@@ -7,9 +7,7 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// End-to-end tests for content stream parsing: load a PDF with a known
-/// content stream → call <see cref="IPdfPage.GetContentOperators"/> → assert
-/// that the operators and operands are correctly extracted.
+/// End-to-end tests for content stream parsing
 /// </summary>
 public sealed class ContentStreamTests : IDisposable
 {
@@ -52,7 +50,7 @@ public sealed class ContentStreamTests : IDisposable
             .FirstOrDefault(static o => o.Name == "Tj");
 
         tjOp.ShouldNotBeNull();
-        tjOp!.Operands.Count.ShouldBe(1);
+        tjOp.Operands.Count.ShouldBe(1);
         tjOp.Operands[0].ShouldBeOfType<PdfString>();
     }
 
@@ -66,7 +64,7 @@ public sealed class ContentStreamTests : IDisposable
             .FirstOrDefault(static o => o.Name == "Tf");
 
         tfOp.ShouldNotBeNull();
-        tfOp!.Operands.Count.ShouldBe(2);
+        tfOp.Operands.Count.ShouldBe(2);
         tfOp.Operands[0].ShouldBeOfType<PdfName>();
         ((PdfInteger)tfOp.Operands[1]).Value.ShouldBe(12);
     }

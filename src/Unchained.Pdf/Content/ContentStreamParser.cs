@@ -52,9 +52,10 @@ internal static class ContentStreamParser
                 case PdfTokenKind.Null:
                 case PdfTokenKind.ArrayBegin:
                 case PdfTokenKind.DictionaryBegin:
+                {
                     operands.Add(parser.ReadValue(lexer));
                     break;
-
+                }
                 case PdfTokenKind.Name:
                 {
                     var raw = peek.Raw.Span;
@@ -80,12 +81,26 @@ internal static class ContentStreamParser
                         operators.Add(new ContentOperator(opName, operands.ToArray()));
                         operands.Clear();
                     }
+
                     break;
                 }
 
+                case PdfTokenKind.DictionaryEnd:
+                case PdfTokenKind.ArrayEnd:
+                case PdfTokenKind.Stream:
+                case PdfTokenKind.EndStream:
+                case PdfTokenKind.Obj:
+                case PdfTokenKind.EndObj:
+                case PdfTokenKind.IndirectRef:
+                case PdfTokenKind.Xref:
+                case PdfTokenKind.Trailer:
+                case PdfTokenKind.StartXref:
+                case PdfTokenKind.Comment:
                 default:
+                {
                     lexer.ReadNext(); // skip unexpected tokens gracefully
                     break;
+                }
             }
         }
 
@@ -105,13 +120,14 @@ internal static class ContentStreamParser
         while (pos < span.Length - 2)
         {
             // EI must be preceded by whitespace (NUL, TAB, LF, FF, CR, or SPACE).
-            if (IsWhitespace(span[pos])
-                && span[pos + 1] == (byte)'E'
-                && span[pos + 2] == (byte)'I')
+            if (IsWhitespace(span[pos]) &&
+                span[pos + 1] == (byte)'E' &&
+                span[pos + 2] == (byte)'I')
             {
                 lexer.Seek(pos + 3); // skip past EI
                 return;
             }
+
             pos++;
         }
 

@@ -33,25 +33,27 @@ internal static class PdfFixtures
         BuildWithContent($"BT /F1 12 Tf 100 700 Td ({EscapeString(text)}) Tj ET");
 
     private static string EscapeString(string s) =>
-        s.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
+        s.Replace("\\", @"\\").Replace("(", "\\(").Replace(")", "\\)");
 
     private static byte[] BuildWithContent(string contentStream)
     {
         var sb = new StringBuilder();
         var offsets = new List<int>();
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
-        static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
 
         Ln(sb, "%PDF-1.7");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog
         offsets.Add(Len(sb));
-        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
 
         // Object 2 — Pages
         offsets.Add(Len(sb));
-        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [4 0 R] /Count 1 >>"); Ln(sb, "endobj");
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [4 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
         // Object 3 — content stream
         var streamBytes = Encoding.Latin1.GetBytes(contentStream);
@@ -73,7 +75,7 @@ internal static class PdfFixtures
         // xref
         var xrefOffset = Len(sb);
         Ln(sb, "xref");
-        Ln(sb, $"0 5");
+        Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets)
             Ln(sb, $"{o:D10} 00000 n ");
@@ -85,6 +87,10 @@ internal static class PdfFixtures
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
+
+        static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     private static byte[] Build(int pageCount, string? title = null, string? author = null)

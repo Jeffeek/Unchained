@@ -10,11 +10,11 @@ namespace Unchained.Pdf.Models;
 /// or arrays. The caller is responsible for casting them to the expected type based
 /// on the operator's specification in Table A.1.
 /// </para>
+/// <param name="Name">The operator keyword, e.g. <c>Tj</c>, <c>cm</c>, <c>BT</c>.</param>
+/// <param name="Operands">The operand values that precede this operator in the stream.</param>
 /// </summary>
 public sealed record ContentOperator(
-    /// <summary>The operator keyword, e.g. <c>Tj</c>, <c>cm</c>, <c>BT</c>.</summary>
     string Name,
-    /// <summary>The operand values that precede this operator in the stream.</summary>
     IReadOnlyList<PdfObject> Operands
 )
 {

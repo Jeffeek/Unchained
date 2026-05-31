@@ -92,7 +92,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
 
     // Decodes and concatenates multiple content streams with a newline separator
     // so that operator sequences spanning stream boundaries parse correctly (§7.8.1).
-    private static ReadOnlyMemory<byte> ConcatenateStreams(IReadOnlyList<PdfStream> streams)
+    private static ReadOnlyMemory<byte> ConcatenateStreams(IEnumerable<PdfStream> streams)
     {
         using var ms = new MemoryStream();
         foreach (var stream in streams)
@@ -100,6 +100,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             ms.Write(StreamFilters.Decode(stream).Span);
             ms.WriteByte((byte)'\n');
         }
+
         return ms.ToArray();
     }
 
