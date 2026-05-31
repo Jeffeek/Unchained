@@ -2,6 +2,7 @@
   <Folder Name="/assets/" />
   <Folder Name="/docs/">
     <File Path="docs/README-RESHARPER.md" />
+    <File Path="docs/Architecture_Design.md" />
   </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/Solution items/">
@@ -14,7 +15,9 @@
     <File Path="Unchained.slnx.DotSettings.user" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="Unchained.Pdf/Unchained.Pdf.csproj" />
+    <Project Path="src/Unchained.Pdf/Unchained.Pdf.csproj" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
+  </Folder>
 </Solution>
