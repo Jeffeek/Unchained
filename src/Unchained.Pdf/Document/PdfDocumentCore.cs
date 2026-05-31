@@ -1,5 +1,6 @@
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing;
+using Unchained.Pdf.Parsing.Filters;
 
 namespace Unchained.Pdf.Document;
 
@@ -20,6 +21,9 @@ internal sealed class PdfDocumentCore : IDisposable
     private readonly CrossReferenceTable _xref;
     private readonly PdfParser _parser;
     private readonly Dictionary<int, PdfIndirectObject> _cache = new();
+    // Object stream cache: stream object number → (objectNumber → decoded PdfObject)
+    // Avoids re-decompressing the same object stream when multiple objects are resolved from it.
+    private readonly Dictionary<int, Dictionary<int, PdfObject>> _objectStreamCache = new();
     private bool _disposed;
 
     private PdfDocumentCore(ReadOnlyMemory<byte> source, CrossReferenceTable xref, PdfDictionary trailer)
@@ -131,13 +135,102 @@ internal sealed class PdfDocumentCore : IDisposable
         var entry = _xref.GetEntry(objectNumber);
         if (entry.IsFree)
             throw new PdfException($"Object {objectNumber} is marked free in the xref table.");
+
+        PdfIndirectObject obj;
         if (entry.Type == CrossReferenceEntryType.Compressed)
-            throw new NotImplementedException("Object streams (§7.5.7) — implementation pending.");
+        {
+            obj = ResolveFromObjectStream(objectNumber, streamObjNum: (int)entry.Offset, indexInStream: entry.Generation);
+        }
+        else
+        {
+            obj = _parser.ReadObject(entry.Offset);
+        }
 
-        var obj = _parser.ReadObject(entry.Offset);
         _cache[objectNumber] = obj;
-
         return obj;
+    }
+
+    // ── Object stream resolution (§7.5.7) ────────────────────────────────────
+
+    /// <summary>
+    /// Resolves an object that is stored inside a compressed object stream.
+    /// The stream is decoded and its embedded objects are parsed and cached so
+    /// subsequent calls for siblings from the same stream are free.
+    /// </summary>
+    private PdfIndirectObject ResolveFromObjectStream(int objectNumber, int streamObjNum, int indexInStream)
+    {
+        if (!_objectStreamCache.TryGetValue(streamObjNum, out var streamObjects))
+        {
+            streamObjects = DecodeObjectStream(streamObjNum);
+            _objectStreamCache[streamObjNum] = streamObjects;
+        }
+
+        if (!streamObjects.TryGetValue(objectNumber, out var value))
+            throw new PdfException($"Object {objectNumber} not found in object stream {streamObjNum}.");
+
+        return new PdfIndirectObject(objectNumber, 0, value);
+    }
+
+    // Decompresses an object stream and parses all embedded objects.
+    // Returns a map from object number → decoded PdfObject.
+    private Dictionary<int, PdfObject> DecodeObjectStream(int streamObjNum)
+    {
+        // The object stream is itself a regular in-use indirect object.
+        var streamEntry = _xref.GetEntry(streamObjNum);
+        if (streamEntry.Type == CrossReferenceEntryType.Compressed)
+            throw new PdfException($"Object stream {streamObjNum} is itself compressed — nested object streams are not supported.");
+
+        var streamIndirect = _parser.ReadObject(streamEntry.Offset);
+        if (streamIndirect.Value is not PdfStream objStream)
+            throw new PdfException($"Object {streamObjNum} is expected to be an object stream but is {streamIndirect.Value.GetType().Name}.");
+
+        var n = (int)(objStream.Dictionary.Get<PdfInteger>("N")?.Value
+            ?? throw new PdfException($"Object stream {streamObjNum} missing required /N entry."));
+        var first = (int)(objStream.Dictionary.Get<PdfInteger>("First")?.Value
+            ?? throw new PdfException($"Object stream {streamObjNum} missing required /First entry."));
+
+        var decoded = StreamFilters.Decode(objStream);
+
+        // Header section: N pairs of "<objectNumber> <byteOffset>" separated by whitespace.
+        // All byte offsets are relative to the start of the body (i.e., offset <first>).
+        var headerParser = new PdfParser(decoded);
+        var headerLexer = new Lexer(decoded);
+
+        var index = new (int ObjNum, int Offset)[n];
+        for (var i = 0; i < n; i++)
+        {
+            var objNum = (int)ExpectIntegerFromLexer(headerLexer, decoded);
+            var byteOffset = (int)ExpectIntegerFromLexer(headerLexer, decoded);
+            index[i] = (objNum, byteOffset);
+        }
+
+        // Body section: parse each object value at its declared offset within the stream.
+        var result = new Dictionary<int, PdfObject>(n);
+        foreach (var (objNum, byteOffset) in index)
+        {
+            var bodyLexer = new Lexer(decoded, first + byteOffset);
+            result[objNum] = headerParser.ReadValue(bodyLexer);
+        }
+
+        return result;
+    }
+
+    private static long ExpectIntegerFromLexer(Lexer lexer, ReadOnlyMemory<byte> _)
+    {
+        var t = lexer.ReadNext();
+        if (t.Kind != PdfTokenKind.Integer)
+            throw new PdfException($"Expected integer in object stream header, got {t.Kind}.", t.Offset);
+        return ParseRawInteger(t.Raw.Span);
+    }
+
+    private static long ParseRawInteger(ReadOnlySpan<byte> span)
+    {
+        var negative = span[0] == (byte)'-';
+        var start = (negative || span[0] == (byte)'+') ? 1 : 0;
+        long value = 0;
+        for (var i = start; i < span.Length; i++)
+            value = (value * 10) + (span[i] - '0');
+        return negative ? -value : value;
     }
 
     // ── Page access ───────────────────────────────────────────────────────────
@@ -222,5 +315,6 @@ internal sealed class PdfDocumentCore : IDisposable
 
         _disposed = true;
         _cache.Clear();
+        _objectStreamCache.Clear();
     }
 }

@@ -1,4 +1,5 @@
 using Unchained.Pdf.Core;
+using Unchained.Pdf.Parsing.Filters;
 
 namespace Unchained.Pdf.Parsing;
 
@@ -230,11 +231,9 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     private (Dictionary<int, CrossReferenceEntry> Entries, PdfDictionary Trailer, long Prev) ParseSingleXref(long offset)
     {
         var lexer = new Lexer(source, (int)offset);
-        var keyword = lexer.Peek();
-
-        return keyword.Is(PdfTokenKind.Xref)
+        return lexer.Peek().Is(PdfTokenKind.Xref)
             ? ParseTraditionalXref(lexer)
-            : ParseXrefStream(lexer);
+            : ParseXrefStream(offset);
     }
 
     // Parses a traditional "xref\n<subsection> ... trailer\n<dict>" block (§7.5.4).
@@ -275,11 +274,90 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         return (entries, trailer, prev);
     }
 
-    // Cross-reference streams (§7.5.8) are used by PDF 1.5+ when the xref section
-    // is stored as a compressed stream rather than a plain-text table.
-    // ReSharper disable once UnusedParameter.Local
-    private static (Dictionary<int, CrossReferenceEntry>, PdfDictionary, long) ParseXrefStream(Lexer lexer) => throw
-        new NotImplementedException("Cross-reference stream parsing (§7.5.8) — implementation pending.");
+    // Cross-reference streams (§7.5.8) — PDF 1.5+ replaces the traditional text-based
+    // xref table with a compressed binary stream. The stream dictionary doubles as the
+    // trailer dictionary.
+    private (Dictionary<int, CrossReferenceEntry>, PdfDictionary, long) ParseXrefStream(long offset)
+    {
+        var xrefObj = ReadObject(offset);
+        if (xrefObj.Value is not PdfStream stream)
+            throw new PdfException($"Expected a cross-reference stream at offset 0x{offset:X}, found {xrefObj.Value.GetType().Name}.", offset);
+
+        var dict = stream.Dictionary;
+        var decoded = StreamFilters.Decode(stream);
+
+        // /W — field widths: [typeWidth, offsetWidth, genWidth]
+        var w = dict.Get<PdfArray>("W")
+            ?? throw new PdfException("Cross-reference stream missing required /W entry.");
+        if (w.Count != 3)
+            throw new PdfException($"Cross-reference stream /W must have 3 elements, got {w.Count}.");
+
+        var w0 = (int)((w[0] as PdfInteger)?.Value ?? 0);
+        var w1 = (int)((w[1] as PdfInteger)?.Value
+            ?? throw new PdfException("Cross-reference stream /W[1] (offset field) must not be zero."));
+        var w2 = (int)((w[2] as PdfInteger)?.Value ?? 0);
+        var rowSize = w0 + w1 + w2;
+
+        // /Index — subsection ranges [first0 count0 first1 count1 ...]
+        // Defaults to [0, /Size] when absent.
+        var size = (int)(dict.Get<PdfInteger>(PdfName.Size)?.Value
+            ?? throw new PdfException("Cross-reference stream missing required /Size entry."));
+
+        var indexArray = dict.Get<PdfArray>("Index");
+        var subsections = new List<(int First, int Count)>();
+        if (indexArray is not null)
+        {
+            for (var i = 0; i + 1 < indexArray.Count; i += 2)
+                subsections.Add(((int)(indexArray[i] as PdfInteger)!.Value,
+                                 (int)(indexArray[i + 1] as PdfInteger)!.Value));
+        }
+        else
+        {
+            subsections.Add((0, size));
+        }
+
+        // Parse binary rows
+        var entries = new Dictionary<int, CrossReferenceEntry>();
+        var span = decoded.Span;
+        var pos = 0;
+
+        foreach (var (first, count) in subsections)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                if (pos + rowSize > span.Length)
+                    throw new PdfException("Cross-reference stream data is shorter than declared entry count.");
+
+                // Type field (default 1 when w0 == 0)
+                var type = w0 == 0 ? 1 : (int)ReadBigEndian(span, pos, w0);
+                var field1 = ReadBigEndian(span, pos + w0, w1);
+                var gen = w2 == 0 ? 0 : (int)ReadBigEndian(span, pos + w0 + w1, w2);
+                pos += rowSize;
+
+                var entryType = type switch
+                {
+                    0 => CrossReferenceEntryType.Free,
+                    1 => CrossReferenceEntryType.InUse,
+                    2 => CrossReferenceEntryType.Compressed,
+                    _ => CrossReferenceEntryType.InUse // unknown types treated as in-use per spec
+                };
+
+                entries[first + i] = new CrossReferenceEntry(field1, gen, entryType);
+            }
+        }
+
+        var prev = dict.Get<PdfInteger>(PdfName.Prev)?.Value ?? 0;
+        return (entries, dict, prev);
+    }
+
+    // Reads a big-endian unsigned integer of <paramref name="count"/> bytes from <paramref name="span"/>.
+    private static long ReadBigEndian(ReadOnlySpan<byte> span, int offset, int count)
+    {
+        long value = 0;
+        for (var i = 0; i < count; i++)
+            value = (value << 8) | span[offset + i];
+        return value;
+    }
 
     // ── Token utilities ───────────────────────────────────────────────────────
 
@@ -299,11 +377,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     }
 
     // §7.3.8.1 — "stream" keyword must be followed by a single CR, LF, or CR+LF.
-    private static void SkipNewline(Lexer lexer)
-    {
-        var span = lexer.Peek().Raw.Span;
-        _ = span;
-    }
+    private static void SkipNewline(Lexer lexer) => lexer.SkipLineEnding();
 
     // ── Raw value parsers (no string allocation) ──────────────────────────────
 

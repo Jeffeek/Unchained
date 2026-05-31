@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 
 namespace Unchained.Pdf.Tests.Helpers;
@@ -14,6 +15,15 @@ internal static class PdfFixtures
 
     public static byte[] WithInfo(string title, string author) =>
         Build(pageCount: 1, title: title, author: author);
+
+    /// <summary>
+    /// Generates a PDF 1.5-style document that uses a compressed /XRef stream
+    /// instead of a traditional xref table. Tests the cross-reference stream
+    /// parser (ISO 32000-1 §7.5.8).
+    /// W = [1, 4, 2]: 1-byte type, 4-byte offset, 2-byte generation.
+    /// </summary>
+    public static byte[] WithCompressedXref(int pageCount = 1) =>
+        BuildWithXrefStream(pageCount);
 
     private static byte[] Build(int pageCount, string? title = null, string? author = null)
     {
@@ -82,4 +92,100 @@ internal static class PdfFixtures
     }
 
     private static int ByteLen(StringBuilder sb) => Encoding.Latin1.GetByteCount(sb.ToString());
+
+    // ── PDF with compressed /XRef stream ─────────────────────────────────────
+
+    private static byte[] BuildWithXrefStream(int pageCount)
+    {
+        // Phase 1: write the body objects and record their offsets.
+        var body = new StringBuilder();
+        var offsets = new List<int>(); // offsets[i] = byte offset of object (i+1)
+
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+        static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+
+        Ln(body, "%PDF-1.5");
+        Ln(body, "%\xE2\xE3\xCF\xD3");
+
+        // Object 1 — Catalog
+        offsets.Add(Len(body));
+        Ln(body, "1 0 obj");
+        Ln(body, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(body, "endobj");
+
+        // Object 2 — Pages
+        offsets.Add(Len(body));
+        var kids = string.Join(" ", Enumerable.Range(3, pageCount).Select(static n => $"{n} 0 R"));
+        Ln(body, "2 0 obj");
+        Ln(body, $"<< /Type /Pages /Kids [{kids}] /Count {pageCount} >>");
+        Ln(body, "endobj");
+
+        // Objects 3..N — Page nodes
+        for (var i = 0; i < pageCount; i++)
+        {
+            offsets.Add(Len(body));
+            Ln(body, $"{3 + i} 0 obj");
+            Ln(body, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+            Ln(body, "endobj");
+        }
+
+        // Phase 2: build the binary xref stream data.
+        // Object numbering: 0=free, 1..N=body objects, N+1=the xref stream itself.
+        var totalObjects = 3 + pageCount + 1; // +1 for the xref stream object itself
+        var xrefStreamObjNum = 2 + pageCount + 1;
+        var xrefStreamOffset = Len(body); // offset where the xref stream object will start
+
+        // W = [1, 4, 2]: type(1), offset(4), generation(2)
+        const int w0 = 1, w1 = 4, w2 = 2;
+        var rowSize = w0 + w1 + w2;
+        var rawXref = new byte[totalObjects * rowSize];
+
+        void WriteRow(int rowIndex, byte type, long offset, int gen)
+        {
+            var pos = rowIndex * rowSize;
+            rawXref[pos] = type;
+            rawXref[pos + 1] = (byte)(offset >> 24);
+            rawXref[pos + 2] = (byte)(offset >> 16);
+            rawXref[pos + 3] = (byte)(offset >> 8);
+            rawXref[pos + 4] = (byte)offset;
+            rawXref[pos + 5] = (byte)(gen >> 8);
+            rawXref[pos + 6] = (byte)gen;
+        }
+
+        // Object 0: free
+        WriteRow(0, 0, 0, 65535);
+        // Objects 1..N: in-use body objects
+        for (var i = 0; i < offsets.Count; i++)
+            WriteRow(i + 1, 1, offsets[i], 0);
+        // Xref stream object itself (object number = xrefStreamObjNum, row index = same)
+        WriteRow(xrefStreamObjNum, 1, xrefStreamOffset, 0);
+
+        // Compress the binary xref data
+        var compressed = ZlibCompress(rawXref);
+
+        // Phase 3: write the xref stream object.
+        Ln(body, $"{xrefStreamObjNum} 0 obj");
+        Ln(body, $"<< /Type /XRef /Size {totalObjects} /W [{w0} {w1} {w2}] /Filter /FlateDecode /Length {compressed.Length} /Root 1 0 R >>");
+        body.Append("stream\n");
+        var bodyBytes = Encoding.Latin1.GetBytes(body.ToString());
+        var result = new byte[bodyBytes.Length + compressed.Length + "\nendstream\nendobj\nstartxref\n".Length + 20 + "%%EOF".Length];
+
+        var pos2 = 0;
+        bodyBytes.CopyTo(result, pos2); pos2 += bodyBytes.Length;
+        compressed.CopyTo(result, pos2); pos2 += compressed.Length;
+
+        var tail = $"\nendstream\nendobj\nstartxref\n{xrefStreamOffset}\n%%EOF";
+        var tailBytes = Encoding.Latin1.GetBytes(tail);
+        tailBytes.CopyTo(result, pos2); pos2 += tailBytes.Length;
+
+        return result[..pos2];
+    }
+
+    private static byte[] ZlibCompress(byte[] data)
+    {
+        using var ms = new MemoryStream();
+        using (var zlib = new ZLibStream(ms, CompressionMode.Compress, leaveOpen: true))
+            zlib.Write(data);
+        return ms.ToArray();
+    }
 }

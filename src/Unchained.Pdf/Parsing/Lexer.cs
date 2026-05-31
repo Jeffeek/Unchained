@@ -75,6 +75,17 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     /// </summary>
     public void Seek(int offset) => Position = offset;
 
+    /// <summary>
+    /// Skips a CR, LF, or CR+LF sequence at the current position without consuming a full token.
+    /// Required after the <c>stream</c> keyword (ISO 32000-1 §7.3.8.1) to position the cursor
+    /// at the first byte of stream data.
+    /// </summary>
+    public void SkipLineEnding()
+    {
+        if (!AtEnd && source.Span[Position] == (byte)'\r') Position++;
+        if (!AtEnd && source.Span[Position] == (byte)'\n') Position++;
+    }
+
     // ── Private readers ───────────────────────────────────────────────────────
 
     private void SkipWhitespaceAndComments()
