@@ -90,7 +90,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
             var core = await Task.Run(
                 () => PdfDocumentCore.Parse(bytes),
                 ct).ConfigureAwait(false);
-            return new PdfDocumentAdapter(core, bytes);
+            return new PdfDocumentAdapter(core);
         }
         finally
         {

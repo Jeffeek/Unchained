@@ -1,24 +1,23 @@
+using System.Buffers;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
+using Unchained.Pdf.Writing;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
 /// Adapts <see cref="PdfDocumentCore"/> to the public <see cref="IPdfDocument"/> interface.
-/// Owns both the core document model and the raw source byte array.
 /// </summary>
 internal sealed class PdfDocumentAdapter : IPdfDocument
 {
     private readonly PdfDocumentCore _core;
-    private readonly byte[] _sourceBytes;
     private int _disposed;
 
-    internal PdfDocumentAdapter(PdfDocumentCore core, byte[] sourceBytes)
+    internal PdfDocumentAdapter(PdfDocumentCore core)
     {
         _core = core;
-        _sourceBytes = sourceBytes;
         Pages = new PdfPageCollectionAdapter(core);
     }
 
@@ -52,13 +51,33 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     public bool IsDisposed => _disposed == 1;
 
     /// <summary>
-    /// Returns the PDF bytes for this document.
-    /// For documents that have not been modified this is a direct pass-through of the
-    /// original source bytes. Once mutation support is implemented, this method will
-    /// re-serialize the modified object graph via <see cref="Unchained.Pdf.Writing.PdfWriter"/>.
+    /// Performs a full-rewrite serialization: collects every in-use indirect object
+    /// from the document, rebuilds the xref table with fresh byte offsets, and
+    /// writes a clean PDF via <see cref="PdfWriter"/>.
     /// </summary>
-    internal byte[] Serialize(SaveOptions? options) =>
-        _sourceBytes;
+    internal byte[] Serialize(SaveOptions? options)
+    {
+        var objects = _core.CollectObjects();
+        var maxObjNum = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
+
+        // Build a clean trailer — preserve /Root and /Info, drop /Prev and other
+        // incremental-update entries that belong to the old file structure.
+        var trailerEntries = new Dictionary<string, PdfObject>
+        {
+            [PdfName.Size.Value] = new PdfInteger(maxObjNum + 1),
+            [PdfName.Root.Value] = _core.Trailer[PdfName.Root] ?? throw new PdfException("Document trailer is missing required /Root entry.")
+        };
+
+        if (_core.Trailer[PdfName.Info] is { } infoRef)
+            trailerEntries[PdfName.Info.Value] = infoRef;
+
+        var trailer = new PdfDictionary(trailerEntries);
+
+        var buffer = new ArrayBufferWriter<byte>();
+        using var writer = new PdfWriter(buffer);
+        writer.Write(objects, trailer);
+        return buffer.WrittenMemory.ToArray();
+    }
 
     /// <inheritdoc />
     public void Dispose()

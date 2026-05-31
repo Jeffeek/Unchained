@@ -145,6 +145,19 @@ internal sealed class PdfDocumentCore : IDisposable
         return obj;
     }
 
+    // ── Serialization support ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Resolves every in-use indirect object in the document and returns them
+    /// sorted by object number. Called by the serialization layer to collect
+    /// the full object graph for a full-rewrite save.
+    /// </summary>
+    internal IReadOnlyList<PdfIndirectObject> CollectObjects() =>
+        _xref.InUseObjectNumbers
+            .Select(ResolveIndirect)
+            .OrderBy(static o => o.ObjectNumber)
+            .ToList();
+
     // ── Object stream resolution (§7.5.7) ────────────────────────────────────
 
     /// <summary>

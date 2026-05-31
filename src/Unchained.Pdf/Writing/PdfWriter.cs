@@ -48,7 +48,10 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
         foreach (var obj in objects)
             WriteIndirectObject(obj);
         var xrefOffset = _position;
-        WriteXrefTable(objects.Count + 1);
+        // Max object number determines the xref section size.
+        // Objects may not be consecutively numbered when re-serializing a loaded document.
+        var maxObjNum = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
+        WriteXrefTable(maxObjNum);
         WriteTrailer(trailer, xrefOffset);
     }
 
@@ -178,17 +181,21 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
 
     // ── Cross-reference table ─────────────────────────────────────────────────
 
-    // Writes the traditional xref section. Object 0 is always a free entry (§7.5.4).
-    // Each in-use entry is a 20-byte fixed-width record: "oooooooooo ggggg n \r\n".
-    private void WriteXrefTable(int objectCount)
+    // Writes the traditional xref section (§7.5.4).
+    // Covers objects 0..<paramref name="maxObjectNumber"/> inclusive.
+    // Objects with no recorded offset are written as free entries so the
+    // xref section is contiguous even when object numbers have gaps.
+    private void WriteXrefTable(int maxObjectNumber)
     {
+        var count = maxObjectNumber + 1;
         WriteBytes("xref\n"u8);
-        WriteAscii($"0 {objectCount}\n");
+        WriteAscii($"0 {count}\n");
         WriteAscii("0000000000 65535 f \r\n"); // free object 0
-        for (var i = 1; i < objectCount; i++)
+        for (var i = 1; i <= maxObjectNumber; i++)
         {
-            var offset = _objectOffsets.GetValueOrDefault(i, 0);
-            WriteAscii($"{offset:D10} 00000 n \r\n");
+            WriteAscii(_objectOffsets.TryGetValue(i, out var offset)
+                ? $"{offset:D10} 00000 n \r\n"
+                : "0000000000 00000 f \r\n"); // gap — mark as free
         }
     }
 

@@ -77,6 +77,17 @@ public sealed class CrossReferenceTable(IReadOnlyDictionary<int, CrossReferenceE
     public int Count => entries.Count;
 
     /// <summary>
+    /// All non-free object numbers present in the table, in ascending order.
+    /// Used during full-rewrite serialization to enumerate every object that
+    /// must be included in the output.
+    /// </summary>
+    public IEnumerable<int> InUseObjectNumbers =>
+        entries
+            .Where(static kvp => !kvp.Value.IsFree)
+            .Select(static kvp => kvp.Key)
+            .Order();
+
+    /// <summary>
     /// Attempts to retrieve the entry for <paramref name="objectNumber"/>.
     /// Returns <see langword="false"/> if the object number is not present in the table.
     /// </summary>
