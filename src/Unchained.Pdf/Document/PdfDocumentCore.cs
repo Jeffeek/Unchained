@@ -9,27 +9,24 @@ namespace Unchained.Pdf.Document;
 /// <para>
 /// Objects are parsed on first access and stored in an internal cache;
 /// subsequent dereferences of the same object number return the cached instance
-/// without re-parsing. Memory consumption is proportional to the number of
+/// without reparsing. Memory consumption is proportional to the number of
 /// objects accessed, not the total number present in the file.
 /// </para>
 /// </summary>
 internal sealed class PdfDocumentCore : IDisposable
 {
+    // ReSharper disable once NotAccessedField.Local
     private readonly ReadOnlyMemory<byte> _source;
     private readonly CrossReferenceTable _xref;
-    private readonly PdfDictionary _trailer;
     private readonly PdfParser _parser;
     private readonly Dictionary<int, PdfIndirectObject> _cache = new();
     private bool _disposed;
 
-    private PdfDocumentCore(
-        ReadOnlyMemory<byte> source,
-        CrossReferenceTable xref,
-        PdfDictionary trailer)
+    private PdfDocumentCore(ReadOnlyMemory<byte> source, CrossReferenceTable xref, PdfDictionary trailer)
     {
         _source = source;
         _xref = xref;
-        _trailer = trailer;
+        Trailer = trailer;
         _parser = new PdfParser(source);
     }
 
@@ -55,22 +52,23 @@ internal sealed class PdfDocumentCore : IDisposable
     // ── Document properties ───────────────────────────────────────────────────
 
     /// <summary>The raw trailer dictionary from the most-recent update section.</summary>
-    public PdfDictionary Trailer => _trailer;
+    // ReSharper disable once MemberCanBePrivate.Global
+    public PdfDictionary Trailer { get; }
 
     /// <summary>
     /// The document catalog dictionary (<c>/Type /Catalog</c>), resolved from
     /// the <c>/Root</c> entry in <see cref="Trailer"/>.
     /// </summary>
     /// <exception cref="PdfException">Thrown when <c>/Root</c> is absent or malformed.</exception>
-    public PdfDictionary Catalog => Resolve<PdfDictionary>(
-        GetRequiredRef("Root"), "Catalog must be a dictionary.");
+    // ReSharper disable once MemberCanBePrivate.Global
+    public PdfDictionary Catalog => Resolve<PdfDictionary>(GetRequiredRef("Root"), "Catalog must be a dictionary.");
 
     /// <summary>
     /// The document information dictionary (<c>/Info</c>), or <see langword="null"/>
     /// if the document does not carry one.
     /// </summary>
     public PdfDictionary? Info =>
-        _trailer["Info"] is PdfIndirectReference infoRef
+        Trailer["Info"] is PdfIndirectReference infoRef
             ? Resolve<PdfDictionary>(infoRef, "Info must be a dictionary.")
             : null;
 
@@ -82,8 +80,7 @@ internal sealed class PdfDocumentCore : IDisposable
     {
         get
         {
-            var pages = Resolve<PdfDictionary>(
-                GetRefFromDict(Catalog, "Pages"), "Pages must be a dictionary.");
+            var pages = Resolve<PdfDictionary>(GetRefFromDict(Catalog, "Pages"), "Pages must be a dictionary.");
             return (int)(pages.Get<PdfInteger>(PdfName.Count)?.Value ?? 0);
         }
     }
@@ -96,10 +93,11 @@ internal sealed class PdfDocumentCore : IDisposable
     /// otherwise <paramref name="obj"/> is returned unchanged.
     /// Does not recurse — call again if the resolved value is itself a reference.
     /// </summary>
+    // ReSharper disable once MemberCanBePrivate.Global
     public PdfObject Dereference(PdfObject obj) => obj switch
     {
         PdfIndirectReference r => ResolveIndirect(r.ObjectNumber).Value,
-        _ => obj,
+        _ => obj
     };
 
     /// <summary>
@@ -110,9 +108,8 @@ internal sealed class PdfDocumentCore : IDisposable
     /// Thrown when the resolved value cannot be cast to <typeparamref name="T"/>.
     /// <paramref name="errorMessage"/> is used as the exception message.
     /// </exception>
-    public T Resolve<T>(PdfIndirectReference reference, string errorMessage) where T : PdfObject =>
-        Dereference(ResolveIndirect(reference.ObjectNumber).Value) as T
-            ?? throw new PdfException(errorMessage);
+    private T Resolve<T>(PdfIndirectReference reference, string errorMessage)
+        where T : PdfObject => Dereference(ResolveIndirect(reference.ObjectNumber).Value) as T ?? throw new PdfException(errorMessage);
 
     /// <summary>
     /// Resolves and parses the indirect object identified by <paramref name="objectNumber"/>,
@@ -139,6 +136,7 @@ internal sealed class PdfDocumentCore : IDisposable
 
         var obj = _parser.ReadObject(entry.Offset);
         _cache[objectNumber] = obj;
+
         return obj;
     }
 
@@ -156,12 +154,10 @@ internal sealed class PdfDocumentCore : IDisposable
     public PdfDictionary GetPage(int pageNumber)
     {
         if (pageNumber < 1 || pageNumber > PageCount)
-        {
-            throw new ArgumentOutOfRangeException(nameof(pageNumber), pageNumber,
-                $"Page number must be between 1 and {PageCount}.");
-        }
+            throw new ArgumentOutOfRangeException(nameof(pageNumber), pageNumber, $"Page number must be between 1 and {PageCount}.");
 
         var pagesRef = GetRefFromDict(Catalog, "Pages");
+
         return FindPageInTree(pagesRef, pageNumber, ref pageNumber);
     }
 
@@ -173,12 +169,12 @@ internal sealed class PdfDocumentCore : IDisposable
         if (type == "Page")
         {
             remaining--;
-            return remaining == 0 ? node
+            return remaining == 0
+                ? node
                 : throw new PdfException($"Page tree traversal error at node {nodeRef}.");
         }
 
-        var kids = node.Get<PdfArray>(PdfName.Kids)
-            ?? throw new PdfException("Pages node missing /Kids array.");
+        var kids = node.Get<PdfArray>(PdfName.Kids) ?? throw new PdfException("Pages node missing /Kids array.");
 
         foreach (var kid in kids.Elements)
         {
@@ -199,6 +195,7 @@ internal sealed class PdfDocumentCore : IDisposable
                 var subtreeCount = (int)(kidNode.Get<PdfInteger>(PdfName.Count)?.Value ?? 1);
                 if (remaining <= subtreeCount)
                     return FindPageInTree(kidRef, target, ref remaining);
+
                 remaining -= subtreeCount;
             }
         }
@@ -209,12 +206,10 @@ internal sealed class PdfDocumentCore : IDisposable
     // ── Utilities ─────────────────────────────────────────────────────────────
 
     private PdfIndirectReference GetRequiredRef(string key) =>
-        _trailer[key] as PdfIndirectReference
-            ?? throw new PdfException($"Trailer is missing required /{key} indirect reference.");
+        Trailer[key] as PdfIndirectReference ?? throw new PdfException($"Trailer is missing required /{key} indirect reference.");
 
     private static PdfIndirectReference GetRefFromDict(PdfDictionary dict, string key) =>
-        dict[key] as PdfIndirectReference
-            ?? throw new PdfException($"Dictionary is missing required /{key} indirect reference.");
+        dict[key] as PdfIndirectReference ?? throw new PdfException($"Dictionary is missing required /{key} indirect reference.");
 
     /// <summary>
     /// Clears the object cache and marks the instance as disposed.
@@ -222,7 +217,9 @@ internal sealed class PdfDocumentCore : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
+
         _disposed = true;
         _cache.Clear();
     }

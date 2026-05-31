@@ -8,11 +8,11 @@ namespace Unchained.Pdf.Engine;
 /// <summary>
 /// Adapts <see cref="PdfDocumentCore"/> page access to the <see cref="IPageCollection"/> interface.
 /// Pages are resolved lazily from the document core on each access; no pages are
-/// pre-loaded at construction time.
+/// preloaded at construction time.
 /// </summary>
 internal sealed class PdfPageCollectionAdapter(PdfDocumentCore core) : IPageCollection
 {
-    /// <inheritdoc />
+    /// <inheritdoc cref="IPageCollection.this[int]" />
     public IPdfPage this[int pageNumber] =>
         new PdfPageAdapter(core.GetPage(pageNumber), pageNumber);
 

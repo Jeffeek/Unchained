@@ -59,7 +59,7 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
     private void WriteHeader()
     {
         WriteBytes("%PDF-1.7\n"u8);
-        WriteBytes("%\xE2\xE3\xCF\xD3\n"u8);
+        WriteBytes("%\xE2\xE3\xCF\xD3"u8 + "\n"u8);
     }
 
     // ── Object serialization ──────────────────────────────────────────────────

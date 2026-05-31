@@ -2,9 +2,9 @@ namespace Unchained.Pdf.Models;
 
 /// <summary>
 /// Data-only representation of a table to be rendered into a PDF document
-/// by <see cref="ITableGenerator"/>. Contains no layout or styling information;
 /// visual presentation is controlled separately by <see cref="TableStyle"/>.
 /// </summary>
+// ReSharper disable once ClassNeverInstantiated.Global
 public sealed class TableData
 {
     /// <summary>

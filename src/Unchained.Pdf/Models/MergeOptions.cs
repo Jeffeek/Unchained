@@ -2,27 +2,13 @@ namespace Unchained.Pdf.Models;
 
 /// <summary>
 /// Controls which document-level metadata is copied into the merged output
-/// when combining documents via <see cref="IDocumentMerger"/>.
+/// <param name="CopyOutlines">When <see langword="true"/>, bookmarks (outline entries, <c>/Outlines</c>) from each source document are copied and renumbered in the merged output.</param>
+/// <param name="CopyNamedDestinations">When <see langword="true"/>, named destinations (<c>/Dests</c>) from each source document are merged into the output name tree. Duplicate names from later documents overwrite earlier ones.</param>
+/// <param name="OptimizeResources">When <see langword="true"/>, shared resources (fonts, images) that appear in multiple source documents are de-duplicated in the merged output to reduce file size. This increases merge time proportionally to the number of resources.</param>
 /// </summary>
 public sealed record MergeOptions(
-    /// <summary>
-    /// When <see langword="true"/>, bookmarks (outline entries, <c>/Outlines</c>)
-    /// from each source document are copied and renumbered in the merged output.
-    /// </summary>
     bool CopyOutlines = true,
-
-    /// <summary>
-    /// When <see langword="true"/>, named destinations (<c>/Dests</c>) from each source
-    /// document are merged into the output name tree. Duplicate names from later
-    /// documents overwrite earlier ones.
-    /// </summary>
     bool CopyNamedDestinations = true,
-
-    /// <summary>
-    /// When <see langword="true"/>, shared resources (fonts, images) that appear in
-    /// multiple source documents are de-duplicated in the merged output to reduce file size.
-    /// This increases merge time proportionally to the number of resources.
-    /// </summary>
     bool OptimizeResources = false
 )
 {

@@ -30,27 +30,14 @@ public enum PdfVersion
 }
 
 /// <summary>
-/// Options applied when serializing an <see cref="IPdfDocument"/> via
-/// <see cref="IDocumentProcessor.SaveAsync(IPdfDocument,System.IO.Stream,SaveOptions?,System.Threading.CancellationToken)"/>.
+/// Options applied when serializing a PdfDocument
+/// <param name="Version">The PDF version string written into the file header (<c>%PDF-x.y</c>). Defaults to <see cref="PdfVersion.Pdf17"/>.</param>
+/// <param name="Linearize">When <see langword="true"/>, the output is linearized (web-optimized) so that PDF readers can render the first page before the full file is downloaded.</param>
+/// <param name="OptimizeImages">When <see langword="true"/>, embedded images are re-compressed to reduce file size.</param>
 /// </summary>
 public sealed record SaveOptions(
-    /// <summary>
-    /// The PDF version string written into the file header (<c>%PDF-x.y</c>).
-    /// Defaults to <see cref="PdfVersion.Pdf17"/>.
-    /// </summary>
     PdfVersion Version = PdfVersion.Pdf17,
-
-    /// <summary>
-    /// When <see langword="true"/>, the output is linearized (web-optimized) so that
-    /// PDF readers can render the first page before the full file is downloaded.
-    /// Linearization increases write time and output size slightly.
-    /// </summary>
     bool Linearize = false,
-
-    /// <summary>
-    /// When <see langword="true"/>, embedded images are re-compressed to reduce
-    /// file size. May reduce image quality depending on the codec settings.
-    /// </summary>
     bool OptimizeImages = false
 )
 {
