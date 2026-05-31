@@ -287,34 +287,28 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         var decoded = StreamFilters.Decode(stream);
 
         // /W — field widths: [typeWidth, offsetWidth, genWidth]
-        var w = dict.Get<PdfArray>("W")
-            ?? throw new PdfException("Cross-reference stream missing required /W entry.");
+        var w = dict.Get<PdfArray>("W") ?? throw new PdfException("Cross-reference stream missing required /W entry.");
         if (w.Count != 3)
             throw new PdfException($"Cross-reference stream /W must have 3 elements, got {w.Count}.");
 
         var w0 = (int)((w[0] as PdfInteger)?.Value ?? 0);
-        var w1 = (int)((w[1] as PdfInteger)?.Value
-            ?? throw new PdfException("Cross-reference stream /W[1] (offset field) must not be zero."));
+        var w1 = (int)((w[1] as PdfInteger)?.Value ?? throw new PdfException("Cross-reference stream /W[1] (offset field) must not be zero."));
         var w2 = (int)((w[2] as PdfInteger)?.Value ?? 0);
         var rowSize = w0 + w1 + w2;
 
         // /Index — subsection ranges [first0 count0 first1 count1 ...]
         // Defaults to [0, /Size] when absent.
-        var size = (int)(dict.Get<PdfInteger>(PdfName.Size)?.Value
-            ?? throw new PdfException("Cross-reference stream missing required /Size entry."));
+        var size = (int)(dict.Get<PdfInteger>(PdfName.Size)?.Value ?? throw new PdfException("Cross-reference stream missing required /Size entry."));
 
         var indexArray = dict.Get<PdfArray>("Index");
         var subsections = new List<(int First, int Count)>();
         if (indexArray is not null)
         {
             for (var i = 0; i + 1 < indexArray.Count; i += 2)
-                subsections.Add(((int)(indexArray[i] as PdfInteger)!.Value,
-                                 (int)(indexArray[i + 1] as PdfInteger)!.Value));
+                subsections.Add(((int)(indexArray[i] as PdfInteger)!.Value, (int)(indexArray[i + 1] as PdfInteger)!.Value));
         }
         else
-        {
             subsections.Add((0, size));
-        }
 
         // Parse binary rows
         var entries = new Dictionary<int, CrossReferenceEntry>();

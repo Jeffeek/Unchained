@@ -31,8 +31,10 @@ internal static class RunLengthDecoder
                 var count = length + 1;
                 if (i + count > span.Length)
                     throw new PdfException("RunLengthDecode: literal run extends past end of data.");
+
                 for (var j = 0; j < count; j++)
                     output.Add(span[i + j]);
+
                 i += count;
             }
             else
@@ -40,8 +42,10 @@ internal static class RunLengthDecoder
                 // Repeat run: output (257 - length) copies of the next byte
                 if (i >= span.Length)
                     throw new PdfException("RunLengthDecode: repeat run has no data byte.");
+
                 var count = 257 - length;
                 var value = span[i++];
+
                 for (var j = 0; j < count; j++)
                     output.Add(value);
             }

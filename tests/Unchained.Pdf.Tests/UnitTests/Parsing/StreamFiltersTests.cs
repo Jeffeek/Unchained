@@ -53,10 +53,12 @@ public sealed class FlateDecoderTests
 
 public sealed class AsciiHexDecoderTests
 {
-    [Theory]
-    [InlineData("48656C6C6F>", "Hello")]
-    [InlineData("68 65 6C 6C 6F>", "hello")]
-    [InlineData(">", "")]
+    [
+        Theory,
+        InlineData("48656C6C6F>", "Hello"),
+        InlineData("68 65 6C 6C 6F>", "hello"),
+        InlineData(">", "")
+    ]
     public void Decode_ValidInput_ReturnsCorrectBytes(string input, string expected)
     {
         var result = AsciiHexDecoder.Decode(Encoding.ASCII.GetBytes(input));
@@ -85,7 +87,7 @@ public sealed class Ascii85DecoderTests
     public void Decode_HelloWorld_ReturnsCorrectBytes()
     {
         // "Man" in ASCII85 is "9jqo~>"
-        var encoded = Encoding.ASCII.GetBytes("9jqo~>");
+        var encoded = "9jqo~>"u8.ToArray();
         var result = Ascii85Decoder.Decode(encoded);
         result.Span[0].ShouldBe((byte)'M');
         result.Span[1].ShouldBe((byte)'a');
@@ -97,14 +99,11 @@ public sealed class Ascii85DecoderTests
     {
         var result = Ascii85Decoder.Decode("z~>"u8.ToArray());
         result.Length.ShouldBe(4);
-        result.Span.ToArray().ShouldAllBe(b => b == 0);
+        result.Span.ToArray().ShouldAllBe(static b => b == 0);
     }
 
     [Fact]
-    public void Decode_EmptyInput_ReturnsEmpty()
-    {
-        Ascii85Decoder.Decode("~>"u8.ToArray()).Length.ShouldBe(0);
-    }
+    public void Decode_EmptyInput_ReturnsEmpty() => Ascii85Decoder.Decode("~>"u8.ToArray()).Length.ShouldBe(0);
 }
 
 public sealed class RunLengthDecoderTests
@@ -125,7 +124,7 @@ public sealed class RunLengthDecoderTests
         var input = new byte[] { 253, (byte)'X', 128 };
         var result = RunLengthDecoder.Decode(input);
         result.Length.ShouldBe(4);
-        result.Span.ToArray().ShouldAllBe(b => b == (byte)'X');
+        result.Span.ToArray().ShouldAllBe(static b => b == (byte)'X');
     }
 
     [Fact]
@@ -170,7 +169,7 @@ public sealed class StreamFiltersTests
         // ASCIIHexDecode on top of ASCIIHexDecode: decode once then decode again
         // Single ASCIIHexDecode: "41>" → [0x41] = 'A'
         // So double: "3431>" → "41>" → [0x41] = 'A'
-        var doubleEncoded = Encoding.ASCII.GetBytes("3431>");
+        var doubleEncoded = "3431>"u8.ToArray();
         var dict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
             [PdfName.Filter.Value] = new PdfArray([
@@ -186,7 +185,7 @@ public sealed class StreamFiltersTests
 
     [Fact]
     public void Decode_UnknownFilter_ThrowsPdfException() =>
-        Should.Throw<PdfException>(() =>
+        Should.Throw<PdfException>(static () =>
         {
             var dict = new PdfDictionary(new Dictionary<string, PdfObject>
             {

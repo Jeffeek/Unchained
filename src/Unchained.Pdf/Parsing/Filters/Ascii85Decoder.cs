@@ -24,56 +24,59 @@ internal static class Ascii85Decoder
             // End-of-data marker '~>'
             if (b == (byte)'~')
             {
-                if (i + 1 < span.Length && span[i + 1] == (byte)'>') break;
+                if (i + 1 < span.Length && span[i + 1] == (byte)'>')
+                    break;
+
                 throw new PdfException("ASCII85Decode: unexpected '~' not followed by '>'.");
             }
 
             // Whitespace: skip (§7.4.3 allows whitespace between characters)
             if (IsWhitespace(b)) continue;
 
-            // 'z' shorthand: four zero bytes
-            if (b == (byte)'z')
+            switch (b)
             {
-                if (groupLen != 0) throw new PdfException("ASCII85Decode: 'z' inside a group.");
-                output.AddRange([0, 0, 0, 0]);
-                continue;
+                // 'z' shorthand: four zero bytes
+                case (byte)'z' when groupLen != 0:
+                    throw new PdfException("ASCII85Decode: 'z' inside a group.");
+                case (byte)'z':
+                    output.AddRange([0, 0, 0, 0]);
+                    continue;
+                case < (byte)'!' or > (byte)'u':
+                    throw new PdfException($"ASCII85Decode: character 0x{b:X2} is out of range.");
             }
-
-            if (b is < (byte)'!' or > (byte)'u')
-                throw new PdfException($"ASCII85Decode: character 0x{b:X2} is out of range.");
 
             group[groupLen++] = b;
 
-            if (groupLen == 5)
-            {
-                DecodeGroup(group, 5, output);
-                groupLen = 0;
-            }
+            if (groupLen != 5)
+                continue;
+
+            DecodeGroup(group, 5, output);
+            groupLen = 0;
         }
 
         // Final partial group — pad with 'u' (84+33) and trim output bytes
-        if (groupLen > 0)
-        {
-            for (var j = groupLen; j < 5; j++)
-                group[j] = (byte)'u';
-            DecodeGroup(group, groupLen, output);
-        }
+        if (groupLen <= 0)
+            return output.ToArray();
+
+        for (var j = groupLen; j < 5; j++)
+            group[j] = (byte)'u';
+        DecodeGroup(group, groupLen, output);
 
         return output.ToArray();
     }
 
-    private static void DecodeGroup(byte[] group, int count, List<byte> output)
+    private static void DecodeGroup(IReadOnlyList<byte> group, int count, ICollection<byte> output)
     {
         var value =
-            (uint)(group[0] - '!') * 52200625u +
-            (uint)(group[1] - '!') * 614125u +
-            (uint)(group[2] - '!') * 7225u +
-            (uint)(group[3] - '!') * 85u +
+            ((uint)(group[0] - '!') * 52200625u) +
+            ((uint)(group[1] - '!') * 614125u) +
+            ((uint)(group[2] - '!') * 7225u) +
+            ((uint)(group[3] - '!') * 85u) +
             (uint)(group[4] - '!');
 
         // Emit (count - 1) bytes; a full group always emits 4.
         var emit = count - 1;
-        for (var shift = 24; shift >= 24 - (emit - 1) * 8; shift -= 8)
+        for (var shift = 24; shift >= 24 - ((emit - 1) * 8); shift -= 8)
             output.Add((byte)(value >> shift));
     }
 

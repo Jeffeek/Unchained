@@ -37,11 +37,7 @@ internal static class StreamFilters
             _ => throw new PdfException($"Invalid /Filter value: expected name or array, got {filter.GetType().Name}.")
         };
 
-        var data = stream.Data;
-        foreach (var name in names)
-            data = ApplyFilter(name.Value, data);
-
-        return data;
+        return names.Aggregate(stream.Data, static (current, name) => ApplyFilter(name.Value, current));
     }
 
     private static ReadOnlyMemory<byte> ApplyFilter(string filterName, ReadOnlyMemory<byte> data) =>

@@ -101,9 +101,6 @@ internal static class PdfFixtures
         var body = new StringBuilder();
         var offsets = new List<int>(); // offsets[i] = byte offset of object (i+1)
 
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
-        static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
-
         Ln(body, "%PDF-1.5");
         Ln(body, "%\xE2\xE3\xCF\xD3");
 
@@ -130,6 +127,7 @@ internal static class PdfFixtures
         }
 
         // Phase 2: build the binary xref stream data.
+        // ReSharper disable once GrammarMistakeInComment
         // Object numbering: 0=free, 1..N=body objects, N+1=the xref stream itself.
         var totalObjects = 3 + pageCount + 1; // +1 for the xref stream object itself
         var xrefStreamObjNum = 2 + pageCount + 1;
@@ -137,23 +135,12 @@ internal static class PdfFixtures
 
         // W = [1, 4, 2]: type(1), offset(4), generation(2)
         const int w0 = 1, w1 = 4, w2 = 2;
-        var rowSize = w0 + w1 + w2;
+        const int rowSize = w0 + w1 + w2;
         var rawXref = new byte[totalObjects * rowSize];
-
-        void WriteRow(int rowIndex, byte type, long offset, int gen)
-        {
-            var pos = rowIndex * rowSize;
-            rawXref[pos] = type;
-            rawXref[pos + 1] = (byte)(offset >> 24);
-            rawXref[pos + 2] = (byte)(offset >> 16);
-            rawXref[pos + 3] = (byte)(offset >> 8);
-            rawXref[pos + 4] = (byte)offset;
-            rawXref[pos + 5] = (byte)(gen >> 8);
-            rawXref[pos + 6] = (byte)gen;
-        }
 
         // Object 0: free
         WriteRow(0, 0, 0, 65535);
+        // ReSharper disable once GrammarMistakeInComment
         // Objects 1..N: in-use body objects
         for (var i = 0; i < offsets.Count; i++)
             WriteRow(i + 1, 1, offsets[i], 0);
@@ -171,14 +158,38 @@ internal static class PdfFixtures
         var result = new byte[bodyBytes.Length + compressed.Length + "\nendstream\nendobj\nstartxref\n".Length + 20 + "%%EOF".Length];
 
         var pos2 = 0;
-        bodyBytes.CopyTo(result, pos2); pos2 += bodyBytes.Length;
-        compressed.CopyTo(result, pos2); pos2 += compressed.Length;
+        bodyBytes.CopyTo(result, pos2);
+        pos2 += bodyBytes.Length;
+        compressed.CopyTo(result, pos2);
+        pos2 += compressed.Length;
 
         var tail = $"\nendstream\nendobj\nstartxref\n{xrefStreamOffset}\n%%EOF";
         var tailBytes = Encoding.Latin1.GetBytes(tail);
-        tailBytes.CopyTo(result, pos2); pos2 += tailBytes.Length;
+        tailBytes.CopyTo(result, pos2);
+        pos2 += tailBytes.Length;
 
         return result[..pos2];
+
+        void WriteRow(
+            int rowIndex,
+            byte type,
+            long offset,
+            int gen
+        )
+        {
+            var pos = rowIndex * rowSize;
+            rawXref[pos] = type;
+            rawXref[pos + 1] = (byte)(offset >> 24);
+            rawXref[pos + 2] = (byte)(offset >> 16);
+            rawXref[pos + 3] = (byte)(offset >> 8);
+            rawXref[pos + 4] = (byte)offset;
+            rawXref[pos + 5] = (byte)(gen >> 8);
+            rawXref[pos + 6] = (byte)gen;
+        }
+
+        static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     private static byte[] ZlibCompress(byte[] data)

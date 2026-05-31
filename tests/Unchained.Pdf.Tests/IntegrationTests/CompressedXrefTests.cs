@@ -27,10 +27,12 @@ public sealed class CompressedXrefTests : IDisposable
         doc.PageCount.ShouldBe(1);
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(3)]
-    [InlineData(10)]
+    [
+        Theory,
+        InlineData(1),
+        InlineData(3),
+        InlineData(10)
+    ]
     public async Task Load_CompressedXref_MultiPage_PageCountMatches(int count)
     {
         var bytes = PdfFixtures.WithCompressedXref(pageCount: count);
@@ -52,7 +54,7 @@ public sealed class CompressedXrefTests : IDisposable
     {
         var bytes = PdfFixtures.WithCompressedXref(pageCount: 5);
         await using var doc = await _processor.LoadAsync(new MemoryStream(bytes));
-        var numbers = doc.Pages.Select(p => p.PageNumber).ToList();
+        var numbers = doc.Pages.Select(static p => p.PageNumber).ToList();
         numbers.ShouldBe([1, 2, 3, 4, 5]);
     }
 

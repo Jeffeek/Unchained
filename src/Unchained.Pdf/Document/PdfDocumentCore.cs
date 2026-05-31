@@ -136,17 +136,12 @@ internal sealed class PdfDocumentCore : IDisposable
         if (entry.IsFree)
             throw new PdfException($"Object {objectNumber} is marked free in the xref table.");
 
-        PdfIndirectObject obj;
-        if (entry.Type == CrossReferenceEntryType.Compressed)
-        {
-            obj = ResolveFromObjectStream(objectNumber, streamObjNum: (int)entry.Offset, indexInStream: entry.Generation);
-        }
-        else
-        {
-            obj = _parser.ReadObject(entry.Offset);
-        }
+        var obj = entry.Type == CrossReferenceEntryType.Compressed
+            ? ResolveFromObjectStream(objectNumber, streamObjNum: (int)entry.Offset)
+            : _parser.ReadObject(entry.Offset);
 
         _cache[objectNumber] = obj;
+
         return obj;
     }
 
@@ -157,18 +152,21 @@ internal sealed class PdfDocumentCore : IDisposable
     /// The stream is decoded and its embedded objects are parsed and cached so
     /// subsequent calls for siblings from the same stream are free.
     /// </summary>
-    private PdfIndirectObject ResolveFromObjectStream(int objectNumber, int streamObjNum, int indexInStream)
+    private PdfIndirectObject ResolveFromObjectStream(int objectNumber, int streamObjNum)
     {
-        if (!_objectStreamCache.TryGetValue(streamObjNum, out var streamObjects))
+        if (_objectStreamCache.TryGetValue(streamObjNum, out var streamObjects))
         {
-            streamObjects = DecodeObjectStream(streamObjNum);
-            _objectStreamCache[streamObjNum] = streamObjects;
+            return !streamObjects.TryGetValue(objectNumber, out var value)
+                ? throw new PdfException($"Object {objectNumber} not found in object stream {streamObjNum}.")
+                : new PdfIndirectObject(objectNumber, 0, value);
         }
 
-        if (!streamObjects.TryGetValue(objectNumber, out var value))
-            throw new PdfException($"Object {objectNumber} not found in object stream {streamObjNum}.");
+        streamObjects = DecodeObjectStream(streamObjNum);
+        _objectStreamCache[streamObjNum] = streamObjects;
 
-        return new PdfIndirectObject(objectNumber, 0, value);
+        return !streamObjects.TryGetValue(objectNumber, out var value2)
+            ? throw new PdfException($"Object {objectNumber} not found in object stream {streamObjNum}.")
+            : new PdfIndirectObject(objectNumber, 0, value2);
     }
 
     // Decompresses an object stream and parses all embedded objects.
@@ -184,10 +182,8 @@ internal sealed class PdfDocumentCore : IDisposable
         if (streamIndirect.Value is not PdfStream objStream)
             throw new PdfException($"Object {streamObjNum} is expected to be an object stream but is {streamIndirect.Value.GetType().Name}.");
 
-        var n = (int)(objStream.Dictionary.Get<PdfInteger>("N")?.Value
-            ?? throw new PdfException($"Object stream {streamObjNum} missing required /N entry."));
-        var first = (int)(objStream.Dictionary.Get<PdfInteger>("First")?.Value
-            ?? throw new PdfException($"Object stream {streamObjNum} missing required /First entry."));
+        var n = (int)(objStream.Dictionary.Get<PdfInteger>("N")?.Value ?? throw new PdfException($"Object stream {streamObjNum} missing required /N entry."));
+        var first = (int)(objStream.Dictionary.Get<PdfInteger>("First")?.Value ?? throw new PdfException($"Object stream {streamObjNum} missing required /First entry."));
 
         var decoded = StreamFilters.Decode(objStream);
 
@@ -199,8 +195,8 @@ internal sealed class PdfDocumentCore : IDisposable
         var index = new (int ObjNum, int Offset)[n];
         for (var i = 0; i < n; i++)
         {
-            var objNum = (int)ExpectIntegerFromLexer(headerLexer, decoded);
-            var byteOffset = (int)ExpectIntegerFromLexer(headerLexer, decoded);
+            var objNum = (int)ExpectIntegerFromLexer(headerLexer);
+            var byteOffset = (int)ExpectIntegerFromLexer(headerLexer);
             index[i] = (objNum, byteOffset);
         }
 
@@ -215,12 +211,13 @@ internal sealed class PdfDocumentCore : IDisposable
         return result;
     }
 
-    private static long ExpectIntegerFromLexer(Lexer lexer, ReadOnlyMemory<byte> _)
+    private static long ExpectIntegerFromLexer(Lexer lexer)
     {
         var t = lexer.ReadNext();
-        if (t.Kind != PdfTokenKind.Integer)
-            throw new PdfException($"Expected integer in object stream header, got {t.Kind}.", t.Offset);
-        return ParseRawInteger(t.Raw.Span);
+
+        return t.Kind != PdfTokenKind.Integer
+            ? throw new PdfException($"Expected integer in object stream header, got {t.Kind}.", t.Offset)
+            : ParseRawInteger(t.Raw.Span);
     }
 
     private static long ParseRawInteger(ReadOnlySpan<byte> span)
@@ -230,6 +227,7 @@ internal sealed class PdfDocumentCore : IDisposable
         long value = 0;
         for (var i = start; i < span.Length; i++)
             value = (value * 10) + (span[i] - '0');
+
         return negative ? -value : value;
     }
 

@@ -20,16 +20,28 @@ internal static class AsciiHexDecoder
             if (b == (byte)'>') break; // end-of-data marker
 
             int value;
-            if (b is >= (byte)'0' and <= (byte)'9') value = b - '0';
-            else if (b is >= (byte)'A' and <= (byte)'F') value = b - 'A' + 10;
-            else if (b is >= (byte)'a' and <= (byte)'f') value = b - 'a' + 10;
-            else if (IsWhitespace(b)) continue;
-            else throw new PdfException($"ASCIIHexDecode: unexpected byte 0x{b:X2}.");
+            switch (b)
+            {
+                case >= (byte)'0' and <= (byte)'9':
+                    value = b - '0';
+                break;
+                case >= (byte)'A' and <= (byte)'F':
+                    value = b - 'A' + 10;
+                break;
+                case >= (byte)'a' and <= (byte)'f':
+                    value = b - 'a' + 10;
+                break;
+                default:
+                {
+                    if (IsWhitespace(b))
+                        continue;
+
+                    throw new PdfException($"ASCIIHexDecode: unexpected byte 0x{b:X2}.");
+                }
+            }
 
             if (nibble < 0)
-            {
                 nibble = value;
-            }
             else
             {
                 output.Add((byte)((nibble << 4) | value));
