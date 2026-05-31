@@ -1,0 +1,64 @@
+# Unchained Package Registry
+# This file is the SINGLE SOURCE OF TRUTH for all package information.
+# When you add a new package, update this file and run: ./scripts/UpdateAll/update-all.sh (or update-all.ps1 on Windows)
+#
+# Most fields are AUTO-DERIVED from the codebase:
+#   - nuget_id, path, test_path, sample_path, sample_name: derived from 'name'
+#   - description, features, key_features: parsed from README.md markers
+#   - dependencies: parsed from .csproj (ProjectReference + PackageReference)
+#   - targets: global default, validated against .csproj TargetFrameworks
+#
+# Only specify: name, id, version, status.
+
+metadata:
+  schema_version: "2.0"
+  last_updated: "2026-03-23"
+  repository: "https://github.com/Jeffeek/Unchained"
+
+# Global defaults — all packages MUST share these targets.
+# If a .csproj disagrees, validation fails (it's a bug in the .csproj).
+defaults:
+  targets:
+    - net8.0
+    - net9.0
+    - net10.0
+
+packages:
+  # ============================================================================
+  # RELEASED
+  # ============================================================================
+
+  - name: Unchained.Pdf
+    id: unchained.pdf
+    version: 0.1.0
+    status: in-development
+
+# ============================================================================
+# IN DEVELOPMENT
+# ============================================================================
+
+# ============================================================================
+# VERSION ROADMAP
+# ============================================================================
+
+versions:
+  # - version: "0.1.0"
+  #   release_date: "2024-01-15"
+  #   status: released
+  #   packages:
+  #     - unchained.pdf
+
+# ============================================================================
+# BADGES AND LINKS
+# ============================================================================
+
+badges:
+  nuget_url: "https://www.nuget.org/packages/{nuget_id}"
+  nuget_badge: "https://img.shields.io/nuget/v/{nuget_id}.svg?style=flat-square"
+  nuget_downloads: "https://img.shields.io/nuget/dt/{nuget_id}.svg?style=flat-square"
+
+links:
+  documentation: "https://unchained.readthedocs.io"
+  repository: "https://github.com/Jeffeek/Unchained"
+  issues: "https://github.com/Jeffeek/Unchained/issues"
+  discussions: "https://github.com/Jeffeek/Unchained/discussions"

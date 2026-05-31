@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/assets/" />
+  <Folder Name="/docs/">
+    <File Path="docs/README-RESHARPER.md" />
+  </Folder>
+  <Folder Name="/samples/" />
+  <Folder Name="/Solution items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="NuGet.config" />
+    <File Path="packages.yml" />
+    <File Path="Unchained.slnx.DotSettings" />
+    <File Path="Unchained.slnx.DotSettings.user" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="Unchained.Pdf/Unchained.Pdf.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>
