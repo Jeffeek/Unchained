@@ -49,14 +49,15 @@ internal static class MinimalPdfFactory
         // Cross-reference table
         var xrefOffset = Encoding.Latin1.GetByteCount(sb.ToString());
         sb.AppendLine("xref");
-        sb.AppendLine($"0 {2 + pageCount}");
+        // Objects: 0 (free) + 1 (Catalog) + 1 (Pages) + pageCount (Page nodes) = 3 + pageCount
+        sb.AppendLine($"0 {3 + pageCount}");
         sb.AppendLine("0000000000 65535 f ");
         foreach (var offset in offsets)
             sb.AppendLine($"{offset:D10} 00000 n ");
 
         // Trailer
         sb.AppendLine("trailer");
-        sb.AppendLine($"<< /Size {2 + pageCount} /Root 1 0 R >>");
+        sb.AppendLine($"<< /Size {3 + pageCount} /Root 1 0 R >>");
         sb.AppendLine("startxref");
         sb.AppendLine(xrefOffset.ToString());
         sb.AppendLine("%%EOF");

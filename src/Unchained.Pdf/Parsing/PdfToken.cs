@@ -3,7 +3,7 @@ namespace Unchained.Pdf.Parsing;
 /// <summary>
 /// Classifies a single lexical token in a PDF byte stream (ISO 32000-1 §7.2).
 /// </summary>
-internal enum PdfTokenKind
+public enum PdfTokenKind
 {
     // ── Primitives ────────────────────────────────────────────────────────────
 

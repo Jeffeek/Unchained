@@ -19,5 +19,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
+    <Project Path="tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj" />
   </Folder>
 </Solution>

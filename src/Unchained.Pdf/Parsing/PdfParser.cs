@@ -70,7 +70,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
 
         lexer.ReadNext(); // consume "stream"
         SkipNewline(lexer);
-        var length = (dict.Get<PdfInteger>(PdfName.Length)?.Value ?? 0);
+        var length = dict.Get<PdfInteger>(PdfName.Length)?.Value ?? 0;
         var data = source.Slice(lexer.Position, (int)length);
         value = new PdfStream(dict, data);
 
