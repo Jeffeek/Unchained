@@ -2,7 +2,7 @@
   <Folder Name="/assets/" />
   <Folder Name="/docs/">
     <File Path="docs/README-RESHARPER.md" />
-    <File Path="docs/Architecture_Design.md" />
+
   </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/Solution items/">
