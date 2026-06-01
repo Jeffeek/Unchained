@@ -14,6 +14,20 @@ internal static class PdfFixtures
     public static byte[] MultiPage(int count) => Build(pageCount: count);
 
     /// <summary>
+    /// Generates a single-page PDF whose /Font entry includes a /FontFile2 stream
+    /// containing <paramref name="fontBytes"/> (a TrueType font program).
+    /// </summary>
+    public static byte[] WithEmbeddedFont(byte[] fontBytes, string contentStream = "BT /F1 12 Tf 100 700 Td (Hello) Tj ET") =>
+        BuildWithEmbeddedFont(fontBytes, contentStream);
+
+    /// <summary>
+    /// Generates a single-page PDF with a small <paramref name="width"/>×<paramref name="height"/>
+    /// DeviceRGB image XObject and a <c>Do</c> operator that paints it.
+    /// </summary>
+    public static byte[] WithImageXObject(int width, int height, byte[] rgbData) =>
+        BuildWithImageXObject(width, height, rgbData);
+
+    /// <summary>
     /// Generates a single-page PDF whose first page has one /Text annotation.
     /// </summary>
     public static byte[] WithAnnotation(string contents = "Note") =>
@@ -502,6 +516,159 @@ internal static class PdfFixtures
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    // Builds a PDF with a font entry whose /FontFile2 stream contains fontBytes,
+    // encoded as ASCII hex so the file stays in printable ASCII throughout.
+    private static byte[] BuildWithEmbeddedFont(byte[] fontBytes, string contentStream)
+    {
+        // Encode binary font data as hex so it can be stored in a text-based PDF.
+        var hexFont = Convert.ToHexString(fontBytes);
+        // ASCIIHexDecode expects hex pairs followed by '>'.
+        var hexStream = hexFont + ">";
+        var hexLen = hexStream.Length;
+
+        var sb = new StringBuilder();
+
+        AppendLineWithLineEnding("%PDF-1.7");
+        AppendLineWithLineEnding("%\xE2\xE3\xCF\xD3");
+
+        var o1 = Len();
+        AppendLineWithLineEnding("1 0 obj");
+        AppendLineWithLineEnding("<< /Type /Catalog /Pages 2 0 R >>");
+        AppendLineWithLineEnding("endobj");
+        var o2 = Len();
+        AppendLineWithLineEnding("2 0 obj");
+        AppendLineWithLineEnding("<< /Type /Pages /Kids [7 0 R] /Count 1 >>");
+        AppendLineWithLineEnding("endobj");
+
+        // Object 3 — content stream
+        var o3 = Len();
+        AppendLineWithLineEnding("3 0 obj");
+        AppendLineWithLineEnding($"<< /Length {Encoding.Latin1.GetByteCount(contentStream)} >>");
+        sb.Append("stream\n").Append(contentStream).Append("\nendstream\n");
+        AppendLineWithLineEnding("endobj");
+
+        // Object 4 — FontDescriptor
+        var o4 = Len();
+        AppendLineWithLineEnding("4 0 obj");
+        AppendLineWithLineEnding("<< /Type /FontDescriptor /FontName /TestFont /Flags 32 /FontFile2 5 0 R >>");
+        AppendLineWithLineEnding("endobj");
+
+        // Object 5 — embedded font stream (hex-encoded, ASCIIHexDecode)
+        var o5 = Len();
+        AppendLineWithLineEnding("5 0 obj");
+        AppendLineWithLineEnding($"<< /Length {hexLen} /Length1 {fontBytes.Length} /Filter /ASCIIHexDecode >>");
+        sb.Append("stream\n").Append(hexStream).Append("\nendstream\n");
+        AppendLineWithLineEnding("endobj");
+
+        // Object 6 — Font
+        var o6 = Len();
+        AppendLineWithLineEnding("6 0 obj");
+        AppendLineWithLineEnding("<< /Type /Font /Subtype /TrueType /BaseFont /TestFont /FontDescriptor 4 0 R >>");
+        AppendLineWithLineEnding("endobj");
+
+        // Object 7 — Page
+        var o7 = Len();
+        AppendLineWithLineEnding("7 0 obj");
+        AppendLineWithLineEnding("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
+        AppendLineWithLineEnding("   /Resources << /Font << /F1 6 0 R >> >> >>");
+        AppendLineWithLineEnding("endobj");
+
+        var xref = Len();
+        AppendLineWithLineEnding("xref");
+        AppendLineWithLineEnding("0 8");
+        AppendLineWithLineEnding("0000000000 65535 f ");
+        foreach (var o in new[] { o1, o2, o3, o4, o5, o6, o7 })
+            AppendLineWithLineEnding($"{o:D10} 00000 n ");
+        AppendLineWithLineEnding("trailer");
+        AppendLineWithLineEnding("<< /Size 8 /Root 1 0 R >>");
+        AppendLineWithLineEnding("startxref");
+        AppendLineWithLineEnding(xref.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
+
+        int Len() => Encoding.Latin1.GetByteCount(sb.ToString());
+
+        void AppendLineWithLineEnding(string line) => sb.Append(line).Append('\n');
+    }
+
+    // Builds a PDF with a DeviceRGB image XObject and a Do operator that paints it.
+    // The image stream is ZLib-compressed; since the compressed bytes are binary,
+    // the PDF is assembled as a byte array using a MemoryStream.
+    private static byte[] BuildWithImageXObject(int width, int height, byte[] rgbData)
+    {
+        var compressed = ZlibCompress(rgbData);
+        var cs = $"q {width * 10} 0 0 {height * 10} 0 0 cm /Im1 Do Q";
+        var csBytes = Encoding.Latin1.GetBytes(cs);
+
+        using var ms = new MemoryStream();
+        Line("%PDF-1.7");
+        Line("%\xE2\xE3\xCF\xD3");
+
+        var o1 = Pos();
+        Line("1 0 obj");
+        Line("<< /Type /Catalog /Pages 2 0 R >>");
+        Line("endobj");
+        var o2 = Pos();
+        Line("2 0 obj");
+        Line("<< /Type /Pages /Kids [5 0 R] /Count 1 >>");
+        Line("endobj");
+
+        // Object 3 — content stream
+        var o3 = Pos();
+        Line("3 0 obj");
+        Line($"<< /Length {csBytes.Length} >>");
+        Line("stream");
+        Binary(csBytes);
+        Line(string.Empty);
+        Line("endstream");
+        Line("endobj");
+
+        // Object 4 — Image XObject (FlateDecode, binary stream)
+        var o4 = Pos();
+        Line("4 0 obj");
+        Line($"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
+        Line($"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length {compressed.Length} >>");
+        Line("stream");
+        Binary(compressed);
+        Line(string.Empty);
+        Line("endstream");
+        Line("endobj");
+
+        // Object 5 — Page
+        var o5 = Pos();
+        Line("5 0 obj");
+        Line("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
+        Line("   /Resources << /XObject << /Im1 4 0 R >> >> >>");
+        Line("endobj");
+
+        var xref = Pos();
+        Line("xref");
+        Line("0 6");
+        Line("0000000000 65535 f ");
+        foreach (var o in new[] { o1, o2, o3, o4, o5 })
+            Line($"{o:D10} 00000 n ");
+        Line("trailer");
+        Line("<< /Size 6 /Root 1 0 R >>");
+        Line("startxref");
+        Line(xref.ToString());
+        Text("%%EOF");
+
+        return ms.ToArray();
+
+        void Text(string s) => ms.Write(Encoding.Latin1.GetBytes(s));
+
+        void Line(string s)
+        {
+            Text(s);
+            ms.WriteByte((byte)'\n');
+        }
+
+        void Binary(byte[] b) => ms.Write(b);
+
+        long Pos() => ms.Position;
     }
 
     private static byte[] ZlibCompress(byte[] data)

@@ -129,5 +129,19 @@ internal sealed class RasterBuffer(int width, int height)
         }
     }
 
+    // Writes an opaque RGB pixel directly (used for image XObject blitting, no alpha).
+    [SuppressMessage("ReSharper", "BadListLineBreaks")]
+    internal void BlitImagePixel(int x, int y, byte r, byte g, byte b)
+    {
+        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
+            return;
+
+        var i = ((y * Width) + x) * 4;
+        _data[i] = r;
+        _data[i + 1] = g;
+        _data[i + 2] = b;
+        _data[i + 3] = 255;
+    }
+
     internal byte[] ToArgbBytes() => _data;
 }

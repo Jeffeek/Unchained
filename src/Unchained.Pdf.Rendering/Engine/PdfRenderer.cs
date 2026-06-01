@@ -73,9 +73,11 @@ public sealed class PdfRenderer : IRenderer
         var buffer = new RasterBuffer(pixW, pixH);
         buffer.Clear(r: 255, g: 255, b: 255);
 
-        // Use the public IPdfPage interface — no internal casting required.
         var fontMap = page.GetFontNameMap();
-        var renderer = new PageRenderer(buffer, _fonts, scale, page.Height);
+        var embeddedFontBytes = page.GetEmbeddedFontBytes();
+        var imageXObjects = page.GetImageXObjects();
+        // ReSharper disable once BadListLineBreaks
+        var renderer = new PageRenderer(buffer, _fonts, scale, page.Height, embeddedFontBytes, imageXObjects);
         renderer.Render(page.GetContentOperators(), fontMap);
 
         return PdfPngEncoder.Encode(buffer);

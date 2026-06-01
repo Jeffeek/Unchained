@@ -73,4 +73,19 @@ public interface IPdfPage
     /// Used by renderers to resolve the actual typeface for each <c>Tf</c> operator.
     /// </summary>
     IReadOnlyDictionary<string, string> GetFontNameMap();
+
+    /// <summary>
+    /// Returns a map from PDF font resource name (e.g. <c>F1</c>) to the raw bytes of the
+    /// embedded font program (<c>/FontFile</c>, <c>/FontFile2</c>, or <c>/FontFile3</c>),
+    /// or <see langword="null"/> when the font is not embedded (Standard 14, system font).
+    /// </summary>
+    IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes();
+
+    /// <summary>
+    /// Decodes and returns all raster image XObjects referenced in this page's
+    /// <c>/Resources /XObject</c> dictionary. Only <c>/DeviceRGB</c> images with 8 bits per
+    /// component are decoded; other colour spaces produce a solid mid-grey placeholder.
+    /// Returns an empty dictionary when the page has no image XObjects.
+    /// </summary>
+    IReadOnlyDictionary<string, ImageXObject> GetImageXObjects();
 }

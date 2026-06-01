@@ -32,7 +32,7 @@ public sealed class TableGenerator : ITableGenerator
 
     private static IPdfDocument Generate(TableData data, TableStyle style)
     {
-        var layout = TableLayout.Compute(data.Headers.Count, style, hasTitle: data.Title is not null);
+        var layout = TableLayout.Compute(data.Headers.Count, style, hasTitle: data.Title is not null, data);
         var builder = new ObjectGraphBuilder();
         var resourcesRef = AddSharedResources(builder, style);
 
@@ -64,7 +64,7 @@ public sealed class TableGenerator : ITableGenerator
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
 
-        var layout = TableLayout.Compute(data.Headers.Count, style, hasTitle: data.Title is not null);
+        var layout = TableLayout.Compute(data.Headers.Count, style, hasTitle: data.Title is not null, data);
         var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
         var resourcesRef = AddSharedResources(builder, style);
 

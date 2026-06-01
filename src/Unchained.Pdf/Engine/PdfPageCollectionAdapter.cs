@@ -137,6 +137,96 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     /// <inheritdoc />
     public IReadOnlyDictionary<string, string> GetFontNameMap() => ResolveFontNames();
 
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes()
+    {
+        var result = new Dictionary<string, byte[]?>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Font]);
+        if (fontDict is null)
+            return result;
+
+        foreach (var (key, value) in fontDict.Entries)
+        {
+            var fontEntry = ResolveDict(value);
+            if (fontEntry is null)
+            {
+                result[key] = null;
+                continue;
+            }
+
+            var descriptor = ResolveDict(fontEntry[PdfName.Get("FontDescriptor")]);
+            if (descriptor is null)
+            {
+                result[key] = null;
+                continue;
+            }
+
+            // Try /FontFile2 (TrueType), /FontFile3 (OpenType/CFF), /FontFile (Type1) in order.
+            var streamRef = descriptor[PdfName.Get("FontFile2")]
+                            ?? descriptor[PdfName.Get("FontFile3")]
+                            ?? descriptor[PdfName.Get("FontFile")];
+
+            if (streamRef is null)
+            {
+                result[key] = null;
+                continue;
+            }
+
+            var fontStream = streamRef is PdfIndirectReference r
+                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfStream
+                : streamRef as PdfStream;
+
+            result[key] = fontStream is not null
+                ? StreamFilters.Decode(fontStream).ToArray()
+                : null;
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, ImageXObject> GetImageXObjects()
+    {
+        var result = new Dictionary<string, ImageXObject>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var xobjDict = ResolveDict(resources?[PdfName.Get("XObject")]);
+        if (xobjDict is null)
+            return result;
+
+        foreach (var (key, value) in xobjDict.Entries)
+        {
+            var stream = value is PdfIndirectReference r
+                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfStream
+                : value as PdfStream;
+
+            if (stream is null) continue;
+            if (stream.Dictionary.GetName(PdfName.Subtype.Value) != "Image") continue;
+
+            var w = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("Width"))?.Value ?? 0);
+            var h = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("Height"))?.Value ?? 0);
+            if (w <= 0 || h <= 0) continue;
+
+            var cs = stream.Dictionary.GetName("ColorSpace");
+            var bpc = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 8);
+            var decoded = StreamFilters.Decode(stream);
+
+            byte[] rgb;
+            if (cs == "DeviceRGB" && bpc == 8 && decoded.Length == w * h * 3)
+                rgb = decoded.ToArray();
+            else
+            {
+                // Unsupported colour space — solid mid-grey placeholder.
+                rgb = new byte[w * h * 3];
+                Array.Fill(rgb, (byte)128);
+            }
+
+            result[key] = new ImageXObject(w, h, rgb);
+        }
+
+        return result;
+    }
+
     // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
     // to the actual base font name (e.g. "Helvetica") for AFM width lookup.
     private Dictionary<string, string> ResolveFontNames()

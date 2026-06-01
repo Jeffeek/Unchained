@@ -12,7 +12,9 @@ internal sealed class PageRenderer(
     RasterBuffer buffer,
     FontCache fonts,
     double scale,
-    double pageHeightPt
+    double pageHeightPt,
+    IReadOnlyDictionary<string, byte[]?>? embeddedFontBytes = null,
+    IReadOnlyDictionary<string, ImageXObject>? imageXObjects = null
 )
 {
     // Current path segments accumulated between path construction operators.
@@ -285,7 +287,8 @@ internal sealed class PageRenderer(
             // ── XObject ───────────────────────────────────────────────────────
             case "Do" when op.Operands.Count >= 1:
             {
-                // XObject rendering deferred — requires embedded-font subsystem (M6).
+                if (op.Operands[0] is PdfName xName)
+                    PaintXObject(xName.Value);
                 break;
             }
         }
@@ -308,9 +311,13 @@ internal sealed class PageRenderer(
         if (_gs.FontSize <= 0 || _gs.FontName.Length == 0)
             return;
 
+        // Resolve embedded font bytes for this font resource name (if any).
+        byte[]? embeddedBytes = null;
+        embeddedFontBytes?.TryGetValue(_gs.FontName, out embeddedBytes);
+
         try
         {
-            var face = fonts.GetFace(_gs.FontName);
+            var face = fonts.GetFace(_gs.FontName, embeddedBytes);
             var pixelSize = (uint)Math.Max(1, Math.Round(_gs.FontSize * scale));
             face.SetPixelSizes(0, pixelSize);
 
@@ -338,8 +345,10 @@ internal sealed class PageRenderer(
                     _gs.FillB
                 );
 
-                // Advance text position
-                var advance = ((glyph.Advance.X.Value / 65536.0 / scale) + _gs.CharSpace) * (_gs.HorizontalScale / 100.0);
+                // Advance text position.
+                // glyph.Advance.X.Value is in 26.6 fixed-point (1/64 pixel units).
+                // Dividing by 64.0 converts to pixels; dividing by scale converts to PDF points.
+                var advance = ((glyph.Advance.X.Value / 64.0 / scale) + _gs.CharSpace) * (_gs.HorizontalScale / 100.0);
                 if (c == 32)
                     advance += _gs.WordSpace * (_gs.HorizontalScale / 100.0);
                 _gs.TextMatrix[4] += advance;
@@ -490,7 +499,42 @@ internal sealed class PageRenderer(
 
     // ── XObject / image ───────────────────────────────────────────────────────
 
-    // PaintXObject is a no-op stub until the embedded-font subsystem (M6) is in place.
+    private void PaintXObject(string resourceName)
+    {
+        if (imageXObjects is null) return;
+        if (!imageXObjects.TryGetValue(resourceName, out var img)) return;
+
+        // The Do operator places the image into the unit square [0,0] → [1,1] in user space,
+        // transformed by the current CTM. Compute the destination rect in pixel space.
+        var (x0, y0) = UToPixel(0, 0);
+        var (x1, y1) = UToPixel(1, 1);
+
+        // After CTM, top-left is (min px, min py), bottom-right is (max px, max py).
+        var dstX = (int)Math.Min(x0, x1);
+        var dstY = (int)Math.Min(y0, y1);
+        var dstW = (int)Math.Abs(x1 - x0);
+        var dstH = (int)Math.Abs(y1 - y0);
+
+        if (dstW <= 0 || dstH <= 0) return;
+
+        // Simple nearest-neighbour blit with scaling.
+        for (var py = 0; py < dstH; py++)
+        {
+            var srcY = py * img.Height / dstH;
+            for (var px = 0; px < dstW; px++)
+            {
+                var srcX = px * img.Width / dstW;
+                var srcOff = ((srcY * img.Width) + srcX) * 3;
+                buffer.BlitImagePixel(
+                    dstX + px,
+                    dstY + py,
+                    img.RgbData[srcOff],
+                    img.RgbData[srcOff + 1],
+                    img.RgbData[srcOff + 2]
+                );
+            }
+        }
+    }
 
     // ── Coordinate helpers ────────────────────────────────────────────────────
 
