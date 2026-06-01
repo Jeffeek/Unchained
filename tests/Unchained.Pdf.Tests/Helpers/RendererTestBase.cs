@@ -1,3 +1,4 @@
+using Xunit;
 using Unchained.Pdf.Rendering.Engine;
 
 namespace Unchained.Pdf.Tests.Helpers;
@@ -27,4 +28,12 @@ public abstract class RendererTestBase : PdfTestBase, IDisposable
     }
 
     public void Dispose() => Renderer?.Dispose();
+
+    /// <summary>
+    /// Skips the current test (marks it as <em>Skipped</em>, not <em>Passed</em>) when
+    /// FreeType2 is not available at runtime. Use instead of <c>if (!FreeTypeAvailable) return;</c>
+    /// so the test runner correctly distinguishes "not run" from "passed".
+    /// </summary>
+    protected void SkipIfNoFreeType() =>
+        Assert.SkipUnless(FreeTypeAvailable, "FreeType2 native library not available at runtime.");
 }

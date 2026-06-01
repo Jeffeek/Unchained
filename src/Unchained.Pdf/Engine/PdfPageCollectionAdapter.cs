@@ -209,16 +209,19 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
 
             var cs = stream.Dictionary.GetName("ColorSpace");
             var bpc = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 8);
-            var decoded = StreamFilters.Decode(stream);
 
             byte[] rgb;
-            if (cs == "DeviceRGB" && bpc == 8 && decoded.Length == w * h * 3)
-                rgb = decoded.ToArray();
-            else
+            try
             {
-                // Unsupported colour space — solid mid-grey placeholder.
-                rgb = new byte[w * h * 3];
-                Array.Fill(rgb, (byte)128);
+                var decoded = StreamFilters.Decode(stream);
+                rgb = cs == "DeviceRGB" && bpc == 8 && decoded.Length == w * h * 3
+                    ? decoded.ToArray()
+                    : BuildGrayPlaceholder(w, h);
+            }
+            catch (NotImplementedException)
+            {
+                // Filter not yet supported (e.g. DCTDecode/JPEG, JPXDecode) — use placeholder.
+                rgb = BuildGrayPlaceholder(w, h);
             }
 
             result[key] = new ImageXObject(w, h, rgb);
@@ -314,6 +317,13 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             PdfReal r => r.Value,
             _ => 0
         };
+    }
+
+    private static byte[] BuildGrayPlaceholder(int w, int h)
+    {
+        var rgb = new byte[w * h * 3];
+        Array.Fill(rgb, (byte)128);
+        return rgb;
     }
 
     private static double ReadCoordinate(PdfObject obj) => obj switch

@@ -8,7 +8,7 @@ namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
 /// Integration tests for <see cref="Unchained.Pdf.Rendering.Engine.PdfRenderer"/>.
-/// Tests guard with <c>if (!FreeTypeAvailable) return;</c> when FreeType2 is absent.
+/// Tests call <c>SkipIfNoFreeType()</c> so absent FreeType2 shows as Skipped, not Passed.
 /// </summary>
 public sealed class RendererTests : RendererTestBase
 {
@@ -17,8 +17,7 @@ public sealed class RendererTests : RendererTestBase
     [Fact]
     public async Task RenderPage_SinglePage_StartsWithPngSignature()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
@@ -28,8 +27,7 @@ public sealed class RendererTests : RendererTestBase
     [Fact]
     public async Task RenderPage_WithTextContent_StartsWithPngSignature()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.WithTextContent(text: "Hello"));
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
@@ -41,8 +39,7 @@ public sealed class RendererTests : RendererTestBase
     [Fact]
     public async Task RenderPage_150Dpi_WidthApproximatesExpected()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         var page = doc.Pages[1];
@@ -56,8 +53,7 @@ public sealed class RendererTests : RendererTestBase
     [Fact]
     public async Task RenderPage_300Dpi_LargerThan150Dpi()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         var png150 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150));
@@ -72,8 +68,7 @@ public sealed class RendererTests : RendererTestBase
     [Fact]
     public async Task RenderPage_TableDocument_ProducesPng()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         var gen = new TableGenerator();
         var data = new TableData
@@ -91,8 +86,7 @@ public sealed class RendererTests : RendererTestBase
     [Fact]
     public async Task RenderDocumentAsync_MultiPage_ReturnsOnePerPage()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3));
         var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default);
@@ -106,8 +100,7 @@ public sealed class RendererTests : RendererTestBase
     [Fact]
     public async Task RenderPage_Cancellation_ThrowsOperationCanceledException()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         using var cts = new CancellationTokenSource();
@@ -120,7 +113,7 @@ public sealed class RendererTests : RendererTestBase
     [Fact]
     public async Task RenderPage_ProducesNonEmptyPng()
     {
-        if (!FreeTypeAvailable) return;
+        SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.WithTextContent());
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);

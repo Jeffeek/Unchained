@@ -21,6 +21,17 @@ public abstract class PdfTestBase
         Processor.LoadAsync(stream);
 
     /// <summary>
+    /// Tries to load a PDF from a byte array. Returns <see langword="null"/> when parsing
+    /// throws <see cref="Unchained.Pdf.Core.PdfException"/> — an expected, documented
+    /// outcome for genuinely malformed PDFs.
+    /// </summary>
+    protected static async Task<IPdfDocument?> TryLoadDocAsync(byte[] bytes)
+    {
+        try { return await LoadAsync(bytes); }
+        catch (Core.PdfException) { return null; }
+    }
+
+    /// <summary>
     /// Saves <paramref name="doc"/> to a temporary stream and reloads it, exercising
     /// the full serialize–parse round-trip.
     /// </summary>

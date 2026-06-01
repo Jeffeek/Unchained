@@ -18,8 +18,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
     public async Task RenderPage_LigatureFontText_ProducesPng()
     {
         // Any text through a shaped font should produce a valid PNG.
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         var fontData = LoadBundledDejaVuBytes();
         const string cs = "BT /F1 14 Tf 50 700 Td (fi) Tj ET"; // "fi" should form a ligature
@@ -32,8 +31,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
     [Fact]
     public async Task RenderPage_MultiCharText_ProducesNonTrivialPng()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         // Multi-character shaped text should produce a substantially-sized PNG.
         var fontData = LoadBundledDejaVuBytes();
@@ -47,8 +45,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
     [Fact]
     public async Task RenderPage_StandardDocument_ShapingDoesNotBreakExistingOutput()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         // Existing table-generated documents should still render correctly.
         var gen = new TableGenerator();
@@ -66,8 +63,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
     [Fact]
     public async Task RenderPage_AllPageOperatorsStillWork_WithShaping()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         // Table with alternating rows and borders tests the full rendering pipeline.
         var gen = new TableGenerator();
@@ -87,7 +83,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
     [Fact]
     public async Task RenderPage_UnknownFontName_FallsBackToNotoSans()
     {
-        if (!FreeTypeAvailable) return;
+        SkipIfNoFreeType();
 
         // A font name that isn't Standard 14 and has no embedded data → NotoSans fallback.
         const string cs = "BT /F1 12 Tf 50 700 Td (Fallback text) Tj ET";

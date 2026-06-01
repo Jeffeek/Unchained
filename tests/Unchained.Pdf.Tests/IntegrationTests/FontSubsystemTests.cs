@@ -60,7 +60,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task RenderPage_WithEmbeddedFont_ProducesPng()
     {
-        if (!FreeTypeAvailable) return;
+        SkipIfNoFreeType();
 
         // Use the bundled DejaVu font (valid TrueType) so FreeType2 can actually load it.
         var fontData = LoadBundledDejaVuBytes();
@@ -73,7 +73,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task RenderPage_WithEmbeddedFont_ProducesValidSizedPng()
     {
-        if (!FreeTypeAvailable) return;
+        SkipIfNoFreeType();
 
         var fontData = LoadBundledDejaVuBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
@@ -187,8 +187,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task RenderPage_WithImageXObject_ProducesPng()
     {
-        if (!FreeTypeAvailable)
-            return;
+        SkipIfNoFreeType();
 
         var rgb = CreateSolidRgb(4, 4, r: 200, g: 100, b: 50);
         var pdfBytes = PdfFixtures.WithImageXObject(4, 4, rgb);
