@@ -121,9 +121,15 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         return result;
     }
 
+    // Exposes the document core for XObject resolution and font embedding in M5.
+    internal PdfDocumentCore Core => core;
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, string> GetFontNameMap() => ResolveFontNames();
+
     // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
     // to the actual base font name (e.g. "Helvetica") for AFM width lookup.
-    private Dictionary<string, string> ResolveFontNames()
+    internal Dictionary<string, string> ResolveFontNames()
     {
         var result = new Dictionary<string, string>();
         var resources = ResolveDict(page[PdfName.Resources]);

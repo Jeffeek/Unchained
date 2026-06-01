@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Unchained.Pdf.Tests"/>
+    <InternalsVisibleTo Include="Unchained.Pdf.Tests" />
   </ItemGroup>
 
 </Project>

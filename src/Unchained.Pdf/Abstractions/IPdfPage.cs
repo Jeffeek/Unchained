@@ -66,4 +66,11 @@ public interface IPdfPage
     /// Returns an empty list when the page has no annotations.
     /// </summary>
     IReadOnlyList<Models.Annotation> GetAnnotations();
+
+    /// <summary>
+    /// Returns a map from PDF font resource name (e.g. <c>F1</c>) to base font name
+    /// (e.g. <c>Helvetica</c>) as declared in the page's <c>/Resources /Font</c> dictionary.
+    /// Used by renderers to resolve the actual typeface for each <c>Tf</c> operator.
+    /// </summary>
+    IReadOnlyDictionary<string, string> GetFontNameMap();
 }

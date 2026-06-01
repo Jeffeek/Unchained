@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Unchained.Pdf\Unchained.Pdf.csproj" />
+    <ProjectReference Include="..\..\src\Unchained.Pdf.Rendering\Unchained.Pdf.Rendering.csproj" />
   </ItemGroup>
 
 </Project>
