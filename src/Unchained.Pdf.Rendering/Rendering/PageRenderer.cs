@@ -1,6 +1,7 @@
-using SharpFont;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
+using LoadFlags = SharpFont.LoadFlags;
+using LoadTarget = SharpFont.LoadTarget;
 
 namespace Unchained.Pdf.Rendering.Rendering;
 
@@ -308,49 +309,64 @@ internal sealed class PageRenderer(
 
     private void ShowString(ReadOnlySpan<byte> bytes)
     {
-        if (_gs.FontSize <= 0 || _gs.FontName.Length == 0)
+        if (_gs.FontSize <= 0 || _gs.FontName.Length == 0 || bytes.IsEmpty)
             return;
 
-        // Resolve embedded font bytes for this font resource name (if any).
         byte[]? embeddedBytes = null;
         embeddedFontBytes?.TryGetValue(_gs.FontName, out embeddedBytes);
 
         try
         {
-            var face = fonts.GetFace(_gs.FontName, embeddedBytes);
+            var (ftFace, hbFont) = fonts.GetFonts(_gs.FontName, embeddedBytes);
             var pixelSize = (uint)Math.Max(1, Math.Round(_gs.FontSize * scale));
-            face.SetPixelSizes(0, pixelSize);
+            ftFace.SetPixelSizes(0, pixelSize);
 
-            foreach (var c in bytes)
+            // Sync HarfBuzz font scale to the current pixel size (26.6 units).
+            var hbScale = (int)(pixelSize * 64);
+            hbFont.SetScale(hbScale, hbScale);
+
+            // Shape the run — HarfBuzz applies GSUB/GPOS rules, handles RTL, ligatures.
+            using var hbBuffer = new HarfBuzzSharp.Buffer();
+            hbBuffer.AddUtf8(bytes.ToArray());
+            hbBuffer.GuessSegmentProperties();
+            hbFont.Shape(hbBuffer);
+
+            var glyphInfos = hbBuffer.GlyphInfos;
+            var glyphPositions = hbBuffer.GlyphPositions;
+
+            for (var i = 0; i < glyphInfos.Length; i++)
             {
-                face.LoadChar(c, LoadFlags.Render, LoadTarget.Normal);
-                var glyph = face.Glyph;
+                var glyphId = glyphInfos[i].Codepoint;
+
+                // ReSharper disable once EmptyGeneralCatchClause
+                try
+                {
+                    ftFace.LoadGlyph(glyphId, LoadFlags.Render, LoadTarget.Normal);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                var glyph = ftFace.Glyph;
                 var bm = glyph.Bitmap;
 
-                // Origin in pixel space (bottom of baseline)
-                var originX = _gs.TextMatrix[4];
-                var originY = _gs.TextMatrix[5];
+                // HarfBuzz positions are in 26.6 px; convert to PDF user-space points.
+                var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
+                var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale);
                 var (px, py) = UToPixel(originX, originY);
 
-                // FreeType bitmap top-left = origin + (bearingX, -bearingY)
-                var bmpX = (int)(px + glyph.BitmapLeft);
-                var bmpY = (int)(py - glyph.BitmapTop);
-
                 buffer.BlitGlyphBitmap(
-                    bmpX,
-                    bmpY,
+                    (int)(px + glyph.BitmapLeft),
+                    (int)(py - glyph.BitmapTop),
                     bm,
                     _gs.FillR,
                     _gs.FillG,
                     _gs.FillB
                 );
 
-                // Advance text position.
-                // glyph.Advance.X.Value is in 26.6 fixed-point (1/64 pixel units).
-                // Dividing by 64.0 converts to pixels; dividing by scale converts to PDF points.
-                var advance = ((glyph.Advance.X.Value / 64.0 / scale) + _gs.CharSpace) * (_gs.HorizontalScale / 100.0);
-                if (c == 32)
-                    advance += _gs.WordSpace * (_gs.HorizontalScale / 100.0);
+                // XAdvance from HarfBuzz (26.6 px) → PDF user-space points.
+                var advance = ((glyphPositions[i].XAdvance / 64.0 / scale) + _gs.CharSpace) * (_gs.HorizontalScale / 100.0);
                 _gs.TextMatrix[4] += advance;
             }
         }

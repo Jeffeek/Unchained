@@ -29,8 +29,19 @@
     </Reference>
   </ItemGroup>
 
+  <!-- HarfBuzz (MIT) — text shaping for complex scripts (Arabic, Devanagari, CJK, ligatures). -->
+  <ItemGroup Label="HarfBuzz">
+    <PackageReference Include="HarfBuzzSharp" Version="8.3.1.5" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.5" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.5" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.5" />
+  </ItemGroup>
+
   <!-- Substitute fonts for Standard 14 (DejaVu — Bitstream Vera / SIL OFL). -->
+  <!-- NotoSans-Regular (OFL) — primary fallback for unrecognised/unembedded fonts;
+       broader Unicode coverage than DejaVu (Latin, Greek, Cyrillic, and more). -->
   <ItemGroup Label="Substitute fonts">
+    <EmbeddedResource Include="Rendering\Fonts\NotoSans-Regular.ttf" />
     <EmbeddedResource Include="Rendering\Fonts\DejaVuSans-Regular.ttf" />
     <EmbeddedResource Include="Rendering\Fonts\DejaVuSans-Bold.ttf" />
     <EmbeddedResource Include="Rendering\Fonts\DejaVuSans-Oblique.ttf" />

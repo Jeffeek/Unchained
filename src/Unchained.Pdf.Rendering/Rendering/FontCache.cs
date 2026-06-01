@@ -1,36 +1,43 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
-using SharpFont;
+using HarfBuzzSharp;
+using FtFace = SharpFont.Face;
+using FtLibrary = SharpFont.Library;
 
 namespace Unchained.Pdf.Rendering.Rendering;
 
 /// <summary>
-/// Owns the FreeType2 library handle and caches one <see cref="Face"/> per font name.
+/// Owns the FreeType2 library handle, one HarfBuzz font per loaded typeface,
+/// and the corresponding raw font bytes used to create both.
 /// Standard 14 fonts are substituted with bundled DejaVu fonts (Bitstream Vera / SIL OFL).
+/// Unrecognised fonts fall back to bundled NotoSans-Regular (SIL OFL).
 /// </summary>
 internal sealed class FontCache : IDisposable
 {
-    private readonly Library _library;
-    private readonly Dictionary<string, Face> _faces = new(StringComparer.OrdinalIgnoreCase);
+    private readonly FtLibrary _ftLibrary;
+
+    // Each entry: FreeType2 Face (for rasterisation) + HarfBuzz Font (for shaping).
+    private readonly Dictionary<string, (FtFace FtFace, Font HbFont)> _fonts =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private bool _disposed;
 
     // SharpFont uses DllImport("freetype6") on all platforms, but the system library is
     // named differently on Linux (libfreetype.so.6) and macOS (libfreetype.6.dylib).
-    // This resolver bridges that gap for .NET 5+, where Mono's dll map is not used.
-    static FontCache() => NativeLibrary.SetDllImportResolver(typeof(Library).Assembly, ResolveFreetype);
+    // This resolver bridges that gap for .NET 5+, where Mono's dllmap is not used.
+    static FontCache() => NativeLibrary.SetDllImportResolver(typeof(FtLibrary).Assembly, ResolveFreetype);
 
     private static nint ResolveFreetype(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
     {
         if (libraryName != "freetype6") return nint.Zero;
 
-        // Platform-specific candidate names (system or bundled in output directory).
         string[] candidates;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             candidates = ["libfreetype.so.6", "libfreetype.so"];
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             candidates = ["libfreetype.6.dylib", "libfreetype.dylib"];
         else
-            return nint.Zero; // Windows: freetype6.dll found by default DllImport resolution
+            return nint.Zero; // Windows: freetype6.dll resolved by default
 
         foreach (var name in candidates)
         {
@@ -41,35 +48,63 @@ internal sealed class FontCache : IDisposable
         return nint.Zero;
     }
 
-    internal FontCache() => _library = new Library();
+    internal FontCache() => _ftLibrary = new FtLibrary();
 
     /// <summary>
-    /// Returns a FreeType2 <see cref="Face"/> for the named font.
-    /// If <paramref name="embeddedBytes"/> is provided (embedded font from PDF), it is used.
-    /// Otherwise, falls back to the bundled DejaVu substitute.
+    /// Returns the FreeType2 <see cref="HarfBuzzSharp.Face"/> and HarfBuzz <see cref="Font"/> for the
+    /// named font. If <paramref name="embeddedBytes"/> are provided (an embedded font program
+    /// from the PDF), they are used; otherwise the bundled substitute is selected.
     /// </summary>
-    internal Face GetFace(string fontName, byte[]? embeddedBytes = null)
+    internal (FtFace FtFace, Font HbFont) GetFonts(string fontName, byte[]? embeddedBytes = null)
     {
-        if (_faces.TryGetValue(fontName, out var cached)) return cached;
+        if (_fonts.TryGetValue(fontName, out var cached)) return cached;
 
-        Face face;
-        if (embeddedBytes is { Length: > 0 })
-            face = _library.NewMemoryFace(embeddedBytes, 0);
-        else
+        var bytes = embeddedBytes is { Length: > 0 }
+            ? embeddedBytes
+            : LoadSubstituteFont(fontName);
+
+        var pair = CreatePair(bytes);
+        _fonts[fontName] = pair;
+
+        return pair;
+    }
+
+    // Convenience overload — returns only the FreeType2 face (used by path-rendering paths).
+    internal FtFace GetFace(string fontName, byte[]? embeddedBytes = null) =>
+        GetFonts(fontName, embeddedBytes).FtFace;
+
+    private (FtFace FtFace, Font HbFont) CreatePair(byte[] fontBytes)
+    {
+        var ftFace = _ftLibrary.NewMemoryFace(fontBytes, 0);
+
+        // HarfBuzz Blob requires an IntPtr to the data.
+        // GCHandle.Alloc pins the managed array; MemoryMode.Duplicate copies it internally
+        // so we can safely release the pin after the Blob is constructed.
+        var gch = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
+        Font hbFont;
+        try
         {
-            var resourceBytes = LoadSubstituteFont(fontName);
-            face = _library.NewMemoryFace(resourceBytes, 0);
+            using var blob = new Blob(gch.AddrOfPinnedObject(), fontBytes.Length, MemoryMode.Duplicate);
+            using var hbFace = new Face(blob, 0);
+            hbFont = new Font(hbFace);
+            // Scale HarfBuzz advances to FreeType2 glyph-space (units-per-em).
+            // PageRenderer rescales to pixel units via SetScale before each shaping call.
+            hbFont.SetScale(ftFace.UnitsPerEM, ftFace.UnitsPerEM);
+        }
+        finally
+        {
+            gch.Free();
         }
 
-        _faces[fontName] = face;
-
-        return face;
+        return (ftFace, hbFont);
     }
+
+    // ── Font selection ────────────────────────────────────────────────────────
 
     private static byte[] LoadSubstituteFont(string fontName) =>
         LoadEmbeddedFont(SelectResourceName(fontName));
 
-    // Maps Standard 14 font names to bundled DejaVu resource names.
+    // Priority: Standard 14 → DejaVu variant → NotoSans (broadest Unicode coverage).
     private static string SelectResourceName(string fontName) => fontName switch
     {
         "Helvetica-Bold" or "Helvetica-BoldOblique" => "DejaVuSans-Bold.ttf",
@@ -77,17 +112,16 @@ internal sealed class FontCache : IDisposable
         "Helvetica" or "Helvetica-Regular" => "DejaVuSans-Regular.ttf",
         "Times-Bold" or "Times-BoldItalic" => "DejaVuSerif-Bold.ttf",
         "Times-Roman" or "Times-Italic" => "DejaVuSerif-Regular.ttf",
-        "Courier" or "Courier-Bold"
-            or "Courier-Oblique" or "Courier-BoldOblique"
+        "Courier" or "Courier-Bold" or "Courier-Oblique" or "Courier-BoldOblique"
             => "DejaVuSansMono-Regular.ttf",
-        _ => "DejaVuSans-Regular.ttf"
+        // All other fonts (embedded with unrecognised name, or non-Standard-14 system fonts)
+        // fall back to NotoSans-Regular — better Unicode coverage than DejaVu.
+        _ => "NotoSans-Regular.ttf"
     };
 
     private static byte[] LoadEmbeddedFont(string resourceFileName)
     {
         var asm = typeof(FontCache).Assembly;
-        // Embedded resource name: Unchained.Pdf.Rendering.Rendering.Fonts.<filename>
-        // (default namespace = assembly name = Unchained.Pdf.Rendering, folder path = Rendering/Fonts/)
         var resourceName = $"Unchained.Pdf.Rendering.Rendering.Fonts.{resourceFileName}";
         using var stream = asm.GetManifestResourceStream(resourceName)
                            ?? throw new InvalidOperationException(
@@ -101,14 +135,16 @@ internal sealed class FontCache : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
+        if (_disposed) return;
 
         _disposed = true;
-        foreach (var face in _faces.Values)
-            face.Dispose();
+        foreach (var (ftFace, hbFont) in _fonts.Values)
+        {
+            hbFont.Dispose();
+            ftFace.Dispose();
+        }
 
-        _faces.Clear();
-        _library.Dispose();
+        _fonts.Clear();
+        _ftLibrary.Dispose();
     }
 }
