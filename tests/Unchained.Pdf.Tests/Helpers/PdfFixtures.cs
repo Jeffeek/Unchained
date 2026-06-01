@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Tests.Helpers;
 
@@ -12,6 +13,19 @@ internal static class PdfFixtures
     public static byte[] SinglePage() => Build(pageCount: 1);
 
     public static byte[] MultiPage(int count) => Build(pageCount: count);
+
+    /// <summary>
+    /// Creates a <see cref="TableData"/> with auto-generated header and cell text.
+    /// Headers are <c>Col1…ColN</c>; cells are <c>R{row}C{col}</c>.
+    /// </summary>
+    public static TableData SimpleTableData(int rows, int cols = 3) => new()
+    {
+        Headers = Enumerable.Range(1, cols).Select(static i => $"Col{i}").ToList(),
+        Rows = Enumerable.Range(0, rows)
+            .Select(IReadOnlyList<string> (r) =>
+                Enumerable.Range(1, cols).Select(c => $"R{r}C{c}").ToList())
+            .ToList()
+    };
 
     /// <summary>
     /// Generates a single-page PDF whose /Font entry includes a /FontFile2 stream

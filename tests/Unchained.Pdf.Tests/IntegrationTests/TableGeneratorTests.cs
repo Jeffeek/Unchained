@@ -1,23 +1,18 @@
 using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
+using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
-public sealed class TableGeneratorTests
+public sealed class TableGeneratorTests : PdfTestBase
 {
     private static readonly TableGenerator Generator = new();
-    private static readonly DocumentProcessor Processor = new();
 
-    private static TableData SimpleData(int rows, int cols = 3) => new()
-    {
-        Headers = Enumerable.Range(1, cols).Select(static i => $"Col{i}").ToList(),
-        Rows = Enumerable.Range(0, rows)
-            .Select(IReadOnlyList<string> (r) => Enumerable.Range(1, cols)
-                .Select(c => $"R{r}C{c}").ToList())
-            .ToList()
-    };
+    // Shortcut to the shared fixture factory.
+    private static TableData SimpleData(int rows, int cols = 3) =>
+        PdfFixtures.SimpleTableData(rows, cols);
 
     // ── GenerateAsync ─────────────────────────────────────────────────────────
 
@@ -71,7 +66,7 @@ public sealed class TableGeneratorTests
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms);
         ms.Position = 0;
-        await using var reloaded = await Processor.LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms);
         reloaded.PageCount.ShouldBe(1);
     }
 
@@ -83,7 +78,7 @@ public sealed class TableGeneratorTests
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms);
         ms.Position = 0;
-        await using var reloaded = await Processor.LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms);
         reloaded.PageCount.ShouldBe(doc.PageCount);
     }
 
@@ -176,7 +171,7 @@ public sealed class TableGeneratorTests
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms);
         ms.Position = 0;
-        await using var reloaded = await Processor.LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms);
 
         reloaded.PageCount.ShouldBe(2);
     }
@@ -184,8 +179,8 @@ public sealed class TableGeneratorTests
     [Fact]
     public async Task AppendTableAsync_AppendToExistingDocument_PageCountIncreased()
     {
-        var fixtures = Helpers.PdfFixtures.MultiPage(count: 3);
-        await using var doc = await Processor.LoadAsync(new MemoryStream(fixtures));
+        var fixtures = PdfFixtures.MultiPage(count: 3);
+        await using var doc = await LoadAsync(fixtures);
         var before = doc.PageCount;
 
         await Generator.AppendTableAsync(doc, SimpleData(rows: 2), TableStyle.Default);

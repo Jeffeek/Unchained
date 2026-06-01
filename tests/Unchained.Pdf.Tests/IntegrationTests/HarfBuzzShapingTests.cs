@@ -1,6 +1,7 @@
 using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
+using Unchained.Pdf.Tests.Helpers;
 using Unchained.Pdf.Rendering.Engine;
 using Xunit;
 
@@ -9,65 +10,44 @@ namespace Unchained.Pdf.Tests.IntegrationTests;
 /// <summary>
 /// Tests for M6 steps 6.7 (HarfBuzz text shaping) and 6.8 (NotoSans fallback font).
 /// </summary>
-public sealed class HarfBuzzShapingTests : IDisposable
+public sealed class HarfBuzzShapingTests : RendererTestBase
 {
-    private static readonly DocumentProcessor Processor = new();
-    private readonly PdfRenderer? _renderer;
-    private readonly bool _freeTypeAvailable;
-
-    public HarfBuzzShapingTests()
-    {
-        try
-        {
-            _renderer = new PdfRenderer();
-            _freeTypeAvailable = true;
-        }
-        catch
-        {
-            _freeTypeAvailable = false;
-        }
-    }
-
-    public void Dispose() => _renderer?.Dispose();
-
-    private bool FreeTypeAvailable() => _freeTypeAvailable;
-
     // ── 6.7 — HarfBuzz shaping ────────────────────────────────────────────────
 
     [Fact]
     public async Task RenderPage_LigatureFontText_ProducesPng()
     {
         // Any text through a shaped font should produce a valid PNG.
-        if (!FreeTypeAvailable())
+        if (!FreeTypeAvailable)
             return;
 
         var fontData = LoadBundledDejaVuBytes();
         const string cs = "BT /F1 14 Tf 50 700 Td (fi) Tj ET"; // "fi" should form a ligature
-        var pdfBytes = Helpers.PdfFixtures.WithEmbeddedFont(fontData, cs);
-        await using var doc = await Processor.LoadAsync(new MemoryStream(pdfBytes));
-        var png = await _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
-        png[..8].ShouldBe([137, 80, 78, 71, 13, 10, 26, 10]);
+        var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, cs);
+        await using var doc = await LoadAsync(pdfBytes);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
     [Fact]
     public async Task RenderPage_MultiCharText_ProducesNonTrivialPng()
     {
-        if (!FreeTypeAvailable())
+        if (!FreeTypeAvailable)
             return;
 
         // Multi-character shaped text should produce a substantially-sized PNG.
         var fontData = LoadBundledDejaVuBytes();
         const string cs = "BT /F1 12 Tf 50 700 Td (Hello, World!) Tj ET";
-        var pdfBytes = Helpers.PdfFixtures.WithEmbeddedFont(fontData, cs);
-        await using var doc = await Processor.LoadAsync(new MemoryStream(pdfBytes));
-        var png = await _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, cs);
+        await using var doc = await LoadAsync(pdfBytes);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
         png.Length.ShouldBeGreaterThan(500);
     }
 
     [Fact]
     public async Task RenderPage_StandardDocument_ShapingDoesNotBreakExistingOutput()
     {
-        if (!FreeTypeAvailable())
+        if (!FreeTypeAvailable)
             return;
 
         // Existing table-generated documents should still render correctly.
@@ -78,7 +58,7 @@ public sealed class HarfBuzzShapingTests : IDisposable
             Rows = [["Alice", "100"], ["Bob", "95"]]
         };
         await using var doc = await gen.GenerateAsync(data, TableStyle.Default);
-        var pages = await _renderer!.RenderDocumentAsync(doc, RenderOptions.Default);
+        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default);
         pages.Count.ShouldBe(doc.PageCount);
         pages.ShouldAllBe(static p => p.Length > 100);
     }
@@ -86,7 +66,7 @@ public sealed class HarfBuzzShapingTests : IDisposable
     [Fact]
     public async Task RenderPage_AllPageOperatorsStillWork_WithShaping()
     {
-        if (!FreeTypeAvailable())
+        if (!FreeTypeAvailable)
             return;
 
         // Table with alternating rows and borders tests the full rendering pipeline.
@@ -98,8 +78,8 @@ public sealed class HarfBuzzShapingTests : IDisposable
         };
         var style = new TableStyle(DrawBorders: true, AlternatingRowColor: true);
         await using var doc = await gen.GenerateAsync(data, style);
-        var png = await _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
-        png[..8].ShouldBe([137, 80, 78, 71, 13, 10, 26, 10]);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
     // ── 6.8 — NotoSans fallback font ──────────────────────────────────────────
@@ -107,16 +87,16 @@ public sealed class HarfBuzzShapingTests : IDisposable
     [Fact]
     public async Task RenderPage_UnknownFontName_FallsBackToNotoSans()
     {
-        if (!FreeTypeAvailable()) return;
+        if (!FreeTypeAvailable) return;
 
         // A font name that isn't Standard 14 and has no embedded data → NotoSans fallback.
         const string cs = "BT /F1 12 Tf 50 700 Td (Fallback text) Tj ET";
         // Build PDF where F1 maps to an unrecognised base font name.
         var pdfBytes = BuildWithUnknownFont(cs);
-        await using var doc = await Processor.LoadAsync(new MemoryStream(pdfBytes));
-        var png = await _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        await using var doc = await LoadAsync(pdfBytes);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
         // Should render without throwing — NotoSans is used as fallback.
-        png[..8].ShouldBe([137, 80, 78, 71, 13, 10, 26, 10]);
+        png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
     [Fact]

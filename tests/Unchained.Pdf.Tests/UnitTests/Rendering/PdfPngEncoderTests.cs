@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Pdf.Tests.Helpers;
 using Unchained.Pdf.Rendering.Rendering; // RasterBuffer, PdfPngEncoder live in Unchained.Pdf.Rendering assembly
 using Xunit;
 
@@ -6,8 +7,6 @@ namespace Unchained.Pdf.Tests.UnitTests.Rendering;
 
 public sealed class PdfPngEncoderTests
 {
-    private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
-
     private static RasterBuffer SinglePixel(byte r, byte g, byte b)
     {
         var buf = new RasterBuffer(1, 1);
@@ -20,7 +19,7 @@ public sealed class PdfPngEncoderTests
     {
         var png = PdfPngEncoder.Encode(SinglePixel(255, 0, 0));
         png.Length.ShouldBeGreaterThan(8);
-        png[..8].ShouldBe(PngSignature);
+        png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
     [Fact]
@@ -29,7 +28,7 @@ public sealed class PdfPngEncoderTests
         var png = PdfPngEncoder.Encode(SinglePixel(0, 255, 0));
         // IHDR starts at byte 16 (after 8-byte sig + 4-byte len + 4-byte "IHDR")
         // Width is at bytes 16..19
-        var width = (png[16] << 24) | (png[17] << 16) | (png[18] << 8) | png[19];
+        var width = PdfTestConstants.PngWidth(png);
         width.ShouldBe(1);
     }
 
@@ -37,7 +36,7 @@ public sealed class PdfPngEncoderTests
     public void Encode_1x1Buffer_IhdrContainsCorrectHeight()
     {
         var png = PdfPngEncoder.Encode(SinglePixel(0, 0, 255));
-        var height = (png[20] << 24) | (png[21] << 16) | (png[22] << 8) | png[23];
+        var height = PdfTestConstants.PngHeight(png);
         height.ShouldBe(1);
     }
 
@@ -47,8 +46,8 @@ public sealed class PdfPngEncoderTests
         var buf = new RasterBuffer(10, 20);
         buf.Clear();
         var png = PdfPngEncoder.Encode(buf);
-        var width = (png[16] << 24) | (png[17] << 16) | (png[18] << 8) | png[19];
-        var height = (png[20] << 24) | (png[21] << 16) | (png[22] << 8) | png[23];
+        var width = PdfTestConstants.PngWidth(png);
+        var height = PdfTestConstants.PngHeight(png);
         width.ShouldBe(10);
         height.ShouldBe(20);
     }

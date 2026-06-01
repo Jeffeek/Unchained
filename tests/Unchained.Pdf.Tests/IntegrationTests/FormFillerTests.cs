@@ -1,16 +1,14 @@
 using Shouldly;
 using Unchained.Pdf.Engine;
 using Xunit;
+using Unchained.Pdf.Tests.Helpers;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
-public sealed class FormFillerTests
+public sealed class FormFillerTests : PdfTestBase
 {
     private static readonly FormFiller Filler = new();
-    private static readonly DocumentProcessor Processor = new();
 
-    private static Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
-        Processor.LoadAsync(new MemoryStream(bytes));
 
     // ── GetFormFields (reading) ───────────────────────────────────────────────
 
@@ -18,7 +16,7 @@ public sealed class FormFillerTests
     public async Task GetFormFields_WithAcroForm_ReturnsField()
     {
         await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm("Name", "Alice"));
+            PdfFixtures.WithAcroForm("Name", "Alice"));
         doc.GetFormFields().Count.ShouldBe(1);
     }
 
@@ -26,7 +24,7 @@ public sealed class FormFillerTests
     public async Task GetFormFields_FieldName_Matches()
     {
         await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm(fieldName: "Email"));
+            PdfFixtures.WithAcroForm(fieldName: "Email"));
         doc.GetFormFields()[0].Name.ShouldBe("Email");
     }
 
@@ -34,7 +32,7 @@ public sealed class FormFillerTests
     public async Task GetFormFields_FieldValue_Matches()
     {
         await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm("Field", fieldValue: "Hello"));
+            PdfFixtures.WithAcroForm("Field", fieldValue: "Hello"));
         doc.GetFormFields()[0].Value.ShouldBe("Hello");
     }
 
@@ -42,14 +40,14 @@ public sealed class FormFillerTests
     public async Task GetFormFields_FieldType_IsTx()
     {
         await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm());
+            PdfFixtures.WithAcroForm());
         doc.GetFormFields()[0].FieldType.ShouldBe("Tx");
     }
 
     [Fact]
     public async Task GetFormFields_NoAcroForm_ReturnsEmpty()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         doc.GetFormFields().ShouldBeEmpty();
     }
 
@@ -58,7 +56,7 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FillAsync_UpdatesFieldValue()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("Name", string.Empty));
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("Name", string.Empty));
         await Filler.FillAsync(doc, new Dictionary<string, string> { ["Name"] = "Alice" });
         doc.GetFormFields()[0].Value.ShouldBe("Alice");
     }
@@ -66,14 +64,14 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FillAsync_UnknownField_NoError()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("Name", string.Empty));
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("Name", string.Empty));
         await Should.NotThrowAsync(() => Filler.FillAsync(doc, new Dictionary<string, string> { ["DoesNotExist"] = "X" }));
     }
 
     [Fact]
     public async Task FillAsync_EmptyValues_DocumentUnchanged()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("Name", "Original"));
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("Name", "Original"));
         await Filler.FillAsync(doc, new Dictionary<string, string>());
         doc.GetFormFields()[0].Value.ShouldBe("Original");
     }
@@ -81,19 +79,19 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FillAsync_RoundTrip_ValuePersistsAfterSave()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("Email", string.Empty));
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("Email", string.Empty));
         await Filler.FillAsync(doc, new Dictionary<string, string> { ["Email"] = "test@example.com" });
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms);
         ms.Position = 0;
-        await using var reloaded = await Processor.LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms);
         reloaded.GetFormFields()[0].Value.ShouldBe("test@example.com");
     }
 
     [Fact]
     public async Task FillAsync_PageCountUnchanged()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("F"));
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("F"));
         await Filler.FillAsync(doc, new Dictionary<string, string> { ["F"] = "val" });
         doc.PageCount.ShouldBe(1);
     }
@@ -101,7 +99,7 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FillAsync_Cancellation_ThrowsOperationCanceledException()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm());
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm());
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => Filler.FillAsync(doc, new Dictionary<string, string>(), cts.Token));
@@ -112,7 +110,7 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FlattenAsync_RemovesAcroFormFromDocument()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("F", "val"));
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("F", "val"));
         await Filler.FlattenAsync(doc);
         doc.GetFormFields().ShouldBeEmpty();
     }
@@ -120,7 +118,7 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FlattenAsync_PageCountUnchanged()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("F"));
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("F"));
         await Filler.FlattenAsync(doc);
         doc.PageCount.ShouldBe(1);
     }
@@ -128,12 +126,12 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FlattenAsync_RoundTrip_ParseableAfterSave()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("F", "v"));
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("F", "v"));
         await Filler.FlattenAsync(doc);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms);
         ms.Position = 0;
-        await using var reloaded = await Processor.LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms);
         reloaded.PageCount.ShouldBe(1);
         reloaded.GetFormFields().ShouldBeEmpty();
     }

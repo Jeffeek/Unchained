@@ -3,14 +3,17 @@ namespace Unchained.Pdf.Models;
 /// <summary>
 /// A PDF annotation attached to a page (ISO 32000-1 §12.5).
 /// Coordinates are in PDF user space (points, origin bottom-left).
+/// </summary>
 /// <param name="Subtype">The annotation subtype.</param>
 /// <param name="X">Left edge of the annotation rectangle, in points.</param>
 /// <param name="Y">Bottom edge of the annotation rectangle, in points.</param>
 /// <param name="Width">Width of the annotation rectangle, in points.</param>
 /// <param name="Height">Height of the annotation rectangle, in points.</param>
 /// <param name="Contents">Optional text content of the annotation (maps to <c>/Contents</c>).</param>
-/// <param name="Color">Optional RGB colour as a three-element array [R, G, B] with components in [0, 1]. Maps to the <c>/C</c> entry.</param>
-/// </summary>
+/// <param name="Color">
+/// Optional RGB colour as a three-element array [R, G, B] with components in [0, 1].
+/// Maps to the <c>/C</c> entry.
+/// </param>
 public sealed record Annotation(
     AnnotationSubtype Subtype,
     float X,

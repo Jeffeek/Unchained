@@ -1,17 +1,18 @@
 using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
+using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
-public sealed class DocumentMergerTests
+public sealed class DocumentMergerTests : PdfTestBase
 {
     private static readonly DocumentMerger Merger = new();
-    private static readonly DocumentProcessor Processor = new();
 
+    // Convenience wrapper that builds a MultiPage fixture and loads it.
     private static Task<Abstractions.IPdfDocument> LoadFixtureAsync(int pages) =>
-        Processor.LoadAsync(new MemoryStream(Helpers.PdfFixtures.MultiPage(pages)));
+        LoadAsync(PdfFixtures.MultiPage(pages));
 
     // ── IReadOnlyList<IPdfDocument> overload ──────────────────────────────────
 
@@ -56,7 +57,7 @@ public sealed class DocumentMergerTests
         using var ms = new MemoryStream();
         await Processor.SaveAsync(merged, ms);
         ms.Position = 0;
-        await using var reloaded = await Processor.LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms);
 
         reloaded.PageCount.ShouldBe(4);
     }
@@ -98,8 +99,8 @@ public sealed class DocumentMergerTests
     [Fact]
     public async Task MergeAsync_Streams_TwoDocuments_PageCountIsSumOfBoth()
     {
-        var a = new MemoryStream(Helpers.PdfFixtures.MultiPage(2));
-        var b = new MemoryStream(Helpers.PdfFixtures.MultiPage(3));
+        var a = new MemoryStream(PdfFixtures.MultiPage(2));
+        var b = new MemoryStream(PdfFixtures.MultiPage(3));
         await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default);
         merged.PageCount.ShouldBe(5);
     }
@@ -111,14 +112,14 @@ public sealed class DocumentMergerTests
     [Fact]
     public async Task MergeAsync_Streams_ProducedDocument_IsParseableAfterSave()
     {
-        var a = new MemoryStream(Helpers.PdfFixtures.MultiPage(2));
-        var b = new MemoryStream(Helpers.PdfFixtures.MultiPage(2));
+        var a = new MemoryStream(PdfFixtures.MultiPage(2));
+        var b = new MemoryStream(PdfFixtures.MultiPage(2));
         await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default);
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(merged, ms);
         ms.Position = 0;
-        await using var reloaded = await Processor.LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms);
 
         reloaded.PageCount.ShouldBe(4);
     }
@@ -131,8 +132,8 @@ public sealed class DocumentMergerTests
         await using var b = await LoadFixtureAsync(pagesB);
         await using var mergedDocs = await Merger.MergeAsync([a, b], MergeOptions.Default);
 
-        var sa = new MemoryStream(Helpers.PdfFixtures.MultiPage(pagesA));
-        var sb = new MemoryStream(Helpers.PdfFixtures.MultiPage(pagesB));
+        var sa = new MemoryStream(PdfFixtures.MultiPage(pagesA));
+        var sb = new MemoryStream(PdfFixtures.MultiPage(pagesB));
         await using var mergedStreams = await Merger.MergeAsync([sa, sb], MergeOptions.Default);
 
         mergedDocs.PageCount.ShouldBe(mergedStreams.PageCount);
@@ -141,7 +142,7 @@ public sealed class DocumentMergerTests
     [Fact]
     public async Task MergeAsync_Streams_Cancellation_ThrowsOperationCanceledException()
     {
-        var s = new MemoryStream(Helpers.PdfFixtures.MultiPage(1));
+        var s = new MemoryStream(PdfFixtures.MultiPage(1));
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => Merger.MergeAsync([s], MergeOptions.Default, cts.Token));

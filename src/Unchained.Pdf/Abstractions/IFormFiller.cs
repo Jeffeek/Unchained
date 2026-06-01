@@ -7,8 +7,14 @@ public interface IFormFiller
 {
     /// <summary>
     /// Sets the value of each field named in <paramref name="values"/>.
-    /// Keys are fully-qualified field names (dot-separated). The document is mutated in-place.
+    /// The document is mutated in-place.
     /// </summary>
+    /// <param name="document">The document containing the AcroForm. Must not be disposed.</param>
+    /// <param name="values">
+    /// Map of fully-qualified field name (dot-separated) to the new value string.
+    /// Fields not present in the document are silently ignored.
+    /// </param>
+    /// <param name="ct">Token to cancel the operation.</param>
     Task FillAsync(
         IPdfDocument document,
         IReadOnlyDictionary<string, string> values,

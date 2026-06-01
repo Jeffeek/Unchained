@@ -2,16 +2,14 @@ using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Xunit;
+using Unchained.Pdf.Tests.Helpers;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
-public sealed class AnnotationEditorTests
+public sealed class AnnotationEditorTests : PdfTestBase
 {
     private static readonly AnnotationEditor Editor = new();
-    private static readonly DocumentProcessor Processor = new();
 
-    private static Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
-        Processor.LoadAsync(new MemoryStream(bytes));
 
     private static readonly Annotation SampleAnnotation = new(
         Subtype: AnnotationSubtype.Text,
@@ -27,14 +25,14 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task GetAnnotations_PageWithAnnotation_ReturnsOne()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAnnotation(contents: "Note"));
+        await using var doc = await LoadAsync(PdfFixtures.WithAnnotation(contents: "Note"));
         doc.Pages[1].GetAnnotations().Count.ShouldBe(1);
     }
 
     [Fact]
     public async Task GetAnnotations_PageWithAnnotation_ContentsMatch()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAnnotation(contents: "MyNote"));
+        await using var doc = await LoadAsync(PdfFixtures.WithAnnotation(contents: "MyNote"));
         var annots = doc.Pages[1].GetAnnotations();
         annots[0].Contents.ShouldBe("MyNote");
     }
@@ -42,14 +40,14 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task GetAnnotations_PageWithAnnotation_SubtypeIsText()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAnnotation());
+        await using var doc = await LoadAsync(PdfFixtures.WithAnnotation());
         doc.Pages[1].GetAnnotations()[0].Subtype.ShouldBe(AnnotationSubtype.Text);
     }
 
     [Fact]
     public async Task GetAnnotations_EmptyPage_ReturnsEmpty()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         doc.Pages[1].GetAnnotations().ShouldBeEmpty();
     }
 
@@ -58,7 +56,7 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task AddAnnotationAsync_EmptyPage_AnnotationAdded()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         await Editor.AddAnnotationAsync(doc, pageNumber: 1, SampleAnnotation);
         doc.Pages[1].GetAnnotations().Count.ShouldBe(1);
     }
@@ -66,7 +64,7 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task AddAnnotationAsync_Contents_RoundTripped()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation);
         doc.Pages[1].GetAnnotations()[0].Contents.ShouldBe("Hello");
     }
@@ -74,7 +72,7 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task AddAnnotationAsync_Subtype_RoundTripped()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         await Editor.AddAnnotationAsync(doc, 1, new Annotation(AnnotationSubtype.Square, 10, 10, 50, 50));
         doc.Pages[1].GetAnnotations()[0].Subtype.ShouldBe(AnnotationSubtype.Square);
     }
@@ -82,7 +80,7 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task AddAnnotationAsync_Rect_RoundTripped()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         var ann = new Annotation(AnnotationSubtype.Text, X: 30, Y: 40, Width: 60, Height: 70);
         await Editor.AddAnnotationAsync(doc, 1, ann);
         var result = doc.Pages[1].GetAnnotations()[0];
@@ -95,7 +93,7 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task AddAnnotationAsync_MultipleAnnotations_AllPresent()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation);
         await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation with { Contents = "Second" });
         doc.Pages[1].GetAnnotations().Count.ShouldBe(2);
@@ -104,7 +102,7 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task AddAnnotationAsync_PageCountUnchanged()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.MultiPage(count: 2));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
         await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation);
         doc.PageCount.ShouldBe(2);
     }
@@ -112,19 +110,19 @@ public sealed class AnnotationEditorTests
     [Fact]
     public async Task AddAnnotationAsync_RoundTrip_ParseableAfterSave()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms);
         ms.Position = 0;
-        await using var reloaded = await Processor.LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms);
         reloaded.Pages[1].GetAnnotations().Count.ShouldBe(1);
     }
 
     [Fact]
     public async Task AddAnnotationAsync_Cancellation_ThrowsOperationCanceledException()
     {
-        await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, cts.Token));
