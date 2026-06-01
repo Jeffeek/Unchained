@@ -51,4 +51,35 @@ public interface IPdfDocument : IDisposable, IAsyncDisposable
     /// Returns an empty list when the document has no form fields.
     /// </summary>
     IReadOnlyList<FormField> GetFormFields();
+
+    /// <summary>
+    /// Returns the document's viewer preferences from the catalog's
+    /// <c>/ViewerPreferences</c> dictionary. Returns <see cref="ViewerPreferences.Default"/>
+    /// when no preferences are set.
+    /// </summary>
+    ViewerPreferences GetViewerPreferences();
+
+    /// <summary>
+    /// Returns the initial page layout from the catalog's <c>/PageLayout</c> entry,
+    /// or <see cref="PageLayout.Default"/> when not specified.
+    /// </summary>
+    PageLayout PageLayout { get; }
+
+    /// <summary>
+    /// Returns the initial page mode from the catalog's <c>/PageMode</c> entry,
+    /// or <see cref="PageMode.Default"/> when not specified.
+    /// </summary>
+    PageMode PageMode { get; }
+
+    /// <summary>
+    /// Returns the raw XMP metadata XML from the catalog's <c>/Metadata</c> stream,
+    /// or <see langword="null"/> when no XMP metadata is present.
+    /// </summary>
+    string? GetXmpMetadata();
+
+    /// <summary>
+    /// Returns all named destinations from the document's <c>/Names /Dests</c> tree
+    /// (or the legacy <c>/Dests</c> dict). Returns an empty list when none exist.
+    /// </summary>
+    IReadOnlyList<NamedDestination> GetNamedDestinations();
 }

@@ -109,6 +109,34 @@ public sealed class DocumentProcessor : IDocumentProcessor
             $"Document was not created by this processor. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
             nameof(document));
 
+    /// <summary>
+    /// Attempts to load a PDF from <paramref name="bytes"/>, falling back to a
+    /// byte-scanning recovery pass if the normal parse fails due to a corrupted
+    /// or missing cross-reference table.
+    /// </summary>
+    public async Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+        try
+        {
+            return await ParseAsync(bytes, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Normal parse failed — try byte-scan recovery.
+            await _gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                var core = await Task.Run(() => PdfDocumentCore.Repair(bytes), ct).ConfigureAwait(false);
+                return new PdfDocumentAdapter(core);
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {

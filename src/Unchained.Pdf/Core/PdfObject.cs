@@ -211,6 +211,27 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     /// <summary>The <c>/Title</c> name.</summary>
     // ReSharper disable once MemberCanBeInternal
     public static readonly PdfName Title = Get("Title");
+    /// <summary>The <c>/PageLayout</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName PageLayout = Get("PageLayout");
+    /// <summary>The <c>/PageMode</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName PageMode = Get("PageMode");
+    /// <summary>The <c>/OpenAction</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName OpenAction = Get("OpenAction");
+    /// <summary>The <c>/ViewerPreferences</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName ViewerPreferences = Get("ViewerPreferences");
+    /// <summary>The <c>/Metadata</c> name (XMP metadata stream).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Metadata = Get("Metadata");
+    /// <summary>The <c>/Names</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Names = Get("Names");
+    /// <summary>The <c>/Dests</c> name (named destinations).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Dests = Get("Dests");
 
     /// <summary>
     /// Returns <see langword="true"/> if <paramref name="other"/> is the same interned instance.

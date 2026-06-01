@@ -37,6 +37,115 @@ internal sealed class PdfDocumentCore : IDisposable
     // ── Factory ───────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Scans <paramref name="source"/> byte-by-byte for <c>N G obj</c> markers,
+    /// rebuilds the cross-reference table from the found objects, and returns a
+    /// <see cref="PdfDocumentCore"/> suitable for reading recovered content.
+    /// Use this when <see cref="Parse"/> throws due to a corrupted xref.
+    /// </summary>
+    public static PdfDocumentCore Repair(ReadOnlyMemory<byte> source)
+    {
+        var span = source.Span;
+        var entries = new Dictionary<int, CrossReferenceEntry>();
+
+        // Scan for patterns matching "N G obj" (object headers).
+        for (var i = 0; i < span.Length - 6; i++)
+        {
+            // Look for whitespace followed by digits
+            if (span[i] != (byte)'\n' && span[i] != (byte)'\r' && span[i] != (byte)' ')
+                continue;
+
+            var start = i + 1;
+            if (start >= span.Length || !IsDigit(span[start])) continue;
+
+            // Parse object number
+            var pos = start;
+            while (pos < span.Length && IsDigit(span[pos])) pos++;
+            if (pos >= span.Length || span[pos] != ' ')
+                continue;
+
+            if (!int.TryParse(
+                    System.Text.Encoding.ASCII.GetString(span[start..pos]),
+                    out var objNum) || objNum <= 0) continue;
+
+            // Parse generation number
+            var genStart = pos + 1;
+            pos = genStart;
+            while (pos < span.Length && IsDigit(span[pos]))
+                pos++;
+            if (pos + 4 >= span.Length || span[pos] != ' ')
+                continue;
+
+            if (!int.TryParse(System.Text.Encoding.ASCII.GetString(span[genStart..pos]), out var gen)) continue;
+
+            // Confirm " obj" follows
+            if (span[pos + 1] != 'o' || span[pos + 2] != 'b' || span[pos + 3] != 'j')
+                continue;
+            if (span[pos + 4] != ' ' && span[pos + 4] != '\n' && span[pos + 4] != '\r')
+                continue;
+
+            entries.TryAdd(objNum, new CrossReferenceEntry(start - 1, gen, CrossReferenceEntryType.InUse));
+        }
+
+        if (entries.Count == 0)
+            throw new PdfException("Repair failed: no PDF objects found in the byte stream.");
+
+        // Add free head entry (object 0).
+        entries[0] = new CrossReferenceEntry(0, 65535, CrossReferenceEntryType.Free);
+
+        // Build synthetic xref using the scanned offsets.
+        var syntheticXref = new CrossReferenceTable(entries, trailerOffset: 0);
+
+        // Parse the recovered document. Trailer might be missing — synthesise one from the catalog.
+        var parser = new PdfParser(source);
+        PdfDictionary? trailer = null;
+        try
+        {
+            (_, trailer) = parser.ParseStructure();
+        }
+        catch
+        {
+             /* ignore if trailer is corrupt */
+        }
+
+        // Find catalog from scanned objects if trailer is missing.
+        if (trailer?["Root"] is not null)
+            return new PdfDocumentCore(source, syntheticXref, trailer);
+
+        var tempCore = new PdfDocumentCore(source, syntheticXref, new PdfDictionary());
+        PdfIndirectReference? catalogRef = null;
+        foreach (var objNum in entries.Keys.Where(static n => n > 0))
+        {
+            try
+            {
+                var obj = tempCore.ResolveIndirect(objNum);
+                if (obj.Value is not PdfDictionary d || d.GetName("Type") != "Catalog")
+                    continue;
+
+                catalogRef = new PdfIndirectReference(objNum, 0);
+                break;
+            }
+            catch
+            {
+                /* skip unreadable objects */
+            }
+        }
+
+        if (catalogRef is null)
+            throw new PdfException("Repair failed: could not locate document catalog.");
+
+        var size = entries.Keys.Max() + 1;
+        trailer = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            [PdfName.Root.Value] = catalogRef,
+            [PdfName.Size.Value] = new PdfInteger(size)
+        });
+
+        return new PdfDocumentCore(source, syntheticXref, trailer);
+
+        static bool IsDigit(byte b) => b is >= (byte)'0' and <= (byte)'9';
+    }
+
+    /// <summary>
     /// Parses the structural skeleton of a PDF document from <paramref name="source"/>
     /// and returns a ready-to-use <see cref="PdfDocumentCore"/>.
     /// Only the cross-reference table and trailer dictionary are parsed at this point;

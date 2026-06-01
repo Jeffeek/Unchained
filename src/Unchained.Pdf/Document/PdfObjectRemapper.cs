@@ -10,6 +10,22 @@ namespace Unchained.Pdf.Document;
 /// </summary>
 internal static class PdfObjectRemapper
 {
+    /// <summary>
+    /// Walks <paramref name="obj"/> and replaces any <see cref="PdfIndirectReference"/>
+    /// whose <c>ObjectNumber</c> appears in <paramref name="remapping"/> with a reference
+    /// to the canonical object number. Used for stream deduplication.
+    /// </summary>
+    internal static PdfObject RemapSelective(PdfObject obj, IReadOnlyDictionary<int, int> remapping) =>
+        obj switch
+        {
+            PdfIndirectReference r when remapping.TryGetValue(r.ObjectNumber, out var canon) => new PdfIndirectReference(canon, r.Generation),
+            PdfIndirectObject io => new PdfIndirectObject(io.ObjectNumber, io.Generation, RemapSelective(io.Value, remapping)),
+            PdfArray a => new PdfArray(a.Elements.Select(e => RemapSelective(e, remapping)).ToArray()),
+            PdfDictionary d => new PdfDictionary(d.Entries.ToDictionary(static kvp => kvp.Key, kvp => RemapSelective(kvp.Value, remapping))),
+            PdfStream s => new PdfStream((PdfDictionary)RemapSelective(s.Dictionary, remapping), s.Data),
+            _ => obj
+        };
+
     internal static PdfObject Remap(PdfObject obj, int offset) => obj switch
     {
         PdfIndirectReference r => new PdfIndirectReference(r.ObjectNumber + offset, r.Generation),
