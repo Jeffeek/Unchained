@@ -67,6 +67,60 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     public string ExtractText() =>
         TextExtractor.SpansToText(GetTextSpans());
 
+    /// <inheritdoc />
+    public IReadOnlyList<Models.Annotation> GetAnnotations()
+    {
+        var annotsObj = page[PdfName.Annots];
+        var annotsArr = annotsObj switch
+        {
+            PdfArray a => a,
+            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfArray,
+            _ => null
+        };
+        if (annotsArr is null) return [];
+
+        var result = new List<Models.Annotation>();
+        foreach (var elem in annotsArr.Elements)
+        {
+            var dict = elem switch
+            {
+                PdfDictionary d => d,
+                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+                _ => null
+            };
+            if (dict is null) continue;
+
+            var subtypeName = dict.GetName(PdfName.Subtype.Value) ?? "";
+            var subtype = subtypeName switch
+            {
+                "Text"      => Models.AnnotationSubtype.Text,
+                "Highlight" => Models.AnnotationSubtype.Highlight,
+                "Link"      => Models.AnnotationSubtype.Link,
+                "FreeText"  => Models.AnnotationSubtype.FreeText,
+                "Square"    => Models.AnnotationSubtype.Square,
+                "Circle"    => Models.AnnotationSubtype.Circle,
+                _           => Models.AnnotationSubtype.Text
+            };
+
+            var rect = dict.Get<PdfArray>(PdfName.Rect);
+            var x = rect is { Count: >= 4 } ? (float)ReadCoord(rect[0]) : 0f;
+            var y = rect is { Count: >= 4 } ? (float)ReadCoord(rect[1]) : 0f;
+            var x2 = rect is { Count: >= 4 } ? (float)ReadCoord(rect[2]) : 0f;
+            var y2 = rect is { Count: >= 4 } ? (float)ReadCoord(rect[3]) : 0f;
+
+            string? contents = null;
+            if (dict[PdfName.Contents] is PdfString cs)
+                contents = System.Text.Encoding.Latin1.GetString(cs.Bytes.Span);
+
+            float[]? color = null;
+            if (dict.Get<PdfArray>(PdfName.Get("C")) is { Count: 3 } cArr)
+                color = [ReadFloat(cArr[0]), ReadFloat(cArr[1]), ReadFloat(cArr[2])];
+
+            result.Add(new Models.Annotation(subtype, x, y, x2 - x, y2 - y, contents, color));
+        }
+        return result;
+    }
+
     // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
     // to the actual base font name (e.g. "Helvetica") for AFM width lookup.
     private Dictionary<string, string> ResolveFontNames()
@@ -154,4 +208,13 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             _ => 0
         };
     }
+
+    private static double ReadCoord(PdfObject obj) => obj switch
+    {
+        PdfInteger i => i.Value,
+        PdfReal r => r.Value,
+        _ => 0
+    };
+
+    private static float ReadFloat(PdfObject obj) => (float)ReadCoord(obj);
 }

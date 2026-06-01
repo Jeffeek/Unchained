@@ -13,6 +13,24 @@ internal static class PdfFixtures
 
     public static byte[] MultiPage(int count) => Build(pageCount: count);
 
+    /// <summary>
+    /// Generates a single-page PDF whose first page has one /Text annotation.
+    /// </summary>
+    public static byte[] WithAnnotation(string contents = "Note") =>
+        BuildWithAnnotation(contents);
+
+    /// <summary>
+    /// Generates a two-page PDF with a flat /Outlines tree pointing at the pages.
+    /// </summary>
+    public static byte[] WithOutlines(params (string title, int page)[] bookmarks) =>
+        BuildWithOutlines(bookmarks);
+
+    /// <summary>
+    /// Generates a single-page PDF with one AcroForm text field.
+    /// </summary>
+    public static byte[] WithAcroForm(string fieldName = "TextField", string fieldValue = "") =>
+        BuildWithAcroForm(fieldName, fieldValue);
+
     public static byte[] WithInfo(string title, string author) =>
         Build(pageCount: 1, title: title, author: author);
 
@@ -161,6 +179,8 @@ internal static class PdfFixtures
 
     private static int ByteLen(StringBuilder sb) => Encoding.Latin1.GetByteCount(sb.ToString());
 
+    private static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+
     // ── PDF with compressed /XRef stream ─────────────────────────────────────
 
     private static byte[] BuildWithXrefStream(int pageCount)
@@ -258,6 +278,236 @@ internal static class PdfFixtures
         static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
 
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+    }
+
+    private static byte[] BuildWithAnnotation(string contents)
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        // Object 1 — Catalog
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
+
+        // Object 2 — Pages
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
+
+        // Object 3 — Page (with /Annots)
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
+        Ln(sb, "endobj");
+
+        // Object 4 — Annotation
+        var escaped = EscapeString(contents);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Type /Annot /Subtype /Text /Rect [50 700 100 750] /Contents ({escaped}) >>");
+        Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 5");
+        Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 5 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    private static byte[] BuildWithOutlines(IEnumerable<(string title, int page)> bookmarks)
+    {
+        var bms = bookmarks.ToList();
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        const int pageCount = 2;
+
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        // Object 1 — Catalog (with /Outlines)
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>");
+        Ln(sb, "endobj");
+
+        // Object 2 — Pages
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [5 0 R 6 0 R] /Count 2 >>");
+        Ln(sb, "endobj");
+
+        // Object 3 — Outlines root
+        // Items start at object 4
+        var itemCount = bms.Count;
+        var firstRef = itemCount > 0 ? "4 0 R" : "null";
+        var lastRef = itemCount > 0 ? $"{3 + itemCount} 0 R" : "null";
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, $"<< /Type /Outlines /Count {itemCount} /First {firstRef} /Last {lastRef} >>");
+        Ln(sb, "endobj");
+
+        // Objects 4..(3+N) — outline items
+        for (var i = 0; i < bms.Count; i++)
+        {
+            var num = 4 + i;
+            var (title, pageNum) = bms[i];
+            var pageObjNum = pageNum == 1 ? 5 : 6;
+            var prev = i > 0 ? $" /Prev {num - 1} 0 R" : "";
+            var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : "";
+            offsets.Add(ByteLen(sb));
+            Ln(sb, $"{num} 0 obj");
+            Ln(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");
+            Ln(sb, "endobj");
+        }
+
+        // Page objects
+        var page1ObjNum = 4 + bms.Count;
+        offsets.Add(ByteLen(sb));
+        Ln(sb, $"{page1ObjNum} 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        Ln(sb, "endobj");
+
+        var page2ObjNum = page1ObjNum + 1;
+        offsets.Add(ByteLen(sb));
+        Ln(sb, $"{page2ObjNum} 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        Ln(sb, "endobj");
+
+        // Fix Pages /Kids to use correct page object numbers
+        // We need to re-write object 2 at the actual page object numbers.
+        // Since we built it above with [5 0 R 6 0 R] but actual numbers depend on bm count,
+        // rebuild the whole thing with correct numbers.
+        _ = pageCount; // avoid unused warning
+
+        return BuildWithOutlinesFinal(bms);
+    }
+
+    private static byte[] BuildWithOutlinesFinal(List<(string title, int page)> bms)
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+
+        // Fixed layout: catalog=1, pages=2, outlinesRoot=3, items=4..(3+N), page1=(4+N), page2=(5+N)
+        var page1Obj = 4 + bms.Count;
+        var page2Obj = 5 + bms.Count;
+        var totalObjs = page2Obj + 1;
+
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, $"<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>");
+        Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, $"<< /Type /Pages /Kids [{page1Obj} 0 R {page2Obj} 0 R] /Count 2 >>");
+        Ln(sb, "endobj");
+
+        var first = bms.Count > 0 ? "4 0 R" : "null";
+        var last  = bms.Count > 0 ? $"{3 + bms.Count} 0 R" : "null";
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, $"<< /Type /Outlines /Count {bms.Count} /First {first} /Last {last} >>");
+        Ln(sb, "endobj");
+
+        for (var i = 0; i < bms.Count; i++)
+        {
+            var num = 4 + i;
+            var (title, pageNum) = bms[i];
+            var pageObjNum = pageNum == 1 ? page1Obj : page2Obj;
+            var prev = i > 0 ? $" /Prev {num - 1} 0 R" : "";
+            var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : "";
+            offsets.Add(ByteLen(sb));
+            Ln(sb, $"{num} 0 obj");
+            Ln(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");
+            Ln(sb, "endobj");
+        }
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, $"{page1Obj} 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, $"{page2Obj} 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref");
+        Ln(sb, $"0 {totalObjs}");
+        Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer");
+        Ln(sb, $"<< /Size {totalObjs} /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    private static byte[] BuildWithAcroForm(string fieldName, string fieldValue)
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        // Object 1 — Catalog (with /AcroForm)
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
+        Ln(sb, "endobj");
+
+        // Object 2 — Pages
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
+
+        // Object 3 — Page
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
+        Ln(sb, "endobj");
+
+        // Object 4 — Text field (also the widget annotation for it)
+        var escapedName = EscapeString(fieldName);
+        var escapedValue = EscapeString(fieldValue);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({escapedName}) /V ({escapedValue}) /Rect [50 700 300 720] /P 3 0 R >>");
+        Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 5");
+        Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 5 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
     }
 
     private static byte[] ZlibCompress(byte[] data)

@@ -60,4 +60,10 @@ public interface IPdfPage
     /// when there is a visible gap between them.
     /// </summary>
     string ExtractText();
+
+    /// <summary>
+    /// Returns all annotations attached to this page, parsed from the <c>/Annots</c> array.
+    /// Returns an empty list when the page has no annotations.
+    /// </summary>
+    IReadOnlyList<Models.Annotation> GetAnnotations();
 }

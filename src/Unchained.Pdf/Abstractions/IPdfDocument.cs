@@ -2,6 +2,7 @@ using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Abstractions;
 
+
 /// <summary>
 /// Represents a loaded PDF document.
 /// <para>
@@ -39,4 +40,16 @@ public interface IPdfDocument : IDisposable, IAsyncDisposable
     /// Accessing other members on a disposed document results in undefined behaviour.
     /// </summary>
     bool IsDisposed { get; }
+
+    /// <summary>
+    /// Returns the document's outline (bookmark) tree, parsed from <c>/Outlines</c>.
+    /// Returns an empty list when the document has no bookmarks.
+    /// </summary>
+    IReadOnlyList<Bookmark> GetBookmarks();
+
+    /// <summary>
+    /// Returns all AcroForm fields, parsed from <c>/AcroForm /Fields</c>.
+    /// Returns an empty list when the document has no form fields.
+    /// </summary>
+    IReadOnlyList<FormField> GetFormFields();
 }

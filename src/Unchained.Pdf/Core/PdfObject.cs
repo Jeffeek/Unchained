@@ -184,6 +184,33 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     /// <summary>The <c>/Outlines</c> name.</summary>
     // ReSharper disable once MemberCanBeInternal
     public static readonly PdfName Outlines = Get("Outlines");
+    /// <summary>The <c>/Annots</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Annots = Get("Annots");
+    /// <summary>The <c>/Rect</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Rect = Get("Rect");
+    /// <summary>The <c>/AcroForm</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName AcroForm = Get("AcroForm");
+    /// <summary>The <c>/Fields</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Fields = Get("Fields");
+    /// <summary>The <c>/First</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName First = Get("First");
+    /// <summary>The <c>/Last</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Last = Get("Last");
+    /// <summary>The <c>/Next</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Next = Get("Next");
+    /// <summary>The <c>/Dest</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Dest = Get("Dest");
+    /// <summary>The <c>/Title</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Title = Get("Title");
 
     /// <summary>
     /// Returns <see langword="true"/> if <paramref name="other"/> is the same interned instance.

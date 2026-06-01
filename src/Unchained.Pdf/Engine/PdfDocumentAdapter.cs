@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -108,8 +109,112 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         return ValueTask.CompletedTask;
     }
 
+    /// <inheritdoc />
+    public IReadOnlyList<Bookmark> GetBookmarks()
+    {
+        var outlines = ResolveDict(Core.Catalog[PdfName.Outlines]);
+        return outlines is null ? [] : ReadOutlineLevel(outlines);
+    }
+
+    private IReadOnlyList<Bookmark> ReadOutlineLevel(PdfDictionary node)
+    {
+        var result = new List<Bookmark>();
+        var current = ResolveDict(node[PdfName.First]);
+        while (current is not null)
+        {
+            var title = current[PdfName.Title] is PdfString ts
+                ? Encoding.Latin1.GetString(ts.Bytes.Span)
+                : "";
+
+            var pageNum = ResolveDestPage(current);
+            var children = ResolveDict(current[PdfName.First]) is not null
+                ? ReadOutlineLevel(current)
+                : null;
+
+            result.Add(new Bookmark(title, pageNum, children));
+            current = ResolveDict(current[PdfName.Next]);
+        }
+        return result;
+    }
+
+    private int ResolveDestPage(PdfDictionary item)
+    {
+        var dest = item[PdfName.Dest];
+        if (dest is PdfIndirectReference dr)
+            dest = Core.ResolveIndirect(dr.ObjectNumber).Value;
+        if (dest is not PdfArray destArr || destArr.Count == 0) return 0;
+
+        var pageRef = destArr[0] is PdfIndirectReference r ? r : null;
+        if (pageRef is null) return 0;
+
+        for (var i = 1; i <= Core.PageCount; i++)
+        {
+            var pageDict = Core.GetPage(i);
+            if (Core.Dereference(pageRef) is PdfDictionary resolved &&
+                ReferenceEquals(pageDict, resolved))
+                return i;
+        }
+        return 0;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<FormField> GetFormFields()
+    {
+        var acroForm = ResolveDict(Core.Catalog[PdfName.AcroForm]);
+        if (acroForm is null) return [];
+        var fields = acroForm.Get<PdfArray>(PdfName.Fields);
+        if (fields is null) return [];
+        var result = new List<FormField>();
+        CollectFields(fields, prefix: "", result);
+        return result;
+    }
+
+    private void CollectFields(PdfArray fields, string prefix, List<FormField> result)
+    {
+        foreach (var elem in fields.Elements)
+        {
+            var dict = ResolveDict(elem);
+            if (dict is null) continue;
+
+            var partialName = dict[PdfName.Get("T")] is PdfString ts
+                ? Encoding.Latin1.GetString(ts.Bytes.Span)
+                : "";
+            var fullName = prefix.Length > 0 ? $"{prefix}.{partialName}" : partialName;
+
+            var ft = dict.GetName("FT");
+
+            // Non-terminal node (group field with /Kids but no /FT)
+            if (ft is null && dict.Get<PdfArray>(PdfName.Kids) is { } kids)
+            {
+                CollectFields(kids, fullName, result);
+                continue;
+            }
+
+            var value = DecodeFieldValue(dict);
+            result.Add(new FormField(fullName, ft ?? "", value));
+        }
+    }
+
+    private static string? DecodeFieldValue(PdfDictionary dict)
+    {
+        var v = dict[PdfName.Get("V")];
+        return v switch
+        {
+            PdfString s => Encoding.Latin1.GetString(s.Bytes.Span),
+            PdfName n => n.Value,
+            _ => null
+        };
+    }
+
+    private PdfDictionary? ResolveDict(PdfObject? obj) => obj switch
+    {
+        PdfDictionary d => d,
+        PdfIndirectReference r => Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+        _ => null
+    };
+
     private static string? GetInfoString(PdfDictionary info, string key) =>
         info[key] is not PdfString str
             ? null
-            : System.Text.Encoding.Latin1.GetString(str.Bytes.Span);
+            : Encoding.Latin1.GetString(str.Bytes.Span);
 }
