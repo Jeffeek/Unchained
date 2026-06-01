@@ -59,6 +59,41 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         return decoded.Length == 0 ? [] : ContentStreamParser.Parse(decoded);
     }
 
+    /// <inheritdoc />
+    public IReadOnlyList<TextSpan> GetTextSpans() =>
+        TextExtractor.Extract(GetContentOperators(), ResolveFontNames());
+
+    /// <inheritdoc />
+    public string ExtractText() =>
+        TextExtractor.SpansToText(GetTextSpans());
+
+    // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
+    // to the actual base font name (e.g. "Helvetica") for AFM width lookup.
+    private Dictionary<string, string> ResolveFontNames()
+    {
+        var result = new Dictionary<string, string>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Font]);
+        if (fontDict is null) return result;
+
+        foreach (var (key, value) in fontDict.Entries)
+        {
+            var fontEntry = ResolveDict(value);
+            var baseFontName = fontEntry?.GetName(PdfName.BaseFont.Value);
+            if (baseFontName is not null)
+                result[key] = baseFontName;
+        }
+
+        return result;
+    }
+
+    private PdfDictionary? ResolveDict(PdfObject? obj) => obj switch
+    {
+        PdfDictionary d => d,
+        PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+        _ => null
+    };
+
     // ── Content stream resolution ─────────────────────────────────────────────
 
     // /Contents can be a single indirect reference to a stream, or an array of them.

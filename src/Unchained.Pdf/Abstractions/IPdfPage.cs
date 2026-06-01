@@ -39,4 +39,25 @@ public interface IPdfPage
     /// </para>
     /// </summary>
     IReadOnlyList<ContentOperator> GetContentOperators();
+
+    /// <summary>
+    /// Extracts text from this page as positioned <see cref="TextSpan"/> instances,
+    /// sorted in reading order (top-to-bottom, left-to-right).
+    /// <para>
+    /// Advance widths are computed using hardcoded AFM tables for the Standard 14 fonts.
+    /// Fonts not in the Standard 14 (embedded TrueType/OpenType/CFF) receive a fallback
+    /// width of 500/1000 em per character — positions will be approximate until the full
+    /// font subsystem is implemented in Milestone 6.
+    /// </para>
+    /// <para>CTM transformations (rotation, shear) are not applied in this release;
+    /// only axis-aligned text is positioned accurately.</para>
+    /// </summary>
+    IReadOnlyList<TextSpan> GetTextSpans();
+
+    /// <summary>
+    /// Extracts all text from this page as a plain string in reading order.
+    /// Lines are separated by <c>\n</c>; spans on the same line are joined with a space
+    /// when there is a visible gap between them.
+    /// </summary>
+    string ExtractText();
 }
