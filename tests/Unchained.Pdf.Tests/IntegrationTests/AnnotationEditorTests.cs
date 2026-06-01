@@ -10,12 +10,15 @@ public sealed class AnnotationEditorTests
     private static readonly AnnotationEditor Editor = new();
     private static readonly DocumentProcessor Processor = new();
 
-    private static async Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
-        await Processor.LoadAsync(new MemoryStream(bytes));
+    private static Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
+        Processor.LoadAsync(new MemoryStream(bytes));
 
     private static readonly Annotation SampleAnnotation = new(
         Subtype: AnnotationSubtype.Text,
-        X: 100, Y: 700, Width: 50, Height: 50,
+        X: 100,
+        Y: 700,
+        Width: 50,
+        Height: 50,
         Contents: "Hello"
     );
 
@@ -124,7 +127,6 @@ public sealed class AnnotationEditorTests
         await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        await Should.ThrowAsync<OperationCanceledException>(
-            () => Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, cts.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, cts.Token));
     }
 }

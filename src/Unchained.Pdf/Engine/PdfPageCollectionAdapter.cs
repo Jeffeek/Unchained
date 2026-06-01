@@ -68,19 +68,20 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         TextExtractor.SpansToText(GetTextSpans());
 
     /// <inheritdoc />
-    public IReadOnlyList<Models.Annotation> GetAnnotations()
+    public IReadOnlyList<Annotation> GetAnnotations()
     {
-        var annotsObj = page[PdfName.Annots];
-        var annotsArr = annotsObj switch
+        var annotationsObj = page[PdfName.Annots];
+        var annotationsArr = annotationsObj switch
         {
             PdfArray a => a,
             PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfArray,
             _ => null
         };
-        if (annotsArr is null) return [];
+        if (annotationsArr is null)
+            return [];
 
-        var result = new List<Models.Annotation>();
-        foreach (var elem in annotsArr.Elements)
+        var result = new List<Annotation>();
+        foreach (var elem in annotationsArr.Elements)
         {
             var dict = elem switch
             {
@@ -93,20 +94,20 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             var subtypeName = dict.GetName(PdfName.Subtype.Value) ?? "";
             var subtype = subtypeName switch
             {
-                "Text"      => Models.AnnotationSubtype.Text,
-                "Highlight" => Models.AnnotationSubtype.Highlight,
-                "Link"      => Models.AnnotationSubtype.Link,
-                "FreeText"  => Models.AnnotationSubtype.FreeText,
-                "Square"    => Models.AnnotationSubtype.Square,
-                "Circle"    => Models.AnnotationSubtype.Circle,
-                _           => Models.AnnotationSubtype.Text
+                "Text" => AnnotationSubtype.Text,
+                "Highlight" => AnnotationSubtype.Highlight,
+                "Link" => AnnotationSubtype.Link,
+                "FreeText" => AnnotationSubtype.FreeText,
+                "Square" => AnnotationSubtype.Square,
+                "Circle" => AnnotationSubtype.Circle,
+                _ => AnnotationSubtype.Text
             };
 
             var rect = dict.Get<PdfArray>(PdfName.Rect);
-            var x = rect is { Count: >= 4 } ? (float)ReadCoord(rect[0]) : 0f;
-            var y = rect is { Count: >= 4 } ? (float)ReadCoord(rect[1]) : 0f;
-            var x2 = rect is { Count: >= 4 } ? (float)ReadCoord(rect[2]) : 0f;
-            var y2 = rect is { Count: >= 4 } ? (float)ReadCoord(rect[3]) : 0f;
+            var x = rect is { Count: >= 4 } ? (float)ReadCoordinate(rect[0]) : 0f;
+            var y = rect is { Count: >= 4 } ? (float)ReadCoordinate(rect[1]) : 0f;
+            var x2 = rect is { Count: >= 4 } ? (float)ReadCoordinate(rect[2]) : 0f;
+            var y2 = rect is { Count: >= 4 } ? (float)ReadCoordinate(rect[3]) : 0f;
 
             string? contents = null;
             if (dict[PdfName.Contents] is PdfString cs)
@@ -116,8 +117,17 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             if (dict.Get<PdfArray>(PdfName.Get("C")) is { Count: 3 } cArr)
                 color = [ReadFloat(cArr[0]), ReadFloat(cArr[1]), ReadFloat(cArr[2])];
 
-            result.Add(new Models.Annotation(subtype, x, y, x2 - x, y2 - y, contents, color));
+            result.Add(new Annotation(
+                subtype,
+                x,
+                y,
+                x2 - x,
+                y2 - y,
+                contents,
+                color)
+            );
         }
+
         return result;
     }
 
@@ -129,12 +139,13 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
 
     // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
     // to the actual base font name (e.g. "Helvetica") for AFM width lookup.
-    internal Dictionary<string, string> ResolveFontNames()
+    private Dictionary<string, string> ResolveFontNames()
     {
         var result = new Dictionary<string, string>();
         var resources = ResolveDict(page[PdfName.Resources]);
         var fontDict = ResolveDict(resources?[PdfName.Font]);
-        if (fontDict is null) return result;
+        if (fontDict is null)
+            return result;
 
         foreach (var (key, value) in fontDict.Entries)
         {
@@ -215,12 +226,12 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         };
     }
 
-    private static double ReadCoord(PdfObject obj) => obj switch
+    private static double ReadCoordinate(PdfObject obj) => obj switch
     {
         PdfInteger i => i.Value,
         PdfReal r => r.Value,
         _ => 0
     };
 
-    private static float ReadFloat(PdfObject obj) => (float)ReadCoord(obj);
+    private static float ReadFloat(PdfObject obj) => (float)ReadCoordinate(obj);
 }

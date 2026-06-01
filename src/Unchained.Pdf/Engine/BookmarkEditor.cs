@@ -21,9 +21,9 @@ public sealed class BookmarkEditor : IBookmarkEditor
     private static void SetBookmarks(IPdfDocument document, IReadOnlyList<Bookmark> bookmarks)
     {
         var adapter = document as PdfDocumentAdapter
-            ?? throw new ArgumentException(
-                $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                nameof(document));
+                      ?? throw new ArgumentException(
+                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
+                          nameof(document));
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -47,13 +47,15 @@ public sealed class BookmarkEditor : IBookmarkEditor
             var rootNum = builder.NextNumber();
             var rootRef = new PdfIndirectReference(rootNum, 0);
             var itemRefs = BuildOutlineItems(builder, bookmarks, rootRef, pageObjNums);
-            builder.AddAt(rootNum, new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Outlines,
-                [PdfName.First.Value] = itemRefs[0],
-                [PdfName.Last.Value] = itemRefs[^1],
-                [PdfName.Count.Value] = new PdfInteger(CountAll(bookmarks))
-            }));
+            builder.AddAt(
+                rootNum,
+                new PdfDictionary(new Dictionary<string, PdfObject>
+                {
+                    [PdfName.Type.Value] = PdfName.Outlines,
+                    [PdfName.First.Value] = itemRefs[0],
+                    [PdfName.Last.Value] = itemRefs[^1],
+                    [PdfName.Count.Value] = new PdfInteger(CountAll(bookmarks))
+                }));
             outlinesEntry = rootRef;
         }
 
@@ -65,8 +67,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
         else
             catEntries[PdfName.Outlines.Value] = outlinesEntry;
 
-        var rebuiltCatalog = new PdfIndirectObject(catalogObj.ObjectNumber, catalogObj.Generation,
-            new PdfDictionary(catEntries));
+        var rebuiltCatalog = new PdfIndirectObject(catalogObj.ObjectNumber, catalogObj.Generation, new PdfDictionary(catEntries));
 
         var finalObjects = existing
             .Select(o => o.ObjectNumber == catalogObj.ObjectNumber ? rebuiltCatalog : o)
@@ -90,7 +91,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
     private static IReadOnlyList<PdfIndirectReference> BuildOutlineItems(
         ObjectGraphBuilder builder,
         IReadOnlyList<Bookmark> items,
-        PdfIndirectReference parentRef,
+        PdfObject parentRef,
         IReadOnlyDictionary<int, int> pageObjNums
     )
     {
@@ -102,8 +103,8 @@ public sealed class BookmarkEditor : IBookmarkEditor
         {
             var bm = items[i];
             var pageObjNum = pageObjNums.GetValueOrDefault(bm.PageNumber, 0);
-            var destArr = pageObjNum > 0
-                ? (PdfObject)new PdfArray([new PdfIndirectReference(pageObjNum, 0), PdfName.Get("Fit")])
+            PdfObject destArr = pageObjNum > 0
+                ? new PdfArray([new PdfIndirectReference(pageObjNum, 0), PdfName.Get("Fit")])
                 : PdfNull.Instance;
 
             var dict = new Dictionary<string, PdfObject>
@@ -129,7 +130,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
         return refs;
     }
 
-    private static int CountAll(IReadOnlyList<Bookmark> items) =>
+    private static int CountAll(IEnumerable<Bookmark> items) =>
         items.Sum(static b => 1 + (b.Children is not null ? CountAll(b.Children) : 0));
 
     // ── Page object number lookup ─────────────────────────────────────────────
@@ -147,6 +148,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
             if (obj is not null)
                 result[page] = obj.ObjectNumber;
         }
+
         return result;
     }
 }

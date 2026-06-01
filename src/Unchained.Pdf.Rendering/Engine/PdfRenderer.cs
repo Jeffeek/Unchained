@@ -1,6 +1,5 @@
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Rendering;
 using Unchained.Pdf.Rendering.Rendering;
 
 namespace Unchained.Pdf.Rendering.Engine;
@@ -17,6 +16,7 @@ namespace Unchained.Pdf.Rendering.Engine;
 /// the core <c>Unchained.Pdf</c> package only exposes the <see cref="IRenderer"/> interface.
 /// </para>
 /// </summary>
+// ReSharper disable once MemberCanBeInternal
 public sealed class PdfRenderer : IRenderer
 {
     private readonly FontCache _fonts;
@@ -39,7 +39,8 @@ public sealed class PdfRenderer : IRenderer
             throw new InvalidOperationException(
                 "Could not initialise FreeType2. Ensure 'freetype6.dll' (Windows) or " +
                 "'libfreetype.so.6' (Linux) is present in the application output directory. " +
-                $"Inner: {ex.Message}", ex);
+                $"Inner: {ex.Message}",
+                ex);
         }
     }
 
@@ -55,10 +56,10 @@ public sealed class PdfRenderer : IRenderer
         IPdfDocument document,
         RenderOptions options,
         CancellationToken ct = default
-    ) => Task.Run(() =>
-        (IReadOnlyList<byte[]>)Enumerable.Range(1, document.PageCount)
-            .Select(i => RenderPage(document.Pages[i], options))
-            .ToList(),
+    ) => Task.Run(IReadOnlyList<byte[]> () =>
+            Enumerable.Range(1, document.PageCount)
+                .Select(i => RenderPage(document.Pages[i], options))
+                .ToList(),
         ct);
 
     private byte[] RenderPage(IPdfPage page, RenderOptions options)
@@ -66,11 +67,11 @@ public sealed class PdfRenderer : IRenderer
         ObjectDisposedException.ThrowIf(_disposed == 1, this);
 
         var scale = options.Dpi / 72.0;
-        var pixW = (int)Math.Ceiling(page.Width  * scale);
+        var pixW = (int)Math.Ceiling(page.Width * scale);
         var pixH = (int)Math.Ceiling(page.Height * scale);
 
         var buffer = new RasterBuffer(pixW, pixH);
-        buffer.Clear(255, 255, 255);
+        buffer.Clear(r: 255, g: 255, b: 255);
 
         // Use the public IPdfPage interface — no internal casting required.
         var fontMap = page.GetFontNameMap();

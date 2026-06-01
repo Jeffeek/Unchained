@@ -12,8 +12,8 @@ public sealed class StampApplierTests
 
     private static readonly TextStamp DefaultStamp = new("DRAFT", X: 100, Y: 400);
 
-    private static async Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
-        await Processor.LoadAsync(new MemoryStream(bytes));
+    private static Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
+        Processor.LoadAsync(new MemoryStream(bytes));
 
     // ── StampAsync ────────────────────────────────────────────────────────────
 
@@ -93,8 +93,7 @@ public sealed class StampApplierTests
         await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        await Should.ThrowAsync<OperationCanceledException>(
-            () => Applier.StampAsync(doc, DefaultStamp, cts.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => Applier.StampAsync(doc, DefaultStamp, cts.Token));
     }
 
     // ── StampPageAsync ────────────────────────────────────────────────────────

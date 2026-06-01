@@ -2,7 +2,6 @@ using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Abstractions;
 
-
 /// <summary>
 /// Represents a loaded PDF document.
 /// <para>

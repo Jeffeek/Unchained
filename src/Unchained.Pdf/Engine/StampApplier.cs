@@ -31,9 +31,9 @@ public sealed class StampApplier : IStampApplier
     private static void ApplyStamp(IPdfDocument document, int? pageFilter, TextStamp stamp)
     {
         var adapter = document as PdfDocumentAdapter
-            ?? throw new ArgumentException(
-                $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                nameof(document));
+                      ?? throw new ArgumentException(
+                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
+                          nameof(document));
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -45,7 +45,7 @@ public sealed class StampApplier : IStampApplier
 
         // Find pages (by reference equality with GetPage results when pageFilter set,
         // or all /Type /Page objects when stamping all pages).
-        PdfDictionary? targetPageDict = pageFilter.HasValue
+        var targetPageDict = pageFilter.HasValue
             ? adapter.Core.GetPage(pageFilter.Value)
             : null;
 
@@ -53,9 +53,14 @@ public sealed class StampApplier : IStampApplier
 
         foreach (var obj in existing)
         {
-            if (obj.Value is not PdfDictionary pd) continue;
-            if (pd.GetName(PdfName.Type.Value) != "Page") continue;
-            if (targetPageDict is not null && !ReferenceEquals(pd, targetPageDict)) continue;
+            if (obj.Value is not PdfDictionary pd)
+                continue;
+
+            if (pd.GetName(PdfName.Type.Value) != "Page")
+                continue;
+
+            if (targetPageDict is not null && !ReferenceEquals(pd, targetPageDict))
+                continue;
 
             var streamObj = builder.Add(new PdfStream(
                 new PdfDictionary(new Dictionary<string, PdfObject>
@@ -64,19 +69,23 @@ public sealed class StampApplier : IStampApplier
                 }),
                 contentBytes));
 
-            var rebuilt = RebuildPage(pd, streamObj.ToReference(), fontObj.ToReference(),
-                stamp.IsBackground, adapter.Core);
+            var rebuilt = RebuildPage(
+                pd,
+                streamObj.ToReference(),
+                fontObj.ToReference(),
+                stamp.IsBackground,
+                adapter.Core
+            );
             swaps[obj.ObjectNumber] = new PdfIndirectObject(obj.ObjectNumber, obj.Generation, rebuilt);
         }
 
         var finalObjects = existing
-            .Select(o => swaps.TryGetValue(o.ObjectNumber, out var s) ? s : o)
+            .Select(o => swaps.GetValueOrDefault(o.ObjectNumber, o))
             .Concat(builder.Objects)
             .ToList();
 
         var totalMax = finalObjects.Max(static o => o.ObjectNumber);
-        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference
-            ?? throw new PdfException("Trailer missing /Root.");
+        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
         var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
         {
             [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
@@ -99,16 +108,23 @@ public sealed class StampApplier : IStampApplier
         var sinR = (float)Math.Sin(radians);
 
         csw.Op("q"u8);
-        csw.Float(stamp.GrayLevel); csw.Op("g"u8);
+        csw.Float(stamp.GrayLevel);
+        csw.Op("g"u8);
         csw.Op("BT"u8);
-        csw.Name(StampFontKey); csw.Float(stamp.FontSize); csw.Op("Tf"u8);
+        csw.Name(StampFontKey);
+        csw.Float(stamp.FontSize);
+        csw.Op("Tf"u8);
         // Text matrix: [cos -sin sin cos x y] — but PDF matrix is [a b c d e f]
         // where a=cos, b=sin, c=-sin, d=cos, e=x, f=y
-        csw.Float(cosR); csw.Float(sinR);
-        csw.Float(-sinR); csw.Float(cosR);
-        csw.Float(stamp.X); csw.Float(stamp.Y);
+        csw.Float(cosR);
+        csw.Float(sinR);
+        csw.Float(-sinR);
+        csw.Float(cosR);
+        csw.Float(stamp.X);
+        csw.Float(stamp.Y);
         csw.Op("Tm"u8);
-        csw.LiteralString(stamp.Text); csw.Op("Tj"u8);
+        csw.LiteralString(stamp.Text);
+        csw.Op("Tj"u8);
         csw.Op("ET"u8);
         csw.Op("Q"u8);
 
@@ -120,7 +136,7 @@ public sealed class StampApplier : IStampApplier
     private static PdfDictionary RebuildPage(
         PdfDictionary page,
         PdfIndirectReference stampRef,
-        PdfIndirectReference fontRef,
+        PdfObject fontRef,
         bool isBackground,
         PdfDocumentCore core
     )
@@ -129,38 +145,35 @@ public sealed class StampApplier : IStampApplier
         var existing = page[PdfName.Contents];
         PdfObject newContents;
         if (existing is null)
-        {
             newContents = stampRef;
-        }
         else
         {
             var existingList = existing is PdfArray a
-                ? a.Elements.ToList<PdfObject>()
-                : [(PdfObject)existing];
+                ? a.Elements.ToList()
+                : [existing];
             var allRefs = isBackground
-                ? new[] { stampRef }.Concat(existingList).ToArray<PdfObject>()
-                : existingList.Append(stampRef).ToArray<PdfObject>();
+                ? new[] { stampRef }.Concat(existingList).ToArray()
+                : existingList.Append(stampRef).ToArray();
             newContents = new PdfArray(allRefs);
         }
 
         // Merge /Resources /Font
         var existingResources = ResolveDict(page[PdfName.Resources], core);
         var existingFonts = existingResources?.Get<PdfDictionary>(PdfName.Font);
-        var fontEntries = existingFonts?.Entries.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-                          ?? new Dictionary<string, PdfObject>();
+        var fontEntries = existingFonts?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value) ?? new Dictionary<string, PdfObject>();
         fontEntries[StampFontKey] = fontRef;
+
         var newFontDict = new PdfDictionary(fontEntries);
-
-        var resourceEntries = existingResources?.Entries.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-                              ?? new Dictionary<string, PdfObject>();
+        var resourceEntries = existingResources?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value) ?? new Dictionary<string, PdfObject>();
         resourceEntries[PdfName.Font.Value] = newFontDict;
-        var newResources = new PdfDictionary(resourceEntries);
 
+        var newResources = new PdfDictionary(resourceEntries);
         var entries = new Dictionary<string, PdfObject>(page.Entries)
         {
             [PdfName.Contents.Value] = newContents,
             [PdfName.Resources.Value] = newResources
         };
+
         return new PdfDictionary(entries);
     }
 

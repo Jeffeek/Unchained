@@ -40,9 +40,10 @@ public sealed class RendererTests : IDisposable
     [Fact]
     public async Task RenderPage_SinglePage_StartsWithPngSignature()
     {
-        if (!FreeTypeAvailable()) return;
-        await using var doc = await Processor.LoadAsync(
-            new MemoryStream(Helpers.PdfFixtures.SinglePage()));
+        if (!FreeTypeAvailable())
+            return;
+
+        await using var doc = await Processor.LoadAsync(new MemoryStream(Helpers.PdfFixtures.SinglePage()));
         var png = await _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
         png[..8].ShouldBe(PngSignature);
     }
@@ -50,9 +51,10 @@ public sealed class RendererTests : IDisposable
     [Fact]
     public async Task RenderPage_WithTextContent_StartsWithPngSignature()
     {
-        if (!FreeTypeAvailable()) return;
-        await using var doc = await Processor.LoadAsync(
-            new MemoryStream(Helpers.PdfFixtures.WithTextContent(text: "Hello")));
+        if (!FreeTypeAvailable())
+            return;
+
+        await using var doc = await Processor.LoadAsync(new MemoryStream(Helpers.PdfFixtures.WithTextContent(text: "Hello")));
         var png = await _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
         png[..8].ShouldBe(PngSignature);
     }
@@ -62,9 +64,10 @@ public sealed class RendererTests : IDisposable
     [Fact]
     public async Task RenderPage_150Dpi_WidthApproximatesExpected()
     {
-        if (!FreeTypeAvailable()) return;
-        await using var doc = await Processor.LoadAsync(
-            new MemoryStream(Helpers.PdfFixtures.SinglePage()));
+        if (!FreeTypeAvailable())
+            return;
+
+        await using var doc = await Processor.LoadAsync(new MemoryStream(Helpers.PdfFixtures.SinglePage()));
         var page = doc.Pages[1];
         var png = await _renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150));
         // Expected pixel width ≈ pageWidthPt * 150 / 72
@@ -76,9 +79,10 @@ public sealed class RendererTests : IDisposable
     [Fact]
     public async Task RenderPage_300Dpi_LargerThan150Dpi()
     {
-        if (!FreeTypeAvailable()) return;
-        await using var doc = await Processor.LoadAsync(
-            new MemoryStream(Helpers.PdfFixtures.SinglePage()));
+        if (!FreeTypeAvailable())
+            return;
+
+        await using var doc = await Processor.LoadAsync(new MemoryStream(Helpers.PdfFixtures.SinglePage()));
         var png150 = await _renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150));
         var png300 = await _renderer.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 300));
         var w150 = (png150[16] << 24) | (png150[17] << 16) | (png150[18] << 8) | png150[19];
@@ -91,12 +95,14 @@ public sealed class RendererTests : IDisposable
     [Fact]
     public async Task RenderPage_TableDocument_ProducesPng()
     {
-        if (!FreeTypeAvailable()) return;
+        if (!FreeTypeAvailable())
+            return;
+
         var gen = new TableGenerator();
         var data = new TableData
         {
             Headers = ["Name", "Value"],
-            Rows    = [["Alice", "42"], ["Bob", "17"]]
+            Rows = [["Alice", "42"], ["Bob", "17"]]
         };
         await using var doc = await gen.GenerateAsync(data, TableStyle.Default);
         var png = await _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
@@ -108,9 +114,10 @@ public sealed class RendererTests : IDisposable
     [Fact]
     public async Task RenderDocumentAsync_MultiPage_ReturnsOnePerPage()
     {
-        if (!FreeTypeAvailable()) return;
-        await using var doc = await Processor.LoadAsync(
-            new MemoryStream(Helpers.PdfFixtures.MultiPage(count: 3)));
+        if (!FreeTypeAvailable())
+            return;
+
+        await using var doc = await Processor.LoadAsync(new MemoryStream(Helpers.PdfFixtures.MultiPage(count: 3)));
         var pages = await _renderer!.RenderDocumentAsync(doc, RenderOptions.Default);
         pages.Count.ShouldBe(3);
         foreach (var p in pages)
@@ -122,13 +129,13 @@ public sealed class RendererTests : IDisposable
     [Fact]
     public async Task RenderPage_Cancellation_ThrowsOperationCanceledException()
     {
-        if (!FreeTypeAvailable()) return;
-        await using var doc = await Processor.LoadAsync(
-            new MemoryStream(Helpers.PdfFixtures.SinglePage()));
+        if (!FreeTypeAvailable())
+            return;
+
+        await using var doc = await Processor.LoadAsync(new MemoryStream(Helpers.PdfFixtures.SinglePage()));
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        await Should.ThrowAsync<OperationCanceledException>(
-            () => _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, cts.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, cts.Token));
     }
 
     // ── Output size sanity ────────────────────────────────────────────────────
@@ -137,6 +144,7 @@ public sealed class RendererTests : IDisposable
     public async Task RenderPage_ProducesNonEmptyPng()
     {
         if (!FreeTypeAvailable()) return;
+
         await using var doc = await Processor.LoadAsync(
             new MemoryStream(Helpers.PdfFixtures.WithTextContent()));
         var png = await _renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);

@@ -14,20 +14,22 @@ internal static class PdfPngEncoder
 
     internal static byte[] Encode(RasterBuffer buffer)
     {
-        using var ms = new MemoryStream(buffer.Width * buffer.Height * 4 + 256);
+        using var ms = new MemoryStream((buffer.Width * buffer.Height * 4) + 256);
         ms.Write(PngSignature);
-        WriteIhdr(ms, buffer.Width, buffer.Height);
-        WriteIdat(ms, buffer);
+        WriteIHDR(ms, buffer.Width, buffer.Height);
+        WriteIDAT(ms, buffer);
         WriteChunk(ms, "IEND"u8, ReadOnlySpan<byte>.Empty);
+
         return ms.ToArray();
     }
 
-    private static void WriteIhdr(Stream stream, int width, int height)
+    // ReSharper disable once InconsistentNaming
+    private static void WriteIHDR(Stream stream, int width, int height)
     {
         Span<byte> data = stackalloc byte[13];
-        BinaryPrimitives.WriteInt32BigEndian(data[0..], width);
+        BinaryPrimitives.WriteInt32BigEndian(data[..], width);
         BinaryPrimitives.WriteInt32BigEndian(data[4..], height);
-        data[8] = 8;   // bit depth
+        data[8] = 8;   // a bit of depth
         data[9] = 6;   // colour type: RGBA
         data[10] = 0;  // compression method
         data[11] = 0;  // filter method
@@ -35,17 +37,18 @@ internal static class PdfPngEncoder
         WriteChunk(stream, "IHDR"u8, data);
     }
 
-    private static void WriteIdat(Stream stream, RasterBuffer buffer)
+    // ReSharper disable once InconsistentNaming
+    private static void WriteIDAT(Stream stream, RasterBuffer buffer)
     {
         var w = buffer.Width;
         var h = buffer.Height;
         var pixels = buffer.ToArgbBytes();
 
         // Build filtered scanline data: filter_byte(0=None) + R G B A per pixel
-        var raw = new byte[h * (1 + w * 4)];
+        var raw = new byte[h * (1 + (w * 4))];
         for (var y = 0; y < h; y++)
         {
-            var outOffset = y * (1 + w * 4);
+            var outOffset = y * (1 + (w * 4));
             raw[outOffset] = 0; // filter type: None
             var srcOffset = y * w * 4;
             Buffer.BlockCopy(pixels, srcOffset, raw, outOffset + 1, w * 4);
@@ -81,6 +84,7 @@ internal static class PdfPngEncoder
     {
         foreach (var b in data)
             crc = Crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
+
         return crc;
     }
 
@@ -94,6 +98,7 @@ internal static class PdfPngEncoder
                 c = (c & 1) != 0 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
             table[n] = c;
         }
+
         return table;
     }
 }

@@ -179,7 +179,7 @@ internal static class PdfFixtures
 
     private static int ByteLen(StringBuilder sb) => Encoding.Latin1.GetByteCount(sb.ToString());
 
-    private static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+    private static void AppendWithLineEnding(StringBuilder b, string line) => b.Append(line).Append('\n');
 
     // ── PDF with compressed /XRef stream ─────────────────────────────────────
 
@@ -285,43 +285,43 @@ internal static class PdfFixtures
         var sb = new StringBuilder();
         var offsets = new List<int>();
 
-        Ln(sb, "%PDF-1.7");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog
         offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj");
-        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Object 2 — Pages
         offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj");
-        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Object 3 — Page (with /Annots)
         offsets.Add(ByteLen(sb));
-        Ln(sb, "3 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Object 4 — Annotation
         var escaped = EscapeString(contents);
         offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj");
-        Ln(sb, $"<< /Type /Annot /Subtype /Text /Rect [50 700 100 750] /Contents ({escaped}) >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "4 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Text /Rect [50 700 100 750] /Contents ({escaped}) >>");
+        AppendWithLineEnding(sb, "endobj");
 
         var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref");
-        Ln(sb, "0 5");
-        Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
-        Ln(sb, "<< /Size 5 /Root 1 0 R >>");
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        AppendWithLineEnding(sb, "xref");
+        AppendWithLineEnding(sb, "0 5");
+        AppendWithLineEnding(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) AppendWithLineEnding(sb, $"{o:D10} 00000 n ");
+        AppendWithLineEnding(sb, "trailer");
+        AppendWithLineEnding(sb, "<< /Size 5 /Root 1 0 R >>");
+        AppendWithLineEnding(sb, "startxref");
+        AppendWithLineEnding(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
@@ -331,34 +331,31 @@ internal static class PdfFixtures
     {
         var bms = bookmarks.ToList();
         var sb = new StringBuilder();
-        var offsets = new List<int>();
         const int pageCount = 2;
 
-        Ln(sb, "%PDF-1.7");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog (with /Outlines)
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj");
-        Ln(sb, "<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Object 2 — Pages
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj");
-        Ln(sb, "<< /Type /Pages /Kids [5 0 R 6 0 R] /Count 2 >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Pages /Kids [5 0 R 6 0 R] /Count 2 >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Object 3 — Outlines root
         // Items start at object 4
         var itemCount = bms.Count;
         var firstRef = itemCount > 0 ? "4 0 R" : "null";
         var lastRef = itemCount > 0 ? $"{3 + itemCount} 0 R" : "null";
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "3 0 obj");
-        Ln(sb, $"<< /Type /Outlines /Count {itemCount} /First {firstRef} /Last {lastRef} >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Outlines /Count {itemCount} /First {firstRef} /Last {lastRef} >>");
+        AppendWithLineEnding(sb, "endobj");
 
+        // ReSharper disable once GrammarMistakeInComment
         // Objects 4..(3+N) — outline items
         for (var i = 0; i < bms.Count; i++)
         {
@@ -367,24 +364,21 @@ internal static class PdfFixtures
             var pageObjNum = pageNum == 1 ? 5 : 6;
             var prev = i > 0 ? $" /Prev {num - 1} 0 R" : "";
             var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : "";
-            offsets.Add(ByteLen(sb));
-            Ln(sb, $"{num} 0 obj");
-            Ln(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");
-            Ln(sb, "endobj");
+            AppendWithLineEnding(sb, $"{num} 0 obj");
+            AppendWithLineEnding(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");
+            AppendWithLineEnding(sb, "endobj");
         }
 
         // Page objects
         var page1ObjNum = 4 + bms.Count;
-        offsets.Add(ByteLen(sb));
-        Ln(sb, $"{page1ObjNum} 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, $"{page1ObjNum} 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        AppendWithLineEnding(sb, "endobj");
 
         var page2ObjNum = page1ObjNum + 1;
-        offsets.Add(ByteLen(sb));
-        Ln(sb, $"{page2ObjNum} 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, $"{page2ObjNum} 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Fix Pages /Kids to use correct page object numbers
         // We need to re-write object 2 at the actual page object numbers.
@@ -395,7 +389,7 @@ internal static class PdfFixtures
         return BuildWithOutlinesFinal(bms);
     }
 
-    private static byte[] BuildWithOutlinesFinal(List<(string title, int page)> bms)
+    private static byte[] BuildWithOutlinesFinal(IReadOnlyList<(string title, int page)> bms)
     {
         var sb = new StringBuilder();
         var offsets = new List<int>();
@@ -403,27 +397,27 @@ internal static class PdfFixtures
         // Fixed layout: catalog=1, pages=2, outlinesRoot=3, items=4..(3+N), page1=(4+N), page2=(5+N)
         var page1Obj = 4 + bms.Count;
         var page2Obj = 5 + bms.Count;
-        var totalObjs = page2Obj + 1;
+        var totalObjects = page2Obj + 1;
 
-        Ln(sb, "%PDF-1.7");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
-
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj");
-        Ln(sb, $"<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
         offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj");
-        Ln(sb, $"<< /Type /Pages /Kids [{page1Obj} 0 R {page2Obj} 0 R] /Count 2 >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Pages /Kids [{page1Obj} 0 R {page2Obj} 0 R] /Count 2 >>");
+        AppendWithLineEnding(sb, "endobj");
 
         var first = bms.Count > 0 ? "4 0 R" : "null";
-        var last  = bms.Count > 0 ? $"{3 + bms.Count} 0 R" : "null";
+        var last = bms.Count > 0 ? $"{3 + bms.Count} 0 R" : "null";
         offsets.Add(ByteLen(sb));
-        Ln(sb, "3 0 obj");
-        Ln(sb, $"<< /Type /Outlines /Count {bms.Count} /First {first} /Last {last} >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Outlines /Count {bms.Count} /First {first} /Last {last} >>");
+        AppendWithLineEnding(sb, "endobj");
 
         for (var i = 0; i < bms.Count; i++)
         {
@@ -433,30 +427,30 @@ internal static class PdfFixtures
             var prev = i > 0 ? $" /Prev {num - 1} 0 R" : "";
             var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : "";
             offsets.Add(ByteLen(sb));
-            Ln(sb, $"{num} 0 obj");
-            Ln(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");
-            Ln(sb, "endobj");
+            AppendWithLineEnding(sb, $"{num} 0 obj");
+            AppendWithLineEnding(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");
+            AppendWithLineEnding(sb, "endobj");
         }
 
         offsets.Add(ByteLen(sb));
-        Ln(sb, $"{page1Obj} 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, $"{page1Obj} 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        AppendWithLineEnding(sb, "endobj");
 
         offsets.Add(ByteLen(sb));
-        Ln(sb, $"{page2Obj} 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, $"{page2Obj} 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        AppendWithLineEnding(sb, "endobj");
 
         var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref");
-        Ln(sb, $"0 {totalObjs}");
-        Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
-        Ln(sb, $"<< /Size {totalObjs} /Root 1 0 R >>");
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        AppendWithLineEnding(sb, "xref");
+        AppendWithLineEnding(sb, $"0 {totalObjects}");
+        AppendWithLineEnding(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) AppendWithLineEnding(sb, $"{o:D10} 00000 n ");
+        AppendWithLineEnding(sb, "trailer");
+        AppendWithLineEnding(sb, $"<< /Size {totalObjects} /Root 1 0 R >>");
+        AppendWithLineEnding(sb, "startxref");
+        AppendWithLineEnding(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
@@ -467,44 +461,44 @@ internal static class PdfFixtures
         var sb = new StringBuilder();
         var offsets = new List<int>();
 
-        Ln(sb, "%PDF-1.7");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog (with /AcroForm)
         offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj");
-        Ln(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Object 2 — Pages
         offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj");
-        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Object 3 — Page
         offsets.Add(ByteLen(sb));
-        Ln(sb, "3 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
+        AppendWithLineEnding(sb, "endobj");
 
         // Object 4 — Text field (also the widget annotation for it)
         var escapedName = EscapeString(fieldName);
         var escapedValue = EscapeString(fieldValue);
         offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj");
-        Ln(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({escapedName}) /V ({escapedValue}) /Rect [50 700 300 720] /P 3 0 R >>");
-        Ln(sb, "endobj");
+        AppendWithLineEnding(sb, "4 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({escapedName}) /V ({escapedValue}) /Rect [50 700 300 720] /P 3 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
 
         var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref");
-        Ln(sb, "0 5");
-        Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
-        Ln(sb, "<< /Size 5 /Root 1 0 R >>");
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        AppendWithLineEnding(sb, "xref");
+        AppendWithLineEnding(sb, "0 5");
+        AppendWithLineEnding(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) AppendWithLineEnding(sb, $"{o:D10} 00000 n ");
+        AppendWithLineEnding(sb, "trailer");
+        AppendWithLineEnding(sb, "<< /Size 5 /Root 1 0 R >>");
+        AppendWithLineEnding(sb, "startxref");
+        AppendWithLineEnding(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());

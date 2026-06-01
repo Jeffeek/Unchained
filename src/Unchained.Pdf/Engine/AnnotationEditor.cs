@@ -22,9 +22,9 @@ public sealed class AnnotationEditor : IAnnotationEditor
     private static void AddAnnotation(IPdfDocument document, int pageNumber, Annotation annotation)
     {
         var adapter = document as PdfDocumentAdapter
-            ?? throw new ArgumentException(
-                $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                nameof(document));
+                      ?? throw new ArgumentException(
+                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
+                          nameof(document));
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -58,25 +58,27 @@ public sealed class AnnotationEditor : IAnnotationEditor
             if (!ReferenceEquals(obj.Value, targetDict)) continue;
 
             var pd = (PdfDictionary)obj.Value;
-            var existingAnnots = ResolveAnnotArray(pd[PdfName.Annots], adapter.Core);
-            var allAnnots = existingAnnots.Append(annotObj.ToReference()).ToArray<PdfObject>();
+            var existingAnnotations = ResolveAnnotArray(pd[PdfName.Annots], adapter.Core);
+            var allAnnotations = existingAnnotations.Append(annotObj.ToReference()).ToArray();
 
             var entries = new Dictionary<string, PdfObject>(pd.Entries)
             {
-                [PdfName.Annots.Value] = new PdfArray(allAnnots)
+                [PdfName.Annots.Value] = new PdfArray(allAnnotations)
             };
-            swaps[obj.ObjectNumber] = new PdfIndirectObject(obj.ObjectNumber, obj.Generation,
-                new PdfDictionary(entries));
+            swaps[obj.ObjectNumber] = new PdfIndirectObject(
+                obj.ObjectNumber,
+                obj.Generation,
+                new PdfDictionary(entries)
+            );
         }
 
         var finalObjects = existing
-            .Select(o => swaps.TryGetValue(o.ObjectNumber, out var s) ? s : o)
+            .Select(o => swaps.GetValueOrDefault(o.ObjectNumber, o))
             .Concat(builder.Objects)
             .ToList();
 
         var totalMax = finalObjects.Max(static o => o.ObjectNumber);
-        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference
-            ?? throw new PdfException("Trailer missing /Root.");
+        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
         var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
         {
             [PdfName.Size.Value] = new PdfInteger(totalMax + 1),

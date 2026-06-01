@@ -188,13 +188,8 @@ public sealed class DocumentMerger : IDocumentMerger
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static bool IsStructural(PdfIndirectObject obj)
-    {
-        if (obj.Value is not PdfDictionary d)
-            return false;
-
-        return d.GetName(PdfName.Type.Value) is "Catalog" or "Pages";
-    }
+    private static bool IsStructural(PdfIndirectObject obj) =>
+        obj.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) is "Catalog" or "Pages";
 
     private static bool IsPageLeaf(PdfIndirectObject obj) =>
         obj.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Page";

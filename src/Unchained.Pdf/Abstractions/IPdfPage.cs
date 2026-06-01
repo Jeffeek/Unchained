@@ -65,7 +65,7 @@ public interface IPdfPage
     /// Returns all annotations attached to this page, parsed from the <c>/Annots</c> array.
     /// Returns an empty list when the page has no annotations.
     /// </summary>
-    IReadOnlyList<Models.Annotation> GetAnnotations();
+    IReadOnlyList<Annotation> GetAnnotations();
 
     /// <summary>
     /// Returns a map from PDF font resource name (e.g. <c>F1</c>) to base font name

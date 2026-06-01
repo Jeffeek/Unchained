@@ -10,32 +10,29 @@ public sealed class BookmarkEditorTests
     private static readonly BookmarkEditor Editor = new();
     private static readonly DocumentProcessor Processor = new();
 
-    private static async Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
-        await Processor.LoadAsync(new MemoryStream(bytes));
+    private static Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
+        Processor.LoadAsync(new MemoryStream(bytes));
 
     // ── GetBookmarks (reading existing) ──────────────────────────────────────
 
     [Fact]
     public async Task GetBookmarks_WithOutlines_ReturnsItems()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithOutlines(("Chapter 1", 1), ("Chapter 2", 2)));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithOutlines(("Chapter 1", 1), ("Chapter 2", 2)));
         doc.GetBookmarks().Count.ShouldBe(2);
     }
 
     [Fact]
     public async Task GetBookmarks_Titles_Match()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithOutlines(("Introduction", 1)));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithOutlines(("Introduction", 1)));
         doc.GetBookmarks()[0].Title.ShouldBe("Introduction");
     }
 
     [Fact]
     public async Task GetBookmarks_PageNumbers_Match()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithOutlines(("Ch1", 1), ("Ch2", 2)));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithOutlines(("Ch1", 1), ("Ch2", 2)));
         doc.GetBookmarks()[0].PageNumber.ShouldBe(1);
         doc.GetBookmarks()[1].PageNumber.ShouldBe(2);
     }
@@ -74,7 +71,8 @@ public sealed class BookmarkEditorTests
     public async Task SetBookmarksAsync_PageNumbers_RoundTripped()
     {
         await using var doc = await LoadAsync(Helpers.PdfFixtures.MultiPage(count: 2));
-        await Editor.SetBookmarksAsync(doc, [
+        await Editor.SetBookmarksAsync(doc,
+        [
             new("A", 1),
             new("B", 2)
         ]);
@@ -85,8 +83,7 @@ public sealed class BookmarkEditorTests
     [Fact]
     public async Task SetBookmarksAsync_EmptyList_RemovesBookmarks()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithOutlines(("Ch1", 1)));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithOutlines(("Ch1", 1)));
         await Editor.SetBookmarksAsync(doc, []);
         doc.GetBookmarks().ShouldBeEmpty();
     }
@@ -132,7 +129,6 @@ public sealed class BookmarkEditorTests
         await using var doc = await LoadAsync(Helpers.PdfFixtures.SinglePage());
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        await Should.ThrowAsync<OperationCanceledException>(
-            () => Editor.SetBookmarksAsync(doc, [new("A", 1)], cts.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => Editor.SetBookmarksAsync(doc, [new("A", 1)], cts.Token));
     }
 }

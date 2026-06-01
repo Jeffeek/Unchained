@@ -9,8 +9,8 @@ public sealed class FormFillerTests
     private static readonly FormFiller Filler = new();
     private static readonly DocumentProcessor Processor = new();
 
-    private static async Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
-        await Processor.LoadAsync(new MemoryStream(bytes));
+    private static Task<Abstractions.IPdfDocument> LoadAsync(byte[] bytes) =>
+        Processor.LoadAsync(new MemoryStream(bytes));
 
     // ── GetFormFields (reading) ───────────────────────────────────────────────
 
@@ -58,8 +58,7 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FillAsync_UpdatesFieldValue()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm("Name", ""));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("Name", string.Empty));
         await Filler.FillAsync(doc, new Dictionary<string, string> { ["Name"] = "Alice" });
         doc.GetFormFields()[0].Value.ShouldBe("Alice");
     }
@@ -67,17 +66,14 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FillAsync_UnknownField_NoError()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm("Name", ""));
-        await Should.NotThrowAsync(
-            () => Filler.FillAsync(doc, new Dictionary<string, string> { ["DoesNotExist"] = "X" }));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("Name", string.Empty));
+        await Should.NotThrowAsync(() => Filler.FillAsync(doc, new Dictionary<string, string> { ["DoesNotExist"] = "X" }));
     }
 
     [Fact]
     public async Task FillAsync_EmptyValues_DocumentUnchanged()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm("Name", "Original"));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("Name", "Original"));
         await Filler.FillAsync(doc, new Dictionary<string, string>());
         doc.GetFormFields()[0].Value.ShouldBe("Original");
     }
@@ -85,8 +81,7 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FillAsync_RoundTrip_ValuePersistsAfterSave()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm("Email", ""));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("Email", string.Empty));
         await Filler.FillAsync(doc, new Dictionary<string, string> { ["Email"] = "test@example.com" });
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms);
@@ -98,8 +93,7 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FillAsync_PageCountUnchanged()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm("F"));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("F"));
         await Filler.FillAsync(doc, new Dictionary<string, string> { ["F"] = "val" });
         doc.PageCount.ShouldBe(1);
     }
@@ -110,8 +104,7 @@ public sealed class FormFillerTests
         await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm());
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        await Should.ThrowAsync<OperationCanceledException>(
-            () => Filler.FillAsync(doc, new Dictionary<string, string>(), cts.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => Filler.FillAsync(doc, new Dictionary<string, string>(), cts.Token));
     }
 
     // ── FlattenAsync ──────────────────────────────────────────────────────────
@@ -119,8 +112,7 @@ public sealed class FormFillerTests
     [Fact]
     public async Task FlattenAsync_RemovesAcroFormFromDocument()
     {
-        await using var doc = await LoadAsync(
-            Helpers.PdfFixtures.WithAcroForm("F", "val"));
+        await using var doc = await LoadAsync(Helpers.PdfFixtures.WithAcroForm("F", "val"));
         await Filler.FlattenAsync(doc);
         doc.GetFormFields().ShouldBeEmpty();
     }

@@ -124,7 +124,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         {
             var title = current[PdfName.Title] is PdfString ts
                 ? Encoding.Latin1.GetString(ts.Bytes.Span)
-                : "";
+                : string.Empty;
 
             var pageNum = ResolveDestPage(current);
             var children = ResolveDict(current[PdfName.First]) is not null
@@ -134,6 +134,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             result.Add(new Bookmark(title, pageNum, children));
             current = ResolveDict(current[PdfName.Next]);
         }
+
         return result;
     }
 
@@ -142,10 +143,12 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         var dest = item[PdfName.Dest];
         if (dest is PdfIndirectReference dr)
             dest = Core.ResolveIndirect(dr.ObjectNumber).Value;
-        if (dest is not PdfArray destArr || destArr.Count == 0) return 0;
 
-        var pageRef = destArr[0] is PdfIndirectReference r ? r : null;
-        if (pageRef is null) return 0;
+        if (dest is not PdfArray destArr || destArr.Count == 0)
+            return 0;
+
+        if (destArr[0] is not PdfIndirectReference pageRef)
+            return 0;
 
         for (var i = 1; i <= Core.PageCount; i++)
         {
@@ -154,6 +157,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
                 ReferenceEquals(pageDict, resolved))
                 return i;
         }
+
         return 0;
     }
 
@@ -161,26 +165,28 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     public IReadOnlyList<FormField> GetFormFields()
     {
         var acroForm = ResolveDict(Core.Catalog[PdfName.AcroForm]);
-        if (acroForm is null) return [];
+        if (acroForm is null)
+            return [];
+
         var fields = acroForm.Get<PdfArray>(PdfName.Fields);
-        if (fields is null) return [];
+        if (fields is null)
+            return [];
+
         var result = new List<FormField>();
-        CollectFields(fields, prefix: "", result);
+        CollectFields(fields, prefix: string.Empty, result);
+
         return result;
     }
 
-    private void CollectFields(PdfArray fields, string prefix, List<FormField> result)
+    private void CollectFields(PdfArray fields, string prefix, ICollection<FormField> result)
     {
-        foreach (var elem in fields.Elements)
+        foreach (var dict in fields.Elements.Select(ResolveDict).OfType<PdfDictionary>())
         {
-            var dict = ResolveDict(elem);
-            if (dict is null) continue;
-
             var partialName = dict[PdfName.Get("T")] is PdfString ts
                 ? Encoding.Latin1.GetString(ts.Bytes.Span)
-                : "";
-            var fullName = prefix.Length > 0 ? $"{prefix}.{partialName}" : partialName;
+                : string.Empty;
 
+            var fullName = prefix.Length > 0 ? $"{prefix}.{partialName}" : partialName;
             var ft = dict.GetName("FT");
 
             // Non-terminal node (group field with /Kids but no /FT)
@@ -191,7 +197,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             }
 
             var value = DecodeFieldValue(dict);
-            result.Add(new FormField(fullName, ft ?? "", value));
+            result.Add(new FormField(fullName, ft ?? string.Empty, value));
         }
     }
 

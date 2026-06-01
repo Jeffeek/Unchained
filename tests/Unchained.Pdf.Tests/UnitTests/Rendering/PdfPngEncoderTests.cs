@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Pdf.Rendering;
 using Unchained.Pdf.Rendering.Rendering; // RasterBuffer, PdfPngEncoder live in Unchained.Pdf.Rendering assembly
 using Xunit;
 
@@ -48,21 +47,22 @@ public sealed class PdfPngEncoderTests
         var buf = new RasterBuffer(10, 20);
         buf.Clear();
         var png = PdfPngEncoder.Encode(buf);
-        var width  = (png[16] << 24) | (png[17] << 16) | (png[18] << 8) | png[19];
+        var width = (png[16] << 24) | (png[17] << 16) | (png[18] << 8) | png[19];
         var height = (png[20] << 24) | (png[21] << 16) | (png[22] << 8) | png[23];
         width.ShouldBe(10);
         height.ShouldBe(20);
     }
 
     [Fact]
-    public void Encode_Buffer_EndsWithIendChunk()
+    public void Encode_Buffer_EndsWithIENDChunk()
     {
         var png = PdfPngEncoder.Encode(SinglePixel(128, 128, 128));
         // Last 12 bytes: 4-byte len (0) + "IEND" + 4-byte CRC
         var iendStart = png.Length - 12;
         iendStart.ShouldBeGreaterThanOrEqualTo(0);
+
         var iendType = new[] { png[iendStart + 4], png[iendStart + 5], png[iendStart + 6], png[iendStart + 7] };
-        iendType.ShouldBe(new byte[] { (byte)'I', (byte)'E', (byte)'N', (byte)'D' });
+        iendType.ShouldBe("IEND"u8.ToArray());
     }
 
     [Fact]

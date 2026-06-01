@@ -29,9 +29,9 @@ public sealed class FormFiller : IFormFiller
         if (values.Count == 0) return;
 
         var adapter = document as PdfDocumentAdapter
-            ?? throw new ArgumentException(
-                $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                nameof(document));
+                      ?? throw new ArgumentException(
+                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
+                          nameof(document));
 
         var existing = adapter.Core.CollectObjects();
         var swaps = new Dictionary<int, PdfIndirectObject>();
@@ -42,20 +42,21 @@ public sealed class FormFiller : IFormFiller
 
         foreach (var (name, newValue) in values)
         {
-            if (!fieldMap.TryGetValue(name, out var fieldObj)) continue;
+            if (!fieldMap.TryGetValue(name, out var fieldObj))
+                continue;
+
             var fieldDict = (PdfDictionary)fieldObj.Value;
             var entries = new Dictionary<string, PdfObject>(fieldDict.Entries)
             {
                 ["V"] = PdfString.FromLatin1(newValue)
             };
-            swaps[fieldObj.ObjectNumber] = new PdfIndirectObject(
-                fieldObj.ObjectNumber, fieldObj.Generation, new PdfDictionary(entries));
+            swaps[fieldObj.ObjectNumber] = new PdfIndirectObject(fieldObj.ObjectNumber, fieldObj.Generation, new PdfDictionary(entries));
         }
 
         if (swaps.Count == 0) return;
 
         var finalObjects = existing
-            .Select(o => swaps.TryGetValue(o.ObjectNumber, out var s) ? s : o)
+            .Select(o => swaps.GetValueOrDefault(o.ObjectNumber, o))
             .ToList();
 
         SerializeAndReplace(adapter, finalObjects);
@@ -66,9 +67,9 @@ public sealed class FormFiller : IFormFiller
     private static void Flatten(IPdfDocument document)
     {
         var adapter = document as PdfDocumentAdapter
-            ?? throw new ArgumentException(
-                $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                nameof(document));
+                      ?? throw new ArgumentException(
+                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
+                          nameof(document));
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -81,16 +82,21 @@ public sealed class FormFiller : IFormFiller
         foreach (var (_, fieldObj) in fieldMap)
         {
             var fieldDict = (PdfDictionary)fieldObj.Value;
-            if (fieldDict.GetName("FT") != "Tx") continue;
+            if (fieldDict.GetName("FT") != "Tx")
+                continue;
+
             var ap = ResolveDict(fieldDict[PdfName.Get("AP")], adapter.Core);
             var normalAp = ap is not null ? ResolveStream(ap[PdfName.Get("N")], adapter.Core) : null;
-            if (normalAp is null) continue;
+            if (normalAp is null)
+                continue;
 
             // Find which page this widget annotation belongs to.
-            var pageRef = fieldDict[PdfName.Get("P")] as PdfIndirectReference;
-            if (pageRef is null) continue;
+            if (fieldDict[PdfName.Get("P")] is not PdfIndirectReference pageRef)
+                continue;
+
             var pageObj = existing.FirstOrDefault(o => o.ObjectNumber == pageRef.ObjectNumber);
-            if (pageObj is null) continue;
+            if (pageObj is null)
+                continue;
 
             // Add the appearance stream to page /Contents.
             var appearanceBytes = normalAp.Data.ToArray();
@@ -105,36 +111,31 @@ public sealed class FormFiller : IFormFiller
             var existingContents = pd[PdfName.Contents];
             PdfObject newContents;
             if (existingContents is null)
-            {
                 newContents = apStream.ToReference();
-            }
             else
             {
                 var existingList = existingContents is PdfArray a
-                    ? a.Elements.ToList<PdfObject>()
-                    : [(PdfObject)existingContents];
-                newContents = new PdfArray(existingList.Append(apStream.ToReference()).ToArray<PdfObject>());
+                    ? a.Elements.ToList()
+                    : [existingContents];
+                newContents = new PdfArray(existingList.Append(apStream.ToReference()).ToArray());
             }
 
             var pageEntries = new Dictionary<string, PdfObject>(pd.Entries)
             {
                 [PdfName.Contents.Value] = newContents
             };
-            swaps[pageObj.ObjectNumber] = new PdfIndirectObject(
-                pageObj.ObjectNumber, pageObj.Generation, new PdfDictionary(pageEntries));
+            swaps[pageObj.ObjectNumber] = new PdfIndirectObject(pageObj.ObjectNumber, pageObj.Generation, new PdfDictionary(pageEntries));
         }
 
         // Remove /AcroForm from catalog.
-        var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
         var catDict = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catDict.Entries);
         catEntries.Remove(PdfName.AcroForm.Value);
-        swaps[catalogObj.ObjectNumber] = new PdfIndirectObject(
-            catalogObj.ObjectNumber, catalogObj.Generation, new PdfDictionary(catEntries));
+        swaps[catalogObj.ObjectNumber] = new PdfIndirectObject(catalogObj.ObjectNumber, catalogObj.Generation, new PdfDictionary(catEntries));
 
         var finalObjects = existing
-            .Select(o => swaps.TryGetValue(o.ObjectNumber, out var s) ? s : o)
+            .Select(o => swaps.GetValueOrDefault(o.ObjectNumber, o))
             .Concat(builder.Objects)
             .ToList();
 
@@ -149,19 +150,22 @@ public sealed class FormFiller : IFormFiller
         PdfDocumentCore core
     )
     {
-        var acroFormObj = existing.FirstOrDefault(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
-        if (acroFormObj is null) return new Dictionary<string, PdfIndirectObject>();
+        var acroFormObj = existing.FirstOrDefault(static o => o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+        if (acroFormObj is null)
+            return new Dictionary<string, PdfIndirectObject>();
 
         var catalog = (PdfDictionary)acroFormObj.Value;
         var acroForm = ResolveDict(catalog[PdfName.AcroForm], core);
-        if (acroForm is null) return new Dictionary<string, PdfIndirectObject>();
+        if (acroForm is null)
+            return new Dictionary<string, PdfIndirectObject>();
 
         var fields = acroForm.Get<PdfArray>(PdfName.Fields);
-        if (fields is null) return new Dictionary<string, PdfIndirectObject>();
+        if (fields is null)
+            return new Dictionary<string, PdfIndirectObject>();
 
         var result = new Dictionary<string, PdfIndirectObject>();
-        CollectFieldMap(fields, prefix: "", existing, core, result);
+        CollectFieldMap(fields, prefix: "", existing, result);
+
         return result;
     }
 
@@ -169,27 +173,27 @@ public sealed class FormFiller : IFormFiller
         PdfArray fields,
         string prefix,
         IReadOnlyList<PdfIndirectObject> existing,
-        PdfDocumentCore core,
-        Dictionary<string, PdfIndirectObject> result
+        IDictionary<string, PdfIndirectObject> result
     )
     {
         foreach (var elem in fields.Elements)
         {
-            if (elem is not PdfIndirectReference r) continue;
+            if (elem is not PdfIndirectReference r)
+                continue;
+
             var obj = existing.FirstOrDefault(o => o.ObjectNumber == r.ObjectNumber);
-            if (obj is null) continue;
-            var dict = obj.Value as PdfDictionary;
-            if (dict is null) continue;
+            if (obj?.Value is not PdfDictionary dict)
+                continue;
 
             var partialName = dict[PdfName.Get("T")] is PdfString ts
                 ? Encoding.Latin1.GetString(ts.Bytes.Span)
-                : "";
+                : string.Empty;
             var fullName = prefix.Length > 0 ? $"{prefix}.{partialName}" : partialName;
 
             var ft = dict.GetName("FT");
             if (ft is null && dict.Get<PdfArray>(PdfName.Kids) is { } kids)
             {
-                CollectFieldMap(kids, fullName, existing, core, result);
+                CollectFieldMap(kids, fullName, existing, result);
                 continue;
             }
 
@@ -197,11 +201,10 @@ public sealed class FormFiller : IFormFiller
         }
     }
 
-    private static void SerializeAndReplace(PdfDocumentAdapter adapter, List<PdfIndirectObject> objects)
+    private static void SerializeAndReplace(PdfDocumentAdapter adapter, IReadOnlyCollection<PdfIndirectObject> objects)
     {
         var totalMax = objects.Max(static o => o.ObjectNumber);
-        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference
-            ?? throw new PdfException("Trailer missing /Root.");
+        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
         var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
         {
             [PdfName.Size.Value] = new PdfInteger(totalMax + 1),

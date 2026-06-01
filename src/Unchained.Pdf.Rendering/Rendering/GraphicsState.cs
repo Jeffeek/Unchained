@@ -30,7 +30,7 @@ internal sealed class GraphicsState
     internal double FontSize { get; set; }
     internal double CharSpace { get; set; }
     internal double WordSpace { get; set; }
-    internal double HorizScale { get; set; } = 100;
+    internal double HorizontalScale { get; set; } = 100;
     internal double Leading { get; set; }
 
     internal GraphicsState Clone() =>
@@ -46,30 +46,33 @@ internal sealed class GraphicsState
             FontSize = FontSize,
             CharSpace = CharSpace,
             WordSpace = WordSpace,
-            HorizScale = HorizScale,
+            HorizontalScale = HorizontalScale,
             Leading = Leading
         };
 
     // Transform a PDF user-space point through the current CTM.
     internal (double X, double Y) Transform(double x, double y)
     {
-        var a = Ctm[0]; var b = Ctm[1]; var c = Ctm[2];
-        var d = Ctm[3]; var e = Ctm[4]; var f = Ctm[5];
-        return (a * x + c * y + e, b * x + d * y + f);
+        var a = Ctm[0];
+        var b = Ctm[1];
+        var c = Ctm[2];
+        var d = Ctm[3];
+        var e = Ctm[4];
+        var f = Ctm[5];
+
+        return ((a * x) + (c * y) + e, (b * x) + (d * y) + f);
     }
 
-    internal static double[] MultiplyMatrix(double[] m1, double[] m2)
-    {
+    internal static double[] MultiplyMatrix(double[] m1, double[] m2) =>
         // [a1 b1 0]   [a2 b2 0]
         // [c1 d1 0] × [c2 d2 0]
         // [e1 f1 1]   [e2 f2 1]
-        return [
-            m1[0] * m2[0] + m1[1] * m2[2],
-            m1[0] * m2[1] + m1[1] * m2[3],
-            m1[2] * m2[0] + m1[3] * m2[2],
-            m1[2] * m2[1] + m1[3] * m2[3],
-            m1[4] * m2[0] + m1[5] * m2[2] + m2[4],
-            m1[4] * m2[1] + m1[5] * m2[3] + m2[5]
+        [
+            (m1[0] * m2[0]) + (m1[1] * m2[2]),
+            (m1[0] * m2[1]) + (m1[1] * m2[3]),
+            (m1[2] * m2[0]) + (m1[3] * m2[2]),
+            (m1[2] * m2[1]) + (m1[3] * m2[3]),
+            (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
+            (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
         ];
-    }
 }
