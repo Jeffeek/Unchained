@@ -33,7 +33,7 @@ public sealed class ContentStreamParserTests
 
     [Fact]
     public void Parse_EmptyStream_ReturnsEmpty() =>
-        Parse("").ShouldBeEmpty();
+        Parse(string.Empty).ShouldBeEmpty();
 
     [Fact]
     public void Parse_WhitespaceOnly_ReturnsEmpty() =>

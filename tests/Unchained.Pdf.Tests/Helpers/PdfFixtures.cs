@@ -142,14 +142,14 @@ internal static class PdfFixtures
         }
 
         // Optional Info dictionary
-        var infoRef = "";
+        var infoRef = string.Empty;
         if (title is not null || author is not null)
         {
             var infoObjNum = 3 + pageCount;
             offsets.Add(ByteLen(sb));
             Ln(sb, $"{infoObjNum} 0 obj");
-            var titleEntry = title is not null ? $" /Title ({title})" : "";
-            var authorEntry = author is not null ? $" /Author ({author})" : "";
+            var titleEntry = title is not null ? $" /Title ({title})" : string.Empty;
+            var authorEntry = author is not null ? $" /Author ({author})" : string.Empty;
             Ln(sb, $"<<{titleEntry}{authorEntry} >>");
             Ln(sb, "endobj");
             infoRef = $" /Info {infoObjNum} 0 R";
@@ -362,8 +362,8 @@ internal static class PdfFixtures
             var num = 4 + i;
             var (title, pageNum) = bms[i];
             var pageObjNum = pageNum == 1 ? 5 : 6;
-            var prev = i > 0 ? $" /Prev {num - 1} 0 R" : "";
-            var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : "";
+            var prev = i > 0 ? $" /Prev {num - 1} 0 R" : string.Empty;
+            var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : string.Empty;
             AppendWithLineEnding(sb, $"{num} 0 obj");
             AppendWithLineEnding(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");
             AppendWithLineEnding(sb, "endobj");
@@ -424,8 +424,8 @@ internal static class PdfFixtures
             var num = 4 + i;
             var (title, pageNum) = bms[i];
             var pageObjNum = pageNum == 1 ? page1Obj : page2Obj;
-            var prev = i > 0 ? $" /Prev {num - 1} 0 R" : "";
-            var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : "";
+            var prev = i > 0 ? $" /Prev {num - 1} 0 R" : string.Empty;
+            var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : string.Empty;
             offsets.Add(ByteLen(sb));
             AppendWithLineEnding(sb, $"{num} 0 obj");
             AppendWithLineEnding(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");

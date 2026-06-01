@@ -91,7 +91,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             };
             if (dict is null) continue;
 
-            var subtypeName = dict.GetName(PdfName.Subtype.Value) ?? "";
+            var subtypeName = dict.GetName(PdfName.Subtype.Value) ?? string.Empty;
             var subtype = subtypeName switch
             {
                 "Text" => AnnotationSubtype.Text,

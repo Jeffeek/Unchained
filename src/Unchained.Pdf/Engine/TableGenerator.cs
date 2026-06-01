@@ -267,7 +267,7 @@ public sealed class TableGenerator : ITableGenerator
                 var xOffset = c > 0 ? layout.ColumnWidths[..c].Sum() : 0f;
                 var cellX = margin + style.CellPaddingPt + xOffset;
                 SetTextMatrix(csw, cellX, rowBaseline);
-                csw.LiteralString(c < row.Count ? row[c] : "");
+                csw.LiteralString(c < row.Count ? row[c] : string.Empty);
                 csw.Op("Tj"u8);
             }
 

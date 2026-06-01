@@ -56,18 +56,15 @@ public sealed class DocumentProcessorLoadTests : IDisposable
 
     [Fact]
     public async Task LoadAsync_NullStream_Throws() =>
-        await Should.ThrowAsync<ArgumentNullException>(() =>
-            _processor.LoadAsync((Stream)null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => _processor.LoadAsync((Stream)null!));
 
     [Fact]
     public async Task LoadAsync_NullPath_Throws() =>
-        await Should.ThrowAsync<ArgumentException>(() =>
-            _processor.LoadAsync((string)null!));
+        await Should.ThrowAsync<ArgumentException>(() => _processor.LoadAsync((string)null!));
 
     [Fact]
     public async Task LoadAsync_EmptyPath_Throws() =>
-        await Should.ThrowAsync<ArgumentException>(() =>
-            _processor.LoadAsync(""));
+        await Should.ThrowAsync<ArgumentException>(() => _processor.LoadAsync(string.Empty));
 
     [Fact]
     public async Task LoadAsync_InvalidPdf_ThrowsPdfException()

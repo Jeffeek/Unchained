@@ -202,7 +202,7 @@ internal sealed class PageRenderer(
             // ── Text state ────────────────────────────────────────────────────
             case "Tf" when op.Operands.Count >= 2:
             {
-                var resName = (op.Operands[0] as PdfName)?.Value ?? "";
+                var resName = (op.Operands[0] as PdfName)?.Value ?? string.Empty;
                 _gs.FontName = fontMap.GetValueOrDefault(resName, resName);
                 _gs.FontSize = Num(op, 1);
 

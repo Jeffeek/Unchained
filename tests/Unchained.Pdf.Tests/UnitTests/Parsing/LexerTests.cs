@@ -148,7 +148,7 @@ public sealed class LexerTests
 
     [Fact]
     public void ReadNext_EmptyInput_ReturnsEndOfFile() =>
-        Lex("").ReadNext().Kind.ShouldBe(PdfTokenKind.EndOfFile);
+        Lex(string.Empty).ReadNext().Kind.ShouldBe(PdfTokenKind.EndOfFile);
 
     [Fact]
     public void ReadNext_OnlyWhitespace_ReturnsEndOfFile() =>

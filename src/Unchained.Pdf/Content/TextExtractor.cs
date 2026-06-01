@@ -38,7 +38,7 @@ internal static class TextExtractor
         var tlmF = 0.0; // text line matrix
 
         var fontSize = 0.0;
-        var fontName = "";
+        var fontName = string.Empty;
         var tc = 0.0; // character spacing
         var tw = 0.0; // word spacing
         var th = 100.0; // horizontal scaling (%)
@@ -81,7 +81,7 @@ internal static class TextExtractor
                 // ── Font selection ────────────────────────────────────────────
                 case "Tf" when inText && op.Operands.Count >= 2:
                 {
-                    var resName = (op.Operands[0] as PdfName)?.Value ?? "";
+                    var resName = (op.Operands[0] as PdfName)?.Value ?? string.Empty;
                     fontName = fontNameMap.GetValueOrDefault(resName, resName);
                     fontSize = ReadNumber(op.Operands[1]);
                     break;

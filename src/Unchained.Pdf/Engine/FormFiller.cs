@@ -164,7 +164,7 @@ public sealed class FormFiller : IFormFiller
             return new Dictionary<string, PdfIndirectObject>();
 
         var result = new Dictionary<string, PdfIndirectObject>();
-        CollectFieldMap(fields, prefix: "", existing, result);
+        CollectFieldMap(fields, prefix: string.Empty, existing, result);
 
         return result;
     }

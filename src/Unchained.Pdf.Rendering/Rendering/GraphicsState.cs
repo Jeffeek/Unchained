@@ -26,7 +26,7 @@ internal sealed class GraphicsState
     // Text state (reset to identity on BT)
     internal double[] TextMatrix { get; set; } = [1, 0, 0, 1, 0, 0];
     internal double[] TextLineMatrix { get; set; } = [1, 0, 0, 1, 0, 0];
-    internal string FontName { get; set; } = "";
+    internal string FontName { get; set; } = string.Empty;
     internal double FontSize { get; set; }
     internal double CharSpace { get; set; }
     internal double WordSpace { get; set; }
