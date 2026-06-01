@@ -12,27 +12,40 @@ namespace Unchained.Pdf.Engine;
 /// </summary>
 internal sealed class PdfDocumentAdapter : IPdfDocument
 {
-    private readonly PdfDocumentCore _core;
     private int _disposed;
 
     internal PdfDocumentAdapter(PdfDocumentCore core)
     {
-        _core = core;
+        Core = core;
         Pages = new PdfPageCollectionAdapter(core);
     }
 
-    /// <inheritdoc />
-    public int PageCount => _core.PageCount;
+    internal PdfDocumentCore Core { get; private set; }
+
+    /// <summary>
+    /// Disposes the current core and replaces it with <paramref name="newCore"/>.
+    /// Called by <see cref="TableGenerator"/> and <see cref="DocumentMerger"/> after
+    /// in-place document mutation (e.g. <c>AppendTableAsync</c>, <c>MergeAsync</c>).
+    /// </summary>
+    internal void ReplaceCore(PdfDocumentCore newCore)
+    {
+        Core.Dispose();
+        Core = newCore;
+        Pages = new PdfPageCollectionAdapter(Core);
+    }
 
     /// <inheritdoc />
-    public IPageCollection Pages { get; }
+    public int PageCount => Core.PageCount;
+
+    /// <inheritdoc />
+    public IPageCollection Pages { get; private set; }
 
     /// <inheritdoc />
     public DocumentMetadata Metadata
     {
         get
         {
-            var info = _core.Info;
+            var info = Core.Info;
             return info is null
                 ? DocumentMetadata.Empty
                 : new DocumentMetadata(
@@ -57,7 +70,9 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     /// </summary>
     internal byte[] Serialize(SaveOptions? options)
     {
-        var objects = _core.CollectObjects();
+        _ = options; // Currently ignored — reserved for future use (e.g. incremental update support)
+
+        var objects = Core.CollectObjects();
         var maxObjNum = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
 
         // Build a clean trailer — preserve /Root and /Info, drop /Prev and other
@@ -65,10 +80,10 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         var trailerEntries = new Dictionary<string, PdfObject>
         {
             [PdfName.Size.Value] = new PdfInteger(maxObjNum + 1),
-            [PdfName.Root.Value] = _core.Trailer[PdfName.Root] ?? throw new PdfException("Document trailer is missing required /Root entry.")
+            [PdfName.Root.Value] = Core.Trailer[PdfName.Root] ?? throw new PdfException("Document trailer is missing required /Root entry.")
         };
 
-        if (_core.Trailer[PdfName.Info] is { } infoRef)
+        if (Core.Trailer[PdfName.Info] is { } infoRef)
             trailerEntries[PdfName.Info.Value] = infoRef;
 
         var trailer = new PdfDictionary(trailerEntries);
@@ -83,7 +98,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
-            _core.Dispose();
+            Core.Dispose();
     }
 
     /// <inheritdoc />

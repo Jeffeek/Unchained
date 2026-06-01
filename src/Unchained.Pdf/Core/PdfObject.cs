@@ -172,6 +172,18 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     /// <summary>The <c>/Prev</c> name.</summary>
     // ReSharper disable once MemberCanBeInternal
     public static readonly PdfName Prev = Get("Prev");
+    /// <summary>The <c>/Font</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Font = Get("Font");
+    /// <summary>The <c>/BaseFont</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName BaseFont = Get("BaseFont");
+    /// <summary>The <c>/Parent</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Parent = Get("Parent");
+    /// <summary>The <c>/Outlines</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Outlines = Get("Outlines");
 
     /// <summary>
     /// Returns <see langword="true"/> if <paramref name="other"/> is the same interned instance.
