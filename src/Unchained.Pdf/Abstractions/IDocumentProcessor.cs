@@ -80,6 +80,39 @@ public interface IDocumentProcessor : IDisposable
     Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken ct = default);
 
     /// <summary>
+    /// Re-encrypts <paramref name="document"/> with new passwords and writes the result to
+    /// <paramref name="outputStream"/>. Pass empty strings for both passwords to remove encryption.
+    /// The document must have been loaded (and decrypted) by this processor instance.
+    /// </summary>
+    /// <param name="document">The already-decrypted source document.</param>
+    /// <param name="newUserPassword">New user password. Empty string = no password required to open.</param>
+    /// <param name="newOwnerPassword">New owner password. Empty → defaults to <paramref name="newUserPassword"/>.</param>
+    /// <param name="outputStream">Destination stream for the re-encrypted PDF.</param>
+    /// <param name="algorithm">Encryption algorithm for the new file (default AES-256).</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task ChangePasswordsAsync(
+        IPdfDocument document,
+        string newUserPassword,
+        string newOwnerPassword,
+        Stream outputStream,
+        PdfEncryptionAlgorithm algorithm = PdfEncryptionAlgorithm.Aes256,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Re-encrypts <paramref name="document"/> with new passwords and writes to <paramref name="filePath"/>.
+    /// Pass empty strings for both passwords to remove encryption.
+    /// </summary>
+    Task ChangePasswordsAsync(
+        IPdfDocument document,
+        string newUserPassword,
+        string newOwnerPassword,
+        string filePath,
+        PdfEncryptionAlgorithm algorithm = PdfEncryptionAlgorithm.Aes256,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
     /// Serializes <paramref name="document"/> and writes the result to <paramref name="filePath"/>.
     /// The document must have been produced by this processor instance.
     /// </summary>

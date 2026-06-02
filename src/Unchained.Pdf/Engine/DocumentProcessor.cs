@@ -72,6 +72,66 @@ public sealed class DocumentProcessor : IDocumentProcessor
     }
 
     /// <inheritdoc />
+    public Task ChangePasswordsAsync(
+        IPdfDocument document,
+        string newUserPassword,
+        string newOwnerPassword,
+        Stream outputStream,
+        PdfEncryptionAlgorithm algorithm = PdfEncryptionAlgorithm.Aes256,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(newUserPassword);
+        ArgumentNullException.ThrowIfNull(newOwnerPassword);
+        ArgumentNullException.ThrowIfNull(outputStream);
+
+        return SaveAsync(
+            document,
+            outputStream,
+            options: BuildChangePasswordOptions(newUserPassword, newOwnerPassword, algorithm),
+            ct
+        );
+    }
+
+    /// <inheritdoc />
+    public Task ChangePasswordsAsync(
+        IPdfDocument document,
+        string newUserPassword,
+        string newOwnerPassword,
+        string filePath,
+        PdfEncryptionAlgorithm algorithm = PdfEncryptionAlgorithm.Aes256,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(newUserPassword);
+        ArgumentNullException.ThrowIfNull(newOwnerPassword);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        return SaveAsync(
+            document,
+            filePath,
+            options: BuildChangePasswordOptions(newUserPassword, newOwnerPassword, algorithm),
+            ct
+        );
+    }
+
+    // Builds SaveOptions for a password-change operation.
+    // Empty passwords on both sides → remove encryption (SaveOptions.Default).
+    private static SaveOptions BuildChangePasswordOptions(string userPwd, string ownerPwd, PdfEncryptionAlgorithm algorithm)
+    {
+        if (userPwd.Length == 0 && ownerPwd.Length == 0)
+            return SaveOptions.Default; // strip encryption
+
+        return new SaveOptions(Encryption: new EncryptionOptions(
+            UserPassword: userPwd,
+            OwnerPassword: ownerPwd,
+            Algorithm: algorithm)
+        );
+    }
+
+    /// <inheritdoc />
     public async Task SaveAsync(
         IPdfDocument document,
         string filePath,

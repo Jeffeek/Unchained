@@ -39,6 +39,7 @@ internal static class PdfEncryption
         var oBytes = GetStringBytes(encryptDict, "O");
         var uBytes = GetStringBytes(encryptDict, "U");
         var pFlags = (int)(encryptDict.Get<PdfInteger>("P")?.Value ?? -3904);
+        var permissions = DecodePermissions(pFlags);
 
         switch (v)
         {
@@ -54,7 +55,7 @@ internal static class PdfEncryption
 
                 return fileKey is null
                     ? throw new PdfEncryptedException("Incorrect password for AES-256 encrypted PDF.")
-                    : new PdfEncryptionContext(fileKey, PdfEncryptionAlgorithm.Aes256);
+                    : new PdfEncryptionContext(fileKey, PdfEncryptionAlgorithm.Aes256, permissions);
             }
             case <= 4:
             {
@@ -65,17 +66,15 @@ internal static class PdfEncryption
                 // ReSharper disable once BadListLineBreaks
                 var encKey = DeriveKeyV2V4(password, oBytes, pFlags, fileId, r, keyLen);
                 if (ValidateUserPasswordV2V4(encKey, uBytes, fileId, r))
-                    return new PdfEncryptionContext(encKey, algo);
+                    return new PdfEncryptionContext(encKey, algo, permissions);
 
                 // Try with empty password before failing
                 // ReSharper disable once BadListLineBreaks
                 var emptyKey = DeriveKeyV2V4(string.Empty, oBytes, pFlags, fileId, r, keyLen);
-                if (!ValidateUserPasswordV2V4(emptyKey, uBytes, fileId, r))
-                    throw new PdfEncryptedException("Incorrect password for encrypted PDF.");
 
-                encKey = emptyKey;
-
-                return new PdfEncryptionContext(encKey, algo);
+                return !ValidateUserPasswordV2V4(emptyKey, uBytes, fileId, r)
+                    ? throw new PdfEncryptedException("Incorrect password for encrypted PDF.")
+                    : new PdfEncryptionContext(emptyKey, algo, permissions);
             }
             default:
                 return null; // revision not supported
@@ -420,6 +419,10 @@ internal static class PdfEncryption
         const int reservedBits = unchecked((int)0xFFFFF0C0); // bits 7-8 and 13-32 = 1
         return reservedBits | (int)perms;
     }
+
+    // Extract only the bits defined in PdfPermissions from the raw /P integer.
+    private static PdfPermissions DecodePermissions(int pFlags) =>
+        (PdfPermissions)(pFlags & (int)PdfPermissions.All);
 
     private static byte[] GetStringBytes(PdfDictionary dict, string key)
     {

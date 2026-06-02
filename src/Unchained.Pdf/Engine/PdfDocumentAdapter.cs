@@ -66,6 +66,9 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     public bool IsEncrypted => Core.IsEncrypted;
 
     /// <inheritdoc />
+    public PdfPermissions Permissions => Core.EncryptionPermissions;
+
+    /// <inheritdoc />
     public bool IsDisposed => _disposed == 1;
 
     /// <summary>

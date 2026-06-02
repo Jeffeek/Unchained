@@ -1,4 +1,5 @@
 using Unchained.Pdf.Core;
+using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -173,6 +174,12 @@ internal sealed class PdfDocumentCore : IDisposable
 
     /// <summary><see langword="true"/> when the source PDF was password-protected.</summary>
     public bool IsEncrypted => _encryption is not null;
+
+    /// <summary>
+    /// Operations permitted when the document is opened with the user password.
+    /// Returns <see cref="PdfPermissions.All"/> for unencrypted documents.
+    /// </summary>
+    public PdfPermissions EncryptionPermissions => _encryption?.Permissions ?? PdfPermissions.All;
 
     private void InitializeEncryption(string? password)
     {

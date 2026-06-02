@@ -40,6 +40,12 @@ public interface IPdfDocument : IDisposable, IAsyncDisposable
     bool IsEncrypted { get; }
 
     /// <summary>
+    /// Operations permitted when the document is opened with the user password.
+    /// Returns <see cref="PdfPermissions.All"/> for unencrypted documents (no restrictions).
+    /// </summary>
+    PdfPermissions Permissions { get; }
+
+    /// <summary>
     /// <see langword="true"/> after <see cref="IDisposable.Dispose"/> or
     /// <see cref="IAsyncDisposable.DisposeAsync"/> has been called.
     /// Accessing other members on a disposed document results in undefined behaviour.

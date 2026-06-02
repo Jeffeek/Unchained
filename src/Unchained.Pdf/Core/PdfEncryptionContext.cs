@@ -11,11 +11,18 @@ internal sealed class PdfEncryptionContext
     private readonly byte[] _fileKey;
     private readonly PdfEncryptionAlgorithm _algorithm;
 
-    internal PdfEncryptionContext(byte[] fileKey, PdfEncryptionAlgorithm algorithm)
+    internal PdfEncryptionContext(byte[] fileKey, PdfEncryptionAlgorithm algorithm, PdfPermissions permissions = PdfPermissions.All)
     {
         _fileKey = fileKey;
         _algorithm = algorithm;
+        Permissions = permissions;
     }
+
+    /// <summary>
+    /// Operations permitted when the document is opened with the user password.
+    /// Always <see cref="PdfPermissions.All"/> on the write path (owner has full access).
+    /// </summary>
+    internal PdfPermissions Permissions { get; }
 
     // ── Stream data encrypt / decrypt ─────────────────────────────────────────
 
