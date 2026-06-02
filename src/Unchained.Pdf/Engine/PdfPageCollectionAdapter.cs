@@ -56,7 +56,93 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         if (contents is null) return [];
 
         var decoded = DecodeContents(contents);
-        return decoded.Length == 0 ? [] : ContentStreamParser.Parse(decoded);
+        if (decoded.Length == 0) return [];
+
+        var operators = ContentStreamParser.Parse(decoded);
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var budget = MaxExpandedOperatorsPerPage;
+        return ExpandFormXObjects(operators, resources, depth: 0, ref budget);
+    }
+
+    private const int MaxFormXObjectDepth = 10;
+
+    // 100 000 operators per page is a generous ceiling that covers any real PDF.
+    // An expanded count above this indicates recursive or excessively large form XObjects
+    // that would take too long to render; we stop expanding beyond the limit.
+    private const int MaxExpandedOperatorsPerPage = 100_000;
+
+    // Recursively expands Do operators that reference /Subtype /Form XObjects.
+    // Each form XObject is inlined as q [cm] <form content> Q.
+    // Image Do operators are left in place for the renderer to handle.
+    // `budget` is a shared counter tracking total operators emitted for this page;
+    // expansion stops when it reaches MaxExpandedOperatorsPerPage.
+    private IReadOnlyList<ContentOperator> ExpandFormXObjects(
+        IReadOnlyList<ContentOperator> operators, PdfDictionary? resources, int depth, ref int budget)
+    {
+        if (depth >= MaxFormXObjectDepth) return operators;
+        if (budget <= 0) return operators; // ceiling reached — no further expansion
+        if (!operators.Any(static op => op.Name == "Do")) return operators;
+
+        var xobjDict = ResolveDict(resources?[PdfName.Get("XObject")]);
+        var result = new List<ContentOperator>(operators.Count + 4);
+
+        foreach (var op in operators)
+        {
+            if (budget <= 0)
+            {
+                result.Add(op); // ceiling hit — emit remaining ops unexpanded
+                continue;
+            }
+
+            if (op.Name != "Do" || op.Operands.Count == 0 ||
+                op.Operands[0] is not PdfName xName || xobjDict is null)
+            {
+                result.Add(op);
+                budget--;
+                continue;
+            }
+
+            var xobj = xobjDict[PdfName.Get(xName.Value)];
+            var xStream = xobj switch
+            {
+                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
+                PdfStream s => s,
+                _ => null
+            };
+
+            if (xStream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
+            {
+                result.Add(op); // image XObject or unresolved — leave Do intact
+                budget--;
+                continue;
+            }
+
+            result.Add(new ContentOperator("q", []));
+            budget--;
+
+            var matrixArr = xStream.Dictionary.Get<PdfArray>(PdfName.Get("Matrix"));
+            if (matrixArr is { Count: 6 })
+            {
+                result.Add(new ContentOperator("cm", matrixArr.Elements.ToArray()));
+                budget--;
+            }
+
+            ReadOnlyMemory<byte> formData;
+            try { formData = StreamFilters.Decode(xStream); }
+            catch { result.Add(new ContentOperator("Q", [])); budget--; continue; }
+
+            if (formData.Length > 0)
+            {
+                var formResources = ResolveDict(xStream.Dictionary[PdfName.Resources]) ?? resources;
+                var formOps = ContentStreamParser.Parse(formData);
+                result.AddRange(ExpandFormXObjects(formOps, formResources, depth + 1, ref budget));
+            }
+
+            result.Add(new ContentOperator("Q", []));
+            budget--;
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -218,9 +304,10 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                     ? decoded.ToArray()
                     : BuildGrayPlaceholder(w, h);
             }
-            catch (NotImplementedException)
+            catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
             {
-                // Filter not yet supported (e.g. DCTDecode/JPEG, JPXDecode) — use placeholder.
+                // Unsupported filter (LZW, CCITT, JBIG2, JPX) or unsupported JPEG color space
+                // (CMYK) or malformed JPEG data — use gray placeholder.
                 rgb = BuildGrayPlaceholder(w, h);
             }
 

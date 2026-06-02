@@ -12,4 +12,8 @@
     <InternalsVisibleTo Include="Unchained.Pdf.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="JpegLibrary" Version="0.4.32" />
+  </ItemGroup>
+
 </Project>

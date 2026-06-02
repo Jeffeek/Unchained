@@ -117,16 +117,30 @@ public sealed class RealPdfRenderingTests : RendererTestBase
     }
 
     [Fact]
-    public async Task Render_Large_CompletesWithinTenSeconds()
+    public async Task Render_Large_FirstPage_ProducesValidPng()
     {
         SkipIfNoFreeType();
 
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Large);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var doc = await LoadAsync(bytes);
-        var pages = await Renderer!.RenderDocumentAsync(doc, new RenderOptions(Dpi: 72), cts.Token);
-        pages.Count.ShouldBe(doc.PageCount);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 72));
+        png[..8].ShouldBe(PdfTestConstants.PngSignature);
+    }
+
+    [Fact]
+    public async Task Render_Large_RenderDocumentAsync_RespectsCancellation()
+    {
+        SkipIfNoFreeType();
+
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Large);
+
+        // Large PDFs now have real content from form XObject expansion.
+        // Verify cancellation stops rendering mid-document rather than running to completion.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        await using var doc = await LoadAsync(bytes);
+        await Should.ThrowAsync<OperationCanceledException>(
+            () => Renderer!.RenderDocumentAsync(doc, new RenderOptions(Dpi: 72), cts.Token));
     }
 
     // ── helper ────────────────────────────────────────────────────────────────

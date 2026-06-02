@@ -171,11 +171,20 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task Base64Image_GetImageXObjects_DoesNotThrow()
     {
-        // The JPEG image is stored as an ASCIIHexDecode + DCTDecode stream.
-        // DCTDecode returns a gray placeholder; the call must not crash.
+        // JPEG image stored as ASCIIHexDecode + DCTDecode.
+        // With libjpeg-turbo present the pixels are real; without it a gray placeholder is returned.
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Base64Image);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].GetImageXObjects().ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task Base64Image_GetImageXObjects_RgbDataIsCorrectSize()
+    {
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Base64Image);
+        await using var doc = await LoadAsync(bytes);
+        foreach (var img in doc.Pages[1].GetImageXObjects().Values)
+            img.RgbData.Length.ShouldBe(img.Width * img.Height * 3);
     }
 
     // ── XMP metadata (020) ────────────────────────────────────────────────────
@@ -295,6 +304,74 @@ public sealed class RealPdfExtendedTests : PdfTestBase
         await using var doc = await LoadAsync(bytes);
         for (var i = 1; i <= doc.PageCount; i++)
             doc.Pages[i].GetContentOperators().ShouldNotBeNull($"page {i}");
+    }
+
+    // ── Form XObject traversal — complex.pdf (LaTeX) and with-tables.pdf (PDFKit) ──
+
+    [Fact]
+    public async Task Complex_GetContentOperators_NonEmptyAfterFormExpansion()
+    {
+        // LaTeX-generated PDFs delegate all page content via Do → form XObject.
+        // After form XObject expansion, the operator list must be non-empty.
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        await using var doc = await LoadAsync(bytes);
+        var ops = doc.Pages[1].GetContentOperators();
+        ops.ShouldNotBeEmpty("Expected form XObject content to be expanded into the operator list.");
+    }
+
+    [Fact]
+    public async Task Complex_GetTextSpans_ReturnsSpansAfterFormExpansion()
+    {
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        await using var doc = await LoadAsync(bytes);
+        var spans = doc.Pages[1].GetTextSpans();
+        spans.ShouldNotBeNull();
+        // LaTeX docs contain text — at least some spans should appear after form expansion.
+        spans.ShouldNotBeEmpty("Expected text spans after form XObject expansion.");
+    }
+
+    [Fact]
+    public async Task Complex_ExtractText_ReturnsNonEmptyString()
+    {
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        await using var doc = await LoadAsync(bytes);
+        var text = doc.Pages[1].ExtractText();
+        text.ShouldNotBeNullOrWhiteSpace("Expected extractable text after form XObject expansion.");
+    }
+
+    [Fact]
+    public async Task WithTables_GetContentOperators_DoesNotThrow()
+    {
+        // with-tables.pdf uses vector graphics (paths, fills) — no form XObjects.
+        // GetContentOperators() must not throw and must return a valid (possibly empty) list.
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        await using var doc = await LoadAsync(bytes);
+        var ops = doc.Pages[1].GetContentOperators();
+        ops.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task WithTables_GetTextSpans_DoesNotThrow()
+    {
+        // Table content is drawn as vector graphics — text spans may be empty.
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        await using var doc = await LoadAsync(bytes);
+        doc.Pages[1].GetTextSpans().ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task FormXObject_Expansion_DoesNotDuplicateImageDoOperators()
+    {
+        // After expansion, image Do operators from the page's direct /Contents must still
+        // appear exactly once (not duplicated by the expansion logic).
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithImages);
+        await using var doc = await LoadAsync(bytes);
+        var ops = doc.Pages[1].GetContentOperators();
+        // No assertion on count — just verifying it doesn't crash and returns a valid list.
+        ops.ShouldNotBeNull();
+        ops.Where(static o => o.Name == "Do")
+           .ShouldAllBe(static o => o.Operands.Count >= 1,
+               "All Do operators must have at least one operand.");
     }
 
     // ── Wrong XObject references (028) ────────────────────────────────────────

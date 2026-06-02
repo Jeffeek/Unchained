@@ -56,11 +56,16 @@ public sealed class PdfRenderer : IRenderer
         IPdfDocument document,
         RenderOptions options,
         CancellationToken ct = default
-    ) => Task.Run(IReadOnlyList<byte[]> () =>
-            Enumerable.Range(1, document.PageCount)
-                .Select(i => RenderPage(document.Pages[i], options))
-                .ToList(),
-        ct);
+    ) => Task.Run(() =>
+    {
+        var results = new List<byte[]>(document.PageCount);
+        for (var i = 1; i <= document.PageCount; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            results.Add(RenderPage(document.Pages[i], options));
+        }
+        return (IReadOnlyList<byte[]>)results;
+    }, ct);
 
     private byte[] RenderPage(IPdfPage page, RenderOptions options)
     {

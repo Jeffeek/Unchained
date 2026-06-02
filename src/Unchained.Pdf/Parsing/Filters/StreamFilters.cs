@@ -22,7 +22,7 @@ internal static class StreamFilters
     /// </exception>
     /// <exception cref="NotImplementedException">
     /// Thrown for filters that are recognized but not yet implemented
-    /// (<c>LZWDecode</c>, <c>CCITTFaxDecode</c>, <c>JBIG2Decode</c>, <c>DCTDecode</c>, <c>JPXDecode</c>).
+    /// (<c>LZWDecode</c>, <c>CCITTFaxDecode</c>, <c>JBIG2Decode</c>, <c>JPXDecode</c>).
     /// </exception>
     public static ReadOnlyMemory<byte> Decode(PdfStream stream)
     {
@@ -50,7 +50,7 @@ internal static class StreamFilters
             "LZWDecode" or "LZW" => throw new NotImplementedException("LZWDecode is not yet implemented."),
             "CCITTFaxDecode" or "CCF" => throw new NotImplementedException("CCITTFaxDecode is not yet implemented."),
             "JBIG2Decode" => throw new NotImplementedException("JBIG2Decode is not yet implemented."),
-            "DCTDecode" or "DCT" => throw new NotImplementedException("DCTDecode (JPEG) is not yet implemented."),
+            "DCTDecode" or "DCT" => JpegDecoder.Decode(data),
             "JPXDecode" => throw new NotImplementedException("JPXDecode (JPEG 2000) is not yet implemented."),
             "Crypt" => data, // identity crypt filter — pass through
             _ => throw new PdfException($"Unknown stream filter: /{filterName}.")
