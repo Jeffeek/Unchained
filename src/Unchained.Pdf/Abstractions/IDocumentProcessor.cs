@@ -80,6 +80,50 @@ public interface IDocumentProcessor : IDisposable
     Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken ct = default);
 
     /// <summary>
+    /// Validates <paramref name="pdfBytes"/> against the specified PDF/A conformance profile.
+    /// Returns a <see cref="PdfAValidationResult"/> listing every violation found.
+    /// An empty violation list means the document is fully conformant.
+    /// </summary>
+    /// <param name="pdfBytes">Raw bytes of the PDF to validate.</param>
+    /// <param name="profile">PDF/A profile to check against (default PDF/A-1b).</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<PdfAValidationResult> ValidatePdfAAsync(
+        byte[] pdfBytes,
+        PdfAProfile profile = PdfAProfile.PdfA1B,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Applies structural PDF/A conformance fixes to <paramref name="document"/> and
+    /// writes the result to <paramref name="outputStream"/>.
+    /// <para>
+    /// Fixes applied: pdfaid XMP metadata, /ID in trailer, removal of /AA from catalog,
+    /// Print flag on annotations. Does not embed fonts, add output intents, or remove
+    /// transparency — validate after conversion to see any remaining violations.
+    /// </para>
+    /// </summary>
+    /// <param name="document">Source document (must not be encrypted).</param>
+    /// <param name="outputStream">Destination stream for the converted PDF.</param>
+    /// <param name="profile">Target PDF/A profile (default PDF/A-1b).</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task ConvertToPdfAAsync(
+        IPdfDocument document,
+        Stream outputStream,
+        PdfAProfile profile = PdfAProfile.PdfA1B,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Applies structural PDF/A fixes and writes the result to <paramref name="filePath"/>.
+    /// </summary>
+    Task ConvertToPdfAAsync(
+        IPdfDocument document,
+        string filePath,
+        PdfAProfile profile = PdfAProfile.PdfA1B,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
     /// Digitally signs <paramref name="document"/> with <paramref name="certificate"/> and
     /// writes the signed PDF to <paramref name="outputStream"/>.
     /// Uses PKCS#7 detached signature (<c>adbe.pkcs7.detached</c>, ISO 32000-1 §12.8.3).

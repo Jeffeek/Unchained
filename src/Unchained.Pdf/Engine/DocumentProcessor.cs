@@ -73,6 +73,46 @@ public sealed class DocumentProcessor : IDocumentProcessor
     }
 
     /// <inheritdoc />
+    public Task<PdfAValidationResult> ValidatePdfAAsync(byte[] pdfBytes, PdfAProfile profile = PdfAProfile.PdfA1B, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(pdfBytes);
+
+        return Task.Run(() => PdfAValidator.Validate(pdfBytes, profile), ct);
+    }
+
+    /// <inheritdoc />
+    public async Task ConvertToPdfAAsync(
+        IPdfDocument document,
+        Stream outputStream,
+        PdfAProfile profile = PdfAProfile.PdfA1B,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(outputStream);
+
+        var adapter = CastAdapter(document);
+        var converted = await Task.Run(() => PdfAConverter.Convert(adapter.Core, profile), ct).ConfigureAwait(false);
+        await outputStream.WriteAsync(converted, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task ConvertToPdfAAsync(
+        IPdfDocument document,
+        string filePath,
+        PdfAProfile profile = PdfAProfile.PdfA1B,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        var adapter = CastAdapter(document);
+        var converted = await Task.Run(() => PdfAConverter.Convert(adapter.Core, profile), ct).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(filePath, converted, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task SignAsync(
         IPdfDocument document,
         X509Certificate2 certificate,
