@@ -8,8 +8,8 @@ namespace Unchained.Pdf.Parsing.Filters;
 /// using JBig2Decoder.NETStandard — a pure-managed C# port of the JPedal JBIG2 decoder.
 /// <para>
 /// JBIG2 images in PDFs are bi-level (1 bit per pixel, DeviceGray).
-/// The decoded output is a raw pixel byte array; <see cref="GetImageXObjects"/> applies
-/// a gray placeholder since the image is DeviceGray rather than DeviceRGB 8-bit.
+/// The decoded output is a raw pixel byte array; image extraction returns a gray
+/// placeholder since JBIG2 images are DeviceGray rather than DeviceRGB 8-bit.
 /// </para>
 /// </summary>
 internal static class Jbig2Decoder

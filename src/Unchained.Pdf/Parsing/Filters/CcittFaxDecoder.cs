@@ -132,7 +132,6 @@ internal static class CcittFaxDecoder
 
     private const int LookupBits = 13;
     private const int LookupSize = 1 << LookupBits; // 8192
-    private const int RunEod = -1;   // sentinel: end of data / invalid
 
     // Lookup entry: run count (≥0 = terminating; <0 = makeup needing another code to follow).
     // code_length in high byte: (len << 16) | run  — stored as int32.
@@ -226,6 +225,7 @@ internal static class CcittFaxDecoder
                 curRow,
                 columns,
                 whiteBit,
+                endOfBlock,
                 ref a0,
                 ref a0Color
             );
@@ -244,7 +244,7 @@ internal static class CcittFaxDecoder
         return output.ToArray();
     }
 
-    // Returns false when EOFB (two consecutive EOL codes) is encountered.
+    // Returns false when EOFB (two consecutive EOL codes) is encountered and endOfBlock is true.
     private static bool DecodeRow2D(
         ReadOnlySpan<byte> input,
         ref int bitPos,
@@ -252,18 +252,22 @@ internal static class CcittFaxDecoder
         IList<bool> curRow,
         int columns,
         bool whiteBit,
+        bool endOfBlock,
         ref int a0,
         ref bool a0Color
     )
     {
         while (a0 < columns)
         {
-            // Check for EOFB / EOL: 12 zero bits followed by 1 (24 bits for double EOL in G4)
-            var saved = bitPos;
-            if (TryReadEolOrEofb(input, ref bitPos))
-                return false;
+            // Check for EOFB only when EndOfBlock is in effect (default true for Group 4).
+            if (endOfBlock)
+            {
+                var saved = bitPos;
+                if (TryReadEolOrEofb(input, ref bitPos))
+                    return false;
 
-            bitPos = saved;
+                bitPos = saved;
+            }
 
             // Read 2D mode code
             var mode = Read2dMode(input, ref bitPos);
@@ -382,10 +386,10 @@ internal static class CcittFaxDecoder
 
     private static class Mode2D
     {
-        public const int Pass = -100;
-        public const int Horizontal = -101;
+        public const int Pass = 4;       // distinct from V offsets (−3…+3) and the −1 sentinel
+        public const int Horizontal = 5;
         public const int V0 = 0;
-        // V(+1) = 1, V(-1) = -1, V(+2) = 2, V(-2) = -2, V(+3) = 3, V(-3) = -3
+        // V(+1)=1, V(-1)=-1, V(+2)=2, V(-2)=-2, V(+3)=3, V(-3)=-3; −1 = end-of-data
     }
 
     // 2D mode codes (T.6 §4.2.1).
@@ -433,9 +437,7 @@ internal static class CcittFaxDecoder
                         case 1 when b3 == 0:
                             bitPos += 4;
                             return Mode2D.V0 + 2;
-                        case 1:
-                            bitPos += 4;
-                            return b3 == 0 ? Mode2D.V0 - 2 : Mode2D.V0 + 2;
+                        // b2==1, b3 ∈ {0,1}: both guarded cases above exhaust all possibilities.
                     }
 
                     // 00 0 0...

@@ -141,9 +141,4 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         await using var doc = await LoadAsync(bytes);
         await Should.ThrowAsync<OperationCanceledException>(() => Renderer!.RenderDocumentAsync(doc, new RenderOptions(Dpi: 72), cts.Token));
     }
-
-    // ── helper ────────────────────────────────────────────────────────────────
-
-    private static IEnumerable<string> Files() =>
-        RealPdfFixtures.AllPdfFilePaths().Select(static o => (string)o[0]);
 }

@@ -138,9 +138,4 @@ public sealed class RealPdfTextTests : PdfTestBase
         embedded.ShouldBeGreaterThanOrEqualTo(0,
             "Embedded font programs found: " + embedded + " (0 is acceptable — some PDFs use system fonts without embedding)");
     }
-
-    // ── helper ────────────────────────────────────────────────────────────────
-
-    private static IEnumerable<string> Files() =>
-        RealPdfFixtures.AllPdfFilePaths().Select(static o => (string)o[0]);
 }

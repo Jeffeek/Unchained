@@ -42,4 +42,7 @@ public abstract class PdfTestBase
         ms.Position = 0;
         return await Processor.LoadAsync(ms);
     }
+
+    protected static IEnumerable<string> Files() =>
+        RealPdfFixtures.AllPdfFilePaths().Select(static o => (string)o[0]);
 }
