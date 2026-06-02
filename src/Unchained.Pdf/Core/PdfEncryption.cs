@@ -358,7 +358,7 @@ internal static class PdfEncryption
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.None;
         // Pad to 16-byte block
-        var len = ((data.Length + 15) / 16) * 16;
+        var len = (data.Length + 15) / 16 * 16;
         var padded = new byte[len];
         data.CopyTo(padded, 0);
 

@@ -53,22 +53,21 @@ internal sealed class PdfEncryptionContext
 
         var key = PdfEncryption.DeriveObjectKey(_fileKey, objNum, genNum, isAes: _algorithm == PdfEncryptionAlgorithm.Aes128);
 
-        if (_algorithm != PdfEncryptionAlgorithm.Aes128)
-            return PdfEncryption.Rc4(key, data.ToArray());
-
-        return data.Length < 16
-            ? data.ToArray()
-            : PdfEncryption.AesDecryptCbc(key, data[..16].ToArray(), data[16..].ToArray());
+        return _algorithm != PdfEncryptionAlgorithm.Aes128
+            ? PdfEncryption.Rc4(key, data.ToArray())
+            : data.Length < 16
+                ? data.ToArray()
+                : PdfEncryption.AesDecryptCbc(key, data[..16].ToArray(), data[16..].ToArray());
     }
 
     // ── String encrypt / decrypt ──────────────────────────────────────────────
 
     /// <summary>Encrypts a raw string byte array.</summary>
-    internal byte[] EncryptString(ReadOnlySpan<byte> data, int objNum, int genNum)
+    private byte[] EncryptString(ReadOnlySpan<byte> data, int objNum, int genNum)
         => EncryptStream(data, objNum, genNum); // same algorithm, same key derivation
 
     /// <summary>Decrypts a raw string byte array.</summary>
-    internal byte[] DecryptString(ReadOnlySpan<byte> data, int objNum, int genNum)
+    private byte[] DecryptString(ReadOnlySpan<byte> data, int objNum, int genNum)
         => DecryptStream(data, objNum, genNum);
 
     // ── Object-tree walk: decrypt all strings and streams ────────────────────

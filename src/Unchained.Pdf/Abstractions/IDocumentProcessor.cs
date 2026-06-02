@@ -80,6 +80,44 @@ public interface IDocumentProcessor : IDisposable
     Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken ct = default);
 
     /// <summary>
+    /// Digitally signs <paramref name="document"/> with <paramref name="certificate"/> and
+    /// writes the signed PDF to <paramref name="outputStream"/>.
+    /// Uses PKCS#7 detached signature (<c>adbe.pkcs7.detached</c>, ISO 32000-1 §12.8.3).
+    /// </summary>
+    /// <param name="document">The source document (must not be encrypted).</param>
+    /// <param name="certificate">Certificate with an associated private key used to sign.</param>
+    /// <param name="outputStream">Destination for the signed PDF bytes.</param>
+    /// <param name="options">Signing metadata (reason, location, etc.).</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task SignAsync(
+        IPdfDocument document,
+        System.Security.Cryptography.X509Certificates.X509Certificate2 certificate,
+        Stream outputStream,
+        SignatureOptions? options = null,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Digitally signs <paramref name="document"/> and writes the result to <paramref name="filePath"/>.
+    /// </summary>
+    Task SignAsync(
+        IPdfDocument document,
+        System.Security.Cryptography.X509Certificates.X509Certificate2 certificate,
+        string filePath,
+        SignatureOptions? options = null,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Reads and verifies all digital signatures in the given PDF bytes.
+    /// Returns one <see cref="PdfSignatureInfo"/> per signature field found.
+    /// An empty list means the document has no signatures (not that it is invalid).
+    /// </summary>
+    /// <param name="pdfBytes">The raw bytes of a PDF file (may be password-protected for structure, but signature verification is independent of encryption).</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<IReadOnlyList<PdfSignatureInfo>> VerifySignaturesAsync(byte[] pdfBytes, CancellationToken ct = default);
+
+    /// <summary>
     /// Re-encrypts <paramref name="document"/> with new passwords and writes the result to
     /// <paramref name="outputStream"/>. Pass empty strings for both passwords to remove encryption.
     /// The document must have been loaded (and decrypted) by this processor instance.

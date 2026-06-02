@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.Converters;
@@ -72,6 +73,55 @@ public sealed class DocumentProcessor : IDocumentProcessor
     }
 
     /// <inheritdoc />
+    public async Task SignAsync(
+        IPdfDocument document,
+        X509Certificate2 certificate,
+        Stream outputStream,
+        SignatureOptions? options = null,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(certificate);
+        ArgumentNullException.ThrowIfNull(outputStream);
+
+        var adapter = CastAdapter(document);
+        var signed = await Task.Run(() => PdfSigner.Sign(adapter.Core, certificate, options ?? SignatureOptions.Default), ct).ConfigureAwait(false);
+        await outputStream.WriteAsync(signed, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task SignAsync(
+        IPdfDocument document,
+        X509Certificate2 certificate,
+        string filePath,
+        SignatureOptions? options = null,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(certificate);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        var adapter = CastAdapter(document);
+        var signed = await Task.Run(() => PdfSigner.Sign(adapter.Core, certificate, options ?? SignatureOptions.Default), ct).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(filePath, signed, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<PdfSignatureInfo>> VerifySignaturesAsync(byte[] pdfBytes, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(pdfBytes);
+
+        return Task.Run(() =>
+            {
+                var core = PdfDocumentCore.Parse(pdfBytes);
+                return PdfSignatureVerifier.Verify(pdfBytes, core);
+            },
+            ct);
+    }
+
+    /// <inheritdoc />
     public Task ChangePasswordsAsync(
         IPdfDocument document,
         string newUserPassword,
@@ -119,17 +169,15 @@ public sealed class DocumentProcessor : IDocumentProcessor
 
     // Builds SaveOptions for a password-change operation.
     // Empty passwords on both sides → remove encryption (SaveOptions.Default).
-    private static SaveOptions BuildChangePasswordOptions(string userPwd, string ownerPwd, PdfEncryptionAlgorithm algorithm)
-    {
-        if (userPwd.Length == 0 && ownerPwd.Length == 0)
-            return SaveOptions.Default; // strip encryption
-
-        return new SaveOptions(Encryption: new EncryptionOptions(
-            UserPassword: userPwd,
-            OwnerPassword: ownerPwd,
-            Algorithm: algorithm)
-        );
-    }
+    private static SaveOptions BuildChangePasswordOptions(string userPwd, string ownerPwd, PdfEncryptionAlgorithm algorithm) =>
+        userPwd.Length == 0 && ownerPwd.Length == 0
+            ? SaveOptions.Default
+            : // strip encryption
+            new SaveOptions(Encryption: new EncryptionOptions(
+                UserPassword: userPwd,
+                OwnerPassword: ownerPwd,
+                Algorithm: algorithm)
+            );
 
     /// <inheritdoc />
     public async Task SaveAsync(
