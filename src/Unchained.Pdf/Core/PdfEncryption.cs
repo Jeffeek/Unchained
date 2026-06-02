@@ -97,7 +97,7 @@ internal static class PdfEncryption
         var op = NormalizePasswordV5(opts.OwnerPassword.Length > 0 ? opts.OwnerPassword : opts.UserPassword);
 
         var (uBytes, ueBytes) = ComputeUUE_V5(up, fileKey);
-        var (oBytes, oeBytes) = ComputeOOE_V5(op, up, uBytes, fileKey);
+        var (oBytes, oeBytes) = ComputeOOE_V5(op, uBytes, fileKey);
         var permsBytes = ComputePerms_V5(fileKey, (int)opts.Permissions);
 
         // All binary values in the /Encrypt dict use hex encoding for safe round-trip.
@@ -193,8 +193,7 @@ internal static class PdfEncryption
         return (uBytes, ueBytes);
     }
 
-    // ReSharper disable once BadListLineBreaks
-    private static (byte[] O, byte[] OE) ComputeOOE_V5(byte[] ownerPw, byte[] userPw, byte[] uBytes, byte[] fileKey)
+    private static (byte[] O, byte[] OE) ComputeOOE_V5(byte[] ownerPw, byte[] uBytes, byte[] fileKey)
     {
         var vs = RandomNumberGenerator.GetBytes(8);
         var ks = RandomNumberGenerator.GetBytes(8);
