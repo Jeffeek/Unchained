@@ -33,20 +33,43 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task ImagemagickLzw_ParsesAndHasPages()
     {
-        // LZWDecode is currently a stub (NotImplementedException).
-        // The parser must survive loading a PDF whose image uses LZW.
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickLzw);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
 
     [Fact]
+    public async Task ImagemagickLzw_GetImageXObjects_DecodesWithoutException()
+    {
+        // LZWDecode is now implemented — the image must decode to a correctly-sized buffer.
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickLzw);
+        await using var doc = await LoadAsync(bytes);
+        var images = doc.Pages[1].GetImageXObjects();
+        images.Count.ShouldBeGreaterThan(0);
+        foreach (var img in images.Values)
+            img.RgbData.Length.ShouldBe(img.Width * img.Height * 3);
+    }
+
+    [Fact]
     public async Task ImagemagickCcitt_ParsesAndHasPages()
     {
-        // CCITTFaxDecode is currently a stub. Parser must survive gracefully.
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickCcitt);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ImagemagickCcitt_GetImageXObjects_DecodesWithoutException()
+    {
+        // CCITTFaxDecode (K=-1 Group 4) is now implemented — the image must decode to a
+        // correctly-sized buffer. CCITT images are DeviceGray/1-bit so GetImageXObjects
+        // returns a gray placeholder (DeviceRGB check fails), but the filter must not throw.
+        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickCcitt);
+        await using var doc = await LoadAsync(bytes);
+        var images = doc.Pages[1].GetImageXObjects();
+        images.Count.ShouldBeGreaterThan(0);
+        foreach (var img in images.Values)
+            img.RgbData.Length.ShouldBe(img.Width * img.Height * 3);
     }
 
     // ── Inline images (008 — ReportLab) ──────────────────────────────────────
@@ -369,9 +392,9 @@ public sealed class RealPdfExtendedTests : PdfTestBase
         var ops = doc.Pages[1].GetContentOperators();
         // No assertion on count — just verifying it doesn't crash and returns a valid list.
         ops.ShouldNotBeNull();
-        ops.Where(static o => o.Name == "Do")
-           .ShouldAllBe(static o => o.Operands.Count >= 1,
-               "All Do operators must have at least one operand.");
+        ops
+            .Where(static o => o.Name == "Do")
+            .ShouldAllBe(static o => o.Operands.Count >= 1, "All Do operators must have at least one operand.");
     }
 
     // ── Wrong XObject references (028) ────────────────────────────────────────

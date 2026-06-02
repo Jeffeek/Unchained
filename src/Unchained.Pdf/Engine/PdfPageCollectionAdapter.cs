@@ -77,13 +77,18 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     // `budget` is a shared counter tracking total operators emitted for this page;
     // expansion stops when it reaches MaxExpandedOperatorsPerPage.
     private IReadOnlyList<ContentOperator> ExpandFormXObjects(
-        IReadOnlyList<ContentOperator> operators, PdfDictionary? resources, int depth, ref int budget)
+        IReadOnlyList<ContentOperator> operators,
+        PdfDictionary? resources,
+        int depth,
+        ref int budget
+    )
     {
-        if (depth >= MaxFormXObjectDepth) return operators;
-        if (budget <= 0) return operators; // ceiling reached — no further expansion
-        if (!operators.Any(static op => op.Name == "Do")) return operators;
+        if (depth >= MaxFormXObjectDepth ||
+            budget <= 0 || // ceiling reached — no further expansion
+            !operators.Any(static op => op.Name == "Do"))
+            return operators;
 
-        var xobjDict = ResolveDict(resources?[PdfName.Get("XObject")]);
+        var xObjDict = ResolveDict(resources?[PdfName.Get("XObject")]);
         var result = new List<ContentOperator>(operators.Count + 4);
 
         foreach (var op in operators)
@@ -95,15 +100,15 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             }
 
             if (op.Name != "Do" || op.Operands.Count == 0 ||
-                op.Operands[0] is not PdfName xName || xobjDict is null)
+                op.Operands[0] is not PdfName xName || xObjDict is null)
             {
                 result.Add(op);
                 budget--;
                 continue;
             }
 
-            var xobj = xobjDict[PdfName.Get(xName.Value)];
-            var xStream = xobj switch
+            var xObj = xObjDict[PdfName.Get(xName.Value)];
+            var xStream = xObj switch
             {
                 PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
                 PdfStream s => s,
@@ -128,8 +133,16 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             }
 
             ReadOnlyMemory<byte> formData;
-            try { formData = StreamFilters.Decode(xStream); }
-            catch { result.Add(new ContentOperator("Q", [])); budget--; continue; }
+            try
+            {
+                formData = StreamFilters.Decode(xStream);
+            }
+            catch
+            {
+                result.Add(new ContentOperator("Q", []));
+                budget--;
+                continue;
+            }
 
             if (formData.Length > 0)
             {

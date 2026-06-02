@@ -139,8 +139,7 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         // Verify cancellation stops rendering mid-document rather than running to completion.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         await using var doc = await LoadAsync(bytes);
-        await Should.ThrowAsync<OperationCanceledException>(
-            () => Renderer!.RenderDocumentAsync(doc, new RenderOptions(Dpi: 72), cts.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => Renderer!.RenderDocumentAsync(doc, new RenderOptions(Dpi: 72), cts.Token));
     }
 
     // ── helper ────────────────────────────────────────────────────────────────

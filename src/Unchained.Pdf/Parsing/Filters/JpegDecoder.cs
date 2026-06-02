@@ -26,8 +26,7 @@ internal static class JpegDecoder
 
         var nc = decoder.NumberOfComponents;
         if (nc != 1 && nc != 3)
-            throw new NotSupportedException(
-                $"DCTDecode: unsupported JPEG color space ({nc} components).");
+            throw new NotSupportedException($"DCTDecode: unsupported JPEG color space ({nc} components).");
 
         var width = decoder.Width;
         var height = decoder.Height;
@@ -49,8 +48,8 @@ internal static class JpegDecoder
             for (var i = 0; i < width * height; i++)
             {
                 rgb[i * 3] = y[i];
-                rgb[i * 3 + 1] = y[i];
-                rgb[i * 3 + 2] = y[i];
+                rgb[(i * 3) + 1] = y[i];
+                rgb[(i * 3) + 2] = y[i];
             }
         }
         else
@@ -66,8 +65,8 @@ internal static class JpegDecoder
                 var cr = crPlane[i] - 128;
 
                 rgb[i * 3] = Clamp(yy + (int)(1.402f * cr));
-                rgb[i * 3 + 1] = Clamp(yy - (int)(0.344136f * cb) - (int)(0.714136f * cr));
-                rgb[i * 3 + 2] = Clamp(yy + (int)(1.772f * cb));
+                rgb[(i * 3) + 1] = Clamp(yy - (int)(0.344136f * cb) - (int)(0.714136f * cr));
+                rgb[(i * 3) + 2] = Clamp(yy + (int)(1.772f * cb));
             }
         }
 
@@ -76,10 +75,19 @@ internal static class JpegDecoder
 
     private static byte Clamp(int v) => v < 0 ? (byte)0 : v > 255 ? (byte)255 : (byte)v;
 
-    private sealed class PlanarWriter(byte[][] planes, int width, int height, int componentCount)
-        : JpegBlockOutputWriter
+    private sealed class PlanarWriter(
+        IReadOnlyList<byte[]> planes,
+        int width,
+        int height,
+        int componentCount
+    ) : JpegBlockOutputWriter
     {
-        public override void WriteBlock(ref short blockRef, int componentIndex, int x, int y)
+        public override void WriteBlock(
+            ref short blockRef,
+            int componentIndex,
+            int x,
+            int y
+        )
         {
             if (componentIndex >= componentCount) return;
 
@@ -90,7 +98,7 @@ internal static class JpegDecoder
 
             for (var row = 0; row < writeH; row++)
             {
-                var destBase = (y + row) * width + x;
+                var destBase = ((y + row) * width) + x;
                 var srcBase = row * 8;
                 for (var col = 0; col < writeW; col++)
                     plane[destBase + col] = (byte)Math.Clamp(block[srcBase + col], (short)0, (short)255);

@@ -115,25 +115,26 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     public ViewerPreferences GetViewerPreferences()
     {
         var vp = ResolveDict(Core.Catalog[PdfName.ViewerPreferences]);
-        if (vp is null) return ViewerPreferences.Default;
 
-        return new ViewerPreferences(
-            HideToolbar: vp[PdfName.Get("HideToolbar")] is PdfBoolean { Value: true },
-            HideMenubar: vp[PdfName.Get("HideMenubar")] is PdfBoolean { Value: true },
-            HideWindowUI: vp[PdfName.Get("HideWindowUI")] is PdfBoolean { Value: true },
-            FitWindow: vp[PdfName.Get("FitWindow")] is PdfBoolean { Value: true },
-            CenterWindow: vp[PdfName.Get("CenterWindow")] is PdfBoolean { Value: true },
-            DisplayDocTitle: vp[PdfName.Get("DisplayDocTitle")] is PdfBoolean { Value: true },
-            Direction: (vp.GetName("Direction") ?? string.Empty) == "R2L" ? ReadingDirection.RightToLeft : ReadingDirection.LeftToRight,
-            Duplex: (vp.GetName("Duplex") ?? string.Empty) switch
-            {
-                "Simplex" => DuplexMode.Simplex,
-                "DuplexFlipShortEdge" => DuplexMode.DuplexFlipShortEdge,
-                "DuplexFlipLongEdge" => DuplexMode.DuplexFlipLongEdge,
-                _ => DuplexMode.None
-            },
-            NonFullScreenPageMode: ParsePageMode(vp.GetName("NonFullScreenPageMode"))
-        );
+        return vp is null
+            ? ViewerPreferences.Default
+            : new ViewerPreferences(
+                HideToolbar: vp[PdfName.Get("HideToolbar")] is PdfBoolean { Value: true },
+                HideMenubar: vp[PdfName.Get("HideMenubar")] is PdfBoolean { Value: true },
+                HideWindowUI: vp[PdfName.Get("HideWindowUI")] is PdfBoolean { Value: true },
+                FitWindow: vp[PdfName.Get("FitWindow")] is PdfBoolean { Value: true },
+                CenterWindow: vp[PdfName.Get("CenterWindow")] is PdfBoolean { Value: true },
+                DisplayDocTitle: vp[PdfName.Get("DisplayDocTitle")] is PdfBoolean { Value: true },
+                Direction: (vp.GetName("Direction") ?? string.Empty) == "R2L" ? ReadingDirection.RightToLeft : ReadingDirection.LeftToRight,
+                Duplex: (vp.GetName("Duplex") ?? string.Empty) switch
+                {
+                    "Simplex" => DuplexMode.Simplex,
+                    "DuplexFlipShortEdge" => DuplexMode.DuplexFlipShortEdge,
+                    "DuplexFlipLongEdge" => DuplexMode.DuplexFlipLongEdge,
+                    _ => DuplexMode.None
+                },
+                NonFullScreenPageMode: ParsePageMode(vp.GetName("NonFullScreenPageMode"))
+            );
     }
 
     /// <inheritdoc />

@@ -7,8 +7,8 @@ namespace Unchained.Pdf.Parsing.Filters;
 /// (ISO 32000-1 §7.4) to produce the decoded stream data.
 /// <para>
 /// /Filter may be a single name (<c>/FlateDecode</c>) or an array of names applied
-/// left-to-right. /DecodeParms is not yet supported — all filter parameters use
-/// their default values.
+/// left-to-right. /DecodeParms may be a single dictionary or an array parallel to the
+/// filter array; each element is passed to its corresponding filter.
 /// </para>
 /// </summary>
 internal static class StreamFilters
@@ -17,19 +17,15 @@ internal static class StreamFilters
     /// Returns the decoded bytes for <paramref name="stream"/>.
     /// If the stream has no /Filter entry the raw data is returned unchanged.
     /// </summary>
-    /// <exception cref="PdfException">
-    /// Thrown when a filter name is unknown or when decoding fails.
-    /// </exception>
-    /// <exception cref="NotImplementedException">
-    /// Thrown for filters that are recognized but not yet implemented
-    /// (<c>LZWDecode</c>, <c>CCITTFaxDecode</c>, <c>JBIG2Decode</c>, <c>JPXDecode</c>).
+    /// <exception cref="PdfException">Thrown when a filter name is unknown or decoding fails.</exception>
+    /// <exception cref="NotSupportedException">
+    /// Thrown for JBIG2/JPX images with unsupported color spaces.
     /// </exception>
     public static ReadOnlyMemory<byte> Decode(PdfStream stream)
     {
         var filter = stream.Dictionary[PdfName.Filter];
         if (filter is null) return stream.Data;
 
-        // /Filter can be a single name or an array of names applied in sequence.
         var names = filter switch
         {
             PdfName name => (IReadOnlyList<PdfName>)[name],
@@ -37,22 +33,40 @@ internal static class StreamFilters
             _ => throw new PdfException($"Invalid /Filter value: expected name or array, got {filter.GetType().Name}.")
         };
 
-        return names.Aggregate(stream.Data, static (current, name) => ApplyFilter(name.Value, current));
+        // /DecodeParms: single dict (for single filter) or array parallel to /Filter.
+        var dpObj = stream.Dictionary[PdfName.Get("DecodeParms")];
+        IReadOnlyList<PdfDictionary?> parms = dpObj switch
+        {
+            PdfDictionary d => [d],
+            PdfArray arr => arr.Elements
+                .Select(static e => e as PdfDictionary ?? null)
+                .ToArray(),
+            _ => []
+        };
+
+        var data = stream.Data;
+        for (var i = 0; i < names.Count; i++)
+        {
+            var p = i < parms.Count ? parms[i] : null;
+            data = ApplyFilter(names[i].Value, data, p);
+        }
+
+        return data;
     }
 
-    private static ReadOnlyMemory<byte> ApplyFilter(string filterName, ReadOnlyMemory<byte> data) =>
-        filterName switch
+    private static ReadOnlyMemory<byte> ApplyFilter(string name, ReadOnlyMemory<byte> data, PdfDictionary? parms) =>
+        name switch
         {
             "FlateDecode" or "Fl" => FlateDecoder.Decode(data),
             "ASCIIHexDecode" or "AHx" => AsciiHexDecoder.Decode(data),
             "ASCII85Decode" or "A85" => Ascii85Decoder.Decode(data),
             "RunLengthDecode" or "RL" => RunLengthDecoder.Decode(data),
-            "LZWDecode" or "LZW" => throw new NotImplementedException("LZWDecode is not yet implemented."),
-            "CCITTFaxDecode" or "CCF" => throw new NotImplementedException("CCITTFaxDecode is not yet implemented."),
-            "JBIG2Decode" => throw new NotImplementedException("JBIG2Decode is not yet implemented."),
+            "LZWDecode" or "LZW" => LzwDecoder.Decode(data, parms),
+            "CCITTFaxDecode" or "CCF" => CcittFaxDecoder.Decode(data, parms),
+            "JBIG2Decode" => Jbig2Decoder.Decode(data, parms),
             "DCTDecode" or "DCT" => JpegDecoder.Decode(data),
-            "JPXDecode" => throw new NotImplementedException("JPXDecode (JPEG 2000) is not yet implemented."),
-            "Crypt" => data, // identity crypt filter — pass through
-            _ => throw new PdfException($"Unknown stream filter: /{filterName}.")
+            "JPXDecode" => JpxDecoder.Decode(data),
+            "Crypt" => data, // identity pass-through
+            _ => throw new PdfException($"Unknown stream filter: /{name}.")
         };
 }
