@@ -18,8 +18,6 @@ namespace Unchained.Pdf.Engine.Converters;
 /// </summary>
 internal static class SvgToPdfConverter
 {
-    private static readonly XNamespace Svg = "http://www.w3.org/2000/svg";
-
     internal static IPdfDocument Convert(string svgXml, SvgLoadOptions options)
     {
         var doc = XDocument.Parse(svgXml);

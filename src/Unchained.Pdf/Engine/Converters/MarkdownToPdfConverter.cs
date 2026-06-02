@@ -87,16 +87,14 @@ internal static class MarkdownToPdfConverter
     {
         foreach (var block in doc)
             // ReSharper disable once BadListLineBreaks
-            CollectBlock(block, opts, runs, indent: 0, ordered: false, orderedIndex: 0);
+            CollectBlock(block, opts, runs, indent: 0);
     }
 
     private static void CollectBlock(
         IMarkdownObject block,
         MdLoadOptions opts,
         List<TextRun> runs,
-        float indent,
-        bool ordered,
-        int orderedIndex
+        float indent
     )
     {
         switch (block)
@@ -145,8 +143,7 @@ internal static class MarkdownToPdfConverter
 
                     // Remaining sub-blocks
                     foreach (var sub in item.Skip(1))
-                        // ReSharper disable once BadListLineBreaks
-                        CollectBlock(sub, opts, runs, itemIndent, list.IsOrdered, idx);
+                        CollectBlock(sub, opts, runs, itemIndent);
 
                     idx++;
                 }
@@ -164,7 +161,7 @@ internal static class MarkdownToPdfConverter
             {
                 foreach (var sub in qb)
                     // ReSharper disable once BadListLineBreaks
-                    CollectBlock(sub, opts, runs, indent + 24f, false, 0);
+                    CollectBlock(sub, opts, runs, indent + 24f);
                 break;
             }
         }
@@ -251,7 +248,6 @@ internal static class MarkdownToPdfConverter
     )
     {
         if (continuationIndent < 0) continuationIndent = indent;
-        var usableWidth = opts.PageWidthPt - (2 * opts.MarginPt);
         var lineRuns = new List<(string, string, float)>();
         var lineWidth = 0f;
         var isFirst = true;
@@ -358,7 +354,6 @@ internal static class MarkdownToPdfConverter
         var buf = new ArrayBufferWriter<byte>(1024);
         var w = new ContentStreamWriter(buf);
 
-        var usableWidth = opts.PageWidthPt - (2 * opts.MarginPt);
         var x = opts.MarginPt;
         var y = opts.PageHeightPt - opts.MarginPt;
         var curFont = string.Empty;
