@@ -17,6 +17,7 @@
     <PackageReference Include="JpegLibrary" Version="0.4.32" />
     <PackageReference Include="JBig2Decoder.NETStandard" Version="1.5.2" />
     <PackageReference Include="CoreJ2K" Version="2.2.2.72" />
+    <PackageReference Include="Markdig" Version="1.2.0" />
   </ItemGroup>
 
 </Project>

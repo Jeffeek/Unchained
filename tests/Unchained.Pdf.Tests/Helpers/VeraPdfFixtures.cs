@@ -1,5 +1,3 @@
-using Xunit;
-
 namespace Unchained.Pdf.Tests.Helpers;
 
 /// <summary>

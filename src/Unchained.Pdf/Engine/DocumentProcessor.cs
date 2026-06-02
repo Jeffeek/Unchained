@@ -1,5 +1,6 @@
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.Converters;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
@@ -81,6 +82,27 @@ public sealed class DocumentProcessor : IDocumentProcessor
         await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public Task<IPdfDocument> LoadFromTxtAsync(string text, TxtLoadOptions? options = null, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        return Task.Run(() => TxtToPdfConverter.Convert(text, options ?? TxtLoadOptions.Default), ct);
+    }
+
+    /// <inheritdoc />
+    public Task<IPdfDocument> LoadFromMarkdownAsync(string markdown, MdLoadOptions? options = null, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(markdown);
+        return Task.Run(() => MarkdownToPdfConverter.Convert(markdown, options ?? MdLoadOptions.Default), ct);
+    }
+
+    /// <inheritdoc />
+    public Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(svgXml);
+        return Task.Run(() => SvgToPdfConverter.Convert(svgXml, options ?? SvgLoadOptions.Default), ct);
+    }
+
     // Acquires a gate slot and parses the byte array on the thread-pool.
     private async Task<IPdfDocument> ParseAsync(byte[] bytes, CancellationToken ct)
     {
@@ -114,6 +136,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
     /// byte-scanning recovery pass if the normal parse fails due to a corrupted
     /// or missing cross-reference table.
     /// </summary>
+    // ReSharper disable once MemberCanBeInternal
     public async Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(bytes);

@@ -36,6 +36,32 @@ public interface IDocumentProcessor : IDisposable
     Task<IPdfDocument> LoadAsync(Stream stream, CancellationToken ct = default);
 
     /// <summary>
+    /// Converts plain text to a new PDF document, with automatic word-wrap and pagination.
+    /// </summary>
+    /// <param name="text">The source text content.</param>
+    /// <param name="options">Layout options, or <see langword="null"/> to use <see cref="TxtLoadOptions.Default"/>.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<IPdfDocument> LoadFromTxtAsync(string text, TxtLoadOptions? options = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Converts Markdown text to a new PDF document.
+    /// Supports headings, bold, italic, code blocks, lists, and thematic breaks.
+    /// </summary>
+    /// <param name="markdown">The source Markdown content.</param>
+    /// <param name="options">Layout options, or <see langword="null"/> to use <see cref="MdLoadOptions.Default"/>.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<IPdfDocument> LoadFromMarkdownAsync(string markdown, MdLoadOptions? options = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Converts an SVG document to a single-page PDF.
+    /// Supports common SVG shapes, paths, text, and group transforms.
+    /// </summary>
+    /// <param name="svgXml">The SVG source as an XML string.</param>
+    /// <param name="options">Fit and page options, or <see langword="null"/> to use <see cref="SvgLoadOptions.Default"/>.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken ct = default);
+
+    /// <summary>
     /// Serializes <paramref name="document"/> and writes the result to <paramref name="filePath"/>.
     /// The document must have been produced by this processor instance.
     /// </summary>
