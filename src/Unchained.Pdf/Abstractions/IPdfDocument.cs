@@ -34,6 +34,12 @@ public interface IPdfDocument : IDisposable, IAsyncDisposable
     DocumentMetadata Metadata { get; }
 
     /// <summary>
+    /// <see langword="true"/> when this document was loaded from an encrypted PDF file.
+    /// All content is already decrypted in memory; this flag is informational.
+    /// </summary>
+    bool IsEncrypted { get; }
+
+    /// <summary>
     /// <see langword="true"/> after <see cref="IDisposable.Dispose"/> or
     /// <see cref="IAsyncDisposable.DisposeAsync"/> has been called.
     /// Accessing other members on a disposed document results in undefined behaviour.

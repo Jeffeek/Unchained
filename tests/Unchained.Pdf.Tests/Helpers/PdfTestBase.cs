@@ -29,6 +29,7 @@ public abstract class PdfTestBase
     {
         try { return await LoadAsync(bytes); }
         catch (Core.PdfException) { return null; }
+        catch (Core.PdfEncryptedException) { return null; } // encrypted without password — skip gracefully
     }
 
     /// <summary>

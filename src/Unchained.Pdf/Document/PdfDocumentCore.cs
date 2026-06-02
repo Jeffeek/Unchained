@@ -155,14 +155,67 @@ internal sealed class PdfDocumentCore : IDisposable
     /// Thrown when the file structure (<c>startxref</c>, cross-reference table,
     /// or trailer dictionary) is missing or malformed.
     /// </exception>
-    public static PdfDocumentCore Parse(ReadOnlyMemory<byte> source)
+    public static PdfDocumentCore Parse(ReadOnlyMemory<byte> source, string? password = null)
     {
         var parser = new PdfParser(source);
         var (xref, trailer) = parser.ParseStructure();
-        return new PdfDocumentCore(source, xref, trailer);
+        var doc = new PdfDocumentCore(source, xref, trailer);
+        doc.InitializeEncryption(password);
+        return doc;
     }
 
     // ── Document properties ───────────────────────────────────────────────────
+
+    // ── Encryption state ──────────────────────────────────────────────────────
+
+    private PdfEncryptionContext? _encryption;
+    private int _encryptObjNum = -1; // object number of /Encrypt — not decrypted
+
+    /// <summary><see langword="true"/> when the source PDF was password-protected.</summary>
+    public bool IsEncrypted => _encryption is not null;
+
+    private void InitializeEncryption(string? password)
+    {
+        var encryptEntry = Trailer[PdfName.Get("Encrypt")];
+        if (encryptEntry is null) return;
+
+        PdfDictionary encryptDict;
+
+        switch (encryptEntry)
+        {
+            case PdfIndirectReference r:
+            {
+                _encryptObjNum = r.ObjectNumber;
+                // Read the /Encrypt object raw (bypassing decryption — it is never encrypted).
+                var entry = _xref.GetEntry(r.ObjectNumber);
+                var rawObj = entry.Type == CrossReferenceEntryType.Compressed
+                    ? ResolveFromObjectStream(r.ObjectNumber, (int)entry.Offset)
+                    : _parser.ReadObject(entry.Offset);
+                _cache[r.ObjectNumber] = rawObj; // cache the unencrypted version
+                encryptDict = rawObj.Value as PdfDictionary ?? throw new PdfException("/Encrypt entry is not a dictionary.");
+                break;
+            }
+            case PdfDictionary d:
+            {
+                encryptDict = d;
+                break;
+            }
+            default:
+            {
+                throw new PdfException($"Unexpected /Encrypt type: {encryptEntry.GetType().Name}.");
+            }
+        }
+
+        // Get the first element of the /ID array as the file identifier.
+        var fileId = Array.Empty<byte>();
+        if (Trailer.Get<PdfArray>(PdfName.Get("ID")) is [PdfString idStr, ..])
+            fileId = idStr.Bytes.ToArray();
+
+        _encryption = PdfEncryption.CreateReadContext(encryptDict, fileId, password ?? string.Empty)
+                      ?? throw new PdfEncryptedException(
+                          $"Unsupported PDF encryption (V={encryptDict.Get<PdfInteger>("V")?.Value}, " +
+                          $"R={encryptDict.Get<PdfInteger>("R")?.Value}).");
+    }
 
     /// <summary>The raw trailer dictionary from the most-recent update section.</summary>
     // ReSharper disable once MemberCanBePrivate.Global
@@ -248,6 +301,10 @@ internal sealed class PdfDocumentCore : IDisposable
         var obj = entry.Type == CrossReferenceEntryType.Compressed
             ? ResolveFromObjectStream(objectNumber, streamObjNum: (int)entry.Offset)
             : _parser.ReadObject(entry.Offset);
+
+        // Decrypt if the document is encrypted (skip the /Encrypt object itself).
+        if (_encryption is not null && objectNumber != _encryptObjNum)
+            obj = _encryption.DecryptObject(obj);
 
         _cache[objectNumber] = obj;
 

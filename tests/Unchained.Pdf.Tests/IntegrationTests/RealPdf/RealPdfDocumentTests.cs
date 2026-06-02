@@ -190,15 +190,15 @@ public sealed class RealPdfDocumentTests : PdfTestBase
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Encrypted);
         // Parser must either load it (if unencrypted body is accessible) or
         // throw a PdfException — not an unhandled crash.
+        // Acceptable outcomes: loads successfully (some readers expose unencrypted structure),
+        // or throws PdfException / PdfEncryptedException (correct behaviour for protected files).
         try
         {
             await using var doc = await LoadAsync(bytes);
             doc.PageCount.ShouldBeGreaterThan(0);
         }
-        catch (Core.PdfException)
-        {
-            // Acceptable: encryption is not yet supported; a descriptive exception is correct.
-        }
+        catch (Core.PdfException) { }
+        catch (Core.PdfEncryptedException) { }
     }
 
     // ── large.pdf — performance sanity ────────────────────────────────────────

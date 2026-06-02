@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Security.Cryptography;
 using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
@@ -62,6 +63,9 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     }
 
     /// <inheritdoc />
+    public bool IsEncrypted => Core.IsEncrypted;
+
+    /// <inheritdoc />
     public bool IsDisposed => _disposed == 1;
 
     /// <summary>
@@ -71,13 +75,9 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     /// </summary>
     internal byte[] Serialize(SaveOptions? options)
     {
-        _ = options; // Currently ignored — reserved for future use (e.g. incremental update support)
-
         var objects = Core.CollectObjects();
         var maxObjNum = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
 
-        // Build a clean trailer — preserve /Root and /Info, drop /Prev and other
-        // incremental-update entries that belong to the old file structure.
         var trailerEntries = new Dictionary<string, PdfObject>
         {
             [PdfName.Size.Value] = new PdfInteger(maxObjNum + 1),
@@ -87,12 +87,40 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         if (Core.Trailer[PdfName.Info] is { } infoRef)
             trailerEntries[PdfName.Info.Value] = infoRef;
 
-        var trailer = new PdfDictionary(trailerEntries);
+        // ── Encryption ───────────────────────────────────────────────────────
+        if (options?.Encryption is { } encOpts)
+        {
+            // Generate a fresh /ID for this save (required for key derivation).
+            var fileId = RandomNumberGenerator.GetBytes(16);
+            var (ctx, encryptDict) = PdfEncryption.CreateWriteContext(encOpts, fileId);
 
-        var buffer = new ArrayBufferWriter<byte>();
-        using var writer = new PdfWriter(buffer);
-        writer.Write(objects, trailer);
-        return buffer.WrittenMemory.ToArray();
+            var encObjNum = maxObjNum + 1;
+            var encryptRef = new PdfIndirectReference(encObjNum, 0);
+            trailerEntries["Encrypt"] = encryptRef;
+            trailerEntries["ID"] = new PdfArray([new PdfString(fileId), new PdfString(fileId)]);
+            trailerEntries[PdfName.Size.Value] = new PdfInteger(encObjNum + 1);
+
+            // Encrypt all objects except the /Encrypt dict itself.
+            var encryptedObjects = objects
+                .Select(obj => ctx.EncryptObject(obj))
+                .Append(new PdfIndirectObject(encObjNum, 0, encryptDict))
+                .ToList();
+
+            var trailer = new PdfDictionary(trailerEntries);
+            var buffer = new ArrayBufferWriter<byte>();
+            using var writer = new PdfWriter(buffer);
+            writer.Write(encryptedObjects, trailer);
+            return buffer.WrittenMemory.ToArray();
+        }
+
+        // ── Unencrypted path ─────────────────────────────────────────────────
+        {
+            var trailer = new PdfDictionary(trailerEntries);
+            var buffer = new ArrayBufferWriter<byte>();
+            using var writer = new PdfWriter(buffer);
+            writer.Write(objects, trailer);
+            return buffer.WrittenMemory.ToArray();
+        }
     }
 
     /// <inheritdoc />

@@ -40,7 +40,16 @@ public sealed class DocumentProcessor : IDocumentProcessor
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         var bytes = await File.ReadAllBytesAsync(filePath, ct).ConfigureAwait(false);
-        return await ParseAsync(bytes, ct).ConfigureAwait(false);
+        return await ParseAsync(bytes, password: null, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IPdfDocument> LoadAsync(string filePath, string password, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentNullException.ThrowIfNull(password);
+        var bytes = await File.ReadAllBytesAsync(filePath, ct).ConfigureAwait(false);
+        return await ParseAsync(bytes, password, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -49,7 +58,17 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(stream);
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
-        return await ParseAsync(ms.ToArray(), ct).ConfigureAwait(false);
+        return await ParseAsync(ms.ToArray(), password: null, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IPdfDocument> LoadAsync(Stream stream, string password, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(password);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
+        return await ParseAsync(ms.ToArray(), password, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -104,13 +123,13 @@ public sealed class DocumentProcessor : IDocumentProcessor
     }
 
     // Acquires a gate slot and parses the byte array on the thread-pool.
-    private async Task<IPdfDocument> ParseAsync(byte[] bytes, CancellationToken ct)
+    private async Task<IPdfDocument> ParseAsync(byte[] bytes, string? password, CancellationToken ct)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var core = await Task.Run(
-                () => PdfDocumentCore.Parse(bytes),
+                () => PdfDocumentCore.Parse(bytes, password),
                 ct).ConfigureAwait(false);
             return new PdfDocumentAdapter(core);
         }
@@ -142,7 +161,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(bytes);
         try
         {
-            return await ParseAsync(bytes, ct).ConfigureAwait(false);
+            return await ParseAsync(bytes, password: null, ct).ConfigureAwait(false);
         }
         catch
         {

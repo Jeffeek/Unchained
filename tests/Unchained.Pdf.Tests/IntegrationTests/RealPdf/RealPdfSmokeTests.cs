@@ -114,5 +114,6 @@ public sealed class RealPdfSmokeTests : PdfTestBase
     {
         try { return await LoadAsync(await File.ReadAllBytesAsync(path)); }
         catch (Core.PdfException) { return null; }
+        catch (Core.PdfEncryptedException) { return null; } // skip password-protected files
     }
 }

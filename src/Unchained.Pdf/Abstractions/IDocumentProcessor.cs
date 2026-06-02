@@ -25,6 +25,24 @@ public interface IDocumentProcessor : IDisposable
     Task<IPdfDocument> LoadAsync(string filePath, CancellationToken ct = default);
 
     /// <summary>
+    /// Opens a password-protected PDF at <paramref name="filePath"/> using <paramref name="password"/>.
+    /// </summary>
+    /// <param name="filePath">Path to the encrypted PDF file.</param>
+    /// <param name="password">User or owner password. Pass an empty string for no-password encrypted PDFs.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    /// <exception cref="Core.PdfEncryptedException">Thrown when the password is incorrect.</exception>
+    Task<IPdfDocument> LoadAsync(string filePath, string password, CancellationToken ct = default);
+
+    /// <summary>
+    /// Opens a password-protected PDF from <paramref name="stream"/> using <paramref name="password"/>.
+    /// </summary>
+    /// <param name="stream">A readable stream containing encrypted PDF data.</param>
+    /// <param name="password">User or owner password.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    /// <exception cref="Core.PdfEncryptedException">Thrown when the password is incorrect.</exception>
+    Task<IPdfDocument> LoadAsync(Stream stream, string password, CancellationToken ct = default);
+
+    /// <summary>
     /// Reads and parses PDF content from <paramref name="stream"/>.
     /// The stream does not need to be seekable; it is copied to an internal buffer first.
     /// The returned document is caller-owned; dispose it when done.
