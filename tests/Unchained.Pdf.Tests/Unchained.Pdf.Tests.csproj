@@ -36,6 +36,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Unchained.Pdf\Unchained.Pdf.csproj" />
+    <ProjectReference Include="..\..\src\Unchained.Pdf.Rendering\Unchained.Pdf.Rendering.csproj" />
+  </ItemGroup>
+
+  <!-- Real-PDF test files: copied to output so tests can load from AppContext.BaseDirectory. -->
+  <ItemGroup>
+    <Content Include="TestFiles\**\*.pdf"
+             CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('TestFiles\')" />
   </ItemGroup>
 
 </Project>

@@ -39,4 +39,53 @@ public interface IPdfPage
     /// </para>
     /// </summary>
     IReadOnlyList<ContentOperator> GetContentOperators();
+
+    /// <summary>
+    /// Extracts text from this page as positioned <see cref="TextSpan"/> instances,
+    /// sorted in reading order (top-to-bottom, left-to-right).
+    /// <para>
+    /// Advance widths are computed using hardcoded AFM tables for the Standard 14 fonts.
+    /// Fonts not in the Standard 14 (embedded TrueType/OpenType/CFF) receive a fallback
+    /// width of 500/1000 em per character — positions will be approximate until the full
+    /// font subsystem is implemented in Milestone 6.
+    /// </para>
+    /// <para>CTM transformations (rotation, shear) are not applied in this release;
+    /// only axis-aligned text is positioned accurately.</para>
+    /// </summary>
+    IReadOnlyList<TextSpan> GetTextSpans();
+
+    /// <summary>
+    /// Extracts all text from this page as a plain string in reading order.
+    /// Lines are separated by <c>\n</c>; spans on the same line are joined with a space
+    /// when there is a visible gap between them.
+    /// </summary>
+    string ExtractText();
+
+    /// <summary>
+    /// Returns all annotations attached to this page, parsed from the <c>/Annots</c> array.
+    /// Returns an empty list when the page has no annotations.
+    /// </summary>
+    IReadOnlyList<Annotation> GetAnnotations();
+
+    /// <summary>
+    /// Returns a map from PDF font resource name (e.g. <c>F1</c>) to base font name
+    /// (e.g. <c>Helvetica</c>) as declared in the page's <c>/Resources /Font</c> dictionary.
+    /// Used by renderers to resolve the actual typeface for each <c>Tf</c> operator.
+    /// </summary>
+    IReadOnlyDictionary<string, string> GetFontNameMap();
+
+    /// <summary>
+    /// Returns a map from PDF font resource name (e.g. <c>F1</c>) to the raw bytes of the
+    /// embedded font program (<c>/FontFile</c>, <c>/FontFile2</c>, or <c>/FontFile3</c>),
+    /// or <see langword="null"/> when the font is not embedded (Standard 14, system font).
+    /// </summary>
+    IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes();
+
+    /// <summary>
+    /// Decodes and returns all raster image XObjects referenced in this page's
+    /// <c>/Resources /XObject</c> dictionary. Only <c>/DeviceRGB</c> images with 8 bits per
+    /// component are decoded; other colour spaces produce a solid mid-grey placeholder.
+    /// Returns an empty dictionary when the page has no image XObjects.
+    /// </summary>
+    IReadOnlyDictionary<string, ImageXObject> GetImageXObjects();
 }

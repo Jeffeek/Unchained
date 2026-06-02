@@ -56,8 +56,307 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         if (contents is null) return [];
 
         var decoded = DecodeContents(contents);
-        return decoded.Length == 0 ? [] : ContentStreamParser.Parse(decoded);
+        if (decoded.Length == 0) return [];
+
+        var operators = ContentStreamParser.Parse(decoded);
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var budget = MaxExpandedOperatorsPerPage;
+        return ExpandFormXObjects(operators, resources, depth: 0, ref budget);
     }
+
+    private const int MaxFormXObjectDepth = 10;
+
+    // 100 000 operators per page is a generous ceiling that covers any real PDF.
+    // An expanded count above this indicates recursive or excessively large form XObjects
+    // that would take too long to render; we stop expanding beyond the limit.
+    private const int MaxExpandedOperatorsPerPage = 100_000;
+
+    // Recursively expands Do operators that reference /Subtype /Form XObjects.
+    // Each form XObject is inlined as q [cm] <form content> Q.
+    // Image Do operators are left in place for the renderer to handle.
+    // `budget` is a shared counter tracking total operators emitted for this page;
+    // expansion stops when it reaches MaxExpandedOperatorsPerPage.
+    private IReadOnlyList<ContentOperator> ExpandFormXObjects(
+        IReadOnlyList<ContentOperator> operators,
+        PdfDictionary? resources,
+        int depth,
+        ref int budget
+    )
+    {
+        if (depth >= MaxFormXObjectDepth ||
+            budget <= 0 || // ceiling reached — no further expansion
+            !operators.Any(static op => op.Name == "Do"))
+            return operators;
+
+        var xObjDict = ResolveDict(resources?[PdfName.Get("XObject")]);
+        var result = new List<ContentOperator>(operators.Count + 4);
+
+        foreach (var op in operators)
+        {
+            if (budget <= 0)
+            {
+                result.Add(op); // ceiling hit — emit remaining ops unexpanded
+                continue;
+            }
+
+            if (op.Name != "Do" || op.Operands.Count == 0 ||
+                op.Operands[0] is not PdfName xName || xObjDict is null)
+            {
+                result.Add(op);
+                budget--;
+                continue;
+            }
+
+            var xObj = xObjDict[PdfName.Get(xName.Value)];
+            var xStream = xObj switch
+            {
+                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
+                PdfStream s => s,
+                _ => null
+            };
+
+            if (xStream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
+            {
+                result.Add(op); // image XObject or unresolved — leave Do intact
+                budget--;
+                continue;
+            }
+
+            result.Add(new ContentOperator("q", []));
+            budget--;
+
+            var matrixArr = xStream.Dictionary.Get<PdfArray>(PdfName.Get("Matrix"));
+            if (matrixArr is { Count: 6 })
+            {
+                result.Add(new ContentOperator("cm", matrixArr.Elements.ToArray()));
+                budget--;
+            }
+
+            ReadOnlyMemory<byte> formData;
+            try
+            {
+                formData = StreamFilters.Decode(xStream);
+            }
+            catch
+            {
+                result.Add(new ContentOperator("Q", []));
+                budget--;
+                continue;
+            }
+
+            if (formData.Length > 0)
+            {
+                var formResources = ResolveDict(xStream.Dictionary[PdfName.Resources]) ?? resources;
+                var formOps = ContentStreamParser.Parse(formData);
+                result.AddRange(ExpandFormXObjects(formOps, formResources, depth + 1, ref budget));
+            }
+
+            result.Add(new ContentOperator("Q", []));
+            budget--;
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<TextSpan> GetTextSpans() =>
+        TextExtractor.Extract(GetContentOperators(), ResolveFontNames());
+
+    /// <inheritdoc />
+    public string ExtractText() =>
+        TextExtractor.SpansToText(GetTextSpans());
+
+    /// <inheritdoc />
+    public IReadOnlyList<Annotation> GetAnnotations()
+    {
+        var annotationsObj = page[PdfName.Annots];
+        var annotationsArr = annotationsObj switch
+        {
+            PdfArray a => a,
+            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfArray,
+            _ => null
+        };
+        if (annotationsArr is null)
+            return [];
+
+        var result = new List<Annotation>();
+        foreach (var elem in annotationsArr.Elements)
+        {
+            var dict = elem switch
+            {
+                PdfDictionary d => d,
+                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+                _ => null
+            };
+            if (dict is null) continue;
+
+            var subtypeName = dict.GetName(PdfName.Subtype.Value) ?? string.Empty;
+            var subtype = subtypeName switch
+            {
+                "Text" => AnnotationSubtype.Text,
+                "Highlight" => AnnotationSubtype.Highlight,
+                "Link" => AnnotationSubtype.Link,
+                "FreeText" => AnnotationSubtype.FreeText,
+                "Square" => AnnotationSubtype.Square,
+                "Circle" => AnnotationSubtype.Circle,
+                _ => AnnotationSubtype.Text
+            };
+
+            var rect = dict.Get<PdfArray>(PdfName.Rect);
+            var x = rect is { Count: >= 4 } ? (float)ReadCoordinate(rect[0]) : 0f;
+            var y = rect is { Count: >= 4 } ? (float)ReadCoordinate(rect[1]) : 0f;
+            var x2 = rect is { Count: >= 4 } ? (float)ReadCoordinate(rect[2]) : 0f;
+            var y2 = rect is { Count: >= 4 } ? (float)ReadCoordinate(rect[3]) : 0f;
+
+            string? contents = null;
+            if (dict[PdfName.Contents] is PdfString cs)
+                contents = System.Text.Encoding.Latin1.GetString(cs.Bytes.Span);
+
+            float[]? color = null;
+            if (dict.Get<PdfArray>(PdfName.Get("C")) is { Count: 3 } cArr)
+                color = [ReadFloat(cArr[0]), ReadFloat(cArr[1]), ReadFloat(cArr[2])];
+
+            result.Add(new Annotation(
+                subtype,
+                x,
+                y,
+                x2 - x,
+                y2 - y,
+                contents,
+                color)
+            );
+        }
+
+        return result;
+    }
+
+    // Exposes the document core for XObject resolution and font embedding in M5.
+    internal PdfDocumentCore Core => core;
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, string> GetFontNameMap() => ResolveFontNames();
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes()
+    {
+        var result = new Dictionary<string, byte[]?>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Font]);
+        if (fontDict is null)
+            return result;
+
+        foreach (var (key, value) in fontDict.Entries)
+        {
+            var fontEntry = ResolveDict(value);
+            if (fontEntry is null)
+            {
+                result[key] = null;
+                continue;
+            }
+
+            var descriptor = ResolveDict(fontEntry[PdfName.Get("FontDescriptor")]);
+            if (descriptor is null)
+            {
+                result[key] = null;
+                continue;
+            }
+
+            // Try /FontFile2 (TrueType), /FontFile3 (OpenType/CFF), /FontFile (Type1) in order.
+            var streamRef = descriptor[PdfName.Get("FontFile2")]
+                            ?? descriptor[PdfName.Get("FontFile3")]
+                            ?? descriptor[PdfName.Get("FontFile")];
+
+            if (streamRef is null)
+            {
+                result[key] = null;
+                continue;
+            }
+
+            var fontStream = streamRef is PdfIndirectReference r
+                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfStream
+                : streamRef as PdfStream;
+
+            result[key] = fontStream is not null
+                ? StreamFilters.Decode(fontStream).ToArray()
+                : null;
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, ImageXObject> GetImageXObjects()
+    {
+        var result = new Dictionary<string, ImageXObject>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var xobjDict = ResolveDict(resources?[PdfName.Get("XObject")]);
+        if (xobjDict is null)
+            return result;
+
+        foreach (var (key, value) in xobjDict.Entries)
+        {
+            var stream = value is PdfIndirectReference r
+                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfStream
+                : value as PdfStream;
+
+            if (stream is null) continue;
+            if (stream.Dictionary.GetName(PdfName.Subtype.Value) != "Image") continue;
+
+            var w = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("Width"))?.Value ?? 0);
+            var h = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("Height"))?.Value ?? 0);
+            if (w <= 0 || h <= 0) continue;
+
+            var cs = stream.Dictionary.GetName("ColorSpace");
+            var bpc = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 8);
+
+            byte[] rgb;
+            try
+            {
+                var decoded = StreamFilters.Decode(stream);
+                rgb = cs == "DeviceRGB" && bpc == 8 && decoded.Length == w * h * 3
+                    ? decoded.ToArray()
+                    : BuildGrayPlaceholder(w, h);
+            }
+            catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
+            {
+                // Unsupported filter (LZW, CCITT, JBIG2, JPX) or unsupported JPEG color space
+                // (CMYK) or malformed JPEG data — use gray placeholder.
+                rgb = BuildGrayPlaceholder(w, h);
+            }
+
+            result[key] = new ImageXObject(w, h, rgb);
+        }
+
+        return result;
+    }
+
+    // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
+    // to the actual base font name (e.g. "Helvetica") for AFM width lookup.
+    private Dictionary<string, string> ResolveFontNames()
+    {
+        var result = new Dictionary<string, string>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Font]);
+        if (fontDict is null)
+            return result;
+
+        foreach (var (key, value) in fontDict.Entries)
+        {
+            var fontEntry = ResolveDict(value);
+            var baseFontName = fontEntry?.GetName(PdfName.BaseFont.Value);
+            if (baseFontName is not null)
+                result[key] = baseFontName;
+        }
+
+        return result;
+    }
+
+    private PdfDictionary? ResolveDict(PdfObject? obj) => obj switch
+    {
+        PdfDictionary d => d,
+        PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+        _ => null
+    };
 
     // ── Content stream resolution ─────────────────────────────────────────────
 
@@ -119,4 +418,20 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             _ => 0
         };
     }
+
+    private static byte[] BuildGrayPlaceholder(int w, int h)
+    {
+        var rgb = new byte[w * h * 3];
+        Array.Fill(rgb, (byte)128);
+        return rgb;
+    }
+
+    private static double ReadCoordinate(PdfObject obj) => obj switch
+    {
+        PdfInteger i => i.Value,
+        PdfReal r => r.Value,
+        _ => 0
+    };
+
+    private static float ReadFloat(PdfObject obj) => (float)ReadCoordinate(obj);
 }

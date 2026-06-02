@@ -16,6 +16,8 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Unchained.Pdf/Unchained.Pdf.csproj" />
+    <Project Path="src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj" />
+    <Project Path="src/Unchained.Pdf.Runtimes/Unchained.Pdf.Runtimes.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
