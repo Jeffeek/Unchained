@@ -3,7 +3,7 @@ param(
     [string]$Version = "1.0.0-local-test",
 
     [Parameter(Mandatory=$false)]
-    [ValidateSet("Pdf", "All")]
+    [ValidateSet("Pdf", "Pdf.Rendering", "Pdf.Runtimes", "All")]
     [string]$Project = "All"
 )
 
@@ -20,7 +20,9 @@ Write-Host ""
 
 # Define project paths
 $Projects = @{
-    "Pdf" = "src\Unchained.Pdf\Unchained.Pdf.csproj"
+    "Pdf"           = "src\Unchained.Pdf\Unchained.Pdf.csproj"
+    "Pdf.Rendering" = "src\Unchained.Pdf.Rendering\Unchained.Pdf.Rendering.csproj"
+    "Pdf.Runtimes"  = "src\Unchained.Pdf.Runtimes\Unchained.Pdf.Runtimes.csproj"
 }
 
 # Determine which projects to pack

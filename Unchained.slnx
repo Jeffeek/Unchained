@@ -1,7 +1,11 @@
 <Solution>
   <Folder Name="/assets/" />
   <Folder Name="/docs/">
+    <File Path=".github/ISSUE_TEMPLATE/bug_report.md" />
+    <File Path=".github/ISSUE_TEMPLATE/feature_request.md" />
+    <File Path="CONTRIBUTING.md" />
     <File Path="docs/README-RESHARPER.md" />
+    <File Path="README.md" />
 
   </Folder>
   <Folder Name="/samples/" />
@@ -14,13 +18,25 @@
     <File Path="Unchained.slnx.DotSettings" />
     <File Path="Unchained.slnx.DotSettings.user" />
   </Folder>
+  <Folder Name="/Solution items/.github/">
+    <File Path=".github/dependabot.yml" />
+  </Folder>
+  <Folder Name="/Solution items/.github/workflows/">
+    <File Path=".github/actions/dotnet-setup/action.yml" />
+    <File Path=".github/workflows/ci.yml" />
+    <File Path=".github/workflows/codeql.yml" />
+    <File Path=".github/workflows/dependency-review.yml" />
+    <File Path=".github/workflows/nuget-activity-monitor.yml" />
+    <File Path=".github/workflows/release.yml" />
+    <File Path=".github/workflows/scorecard.yml" />
+  </Folder>
   <Folder Name="/src/">
-    <Project Path="src/Unchained.Pdf/Unchained.Pdf.csproj" />
     <Project Path="src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj" />
     <Project Path="src/Unchained.Pdf.Runtimes/Unchained.Pdf.Runtimes.csproj" />
+    <Project Path="src/Unchained.Pdf/Unchained.Pdf.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
     <Project Path="tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj" />
+    <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
   </Folder>
 </Solution>

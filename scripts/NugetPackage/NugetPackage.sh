@@ -25,10 +25,12 @@ echo ""
 
 # Define project paths
 declare -A PROJECTS
-PROJECTS["Core"]="src/Rivulet.Core/Rivulet.Core.csproj"
+PROJECTS["Pdf"]="src/Unchained.Pdf/Unchained.Pdf.csproj"
+PROJECTS["Pdf.Rendering"]="src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj"
+PROJECTS["Pdf.Runtimes"]="src/Unchained.Pdf.Runtimes/Unchained.Pdf.Runtimes.csproj"
 
 # Validate project parameter
-VALID_PROJECTS="Pdf All"
+VALID_PROJECTS="Pdf Pdf.Rendering Pdf.Runtimes All"
 if [[ ! " $VALID_PROJECTS " =~ " $PROJECT " ]]; then
     echo -e "${RED}Error: Invalid project '$PROJECT'${NC}"
     echo -e "${YELLOW}Valid projects: $VALID_PROJECTS${NC}"
@@ -166,7 +168,7 @@ for NUPKG in "$OUTPUT_DIR"/*.nupkg; do
         done
 
         # Check for DLL files
-        # Extract project name without version (e.g., "Rivulet.Core.1.0.0-local-test" -> "Rivulet.Core")
+        # Extract project name without version (e.g., "Unchained.Pdf.1.0.0-local-test" -> "Unchained.Pdf")
         PROJECT_NAME=$(echo "$PACKAGE_NAME" | sed -E 's/\.[0-9]+\.[0-9]+\.[0-9]+.*$//')
         DLL_NAME="$PROJECT_NAME.dll"
         DLL_COUNT=$(find "$EXTRACT_PATH" -type f -name "$DLL_NAME" | wc -l)

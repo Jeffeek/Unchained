@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # NuGet dependencies (root — picks up Directory.Packages.props)
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      patch-updates:
+        patterns: ["*"]
+        update-types: ["patch"]
+      microsoft:
+        patterns: ["Microsoft.*", "System.*"]
+        update-types: ["minor", "patch"]
+    allow:
+      - dependency-type: "all"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # PACKAGE_DIRECTORIES_START
+  # Per-directory nuget entries are omitted: all package versions are centrally
+  # managed in Directory.Packages.props at the repo root, so the root "/" entry
+  # above is the single source of truth for Dependabot NuGet updates.
+  # PACKAGE_DIRECTORIES_END
