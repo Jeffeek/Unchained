@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using HarfBuzzSharp;
 using FtFace = SharpFont.Face;
@@ -23,48 +24,73 @@ internal sealed class FontCache : IDisposable
 
     private bool _disposed;
 
-    // SharpFont uses DllImport("freetype6") on all platforms, but the system library is
-    // named differently on Linux (libfreetype.so.6) and macOS (libfreetype.6.dylib).
-    // This resolver bridges that gap for .NET 5+, where Mono's dllmap is not used.
-    static FontCache() => NativeLibrary.SetDllImportResolver(typeof(FtLibrary).Assembly, ResolveFreetype);
+    private static int _resolverRegistered;
+
+    // ModuleInitializer runs when the Unchained.Pdf.Rendering assembly is first loaded —
+    // before any P/Invoke in SharpFont can fire, regardless of which class triggers the load.
+    // A static class constructor would only run on first access to FontCache specifically,
+    // which can be too late if another code path loads SharpFont first.
+#pragma warning disable CA2255
+    [ModuleInitializer]
+    internal static void RegisterFreeTypeResolver()
+#pragma warning restore CA2255
+    {
+        if (Interlocked.Exchange(ref _resolverRegistered, 1) == 1)
+            return;
+
+        NativeLibrary.SetDllImportResolver(typeof(FtLibrary).Assembly, ResolveFreetype);
+    }
 
     private static nint ResolveFreetype(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
     {
         if (libraryName != "freetype6") return nint.Zero;
 
-        string[] candidates;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            candidates = ["libfreetype.so.6", "libfreetype.so"];
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            candidates = ["libfreetype.6.dylib", "libfreetype.dylib"];
-        else
-            return nint.Zero; // Windows: freetype6.dll resolved by default
+        string rid, fileName;
+        string[] systemFallbacks;
 
-        // The native library is copied to the same directory as Unchained.Pdf.Rendering.dll
-        // (and transitively to any project that references it). Probe using the Rendering
-        // assembly's own location — this is more reliable than AppContext.BaseDirectory,
-        // which can point to the test host or runner directory instead of the output folder.
-        var probeDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var asmLocation = typeof(FontCache).Assembly.Location;
-        if (!string.IsNullOrEmpty(asmLocation))
-            probeDirs.Add(Path.GetDirectoryName(asmLocation)!);
-        probeDirs.Add(AppContext.BaseDirectory.TrimEnd('/', '\\'));
-
-        foreach (var dir in probeDirs)
+        var arch = RuntimeInformation.ProcessArchitecture switch
         {
-            foreach (var name in candidates)
-            {
-                var fullPath = Path.Combine(dir, name);
-                if (File.Exists(fullPath) && NativeLibrary.TryLoad(fullPath, out var h))
-                    return h;
-            }
+            Architecture.X64 => "x64",
+            Architecture.Arm64 => "arm64",
+            Architecture.X86 => "x86",
+            Architecture.Arm => "arm",
+            _ => RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant()
+        };
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            rid = $"win-{arch}";
+            fileName = "freetype6.dll";
+            systemFallbacks = ["freetype6.dll"];
         }
-
-        // Fall back to system-installed FreeType (e.g. apt/yum on Linux).
-        foreach (var name in candidates)
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            if (NativeLibrary.TryLoad(name, assembly, searchPath, out var h))
-                return h;
+            rid = $"linux-{arch}";
+            fileName = "libfreetype.so.6";
+            systemFallbacks = ["libfreetype.so.6", "libfreetype.so"];
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            rid = $"osx-{arch}";
+            fileName = "libfreetype.6.dylib";
+            systemFallbacks = ["libfreetype.6.dylib", "libfreetype.dylib"];
+        }
+        else
+            return nint.Zero;
+
+        // 1. runtimes/{rid}/native/ under the output root (NuGet package convention).
+        var runtimesPath = Path.Combine(AppContext.BaseDirectory, "runtimes", rid, "native", fileName);
+        if (NativeLibrary.TryLoad(runtimesPath, out var h1)) return h1;
+
+        // 2. Output root directly (flattened copy from Unchained.Pdf.Runtimes).
+        var rootPath = Path.Combine(AppContext.BaseDirectory, fileName);
+        if (NativeLibrary.TryLoad(rootPath, out var h2)) return h2;
+
+        // 3. System-installed FreeType (e.g. apt/yum on Linux).
+        foreach (var name in systemFallbacks)
+        {
+            if (NativeLibrary.TryLoad(name, assembly, searchPath, out var h3))
+                return h3;
         }
 
         return nint.Zero;

@@ -21,44 +21,66 @@
   </ItemGroup>
 
   <!--
-    Re-declare FreeType2 native libraries with explicit source paths so they always
-    land in the output of any project that references Unchained.Pdf.Rendering directly.
-    MSBuild does not reliably propagate CopyToOutputDirectory items through transitive
-    ProjectReference chains on all platforms; declaring them here ensures the file
-    reaches Unchained.Pdf.Tests (which references this project directly).
+    Copy FreeType2 native libraries into runtimes/{rid}/native/ in the output so the
+    resolver (using AppContext.BaseDirectory + NuGet convention path) finds them on all
+    platforms. All six entries are unconditional — only the Exists() guard is needed;
+    MSBuild skips missing files silently. No platform conditions means no evaluation
+    surprises across different OS/arch combinations.
   -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">
-    <Content Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib"
-             Link="libfreetype.6.dylib"
-             CopyToOutputDirectory="PreserveNewest"
-             Visible="false"
-             Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib')" />
-  </ItemGroup>
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">
-    <Content Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib"
-             Link="libfreetype.6.dylib"
-             CopyToOutputDirectory="PreserveNewest"
-             Visible="false"
-             Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib')" />
-  </ItemGroup>
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">
-    <Content Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-x64\native\libfreetype.so.6"
-             Link="libfreetype.so.6"
-             CopyToOutputDirectory="PreserveNewest"
-             Visible="false"
-             Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-x64\native\libfreetype.so.6')" />
-  </ItemGroup>
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">
-    <Content Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6"
-             Link="libfreetype.so.6"
-             CopyToOutputDirectory="PreserveNewest"
-             Visible="false"
-             Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6')" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-x64\native\freetype6.dll')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-x64\native\freetype6.dll"
+              Link="runtimes\win-x64\native\freetype6.dll"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-arm64\native\freetype6.dll')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-arm64\native\freetype6.dll"
+              Link="runtimes\win-arm64\native\freetype6.dll"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-x64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-x64\native\libfreetype.so.6"
+              Link="runtimes\linux-x64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6"
+              Link="runtimes\linux-arm64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib"
+              Link="runtimes\osx-x64\native\libfreetype.6.dylib"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib"
+              Link="runtimes\osx-arm64\native\libfreetype.6.dylib"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
   <!-- SharpFont 4.0.1 (MIT) — managed P/Invoke wrapper for FreeType2.
        Directly referenced because the NuGet package only ships a net45 TFM. -->
