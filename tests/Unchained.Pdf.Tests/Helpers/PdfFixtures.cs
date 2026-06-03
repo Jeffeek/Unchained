@@ -59,6 +59,35 @@ internal static class PdfFixtures
     public static byte[] WithAcroForm(string fieldName = "TextField", string fieldValue = "") =>
         BuildWithAcroForm(fieldName, fieldValue);
 
+    /// <summary>
+    /// Generates a single-page PDF with multiple AcroForm text fields.
+    /// </summary>
+    public static byte[] WithMultipleAcroFormFields(IReadOnlyList<(string name, string value)> fields) =>
+        BuildWithMultipleAcroFormFields(fields);
+
+    /// <summary>
+    /// Generates a single-page PDF with a hierarchical AcroForm:
+    /// a non-terminal parent group (<c>/T = "Group"</c>, no <c>/FT</c>) whose
+    /// <c>/Kids</c> array contains two child Tx fields (<c>First</c> and <c>Second</c>).
+    /// The fully-qualified names are <c>Group.First</c> and <c>Group.Second</c>.
+    /// </summary>
+    public static byte[] WithHierarchicalAcroForm() =>
+        BuildWithHierarchicalAcroForm();
+
+    /// <summary>
+    /// Generates a single-page PDF with one Btn (checkbox) AcroForm field.
+    /// </summary>
+    public static byte[] WithBtnAcroForm(string fieldName = "CheckBox") =>
+        BuildWithBtnAcroForm(fieldName);
+
+    /// <summary>
+    /// Generates a single-page PDF with a Tx AcroForm field that carries an
+    /// inline <c>/AP /N</c> appearance stream and a <c>/P</c> page reference.
+    /// Used to exercise the appearance-merging branch of <c>FlattenAsync</c>.
+    /// </summary>
+    public static byte[] WithAcroFormAndAppearance(string fieldName = "Field", string fieldValue = "") =>
+        BuildWithAcroFormAndAppearance(fieldName, fieldValue);
+
     public static byte[] WithInfo(string title, string author) =>
         Build(pageCount: 1, title: title, author: author);
 
@@ -77,6 +106,22 @@ internal static class PdfFixtures
     /// </summary>
     public static byte[] WithTextContent(string text = "Hello Unchained") =>
         BuildWithContent($"BT /F1 12 Tf 100 700 Td ({EscapeString(text)}) Tj ET");
+
+    /// <summary>
+    /// Generates a single-page PDF containing two separate image XObject stream
+    /// objects whose binary pixel data is identical. Used to exercise
+    /// <c>OptimizeResourcesAsync</c> duplicate-stream deduplication.
+    /// </summary>
+    public static byte[] WithDuplicateImageStreams(int width, int height, byte[] rgbData) =>
+        BuildWithDuplicateImageStreams(width, height, rgbData);
+
+    /// <summary>
+    /// Generates a single-page PDF containing two separate font-program stream
+    /// objects with identical binary content. Used to exercise
+    /// <c>OptimizeResourcesAsync</c> duplicate-stream deduplication.
+    /// </summary>
+    public static byte[] WithDuplicateFontStreams(byte[] fontData) =>
+        BuildWithDuplicateFontStreams(fontData);
 
     private static string EscapeString(string s) =>
         s.Replace("\\", @"\\").Replace("(", "\\(").Replace(")", "\\)");
@@ -683,6 +728,408 @@ internal static class PdfFixtures
         void Binary(byte[] b) => ms.Write(b);
 
         long Pos() => ms.Position;
+    }
+
+    private static byte[] BuildWithMultipleAcroFormFields(IReadOnlyList<(string name, string value)> fields)
+    {
+        // Objects: 1=Catalog, 2=Pages, 3=Page, 4..(3+N)=field widgets
+        var fieldCount = fields.Count;
+        var fieldRefs = string.Join(" ", Enumerable.Range(4, fieldCount).Select(static n => $"{n} 0 R"));
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [{fieldRefs}] >> >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [{fieldRefs}] >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        for (var i = 0; i < fieldCount; i++)
+        {
+            var (name, value) = fields[i];
+            offsets.Add(ByteLen(sb));
+            AppendWithLineEnding(sb, $"{4 + i} 0 obj");
+            AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(name)}) /V ({EscapeString(value)}) /Rect [50 {700 - (i * 30)} 300 {720 - (i * 30)}] /P 3 0 R >>");
+            AppendWithLineEnding(sb, "endobj");
+        }
+
+        var totalObjects = 4 + fieldCount;
+        var xrefOffset = ByteLen(sb);
+        AppendWithLineEnding(sb, "xref");
+        AppendWithLineEnding(sb, $"0 {totalObjects}");
+        AppendWithLineEnding(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) AppendWithLineEnding(sb, $"{o:D10} 00000 n ");
+        AppendWithLineEnding(sb, "trailer");
+        AppendWithLineEnding(sb, $"<< /Size {totalObjects} /Root 1 0 R >>");
+        AppendWithLineEnding(sb, "startxref");
+        AppendWithLineEnding(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    private static byte[] BuildWithHierarchicalAcroForm()
+    {
+        // Layout:
+        //   1 = Catalog  (AcroForm /Fields [5 0 R])
+        //   2 = Pages
+        //   3 = Page     (/Annots [6 0 R 7 0 R])
+        //   4 = Group    (/T (Group) /Kids [6 0 R 7 0 R])  — non-terminal, no /FT
+        //   5 = AcroForm Fields array reference wrapper — actually the group is obj 4,
+        //       so /Fields [4 0 R] in catalog
+        //   6 = Child1   (/FT /Tx /T (First) /V (v1) /P 3 0 R)
+        //   7 = Child2   (/FT /Tx /T (Second) /V (v2) /P 3 0 R)
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
+
+        // 1 — Catalog
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // 2 — Pages
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // 3 — Page
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [5 0 R 6 0 R] >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // 4 — Non-terminal group node (no /FT, has /Kids)
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "4 0 obj");
+        AppendWithLineEnding(sb, "<< /T (Group) /Kids [5 0 R 6 0 R] >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // 5 — Child field "First"
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "5 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Annot /Subtype /Widget /FT /Tx /T (First) /V (v1) /Rect [50 700 300 720] /P 3 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // 6 — Child field "Second"
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "6 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Annot /Subtype /Widget /FT /Tx /T (Second) /V (v2) /Rect [50 660 300 680] /P 3 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        AppendWithLineEnding(sb, "xref");
+        AppendWithLineEnding(sb, "0 7");
+        AppendWithLineEnding(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) AppendWithLineEnding(sb, $"{o:D10} 00000 n ");
+        AppendWithLineEnding(sb, "trailer");
+        AppendWithLineEnding(sb, "<< /Size 7 /Root 1 0 R >>");
+        AppendWithLineEnding(sb, "startxref");
+        AppendWithLineEnding(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    private static byte[] BuildWithBtnAcroForm(string fieldName)
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "4 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Btn /T ({EscapeString(fieldName)}) /V /Off /Rect [50 700 70 720] /P 3 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        AppendWithLineEnding(sb, "xref");
+        AppendWithLineEnding(sb, "0 5");
+        AppendWithLineEnding(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) AppendWithLineEnding(sb, $"{o:D10} 00000 n ");
+        AppendWithLineEnding(sb, "trailer");
+        AppendWithLineEnding(sb, "<< /Size 5 /Root 1 0 R >>");
+        AppendWithLineEnding(sb, "startxref");
+        AppendWithLineEnding(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    private static byte[] BuildWithAcroFormAndAppearance(string fieldName, string fieldValue)
+    {
+        // The appearance stream content (a simple "BT ... ET" block).
+        const string apContent = "BT /Helv 12 Tf 2 2 Td (Hi) Tj ET";
+        var apBytes = Encoding.Latin1.GetBytes(apContent);
+
+        // Objects:
+        //   1 = Catalog  (/AcroForm /Fields [5 0 R])
+        //   2 = Pages
+        //   3 = Page     (/Annots [5 0 R])
+        //   4 = Appearance stream  (inline /AP /N points here)
+        //   5 = Text field widget  (/FT /Tx /AP << /N 4 0 R >> /P 3 0 R)
+
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [5 0 R] >> >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [5 0 R] >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // 4 — Normal appearance stream (XObject Form)
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "4 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /XObject /Subtype /Form /BBox [0 0 250 20] /Length {apBytes.Length} >>");
+        sb.Append("stream\n");
+        sb.Append(apContent);
+        AppendWithLineEnding(sb, "\nendstream");
+        AppendWithLineEnding(sb, "endobj");
+
+        // 5 — Text field widget with /AP referencing obj 4
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "5 0 obj");
+        AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(fieldName)}) /V ({EscapeString(fieldValue)}) /Rect [50 700 300 720] /P 3 0 R /AP << /N 4 0 R >> >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        AppendWithLineEnding(sb, "xref");
+        AppendWithLineEnding(sb, "0 6");
+        AppendWithLineEnding(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) AppendWithLineEnding(sb, $"{o:D10} 00000 n ");
+        AppendWithLineEnding(sb, "trailer");
+        AppendWithLineEnding(sb, "<< /Size 6 /Root 1 0 R >>");
+        AppendWithLineEnding(sb, "startxref");
+        AppendWithLineEnding(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    // ── Duplicate stream fixtures (for OptimizeResourcesAsync tests) ──────────
+
+    // Builds a single-page PDF with two separate image XObject stream objects
+    // that hold identical pixel data. The page references Im1 (obj 4); Im2 (obj 6)
+    // is declared in the resource dict but not painted, making it a pure duplicate
+    // for deduplication purposes.
+    private static byte[] BuildWithDuplicateImageStreams(int width, int height, byte[] rgbData)
+    {
+        // We store the pixel data raw (no filter) so OptimizeResources can see
+        // identical byte sequences in both stream objects.
+        using var ms = new MemoryStream();
+
+        Line("%PDF-1.7");
+        Line("%\xE2\xE3\xCF\xD3");
+
+        // Object 1 — Catalog
+        var o1 = Pos();
+        Line("1 0 obj");
+        Line("<< /Type /Catalog /Pages 2 0 R >>");
+        Line("endobj");
+
+        // Object 2 — Pages
+        var o2 = Pos();
+        Line("2 0 obj");
+        Line("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Line("endobj");
+
+        // Object 3 — content stream (paints Im1 only)
+        var cs = $"q {width * 10} 0 0 {height * 10} 0 0 cm /Im1 Do Q";
+        var csBytes = Encoding.Latin1.GetBytes(cs);
+        var o3 = Pos();
+        Line("3 0 obj");
+        Line($"<< /Length {csBytes.Length} >>");
+        Line("stream");
+        Binary(csBytes);
+        Line(string.Empty);
+        Line("endstream");
+        Line("endobj");
+
+        // Object 4 — first image XObject (raw, no filter)
+        var o4 = Pos();
+        Line("4 0 obj");
+        Line($"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
+        Line($"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length {rgbData.Length} >>");
+        Line("stream");
+        Binary(rgbData);
+        Line(string.Empty);
+        Line("endstream");
+        Line("endobj");
+
+        // Object 5 — Page (references both Im1 and Im2 in Resources)
+        var o5 = Pos();
+        Line("5 0 obj");
+        Line("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
+        Line("   /Resources << /XObject << /Im1 4 0 R /Im2 6 0 R >> >> >>");
+        Line("endobj");
+
+        // Object 6 — second image XObject with identical pixel data
+        var o6 = Pos();
+        Line("6 0 obj");
+        Line($"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
+        Line($"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length {rgbData.Length} >>");
+        Line("stream");
+        Binary(rgbData);
+        Line(string.Empty);
+        Line("endstream");
+        Line("endobj");
+
+        var xref = Pos();
+        Line("xref");
+        Line("0 7");
+        Line("0000000000 65535 f ");
+        foreach (var o in new[] { o1, o2, o3, o4, o5, o6 })
+            Line($"{o:D10} 00000 n ");
+        Line("trailer");
+        Line("<< /Size 7 /Root 1 0 R >>");
+        Line("startxref");
+        Line(xref.ToString());
+        Text("%%EOF");
+
+        return ms.ToArray();
+
+        void Text(string s) => ms.Write(Encoding.Latin1.GetBytes(s));
+
+        void Line(string s)
+        {
+            Text(s);
+            ms.WriteByte((byte)'\n');
+        }
+
+        void Binary(byte[] b) => ms.Write(b);
+        long Pos() => ms.Position;
+    }
+
+    // Builds a single-page PDF with two separate font-program stream objects that
+    // hold identical binary data. Both are referenced from FontDescriptor dicts.
+    private static byte[] BuildWithDuplicateFontStreams(byte[] fontData)
+    {
+        // Hex-encode so the font bytes can appear in a text-only PDF.
+        var hex1 = Convert.ToHexString(fontData) + ">";
+        var hex2 = Convert.ToHexString(fontData) + ">"; // identical content
+
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+
+        AppendWithLineEnding(sb, "%PDF-1.7");
+        AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
+
+        // Object 1 — Catalog
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "1 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // Object 2 — Pages
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "2 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // Object 3 — Page (uses font F1)
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "3 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]");
+        AppendWithLineEnding(sb, "   /Resources << /Font << /F1 6 0 R /F2 9 0 R >> >> >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // Object 4 — first font program stream (ASCIIHexDecode)
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "4 0 obj");
+        AppendWithLineEnding(sb, $"<< /Length {hex1.Length} /Length1 {fontData.Length} /Filter /ASCIIHexDecode >>");
+        sb.Append("stream\n").Append(hex1).Append("\nendstream\n");
+        AppendWithLineEnding(sb, "endobj");
+
+        // Object 5 — first FontDescriptor
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "5 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /FontDescriptor /FontName /FontA /Flags 32 /FontFile2 4 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // Object 6 — first Font
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "6 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Font /Subtype /TrueType /BaseFont /FontA /FontDescriptor 5 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // Object 7 — second font program stream (identical bytes, different object)
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "7 0 obj");
+        AppendWithLineEnding(sb, $"<< /Length {hex2.Length} /Length1 {fontData.Length} /Filter /ASCIIHexDecode >>");
+        sb.Append("stream\n").Append(hex2).Append("\nendstream\n");
+        AppendWithLineEnding(sb, "endobj");
+
+        // Object 8 — second FontDescriptor
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "8 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /FontDescriptor /FontName /FontB /Flags 32 /FontFile2 7 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        // Object 9 — second Font
+        offsets.Add(ByteLen(sb));
+        AppendWithLineEnding(sb, "9 0 obj");
+        AppendWithLineEnding(sb, "<< /Type /Font /Subtype /TrueType /BaseFont /FontB /FontDescriptor 8 0 R >>");
+        AppendWithLineEnding(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        AppendWithLineEnding(sb, "xref");
+        AppendWithLineEnding(sb, "0 10");
+        AppendWithLineEnding(sb, "0000000000 65535 f ");
+        foreach (var o in offsets)
+            AppendWithLineEnding(sb, $"{o:D10} 00000 n ");
+        AppendWithLineEnding(sb, "trailer");
+        AppendWithLineEnding(sb, "<< /Size 10 /Root 1 0 R >>");
+        AppendWithLineEnding(sb, "startxref");
+        AppendWithLineEnding(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
     }
 
     private static byte[] ZlibCompress(byte[] data)

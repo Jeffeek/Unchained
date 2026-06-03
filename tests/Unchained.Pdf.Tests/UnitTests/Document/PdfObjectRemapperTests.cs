@@ -126,4 +126,105 @@ public sealed class PdfObjectRemapperTests
         var result = (PdfIndirectReference)PdfObjectRemapper.Remap(ref1, offset: 0);
         result.ObjectNumber.ShouldBe(7);
     }
+
+    // ── RemapSelective ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void RemapSelective_ReferenceInRemapping_ReplacedWithCanonical()
+    {
+        var remapping = new Dictionary<int, int> { [3] = 10 };
+        var result = (PdfIndirectReference)PdfObjectRemapper.RemapSelective(new PdfIndirectReference(3, 0), remapping);
+        result.ObjectNumber.ShouldBe(10);
+        result.Generation.ShouldBe(0);
+    }
+
+    [Fact]
+    public void RemapSelective_ReferenceNotInRemapping_PassesThrough()
+    {
+        var remapping = new Dictionary<int, int> { [3] = 10 };
+        var result = (PdfIndirectReference)PdfObjectRemapper.RemapSelective(new PdfIndirectReference(5, 0), remapping);
+        result.ObjectNumber.ShouldBe(5);
+    }
+
+    [Fact]
+    public void RemapSelective_ReferenceGenerationPreservedOnRemap()
+    {
+        var remapping = new Dictionary<int, int> { [3] = 10 };
+        var result = (PdfIndirectReference)PdfObjectRemapper.RemapSelective(new PdfIndirectReference(3, 2), remapping);
+        result.ObjectNumber.ShouldBe(10);
+        result.Generation.ShouldBe(2);
+    }
+
+    [Fact]
+    public void RemapSelective_IndirectObject_ValueRemapped()
+    {
+        var remapping = new Dictionary<int, int> { [5] = 99 };
+        var io = new PdfIndirectObject(2, 0, new PdfIndirectReference(5, 0));
+        var result = (PdfIndirectObject)PdfObjectRemapper.RemapSelective(io, remapping);
+        result.ObjectNumber.ShouldBe(2);
+        ((PdfIndirectReference)result.Value).ObjectNumber.ShouldBe(99);
+    }
+
+    [Fact]
+    public void RemapSelective_Array_MappedAndUnmappedReferences()
+    {
+        var remapping = new Dictionary<int, int> { [2] = 20 };
+        var arr = new PdfArray([
+            new PdfIndirectReference(2, 0),
+            new PdfIndirectReference(7, 0),
+            new PdfInteger(42)
+        ]);
+        var result = (PdfArray)PdfObjectRemapper.RemapSelective(arr, remapping);
+        ((PdfIndirectReference)result[0]).ObjectNumber.ShouldBe(20);
+        ((PdfIndirectReference)result[1]).ObjectNumber.ShouldBe(7);
+        ((PdfInteger)result[2]).Value.ShouldBe(42);
+    }
+
+    [Fact]
+    public void RemapSelective_Dictionary_MappedEntryReplaced_UnmappedPreserved()
+    {
+        var remapping = new Dictionary<int, int> { [4] = 40 };
+        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            ["Mapped"] = new PdfIndirectReference(4, 0),
+            ["Unmapped"] = new PdfIndirectReference(9, 0),
+            ["Lit"] = PdfName.Get("Bar")
+        });
+        var result = (PdfDictionary)PdfObjectRemapper.RemapSelective(dict, remapping);
+        ((PdfIndirectReference)result["Mapped"]!).ObjectNumber.ShouldBe(40);
+        ((PdfIndirectReference)result["Unmapped"]!).ObjectNumber.ShouldBe(9);
+        ((PdfName)result["Lit"]!).Value.ShouldBe("Bar");
+    }
+
+    [Fact]
+    public void RemapSelective_Stream_DictionaryRemapped_DataPreserved()
+    {
+        var remapping = new Dictionary<int, int> { [5] = 55 };
+        var data = new byte[] { 10, 20, 30 };
+        var streamDict = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            [PdfName.Length.Value] = new PdfIndirectReference(5, 0)
+        });
+        var stream = new PdfStream(streamDict, data);
+        var result = (PdfStream)PdfObjectRemapper.RemapSelective(stream, remapping);
+        ((PdfIndirectReference)result.Dictionary[PdfName.Length]!).ObjectNumber.ShouldBe(55);
+        result.Data.Span.SequenceEqual(data).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void RemapSelective_Primitive_PassesThrough()
+    {
+        var remapping = new Dictionary<int, int> { [1] = 99 };
+        PdfObjectRemapper.RemapSelective(new PdfInteger(7), remapping).ShouldBeOfType<PdfInteger>();
+        PdfObjectRemapper.RemapSelective(PdfNull.Instance, remapping).ShouldBeSameAs(PdfNull.Instance);
+        PdfObjectRemapper.RemapSelective(PdfBoolean.True, remapping).ShouldBeSameAs(PdfBoolean.True);
+    }
+
+    [Fact]
+    public void RemapSelective_EmptyRemapping_NothingChanged()
+    {
+        var arr = new PdfArray([new PdfIndirectReference(3, 0)]);
+        var result = (PdfArray)PdfObjectRemapper.RemapSelective(arr, new Dictionary<int, int>());
+        ((PdfIndirectReference)result[0]).ObjectNumber.ShouldBe(3);
+    }
 }

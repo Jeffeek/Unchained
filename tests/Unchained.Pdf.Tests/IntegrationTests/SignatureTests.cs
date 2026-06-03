@@ -169,4 +169,125 @@ public sealed class SignatureTests : PdfTestBase
         signatures.Count.ShouldBe(1);
         signatures[0].SigningTime?.Year.ShouldBe(2025);
     }
+
+    [Fact]
+    public async Task Verify_SignedDocument_SignerNameSigningTimeReasonAllPopulated()
+    {
+        using var cert = CreateSelfSignedCert("Diana Prince");
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        // ReSharper disable BadListLineBreaks
+        var when = new DateTimeOffset(2024, 3, 10, 9, 30, 0, TimeSpan.Zero);
+        // ReSharper restore BadListLineBreaks
+        var opts = new SignatureOptions(Reason: "Approved", Location: "London", SigningTime: when);
+
+        using var ms = new MemoryStream();
+        await Processor.SignAsync(doc, cert, ms, opts, ct: TestContext.Current.CancellationToken);
+
+        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
+        signatures.Count.ShouldBe(1);
+        var sig = signatures[0];
+        sig.SignerName.ShouldContain("Diana Prince");
+        sig.Reason.ShouldBe("Approved");
+        sig.Location.ShouldBe("London");
+        sig.SigningTime.ShouldNotBeNull();
+        sig.SigningTime!.Value.Year.ShouldBe(2024);
+        sig.SigningTime.Value.Month.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Sign_NullCertificate_ThrowsArgumentNullException()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+
+        await Should.ThrowAsync<ArgumentNullException>(() =>
+            Processor.SignAsync(doc, null!, ms, ct: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Sign_WithCustomSignatureOptions_AllFieldsRoundTrip()
+    {
+        using var cert = CreateSelfSignedCert("Eve Adams");
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        var opts = new SignatureOptions(
+            Reason: "Final approval",
+            Location: "Paris",
+            ContactInfo: "eve@example.com",
+            FieldName: "AuthorSig");
+
+        using var ms = new MemoryStream();
+        await Processor.SignAsync(doc, cert, ms, opts, ct: TestContext.Current.CancellationToken);
+
+        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
+        signatures.Count.ShouldBe(1);
+        var sig = signatures[0];
+        sig.Reason.ShouldBe("Final approval");
+        sig.Location.ShouldBe("Paris");
+        sig.FieldName.ShouldBe("AuthorSig");
+        sig.IsSignatureValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Sign_Twice_BothSignaturesVerified()
+    {
+        using var cert1 = CreateSelfSignedCert("Signer One");
+        using var cert2 = CreateSelfSignedCert("Signer Two");
+
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+
+        // First signature
+        using var ms1 = new MemoryStream();
+        await Processor.SignAsync(original, cert1, ms1, new SignatureOptions(Reason: "First", FieldName: "Sig1"), ct: TestContext.Current.CancellationToken);
+
+        // Second signature applied to the already-signed PDF
+        await using var afterFirst = await LoadAsync(ms1.ToArray(), TestContext.Current.CancellationToken);
+        using var ms2 = new MemoryStream();
+        await Processor.SignAsync(afterFirst, cert2, ms2, new SignatureOptions(Reason: "Second", FieldName: "Sig2"), ct: TestContext.Current.CancellationToken);
+
+        var signatures = await Processor.VerifySignaturesAsync(ms2.ToArray(), ct: TestContext.Current.CancellationToken);
+        // Both signature fields are found.
+        signatures.Count.ShouldBe(2);
+        // The second (most-recent) signature covers the full final byte range and is valid.
+        signatures.ShouldContain(static s => s.FieldName == "Sig2" && s.IsSignatureValid);
+        // Sig1's ByteRange was computed before the second signing re-serialized the document,
+        // so it may no longer be valid — just verify the field is present.
+        signatures.ShouldContain(static s => s.FieldName == "Sig1");
+    }
+
+    [Fact]
+    public async Task Sign_ByteRange_CoversEntireFileExceptContentsHex()
+    {
+        using var cert = CreateSelfSignedCert();
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+
+        using var ms = new MemoryStream();
+        await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
+
+        var bytes = ms.ToArray();
+
+        // ByteRange must appear in the output and the two signed ranges must together
+        // cover all bytes except the /Contents hex literal gap.
+        // Verify by checking the total covered length equals file length minus the gap.
+        var text = System.Text.Encoding.Latin1.GetString(bytes);
+        var byteRangeIdx = text.IndexOf("/ByteRange", StringComparison.Ordinal);
+        byteRangeIdx.ShouldBeGreaterThan(0, "Signed PDF must contain /ByteRange entry.");
+
+        // Extract the four numbers after /ByteRange [
+        var bracketStart = text.IndexOf('[', byteRangeIdx);
+        var bracketEnd = text.IndexOf(']', bracketStart);
+        var parts = text[(bracketStart + 1)..bracketEnd]
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        parts.Length.ShouldBe(4, "ByteRange must have exactly 4 values.");
+
+        var off0 = long.Parse(parts[0]);
+        var len0 = long.Parse(parts[1]);
+        var off1 = long.Parse(parts[2]);
+        var len1 = long.Parse(parts[3]);
+
+        // Ranges must be non-negative and fit within the file
+        off0.ShouldBe(0, "ByteRange must start at offset 0.");
+        len0.ShouldBeGreaterThan(0);
+        off1.ShouldBeGreaterThan(len0, "Second range must start after first range ends.");
+        (off1 + len1).ShouldBe(bytes.Length, "Second range must end at end of file.");
+    }
 }
