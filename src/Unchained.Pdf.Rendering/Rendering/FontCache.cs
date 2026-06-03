@@ -1,3 +1,4 @@
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using HarfBuzzSharp;
@@ -39,10 +40,21 @@ internal sealed class FontCache : IDisposable
         else
             return nint.Zero; // Windows: freetype6.dll resolved by default
 
+        // Unchained.Pdf.Runtimes copies the native file to the output root (AppContext.BaseDirectory)
+        // via Link="<name>" + CopyToOutputDirectory. Probe the absolute path first so we don't depend
+        // on DllImportSearchPath resolving into that directory.
+        var baseDir = AppContext.BaseDirectory;
+        foreach (var fullPath in candidates.Select(name => Path.Combine(baseDir, name)))
+        {
+            if (File.Exists(fullPath) && NativeLibrary.TryLoad(fullPath, out var h))
+                return h;
+        }
+
+        // Fall back to system-installed FreeType (e.g. Homebrew on macOS, apt on Linux).
         foreach (var name in candidates)
         {
-            if (NativeLibrary.TryLoad(name, assembly, searchPath, out var handle))
-                return handle;
+            if (NativeLibrary.TryLoad(name, assembly, searchPath, out var h))
+                return h;
         }
 
         return nint.Zero;
