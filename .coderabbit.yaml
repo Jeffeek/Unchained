@@ -1,0 +1,107 @@
+language: "en-US"
+
+tone_instructions: "Senior .NET library author reviewing a PDF engine. Be direct: lead with the issue, then why it matters. No praise padding. For bugs, state the failure scenario concretely. For improvements, state the consequence of skipping them."
+
+chat:
+  auto_reply: true
+
+reviews:
+  profile: "assertive"
+  high_level_summary: true
+  sequence_diagrams: true
+  poem: false
+  collapse_walkthrough: true
+  suggested_labels: true
+  auto_apply_labels: false
+  assess_linked_issues: true
+  related_issues: false
+  path_filters:
+    - "!**/obj/**"
+    - "!**/bin/**"
+    - "!**/*.g.cs"
+    - "!**/*.g.i.cs"
+    - "!**/AssemblyInfo.cs"
+    - "!**/*.Designer.cs"
+    - "!TestFiles/**"
+  path_instructions:
+    - path: "src/**/*.cs"
+      instructions: |
+        You are reviewing a PDF engine library (Unchained). Apply strict scrutiny.
+
+        **Memory and allocation**
+        - Hot paths (parser, content stream walker, text extractor) must avoid heap allocations. Flag any `new byte[]`, `ToArray()`, or LINQ on hot paths.
+        - `ReadOnlyMemory<byte>` and `ReadOnlySpan<byte>` are preferred over `byte[]` in parser/filter code.
+        - `ArrayBufferWriter<byte>` is the canonical zero-copy write buffer; flag direct `MemoryStream` use in serialization paths.
+
+        **PDF spec correctness**
+        - ISO 32000-1 and ISO 32000-2 are the spec. Flag any deviation from spec that isn't documented with a comment explaining why.
+        - Object resolution (`ResolveIndirect`) must handle circular references defensively.
+        - All stream filter implementations must match their ISO 32000-1 §7.4.x spec exactly — flag any shortcut that skips required steps.
+
+        **Public API**
+        - All public types must be `sealed` unless there is a specific inheritance reason.
+        - Records used as public models must have XML `<param>` docs as siblings of `<summary>`, never inside it.
+        - No breaking changes to existing public surface without a major version bump justification.
+
+        **CancellationToken**
+        - Every `async` public method must accept and forward `CancellationToken`. Flag any that don't.
+        - CPU-bound work dispatched via `Task.Run` must pass the token.
+
+        **Error handling**
+        - `PdfException` is the documented public exception for structural parse failures. Flag any method that throws raw `InvalidOperationException` or `Exception` for conditions the caller might want to handle.
+        - Filter decoders (`StreamFilters`) must throw `NotImplementedException` for unsupported filters and `PdfException` for malformed data — not generic exceptions.
+
+    - path: "src/**/*Options.cs"
+      instructions: |
+        Options/model classes in Unchained follow a strict contract:
+        - Must be `sealed record` with positional or `init`-only properties.
+        - XML `<param>` tags must be siblings of `<summary>`, not nested inside it.
+        - `Default` static field must exist for all options records.
+        - No nullable properties where a sensible default exists.
+
+    - path: "tests/**/*.cs"
+      instructions: |
+        Test correctness is as important as production code.
+
+        **Naming**
+        - All test methods must follow `Subject_Scenario_ExpectedBehaviour` pattern.
+
+        **Assertions**
+        - Use Shouldly only (`ShouldBe`, `ShouldContain`, `ShouldThrowAsync`, etc.). No raw `Assert.*`.
+        - `ShouldThrowAsync` for async exception assertions — never `try/catch` in tests unless testing catch-block behaviour.
+
+        **Isolation**
+        - Every test must create its own `DocumentProcessor` or use `PdfTestBase.Processor`.
+        - `IAsyncDisposable` documents (`IPdfDocument`) must use `await using`.
+
+        **Real PDF tests**
+        - Tests loading from `TestFiles/` must use `RealPdfFixtures.LoadOrSkip` (skips when file is absent) or `Assert.SkipWhen` — never `if (bytes is null) return`.
+        - Loop tests over all files must use `Assert.Skip(...)` when `tested == 0`, not silently pass.
+
+    - path: ".github/workflows/*.yml"
+      instructions: |
+        **Action pinning**
+        - Every `uses:` must be pinned to a full commit SHA with a trailing `# vX.Y.Z` comment. Flag any floating tag or branch pin.
+
+        **Security**
+        - Every job must start with `step-security/harden-runner` as the first step.
+        - Every `actions/checkout` must include `persist-credentials: false`.
+        - Flag any `write` permission that isn't needed by that specific job.
+
+        **Correctness**
+        - `dotnet restore` and `dotnet build` steps must reference `Unchained.slnx` explicitly.
+        - Release workflow must trigger on `tags: ['v*']` only — never on branch push.
+        - Matrix jobs must have `fail-fast: false`.
+        - `upload-artifact` must include `retention-days`.
+
+  abort_on_close: true
+  finishing_touches:
+    docstrings:
+      enabled: true
+  auto_review:
+    enabled: false
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"

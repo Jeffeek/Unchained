@@ -135,9 +135,9 @@ public sealed class RealPdfRenderingTests : RendererTestBase
 
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Large);
 
-        // Large PDFs now have real content from form XObject expansion.
-        // Verify cancellation stops rendering mid-document rather than running to completion.
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        // Cancel after 50 ms — short enough to fire during rendering on any machine,
+        // long enough for the render task to have started.
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
         await using var doc = await LoadAsync(bytes);
         await Should.ThrowAsync<OperationCanceledException>(() => Renderer!.RenderDocumentAsync(doc, new RenderOptions(Dpi: 72), cts.Token));
     }

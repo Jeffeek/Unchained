@@ -383,3 +383,8 @@ docs/readthedocs/assets/
 
 # JetBrains Resharper
 /linter-reports
+
+# FreeType2 native binaries — fetched by scripts/FetchNatives/, not committed
+src/Unchained.Pdf.Runtimes/runtimes/**/*.dll
+src/Unchained.Pdf.Runtimes/runtimes/**/*.so*
+src/Unchained.Pdf.Runtimes/runtimes/**/*.dylib

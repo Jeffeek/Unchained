@@ -87,8 +87,6 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.InlineImage);
         await using var doc = await LoadAsync(bytes);
-        // Inline images (BI…ID…EI) are skipped by ContentStreamParser.
-        // The call must not throw regardless of inline image presence.
         doc.Pages[1].GetContentOperators().ShouldNotBeNull();
     }
 

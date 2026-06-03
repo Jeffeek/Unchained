@@ -1,21 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    This project contains ONLY native FreeType2 binaries — one per platform.
-    No C# code is produced; the output is a NuGet package whose runtimes/ folder
-    is resolved at build/publish time by the .NET SDK (RID-based selection).
+    Native-binary carrier project for FreeType2.
+    No C# code is produced — the output is only the native files.
 
-    To add a new platform:
-      1. Obtain the FreeType2 native binary for that platform.
-      2. Drop it into the matching runtimes/<rid>/native/ subfolder.
-      3. The <Content> item below for that RID will pick it up automatically.
+    Binaries are NOT committed to the repository. Run scripts/FetchNatives/ first:
+      bash  scripts/FetchNatives/fetch-natives.sh   (Linux / macOS / Windows via Git Bash)
+      pwsh  scripts/FetchNatives/fetch-natives.ps1  (Windows PowerShell)
 
-    Naming convention (must match SharpFont's P/Invoke after the resolver in FontCache):
-      Windows  → freetype6.dll         (already named correctly by SharpFont.Dependencies)
-      Linux    → libfreetype.so.6      (standard Linux soname)
-      macOS    → libfreetype.6.dylib   (standard macOS dylib version name)
+    Each <Choose> block is unconditionally evaluated; the inner Exists() guard
+    silently skips missing files. This works correctly for:
+      • Local dev  — only the current platform's file is present (after fetch).
+      • CI build   — same; each runner fetches its own file.
+      • NuGet pack — all files are present (after staging artifacts from all runners).
 
-    DCTDecode (JPEG) no longer requires native binaries — it uses JpegLibrary (pure managed).
+    Note: linux-musl-{x64,arm64} are supported by the fetch scripts but are not
+    included here or in CI — Alpine users fall back to the system libfreetype.
   -->
 
   <PropertyGroup>
@@ -25,88 +25,82 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
 
-  <!--
-    Each <Content> item:
-      • Condition="Exists(...)"  — skips the item if the DLL hasn't been placed yet.
-      • Link="filename"          — copies to the output root (not into a runtimes/ subdir).
-      • The OS/arch condition    — ensures only the host-platform DLL is copied during
-                                   project-reference builds; the NuGet runtimes/ convention
-                                   handles selection automatically in published packages.
-  -->
-
   <!-- ── Windows x64 ──────────────────────────────────────────────────────── -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">
-    <Content Include="runtimes\win-x64\native\freetype6.dll"
-             Link="freetype6.dll"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('runtimes\win-x64\native\freetype6.dll')" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="Exists('runtimes\win-x64\native\freetype6.dll')">
+      <ItemGroup>
+        <Content Include="runtimes\win-x64\native\freetype6.dll"
+                 Link="runtimes\win-x64\native\freetype6.dll"
+                 Pack="true"
+                 PackagePath="runtimes/win-x64/native/freetype6.dll"
+                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
   <!-- ── Windows arm64 ────────────────────────────────────────────────────── -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">
-    <Content Include="runtimes\win-arm64\native\freetype6.dll"
-             Link="freetype6.dll"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('runtimes\win-arm64\native\freetype6.dll')" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="Exists('runtimes\win-arm64\native\freetype6.dll')">
+      <ItemGroup>
+        <Content Include="runtimes\win-arm64\native\freetype6.dll"
+                 Link="runtimes\win-arm64\native\freetype6.dll"
+                 Pack="true"
+                 PackagePath="runtimes/win-arm64/native/freetype6.dll"
+                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
   <!-- ── Linux x64 ────────────────────────────────────────────────────────── -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">
-    <Content Include="runtimes\linux-x64\native\libfreetype.so.6"
-             Link="libfreetype.so.6"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('runtimes\linux-x64\native\libfreetype.so.6')" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="Exists('runtimes\linux-x64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <Content Include="runtimes\linux-x64\native\libfreetype.so.6"
+                 Link="runtimes\linux-x64\native\libfreetype.so.6"
+                 Pack="true"
+                 PackagePath="runtimes/linux-x64/native/libfreetype.so.6"
+                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
   <!-- ── Linux arm64 ──────────────────────────────────────────────────────── -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">
-    <Content Include="runtimes\linux-arm64\native\libfreetype.so.6"
-             Link="libfreetype.so.6"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('runtimes\linux-arm64\native\libfreetype.so.6')" />
-  </ItemGroup>
-
-  <!-- ── Linux musl x64 (Alpine / Docker) ────────────────────────────────── -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">
-    <Content Include="runtimes\linux-musl-x64\native\libfreetype.so.6"
-             Link="libfreetype.so.6"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('runtimes\linux-musl-x64\native\libfreetype.so.6') And
-                        !Exists('runtimes\linux-x64\native\libfreetype.so.6')" />
-  </ItemGroup>
-
-  <!-- ── Linux musl arm64 (Alpine / Docker on ARM) ────────────────────────── -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">
-    <Content Include="runtimes\linux-musl-arm64\native\libfreetype.so.6"
-             Link="libfreetype.so.6"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('runtimes\linux-musl-arm64\native\libfreetype.so.6') And
-                        !Exists('runtimes\linux-arm64\native\libfreetype.so.6')" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="Exists('runtimes\linux-arm64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <Content Include="runtimes\linux-arm64\native\libfreetype.so.6"
+                 Link="runtimes\linux-arm64\native\libfreetype.so.6"
+                 Pack="true"
+                 PackagePath="runtimes/linux-arm64/native/libfreetype.so.6"
+                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
   <!-- ── macOS x64 ────────────────────────────────────────────────────────── -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">
-    <Content Include="runtimes\osx-x64\native\libfreetype.6.dylib"
-             Link="libfreetype.6.dylib"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('runtimes\osx-x64\native\libfreetype.6.dylib')" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="Exists('runtimes\osx-x64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <Content Include="runtimes\osx-x64\native\libfreetype.6.dylib"
+                 Link="runtimes\osx-x64\native\libfreetype.6.dylib"
+                 Pack="true"
+                 PackagePath="runtimes/osx-x64/native/libfreetype.6.dylib"
+                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
   <!-- ── macOS arm64 (Apple Silicon) ─────────────────────────────────────── -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And
-                        '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">
-    <Content Include="runtimes\osx-arm64\native\libfreetype.6.dylib"
-             Link="libfreetype.6.dylib"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('runtimes\osx-arm64\native\libfreetype.6.dylib')" />
-  </ItemGroup>
-
+  <Choose>
+    <When Condition="Exists('runtimes\osx-arm64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <Content Include="runtimes\osx-arm64\native\libfreetype.6.dylib"
+                 Link="runtimes\osx-arm64\native\libfreetype.6.dylib"
+                 Pack="true"
+                 PackagePath="runtimes/osx-arm64/native/libfreetype.6.dylib"
+                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
 </Project>

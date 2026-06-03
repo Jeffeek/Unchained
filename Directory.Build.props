@@ -1,0 +1,43 @@
+<Project>
+
+  <!-- ── Language & compile defaults ────────────────────────────────────────── -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- ── Deterministic build & SourceLink ──────────────────────────────────── -->
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- Reproducible builds in GitHub Actions -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- ── NuGet audit (warn on vulnerable deps; not errors to avoid blocking dev) ── -->
+  <PropertyGroup>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <!-- ── NuGet package metadata (only applied when the project is packable) ── -->
+  <PropertyGroup Condition="'$(IsPackable)' != 'false'">
+    <Authors>Mikhail Ilyushin</Authors>
+    <Company>Jeffeek</Company>
+    <Copyright>Copyright © 2026 Mikhail Ilyushin (Jeffeek)</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Jeffeek/Unchained</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Jeffeek/Unchained</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>pdf;pdf-engine;pdf-parser;dotnet;csharp;document-processing</PackageTags>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageIcon>nuget_logo.png</PackageIcon>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,93 @@
+name: CI - Build and Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "master"
+      - "release/**"
+  push:
+    branches:
+      - "master"
+      - "release/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+  NUGET_XMLDOC_MODE: skip
+
+jobs:
+  build:
+    name: Build & Test (${{ matrix.rid }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest,    rid: linux-x64   }
+          - { runner: ubuntu-24.04-arm, rid: linux-arm64 }
+          - { runner: windows-latest,   rid: win-x64     }
+          - { runner: macos-15-intel,   rid: osx-x64     }
+          - { runner: macos-15,         rid: osx-arm64   }
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch native FreeType2 library
+        shell: bash
+        run: bash scripts/FetchNatives/fetch-natives.sh
+
+      - name: Setup .NET (restore + build)
+        uses: ./.github/actions/dotnet-setup
+
+      - name: Test with coverage
+        timeout-minutes: ${{ matrix.rid == 'linux-arm64' && 30 || 15 }}
+        run: >
+          dotnet test tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj
+          -c Release --no-build
+          --collect:"XPlat Code Coverage"
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory artifacts/test-results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-results-${{ matrix.rid }}
+          path: artifacts/test-results
+          if-no-files-found: warn
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./artifacts/test-results
+          flags: ${{ matrix.rid }}
+          fail_ci_if_error: false
+          verbose: false
+
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    needs: build
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    uses: ./.github/workflows/codeql.yml

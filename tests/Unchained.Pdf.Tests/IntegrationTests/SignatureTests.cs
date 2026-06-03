@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Shouldly;
@@ -23,7 +24,12 @@ public sealed class SignatureTests : PdfTestBase
         req.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation, critical: false));
         var cert = req.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddYears(1));
         // Export + re-import to ensure the key is properly associated (use X509CertificateLoader — SYSLIB0057)
-        return X509CertificateLoader.LoadPkcs12(cert.Export(X509ContentType.Pfx), password: null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+        // EphemeralKeySet is not supported on macOS — use MachineKeySet there.
+        var storageFlags = X509KeyStorageFlags.Exportable |
+                           (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+                               ? X509KeyStorageFlags.MachineKeySet
+                               : X509KeyStorageFlags.EphemeralKeySet);
+        return X509CertificateLoader.LoadPkcs12(cert.Export(X509ContentType.Pfx), password: null, storageFlags);
     }
 
     // ── Sign ──────────────────────────────────────────────────────────────────

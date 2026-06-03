@@ -20,6 +20,68 @@
     <ProjectReference Include="..\Unchained.Pdf.Runtimes\Unchained.Pdf.Runtimes.csproj" />
   </ItemGroup>
 
+  <!--
+    Copy FreeType2 native libraries into runtimes/{rid}/native/ in the output so the
+    resolver (using AppContext.BaseDirectory + NuGet convention path) finds them on all
+    platforms. All six entries are unconditional — only the Exists() guard is needed;
+    MSBuild skips missing files silently. No platform conditions means no evaluation
+    surprises across different OS/arch combinations.
+  -->
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-x64\native\freetype6.dll')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-x64\native\freetype6.dll"
+              Link="runtimes\win-x64\native\freetype6.dll"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-arm64\native\freetype6.dll')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-arm64\native\freetype6.dll"
+              Link="runtimes\win-arm64\native\freetype6.dll"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-x64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-x64\native\libfreetype.so.6"
+              Link="runtimes\linux-x64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6"
+              Link="runtimes\linux-arm64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib"
+              Link="runtimes\osx-x64\native\libfreetype.6.dylib"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib"
+              Link="runtimes\osx-arm64\native\libfreetype.6.dylib"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
   <!-- SharpFont 4.0.1 (MIT) — managed P/Invoke wrapper for FreeType2.
        Directly referenced because the NuGet package only ships a net45 TFM. -->
   <ItemGroup>
@@ -31,10 +93,10 @@
 
   <!-- HarfBuzz (MIT) — text shaping for complex scripts (Arabic, Devanagari, CJK, ligatures). -->
   <ItemGroup Label="HarfBuzz">
-    <PackageReference Include="HarfBuzzSharp" Version="8.3.1.5" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.5" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.5" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.5" />
+    <PackageReference Include="HarfBuzzSharp" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
   </ItemGroup>
 
   <!-- Substitute fonts for Standard 14 (DejaVu — Bitstream Vera / SIL OFL). -->

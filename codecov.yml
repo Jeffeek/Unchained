@@ -1,0 +1,33 @@
+# Codecov configuration for Unchained
+# https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 0.5%
+        informational: false
+    patch:
+      default:
+        target: 80%
+        threshold: 0.5%
+        informational: false
+
+  ignore:
+    - "tests/**/*"
+    - "**/*.Tests/**/*"
+    - "**/obj/**"
+    - "**/bin/**"
+    - "**/*.Designer.cs"
+    - "**/*.g.cs"
+    - "**/*.g.i.cs"
+    - "**/AssemblyInfo.cs"
+    - "scripts/**"
+
+comment:
+  layout: "reach,diff,flags,tree,footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true

@@ -58,6 +58,15 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     {
         var lexer = new Lexer(source, (int)byteOffset);
 
+        // If the stored offset is stale (e.g., CRLF-converted file), scan forward for
+        // the nearest "N G obj" header within 256 bytes.
+        if (!lexer.Peek().Is(PdfTokenKind.Integer))
+        {
+            var adjusted = ScanForwardForObjectHeader(byteOffset);
+            if (adjusted >= 0)
+                lexer = new Lexer(source, adjusted);
+        }
+
         var objNum = ExpectInteger(lexer);
         var generation = ExpectInteger(lexer);
         Expect(lexer, PdfTokenKind.Obj);
@@ -231,9 +240,78 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     private (Dictionary<int, CrossReferenceEntry> Entries, PdfDictionary Trailer, long Prev) ParseSingleXref(long offset)
     {
         var lexer = new Lexer(source, (int)offset);
-        return lexer.Peek().Is(PdfTokenKind.Xref)
-            ? ParseTraditionalXref(lexer)
-            : ParseXrefStream(offset);
+        var peek = lexer.Peek();
+
+        if (peek.Is(PdfTokenKind.Xref))
+            return ParseTraditionalXref(lexer);
+
+        if (peek.Is(PdfTokenKind.Integer))
+            return ParseXrefStream(offset);
+
+        // The stored offset is stale — common when CRLF-converted files shift every byte
+        // position after generation. Scan forward up to 1 KB for the "xref" keyword.
+        var adjusted = ScanForwardForXref(offset);
+        if (adjusted >= 0)
+        {
+            var adjustedLexer = new Lexer(source, adjusted);
+            return adjustedLexer.Peek().Is(PdfTokenKind.Xref)
+                ? ParseTraditionalXref(adjustedLexer)
+                : ParseXrefStream(adjusted);
+        }
+
+        throw new PdfException($"Cross-reference table not found at or near offset 0x{offset:X}.", offset);
+    }
+
+    // Scans forward from startOffset (up to 1 KB) for a "xref" keyword at a line boundary.
+    private int ScanForwardForXref(long startOffset)
+    {
+        var span = source.Span;
+        var limit = (int)Math.Min(startOffset + 1024, span.Length - 4);
+
+        for (var i = (int)startOffset; i < limit; i++)
+        {
+            if (span[i] != (byte)'x')
+                continue;
+
+            if (!span.Slice(i, 4).SequenceEqual("xref"u8))
+                continue;
+
+            if (i == 0 || span[i - 1] is (byte)'\r' or (byte)'\n')
+                return i;
+        }
+
+        return -1;
+    }
+
+    // Scans forward from startOffset (up to 256 bytes) for an indirect-object header
+    // ("N G obj") at a line boundary — used to recover from stale xref offsets.
+    private int ScanForwardForObjectHeader(long startOffset)
+    {
+        var span = source.Span;
+        var limit = (int)Math.Min(startOffset + 256, span.Length);
+        for (var i = (int)startOffset; i < limit; i++)
+        {
+            if (span[i] < (byte)'0' || span[i] > (byte)'9')
+                continue;
+
+            if (i > 0 && span[i - 1] is not ((byte)'\r' or (byte)'\n'))
+                continue;
+
+            // Verify this looks like "N G obj": two integers separated by space, then " obj"
+            var testLexer = new Lexer(source, i);
+            if (!testLexer.Peek().Is(PdfTokenKind.Integer))
+                continue;
+
+            testLexer.ReadNext();
+            if (!testLexer.Peek().Is(PdfTokenKind.Integer))
+                continue;
+
+            testLexer.ReadNext();
+            if (testLexer.Peek().Is(PdfTokenKind.Obj))
+                return i;
+        }
+
+        return -1;
     }
 
     // Parses a traditional "xref\n<subsection> ... trailer\n<dict>" block (§7.5.4).

@@ -14,11 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="JpegLibrary" Version="0.4.32" />
-    <PackageReference Include="JBig2Decoder.NETStandard" Version="1.5.2" />
-    <PackageReference Include="CoreJ2K" Version="2.2.2.72" />
-    <PackageReference Include="Markdig" Version="1.2.0" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.8" />
+    <PackageReference Include="JpegLibrary" />
+    <PackageReference Include="JBig2Decoder.NETStandard" />
+    <PackageReference Include="CoreJ2K" />
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
   </ItemGroup>
 
 </Project>
