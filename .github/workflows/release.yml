@@ -89,16 +89,19 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Fetch native FreeType2 library
+        shell: bash
+        run: bash scripts/FetchNatives/fetch-natives.sh
+
+      - name: Upload native binary artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: natives-${{ matrix.rid }}
+          path: src/Unchained.Pdf.Runtimes/runtimes/${{ matrix.rid }}/native/
+          if-no-files-found: error
+
       - name: Setup .NET (restore + build)
         uses: ./.github/actions/dotnet-setup
-
-      - name: Ad-hoc sign native libraries (macOS)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          find tests/Unchained.Pdf.Tests/bin/Release/net10.0/runtimes \
-            -name "*.dylib" \
-            -exec codesign --force --sign - {} \;
 
       - name: Test
         run: dotnet test tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj -c Release --no-build
@@ -122,6 +125,24 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Download native binaries from all RIDs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: artifacts/natives
+          pattern: natives-*
+
+      - name: Stage natives under runtimes/<rid>/native/
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in artifacts/natives/natives-*; do
+            rid="${dir##*/natives-}"
+            dest="src/Unchained.Pdf.Runtimes/runtimes/${rid}/native"
+            mkdir -p "${dest}"
+            cp -f "${dir}"/* "${dest}/"
+            ls -la "${dest}/"
+          done
 
       - name: Setup .NET (no build yet)
         uses: ./.github/actions/dotnet-setup
