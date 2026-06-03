@@ -20,7 +20,7 @@ public sealed class RendererTests : RendererTestBase
         SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -30,7 +30,7 @@ public sealed class RendererTests : RendererTestBase
         SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.WithTextContent(text: "Hello"));
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -43,7 +43,7 @@ public sealed class RendererTests : RendererTestBase
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         var page = doc.Pages[1];
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150));
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150), ct: TestContext.Current.CancellationToken);
         // Expected pixel width ≈ pageWidthPt * 150 / 72
         var expected = (int)Math.Ceiling(page.Width * 150.0 / 72.0);
         var width = PdfTestConstants.PngWidth(png);
@@ -56,8 +56,8 @@ public sealed class RendererTests : RendererTestBase
         SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        var png150 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150));
-        var png300 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 300));
+        var png150 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150), ct: TestContext.Current.CancellationToken);
+        var png300 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 300), ct: TestContext.Current.CancellationToken);
         var w150 = PdfTestConstants.PngWidth(png150);
         var w300 = PdfTestConstants.PngWidth(png300);
         w300.ShouldBeGreaterThan(w150);
@@ -76,8 +76,8 @@ public sealed class RendererTests : RendererTestBase
             Headers = ["Name", "Value"],
             Rows = [["Alice", "42"], ["Bob", "17"]]
         };
-        await using var doc = await gen.GenerateAsync(data, TableStyle.Default);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -89,7 +89,7 @@ public sealed class RendererTests : RendererTestBase
         SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3));
-        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default);
+        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         pages.Count.ShouldBe(3);
         foreach (var p in pages)
             p[..8].ShouldBe(PdfTestConstants.PngSignature);
@@ -116,7 +116,7 @@ public sealed class RendererTests : RendererTestBase
         SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.WithTextContent());
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(100);
     }
 }

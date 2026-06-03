@@ -19,7 +19,7 @@ public sealed class RealPdfTextTests : PdfTestBase
         var tested = 0;
         foreach (var path in Files())
         {
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path));
+            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken), ct: TestContext.Current.CancellationToken);
             if (doc is null)
                 continue;
 
@@ -38,7 +38,7 @@ public sealed class RealPdfTextTests : PdfTestBase
         var tested = 0;
         foreach (var path in Files())
         {
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path));
+            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken), ct: TestContext.Current.CancellationToken);
             if (doc is null)
                 continue;
 

@@ -57,7 +57,7 @@ public sealed class AnnotationEditorTests : PdfTestBase
     public async Task AddAnnotationAsync_EmptyPage_AnnotationAdded()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.AddAnnotationAsync(doc, pageNumber: 1, SampleAnnotation);
+        await Editor.AddAnnotationAsync(doc, pageNumber: 1, SampleAnnotation, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations().Count.ShouldBe(1);
     }
 
@@ -65,7 +65,7 @@ public sealed class AnnotationEditorTests : PdfTestBase
     public async Task AddAnnotationAsync_Contents_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations()[0].Contents.ShouldBe("Hello");
     }
 
@@ -73,7 +73,7 @@ public sealed class AnnotationEditorTests : PdfTestBase
     public async Task AddAnnotationAsync_Subtype_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.AddAnnotationAsync(doc, 1, new Annotation(AnnotationSubtype.Square, 10, 10, 50, 50));
+        await Editor.AddAnnotationAsync(doc, 1, new Annotation(AnnotationSubtype.Square, 10, 10, 50, 50), ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations()[0].Subtype.ShouldBe(AnnotationSubtype.Square);
     }
 
@@ -82,7 +82,7 @@ public sealed class AnnotationEditorTests : PdfTestBase
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         var ann = new Annotation(AnnotationSubtype.Text, X: 30, Y: 40, Width: 60, Height: 70);
-        await Editor.AddAnnotationAsync(doc, 1, ann);
+        await Editor.AddAnnotationAsync(doc, 1, ann, ct: TestContext.Current.CancellationToken);
         var result = doc.Pages[1].GetAnnotations()[0];
         result.X.ShouldBe(30, tolerance: 0.01f);
         result.Y.ShouldBe(40, tolerance: 0.01f);
@@ -94,8 +94,8 @@ public sealed class AnnotationEditorTests : PdfTestBase
     public async Task AddAnnotationAsync_MultipleAnnotations_AllPresent()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation);
-        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation with { Contents = "Second" });
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, ct: TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation with { Contents = "Second" }, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations().Count.ShouldBe(2);
     }
 
@@ -103,7 +103,7 @@ public sealed class AnnotationEditorTests : PdfTestBase
     public async Task AddAnnotationAsync_PageCountUnchanged()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
-        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(2);
     }
 
@@ -111,9 +111,9 @@ public sealed class AnnotationEditorTests : PdfTestBase
     public async Task AddAnnotationAsync_RoundTrip_ParseableAfterSave()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms);
         reloaded.Pages[1].GetAnnotations().Count.ShouldBe(1);

@@ -66,7 +66,7 @@ public sealed class FontSubsystemTests : RendererTestBase
         var fontData = LoadBundledDejaVuBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
         await using var doc = await LoadAsync(pdfBytes);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -78,7 +78,7 @@ public sealed class FontSubsystemTests : RendererTestBase
         var fontData = LoadBundledDejaVuBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
         await using var doc = await LoadAsync(pdfBytes);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(200);
     }
 
@@ -93,7 +93,7 @@ public sealed class FontSubsystemTests : RendererTestBase
             Headers = ["A", "A very long header that needs more space"],
             Rows = [["x", "y"]]
         };
-        await using var doc = await gen.GenerateAsync(data, TableStyle.Default);
+        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
         // Verify the document round-trips; column proportionality is structural.
         doc.PageCount.ShouldBe(1);
         var ops = doc.Pages[1].GetContentOperators();
@@ -109,10 +109,10 @@ public sealed class FontSubsystemTests : RendererTestBase
             Headers = ["Col1", "Col2", "Col3"],
             Rows = [["a", "b", "c"]]
         };
-        await using var doc = await gen.GenerateAsync(data, TableStyle.Default);
+        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
         // Round-trip should still produce correct page count.
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms);
         reloaded.PageCount.ShouldBe(1);
@@ -192,7 +192,7 @@ public sealed class FontSubsystemTests : RendererTestBase
         var rgb = CreateSolidRgb(4, 4, r: 200, g: 100, b: 50);
         var pdfBytes = PdfFixtures.WithImageXObject(4, 4, rgb);
         await using var doc = await LoadAsync(pdfBytes);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 

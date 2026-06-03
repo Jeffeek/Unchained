@@ -17,7 +17,7 @@ public sealed class PdfATests : PdfTestBase
     public async Task Validate_UnencryptedSimplePdf_ReturnsResult()
     {
         // Any non-encrypted PDF should return a result (may have violations).
-        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage());
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         result.ShouldNotBeNull();
         result.Profile.ShouldBe(PdfAProfile.PdfA1B);
     }
@@ -25,11 +25,11 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task Validate_EncryptedPdf_ReportsEncryptionViolation()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw")));
+        await Processor.SaveAsync(doc, ms, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw")), ct: TestContext.Current.CancellationToken);
 
-        var result = await Processor.ValidatePdfAAsync(ms.ToArray());
+        var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
         // ReSharper disable once StringLiteralTypo
         result.Errors.ShouldContain(static v => v.RuleId == "6.1.3" && v.Description.Contains("ncrypt"), "Encryption must be reported as a §6.1.3 violation.");
@@ -39,25 +39,25 @@ public sealed class PdfATests : PdfTestBase
     public async Task Validate_MissingFileId_ReportsViolation()
     {
         // A freshly-created in-memory PDF (via format imports) has no /ID.
-        await using var doc = await Processor.LoadFromTxtAsync("hello");
+        await using var doc = await Processor.LoadFromTxtAsync("hello", ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
-        var result = await Processor.ValidatePdfAAsync(ms.ToArray());
+        var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         result.Violations.ShouldContain(static v => v.RuleId == "6.1.3", "Missing /ID must be reported.");
     }
 
     [Fact]
     public async Task Validate_MissingXmpMetadata_ReportsViolation()
     {
-        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage());
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         result.Violations.ShouldContain(static v => v.RuleId == "6.7.2", "Missing /Metadata must be reported.");
     }
 
     [Fact]
     public async Task Validate_AllErrorsHaveRuleId()
     {
-        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage());
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         result.Violations.ShouldAllBe(static v => !string.IsNullOrWhiteSpace(v.RuleId), "Every violation must have a rule ID.");
     }
 
@@ -66,22 +66,22 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_ProducesLoadablePdf()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(doc, ms);
+        await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
-        await using var reloaded = await LoadAsync(ms.ToArray());
+        await using var reloaded = await LoadAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
     }
 
     [Fact]
     public async Task ConvertToPdfA_AddsXmpWithPdfaidProperties()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(doc, ms);
+        await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
-        await using var reloaded = await LoadAsync(ms.ToArray());
+        await using var reloaded = await LoadAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         var xmp = reloaded.GetXmpMetadata();
         xmp.ShouldNotBeNull("Converted document must have XMP metadata.");
         xmp.ShouldContain("pdfaid", caseSensitivity: Case.Insensitive);
@@ -90,11 +90,11 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_AddsPdfaidPart1AndConformanceB()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(doc, ms, profile: PdfAProfile.PdfA1B);
+        await Processor.ConvertToPdfAAsync(doc, ms, profile: PdfAProfile.PdfA1B, ct: TestContext.Current.CancellationToken);
 
-        var result = await Processor.ValidatePdfAAsync(ms.ToArray(), profile: PdfAProfile.PdfA1B);
+        var result = await Processor.ValidatePdfAAsync(ms.ToArray(), profile: PdfAProfile.PdfA1B, ct: TestContext.Current.CancellationToken);
 
         // After conversion, the XMP violation should be resolved
         result.Errors.ShouldNotContain(static v => v.RuleId == "6.7.2", "pdfaid XMP properties should be present after conversion.");
@@ -103,11 +103,11 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_AddsFileId()
     {
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2), ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(doc, ms);
+        await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
-        var result = await Processor.ValidatePdfAAsync(ms.ToArray());
+        var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
         result.Errors.ShouldNotContain(static v => v.RuleId == "6.1.3" && v.Description.Contains("ID"), "/ID should be present after conversion.");
     }
@@ -116,12 +116,12 @@ public sealed class PdfATests : PdfTestBase
     public async Task ConvertToPdfA_ThenValidate_FewerErrorsThanOriginal()
     {
         var original = PdfFixtures.SinglePage();
-        var originalResult = await Processor.ValidatePdfAAsync(original);
+        var originalResult = await Processor.ValidatePdfAAsync(original, ct: TestContext.Current.CancellationToken);
 
-        await using var doc = await LoadAsync(original);
+        await using var doc = await LoadAsync(original, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(doc, ms);
-        var convertedResult = await Processor.ValidatePdfAAsync(ms.ToArray());
+        await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        var convertedResult = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
         convertedResult.Errors.Count.ShouldBeLessThan(originalResult.Errors.Count, "Conversion must resolve at least some violations.");
     }
@@ -129,15 +129,15 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_IsIdempotent()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         using var ms1 = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(doc, ms1);
+        await Processor.ConvertToPdfAAsync(doc, ms1, ct: TestContext.Current.CancellationToken);
 
-        await using var doc2 = await LoadAsync(ms1.ToArray());
+        await using var doc2 = await LoadAsync(ms1.ToArray(), ct: TestContext.Current.CancellationToken);
         using var ms2 = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(doc2, ms2);
+        await Processor.ConvertToPdfAAsync(doc2, ms2, ct: TestContext.Current.CancellationToken);
 
-        var result = await Processor.ValidatePdfAAsync(ms2.ToArray());
+        var result = await Processor.ValidatePdfAAsync(ms2.ToArray(), ct: TestContext.Current.CancellationToken);
         // Second conversion should not add duplicate pdfaid properties
         result.Errors.ShouldNotContain(static v => v.RuleId == "6.7.2");
     }
@@ -145,11 +145,11 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_Encrypted_Throws()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         using var encMs = new MemoryStream();
-        await Processor.SaveAsync(doc, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw")));
+        await Processor.SaveAsync(doc, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw")), ct: TestContext.Current.CancellationToken);
 
-        await using var encDoc = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "pw");
+        await using var encDoc = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "pw", ct: TestContext.Current.CancellationToken);
         using var outMs = new MemoryStream();
 
         await Should.ThrowAsync<InvalidOperationException>(() => Processor.ConvertToPdfAAsync(encDoc, outMs));
@@ -175,8 +175,8 @@ public sealed class PdfATests : PdfTestBase
 
         foreach (var path in passFiles)
         {
-            var bytes = await File.ReadAllBytesAsync(path);
-            var r = await Processor.ValidatePdfAAsync(bytes);
+            var bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+            var r = await Processor.ValidatePdfAAsync(bytes, ct: TestContext.Current.CancellationToken);
             avgPassErrors += r.Errors.Count;
             passCount++;
         }
@@ -184,8 +184,8 @@ public sealed class PdfATests : PdfTestBase
         var failCount = 0;
         foreach (var path in failFiles)
         {
-            var bytes = await File.ReadAllBytesAsync(path);
-            var r = await Processor.ValidatePdfAAsync(bytes);
+            var bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+            var r = await Processor.ValidatePdfAAsync(bytes, ct: TestContext.Current.CancellationToken);
             avgFailErrors += r.Errors.Count;
             failCount++;
         }
@@ -211,9 +211,9 @@ public sealed class PdfATests : PdfTestBase
 
         foreach (var path in paths)
         {
-            var bytes = await File.ReadAllBytesAsync(path);
+            var bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
             // Must not throw — encrypted PDFs or broken ones should return results gracefully
-            var result = await Processor.ValidatePdfAAsync(bytes);
+            var result = await Processor.ValidatePdfAAsync(bytes, ct: TestContext.Current.CancellationToken);
             result.ShouldNotBeNull(Path.GetFileName(path));
         }
     }

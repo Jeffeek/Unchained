@@ -20,10 +20,10 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "secret"));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
 
         var bytes = ms.ToArray();
-        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), "secret");
+        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), "secret", ct: TestContext.Current.CancellationToken);
         reopened.PageCount.ShouldBe(3);
     }
 
@@ -34,11 +34,11 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: string.Empty));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
 
         // An empty user password means anyone can open it (but it is still encrypted).
         var bytes = ms.ToArray();
-        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), string.Empty);
+        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), string.Empty, ct: TestContext.Current.CancellationToken);
         reopened.PageCount.ShouldBe(1);
     }
 
@@ -49,10 +49,10 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "test123"));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
 
         var bytes = ms.ToArray();
-        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), "test123");
+        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), "test123", ct: TestContext.Current.CancellationToken);
         reopened.IsEncrypted.ShouldBeTrue();
     }
 
@@ -71,10 +71,10 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "abc123"));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
 
         var bytes = ms.ToArray();
-        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), "abc123");
+        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), "abc123", ct: TestContext.Current.CancellationToken);
         var text = reopened.Pages[1].ExtractText();
         text.ShouldContain("Hello");
     }
@@ -88,15 +88,15 @@ public sealed class EncryptionTests : PdfTestBase
             OwnerPassword: "owner"));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
         var bytes = ms.ToArray();
 
         // User password works
-        await using var byUser = await Processor.LoadAsync(new MemoryStream(bytes), "user");
+        await using var byUser = await Processor.LoadAsync(new MemoryStream(bytes), "user", ct: TestContext.Current.CancellationToken);
         byUser.PageCount.ShouldBe(2);
 
         // Owner password works
-        await using var byOwner = await Processor.LoadAsync(new MemoryStream(bytes), "owner");
+        await using var byOwner = await Processor.LoadAsync(new MemoryStream(bytes), "owner", ct: TestContext.Current.CancellationToken);
         byOwner.PageCount.ShouldBe(2);
     }
 
@@ -107,7 +107,7 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw"));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
 
         ms.Position = 0;
         var header = new byte[5];
@@ -120,14 +120,14 @@ public sealed class EncryptionTests : PdfTestBase
     {
         var data = PdfFixtures.SimpleTableData(rows: 5);
         var gen = new Engine.TableGenerator();
-        await using var original = await gen.GenerateAsync(data, TableStyle.Default);
+        await using var original = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
 
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "table"));
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
 
         var bytes = ms.ToArray();
-        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), "table");
+        await using var reopened = await Processor.LoadAsync(new MemoryStream(bytes), "table", ct: TestContext.Current.CancellationToken);
         reopened.PageCount.ShouldBe(original.PageCount);
     }
 
@@ -147,9 +147,9 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw", Permissions: PdfPermissions.All));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
 
-        await using var reopened = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), "pw");
+        await using var reopened = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), "pw", ct: TestContext.Current.CancellationToken);
         reopened.Permissions.HasFlag(PdfPermissions.Print).ShouldBeTrue();
         reopened.Permissions.HasFlag(PdfPermissions.Copy).ShouldBeTrue();
     }
@@ -162,9 +162,9 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw", Permissions: restricted));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
 
-        await using var reopened = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), "pw");
+        await using var reopened = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), "pw", ct: TestContext.Current.CancellationToken);
         reopened.Permissions.HasFlag(PdfPermissions.Print).ShouldBeTrue();
         reopened.Permissions.HasFlag(PdfPermissions.Copy).ShouldBeFalse();
         reopened.Permissions.HasFlag(PdfPermissions.Modify).ShouldBeFalse();
@@ -178,17 +178,17 @@ public sealed class EncryptionTests : PdfTestBase
         // Encrypt, then change password from "old" to "new"
         await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 2));
         var firstMs = new MemoryStream();
-        await Processor.SaveAsync(original, firstMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "old")));
+        await Processor.SaveAsync(original, firstMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "old")), ct: TestContext.Current.CancellationToken);
 
-        await using var decrypted = await Processor.LoadAsync(new MemoryStream(firstMs.ToArray()), "old");
+        await using var decrypted = await Processor.LoadAsync(new MemoryStream(firstMs.ToArray()), "old", ct: TestContext.Current.CancellationToken);
         var changedMs = new MemoryStream();
-        await Processor.ChangePasswordsAsync(decrypted, "new", "new", changedMs);
+        await Processor.ChangePasswordsAsync(decrypted, "new", "new", changedMs, ct: TestContext.Current.CancellationToken);
 
         // Old password no longer works
-        await Should.ThrowAsync<PdfEncryptedException>(() => Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "old"));
+        await Should.ThrowAsync<PdfEncryptedException>(() => Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "old", ct: TestContext.Current.CancellationToken));
 
         // New password works
-        await using var reopened = await Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "new");
+        await using var reopened = await Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "new", ct: TestContext.Current.CancellationToken);
         reopened.PageCount.ShouldBe(2);
     }
 
@@ -197,14 +197,14 @@ public sealed class EncryptionTests : PdfTestBase
     {
         await using var original = await LoadAsync(PdfFixtures.SinglePage());
         var encMs = new MemoryStream();
-        await Processor.SaveAsync(original, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "secret")));
+        await Processor.SaveAsync(original, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "secret")), ct: TestContext.Current.CancellationToken);
 
-        await using var decrypted = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "secret");
+        await using var decrypted = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "secret", ct: TestContext.Current.CancellationToken);
         var decryptedMs = new MemoryStream();
-        await Processor.ChangePasswordsAsync(decrypted, string.Empty, string.Empty, decryptedMs);
+        await Processor.ChangePasswordsAsync(decrypted, string.Empty, string.Empty, decryptedMs, ct: TestContext.Current.CancellationToken);
 
         // No password needed anymore
-        await using var plain = await Processor.LoadAsync(new MemoryStream(decryptedMs.ToArray()));
+        await using var plain = await Processor.LoadAsync(new MemoryStream(decryptedMs.ToArray()), ct: TestContext.Current.CancellationToken);
         plain.IsEncrypted.ShouldBeFalse();
         plain.PageCount.ShouldBe(1);
     }
@@ -214,17 +214,17 @@ public sealed class EncryptionTests : PdfTestBase
     {
         await using var original = await LoadAsync(PdfFixtures.SinglePage());
         var encMs = new MemoryStream();
-        await Processor.SaveAsync(original, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "initial")));
+        await Processor.SaveAsync(original, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "initial")), ct: TestContext.Current.CancellationToken);
 
-        await using var decrypted = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "initial");
+        await using var decrypted = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "initial", ct: TestContext.Current.CancellationToken);
         var changedMs = new MemoryStream();
-        await Processor.ChangePasswordsAsync(decrypted, "user2", "owner2", changedMs);
+        await Processor.ChangePasswordsAsync(decrypted, "user2", "owner2", changedMs, ct: TestContext.Current.CancellationToken);
 
         // Both new passwords work
-        await using var byUser = await Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "user2");
+        await using var byUser = await Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "user2", ct: TestContext.Current.CancellationToken);
         byUser.PageCount.ShouldBe(1);
 
-        await using var byOwner = await Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "owner2");
+        await using var byOwner = await Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "owner2", ct: TestContext.Current.CancellationToken);
         byOwner.PageCount.ShouldBe(1);
     }
 
@@ -237,10 +237,10 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "correct"));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
         var bytes = ms.ToArray();
 
-        await Should.ThrowAsync<PdfEncryptedException>(() => Processor.LoadAsync(new MemoryStream(bytes), "wrong"));
+        await Should.ThrowAsync<PdfEncryptedException>(() => Processor.LoadAsync(new MemoryStream(bytes), "wrong", ct: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -250,10 +250,10 @@ public sealed class EncryptionTests : PdfTestBase
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "secret"));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(original, ms, encOpts);
+        await Processor.SaveAsync(original, ms, encOpts, ct: TestContext.Current.CancellationToken);
         var bytes = ms.ToArray();
 
         // Loading without password should fail
-        await Should.ThrowAsync<PdfEncryptedException>(() => Processor.LoadAsync(new MemoryStream(bytes)));
+        await Should.ThrowAsync<PdfEncryptedException>(() => Processor.LoadAsync(new MemoryStream(bytes), ct: TestContext.Current.CancellationToken));
     }
 }
