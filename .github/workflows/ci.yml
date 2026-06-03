@@ -53,6 +53,17 @@ jobs:
       - name: Setup .NET (restore + build)
         uses: ./.github/actions/dotnet-setup
 
+      # macOS 15 (Sequoia) requires code-signed dylibs even for non-hardened processes.
+      # Ad-hoc signing (--sign -) applies an identity-based signature with no certificate.
+      # The dylibs live in runtimes/{rid}/native/ since we switched to the NuGet path layout.
+      - name: Ad-hoc sign native libraries (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          find tests/Unchained.Pdf.Tests/bin/Release/net10.0/runtimes \
+            -name "*.dylib" \
+            -exec codesign --force --sign - {} \;
+
       - name: Test with coverage
         timeout-minutes: ${{ matrix.rid == 'linux-arm64' && 30 || 15 }}
         run: >

@@ -92,6 +92,14 @@ jobs:
       - name: Setup .NET (restore + build)
         uses: ./.github/actions/dotnet-setup
 
+      - name: Ad-hoc sign native libraries (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          find tests/Unchained.Pdf.Tests/bin/Release/net10.0/runtimes \
+            -name "*.dylib" \
+            -exec codesign --force --sign - {} \;
+
       - name: Test
         run: dotnet test tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj -c Release --no-build
 
