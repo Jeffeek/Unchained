@@ -61,7 +61,11 @@ jobs:
           find tests/Unchained.Pdf.Tests/bin/Release/net10.0 \
             -maxdepth 1 \( -name "*.so*" -o -name "*.dylib" \) \
             -exec ls -lh {} \; 2>/dev/null || echo "(none found)"
-          echo "=== OSArchitecture check ==="
+          echo "=== Rendering assembly location ==="
+          find tests/Unchained.Pdf.Tests/bin/Release/net10.0 \
+            -maxdepth 1 -name "Unchained.Pdf.Rendering.dll" \
+            -exec ls -lh {} \; 2>/dev/null || echo "(not found)"
+          echo "=== OSArchitecture / RID ==="
           dotnet --info | grep -i "arch\|OS\|RID" | head -10
 
       - name: Test with coverage

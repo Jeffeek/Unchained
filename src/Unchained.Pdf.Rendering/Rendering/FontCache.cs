@@ -40,15 +40,24 @@ internal sealed class FontCache : IDisposable
         else
             return nint.Zero; // Windows: freetype6.dll resolved by default
 
-        // Unchained.Pdf.Runtimes copies the native file to the output root via
-        // Link="<name>" + CopyToOutputDirectory. Probe the absolute path first so we
-        // don't rely on DllImportSearchPath resolving into AppContext.BaseDirectory.
-        var baseDir = AppContext.BaseDirectory;
-        foreach (var name in candidates)
+        // The native library is copied to the same directory as Unchained.Pdf.Rendering.dll
+        // (and transitively to any project that references it). Probe using the Rendering
+        // assembly's own location — this is more reliable than AppContext.BaseDirectory,
+        // which can point to the test host or runner directory instead of the output folder.
+        var probeDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var asmLocation = typeof(FontCache).Assembly.Location;
+        if (!string.IsNullOrEmpty(asmLocation))
+            probeDirs.Add(Path.GetDirectoryName(asmLocation)!);
+        probeDirs.Add(AppContext.BaseDirectory.TrimEnd('/', '\\'));
+
+        foreach (var dir in probeDirs)
         {
-            var fullPath = Path.Combine(baseDir, name);
-            if (File.Exists(fullPath) && NativeLibrary.TryLoad(fullPath, out var h))
-                return h;
+            foreach (var name in candidates)
+            {
+                var fullPath = Path.Combine(dir, name);
+                if (File.Exists(fullPath) && NativeLibrary.TryLoad(fullPath, out var h))
+                    return h;
+            }
         }
 
         // Fall back to system-installed FreeType (e.g. apt/yum on Linux).
