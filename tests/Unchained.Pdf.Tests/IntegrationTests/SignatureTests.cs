@@ -41,7 +41,7 @@ public sealed class SignatureTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms);
+        await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
 
         ms.ToArray()[..5].ShouldBe("%PDF-"u8.ToArray());
         ms.Length.ShouldBeGreaterThan(0);
@@ -54,7 +54,7 @@ public sealed class SignatureTests : PdfTestBase
         await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 2));
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(original, cert, ms);
+        await Processor.SignAsync(original, cert, ms, ct: TestContext.Current.CancellationToken);
 
         await using var reloaded = await LoadAsync(ms.ToArray());
         reloaded.PageCount.ShouldBe(2);
@@ -72,10 +72,10 @@ public sealed class SignatureTests : PdfTestBase
             ContactInfo: "alice@example.com");
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms, opts);
+        await Processor.SignAsync(doc, cert, ms, opts, ct: TestContext.Current.CancellationToken);
 
         // Verify and check metadata came back
-        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray());
+        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         signatures.Count.ShouldBe(1);
         signatures[0].Reason.ShouldBe("I approve");
         signatures[0].Location.ShouldBe("New York");
@@ -87,10 +87,10 @@ public sealed class SignatureTests : PdfTestBase
         using var cert = CreateSelfSignedCert();
         var gen = new Engine.TableGenerator();
         var data = PdfFixtures.SimpleTableData(rows: 3);
-        await using var original = await gen.GenerateAsync(data, TableStyle.Default);
+        await using var original = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(original, cert, ms);
+        await Processor.SignAsync(original, cert, ms, ct: TestContext.Current.CancellationToken);
 
         await using var reloaded = await LoadAsync(ms.ToArray());
         reloaded.PageCount.ShouldBe(original.PageCount);
@@ -105,9 +105,9 @@ public sealed class SignatureTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms);
+        await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
 
-        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray());
+        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         signatures.Count.ShouldBe(1);
     }
 
@@ -118,9 +118,9 @@ public sealed class SignatureTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms, new SignatureOptions(Reason: "Test"));
+        await Processor.SignAsync(doc, cert, ms, new SignatureOptions(Reason: "Test"), ct: TestContext.Current.CancellationToken);
 
-        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray());
+        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         signatures[0].IsSignatureValid.ShouldBeTrue("Signature must be cryptographically valid.");
         signatures[0].SignerName.ShouldContain("Carol");
         signatures[0].Reason.ShouldBe("Test");
@@ -129,7 +129,7 @@ public sealed class SignatureTests : PdfTestBase
     [Fact]
     public async Task Verify_UnsignedDocument_ReturnsEmpty()
     {
-        var signatures = await Processor.VerifySignaturesAsync(PdfFixtures.SinglePage());
+        var signatures = await Processor.VerifySignaturesAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         signatures.Count.ShouldBe(0);
     }
 
@@ -140,14 +140,14 @@ public sealed class SignatureTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms);
+        await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
 
         // Tamper: flip a byte near the start of the file — always within the signed byte range,
         // well before the /Contents placeholder which sits toward the end.
         var bytes = ms.ToArray();
         bytes[20] ^= 0xFF; // safely inside range 0..contentsStart
 
-        var signatures = await Processor.VerifySignaturesAsync(bytes);
+        var signatures = await Processor.VerifySignaturesAsync(bytes, ct: TestContext.Current.CancellationToken);
         // Either the PDF fails to parse (so 0 signatures) or the sig is invalid
         if (signatures.Count > 0)
             signatures[0].IsSignatureValid.ShouldBeFalse("Tampered document signature must be invalid.");
@@ -163,9 +163,9 @@ public sealed class SignatureTests : PdfTestBase
         // ReSharper restore BadListLineBreaks
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms, new SignatureOptions(SigningTime: when));
+        await Processor.SignAsync(doc, cert, ms, new SignatureOptions(SigningTime: when), ct: TestContext.Current.CancellationToken);
 
-        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray());
+        var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         signatures.Count.ShouldBe(1);
         signatures[0].SigningTime?.Year.ShouldBe(2025);
     }

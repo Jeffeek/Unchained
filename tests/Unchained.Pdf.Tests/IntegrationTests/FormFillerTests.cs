@@ -57,7 +57,7 @@ public sealed class FormFillerTests : PdfTestBase
     public async Task FillAsync_UpdatesFieldValue()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("Name", string.Empty));
-        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Name"] = "Alice" });
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Name"] = "Alice" }, ct: TestContext.Current.CancellationToken);
         doc.GetFormFields()[0].Value.ShouldBe("Alice");
     }
 
@@ -72,7 +72,7 @@ public sealed class FormFillerTests : PdfTestBase
     public async Task FillAsync_EmptyValues_DocumentUnchanged()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("Name", "Original"));
-        await Filler.FillAsync(doc, new Dictionary<string, string>());
+        await Filler.FillAsync(doc, new Dictionary<string, string>(), ct: TestContext.Current.CancellationToken);
         doc.GetFormFields()[0].Value.ShouldBe("Original");
     }
 
@@ -80,9 +80,9 @@ public sealed class FormFillerTests : PdfTestBase
     public async Task FillAsync_RoundTrip_ValuePersistsAfterSave()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("Email", string.Empty));
-        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Email"] = "test@example.com" });
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Email"] = "test@example.com" }, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms);
         reloaded.GetFormFields()[0].Value.ShouldBe("test@example.com");
@@ -92,7 +92,7 @@ public sealed class FormFillerTests : PdfTestBase
     public async Task FillAsync_PageCountUnchanged()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("F"));
-        await Filler.FillAsync(doc, new Dictionary<string, string> { ["F"] = "val" });
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["F"] = "val" }, ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -111,7 +111,7 @@ public sealed class FormFillerTests : PdfTestBase
     public async Task FlattenAsync_RemovesAcroFormFromDocument()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("F", "val"));
-        await Filler.FlattenAsync(doc);
+        await Filler.FlattenAsync(doc, ct: TestContext.Current.CancellationToken);
         doc.GetFormFields().ShouldBeEmpty();
     }
 
@@ -119,7 +119,7 @@ public sealed class FormFillerTests : PdfTestBase
     public async Task FlattenAsync_PageCountUnchanged()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("F"));
-        await Filler.FlattenAsync(doc);
+        await Filler.FlattenAsync(doc, ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -127,9 +127,9 @@ public sealed class FormFillerTests : PdfTestBase
     public async Task FlattenAsync_RoundTrip_ParseableAfterSave()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("F", "v"));
-        await Filler.FlattenAsync(doc);
+        await Filler.FlattenAsync(doc, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms);
         reloaded.PageCount.ShouldBe(1);

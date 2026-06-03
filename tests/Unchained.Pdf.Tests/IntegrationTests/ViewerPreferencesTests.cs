@@ -47,7 +47,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         var prefs = new ViewerPreferences(HideToolbar: true);
-        await Editor.SetViewerPreferencesAsync(doc, prefs);
+        await Editor.SetViewerPreferencesAsync(doc, prefs, ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().HideToolbar.ShouldBeTrue();
     }
 
@@ -55,7 +55,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetViewerPreferences_CenterWindow_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(CenterWindow: true));
+        await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(CenterWindow: true), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().CenterWindow.ShouldBeTrue();
     }
 
@@ -63,7 +63,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetViewerPreferences_Direction_RightToLeft_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(Direction: ReadingDirection.RightToLeft));
+        await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(Direction: ReadingDirection.RightToLeft), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().Direction.ShouldBe(ReadingDirection.RightToLeft);
     }
 
@@ -71,7 +71,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetPageLayout_TwoColumnLeft_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetPageLayoutAsync(doc, PageLayout.TwoColumnLeft);
+        await Editor.SetPageLayoutAsync(doc, PageLayout.TwoColumnLeft, ct: TestContext.Current.CancellationToken);
         doc.PageLayout.ShouldBe(PageLayout.TwoColumnLeft);
     }
 
@@ -79,7 +79,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetPageMode_UseOutlines_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetPageModeAsync(doc, PageMode.UseOutlines);
+        await Editor.SetPageModeAsync(doc, PageMode.UseOutlines, ct: TestContext.Current.CancellationToken);
         doc.PageMode.ShouldBe(PageMode.UseOutlines);
     }
 
@@ -87,7 +87,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetViewerPreferences_PageCountUnchanged()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
-        await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(HideMenubar: true));
+        await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(HideMenubar: true), ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(2);
     }
 
@@ -95,10 +95,10 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetPreferences_SaveAndReload_Persisted()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetPageLayoutAsync(doc, PageLayout.SinglePage);
-        await Editor.SetPageModeAsync(doc, PageMode.UseThumbs);
+        await Editor.SetPageLayoutAsync(doc, PageLayout.SinglePage, ct: TestContext.Current.CancellationToken);
+        await Editor.SetPageModeAsync(doc, PageMode.UseThumbs, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms);
         reloaded.PageLayout.ShouldBe(PageLayout.SinglePage);

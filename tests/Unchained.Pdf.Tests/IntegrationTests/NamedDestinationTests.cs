@@ -20,7 +20,7 @@ public sealed class NamedDestinationTests : PdfTestBase
     public async Task SetDestination_CanReadBack()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
-        await Editor.SetDestinationAsync(doc, "chapter1", pageNumber: 1);
+        await Editor.SetDestinationAsync(doc, "chapter1", pageNumber: 1, ct: TestContext.Current.CancellationToken);
         var dests = doc.GetNamedDestinations();
         dests.ShouldContain(static d => d.Name == "chapter1" && d.PageNumber == 1);
     }
@@ -29,8 +29,8 @@ public sealed class NamedDestinationTests : PdfTestBase
     public async Task SetDestination_MultipleNames_AllPresent()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3));
-        await Editor.SetDestinationAsync(doc, "intro", pageNumber: 1);
-        await Editor.SetDestinationAsync(doc, "chapter2", pageNumber: 2);
+        await Editor.SetDestinationAsync(doc, "intro", pageNumber: 1, ct: TestContext.Current.CancellationToken);
+        await Editor.SetDestinationAsync(doc, "chapter2", pageNumber: 2, ct: TestContext.Current.CancellationToken);
         var dests = doc.GetNamedDestinations();
         dests.Count.ShouldBe(2);
     }
@@ -39,8 +39,8 @@ public sealed class NamedDestinationTests : PdfTestBase
     public async Task RemoveDestination_RemovesEntry()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
-        await Editor.SetDestinationAsync(doc, "temp", pageNumber: 1);
-        await Editor.RemoveDestinationAsync(doc, "temp");
+        await Editor.SetDestinationAsync(doc, "temp", pageNumber: 1, ct: TestContext.Current.CancellationToken);
+        await Editor.RemoveDestinationAsync(doc, "temp", ct: TestContext.Current.CancellationToken);
         doc.GetNamedDestinations().ShouldBeEmpty();
     }
 
@@ -55,9 +55,9 @@ public sealed class NamedDestinationTests : PdfTestBase
     public async Task SetDestination_PersistsAfterSave()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
-        await Editor.SetDestinationAsync(doc, "saved-dest", pageNumber: 2);
+        await Editor.SetDestinationAsync(doc, "saved-dest", pageNumber: 2, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms);
         reloaded.GetNamedDestinations().ShouldContain(static d => d.Name == "saved-dest" && d.PageNumber == 2);

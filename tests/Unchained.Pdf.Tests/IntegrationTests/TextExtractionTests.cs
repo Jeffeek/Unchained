@@ -113,7 +113,7 @@ public sealed class TextExtractionTests : PdfTestBase
             Headers = ["Name", "Value", "Status"],
             Rows = [["Alice", "42", "Active"], ["Bob", "17", "Inactive"]]
         };
-        await using var doc = await tableGen.GenerateAsync(data, Models.TableStyle.Default);
+        await using var doc = await tableGen.GenerateAsync(data, Models.TableStyle.Default, ct: TestContext.Current.CancellationToken);
         var text = doc.Pages[1].ExtractText();
         text.ShouldContain("Name");
         text.ShouldContain("Value");
@@ -128,7 +128,7 @@ public sealed class TextExtractionTests : PdfTestBase
             Headers = ["Col"],
             Rows = [["CellValue"]]
         };
-        await using var doc = await tableGen.GenerateAsync(data, Models.TableStyle.Default);
+        await using var doc = await tableGen.GenerateAsync(data, Models.TableStyle.Default, ct: TestContext.Current.CancellationToken);
         var text = doc.Pages[1].ExtractText();
         text.ShouldContain("CellValue");
     }

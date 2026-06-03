@@ -53,7 +53,7 @@ public sealed class BookmarkEditorTests : PdfTestBase
             new("Part 1", PageNumber: 1),
             new("Part 2", PageNumber: 2)
         };
-        await Editor.SetBookmarksAsync(doc, bms);
+        await Editor.SetBookmarksAsync(doc, bms, ct: TestContext.Current.CancellationToken);
         doc.GetBookmarks().Count.ShouldBe(2);
     }
 
@@ -61,7 +61,7 @@ public sealed class BookmarkEditorTests : PdfTestBase
     public async Task SetBookmarksAsync_Titles_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetBookmarksAsync(doc, [new("MyChapter", PageNumber: 1)]);
+        await Editor.SetBookmarksAsync(doc, [new("MyChapter", PageNumber: 1)], ct: TestContext.Current.CancellationToken);
         doc.GetBookmarks()[0].Title.ShouldBe("MyChapter");
     }
 
@@ -70,10 +70,11 @@ public sealed class BookmarkEditorTests : PdfTestBase
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
         await Editor.SetBookmarksAsync(doc,
-        [
-            new("A", 1),
-            new("B", 2)
-        ]);
+            [
+                new("A", 1),
+                new("B", 2)
+            ],
+            ct: TestContext.Current.CancellationToken);
         doc.GetBookmarks()[0].PageNumber.ShouldBe(1);
         doc.GetBookmarks()[1].PageNumber.ShouldBe(2);
     }
@@ -82,7 +83,7 @@ public sealed class BookmarkEditorTests : PdfTestBase
     public async Task SetBookmarksAsync_EmptyList_RemovesBookmarks()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithOutlines(("Ch1", 1)));
-        await Editor.SetBookmarksAsync(doc, []);
+        await Editor.SetBookmarksAsync(doc, [], ct: TestContext.Current.CancellationToken);
         doc.GetBookmarks().ShouldBeEmpty();
     }
 
@@ -90,7 +91,7 @@ public sealed class BookmarkEditorTests : PdfTestBase
     public async Task SetBookmarksAsync_PageCountUnchanged()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3));
-        await Editor.SetBookmarksAsync(doc, [new("A", 1)]);
+        await Editor.SetBookmarksAsync(doc, [new("A", 1)], ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(3);
     }
 
@@ -98,9 +99,9 @@ public sealed class BookmarkEditorTests : PdfTestBase
     public async Task SetBookmarksAsync_RoundTrip_ParseableAfterSave()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
-        await Editor.SetBookmarksAsync(doc, [new("X", 1), new("Y", 2)]);
+        await Editor.SetBookmarksAsync(doc, [new("X", 1), new("Y", 2)], ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms);
         reloaded.GetBookmarks().Count.ShouldBe(2);
@@ -114,7 +115,7 @@ public sealed class BookmarkEditorTests : PdfTestBase
         {
             new("Parent", 1, [new("Child", 2)])
         };
-        await Editor.SetBookmarksAsync(doc, bms);
+        await Editor.SetBookmarksAsync(doc, bms, ct: TestContext.Current.CancellationToken);
         var top = doc.GetBookmarks();
         top.Count.ShouldBe(1);
         top[0].Children.ShouldNotBeNull();

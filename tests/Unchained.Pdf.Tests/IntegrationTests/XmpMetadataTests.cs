@@ -24,7 +24,7 @@ public sealed class XmpMetadataTests : PdfTestBase
     public async Task SetXmpMetadata_CanReadBack()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetXmpMetadataAsync(doc, SampleXmp);
+        await Editor.SetXmpMetadataAsync(doc, SampleXmp, ct: TestContext.Current.CancellationToken);
         var result = doc.GetXmpMetadata();
         result.ShouldNotBeNull();
         result.ShouldContain("Test Document");
@@ -34,7 +34,7 @@ public sealed class XmpMetadataTests : PdfTestBase
     public async Task SetXmpMetadata_PageCountUnchanged()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetXmpMetadataAsync(doc, SampleXmp);
+        await Editor.SetXmpMetadataAsync(doc, SampleXmp, ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -42,8 +42,8 @@ public sealed class XmpMetadataTests : PdfTestBase
     public async Task SetThenRemoveMetadata_ReturnsNull()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetXmpMetadataAsync(doc, SampleXmp);
-        await Editor.RemoveMetadataAsync(doc);
+        await Editor.SetXmpMetadataAsync(doc, SampleXmp, ct: TestContext.Current.CancellationToken);
+        await Editor.RemoveMetadataAsync(doc, ct: TestContext.Current.CancellationToken);
         doc.GetXmpMetadata().ShouldBeNull();
     }
 
@@ -51,9 +51,9 @@ public sealed class XmpMetadataTests : PdfTestBase
     public async Task SetXmpMetadata_PersistsAfterSave()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.SetXmpMetadataAsync(doc, SampleXmp);
+        await Editor.SetXmpMetadataAsync(doc, SampleXmp, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms);
         var result = reloaded.GetXmpMetadata();

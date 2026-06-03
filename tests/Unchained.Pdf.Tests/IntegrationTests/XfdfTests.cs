@@ -13,9 +13,9 @@ public sealed class XfdfTests : PdfTestBase
 
 
     [Fact]
-    public void ExportAnnotationsToXfdf_NoAnnotations_ReturnsEmptyXfdf()
+    public async Task ExportAnnotationsToXfdf_NoAnnotations_ReturnsEmptyXfdf()
     {
-        var doc = LoadAsync(PdfFixtures.SinglePage()).GetAwaiter().GetResult();
+        var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var xfdf = Editor.ExportAnnotationsToXfdf(doc);
         xfdf.ShouldContain("<annots");
         xfdf.ShouldNotContain("<text");
@@ -45,7 +45,7 @@ public sealed class XfdfTests : PdfTestBase
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         const string xfdf = """<?xml version="1.0" encoding="UTF-8"?><xfdf xmlns="http://ns.adobe.com/xfdf/" xml:space="preserve"><annots><text page="0" rect="50,700,100,750"><contents>Imported note</contents></text></annots></xfdf>""";
-        await Editor.ImportAnnotationsFromXfdfAsync(doc, xfdf);
+        await Editor.ImportAnnotationsFromXfdfAsync(doc, xfdf, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations().Count.ShouldBe(1);
     }
 
@@ -54,7 +54,7 @@ public sealed class XfdfTests : PdfTestBase
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
         const string xfdf = """<?xml version="1.0" encoding="UTF-8"?><xfdf xmlns="http://ns.adobe.com/xfdf/" xml:space="preserve"><annots><text page="0" rect="50,700,100,750"><contents>Hello XFDF</contents></text></annots></xfdf>""";
-        await Editor.ImportAnnotationsFromXfdfAsync(doc, xfdf);
+        await Editor.ImportAnnotationsFromXfdfAsync(doc, xfdf, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations()[0].Contents.ShouldBe("Hello XFDF");
     }
 
@@ -63,12 +63,12 @@ public sealed class XfdfTests : PdfTestBase
     {
         await using var source = await LoadAsync(PdfFixtures.SinglePage());
         // ReSharper disable once BadListLineBreaks
-        await AnnotEditor.AddAnnotationAsync(source, 1, new Annotation(AnnotationSubtype.Text, 50, 700, 50, 50, "Round-trip note"));
+        await AnnotEditor.AddAnnotationAsync(source, 1, new Annotation(AnnotationSubtype.Text, 50, 700, 50, 50, "Round-trip note"), ct: TestContext.Current.CancellationToken);
 
         var xfdf = Editor.ExportAnnotationsToXfdf(source);
 
         await using var target = await LoadAsync(PdfFixtures.SinglePage());
-        await Editor.ImportAnnotationsFromXfdfAsync(target, xfdf);
+        await Editor.ImportAnnotationsFromXfdfAsync(target, xfdf, ct: TestContext.Current.CancellationToken);
         target.Pages[1].GetAnnotations().Count.ShouldBe(1);
         target.Pages[1].GetAnnotations()[0].Contents.ShouldBe("Round-trip note");
     }

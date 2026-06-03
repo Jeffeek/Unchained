@@ -11,7 +11,7 @@ public sealed class RepairTests : PdfTestBase
     {
         // A healthy PDF should load via the normal path.
         var bytes = PdfFixtures.MultiPage(count: 3);
-        await using var doc = await Processor.RepairAsync(bytes);
+        await using var doc = await Processor.RepairAsync(bytes, ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(3);
     }
 
@@ -25,7 +25,7 @@ public sealed class RepairTests : PdfTestBase
         // Repair should either succeed or throw PdfException — not crash unhandled.
         try
         {
-            await using var doc = await Processor.RepairAsync(truncated);
+            await using var doc = await Processor.RepairAsync(truncated, ct: TestContext.Current.CancellationToken);
             doc.PageCount.ShouldBeGreaterThan(0);
         }
         catch (Core.PdfException)
