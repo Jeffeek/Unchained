@@ -1,36 +1,80 @@
 # Unchained.Pdf.Runtimes
 
-Contains **only** the FreeType2 native library binaries — one per supported platform.
-No managed code or C# files are produced by this project.
+Native FreeType2 runtime binaries for `Unchained.Pdf.Rendering`. This package contains no managed code — it is a pure native binary carrier that bundles the FreeType2 shared library for all supported platforms.
 
-## Bundled binaries
+**License:** MIT (package) / FTL (FreeType2 binaries)
 
-| Platform | File | Version | Source |
-|---|---|---|---|
-| `win-x64` | `freetype6.dll` | 2.5.5 | SharpFont.Dependencies 2.5.5 |
-| `win-arm64` | `freetype6.dll` | latest | freetype-windows-binaries (GitHub) |
-| `linux-x64` | `libfreetype.so.6` | 2.12.1 | Debian bookworm (libfreetype6) |
-| `linux-arm64` | `libfreetype.so.6` | 2.12.1 | Debian bookworm (libfreetype6) |
-| `linux-musl-x64` | `libfreetype.so.6` | 2.13.2 | Alpine Linux 3.19 |
-| `linux-musl-arm64` | `libfreetype.so.6` | 2.13.2 | Alpine Linux 3.19 |
-| `osx-x64` | `libfreetype.6.dylib` | 2.14.3 | Homebrew (freetype formula, sonoma bottle) |
-| `osx-arm64` | `libfreetype.6.dylib` | 2.14.3 | Homebrew (freetype formula, arm64_sonoma bottle) |
+---
 
-## Name mapping
+## You do not need to install this package directly
 
-SharpFont uses `DllImport("freetype6")` on all platforms. `FontCache` installs a
-`NativeLibrary.SetDllImportResolver` that maps this to the platform-specific filename:
+`Unchained.Pdf.Runtimes` is an automatic transitive dependency of `Unchained.Pdf.Rendering`. The .NET SDK selects and deploys the correct platform binary automatically.
 
-| OS | Loaded as |
+```xml
+<!-- Install this — Runtimes is pulled in automatically -->
+<PackageReference Include="Unchained.Pdf.Rendering" Version="0.1.0" />
+```
+
+---
+
+## What's inside
+
+| Platform | RID | Binary |
+|---|---|---|
+| Windows x64 | `win-x64` | `freetype6.dll` |
+| Windows arm64 | `win-arm64` | `freetype6.dll` |
+| Linux x64 | `linux-x64` | `libfreetype.so.6` |
+| Linux arm64 | `linux-arm64` | `libfreetype.so.6` |
+| macOS x64 (Intel) | `osx-x64` | `libfreetype.6.dylib` |
+| macOS arm64 (Apple Silicon) | `osx-arm64` | `libfreetype.6.dylib` |
+
+The binary for your current runtime is copied next to your application output at build time. The others remain in the NuGet cache and are not deployed.
+
+---
+
+## Library name mapping
+
+SharpFont uses `[DllImport("freetype6")]` on all platforms. A `NativeLibrary.SetDllImportResolver` registered at module load time maps the logical name to the platform-specific filename and locates it in the output directory:
+
+| OS | Resolved file |
 |---|---|
-| Windows | `freetype6.dll` (default DllImport, no remapping) |
-| Linux | `libfreetype.so.6` |
-| macOS | `libfreetype.6.dylib` |
+| Windows | `runtimes/win-x64/native/freetype6.dll` |
+| Linux | `runtimes/linux-x64/native/libfreetype.so.6` |
+| macOS | `runtimes/osx-arm64/native/libfreetype.6.dylib` |
 
-The resolver checks the application output directory first (bundled copy),
-then falls back to the system library path — so system-installed FreeType2 also works.
+If the bundled copy is absent, the resolver falls back to the system-installed FreeType2.
 
-## Updating a binary
+---
 
-Drop the new file into `runtimes/<rid>/native/` with the correct filename from the
-table above. The `<Content>` items in the `.csproj` are already in place for all 8 RIDs.
+## FreeType2
+
+[FreeType2](https://freetype.org) is a freely available, high-quality font rendering library used by `Unchained.Pdf.Rendering` to rasterize TrueType, OpenType, Type 1, and CFF outlines into pixel bitmaps.
+
+FreeType2 is licensed under the [FreeType License (FTL)](https://freetype.org/license.html), a BSD-style permissive license that allows free use in commercial and open-source products.
+
+---
+
+## For developers building from source
+
+Native binaries are **not committed** to the repository. Before building locally, run the fetch script for your platform:
+
+```bash
+# Linux / macOS (Git Bash on Windows also works — handles all RIDs)
+bash scripts/FetchNatives/fetch-natives.sh
+
+# Windows PowerShell
+pwsh scripts/FetchNatives/fetch-natives.ps1
+
+# Download a specific RID from any host
+bash scripts/FetchNatives/fetch-natives.sh --rid win-x64
+pwsh scripts/FetchNatives/fetch-natives.ps1 -Rid osx-arm64
+```
+
+Sources per platform:
+- **Windows** — [ubawurinna/freetype-windows-binaries](https://github.com/ubawurinna/freetype-windows-binaries) (MIT, downloaded via script)
+- **Linux** — system package (`apt-get install libfreetype6`)
+- **macOS** — Homebrew (`brew install freetype`)
+
+---
+
+[GitHub](https://github.com/Jeffeek/Unchained) · [Report an issue](https://github.com/Jeffeek/Unchained/issues)
