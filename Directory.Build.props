@@ -1,3 +1,4 @@
+<!--EXTERNAL_PROPERTIES: IsPackable-->
 <Project>
 
   <!-- ── Language & compile defaults ────────────────────────────────────────── -->
@@ -39,5 +40,12 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageIcon>nuget_logo.png</PackageIcon>
   </PropertyGroup>
+
+  <!-- Include third-party notices in every NuGet package (FTL, SIL OFL, BSD attribution) -->
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)THIRD_PARTY_NOTICES.md"
+          Pack="true" PackagePath="\" Visible="false"
+          Condition="Exists('$(MSBuildThisFileDirectory)THIRD_PARTY_NOTICES.md')" />
+  </ItemGroup>
 
 </Project>

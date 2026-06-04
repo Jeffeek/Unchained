@@ -15,6 +15,7 @@
     <File Path=".gitignore" />
     <File Path="NuGet.config" />
     <File Path="packages.yml" />
+    <File Path="README.md" />
     <File Path="Unchained.slnx.DotSettings" />
     <File Path="Unchained.slnx.DotSettings.user" />
   </Folder>
