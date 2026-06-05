@@ -307,6 +307,93 @@ public sealed class DocumentProcessor : IDocumentProcessor
             nameof(document));
 
 
+    /// <inheritdoc />
+    public Task SetMetadataAsync(
+        IPdfDocument document,
+        DocumentMetadata metadata,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(metadata);
+
+        var adapter = CastAdapter(document);
+        return Task.Run(() => SetMetadata(adapter, metadata), ct);
+    }
+
+    private static void SetMetadata(PdfDocumentAdapter adapter, DocumentMetadata metadata)
+    {
+        var existing = adapter.Core.CollectObjects().ToList();
+        var maxObj = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
+
+        // Build the /Info dictionary — merge with existing entries if present.
+        var infoEntries = new Dictionary<string, Core.PdfObject>();
+
+        // Preserve existing /Info entries.
+        if (adapter.Core.Info is { } existingInfo)
+        {
+            foreach (var (key, value) in existingInfo.Entries)
+                infoEntries[key] = value;
+        }
+
+        if (ToStr(metadata.Title) is { } title) infoEntries["Title"] = title;
+        if (ToStr(metadata.Author) is { } author) infoEntries["Author"] = author;
+        if (ToStr(metadata.Subject) is { } subject) infoEntries["Subject"] = subject;
+        if (ToStr(metadata.Keywords) is { } keywords) infoEntries["Keywords"] = keywords;
+        if (ToStr(metadata.Creator) is { } creator) infoEntries["Creator"] = creator;
+        if (ToStr(metadata.Producer) is { } producer) infoEntries["Producer"] = producer;
+
+        var infoDict = new Core.PdfDictionary(infoEntries);
+
+        // Check if an /Info object already exists in the trailer.
+        if (adapter.Core.Trailer[Core.PdfName.Info] is Core.PdfIndirectReference existingRef)
+        {
+            // Replace the existing /Info object in-place.
+            var objects = existing
+                .Select(o => o.ObjectNumber == existingRef.ObjectNumber
+                    ? new Core.PdfIndirectObject(o.ObjectNumber, o.Generation, infoDict)
+                    : o)
+                .ToList();
+
+            var rootRef = adapter.Core.Trailer[Core.PdfName.Root] as Core.PdfIndirectReference ?? throw new Core.PdfException("Trailer missing /Root.");
+            var trailer = new Core.PdfDictionary(new Dictionary<string, Core.PdfObject>
+            {
+                [Core.PdfName.Size.Value] = new Core.PdfInteger(maxObj + 1),
+                [Core.PdfName.Root.Value] = rootRef,
+                [Core.PdfName.Info.Value] = existingRef
+            });
+
+            var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
+            adapter.ReplaceCore(newDoc.Core);
+        }
+        else
+        {
+            // Add a new /Info object.
+            var infoObjNum = maxObj + 1;
+            var infoRef = new Core.PdfIndirectReference(infoObjNum, 0);
+            var objects = existing
+                .Append(new Core.PdfIndirectObject(infoObjNum, 0, infoDict))
+                .ToList();
+
+            var rootRef = adapter.Core.Trailer[Core.PdfName.Root] as Core.PdfIndirectReference ?? throw new Core.PdfException("Trailer missing /Root.");
+            var trailer = new Core.PdfDictionary(new Dictionary<string, Core.PdfObject>
+            {
+                [Core.PdfName.Size.Value] = new Core.PdfInteger(infoObjNum + 1),
+                [Core.PdfName.Root.Value] = rootRef,
+                [Core.PdfName.Info.Value] = infoRef
+            });
+
+            var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
+            adapter.ReplaceCore(newDoc.Core);
+        }
+
+        return;
+
+        // Write only the non-null fields from the supplied metadata.
+        static Core.PdfString? ToStr(string? value) =>
+            value is null ? null : Core.PdfString.FromLatin1(value);
+    }
+
     /// <inheritdoc/>
     public async Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken ct = default)
     {

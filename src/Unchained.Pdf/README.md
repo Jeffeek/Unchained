@@ -251,6 +251,18 @@ var xmpEditor = new XmpMetadataEditor();
 xmpEditor.SetXmpMetadata(doc, "<x:xmpmeta>...</x:xmpmeta>");
 string? xmp = doc.GetXmpMetadata();
 
+// /Info metadata (Title, Author, Subject, Keywords, Creator, Producer)
+await processor.SetMetadataAsync(doc,
+    new DocumentMetadata(
+        Title:    "Annual Report",
+        Author:   "Alice",
+        Subject:  "Finance",
+        Keywords: "report finance annual",
+        Creator:  null,   // null = leave unchanged
+        Producer: null,
+        CreationDate:     null,
+        ModificationDate: null));
+
 // Named destinations
 var destEditor = new NamedDestinationEditor();
 destEditor.AddDestination(doc, new NamedDestination("toc", pageNumber: 3));

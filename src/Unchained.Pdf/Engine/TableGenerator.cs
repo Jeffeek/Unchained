@@ -9,6 +9,9 @@ namespace Unchained.Pdf.Engine;
 /// <summary>
 /// Default <see cref="ITableGenerator"/> implementation.
 /// All layout is computed in a single pre-pass before any PDF operators are emitted.
+/// When <see cref="TableData.Tagged"/> is <see langword="true"/>, each header cell is
+/// wrapped in a <c>/TH</c> marked-content sequence and each data cell in a <c>/TD</c>
+/// sequence, and a full <c>/StructTreeRoot</c> is injected into the document catalog.
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class TableGenerator : ITableGenerator
@@ -40,7 +43,7 @@ public sealed class TableGenerator : ITableGenerator
         var pagesNum = builder.NextNumber();
         var pagesRef = new PdfIndirectReference(pagesNum, 0);
 
-        var pageRefs = BuildPages(
+        var (pageRefs, allTaggedItems) = BuildPages(
             builder,
             data,
             layout,
@@ -50,7 +53,17 @@ public sealed class TableGenerator : ITableGenerator
         );
 
         var pagesObj = builder.AddAt(pagesNum, MakePagesDict(pageRefs));
-        var catalogObj = builder.Add(MakeCatalogDict(pagesObj.ToReference()));
+        var catalogEntries = new Dictionary<string, PdfObject>
+        {
+            [PdfName.Type.Value] = PdfName.Catalog,
+            [PdfName.Pages.Value] = pagesObj.ToReference()
+        };
+
+        if (data.Tagged && allTaggedItems.Count > 0)
+            InjectTagging(builder, catalogEntries, allTaggedItems, pageRefs, data.Language);
+
+        var catalogObj = builder.Add(new PdfDictionary(catalogEntries));
+
         return ObjectGraphBuilder.Finalize(builder, catalogObj.ToReference());
     }
 
@@ -68,7 +81,6 @@ public sealed class TableGenerator : ITableGenerator
         var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
         var resourcesRef = AddSharedResources(builder, style);
 
-        // Locate the /Pages root (to update /Kids and /Count).
         var pagesRef = adapter.Core.Catalog[PdfName.Pages] as PdfIndirectReference
                        ?? throw new PdfException("Document catalog is missing a /Pages indirect reference.");
         var pagesObjNum = pagesRef.ObjectNumber;
@@ -77,13 +89,17 @@ public sealed class TableGenerator : ITableGenerator
         var existingPagesDict = existingPagesObj.Value as PdfDictionary
                                 ?? throw new PdfException("The /Pages object is not a dictionary.");
 
-        var newPageRefs = BuildPages(
+        // Track page index offset for MCID uniqueness when appending tagged tables.
+        var existingPageCount = (int)(existingPagesDict.Get<PdfInteger>(PdfName.Count)?.Value ?? 0);
+
+        var (newPageRefs, allTaggedItems) = BuildPages(
             builder,
             data,
             layout,
             style,
             pagesRef,
-            resourcesRef
+            resourcesRef,
+            pageIndexOffset: existingPageCount
         );
 
         var existingKids = (existingPagesDict.Get<PdfArray>(PdfName.Kids) ?? PdfArray.Empty).Elements;
@@ -103,12 +119,42 @@ public sealed class TableGenerator : ITableGenerator
             .Concat(builder.Objects)
             .ToList();
 
+        // Inject tagged structure into catalog when data.Tagged is true.
+        if (data.Tagged && allTaggedItems.Count > 0)
+        {
+            var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
+            var catalogObjNum = catalogRef.ObjectNumber;
+            var catalogIdx = finalObjects.FindIndex(o => o.ObjectNumber == catalogObjNum);
+            if (catalogIdx >= 0 && finalObjects[catalogIdx].Value is PdfDictionary catalogDict)
+            {
+                var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries);
+
+                // Combine existing page refs with new ones for the parent tree.
+                var allPageRefs = Enumerable.Range(1, existingPageCount)
+                    .Select(PdfIndirectReference? (i) => FindPageRef(adapter.Core, i))
+                    .OfType<PdfIndirectReference>()
+                    .Concat(newPageRefs)
+                    .ToList();
+
+                InjectTagging(builder, catalogEntries, allTaggedItems, allPageRefs, data.Language);
+                finalObjects[catalogIdx] = new PdfIndirectObject(
+                    catalogObjNum,
+                    0,
+                    new PdfDictionary(catalogEntries)
+                );
+
+                // Add new structure tree objects to finalObjects.
+                finalObjects.AddRange(builder.Objects.Where(o =>
+                    finalObjects.All(e => e.ObjectNumber != o.ObjectNumber)));
+            }
+        }
+
         var totalMax = finalObjects.Max(static o => o.ObjectNumber);
-        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Document trailer is missing /Root.");
+        var rootRef2 = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Document trailer is missing /Root.");
         var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
         {
             [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-            [PdfName.Root.Value] = rootRef
+            [PdfName.Root.Value] = rootRef2
         });
 
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(finalObjects, trailer);
@@ -117,38 +163,48 @@ public sealed class TableGenerator : ITableGenerator
 
     // ── Page building ─────────────────────────────────────────────────────────
 
-    private static List<PdfIndirectReference> BuildPages(
+    private static (List<PdfIndirectReference> PageRefs, List<TaggedContentItem> TaggedItems) BuildPages(
         ObjectGraphBuilder builder,
         TableData data,
         TableLayout layout,
         TableStyle style,
         PdfObject pagesRef,
-        PdfObject resourcesRef
+        PdfObject resourcesRef,
+        int pageIndexOffset = 0
     )
     {
         var pageRefs = new List<PdfIndirectReference>();
+        var allTaggedItems = new List<TaggedContentItem>();
         var rowSlices = SliceRows(data.Rows, layout.RowsPerPage);
         var isFirst = true;
 
         if (rowSlices.Count == 0)
             rowSlices.Add([]);
 
-        foreach (var contentObj in rowSlices.Select(slice => AddContentStream(
-                     builder,
-                     data.Headers,
-                     slice,
-                     layout,
-                     style,
-                     isFirst
-                         ? data.Title
-                         : null)))
+        var pageIndex = pageIndexOffset;
+        foreach (var slice in rowSlices)
         {
+            var taggedItems = new List<TaggedContentItem>();
+            var contentObj = AddContentStream(
+                builder,
+                data.Headers,
+                slice,
+                layout,
+                style,
+                isFirst ? data.Title : null,
+                data.Tagged,
+                pageIndex,
+                taggedItems
+            );
             isFirst = false;
+            allTaggedItems.AddRange(taggedItems);
+
             var pageObj = builder.Add(MakePageDict(pagesRef, contentObj.ToReference(), resourcesRef));
             pageRefs.Add(pageObj.ToReference());
+            pageIndex++;
         }
 
-        return pageRefs;
+        return (pageRefs, allTaggedItems);
     }
 
     private static PdfIndirectObject AddContentStream(
@@ -157,7 +213,10 @@ public sealed class TableGenerator : ITableGenerator
         IReadOnlyList<IReadOnlyList<string>> rows,
         TableLayout layout,
         TableStyle style,
-        string? title
+        string? title,
+        bool tagged,
+        int pageIndex,
+        ICollection<TaggedContentItem> taggedItems
     )
     {
         var contentBuffer = new ArrayBufferWriter<byte>(initialCapacity: 4096);
@@ -168,7 +227,10 @@ public sealed class TableGenerator : ITableGenerator
             rows,
             layout,
             style,
-            title
+            title,
+            tagged,
+            pageIndex,
+            taggedItems
         );
         var contentBytes = contentBuffer.WrittenMemory.ToArray();
         var streamDict = new PdfDictionary(new Dictionary<string, PdfObject>
@@ -187,11 +249,15 @@ public sealed class TableGenerator : ITableGenerator
         IReadOnlyList<IReadOnlyList<string>> rows,
         TableLayout layout,
         TableStyle style,
-        string? title
+        string? title,
+        bool tagged,
+        int pageIndex,
+        ICollection<TaggedContentItem> taggedItems
     )
     {
         const float margin = TableLayout.Margin;
         var curY = TableLayout.PageHeight - margin;
+        var mcid = 0;
 
         csw.Op("q"u8);
 
@@ -219,27 +285,36 @@ public sealed class TableGenerator : ITableGenerator
         csw.Op("re"u8);
         csw.Op("f"u8);
 
-        // ReSharper disable once GrammarMistakeInComment
-        // Header text — one BT..ET for the full row.
-        csw.Op("BT"u8);
-        csw.Name("F2");
-        csw.Float(style.HeaderFontSize);
-        csw.Op("Tf"u8);
+        // Header row — /TH per cell when tagged.
         var headerBaseline = curY - layout.HeaderRowHeight + style.CellPaddingPt;
         for (var c = 0; c < headers.Count; c++)
         {
-            var cellX = margin + style.CellPaddingPt + (c * layout.ColumnWidths[c]);
+            var cellX = margin + style.CellPaddingPt + (c > 0 ? layout.ColumnWidths[..c].Sum() : 0f);
+
+            if (tagged)
+            {
+                csw.MarkedContentBegin("TH", mcid);
+                taggedItems.Add(new TaggedContentItem("TH", mcid, pageIndex));
+                mcid++;
+            }
+
+            csw.Op("BT"u8);
+            csw.Name("F2");
+            csw.Float(style.HeaderFontSize);
+            csw.Op("Tf"u8);
             SetTextMatrix(csw, cellX, headerBaseline);
             csw.LiteralString(headers[c]);
             csw.Op("Tj"u8);
+            csw.Op("ET"u8);
+
+            if (tagged)
+                csw.MarkedContentEnd();
         }
 
-        csw.Op("ET"u8);
         curY -= layout.HeaderRowHeight;
-
         var tableTopY = curY;
 
-        // Data rows.
+        // Data rows — /TD per cell when tagged.
         for (var rowIdx = 0; rowIdx < rows.Count; rowIdx++)
         {
             var row = rows[rowIdx];
@@ -257,43 +332,52 @@ public sealed class TableGenerator : ITableGenerator
                 csw.Op("f"u8);
             }
 
-            csw.Op("BT"u8);
-            csw.Name("F1");
-            csw.Float(style.CellFontSize);
-            csw.Op("Tf"u8);
             var rowBaseline = rowBottomY + style.CellPaddingPt;
             for (var c = 0; c < headers.Count; c++)
             {
                 var xOffset = c > 0 ? layout.ColumnWidths[..c].Sum() : 0f;
                 var cellX = margin + style.CellPaddingPt + xOffset;
-                SetTextMatrix(csw, cellX, rowBaseline);
-                csw.LiteralString(c < row.Count ? row[c] : string.Empty);
-                csw.Op("Tj"u8);
-            }
+                var cellText = c < row.Count ? row[c] : string.Empty;
 
-            csw.Op("ET"u8);
+                if (tagged)
+                {
+                    csw.MarkedContentBegin("TD", mcid);
+                    taggedItems.Add(new TaggedContentItem("TD", mcid, pageIndex));
+                    mcid++;
+                }
+
+                csw.Op("BT"u8);
+                csw.Name("F1");
+                csw.Float(style.CellFontSize);
+                csw.Op("Tf"u8);
+                SetTextMatrix(csw, cellX, rowBaseline);
+                csw.LiteralString(cellText);
+                csw.Op("Tj"u8);
+                csw.Op("ET"u8);
+
+                if (tagged)
+                    csw.MarkedContentEnd();
+            }
 
             curY -= layout.RowHeight;
         }
 
-        // Borders — all path segments stroked in one call.
+        // Borders.
         if (style.DrawBorders)
         {
             csw.Float(0f);
-            csw.Op("G"u8); // black stroke
+            csw.Op("G"u8);
             csw.Float(0.5f);
-            csw.Op("w"u8); // 0.5 pt line width
+            csw.Op("w"u8);
 
             var tableHeight = tableTopY - curY + layout.HeaderRowHeight;
 
-            // Outer rectangle.
             csw.Float(margin);
             csw.Float(curY);
             csw.Float(layout.TableWidth);
             csw.Float(tableHeight);
             csw.Op("re"u8);
 
-            // Horizontal line below header.
             csw.Float(margin);
             csw.Float(tableTopY);
             csw.Op("m"u8);
@@ -301,7 +385,6 @@ public sealed class TableGenerator : ITableGenerator
             csw.Float(tableTopY);
             csw.Op("l"u8);
 
-            // Horizontal line below each data row (except the last — covered by outer rect).
             var rowCurY = tableTopY;
             for (var r = 0; r < rows.Count - 1; r++)
             {
@@ -314,7 +397,6 @@ public sealed class TableGenerator : ITableGenerator
                 csw.Op("l"u8);
             }
 
-            // Vertical line between each column pair.
             var xOffset = 0f;
             for (var c = 1; c < headers.Count; c++)
             {
@@ -336,7 +418,6 @@ public sealed class TableGenerator : ITableGenerator
 
     private static void SetTextMatrix(ContentStreamWriter csw, float x, float y)
     {
-        // Identity matrix with translation (x, y): "1 0 0 1 x y Tm"
         csw.Float(1);
         csw.Float(0);
         csw.Float(0);
@@ -344,6 +425,35 @@ public sealed class TableGenerator : ITableGenerator
         csw.Float(x);
         csw.Float(y);
         csw.Op("Tm"u8);
+    }
+
+    // ── Tagging ───────────────────────────────────────────────────────────────
+
+    private static void InjectTagging(
+        ObjectGraphBuilder builder,
+        IDictionary<string, PdfObject> catalogEntries,
+        IReadOnlyList<TaggedContentItem> taggedItems,
+        IReadOnlyList<PdfIndirectReference> pageRefs,
+        string? language
+    )
+    {
+        catalogEntries[PdfName.MarkInfo.Value] = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Marked.Value] = PdfBoolean.True
+            });
+
+        if (language is not null)
+            catalogEntries[PdfName.Lang.Value] = PdfString.FromLatin1(language);
+
+        catalogEntries[PdfName.ViewerPreferences.Value] = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["DisplayDocTitle"] = PdfBoolean.True
+            });
+
+        var structTreeRef = StructureTreeBuilder.Build(taggedItems, pageRefs, builder);
+        catalogEntries[PdfName.StructTreeRoot.Value] = structTreeRef;
     }
 
     // ── Object construction helpers ───────────────────────────────────────────
@@ -395,13 +505,6 @@ public sealed class TableGenerator : ITableGenerator
             [PdfName.Count.Value] = new PdfInteger(kids.Count)
         });
 
-    private static PdfDictionary MakeCatalogDict(PdfObject pagesRef) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Type.Value] = PdfName.Catalog,
-            [PdfName.Pages.Value] = pagesRef
-        });
-
     private static List<List<IReadOnlyList<string>>> SliceRows(
         IReadOnlyCollection<IReadOnlyList<string>> rows,
         int pageSize
@@ -411,5 +514,17 @@ public sealed class TableGenerator : ITableGenerator
         for (var i = 0; i < rows.Count; i += pageSize)
             slices.Add(rows.Skip(i).Take(pageSize).ToList());
         return slices;
+    }
+
+    /// <summary>Finds the indirect reference for the page at <paramref name="pageNumber"/> (1-based).</summary>
+    private static PdfIndirectReference FindPageRef(PdfDocumentCore core, int pageNumber)
+    {
+        var pageDict = core.GetPage(pageNumber);
+        var xref = core.CollectObjects();
+
+        foreach (var obj in xref.Where(obj => ReferenceEquals(obj.Value, pageDict)))
+            return new PdfIndirectReference(obj.ObjectNumber, obj.Generation);
+
+        throw new PdfException($"Could not find indirect reference for page {pageNumber}.");
     }
 }

@@ -23,4 +23,19 @@ public sealed class TableData
     /// An optional title rendered above the table. Pass <see langword="null"/> to omit.
     /// </summary>
     public string? Title { get; init; }
+
+    /// <summary>
+    /// When <see langword="true"/>, the generated PDF includes a tagged structure tree
+    /// (<c>/MarkInfo /Marked true</c>, <c>/StructTreeRoot</c>) with <c>/Table</c>,
+    /// <c>/TR</c>, <c>/TH</c>, and <c>/TD</c> structure elements so that assistive
+    /// technologies can navigate the table content.
+    /// </summary>
+    public bool Tagged { get; init; }
+
+    /// <summary>
+    /// BCP 47 language tag written to the document catalog's <c>/Lang</c> entry
+    /// (e.g. <c>"en-US"</c>). Required for PDF/UA conformance when
+    /// <see cref="Tagged"/> is <see langword="true"/>.
+    /// </summary>
+    public string? Language { get; init; }
 }
