@@ -55,6 +55,15 @@ jobs:
         shell: bash
         run: bash scripts/FetchNatives/fetch-natives.sh
 
+      - name: Install Visual C++ ARM64 runtime (win-arm64 only)
+        if: matrix.rid == 'win-arm64'
+        shell: powershell
+        run: |
+          $url  = "https://aka.ms/vs/17/release/vc_redist.arm64.exe"
+          $dest = "$env:TEMP\vc_redist.arm64.exe"
+          Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
+          Start-Process -FilePath $dest -ArgumentList "/install", "/quiet", "/norestart" -Wait
+
       - name: Setup .NET (restore + build)
         uses: ./.github/actions/dotnet-setup
 
