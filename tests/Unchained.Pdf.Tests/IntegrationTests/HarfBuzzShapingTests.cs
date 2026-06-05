@@ -23,7 +23,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
         var fontData = LoadBundledDejaVuBytes();
         const string cs = "BT /F1 14 Tf 50 700 Td (fi) Tj ET"; // "fi" should form a ligature
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, cs);
-        await using var doc = await LoadAsync(pdfBytes);
+        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
@@ -37,7 +37,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
         var fontData = LoadBundledDejaVuBytes();
         const string cs = "BT /F1 12 Tf 50 700 Td (Hello, World!) Tj ET";
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, cs);
-        await using var doc = await LoadAsync(pdfBytes);
+        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(500);
     }
@@ -89,7 +89,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
         const string cs = "BT /F1 12 Tf 50 700 Td (Fallback text) Tj ET";
         // Build PDF where F1 maps to an unrecognised base font name.
         var pdfBytes = BuildWithUnknownFont(cs);
-        await using var doc = await LoadAsync(pdfBytes);
+        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         // Should render without throwing — NotoSans is used as fallback.
         png[..8].ShouldBe(PdfTestConstants.PngSignature);

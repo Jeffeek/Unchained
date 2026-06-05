@@ -134,7 +134,7 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
         {
             try
             {
-                _ = await LoadAsync(await File.ReadAllBytesAsync(pdfPath, TestContext.Current.CancellationToken));
+                _ = await LoadAsync(await File.ReadAllBytesAsync(pdfPath, TestContext.Current.CancellationToken), ct: TestContext.Current.CancellationToken);
                 successfullyParsed++;
             }
             catch (PdfException)

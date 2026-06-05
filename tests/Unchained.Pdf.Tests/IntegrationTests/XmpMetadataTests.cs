@@ -16,14 +16,14 @@ public sealed class XmpMetadataTests : PdfTestBase
     [Fact]
     public async Task GetXmpMetadata_NoMetadata_ReturnsNull()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         doc.GetXmpMetadata().ShouldBeNull();
     }
 
     [Fact]
     public async Task SetXmpMetadata_CanReadBack()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetXmpMetadataAsync(doc, SampleXmp, ct: TestContext.Current.CancellationToken);
         var result = doc.GetXmpMetadata();
         result.ShouldNotBeNull();
@@ -33,7 +33,7 @@ public sealed class XmpMetadataTests : PdfTestBase
     [Fact]
     public async Task SetXmpMetadata_PageCountUnchanged()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetXmpMetadataAsync(doc, SampleXmp, ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
@@ -41,7 +41,7 @@ public sealed class XmpMetadataTests : PdfTestBase
     [Fact]
     public async Task SetThenRemoveMetadata_ReturnsNull()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetXmpMetadataAsync(doc, SampleXmp, ct: TestContext.Current.CancellationToken);
         await Editor.RemoveMetadataAsync(doc, ct: TestContext.Current.CancellationToken);
         doc.GetXmpMetadata().ShouldBeNull();
@@ -50,12 +50,12 @@ public sealed class XmpMetadataTests : PdfTestBase
     [Fact]
     public async Task SetXmpMetadata_PersistsAfterSave()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetXmpMetadataAsync(doc, SampleXmp, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
-        await using var reloaded = await LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms, ct: TestContext.Current.CancellationToken);
         var result = reloaded.GetXmpMetadata();
         result.ShouldNotBeNull();
         result.ShouldContain("Test Document");
@@ -64,7 +64,7 @@ public sealed class XmpMetadataTests : PdfTestBase
     [Fact]
     public async Task RemoveMetadata_WhenNoMetadata_NoError()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Should.NotThrowAsync(() => Editor.RemoveMetadataAsync(doc));
     }
 }

@@ -322,7 +322,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     public async Task CroppedRotated_ContentOperators_DoesNotThrow()
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.CroppedRotated);
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         for (var i = 1; i <= doc.PageCount; i++)
             doc.Pages[i].GetContentOperators().ShouldNotBeNull($"page {i}");
     }
@@ -335,7 +335,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
         // LaTeX-generated PDFs delegate all page content via Do → form XObject.
         // After form XObject expansion, the operator list must be non-empty.
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         var ops = doc.Pages[1].GetContentOperators();
         ops.ShouldNotBeEmpty("Expected form XObject content to be expanded into the operator list.");
     }
@@ -344,7 +344,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     public async Task Complex_GetTextSpans_ReturnsSpansAfterFormExpansion()
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         var spans = doc.Pages[1].GetTextSpans();
         spans.ShouldNotBeNull();
         // LaTeX docs contain text — at least some spans should appear after form expansion.
@@ -355,7 +355,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     public async Task Complex_ExtractText_ReturnsNonEmptyString()
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         var text = doc.Pages[1].ExtractText();
         text.ShouldNotBeNullOrWhiteSpace("Expected extractable text after form XObject expansion.");
     }
@@ -366,7 +366,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
         // with-tables.pdf uses vector graphics (paths, fills) — no form XObjects.
         // GetContentOperators() must not throw and must return a valid (possibly empty) list.
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         var ops = doc.Pages[1].GetContentOperators();
         ops.ShouldNotBeNull();
     }

@@ -16,7 +16,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Encrypt_WithUserPassword_RoundTripRestoresPageCount()
     {
-        await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 3));
+        await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 3), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "secret"));
 
         using var ms = new MemoryStream();
@@ -30,7 +30,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Encrypt_EmptyPassword_CanBeOpenedWithoutPassword()
     {
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: string.Empty));
 
         using var ms = new MemoryStream();
@@ -45,7 +45,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Encrypt_IsEncrypted_TrueAfterRoundTrip()
     {
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "test123"));
 
         using var ms = new MemoryStream();
@@ -59,7 +59,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Encrypt_UnencryptedDocument_IsEncryptedFalse()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         doc.IsEncrypted.ShouldBeFalse();
     }
 
@@ -67,7 +67,7 @@ public sealed class EncryptionTests : PdfTestBase
     public async Task Encrypt_TextSurvivesRoundTrip()
     {
         const string content = "Hello encrypted world";
-        await using var original = await LoadAsync(PdfFixtures.WithTextContent(content));
+        await using var original = await LoadAsync(PdfFixtures.WithTextContent(content), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "abc123"));
 
         using var ms = new MemoryStream();
@@ -82,7 +82,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Encrypt_WithOwnerAndUserPassword_BothWork()
     {
-        await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 2));
+        await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 2), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(
             UserPassword: "user",
             OwnerPassword: "owner"));
@@ -103,7 +103,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Encrypt_SavedPdfStartsWithPdfHeader()
     {
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw"));
 
         using var ms = new MemoryStream();
@@ -136,14 +136,14 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Permissions_UnencryptedDocument_ReturnsAll()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         doc.Permissions.ShouldBe(PdfPermissions.All);
     }
 
     [Fact]
     public async Task Permissions_EncryptedWithAllPermissions_ReturnsAll()
     {
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw", Permissions: PdfPermissions.All));
 
         using var ms = new MemoryStream();
@@ -158,7 +158,7 @@ public sealed class EncryptionTests : PdfTestBase
     public async Task Permissions_RestrictedPermissions_RoundTrip()
     {
         const PdfPermissions restricted = PdfPermissions.Print;
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw", Permissions: restricted));
 
         using var ms = new MemoryStream();
@@ -176,7 +176,7 @@ public sealed class EncryptionTests : PdfTestBase
     public async Task ChangePasswords_NewPasswordWorks()
     {
         // Encrypt, then change password from "old" to "new"
-        await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 2));
+        await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 2), ct: TestContext.Current.CancellationToken);
         var firstMs = new MemoryStream();
         await Processor.SaveAsync(original, firstMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "old")), ct: TestContext.Current.CancellationToken);
 
@@ -195,7 +195,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task ChangePasswords_EmptyPasswords_RemovesEncryption()
     {
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encMs = new MemoryStream();
         await Processor.SaveAsync(original, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "secret")), ct: TestContext.Current.CancellationToken);
 
@@ -212,7 +212,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task ChangePasswords_DifferentUserAndOwnerPasswords_BothWork()
     {
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encMs = new MemoryStream();
         await Processor.SaveAsync(original, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "initial")), ct: TestContext.Current.CancellationToken);
 
@@ -233,7 +233,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Encrypt_WrongPassword_ThrowsPdfEncryptedException()
     {
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "correct"));
 
         using var ms = new MemoryStream();
@@ -246,7 +246,7 @@ public sealed class EncryptionTests : PdfTestBase
     [Fact]
     public async Task Encrypt_EmptyPasswordOnProtectedDoc_ThrowsPdfEncryptedException()
     {
-        await using var original = await LoadAsync(PdfFixtures.SinglePage());
+        await using var original = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var encOpts = new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "secret"));
 
         using var ms = new MemoryStream();
