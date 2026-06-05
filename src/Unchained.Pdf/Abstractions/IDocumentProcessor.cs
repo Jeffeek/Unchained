@@ -254,4 +254,23 @@ public interface IDocumentProcessor : IDisposable
         SaveOptions? options = null,
         CancellationToken ct = default
     );
+
+    /// <summary>
+    /// Writes <paramref name="metadata"/> to the document's information dictionary (<c>/Info</c>).
+    /// Only non-<see langword="null"/> fields are written; <see langword="null"/> fields leave the
+    /// existing value unchanged. To clear a field, pass an empty string.
+    /// <para>
+    /// The change is applied in-place to the in-memory document. Call
+    /// <see cref="SaveAsync(IPdfDocument, string, SaveOptions?, CancellationToken)"/> afterwards to
+    /// persist it.
+    /// </para>
+    /// </summary>
+    /// <param name="document">The document to update. Must not be disposed.</param>
+    /// <param name="metadata">Metadata fields to set. <see langword="null"/> fields are skipped.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task SetMetadataAsync(
+        IPdfDocument document,
+        DocumentMetadata metadata,
+        CancellationToken ct = default
+    );
 }
