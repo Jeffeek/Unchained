@@ -9,7 +9,7 @@ namespace Unchained.Pdf.Tests.IntegrationTests;
 /// <summary>
 /// Tests for document-level properties exposed on <see cref="Abstractions.IPdfDocument"/>:
 /// <c>IsLinearized</c>, <c>IsTagged</c>, <c>IsPdfaCompliant</c>, <c>IsPdfUaCompliant</c>,
-/// <c>CryptoAlgorithm</c>, <c>Id</c>, <c>IsXrefGapsAllowed</c>.
+/// <c>CryptoAlgorithm</c>, <c>Id</c>.
 /// Also covers: <c>GetObjectByIdAsync</c>, <c>TrimCacheAsync</c>, <c>SetOpenActionAsync</c>,
 /// <c>RemovePdfaComplianceAsync</c>, <c>RemovePdfUaComplianceAsync</c>,
 /// <c>EmbedStandardFontsAsync</c>, <c>OptimizeSize</c> / <c>AllowReusePageContent</c>
