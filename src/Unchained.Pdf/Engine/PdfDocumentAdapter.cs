@@ -119,6 +119,10 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         // ── Unencrypted path ─────────────────────────────────────────────────
         {
             var trailer = new PdfDictionary(trailerEntries);
+
+            if (options?.Linearize == true)
+                return LinearizedWriter.Write(objects, trailer, Core);
+
             var buffer = new ArrayBufferWriter<byte>();
             using var writer = new PdfWriter(buffer);
             writer.Write(objects, trailer);

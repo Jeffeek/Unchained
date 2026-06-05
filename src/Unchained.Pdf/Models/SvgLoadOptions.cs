@@ -15,11 +15,29 @@ namespace Unchained.Pdf.Models;
 /// (1 user unit = 1 pt) anchored at the top-left margin.
 /// </param>
 /// <param name="MarginPt">Page margin in points applied when fitting (default 36 — 0.5 inch).</param>
+/// <param name="Tagged">
+/// When <see langword="true"/>, the produced PDF wraps the SVG content in a <c>/Figure</c>
+/// structure element with the <paramref name="AltText"/> as an <c>/Alt</c> entry so that
+/// assistive technologies can describe the image.
+/// </param>
+/// <param name="Language">
+/// BCP 47 language tag written to the document catalog's <c>/Lang</c> entry
+/// (e.g. <c>"en-US"</c>). Required for PDF/UA conformance when
+/// <paramref name="Tagged"/> is <see langword="true"/>.
+/// </param>
+/// <param name="AltText">
+/// Alternative text description of the SVG image, written to the <c>/Figure</c> structure
+/// element's <c>/Alt</c> entry. Used by screen readers when <paramref name="Tagged"/> is
+/// <see langword="true"/>. Defaults to an empty string when not supplied.
+/// </param>
 public sealed record SvgLoadOptions(
     float PageWidthPt = 595f,
     float PageHeightPt = 842f,
     bool FitToPage = true,
-    float MarginPt = 36f
+    float MarginPt = 36f,
+    bool Tagged = false,
+    string? Language = null,
+    string AltText = ""
 )
 {
     /// <summary>Default A4 settings with uniform fit.</summary>

@@ -46,11 +46,25 @@ public enum PdfVersion
 /// using AES-256 (V=5, R=6) by default. Use <see cref="EncryptionOptions"/> to configure
 /// the passwords, algorithm, and permission flags.
 /// </param>
+/// <param name="Tagged">
+/// When <see langword="true"/>, the saved PDF includes a structure tree (<c>/StructTreeRoot</c>)
+/// and marked-content operators so that assistive technologies can navigate the document.
+/// Has no effect on documents not produced by Unchained's own converters — use
+/// <c>TxtLoadOptions</c>, <c>MdLoadOptions</c>, or <c>SvgLoadOptions</c>
+/// with <c>Tagged = true</c> to generate tagged content.
+/// </param>
+/// <param name="Language">
+/// BCP 47 language tag written to the document catalog's <c>/Lang</c> entry
+/// (e.g. <c>"en-US"</c>, <c>"fr"</c>). Required for PDF/UA conformance when
+/// <paramref name="Tagged"/> is <see langword="true"/>.
+/// </param>
 public sealed record SaveOptions(
     PdfVersion Version = PdfVersion.Pdf17,
     bool Linearize = false,
     bool OptimizeImages = false,
-    EncryptionOptions? Encryption = null
+    EncryptionOptions? Encryption = null,
+    bool Tagged = false,
+    string? Language = null
 )
 {
     /// <summary>Default options: PDF 1.7, no linearization, no image optimization, no encryption.</summary>

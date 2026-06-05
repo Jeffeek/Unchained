@@ -8,6 +8,12 @@ namespace Unchained.Pdf.Engine.Converters;
 /// Builds a multi-page PDF document from scratch using <see cref="ObjectGraphBuilder"/>.
 /// Callers add pages with pre-rendered content stream bytes and per-page font maps,
 /// then call <see cref="Build"/> to get an <see cref="IPdfDocument"/>.
+/// <para>
+/// When tagged content items are supplied via the tagged overload of <c>AddPage</c>,
+/// <see cref="Build"/> automatically injects <c>/MarkInfo</c>, <c>/StructTreeRoot</c>,
+/// and <c>/Lang</c> into the document catalog so the output is a valid tagged PDF
+/// (ISO 32000-1 §14.7).
+/// </para>
 /// </summary>
 internal sealed class PdfPageAccumulator
 {
@@ -15,6 +21,11 @@ internal sealed class PdfPageAccumulator
     private readonly int _pagesNum;
     private readonly PdfIndirectReference _pagesRef;
     private readonly List<PdfIndirectReference> _pageRefs = [];
+
+    // Tagged PDF support: accumulated items from all pages.
+    private readonly List<TaggedContentItem> _taggedItems = [];
+    private bool _isTagged;
+    private string? _language;
 
     internal PdfPageAccumulator()
     {
@@ -56,6 +67,29 @@ internal sealed class PdfPageAccumulator
         float heightPt,
         ReadOnlySpan<byte> contentBytes,
         IReadOnlyDictionary<string, PdfIndirectReference> fontMap
+        // ReSharper disable once BadListLineBreaks
+    ) => AddPage(widthPt, heightPt, contentBytes, fontMap, taggedItems: null, language: null);
+
+    /// <summary>
+    /// Adds a tagged page. When <paramref name="taggedItems"/> is non-null and non-empty,
+    /// the accumulator switches into tagged mode and collects items for <see cref="Build"/>.
+    /// </summary>
+    /// <param name="widthPt">Page width in points.</param>
+    /// <param name="heightPt">Page height in points.</param>
+    /// <param name="contentBytes">Content stream bytes (must contain matching BDC/EMC pairs).</param>
+    /// <param name="fontMap">Font resource map.</param>
+    /// <param name="taggedItems">
+    /// Marked-content items emitted during content-stream construction for this page,
+    /// or <see langword="null"/> for untagged pages.
+    /// </param>
+    /// <param name="language">BCP 47 language tag for the document (e.g. <c>"en-US"</c>).</param>
+    internal void AddPage(
+        float widthPt,
+        float heightPt,
+        ReadOnlySpan<byte> contentBytes,
+        IReadOnlyDictionary<string, PdfIndirectReference> fontMap,
+        IReadOnlyList<TaggedContentItem>? taggedItems,
+        string? language
     )
     {
         var contentDict = new PdfDictionary(new Dictionary<string, PdfObject>
@@ -84,6 +118,15 @@ internal sealed class PdfPageAccumulator
         });
 
         _pageRefs.Add(_builder.Add(pageDict).ToReference());
+
+        if (taggedItems is not { Count: > 0 })
+            return;
+
+        _isTagged = true;
+        if (language is not null)
+            _language = language;
+
+        _taggedItems.AddRange(taggedItems);
     }
 
     /// <summary>Finalizes and returns the complete PDF document.</summary>
@@ -97,13 +140,39 @@ internal sealed class PdfPageAccumulator
         });
         _builder.AddAt(_pagesNum, pagesDict);
 
-        var catalogDict = new PdfDictionary(new Dictionary<string, PdfObject>
+        var catalogEntries = new Dictionary<string, PdfObject>
         {
             ["Type"] = PdfName.Get("Catalog"),
             ["Pages"] = _pagesRef
-        });
-        var catalogRef = _builder.Add(catalogDict).ToReference();
+        };
 
+        // ── Tagged PDF catalog entries ─────────────────────────────────────────
+        if (_isTagged)
+        {
+            // /MarkInfo — signals this is a tagged PDF.
+            catalogEntries[PdfName.MarkInfo.Value] = new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    [PdfName.Marked.Value] = PdfBoolean.True
+                });
+
+            // /Lang — required by PDF/UA.
+            if (_language is not null)
+                catalogEntries[PdfName.Lang.Value] = PdfString.FromLatin1(_language);
+
+            // /ViewerPreferences /DisplayDocTitle true — required by PDF/UA.
+            catalogEntries[PdfName.ViewerPreferences.Value] = new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["DisplayDocTitle"] = PdfBoolean.True
+                });
+
+            // /StructTreeRoot — build the full structure tree.
+            var structTreeRef = StructureTreeBuilder.Build(_taggedItems, _pageRefs, _builder);
+            catalogEntries[PdfName.StructTreeRoot.Value] = structTreeRef;
+        }
+
+        var catalogRef = _builder.Add(new PdfDictionary(catalogEntries)).ToReference();
         return ObjectGraphBuilder.Finalize(_builder, catalogRef);
     }
 }

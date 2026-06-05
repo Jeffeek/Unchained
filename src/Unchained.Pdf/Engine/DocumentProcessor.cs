@@ -81,6 +81,14 @@ public sealed class DocumentProcessor : IDocumentProcessor
     }
 
     /// <inheritdoc />
+    public Task<PdfUAValidationResult> ValidatePdfUAAsync(byte[] pdfBytes, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(pdfBytes);
+
+        return Task.Run(() => PdfUAValidator.Validate(pdfBytes), ct);
+    }
+
+    /// <inheritdoc />
     public async Task ConvertToPdfAAsync(
         IPdfDocument document,
         Stream outputStream,
@@ -298,12 +306,8 @@ public sealed class DocumentProcessor : IDocumentProcessor
             $"Document was not created by this processor. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
             nameof(document));
 
-    /// <summary>
-    /// Attempts to load a PDF from <paramref name="bytes"/>, falling back to a
-    /// byte-scanning recovery pass if the normal parse fails due to a corrupted
-    /// or missing cross-reference table.
-    /// </summary>
-    // ReSharper disable once MemberCanBeInternal
+
+    /// <inheritdoc/>
     public async Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(bytes);
