@@ -35,11 +35,27 @@ internal sealed class PdfDocumentCore : IDisposable
         _parser = new PdfParser(source);
     }
 
-    // ── Factory ───────────────────────────────────────────────────────────────
+    /// <summary>
+    /// When <see langword="true"/>, <see cref="ResolveIndirect"/> returns
+    /// <see cref="PdfNull.Instance"/> instead of throwing when an object cannot be parsed.
+    /// Useful for processing real-world PDFs with isolated corrupt objects.
+    /// </summary>
+    internal bool IgnoreCorruptedObjects { get; set; }
 
     /// <summary>
-    /// Scans <paramref name="source"/> byte-by-byte for <c>N G obj</c> markers,
-    /// rebuilds the cross-reference table from the found objects, and returns a
+    /// Evicts all resolved objects from the in-memory cache.
+    /// Subsequent accesses will reparse from the source buffer.
+    /// Call this to reduce memory pressure after processing a large document.
+    /// </summary>
+    internal void TrimCache()
+    {
+        _cache.Clear();
+        _objectStreamCache.Clear();
+    }
+
+    // ── Factory ───────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Rebuilds the cross-reference table from the found objects, and returns a
     /// <see cref="PdfDocumentCore"/> suitable for reading recovered content.
     /// Use this when <see cref="Parse"/> throws due to a corrupted xref.
     /// </summary>
@@ -172,8 +188,37 @@ internal sealed class PdfDocumentCore : IDisposable
     private PdfEncryptionContext? _encryption;
     private int _encryptObjNum = -1; // object number of /Encrypt — not decrypted
 
+    /// <summary>
+    /// <see langword="true"/> when the PDF was saved in linearized (web-optimized) form.
+    /// Detected by scanning the first 1024 bytes for the <c>/Linearized</c> keyword,
+    /// as specified in ISO 32000-1 Annex F §F.3.1.
+    /// </summary>
+    public bool IsLinearized
+    {
+        get
+        {
+            // Scan up to the first 1024 bytes per spec.
+            var span = _source.Span;
+            var limit = Math.Min(span.Length, 1024);
+            var target = "/Linearized"u8;
+            for (var i = 0; i <= limit - target.Length; i++)
+            {
+                if (span.Slice(i, target.Length).SequenceEqual(target))
+                    return true;
+            }
+
+            return false;
+        }
+    }
+
     /// <summary><see langword="true"/> when the source PDF was password-protected.</summary>
     public bool IsEncrypted => _encryption is not null;
+
+    /// <summary>
+    /// The encryption algorithm used to protect this document,
+    /// or <see langword="null"/> for unencrypted documents.
+    /// </summary>
+    public PdfEncryptionAlgorithm? EncryptionAlgorithm => _encryption?.Algorithm;
 
     /// <summary>
     /// Operations permitted when the document is opened with the user password.
@@ -305,9 +350,17 @@ internal sealed class PdfDocumentCore : IDisposable
         if (entry.IsFree)
             throw new PdfException($"Object {objectNumber} is marked free in the xref table.");
 
-        var obj = entry.Type == CrossReferenceEntryType.Compressed
-            ? ResolveFromObjectStream(objectNumber, streamObjNum: (int)entry.Offset)
-            : _parser.ReadObject(entry.Offset);
+        PdfIndirectObject obj;
+        try
+        {
+            obj = entry.Type == CrossReferenceEntryType.Compressed
+                ? ResolveFromObjectStream(objectNumber, streamObjNum: (int)entry.Offset)
+                : _parser.ReadObject(entry.Offset);
+        }
+        catch when (IgnoreCorruptedObjects)
+        {
+            obj = new PdfIndirectObject(objectNumber, 0, PdfNull.Instance);
+        }
 
         // Decrypt if the document is encrypted (skip the /Encrypt object itself).
         if (_encryption is not null && objectNumber != _encryptObjNum)

@@ -16,7 +16,11 @@ internal sealed class PdfEncryptionContext
         _fileKey = fileKey;
         _algorithm = algorithm;
         Permissions = permissions;
+        Algorithm = algorithm;
     }
+
+    /// <summary>The encryption algorithm used to protect the document.</summary>
+    internal PdfEncryptionAlgorithm Algorithm { get; }
 
     /// <summary>
     /// Operations permitted when the document is opened with the user password.

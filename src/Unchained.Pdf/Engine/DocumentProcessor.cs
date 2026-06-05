@@ -21,6 +21,7 @@ namespace Unchained.Pdf.Engine;
 public sealed class DocumentProcessor : IDocumentProcessor
 {
     private readonly SemaphoreSlim _gate;
+    private readonly bool _ignoreCorruptedObjects;
     private int _disposed;
 
     /// <summary>
@@ -30,10 +31,16 @@ public sealed class DocumentProcessor : IDocumentProcessor
     /// Maximum number of PDF parse operations that may run concurrently.
     /// Defaults to <see cref="Environment.ProcessorCount"/> when <see langword="null"/>.
     /// </param>
-    public DocumentProcessor(int? maxConcurrency = null)
+    /// <param name="ignoreCorruptedObjects">
+    /// When <see langword="true"/>, objects that fail to parse are silently replaced with
+    /// <c>null</c> instead of throwing <see cref="Core.PdfException"/>.
+    /// Useful for processing real-world PDFs with isolated corrupt objects.
+    /// </param>
+    public DocumentProcessor(int? maxConcurrency = null, bool ignoreCorruptedObjects = false)
     {
         var concurrency = maxConcurrency ?? Environment.ProcessorCount;
         _gate = new SemaphoreSlim(concurrency, concurrency);
+        _ignoreCorruptedObjects = ignoreCorruptedObjects;
     }
 
     /// <inheritdoc />
@@ -285,7 +292,12 @@ public sealed class DocumentProcessor : IDocumentProcessor
         try
         {
             var core = await Task.Run(
-                () => PdfDocumentCore.Parse(bytes, password),
+                () =>
+                {
+                    var c = PdfDocumentCore.Parse(bytes, password);
+                    c.IgnoreCorruptedObjects = _ignoreCorruptedObjects;
+                    return c;
+                },
                 ct).ConfigureAwait(false);
             return new PdfDocumentAdapter(core);
         }
@@ -394,6 +406,120 @@ public sealed class DocumentProcessor : IDocumentProcessor
             value is null ? null : Core.PdfString.FromLatin1(value);
     }
 
+    /// <inheritdoc />
+    public Task EmbedStandardFontsAsync(
+        IPdfDocument document,
+        IReadOnlyDictionary<string, byte[]> fontMap,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(fontMap);
+        var adapter = CastAdapter(document);
+        return Task.Run(() => EmbedStandardFonts(adapter, fontMap), ct);
+    }
+
+    private static void EmbedStandardFonts(
+        PdfDocumentAdapter adapter,
+        IReadOnlyDictionary<string, byte[]> fontMap
+    )
+    {
+        var existing = adapter.Core.CollectObjects().ToList();
+        var changed = false;
+
+        for (var i = 0; i < existing.Count; i++)
+        {
+            var obj = existing[i];
+            var dict = obj.Value as Core.PdfDictionary;
+            if (dict is null) continue;
+            if (dict.GetName("Type") != "Font") continue;
+
+            var baseFont = dict.GetName(Core.PdfName.BaseFont.Value);
+            if (baseFont is null) continue;
+
+            // Strip style suffixes to find the base family name.
+            var family = NormalizeBaseFont(baseFont);
+            if (!fontMap.TryGetValue(family, out var fontBytes) &&
+                !fontMap.TryGetValue(baseFont, out fontBytes))
+                continue;
+
+            // Check if already embedded.
+            var descriptor = dict.Get<Core.PdfDictionary>("FontDescriptor") ??
+                             (dict[Core.PdfName.Get("FontDescriptor")] is Core.PdfIndirectReference fd
+                                 ? adapter.Core.ResolveIndirect(fd.ObjectNumber).Value as Core.PdfDictionary
+                                 : null);
+
+            if (descriptor is not null &&
+                (descriptor[Core.PdfName.Get("FontFile")] is not null ||
+                 descriptor[Core.PdfName.Get("FontFile2")] is not null ||
+                 descriptor[Core.PdfName.Get("FontFile3")] is not null))
+                continue; // Already embedded.
+
+            // Build /FontDescriptor with /FontFile2 (TrueType).
+            var maxObj = existing.Max(static o => o.ObjectNumber);
+            var fontFileObjNum = ++maxObj;
+            var fontFileDict = new Core.PdfDictionary(new Dictionary<string, Core.PdfObject>
+            {
+                [Core.PdfName.Length.Value] = new Core.PdfInteger(fontBytes.Length),
+                ["Length1"] = new Core.PdfInteger(fontBytes.Length)
+            });
+            var fontFileObj = new Core.PdfIndirectObject(fontFileObjNum, 0, new Core.PdfStream(fontFileDict, fontBytes));
+            existing.Add(fontFileObj);
+
+            var descObjNum = ++maxObj;
+            var descEntries = new Dictionary<string, Core.PdfObject>
+            {
+                ["Type"] = Core.PdfName.Get("FontDescriptor"),
+                ["FontName"] = Core.PdfName.Get(baseFont),
+                ["Flags"] = new Core.PdfInteger(32),
+                ["FontBBox"] = new Core.PdfArray([
+                    new Core.PdfInteger(-166), new Core.PdfInteger(-225),
+                    new Core.PdfInteger(1000), new Core.PdfInteger(931)
+                ]),
+                ["ItalicAngle"] = new Core.PdfInteger(0),
+                ["Ascent"] = new Core.PdfInteger(800),
+                ["Descent"] = new Core.PdfInteger(-200),
+                ["CapHeight"] = new Core.PdfInteger(716),
+                ["StemV"] = new Core.PdfInteger(80),
+                ["FontFile2"] = new Core.PdfIndirectReference(fontFileObjNum, 0)
+            };
+            existing.Add(new Core.PdfIndirectObject(descObjNum, 0, new Core.PdfDictionary(descEntries)));
+
+            // Update the font dict to include the descriptor.
+            var updatedEntries = new Dictionary<string, Core.PdfObject>(dict.Entries)
+            {
+                ["FontDescriptor"] = new Core.PdfIndirectReference(descObjNum, 0)
+            };
+            existing[i] = new Core.PdfIndirectObject(obj.ObjectNumber, obj.Generation, new Core.PdfDictionary(updatedEntries));
+            changed = true;
+        }
+
+        if (changed)
+            MutationHelper.SerializeAndReplace(adapter, existing);
+    }
+
+    private static string NormalizeBaseFont(string baseFont)
+    {
+        // "Helvetica-Bold" → "Helvetica", "Times-Roman" → "Times-Roman" (keep as-is for serif)
+        var dash = baseFont.IndexOf('-');
+        return dash > 0 ? baseFont[..dash] : baseFont;
+    }
+
+    /// <inheritdoc />
+    public Task<string> SaveAsXmlAsync(IPdfDocument document, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var adapter = CastAdapter(document);
+        return Task.Run(() => XmlDocumentConverter.SaveXml(adapter.Core), ct);
+    }
+
+    /// <inheritdoc />
+    public Task<IPdfDocument> LoadFromXmlAsync(string xmlContent, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(xmlContent);
+        return Task.Run(() => XmlDocumentConverter.LoadFromXml(xmlContent), ct);
+    }
+
     /// <inheritdoc/>
     public async Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken ct = default)
     {
@@ -423,5 +549,251 @@ public sealed class DocumentProcessor : IDocumentProcessor
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
             _gate.Dispose();
+    }
+
+    // ── M12 — new methods ─────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public Task<Core.PdfObject?> GetObjectByIdAsync(
+        IPdfDocument document,
+        int objectNumber,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var adapter = CastAdapter(document);
+        return Task.Run<Core.PdfObject?>(() =>
+            {
+                try { return adapter.Core.ResolveIndirect(objectNumber).Value; }
+                catch { return null; }
+            },
+            ct);
+    }
+
+    /// <inheritdoc />
+    public Task TrimCacheAsync(IPdfDocument document, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var adapter = CastAdapter(document);
+        return Task.Run(() => adapter.Core.TrimCache(), ct);
+    }
+
+    /// <inheritdoc />
+    public Task SetOpenActionAsync(
+        IPdfDocument document,
+        int pageNumber,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        if (pageNumber < 1)
+            throw new ArgumentOutOfRangeException(nameof(pageNumber));
+
+        var adapter = CastAdapter(document);
+        return Task.Run(() => SetOpenAction(adapter, pageNumber), ct);
+    }
+
+    private static void SetOpenAction(PdfDocumentAdapter adapter, int pageNumber)
+    {
+        if (pageNumber > adapter.Core.PageCount)
+            throw new ArgumentOutOfRangeException(nameof(pageNumber), $"Page number {pageNumber} exceeds document page count {adapter.Core.PageCount}.");
+
+        var existing = adapter.Core.CollectObjects().ToList();
+        var catalogRef = adapter.Core.Trailer[Core.PdfName.Root] as Core.PdfIndirectReference ?? throw new Core.PdfException("Trailer missing /Root.");
+        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
+        if (catalogIdx < 0)
+            throw new Core.PdfException("Catalog object not found.");
+
+        var catalogDict = existing[catalogIdx].Value as Core.PdfDictionary ?? throw new Core.PdfException("Catalog is not a dictionary.");
+
+        // Build a GoTo action pointing at the target page.
+        var pageRef = FindPageRef(adapter.Core, pageNumber);
+        var dest = new Core.PdfArray([
+            pageRef,
+            Core.PdfName.Get("XYZ"),
+            Core.PdfNull.Instance,
+            Core.PdfNull.Instance,
+            Core.PdfNull.Instance
+        ]);
+        var action = new Core.PdfDictionary(new Dictionary<string, Core.PdfObject>
+        {
+            ["Type"] = Core.PdfName.Get("Action"),
+            ["S"] = Core.PdfName.Get("GoTo"),
+            ["D"] = dest
+        });
+
+        var newEntries = new Dictionary<string, Core.PdfObject>(catalogDict.Entries)
+        {
+            [Core.PdfName.OpenAction.Value] = action
+        };
+        existing[catalogIdx] = new Core.PdfIndirectObject(catalogRef.ObjectNumber, 0, new Core.PdfDictionary(newEntries));
+
+        MutationHelper.SerializeAndReplace(adapter, existing);
+    }
+
+    private static Core.PdfIndirectReference FindPageRef(PdfDocumentCore core, int pageNumber)
+    {
+        var pageDict = core.GetPage(pageNumber);
+
+        foreach (var obj in core.CollectObjects().Where(obj => ReferenceEquals(obj.Value, pageDict)))
+            return new Core.PdfIndirectReference(obj.ObjectNumber, obj.Generation);
+
+        throw new Core.PdfException($"Could not find indirect reference for page {pageNumber}.");
+    }
+
+    /// <inheritdoc />
+    public Task RemovePdfaComplianceAsync(IPdfDocument document, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var adapter = CastAdapter(document);
+        return Task.Run(() => RemovePdfaCompliance(adapter), ct);
+    }
+
+    private static void RemovePdfaCompliance(PdfDocumentAdapter adapter)
+    {
+        var existing = adapter.Core.CollectObjects().ToList();
+        var catalogRef = adapter.Core.Trailer[Core.PdfName.Root] as Core.PdfIndirectReference ?? throw new Core.PdfException("Trailer missing /Root.");
+        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
+        if (catalogIdx < 0)
+            return;
+
+        if (existing[catalogIdx].Value is not Core.PdfDictionary catalogDict)
+            return;
+
+        // Remove /OutputIntents from catalog.
+        var entries = new Dictionary<string, Core.PdfObject>(catalogDict.Entries);
+        entries.Remove("OutputIntents");
+
+        // Strip pdfaid properties from XMP if present.
+        if (entries.TryGetValue("Metadata", out var metaObj))
+        {
+            var metaStream = metaObj switch
+            {
+                Core.PdfStream s => s,
+                Core.PdfIndirectReference r =>
+                    adapter.Core.ResolveIndirect(r.ObjectNumber).Value as Core.PdfStream,
+                _ => null
+            };
+            if (metaStream is not null)
+            {
+                var xmp = System.Text.Encoding.UTF8.GetString(Parsing.Filters.StreamFilters.Decode(metaStream).Span);
+                var cleaned = StripXmpNamespace(xmp, "pdfaid");
+                var cleanedBytes = System.Text.Encoding.UTF8.GetBytes(cleaned);
+                var newStreamDict = new Core.PdfDictionary(
+                    new Dictionary<string, Core.PdfObject>(metaStream.Dictionary.Entries)
+                    {
+                        ["Length"] = new Core.PdfInteger(cleanedBytes.Length)
+                    });
+                var newStream = new Core.PdfStream(newStreamDict, cleanedBytes);
+
+                if (metaObj is Core.PdfIndirectReference metaRef)
+                {
+                    var metaIdx = existing.FindIndex(o => o.ObjectNumber == metaRef.ObjectNumber);
+
+                    if (metaIdx >= 0)
+                        existing[metaIdx] = new Core.PdfIndirectObject(metaRef.ObjectNumber, 0, newStream);
+                }
+                else
+                    entries["Metadata"] = newStream;
+            }
+        }
+
+        existing[catalogIdx] = new Core.PdfIndirectObject(catalogRef.ObjectNumber, 0, new Core.PdfDictionary(entries));
+        MutationHelper.SerializeAndReplace(adapter, existing);
+    }
+
+    /// <inheritdoc />
+    public Task RemovePdfUaComplianceAsync(IPdfDocument document, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var adapter = CastAdapter(document);
+        return Task.Run(() => RemovePdfUaCompliance(adapter), ct);
+    }
+
+    private static void RemovePdfUaCompliance(PdfDocumentAdapter adapter)
+    {
+        var existing = adapter.Core.CollectObjects().ToList();
+        var catalogRef = adapter.Core.Trailer[Core.PdfName.Root] as Core.PdfIndirectReference ?? throw new Core.PdfException("Trailer missing /Root.");
+        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
+        if (catalogIdx < 0)
+            return;
+
+        if (existing[catalogIdx].Value is not Core.PdfDictionary catalogDict)
+            return;
+
+        // Remove /MarkInfo from catalog.
+        var entries = new Dictionary<string, Core.PdfObject>(catalogDict.Entries);
+        entries.Remove(Core.PdfName.MarkInfo.Value);
+
+        // Strip pdfuaid properties from XMP if present.
+        if (entries.TryGetValue("Metadata", out var metaObj))
+        {
+            var metaStream = metaObj switch
+            {
+                Core.PdfStream s => s,
+                Core.PdfIndirectReference r =>
+                    adapter.Core.ResolveIndirect(r.ObjectNumber).Value as Core.PdfStream,
+                _ => null
+            };
+            if (metaStream is not null)
+            {
+                var xmp = System.Text.Encoding.UTF8.GetString(
+                    Parsing.Filters.StreamFilters.Decode(metaStream).Span);
+                var cleaned = StripXmpNamespace(xmp, "pdfuaid");
+                var cleanedBytes = System.Text.Encoding.UTF8.GetBytes(cleaned);
+                var newStreamDict = new Core.PdfDictionary(
+                    new Dictionary<string, Core.PdfObject>(metaStream.Dictionary.Entries)
+                    {
+                        ["Length"] = new Core.PdfInteger(cleanedBytes.Length)
+                    });
+                var newStream = new Core.PdfStream(newStreamDict, cleanedBytes);
+
+                if (metaObj is Core.PdfIndirectReference metaRef)
+                {
+                    var metaIdx = existing.FindIndex(o => o.ObjectNumber == metaRef.ObjectNumber);
+                    if (metaIdx >= 0)
+                        existing[metaIdx] = new Core.PdfIndirectObject(metaRef.ObjectNumber, 0, newStream);
+                }
+                else
+                    entries["Metadata"] = newStream;
+            }
+        }
+
+        existing[catalogIdx] = new Core.PdfIndirectObject(catalogRef.ObjectNumber, 0, new Core.PdfDictionary(entries));
+        MutationHelper.SerializeAndReplace(adapter, existing);
+    }
+
+    /// <summary>
+    /// Removes all XML elements and attributes that belong to
+    /// <paramref name="nsPrefix"/> from an XMP string.
+    /// Uses simple string manipulation to avoid a full XML parse/rewrite cycle.
+    /// </summary>
+    private static string StripXmpNamespace(string xmp, string nsPrefix)
+    {
+        // Remove xmlns:nsPrefix="..." declarations.
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(
+            xmp,
+            $"""
+             \s+xmlns:{nsPrefix}="[^"]*"
+             """,
+            string.Empty);
+
+        // Remove <nsPrefix:xxx>...</nsPrefix:xxx> elements.
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            $"<{nsPrefix}:[^>]*/?>.*?</{nsPrefix}:[^>]+>",
+            string.Empty,
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        // Remove self-closing <nsPrefix:xxx ... /> elements.
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            $@"<{nsPrefix}:[^/]*/\s*>",
+            string.Empty);
+
+        return cleaned;
     }
 }

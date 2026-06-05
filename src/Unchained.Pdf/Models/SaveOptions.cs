@@ -55,8 +55,18 @@ public enum PdfVersion
 /// </param>
 /// <param name="Language">
 /// BCP 47 language tag written to the document catalog's <c>/Lang</c> entry
-/// (e.g. <c>"en-US"</c>, <c>"fr"</c>). Required for PDF/UA conformance when
+/// (e.g. <c>"en-US"</c>). Required for PDF/UA conformance when
 /// <paramref name="Tagged"/> is <see langword="true"/>.
+/// </param>
+/// <param name="OptimizeSize">
+/// When <see langword="true"/>, automatically runs stream compression and object
+/// deduplication on the document before serializing. Produces a smaller file at
+/// the cost of slightly more CPU time.
+/// </param>
+/// <param name="AllowReusePageContent">
+/// When <see langword="true"/>, identical content stream byte arrays are deduplicated
+/// during serialization — multiple pages that share the same content will reference a
+/// single shared content stream object instead of storing identical bytes multiple times.
 /// </param>
 public sealed record SaveOptions(
     PdfVersion Version = PdfVersion.Pdf17,
@@ -64,7 +74,9 @@ public sealed record SaveOptions(
     bool OptimizeImages = false,
     EncryptionOptions? Encryption = null,
     bool Tagged = false,
-    string? Language = null
+    string? Language = null,
+    bool OptimizeSize = false,
+    bool AllowReusePageContent = false
 )
 {
     /// <summary>Default options: PDF 1.7, no linearization, no image optimization, no encryption.</summary>
@@ -72,4 +84,11 @@ public sealed record SaveOptions(
 
     /// <summary>Linearized output suitable for web delivery.</summary>
     public static readonly SaveOptions WebOptimized = new(Linearize: true);
+
+    /// <summary>Smallest possible output: linearized + stream compression + deduplication.</summary>
+    public static readonly SaveOptions Compact = new(
+        Linearize: true,
+        OptimizeSize: true,
+        AllowReusePageContent: true
+    );
 }

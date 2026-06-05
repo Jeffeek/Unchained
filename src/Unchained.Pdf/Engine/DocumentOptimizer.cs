@@ -18,6 +18,12 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
     public Task OptimizeResourcesAsync(IPdfDocument document, CancellationToken ct = default) =>
         Task.Run(() => OptimizeResources(document), ct);
 
+    /// <summary>Synchronous compress-streams pass — used internally by <c>SaveOptions.OptimizeSize</c>.</summary>
+    internal static void OptimizeInPlace(IPdfDocument document) => Optimize(document);
+
+    /// <summary>Synchronous deduplication pass — used internally by <c>SaveOptions.OptimizeSize</c>.</summary>
+    internal static void OptimizeResourcesInPlace(IPdfDocument document) => OptimizeResources(document);
+
     // ── Optimize — compress uncompressed streams ──────────────────────────────
 
     private static void Optimize(IPdfDocument document)
