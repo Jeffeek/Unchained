@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Test framework — xUnit v3 -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" />
+
+    <!-- Assertions -->
+    <PackageReference Include="Shouldly" />
+
+    <!-- Mocking -->
+    <PackageReference Include="Moq" />
+
+    <!-- Coverage — feeds the CodeCov GitHub pipeline via XPlat Code Coverage -->
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.msbuild">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Unchained.Pptx\Unchained.Pptx.csproj" />
+  </ItemGroup>
+
+  <!-- Real PPTX test files: copied to output so tests can load from AppContext.BaseDirectory. -->
+  <ItemGroup>
+    <Content Include="TestFiles\**\*.pptx"
+             CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('TestFiles\')" />
+  </ItemGroup>
+
+</Project>
