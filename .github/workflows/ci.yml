@@ -53,7 +53,7 @@ jobs:
 
       - name: Fetch native FreeType2 library
         shell: bash
-        run: bash scripts/FetchNatives/fetch-natives.sh
+        run: bash scripts/FetchNatives/fetch-natives.sh --rid ${{ matrix.rid }}
 
       - name: Setup .NET (restore + build)
         uses: ./.github/actions/dotnet-setup
