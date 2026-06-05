@@ -35,9 +35,13 @@
     <Project Path="src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj" />
     <Project Path="src/Unchained.Pdf.Runtimes/Unchained.Pdf.Runtimes.csproj" />
     <Project Path="src/Unchained.Pdf/Unchained.Pdf.csproj" />
+    <Project Path="src/Unchained.Pptx/Unchained.Pptx.csproj" />
+    <Project Path="src/Unchained.Pptx.Rendering/Unchained.Pptx.Rendering.csproj" />
+    <Project Path="src/Unchained.Pptx.Runtimes/Unchained.Pptx.Runtimes.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj" />
     <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
+    <Project Path="tests/Unchained.Pptx.Tests/Unchained.Pptx.Tests.csproj" />
   </Folder>
 </Solution>
