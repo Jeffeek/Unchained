@@ -16,15 +16,10 @@ namespace Unchained.Pdf.Abstractions;
 /// </summary>
 public interface IPdfDocument : IDisposable, IAsyncDisposable
 {
-    /// <summary>
-    /// The total number of pages in this document.
-    /// Equivalent to <c>Pages.Count</c>.
-    /// </summary>
+    /// <summary>The total number of pages in this document. Equivalent to <c>Pages.Count</c>.</summary>
     int PageCount { get; }
 
-    /// <summary>
-    /// The ordered, 1-based collection of pages in this document.
-    /// </summary>
+    /// <summary>The ordered, 1-based collection of pages in this document.</summary>
     IPageCollection Pages { get; }
 
     /// <summary>
@@ -46,11 +41,52 @@ public interface IPdfDocument : IDisposable, IAsyncDisposable
     PdfPermissions Permissions { get; }
 
     /// <summary>
+    /// The encryption algorithm used to protect this document, or
+    /// <see langword="null"/> when the document is not encrypted.
+    /// </summary>
+    PdfEncryptionAlgorithm? CryptoAlgorithm { get; }
+
+    /// <summary>
     /// <see langword="true"/> after <see cref="IDisposable.Dispose"/> or
     /// <see cref="IAsyncDisposable.DisposeAsync"/> has been called.
-    /// Accessing other members on a disposed document results in undefined behaviour.
     /// </summary>
     bool IsDisposed { get; }
+
+    /// <summary>
+    /// <see langword="true"/> when the PDF was saved in linearized (web-optimized) form
+    /// (ISO 32000-1 Annex F). Detected by the presence of a <c>/Linearized</c> entry in the
+    /// first indirect object of the file.
+    /// </summary>
+    bool IsLinearized { get; }
+
+    /// <summary>
+    /// <see langword="true"/> when the document contains a <c>/MarkInfo /Marked true</c>
+    /// entry in the catalog, indicating that content is tagged for accessibility.
+    /// </summary>
+    bool IsTagged { get; }
+
+    /// <summary>
+    /// <see langword="true"/> when the document's XMP metadata declares PDF/A conformance
+    /// (contains a valid <c>pdfaid:part</c> property).
+    /// This is a lightweight metadata check — use
+    /// <c>IDocumentProcessor.ValidatePdfAAsync</c> for full structural validation.
+    /// </summary>
+    bool IsPdfaCompliant { get; }
+
+    /// <summary>
+    /// <see langword="true"/> when the document's XMP metadata declares PDF/UA conformance
+    /// (contains a valid <c>pdfuaid:part</c> property).
+    /// This is a lightweight metadata check — use
+    /// <c>IDocumentProcessor.ValidatePdfUAAsync</c> for full structural validation.
+    /// </summary>
+    bool IsPdfUaCompliant { get; }
+
+    /// <summary>
+    /// The document identifier from the trailer's <c>/ID</c> array, as a pair of
+    /// hex-encoded strings. Returns <see langword="null"/> when the trailer has no
+    /// <c>/ID</c> entry.
+    /// </summary>
+    (string First, string Second)? Id { get; }
 
     /// <summary>
     /// Returns the document's outline (bookmark) tree, parsed from <c>/Outlines</c>.

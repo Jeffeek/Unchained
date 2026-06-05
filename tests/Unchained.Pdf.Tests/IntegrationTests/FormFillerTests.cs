@@ -340,7 +340,13 @@ public sealed class FormFillerTests : PdfTestBase
         public Models.DocumentMetadata Metadata => Models.DocumentMetadata.Empty;
         public bool IsEncrypted => false;
         public Models.PdfPermissions Permissions => Models.PdfPermissions.All;
+        public Models.PdfEncryptionAlgorithm? CryptoAlgorithm => null;
         public bool IsDisposed => false;
+        public bool IsLinearized => false;
+        public bool IsTagged => false;
+        public bool IsPdfaCompliant => false;
+        public bool IsPdfUaCompliant => false;
+        public (string First, string Second)? Id => null;
         public IReadOnlyList<Models.Bookmark> GetBookmarks() => [];
         public IReadOnlyList<Models.FormField> GetFormFields() => [];
         public Models.ViewerPreferences GetViewerPreferences() => Models.ViewerPreferences.Default;

@@ -69,7 +69,74 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     public PdfPermissions Permissions => Core.EncryptionPermissions;
 
     /// <inheritdoc />
+    public PdfEncryptionAlgorithm? CryptoAlgorithm => Core.EncryptionAlgorithm;
+
+    /// <inheritdoc />
     public bool IsDisposed => _disposed == 1;
+
+    /// <inheritdoc />
+    public bool IsLinearized => Core.IsLinearized;
+
+    /// <inheritdoc />
+    public bool IsTagged
+    {
+        get
+        {
+            var markInfo = Core.Catalog[PdfName.MarkInfo];
+            var dict = markInfo switch
+            {
+                PdfDictionary d => d,
+                PdfIndirectReference r => Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+                _ => null
+            };
+            return dict?[PdfName.Marked] is PdfBoolean { Value: true };
+        }
+    }
+
+    /// <inheritdoc />
+    public bool IsPdfaCompliant
+    {
+        get
+        {
+            var xmp = GetXmpMetadata();
+            return xmp is not null &&
+                   xmp.Contains("pdfaid", StringComparison.OrdinalIgnoreCase) &&
+                   (xmp.Contains("part>1", StringComparison.Ordinal) ||
+                    xmp.Contains("part>2", StringComparison.Ordinal) ||
+                    xmp.Contains("part>3", StringComparison.Ordinal));
+        }
+    }
+
+    /// <inheritdoc />
+    public bool IsPdfUaCompliant
+    {
+        get
+        {
+            var xmp = GetXmpMetadata();
+            return xmp is not null && xmp.Contains("pdfuaid", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    /// <inheritdoc />
+    public (string First, string Second)? Id
+    {
+        get
+        {
+            var idArr = Core.Trailer.Get<PdfArray>(PdfName.Get("ID"));
+            if (idArr is null || idArr.Count < 2)
+                return null;
+
+            var first = IdEntryToHex(idArr[0]);
+            var second = IdEntryToHex(idArr[1]);
+
+            return (first, second);
+        }
+    }
+
+    private static string IdEntryToHex(PdfObject obj) =>
+        obj is PdfString s
+            ? BitConverter.ToString(s.Bytes.ToArray()).Replace("-", string.Empty)
+            : string.Empty;
 
     /// <summary>
     /// Performs a full-rewrite serialization: collects every in-use indirect object
@@ -78,7 +145,21 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     /// </summary>
     internal byte[] Serialize(SaveOptions? options)
     {
-        var objects = Core.CollectObjects();
+        var objects = Core.CollectObjects().ToList();
+
+        // ── OptimizeSize — compress streams + deduplicate objects ─────────────
+        if (options?.OptimizeSize == true)
+        {
+            // Run both optimizers in-place via the mutation helpers before collecting.
+            DocumentOptimizer.OptimizeInPlace(this);
+            DocumentOptimizer.OptimizeResourcesInPlace(this);
+            objects = Core.CollectObjects().ToList();
+        }
+
+        // ── AllowReusePageContent — deduplicate identical content streams ──────
+        if (options?.AllowReusePageContent == true)
+            objects = DeduplicateContentStreams(objects);
+
         var maxObjNum = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
 
         var trailerEntries = new Dictionary<string, PdfObject>
@@ -410,6 +491,39 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             PdfName n => n.Value,
             _ => null
         };
+    }
+
+    // Deduplicates identical content stream objects across pages.
+    // Uses SHA256 of stream bytes as the hash key; canonical = lowest object number.
+    private static List<PdfIndirectObject> DeduplicateContentStreams(
+        IReadOnlyList<PdfIndirectObject> objects
+    )
+    {
+        var seenHashes = new Dictionary<string, int>(StringComparer.Ordinal);
+        var remapping = new Dictionary<int, int>();
+
+        foreach (var obj in objects)
+        {
+            if (obj.Value is not PdfStream stream) continue;
+            // Only deduplicate unfiltered content streams (plain operators).
+            if (stream.Dictionary[PdfName.Filter] is not null) continue;
+            if (stream.Data.Length == 0) continue;
+
+            var hash = Convert.ToBase64String(
+                SHA256.HashData(stream.Data.Span));
+
+            if (seenHashes.TryGetValue(hash, out var canonical))
+                remapping[obj.ObjectNumber] = canonical;
+            else
+                seenHashes[hash] = obj.ObjectNumber;
+        }
+
+        if (remapping.Count == 0) return objects.ToList();
+
+        return objects
+            .Where(o => !remapping.ContainsKey(o.ObjectNumber))
+            .Select(o => PdfObjectRemapper.RemapSelective(o, remapping) as PdfIndirectObject ?? o)
+            .ToList();
     }
 
     private PdfDictionary? ResolveDict(PdfObject? obj) => obj switch

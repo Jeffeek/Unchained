@@ -273,4 +273,123 @@ public interface IDocumentProcessor : IDisposable
         DocumentMetadata metadata,
         CancellationToken ct = default
     );
+
+    /// <summary>
+    /// Returns the raw <see cref="Core.PdfObject"/> with the given indirect object number,
+    /// or <see langword="null"/> when no such object exists.
+    /// Useful for low-level inspection and debugging of PDF internals.
+    /// </summary>
+    /// <param name="document">The source document.</param>
+    /// <param name="objectNumber">The 1-based indirect object number to resolve.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<Core.PdfObject?> GetObjectByIdAsync(
+        IPdfDocument document,
+        int objectNumber,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Evicts all resolved objects from the document's in-memory cache.
+    /// Subsequent object accesses will reparse from the source buffer.
+    /// Call this after processing large pages to reduce memory pressure.
+    /// </summary>
+    /// <param name="document">The document whose cache should be trimmed.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task TrimCacheAsync(
+        IPdfDocument document,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Sets the document's open action to navigate to <paramref name="pageNumber"/> when opened.
+    /// Writes a <c>/OpenAction</c> GoTo action to the document catalog.
+    /// </summary>
+    /// <param name="document">The document to update.</param>
+    /// <param name="pageNumber">1-based page number to navigate to on open.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task SetOpenActionAsync(
+        IPdfDocument document,
+        int pageNumber,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Strips PDF/A conformance metadata from <paramref name="document"/>:
+    /// removes <c>/OutputIntents</c> from the catalog and deletes the
+    /// <c>pdfaid:part</c> and <c>pdfaid:conformance</c> properties from the XMP stream.
+    /// </summary>
+    /// <param name="document">The document to modify.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task RemovePdfaComplianceAsync(
+        IPdfDocument document,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Strips PDF/UA conformance metadata from <paramref name="document"/>:
+    /// removes the <c>pdfuaid:part</c> XMP property and the <c>/MarkInfo</c>
+    /// entry from the catalog.
+    /// </summary>
+    /// <param name="document">The document to modify.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task RemovePdfUaComplianceAsync(
+        IPdfDocument document,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Replaces all unembedded Standard 14 font references in <paramref name="document"/>
+    /// with embedded font programs from <paramref name="fontMap"/>.
+    /// <para>
+    /// Keys in <paramref name="fontMap"/> are base font names as they appear in the PDF
+    /// (e.g. <c>"Helvetica"</c>, <c>"Times-Roman"</c>). Values are the raw TrueType or
+    /// OpenType font bytes to embed as <c>/FontFile2</c> entries.
+    /// </para>
+    /// <para>
+    /// Fonts not present in <paramref name="fontMap"/> are left unchanged.
+    /// This is required for PDF/A conformance, which mandates that all fonts be embedded.
+    /// </para>
+    /// </summary>
+    /// <param name="document">The document to update.</param>
+    /// <param name="fontMap">
+    /// Mapping from Standard 14 base font name to raw font bytes.
+    /// Use <c>Unchained.Pdf.Rendering</c>'s <c>StandardFontEmbedder.DefaultFontMap</c>
+    /// for the bundled DejaVu substitutions.
+    /// </param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task EmbedStandardFontsAsync(
+        IPdfDocument document,
+        IReadOnlyDictionary<string, byte[]> fontMap,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Serializes the structure of <paramref name="document"/> to Unchained's document XML schema
+    /// and returns the XML as a UTF-8 string.
+    /// <para>
+    /// The schema captures page dimensions, text spans (as <c>&lt;Paragraph&gt;</c> elements),
+    /// annotations, and bookmarks. The output can be re-loaded with
+    /// <see cref="LoadFromXmlAsync"/> to reconstruct a PDF.
+    /// </para>
+    /// </summary>
+    /// <param name="document">The document to serialize.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<string> SaveAsXmlAsync(
+        IPdfDocument document,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Parses an Unchained document XML string and produces a new <see cref="IPdfDocument"/>.
+    /// <para>
+    /// Supported elements: <c>Document</c>, <c>Page</c>, <c>Paragraph</c>, <c>Heading</c>,
+    /// <c>Table</c> (with <c>Header</c> and <c>Row</c>/<c>Cell</c> children), <c>Line</c>.
+    /// </para>
+    /// </summary>
+    /// <param name="xmlContent">The Unchained document XML string to parse.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<IPdfDocument> LoadFromXmlAsync(
+        string xmlContent,
+        CancellationToken ct = default
+    );
 }
