@@ -87,7 +87,7 @@ public sealed class StampApplierTests : PdfTestBase
     [Fact]
     public async Task StampAsync_Cancellation_ThrowsOperationCanceledException()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => Applier.StampAsync(doc, DefaultStamp, cts.Token));

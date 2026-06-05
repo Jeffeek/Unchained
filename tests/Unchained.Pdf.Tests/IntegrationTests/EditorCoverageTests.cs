@@ -16,7 +16,7 @@ public sealed class NamedDestinationEditorCoverageTests : PdfTestBase
     public async Task SetDestination_ThenOverwrite_LatestPageStored()
     {
         // Exercises updating an existing entry in the flat name list.
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3), ct: TestContext.Current.CancellationToken);
         await Editor.SetDestinationAsync(doc, "dest", pageNumber: 1, ct: TestContext.Current.CancellationToken);
         await Editor.SetDestinationAsync(doc, "dest", pageNumber: 3, ct: TestContext.Current.CancellationToken);
         var dests = doc.GetNamedDestinations();
@@ -28,7 +28,7 @@ public sealed class NamedDestinationEditorCoverageTests : PdfTestBase
     public async Task RemoveDestination_OfOneOfTwo_LeavesOtherIntact()
     {
         // Exercises partial removal: ensures the surviving entry is not disturbed.
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3), ct: TestContext.Current.CancellationToken);
         await Editor.SetDestinationAsync(doc, "keep", pageNumber: 1, ct: TestContext.Current.CancellationToken);
         await Editor.SetDestinationAsync(doc, "drop", pageNumber: 2, ct: TestContext.Current.CancellationToken);
         await Editor.RemoveDestinationAsync(doc, "drop", ct: TestContext.Current.CancellationToken);
@@ -41,7 +41,7 @@ public sealed class NamedDestinationEditorCoverageTests : PdfTestBase
     public async Task SetDestination_OrderedAlphabetically_NamesAreSorted()
     {
         // Verifies that the flat name list is rebuilt in Ordinal order.
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3), ct: TestContext.Current.CancellationToken);
         await Editor.SetDestinationAsync(doc, "z-last", pageNumber: 1, ct: TestContext.Current.CancellationToken);
         await Editor.SetDestinationAsync(doc, "a-first", pageNumber: 2, ct: TestContext.Current.CancellationToken);
         var dests = doc.GetNamedDestinations();
@@ -54,7 +54,7 @@ public sealed class NamedDestinationEditorCoverageTests : PdfTestBase
     {
         // After removing the last destination the /Names entry should be absent,
         // so GetNamedDestinations returns empty again.
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2), ct: TestContext.Current.CancellationToken);
         await Editor.SetDestinationAsync(doc, "only", pageNumber: 1, ct: TestContext.Current.CancellationToken);
         await Editor.RemoveDestinationAsync(doc, "only", ct: TestContext.Current.CancellationToken);
         doc.GetNamedDestinations().ShouldBeEmpty();
@@ -63,7 +63,7 @@ public sealed class NamedDestinationEditorCoverageTests : PdfTestBase
     [Fact]
     public async Task SetDestination_Cancellation_ThrowsOperationCanceledException()
     {
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2), ct: TestContext.Current.CancellationToken);
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => Editor.SetDestinationAsync(doc, "x", pageNumber: 1, ct: cts.Token));
@@ -72,7 +72,7 @@ public sealed class NamedDestinationEditorCoverageTests : PdfTestBase
     [Fact]
     public async Task RemoveDestination_Cancellation_ThrowsOperationCanceledException()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => Editor.RemoveDestinationAsync(doc, "x", ct: cts.Token));
@@ -89,7 +89,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     public async Task AddAnnotation_WithColor_ColorRoundTripped()
     {
         // Exercises the `if (annotation.Color is { Length: 3 } c)` branch.
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(
             AnnotationSubtype.Square,
             X: 10,
@@ -107,7 +107,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     public async Task AddAnnotation_HighlightSubtype_RoundTripped()
     {
         // Exercises the Highlight annotation subtype path.
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(AnnotationSubtype.Highlight, X: 50, Y: 600, Width: 200, Height: 20);
         await Editor.AddAnnotationAsync(doc, 1, ann, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations()[0].Subtype.ShouldBe(AnnotationSubtype.Highlight);
@@ -117,7 +117,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     public async Task AddAnnotation_LinkSubtype_RoundTripped()
     {
         // Exercises the Link annotation subtype path.
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(AnnotationSubtype.Link, X: 50, Y: 700, Width: 150, Height: 20);
         await Editor.AddAnnotationAsync(doc, 1, ann, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations()[0].Subtype.ShouldBe(AnnotationSubtype.Link);
@@ -126,7 +126,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     [Fact]
     public async Task AddAnnotation_CircleSubtype_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(AnnotationSubtype.Circle, X: 200, Y: 400, Width: 80, Height: 80);
         await Editor.AddAnnotationAsync(doc, 1, ann, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations()[0].Subtype.ShouldBe(AnnotationSubtype.Circle);
@@ -135,7 +135,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     [Fact]
     public async Task AddAnnotation_FreeTextSubtype_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(
             AnnotationSubtype.FreeText,
             X: 100,
@@ -154,7 +154,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     {
         // Exercises ResolveAnnotArray with a real PdfArray already on the page dict
         // (the fixture embeds an annotation so /Annots is a plain array, not indirect).
-        await using var doc = await LoadAsync(PdfFixtures.WithAnnotation(contents: "Existing"));
+        await using var doc = await LoadAsync(PdfFixtures.WithAnnotation(contents: "Existing"), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(
             AnnotationSubtype.Text,
             X: 200,
@@ -170,7 +170,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     [Fact]
     public async Task AddAnnotation_ThreeOnSamePage_AllPresent()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         for (var i = 0; i < 3; i++)
         {
             var ann = new Annotation(
@@ -189,7 +189,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     [Fact]
     public async Task AddAnnotation_MultiPage_OnlyTargetPageAffected()
     {
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(AnnotationSubtype.Text, X: 100, Y: 700, Width: 50, Height: 50);
         await Editor.AddAnnotationAsync(doc, 2, ann, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations().ShouldBeEmpty();
@@ -200,7 +200,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     [Fact]
     public async Task AddAnnotation_WithColorAndContents_BothPresent()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(
             AnnotationSubtype.Circle,
             X: 10,
@@ -218,7 +218,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
     [Fact]
     public async Task AddAnnotation_RoundTrip_ColorPreservedAfterSave()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var ann = new Annotation(
             AnnotationSubtype.Square,
             X: 10,
@@ -230,7 +230,7 @@ public sealed class AnnotationEditorCoverageTests : PdfTestBase
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
-        await using var reloaded = await LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms, ct: TestContext.Current.CancellationToken);
         reloaded.Pages[1].GetAnnotations()[0].Color.ShouldNotBeNull();
     }
 }

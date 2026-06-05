@@ -58,7 +58,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         // Text extraction may return empty for PDFs with CIDFont/no ToUnicode map.
         // Verify it does not throw and returns a non-null string.
         doc.Pages[1].ExtractText().ShouldNotBeNull();
@@ -69,7 +69,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetTextSpans().ShouldAllBe(static s => s.Width >= 0);
     }
 
@@ -78,7 +78,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetTextSpans()
             .Where(static s => s.Text.Length > 0)
             .ShouldAllBe(static s => s.FontSize > 0);
@@ -89,7 +89,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         var spans = doc.Pages[1].GetTextSpans().ToList();
         if (spans.Count < 2) return;
 
@@ -105,7 +105,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetTextSpans()
             .Where(static s => s.Text.Length > 0)
             .ShouldAllBe(static s => !string.IsNullOrEmpty(s.FontName));
@@ -118,7 +118,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Multipage);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         Enumerable.Range(1, doc.PageCount)
             .Any(i => doc.Pages[i].ExtractText().Length > 0)
             .ShouldBeTrue("Expected at least one page to contain extractable text.");
@@ -131,7 +131,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithEmbeddedFonts);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
         var embedded = Enumerable.Range(1, doc.PageCount)
             .SelectMany(i => doc.Pages[i].GetEmbeddedFontBytes().Values)
             .Count(static b => b is { Length: > 0 });

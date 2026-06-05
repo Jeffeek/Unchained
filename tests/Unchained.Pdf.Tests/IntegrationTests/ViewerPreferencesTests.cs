@@ -16,7 +16,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task GetViewerPreferences_NoPreferences_ReturnsDefaults()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var prefs = doc.GetViewerPreferences();
         prefs.HideToolbar.ShouldBeFalse();
         prefs.HideMenubar.ShouldBeFalse();
@@ -29,14 +29,14 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task PageLayout_Default_ReturnsDefault()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         doc.PageLayout.ShouldBe(PageLayout.Default);
     }
 
     [Fact]
     public async Task PageMode_Default_ReturnsDefault()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         doc.PageMode.ShouldBe(PageMode.Default);
     }
 
@@ -45,7 +45,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_HideToolbar_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var prefs = new ViewerPreferences(HideToolbar: true);
         await Editor.SetViewerPreferencesAsync(doc, prefs, ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().HideToolbar.ShouldBeTrue();
@@ -54,7 +54,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_CenterWindow_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(CenterWindow: true), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().CenterWindow.ShouldBeTrue();
     }
@@ -62,7 +62,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_Direction_RightToLeft_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(Direction: ReadingDirection.RightToLeft), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().Direction.ShouldBe(ReadingDirection.RightToLeft);
     }
@@ -70,7 +70,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetPageLayout_TwoColumnLeft_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetPageLayoutAsync(doc, PageLayout.TwoColumnLeft, ct: TestContext.Current.CancellationToken);
         doc.PageLayout.ShouldBe(PageLayout.TwoColumnLeft);
     }
@@ -78,7 +78,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetPageMode_UseOutlines_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetPageModeAsync(doc, PageMode.UseOutlines, ct: TestContext.Current.CancellationToken);
         doc.PageMode.ShouldBe(PageMode.UseOutlines);
     }
@@ -86,7 +86,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_PageCountUnchanged()
     {
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2));
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(HideMenubar: true), ct: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(2);
     }
@@ -94,13 +94,13 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetPreferences_SaveAndReload_Persisted()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetPageLayoutAsync(doc, PageLayout.SinglePage, ct: TestContext.Current.CancellationToken);
         await Editor.SetPageModeAsync(doc, PageMode.UseThumbs, ct: TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
-        await using var reloaded = await LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms, ct: TestContext.Current.CancellationToken);
         reloaded.PageLayout.ShouldBe(PageLayout.SinglePage);
         reloaded.PageMode.ShouldBe(PageMode.UseThumbs);
     }
@@ -108,7 +108,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_HideMenubar_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(HideMenubar: true), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().HideMenubar.ShouldBeTrue();
     }
@@ -116,7 +116,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_HideWindowUI_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(HideWindowUI: true), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().HideWindowUI.ShouldBeTrue();
     }
@@ -124,7 +124,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_FitWindow_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(FitWindow: true), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().FitWindow.ShouldBeTrue();
     }
@@ -132,7 +132,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_DisplayDocTitle_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(DisplayDocTitle: true), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().DisplayDocTitle.ShouldBeTrue();
     }
@@ -140,7 +140,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_DuplexSimplex_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(Duplex: DuplexMode.Simplex), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().Duplex.ShouldBe(DuplexMode.Simplex);
     }
@@ -148,7 +148,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_DuplexFlipLongEdge_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(Duplex: DuplexMode.DuplexFlipLongEdge), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().Duplex.ShouldBe(DuplexMode.DuplexFlipLongEdge);
     }
@@ -156,7 +156,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_DuplexFlipShortEdge_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(Duplex: DuplexMode.DuplexFlipShortEdge), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().Duplex.ShouldBe(DuplexMode.DuplexFlipShortEdge);
     }
@@ -164,7 +164,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_NonFullScreenPageMode_UseOutlines_RoundTripped()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetViewerPreferencesAsync(doc, new ViewerPreferences(NonFullScreenPageMode: PageMode.UseOutlines), ct: TestContext.Current.CancellationToken);
         doc.GetViewerPreferences().NonFullScreenPageMode.ShouldBe(PageMode.UseOutlines);
     }
@@ -180,7 +180,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     ]
     public async Task SetPageLayout_AllNonDefaultValues_RoundTripped(PageLayout layout)
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetPageLayoutAsync(doc, layout, ct: TestContext.Current.CancellationToken);
         doc.PageLayout.ShouldBe(layout);
     }
@@ -196,7 +196,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     ]
     public async Task SetPageMode_AllNonDefaultValues_RoundTripped(PageMode mode)
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetPageModeAsync(doc, mode, ct: TestContext.Current.CancellationToken);
         doc.PageMode.ShouldBe(mode);
     }
@@ -204,7 +204,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetViewerPreferences_AllFlags_SaveAndReload_Persisted()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         var prefs = new ViewerPreferences(
             HideToolbar: true,
             HideMenubar: true,
@@ -221,7 +221,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
-        await using var reloaded = await LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms, ct: TestContext.Current.CancellationToken);
 
         var loaded = reloaded.GetViewerPreferences();
         loaded.HideToolbar.ShouldBeTrue();
@@ -238,7 +238,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetPageLayout_Default_DoesNotWritePageLayout()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetPageLayoutAsync(doc, PageLayout.Default, ct: TestContext.Current.CancellationToken);
         doc.PageLayout.ShouldBe(PageLayout.Default);
     }
@@ -246,7 +246,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     [Fact]
     public async Task SetPageMode_Default_DoesNotWritePageMode()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetPageModeAsync(doc, PageMode.Default, ct: TestContext.Current.CancellationToken);
         doc.PageMode.ShouldBe(PageMode.Default);
     }
@@ -256,7 +256,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     {
         // Calling SetPageLayout exercises the Apply path where prefs is null;
         // the /ViewerPreferences key must not appear in the result.
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         await Editor.SetPageLayoutAsync(doc, PageLayout.TwoPageRight, ct: TestContext.Current.CancellationToken);
         // /ViewerPreferences was never set, so GetViewerPreferences returns defaults.
         var prefs = doc.GetViewerPreferences();

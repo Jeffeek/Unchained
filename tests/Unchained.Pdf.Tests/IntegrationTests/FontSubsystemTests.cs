@@ -19,7 +19,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task GetEmbeddedFontBytes_PageWithNoEmbeddedFonts_ReturnsNullValues()
     {
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(text: "Hello"));
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(text: "Hello"), ct: TestContext.Current.CancellationToken);
         var fontBytes = doc.Pages[1].GetEmbeddedFontBytes();
         // Standard 14 fonts are never embedded — all entries null.
         fontBytes.Values.ShouldAllBe(static b => b == null);
@@ -30,7 +30,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     {
         var fontData = SyntheticFontBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
-        await using var doc = await LoadAsync(pdfBytes);
+        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
         var fontBytes = doc.Pages[1].GetEmbeddedFontBytes();
         fontBytes.ContainsKey("F1").ShouldBeTrue();
         fontBytes["F1"].ShouldNotBeNull();
@@ -42,7 +42,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     {
         var fontData = SyntheticFontBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
-        await using var doc = await LoadAsync(pdfBytes);
+        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
         var extracted = doc.Pages[1].GetEmbeddedFontBytes()["F1"];
         extracted.ShouldNotBeNull();
         extracted.Length.ShouldBe(fontData.Length);
@@ -51,7 +51,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task GetEmbeddedFontBytes_PageWithNoFonts_ReturnsEmptyDict()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetEmbeddedFontBytes().ShouldBeEmpty();
     }
 
@@ -65,7 +65,7 @@ public sealed class FontSubsystemTests : RendererTestBase
         // Use the bundled DejaVu font (valid TrueType) so FreeType2 can actually load it.
         var fontData = LoadBundledDejaVuBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
-        await using var doc = await LoadAsync(pdfBytes);
+        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
@@ -77,7 +77,7 @@ public sealed class FontSubsystemTests : RendererTestBase
 
         var fontData = LoadBundledDejaVuBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
-        await using var doc = await LoadAsync(pdfBytes);
+        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(200);
     }
@@ -114,7 +114,7 @@ public sealed class FontSubsystemTests : RendererTestBase
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
-        await using var reloaded = await LoadAsync(ms);
+        await using var reloaded = await LoadAsync(ms, ct: TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
     }
 
@@ -150,7 +150,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task GetImageXObjects_PageWithNoImages_ReturnsEmpty()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         doc.Pages[1].GetImageXObjects().ShouldBeEmpty();
     }
 
@@ -158,7 +158,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     public async Task GetImageXObjects_PageWithImage_ReturnsEntry()
     {
         var rgb = CreateSolidRgb(4, 4, r: 255, g: 0, b: 0);
-        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, rgb));
+        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, rgb), ct: TestContext.Current.CancellationToken);
         var images = doc.Pages[1].GetImageXObjects();
         images.ContainsKey("Im1").ShouldBeTrue();
     }
@@ -167,7 +167,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     public async Task GetImageXObjects_PageWithImage_CorrectDimensions()
     {
         var rgb = CreateSolidRgb(8, 6, r: 0, g: 255, b: 0);
-        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(8, 6, rgb));
+        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(8, 6, rgb), ct: TestContext.Current.CancellationToken);
         var img = doc.Pages[1].GetImageXObjects()["Im1"];
         img.Width.ShouldBe(8);
         img.Height.ShouldBe(6);
@@ -177,7 +177,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     public async Task GetImageXObjects_PageWithImage_RgbDataDecodedCorrectly()
     {
         var rgb = CreateSolidRgb(2, 2, r: 128, g: 64, b: 32);
-        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(2, 2, rgb));
+        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(2, 2, rgb), ct: TestContext.Current.CancellationToken);
         var img = doc.Pages[1].GetImageXObjects()["Im1"];
         img.RgbData[0].ShouldBe((byte)128);
         img.RgbData[1].ShouldBe((byte)64);
@@ -191,7 +191,7 @@ public sealed class FontSubsystemTests : RendererTestBase
 
         var rgb = CreateSolidRgb(4, 4, r: 200, g: 100, b: 50);
         var pdfBytes = PdfFixtures.WithImageXObject(4, 4, rgb);
-        await using var doc = await LoadAsync(pdfBytes);
+        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }

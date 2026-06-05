@@ -38,7 +38,7 @@ public sealed class SignatureTests : PdfTestBase
     public async Task Sign_SinglePage_ProducesValidPdfBytes()
     {
         using var cert = CreateSelfSignedCert();
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
@@ -51,12 +51,12 @@ public sealed class SignatureTests : PdfTestBase
     public async Task Sign_ProducesLoadablePdf()
     {
         using var cert = CreateSelfSignedCert();
-        await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 2));
+        await using var original = await LoadAsync(PdfFixtures.MultiPage(count: 2), ct: TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SignAsync(original, cert, ms, ct: TestContext.Current.CancellationToken);
 
-        await using var reloaded = await LoadAsync(ms.ToArray());
+        await using var reloaded = await LoadAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(2);
     }
 
@@ -64,7 +64,7 @@ public sealed class SignatureTests : PdfTestBase
     public async Task Sign_WithOptions_MetadataEmbedded()
     {
         using var cert = CreateSelfSignedCert("Alice Smith");
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
 
         var opts = new SignatureOptions(
             Reason: "I approve",
@@ -92,7 +92,7 @@ public sealed class SignatureTests : PdfTestBase
         using var ms = new MemoryStream();
         await Processor.SignAsync(original, cert, ms, ct: TestContext.Current.CancellationToken);
 
-        await using var reloaded = await LoadAsync(ms.ToArray());
+        await using var reloaded = await LoadAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(original.PageCount);
     }
 
@@ -102,7 +102,7 @@ public sealed class SignatureTests : PdfTestBase
     public async Task Verify_SignedDocument_FindsOneSignature()
     {
         using var cert = CreateSelfSignedCert("Bob");
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
@@ -115,7 +115,7 @@ public sealed class SignatureTests : PdfTestBase
     public async Task Verify_SignedDocument_SignatureIsValid()
     {
         using var cert = CreateSelfSignedCert("Carol");
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SignAsync(doc, cert, ms, new SignatureOptions(Reason: "Test"), ct: TestContext.Current.CancellationToken);
@@ -137,7 +137,7 @@ public sealed class SignatureTests : PdfTestBase
     public async Task Verify_TamperedDocument_SignatureIsInvalid()
     {
         using var cert = CreateSelfSignedCert();
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
@@ -157,7 +157,7 @@ public sealed class SignatureTests : PdfTestBase
     public async Task Sign_SigningTime_RoundTrips()
     {
         using var cert = CreateSelfSignedCert();
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
         // ReSharper disable BadListLineBreaks
         var when = new DateTimeOffset(2025, 6, 15, 12, 0, 0, TimeSpan.Zero);
         // ReSharper restore BadListLineBreaks

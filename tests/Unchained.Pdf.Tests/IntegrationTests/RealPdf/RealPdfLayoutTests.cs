@@ -145,7 +145,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes);
         var before = doc.PageCount;
-        await using var reloaded = await SaveAndReloadAsync(doc);
+        await using var reloaded = await SaveAndReloadAsync(doc, ct: TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(before);
     }
 }
