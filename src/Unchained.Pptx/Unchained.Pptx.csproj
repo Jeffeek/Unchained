@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageTags>pptx;powerpoint;presentation;ooxml;dotnet;csharp;document-processing</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Unchained.Pptx.Tests" />
+    <InternalsVisibleTo Include="Unchained.Pptx.Rendering" />
+  </ItemGroup>
+
+</Project>
