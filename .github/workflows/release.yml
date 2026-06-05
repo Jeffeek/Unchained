@@ -92,7 +92,7 @@ jobs:
 
       - name: Fetch native FreeType2 library
         shell: bash
-        run: bash scripts/FetchNatives/fetch-natives.sh
+        run: bash scripts/FetchNatives/fetch-natives.sh --rid ${{ matrix.rid }}
 
       - name: Upload native binary artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
