@@ -10,7 +10,7 @@ namespace Unchained.Pdf.Tests.Helpers;
 /// </summary>
 public abstract class PdfTestBase
 {
-    protected static readonly DocumentProcessor Processor = new();
+    protected static readonly IDocumentProcessor Processor = new DocumentProcessor();
 
     /// <summary>Loads a PDF from a raw byte array via a <see cref="MemoryStream"/>.</summary>
     protected static Task<IPdfDocument> LoadAsync(byte[] bytes, CancellationToken ct = default) =>

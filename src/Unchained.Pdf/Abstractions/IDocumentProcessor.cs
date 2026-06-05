@@ -94,6 +94,37 @@ public interface IDocumentProcessor : IDisposable
     );
 
     /// <summary>
+    /// Validates <paramref name="pdfBytes"/> against ISO 14289-1 (PDF/UA-1) accessibility requirements.
+    /// Returns a <see cref="PdfUAValidationResult"/> listing every violation found.
+    /// <para>
+    /// Rules checked correspond to ISO 14289-1 clause numbers and cover: tagged PDF marker,
+    /// document title, language, structure tree root, role map, alternate descriptions for figures,
+    /// heading level sequence, table and list structure, untagged content detection, annotation
+    /// accessible names, action restrictions, and XMP pdfuaid metadata.
+    /// </para>
+    /// <para>
+    /// An empty violation list means the document passes all statically-verifiable PDF/UA-1 rules.
+    /// Rules requiring human judgment (meaningful alt text content, logical reading order) are
+    /// flagged as warnings where detectable.
+    /// </para>
+    /// </summary>
+    /// <param name="pdfBytes">Raw bytes of the PDF to validate.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<PdfUAValidationResult> ValidatePdfUAAsync(
+        byte[] pdfBytes,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Attempts to load a PDF from <paramref name="bytes"/>, falling back to a
+    /// byte-scanning recovery pass if the normal parse fails due to a corrupted
+    /// or missing cross-reference table.
+    /// </summary>
+    /// <param name="bytes">Raw bytes of the PDF to repair.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken ct = default);
+
+    /// <summary>
     /// Applies structural PDF/A conformance fixes to <paramref name="document"/> and
     /// writes the result to <paramref name="outputStream"/>.
     /// <para>

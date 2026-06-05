@@ -63,6 +63,23 @@ internal sealed class ContentStreamWriter(IBufferWriter<byte> buffer)
         buffer.Write("\n"u8);
     }
 
+    // Writes "/tag <</MCID n>> BDC\n" — begins a marked-content sequence with an MCID property list.
+    // Used for tagged PDF (ISO 32000-1 §14.6): every logical content unit is wrapped in BDC/EMC.
+    // <paramref name="tag"/> must be a standard structure type name (e.g. "P", "H1", "Figure").
+    // <paramref name="mcid"/> is the marked-content identifier; must be unique per page.
+    internal void MarkedContentBegin(string tag, int mcid)
+    {
+        buffer.Write("/"u8);
+        WriteAscii(tag);
+        buffer.Write(" <<"u8);
+        buffer.Write("/MCID "u8);
+        WriteAscii(mcid.ToString(CultureInfo.InvariantCulture));
+        buffer.Write(">> BDC\n"u8);
+    }
+
+    // Writes "EMC\n" — ends a marked-content sequence opened by MarkedContentBegin.
+    internal void MarkedContentEnd() => buffer.Write("EMC\n"u8);
+
     private void WriteAscii(string s)
     {
         // ASCII range is identical to Latin-1 for printable chars; float/int strings

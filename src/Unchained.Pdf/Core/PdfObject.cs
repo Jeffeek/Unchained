@@ -233,6 +233,78 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     // ReSharper disable once MemberCanBeInternal
     public static readonly PdfName Dests = Get("Dests");
 
+    // ── Tagged PDF / PDF/UA names ─────────────────────────────────────────────
+
+    /// <summary>The <c>/MarkInfo</c> name (marked-content information dictionary).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName MarkInfo = Get("MarkInfo");
+
+    /// <summary>The <c>/Marked</c> name (flag inside <c>/MarkInfo</c>).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Marked = Get("Marked");
+
+    /// <summary>The <c>/StructTreeRoot</c> name (root of the logical structure tree).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName StructTreeRoot = Get("StructTreeRoot");
+
+    /// <summary>The <c>/StructElem</c> name (structure element type).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName StructElem = Get("StructElem");
+
+    /// <summary>The <c>/MCR</c> name (marked-content reference type).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    // ReSharper disable once InconsistentNaming
+    public static readonly PdfName MCR = Get("MCR");
+
+    /// <summary>The <c>/MCID</c> name (marked-content identifier integer).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    // ReSharper disable once InconsistentNaming
+    public static readonly PdfName MCID = Get("MCID");
+
+    /// <summary>The <c>/ParentTree</c> name (number tree mapping MCIDs to struct elements).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName ParentTree = Get("ParentTree");
+
+    /// <summary>The <c>/ParentTreeNextKey</c> name.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName ParentTreeNextKey = Get("ParentTreeNextKey");
+
+    /// <summary>The <c>/RoleMap</c> name (maps non-standard structure types to standard ones).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName RoleMap = Get("RoleMap");
+
+    /// <summary>The <c>/Lang</c> name (BCP 47 language tag).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Lang = Get("Lang");
+
+    /// <summary>The <c>/Alt</c> name (alternative text for figures).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Alt = Get("Alt");
+
+    /// <summary>The <c>/ActualText</c> name (actual Unicode text for content).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName ActualText = Get("ActualText");
+
+    /// <summary>The <c>/Pg</c> name (page reference inside a marked-content reference).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Pg = Get("Pg");
+
+    /// <summary>The <c>/K</c> name (kids / content items inside a structure element).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName K = Get("K");
+
+    /// <summary>The <c>/S</c> name (structure type inside a structure element).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName S = Get("S");
+
+    /// <summary>The <c>/P</c> name (parent reference inside a structure element).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName P = Get("P");
+
+    /// <summary>The <c>/Nums</c> name (number array inside a number tree node).</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static readonly PdfName Nums = Get("Nums");
+
     /// <summary>
     /// Returns <see langword="true"/> if <paramref name="other"/> is the same interned instance.
     /// Because all <see cref="PdfName"/> values are interned, reference equality is sufficient.

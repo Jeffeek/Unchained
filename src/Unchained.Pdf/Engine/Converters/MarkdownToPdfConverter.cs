@@ -13,6 +13,8 @@ namespace Unchained.Pdf.Engine.Converters;
 /// Converts Markdown text to a PDF document.
 /// Supports headings (h1–h6), paragraphs, bold, italic, inline code,
 /// fenced code blocks, unordered lists, ordered lists, and thematic breaks.
+/// When <see cref="MdLoadOptions.Tagged"/> is <see langword="true"/>, every block
+/// is wrapped in semantically appropriate BDC/EMC marked-content sequences.
 /// </summary>
 internal static class MarkdownToPdfConverter
 {
@@ -27,7 +29,7 @@ internal static class MarkdownToPdfConverter
         var pipeline = new MarkdownPipelineBuilder().Build();
         var mdDoc = Markdown.Parse(markdown, pipeline);
 
-        // Collect all runs to lay out: each run is (text, fontKey, fontSize, indent).
+        // Collect all runs to lay out: each run is (text, fontKey, fontSize, indent, structTag).
         var runs = new List<TextRun>();
         CollectRuns(mdDoc, options, runs);
 
@@ -35,15 +37,30 @@ internal static class MarkdownToPdfConverter
         var acc = new PdfPageAccumulator();
         var fontMap = BuildFontMap(acc, options);
 
-        var pages = Paginate(runs, options);
+        var pages = Paginate(runs, options).ToList();
+        var pageIndex = 0;
+        foreach (var page in pages)
+        {
+            if (options.Tagged)
+            {
+                var taggedItems = new List<TaggedContentItem>();
+                var content = BuildPageContentTagged(page, options, pageIndex, taggedItems);
+                // ReSharper disable once BadListLineBreaks
+                acc.AddPage(options.PageWidthPt, options.PageHeightPt, content, fontMap, taggedItems, options.Language);
+            }
+            else
+            {
+                var content = BuildPageContent(page, options);
+                acc.AddPage(options.PageWidthPt, options.PageHeightPt, content, fontMap);
+            }
 
-        foreach (var content in pages.Select(page => BuildPageContent(page, options)))
-            acc.AddPage(options.PageWidthPt, options.PageHeightPt, content, fontMap);
+            pageIndex++;
+        }
 
         return acc.Build();
     }
 
-    // ── Font map ─────────────────────────────────────────────────────────────
+    // ── Font map ──────────────────────────────────────────────────────────────
 
     private static Dictionary<string, Core.PdfIndirectReference> BuildFontMap(PdfPageAccumulator acc, MdLoadOptions opts)
     {
@@ -69,7 +86,8 @@ internal static class MarkdownToPdfConverter
         float fontSize,
         float indentPt,
         bool isBreak = false,
-        bool isRule = false
+        bool isRule = false,
+        string structTag = "P"
     )
     {
         internal string Text { get; } = text;
@@ -78,9 +96,15 @@ internal static class MarkdownToPdfConverter
         internal float IndentPt { get; } = indentPt;
 
         // ReSharper disable once MemberCanBePrivate.Local
-        internal bool IsBreak { get; } = isBreak;  // blank line between paragraphs
-        internal bool IsRule { get; } = isRule;     // horizontal rule
+        internal bool IsBreak { get; } = isBreak;
+        internal bool IsRule { get; } = isRule;
         internal bool IsEmptyLine => IsBreak && !IsRule;
+
+        /// <summary>
+        /// PDF structure type for this run when tagged output is enabled.
+        /// Standard values: "P", "H1"–"H6", "Code", "L", "LI", "LBody".
+        /// </summary>
+        internal string StructTag { get; } = structTag;
     }
 
     private static void CollectRuns(MarkdownDocument doc, MdLoadOptions opts, List<TextRun> runs)
@@ -103,21 +127,27 @@ internal static class MarkdownToPdfConverter
             {
                 var size = opts.HeadingFontSize(h.Level);
                 var text = ExtractInlineText(h.Inline);
-                runs.Add(new TextRun(text, KeyBold, size, indent));
-                runs.Add(new TextRun(string.Empty, KeyBody, opts.BodyFontSize * 0.4f, indent, isBreak: true));
+                var tag = $"H{h.Level}";
+                runs.Add(new TextRun(text, KeyBold, size, indent, structTag: tag));
+                // ReSharper disable once BadListLineBreaks
+                runs.Add(new TextRun(string.Empty, KeyBody, opts.BodyFontSize * 0.4f, indent, isBreak: true, structTag: tag));
                 break;
             }
             case ParagraphBlock p:
             {
                 var segments = ExtractInlineSegments(p.Inline, opts);
-                AppendWrappedSegments(segments, runs, opts, indent);
-                runs.Add(new TextRun(string.Empty, KeyBody, opts.ParagraphSpacingPt, indent, isBreak: true));
+                AppendWrappedSegments(segments, runs, opts, indent, structTag: "P");
+                // ReSharper disable once BadListLineBreaks
+                runs.Add(new TextRun(string.Empty, KeyBody, opts.ParagraphSpacingPt, indent, isBreak: true, structTag: "P"));
                 break;
             }
             case FencedCodeBlock fc:
             {
-                runs.AddRange(fc.Lines.Lines.Select(static l => l.Slice.ToString()).Select(line => new TextRun(line, KeyMono, opts.CodeFontSize, indent + 12f)));
-                runs.Add(new TextRun(string.Empty, KeyBody, opts.ParagraphSpacingPt, indent, isBreak: true));
+                runs.AddRange(fc.Lines.Lines
+                    .Select(static l => l.Slice.ToString())
+                    .Select(line => new TextRun(line, KeyMono, opts.CodeFontSize, indent + 12f, structTag: "Code")));
+                // ReSharper disable once BadListLineBreaks
+                runs.Add(new TextRun(string.Empty, KeyBody, opts.ParagraphSpacingPt, indent, isBreak: true, structTag: "Code"));
                 break;
             }
             case ListBlock list:
@@ -129,32 +159,34 @@ internal static class MarkdownToPdfConverter
                     var bulletWidth = TxtToPdfConverter.MeasureText(bullet, opts.BodyFontName, opts.BodyFontSize);
                     var itemIndent = indent + bulletWidth + 4f;
 
-                    // Emit bullet on first sub-block
                     var firstBlock = item.FirstOrDefault();
                     if (firstBlock is ParagraphBlock fp)
                     {
                         var segments = ExtractInlineSegments(fp.Inline, opts);
                         if (segments.Count > 0)
                             segments[0] = (bullet + segments[0].Text, segments[0].FontKey, segments[0].FontSize);
-                        AppendWrappedSegments(segments, runs, opts, indent, continuationIndent: itemIndent);
+                        // ReSharper disable once BadListLineBreaks
+                        AppendWrappedSegments(segments, runs, opts, indent, continuationIndent: itemIndent, structTag: "LBody");
                     }
                     else
-                        runs.Add(new TextRun(bullet, KeyBody, opts.BodyFontSize, indent));
+                        runs.Add(new TextRun(bullet, KeyBody, opts.BodyFontSize, indent, structTag: "LI"));
 
-                    // Remaining sub-blocks
                     foreach (var sub in item.Skip(1))
                         CollectBlock(sub, opts, runs, itemIndent);
 
                     idx++;
                 }
 
-                runs.Add(new TextRun(string.Empty, KeyBody, opts.ParagraphSpacingPt * 0.5f, indent, isBreak: true));
+                // ReSharper disable once BadListLineBreaks
+                runs.Add(new TextRun(string.Empty, KeyBody, opts.ParagraphSpacingPt * 0.5f, indent, isBreak: true, structTag: "L"));
                 break;
             }
             case ThematicBreakBlock:
             {
-                runs.Add(new TextRun(string.Empty, KeyBody, opts.BodyFontSize, indent, isRule: true));
-                runs.Add(new TextRun(string.Empty, KeyBody, opts.ParagraphSpacingPt * 0.5f, indent, isBreak: true));
+                // ReSharper disable BadListLineBreaks
+                runs.Add(new TextRun(string.Empty, KeyBody, opts.BodyFontSize, indent, isRule: true, structTag: "P"));
+                runs.Add(new TextRun(string.Empty, KeyBody, opts.ParagraphSpacingPt * 0.5f, indent, isBreak: true, structTag: "P"));
+                // ReSharper restore BadListLineBreaks
                 break;
             }
             case QuoteBlock qb:
@@ -171,8 +203,7 @@ internal static class MarkdownToPdfConverter
 
     private static string ExtractInlineText(ContainerInline? container)
     {
-        if (container is null)
-            return string.Empty;
+        if (container is null) return string.Empty;
 
         var sb = new StringBuilder();
         foreach (var inline in container)
@@ -189,11 +220,13 @@ internal static class MarkdownToPdfConverter
         return sb.ToString();
     }
 
-    private static List<(string Text, string FontKey, float FontSize)> ExtractInlineSegments(ContainerInline? container, MdLoadOptions opts)
+    private static List<(string Text, string FontKey, float FontSize)> ExtractInlineSegments(
+        ContainerInline? container,
+        MdLoadOptions opts
+    )
     {
         var list = new List<(string, string, float)>();
         AppendInlineSegments(container, opts, list, KeyBody, opts.BodyFontSize);
-
         return list;
     }
 
@@ -205,8 +238,7 @@ internal static class MarkdownToPdfConverter
         float fontSize
     )
     {
-        if (container is null)
-            return;
+        if (container is null) return;
 
         foreach (var inline in container)
         {
@@ -244,7 +276,8 @@ internal static class MarkdownToPdfConverter
         ICollection<TextRun> runs,
         MdLoadOptions opts,
         float indent,
-        float continuationIndent = -1f
+        float continuationIndent = -1f,
+        string structTag = "P"
     )
     {
         if (continuationIndent < 0) continuationIndent = indent;
@@ -266,8 +299,7 @@ internal static class MarkdownToPdfConverter
 
                 if (lineWidth > 0 && lineWidth + spaceWidth + ww > effective)
                 {
-                    // Flush current line
-                    FlushLine(lineRuns, runs, isFirst ? indent : continuationIndent);
+                    FlushLine(lineRuns, runs, isFirst ? indent : continuationIndent, structTag);
                     lineRuns.Clear();
                     lineWidth = 0f;
                     isFirst = false;
@@ -285,12 +317,16 @@ internal static class MarkdownToPdfConverter
         }
 
         if (lineRuns.Count > 0)
-            FlushLine(lineRuns, runs, isFirst ? indent : continuationIndent);
+            FlushLine(lineRuns, runs, isFirst ? indent : continuationIndent, structTag);
     }
 
-    private static void FlushLine(List<(string Text, string FontKey, float FontSize)> lineRuns, ICollection<TextRun> runs, float indent)
+    private static void FlushLine(
+        List<(string Text, string FontKey, float FontSize)> lineRuns,
+        ICollection<TextRun> runs,
+        float indent,
+        string structTag
+    )
     {
-        // Group consecutive segments with the same font into single runs.
         string? lastKey = null;
         var lastSize = 0f;
         var sb = new StringBuilder();
@@ -298,7 +334,7 @@ internal static class MarkdownToPdfConverter
         {
             if (k != lastKey || Math.Abs(s - lastSize) > 0.01f)
             {
-                if (sb.Length > 0) runs.Add(new TextRun(sb.ToString(), lastKey!, lastSize, indent));
+                if (sb.Length > 0) runs.Add(new TextRun(sb.ToString(), lastKey!, lastSize, indent, structTag: structTag));
                 sb.Clear().Append(t);
                 lastKey = k;
                 lastSize = s;
@@ -308,7 +344,7 @@ internal static class MarkdownToPdfConverter
         }
 
         if (sb.Length > 0 && lastKey is not null)
-            runs.Add(new TextRun(sb.ToString(), lastKey, lastSize, indent));
+            runs.Add(new TextRun(sb.ToString(), lastKey, lastSize, indent, structTag: structTag));
     }
 
     // ── Pagination ────────────────────────────────────────────────────────────
@@ -339,15 +375,13 @@ internal static class MarkdownToPdfConverter
             usedY += runH;
         }
 
-        if (current.Count > 0)
-            pages.Add(current);
-        if (pages.Count == 0)
-            pages.Add([]);
+        if (current.Count > 0) pages.Add(current);
+        if (pages.Count == 0) pages.Add([]);
 
         return pages;
     }
 
-    // ── Content stream builder ────────────────────────────────────────────────
+    // ── Content stream builders ───────────────────────────────────────────────
 
     private static byte[] BuildPageContent(List<TextRun> runs, MdLoadOptions opts)
     {
@@ -408,7 +442,87 @@ internal static class MarkdownToPdfConverter
         }
 
         w.Op("ET"u8);
+        return buf.WrittenMemory.ToArray();
+    }
 
+    private static byte[] BuildPageContentTagged(
+        List<TextRun> runs,
+        MdLoadOptions opts,
+        int pageIndex,
+        ICollection<TaggedContentItem> taggedItems
+    )
+    {
+        var buf = new ArrayBufferWriter<byte>(1024);
+        var w = new ContentStreamWriter(buf);
+
+        var x = opts.MarginPt;
+        var y = opts.PageHeightPt - opts.MarginPt;
+        var curFont = string.Empty;
+        var curSize = 0f;
+        var mcid = 0;
+
+        w.Op("BT"u8);
+
+        foreach (var run in runs)
+        {
+            if (run.IsRule)
+            {
+                w.Op("ET"u8);
+                // Rules are artifacts — not part of the logical structure.
+                w.Op("/Artifact BMC"u8);
+                y -= run.FontSize * 0.5f;
+                w.Float(opts.MarginPt);
+                w.Float(y);
+                w.Op("m"u8);
+                w.Float(opts.PageWidthPt - opts.MarginPt);
+                w.Float(y);
+                w.Op("l"u8);
+                w.Float(0.5f);
+                w.Op("w"u8);
+                w.Op("S"u8);
+                y -= (run.FontSize * 0.5f) + 2f;
+                w.Op("EMC"u8);
+                w.Op("BT"u8);
+                curFont = string.Empty;
+                continue;
+            }
+
+            if (run.IsEmptyLine)
+            {
+                y -= run.FontSize;
+                continue;
+            }
+
+            var lineHeight = run.FontSize * opts.LineSpacing;
+            y -= lineHeight;
+
+            w.Op("ET"u8);
+            w.MarkedContentBegin(run.StructTag, mcid);
+            taggedItems.Add(new TaggedContentItem(run.StructTag, mcid, pageIndex));
+            mcid++;
+            w.Op("BT"u8);
+
+            if (run.FontKey != curFont || Math.Abs(run.FontSize - curSize) > 0.01f)
+            {
+                w.Name(run.FontKey);
+                w.Float(run.FontSize);
+                w.Op("Tf"u8);
+                curFont = run.FontKey;
+                curSize = run.FontSize;
+            }
+
+            w.Float(x + run.IndentPt);
+            w.Float(y);
+            w.Op("Td"u8);
+            w.LiteralString(run.Text);
+            w.Op("Tj"u8);
+
+            w.Op("ET"u8);
+            w.MarkedContentEnd();
+            w.Op("BT"u8);
+        }
+
+        w.Op("ET"u8);
         return buf.WrittenMemory.ToArray();
     }
 }

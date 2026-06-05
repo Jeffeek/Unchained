@@ -12,6 +12,16 @@ namespace Unchained.Pdf.Models;
 /// <param name="MarginPt">Uniform page margin in points (default 72 — 1 inch).</param>
 /// <param name="PageWidthPt">Page width in points (default 595 — ISO A4).</param>
 /// <param name="PageHeightPt">Page height in points (default 842 — ISO A4).</param>
+/// <param name="Tagged">
+/// When <see langword="true"/>, the produced PDF includes a tagged structure tree
+/// (<c>/MarkInfo /Marked true</c>, <c>/StructTreeRoot</c>) with semantic element types
+/// (H1–H6, P, Code, L, LI, LBody) so that assistive technologies can navigate the document.
+/// </param>
+/// <param name="Language">
+/// BCP 47 language tag written to the document catalog's <c>/Lang</c> entry
+/// (e.g. <c>"en-US"</c>). Required for PDF/UA conformance when
+/// <paramref name="Tagged"/> is <see langword="true"/>.
+/// </param>
 public sealed record MdLoadOptions(
     string BodyFontName = "Helvetica",
     float BodyFontSize = 11f,
@@ -21,7 +31,9 @@ public sealed record MdLoadOptions(
     float ParagraphSpacingPt = 8f,
     float MarginPt = 72f,
     float PageWidthPt = 595f,
-    float PageHeightPt = 842f
+    float PageHeightPt = 842f,
+    bool Tagged = false,
+    string? Language = null
 )
 {
     /// <summary>Default A4 settings.</summary>

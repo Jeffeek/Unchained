@@ -15,6 +15,11 @@ namespace Unchained.Pdf.Engine.Converters;
 /// Coordinate system: SVG uses top-left origin (Y↓); converted to PDF bottom-left (Y↑)
 /// using a <c>cm</c> transform that flips and scales the Y axis.
 /// </para>
+/// <para>
+/// When <see cref="SvgLoadOptions.Tagged"/> is <see langword="true"/>, the entire SVG
+/// content is wrapped in a <c>/Figure</c> marked-content sequence with an <c>/Alt</c>
+/// entry taken from <see cref="SvgLoadOptions.AltText"/>.
+/// </para>
 /// </summary>
 internal static class SvgToPdfConverter
 {
@@ -47,6 +52,19 @@ internal static class SvgToPdfConverter
         var buf = new ArrayBufferWriter<byte>(4096);
         var w = new ContentStreamWriter(buf);
 
+        List<TaggedContentItem>? taggedItems = null;
+
+        if (options.Tagged)
+        {
+            taggedItems = [];
+            // Wrap entire SVG in a /Figure BDC block (MCID 0, page 0).
+            w.MarkedContentBegin("Figure", 0);
+            taggedItems.Add(new TaggedContentItem("Figure", 0, 0)
+            {
+                AltText = string.IsNullOrEmpty(options.AltText) ? null : options.AltText
+            });
+        }
+
         // PDF CTM for SVG: flip Y, scale, and translate.
         // cm: [ scaleX 0  0  -scaleY  offsetX  (offsetY + svgH*scaleY) ]
         w.Float(scaleX);
@@ -59,10 +77,18 @@ internal static class SvgToPdfConverter
 
         WalkElement(root, w, root.Name.Namespace);
 
+        if (options.Tagged)
+            w.MarkedContentEnd();
+
         var acc = new PdfPageAccumulator();
         var fontRef = acc.AddFont("Helvetica");
         var fontMap = new Dictionary<string, Core.PdfIndirectReference> { ["F1"] = fontRef };
-        acc.AddPage(options.PageWidthPt, options.PageHeightPt, buf.WrittenMemory.Span, fontMap);
+
+        if (options.Tagged && taggedItems is not null)
+            // ReSharper disable once BadListLineBreaks
+            acc.AddPage(options.PageWidthPt, options.PageHeightPt, buf.WrittenMemory.Span, fontMap, taggedItems, options.Language);
+        else
+            acc.AddPage(options.PageWidthPt, options.PageHeightPt, buf.WrittenMemory.Span, fontMap);
 
         return acc.Build();
     }
@@ -142,7 +168,6 @@ internal static class SvgToPdfConverter
         var cy = F(el, "cy");
         var rx = F(el, "rx");
         var ry = F(el, "ry");
-
         if (rx <= 0 || ry <= 0)
             return;
 
@@ -228,14 +253,12 @@ internal static class SvgToPdfConverter
             EmitPaint(el, w);
         else
             w.Op("S"u8);
-
         w.Op("Q"u8);
     }
 
     private static void EmitPath(XElement el, ContentStreamWriter w)
     {
         var d = el.Attribute("d")?.Value;
-
         if (string.IsNullOrWhiteSpace(d))
             return;
 
@@ -249,8 +272,7 @@ internal static class SvgToPdfConverter
     private static void EmitText(XElement el, ContentStreamWriter w)
     {
         var text = el.Value;
-        if (string.IsNullOrWhiteSpace(text))
-            return;
+        if (string.IsNullOrWhiteSpace(text)) return;
 
         var x = F(el, "x");
         var y = F(el, "y");
@@ -277,7 +299,6 @@ internal static class SvgToPdfConverter
     {
         ApplyFill(el, w);
         var sw = el.Attribute("stroke-width")?.Value;
-
         if (sw is null || !float.TryParse(sw, NumberStyles.Float, CultureInfo.InvariantCulture, out var swf))
             return;
 
@@ -314,12 +335,8 @@ internal static class SvgToPdfConverter
 
         switch (hasFill)
         {
-            case true when hasStroke:
-                w.Op("B"u8);
-            break;
-            case true:
-                w.Op("f"u8);
-            break;
+            case true when hasStroke: w.Op("B"u8); break;
+            case true: w.Op("f"u8); break;
             default:
             {
                 w.Op(hasStroke ? "S"u8 : "n"u8);
@@ -397,7 +414,7 @@ internal static class SvgToPdfConverter
                     w.Float(cx);
                     w.Float(cy);
                     w.Op("m"u8);
-                    prevCmd = abs ? 'L' : 'l'; // subsequent coords are line to
+                    prevCmd = abs ? 'L' : 'l';
                     break;
                 }
                 case 'L':
@@ -458,6 +475,7 @@ internal static class SvgToPdfConverter
                     w.Op("c"u8);
                     cx = x;
                     cy = y;
+
                     break;
                 }
                 case 'Z':
@@ -494,10 +512,11 @@ internal static class SvgToPdfConverter
             }
 
             var j = i;
-            if (d[j] == '-' || d[j] == '+') j++;
-            while (j < d.Length && (char.IsDigit(d[j]) || d[j] == '.' || d[j] == 'e' || d[j] == 'E' || (j > i && (d[j] == '-' || d[j] == '+'))))
+            if (d[j] == '-' || d[j] == '+')
                 j++;
 
+            while (j < d.Length && (char.IsDigit(d[j]) || d[j] == '.' || d[j] == 'e' || d[j] == 'E' || (j > i && (d[j] == '-' || d[j] == '+'))))
+                j++;
             result.Add(d[i..j]);
             i = j;
         }
@@ -561,15 +580,13 @@ internal static class SvgToPdfConverter
         var r = System.Convert.ToInt32(color[1..3], 16) / 255f;
         var g = System.Convert.ToInt32(color[3..5], 16) / 255f;
         var b = System.Convert.ToInt32(color[5..7], 16) / 255f;
-
         return (r, g, b);
     }
 
     private static List<(float x, float y)> ParsePoints(string? points)
     {
         var result = new List<(float, float)>();
-        if (points is null)
-            return result;
+        if (points is null) return result;
 
         var nums = points.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
         for (var i = 0; i + 1 < nums.Length; i += 2)

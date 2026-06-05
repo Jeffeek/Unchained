@@ -9,6 +9,8 @@ namespace Unchained.Pdf.Engine.Converters;
 
 /// <summary>
 /// Converts plain text to a PDF document with automatic word-wrap and pagination.
+/// When <see cref="TxtLoadOptions.Tagged"/> is <see langword="true"/>, each text line
+/// is wrapped in a <c>/P</c> marked-content sequence for accessibility.
 /// </summary>
 internal static class TxtToPdfConverter
 {
@@ -28,11 +30,25 @@ internal static class TxtToPdfConverter
         // Ensure at least one page even for empty input.
         if (allLines.Count == 0) allLines.Add(string.Empty);
 
+        var pageIndex = 0;
         for (var pageStart = 0; pageStart < allLines.Count; pageStart += linesPerPage)
         {
             var pageLines = allLines.Skip(pageStart).Take(linesPerPage).ToList();
-            var content = BuildPageContent(pageLines, options);
-            acc.AddPage(options.PageWidthPt, options.PageHeightPt, content, fontMap);
+
+            if (options.Tagged)
+            {
+                var taggedItems = new List<TaggedContentItem>();
+                var content = BuildPageContentTagged(pageLines, options, pageIndex, taggedItems);
+                // ReSharper disable once BadListLineBreaks
+                acc.AddPage(options.PageWidthPt, options.PageHeightPt, content, fontMap, taggedItems, options.Language);
+            }
+            else
+            {
+                var content = BuildPageContent(pageLines, options);
+                acc.AddPage(options.PageWidthPt, options.PageHeightPt, content, fontMap);
+            }
+
+            pageIndex++;
         }
 
         return acc.Build();
@@ -112,14 +128,67 @@ internal static class TxtToPdfConverter
         var first = true;
         foreach (var line in lines)
         {
-            if (!first)
-                w.Op("T*"u8);
+            if (!first) w.Op("T*"u8);
             w.LiteralString(line);
             w.Op("Tj"u8);
             first = false;
         }
 
         w.Op("ET"u8);
+
+        return buf.WrittenMemory.ToArray();
+    }
+
+    /// <summary>
+    /// Builds a page content stream with BDC/EMC wrappers around each line.
+    /// Each non-empty line is tagged as a /P (paragraph) structure element.
+    /// Empty lines are tagged as /Artifact to exclude them from the structure tree.
+    /// </summary>
+    private static byte[] BuildPageContentTagged(
+        IReadOnlyList<string> lines,
+        TxtLoadOptions options,
+        int pageIndex,
+        ICollection<TaggedContentItem> taggedItems
+    )
+    {
+        var buf = new ArrayBufferWriter<byte>(256 + (lines.Count * 120));
+        var w = new ContentStreamWriter(buf);
+
+        var leading = options.FontSize * options.LineSpacing;
+        var startX = options.MarginPt;
+        var startY = options.PageHeightPt - options.MarginPt - options.FontSize;
+        var mcid = 0;
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            var y = startY - (i * leading);
+
+            if (string.IsNullOrEmpty(line))
+            {
+                // Empty lines are artifacts — no structure element, no MCID.
+                w.Op("/Artifact BMC"u8);
+                w.Op("EMC"u8);
+                continue;
+            }
+
+            w.MarkedContentBegin("P", mcid);
+            taggedItems.Add(new TaggedContentItem("P", mcid, pageIndex));
+            mcid++;
+
+            w.Op("BT"u8);
+            w.Name("F1");
+            w.Float(options.FontSize);
+            w.Op("Tf"u8);
+            w.Float(startX);
+            w.Float(y);
+            w.Op("Td"u8);
+            w.LiteralString(line);
+            w.Op("Tj"u8);
+            w.Op("ET"u8);
+
+            w.MarkedContentEnd();
+        }
 
         return buf.WrittenMemory.ToArray();
     }

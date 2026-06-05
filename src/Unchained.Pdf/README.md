@@ -1,6 +1,6 @@
 # Unchained.Pdf
 
-MIT-licensed PDF engine for .NET. Load, save, extract text, generate tables, merge documents, add annotations, fill forms, sign, encrypt, validate PDF/A, and import from Markdown, plain text, or SVG — all in pure managed code, no native dependencies.
+MIT-licensed PDF engine for .NET. Load, save, extract text, generate tables, merge documents, add annotations, fill forms, sign, encrypt, validate PDF/A, validate PDF/UA, produce linearized (web-optimized) output, generate tagged accessible PDFs, and import from Markdown, plain text, or SVG — all in pure managed code, no native dependencies.
 
 **Targets:** `net8.0` · `net9.0` · `net10.0`  
 **License:** MIT
@@ -164,6 +164,62 @@ foreach (var violation in result.Errors)
 // Convert
 using var output = new MemoryStream();
 await processor.ConvertToPdfAAsync(doc, output, PdfAProfile.PdfA1b);
+```
+
+### PDF/UA validation
+
+Validates against ISO 14289-1 (PDF/UA-1). Checks tagged-PDF marker, document language,
+structure tree root, parent tree, figure alt text, heading level sequence, table and list
+structure, untagged content, annotation accessible names, action restrictions, and XMP
+`pdfuaid` metadata.
+
+```csharp
+var result = await processor.ValidatePdfUAAsync(pdfBytes);
+Console.WriteLine(result.IsConformant);
+foreach (var v in result.Violations)
+    Console.WriteLine($"[{v.RuleId}] {v.Severity}: {v.Description}");
+```
+
+### Linearization (web-optimized output)
+
+Produces a linearized PDF (ISO 32000-1 Annex F) so that PDF readers can render the first
+page before the full file downloads. Includes a hint stream, two xref sections, and the
+linearization parameter dictionary in the first 1024 bytes.
+
+```csharp
+// Via SaveOptions
+await processor.SaveAsync(doc, "fast.pdf", new SaveOptions(Linearize: true));
+
+// Via preset
+await processor.SaveAsync(doc, "fast.pdf", SaveOptions.WebOptimized);
+```
+
+### Tagged PDF (accessibility)
+
+Produces tagged PDFs with a full ISO 32000-1 §14.7 structure tree when converting from
+text, Markdown, or SVG. Tagged output passes `ValidatePdfUAAsync` §7.2, §7.4, and §7.5
+checks. Set `Tagged: true` on the load options and supply a BCP 47 language tag.
+
+```csharp
+// Plain text → tagged PDF
+await using var txt = await processor.LoadFromTxtAsync(
+    "Accessible content",
+    new TxtLoadOptions(Tagged: true, Language: "en-US"));
+
+// Markdown → tagged PDF (H1–H6, P, Code, L/LI/LBody)
+await using var md = await processor.LoadFromMarkdownAsync(
+    "# Title\n\nParagraph text.\n\n- Item 1\n- Item 2",
+    new MdLoadOptions(Tagged: true, Language: "en-US"));
+
+// SVG → tagged PDF (/Figure with /Alt text)
+await using var svg = await processor.LoadFromSvgAsync(
+    svgString,
+    new SvgLoadOptions(Tagged: true, Language: "en-US", AltText: "Chart showing sales data"));
+
+// Validate the result
+using var ms = new MemoryStream();
+await processor.SaveAsync(md, ms);
+var uaResult = await processor.ValidatePdfUAAsync(ms.ToArray());
 ```
 
 ### Format imports
