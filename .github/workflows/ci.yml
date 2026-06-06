@@ -61,7 +61,7 @@ jobs:
       - name: Test with coverage
         timeout-minutes: 30
         run: >
-          dotnet test tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj
+          dotnet test
           -c Release --no-build
           --collect:"XPlat Code Coverage"
           --logger "trx;LogFileName=test-results.trx"
