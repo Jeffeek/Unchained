@@ -1,0 +1,444 @@
+@inject RenderingService Renderer
+@inject FileExportService Exporter
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.CompareArrows" Class="mr-2" Style="vertical-align:middle;" />
+            Export Comparison Images
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        @if (_exporting)
+        {
+            <!-- Progress view -->
+            <div style="min-width:400px;">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    @_progressMessage
+                </MudText>
+                <MudProgressLinear Value="_progressPercent" Color="Color.Primary" Rounded="true" Class="mb-1" />
+                <MudText Typo="Typo.caption" Style="opacity:.6;">
+                    @_progressDetail
+                </MudText>
+
+                @if (_errors.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                        @_errors.Count page(s) failed to render — skipped.
+                    </MudAlert>
+                }
+            </div>
+        }
+        else
+        {
+            <MudStack Style="min-width:420px;" Spacing="4">
+                <!-- Page selection -->
+                <div>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">Pages</MudText>
+                    <MudRadioGroup @bind-Value="_pageMode" T="PageMode">
+                        <MudRadio Value="PageMode.Current" Color="Color.Primary">
+                            Current page (@CurrentPage)
+                        </MudRadio>
+                        <MudRadio Value="PageMode.All" Color="Color.Primary">
+                            All pages (@PageCount total)
+                        </MudRadio>
+                        <MudRadio Value="PageMode.Range" Color="Color.Primary">Custom range</MudRadio>
+                    </MudRadioGroup>
+                    @if (_pageMode == PageMode.Range)
+                    {
+                        <MudTextField @bind-Value="_rangeText"
+                                      Label="Page range"
+                                      HelperText="Examples: 1,3,5-8  or  2-5  or  1,4,7"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Class="mt-1"
+                                      Error="@(_rangeError is not null)"
+                                      ErrorText="@_rangeError" />
+                    }
+                </div>
+
+                <!-- Resolution -->
+                <div>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">Resolution</MudText>
+                    <MudSelect T="int" @bind-Value="_dpi"
+                               Label="DPI (both renderers)"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Style="width:160px;">
+                        <MudSelectItem Value="72">72 DPI — fast</MudSelectItem>
+                        <MudSelectItem Value="96">96 DPI — screen</MudSelectItem>
+                        <MudSelectItem Value="150">150 DPI — balanced</MudSelectItem>
+                        <MudSelectItem Value="300">300 DPI — print quality</MudSelectItem>
+                    </MudSelect>
+                </div>
+
+                <!-- Output format -->
+                <div>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">Output</MudText>
+                    <MudRadioGroup @bind-Value="_outputMode" T="OutputMode">
+                        @if (_folderSaveSupported)
+                        {
+                            <MudRadio Value="OutputMode.Folder" Color="Color.Primary">
+                                Save to folder
+                                <MudText Typo="Typo.caption" Style="opacity:.6;display:block;">
+                                    You'll choose a folder; files are written directly (Chrome / Edge only)
+                                </MudText>
+                            </MudRadio>
+                        }
+                        <MudRadio Value="OutputMode.Zip" Color="Color.Primary">
+                            Download as ZIP
+                            <MudText Typo="Typo.caption" Style="opacity:.6;display:block;">
+                                Single ZIP containing unchained/ and pdfjs/ subfolders
+                            </MudText>
+                        </MudRadio>
+                    </MudRadioGroup>
+                </div>
+
+                <!-- File naming preview -->
+                <MudPaper Elevation="0" Class="pa-3" Style="background:#f5f5f5;border-radius:6px;">
+                    <MudText Typo="Typo.caption" Style="font-family:monospace;line-height:1.8;">
+                        @_fileNamePreview
+                    </MudText>
+                </MudPaper>
+            </MudStack>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        @if (_exporting)
+        {
+            <MudButton OnClick="Cancel" Color="Color.Error" Variant="Variant.Text">Cancel</MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="Close" Variant="Variant.Text">Cancel</MudButton>
+            <MudButton OnClick="StartExport"
+                       Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       Disabled="@(_rangeError is not null && _pageMode == PageMode.Range)"
+                       StartIcon="@Icons.Material.Outlined.FileDownload">
+                Export
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Unchained.Pdf.Abstractions.IPdfDocument Document { get; set; } = default!;
+    [Parameter] public byte[] DocumentBytes { get; set; } = default!;
+    [Parameter] public string FileName { get; set; } = "document";
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageCount { get; set; } = 1;
+    [Parameter] public string? ExistingBlobUrl { get; set; }
+
+    private enum PageMode { Current, All, Range }
+    private enum OutputMode { Folder, Zip }
+
+    private PageMode _pageMode = PageMode.Current;
+    private OutputMode _outputMode = OutputMode.Zip;
+    private string _rangeText = string.Empty;
+    private string? _rangeError;
+    private int _dpi = 96;
+    private bool _folderSaveSupported;
+
+    private bool _exporting;
+    private string _progressMessage = string.Empty;
+    private string _progressDetail = string.Empty;
+    private double _progressPercent;
+    private readonly List<string> _errors = [];
+    private CancellationTokenSource? _cts;
+
+    private string _fileNamePreview => BuildFileNamePreview();
+
+    // JS interop is only available after the interactive SignalR circuit is established,
+    // so folder-save detection must run in OnAfterRenderAsync, not OnInitializedAsync.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _folderSaveSupported = await JS.InvokeAsync<bool>("unchainedStudio.isFolderSaveSupported");
+        }
+        catch
+        {
+            _folderSaveSupported = false;
+        }
+        if (!_folderSaveSupported)
+            _outputMode = OutputMode.Zip;
+        StateHasChanged();
+    }
+
+    private string BuildFileNamePreview()
+    {
+        var baseName = Path.GetFileNameWithoutExtension(FileName);
+        return _outputMode == OutputMode.Folder
+            ? $"[chosen folder]/\n  {baseName}_page_001_unchained_{_dpi}dpi.png\n  {baseName}_page_001_pdfjs_{_dpi}dpi.png\n  …"
+            : $"{baseName}_comparison_{_dpi}dpi.zip\n  └ unchained/page_001.png\n  └ pdfjs/page_001.png\n  └ …";
+    }
+
+    private void Close() => MudDialog.Cancel();
+
+    private void Cancel()
+    {
+        _cts?.Cancel();
+    }
+
+    private async Task StartExport()
+    {
+        var pages = ResolvePages();
+        if (pages is null) return;
+
+        _exporting = true;
+        _errors.Clear();
+        _progressPercent = 0;
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
+
+        // Ensure we have a blob URL for PDF.js (reuse if already open in compare mode)
+        string? blobUrl = ExistingBlobUrl;
+        bool ownedBlob = false;
+        if (blobUrl is null)
+        {
+            _progressMessage = "Preparing PDF for browser rendering…";
+            StateHasChanged();
+            blobUrl = await JS.InvokeAsync<string>(
+                "unchainedStudio.createPdfBlobUrl",
+                Convert.ToBase64String(DocumentBytes));
+            ownedBlob = true;
+        }
+
+        try
+        {
+            var baseName = Path.GetFileNameWithoutExtension(FileName);
+            var collected = new List<(string Name, byte[] Bytes)>();
+            int done = 0;
+
+            foreach (var page in pages)
+            {
+                if (ct.IsCancellationRequested) break;
+
+                _progressMessage = $"Rendering page {page} of {pages.Count}…";
+                _progressDetail = string.Empty;
+                StateHasChanged();
+
+                // ── Unchained render (server-side, 30 s cap) ───────────────
+                byte[]? unchainedBytes = null;
+                using (var uts = CancellationTokenSource.CreateLinkedTokenSource(ct))
+                {
+                    uts.CancelAfter(TimeSpan.FromSeconds(30));
+                    try
+                    {
+                        _progressDetail = "Unchained (FreeType2)…";
+                        StateHasChanged();
+                        unchainedBytes = await Renderer.RenderPdfPageAsync(Document, page, _dpi, uts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _errors.Add($"p.{page} Unchained: timeout (>30 s)");
+                    }
+                    catch (Exception ex)
+                    {
+                        _errors.Add($"p.{page} Unchained: {ex.Message}");
+                    }
+                }
+
+                // ── PDF.js render (browser-side, 25 s cap) ──────────────────
+                string? pdfjsBase64 = null;
+                using (var jts = CancellationTokenSource.CreateLinkedTokenSource(ct))
+                {
+                    jts.CancelAfter(TimeSpan.FromSeconds(25));
+                    try
+                    {
+                        _progressDetail = "PDF.js (browser native)…";
+                        StateHasChanged();
+                        pdfjsBase64 = await JS.InvokeAsync<string>(
+                            "unchainedStudio.renderPageWithPdfJs",
+                            jts.Token,
+                            blobUrl, page, _dpi, 24000); // pass JS-side timeout (ms)
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _errors.Add($"p.{page} PDF.js: timeout (>25 s)");
+                    }
+                    catch (Exception ex)
+                    {
+                        _errors.Add($"p.{page} PDF.js: {ex.Message}");
+                    }
+                }
+
+                // Collect results
+                var pageTag = page.ToString("D3");
+                if (unchainedBytes is not null)
+                    collected.Add(($"unchained/page_{pageTag}.png", unchainedBytes));
+                if (pdfjsBase64 is not null)
+                    collected.Add(($"pdfjs/page_{pageTag}.png", Convert.FromBase64String(pdfjsBase64)));
+
+                done++;
+                _progressPercent = done * 100.0 / pages.Count;
+                StateHasChanged();
+            }
+
+            if (ct.IsCancellationRequested)
+            {
+                _progressMessage = "Export cancelled.";
+                StateHasChanged();
+                await Task.Delay(1200);
+                MudDialog.Cancel();
+                return;
+            }
+
+            if (collected.Count == 0)
+            {
+                Snackbar.Add("Nothing was exported — all pages failed to render.", Severity.Warning);
+                _exporting = false;
+                StateHasChanged();
+                return;
+            }
+
+            // ── Save ────────────────────────────────────────────────────────
+            _progressMessage = "Saving files…";
+            _progressDetail = string.Empty;
+            StateHasChanged();
+
+            if (_outputMode == OutputMode.Folder && _folderSaveSupported)
+            {
+                await SaveToFolder(collected, baseName, ct);
+            }
+            else
+            {
+                await SaveAsZip(collected, baseName);
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        finally
+        {
+            if (ownedBlob && blobUrl is not null)
+                await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", blobUrl);
+            _cts?.Dispose();
+            _cts = null;
+        }
+    }
+
+    private async Task SaveToFolder(
+        List<(string Name, byte[] Bytes)> files,
+        string baseName,
+        CancellationToken ct)
+    {
+        // Build the flat list the JS side expects: [{name, base64}]
+        // We group by subfolder (unchained/ pdfjs/) but showDirectoryPicker
+        // doesn't create sub-directories automatically — so we flatten the
+        // name with a prefix and use underscores instead of slashes.
+        var flat = files.Select(f => new
+        {
+            name = f.Name.Replace('/', '_'),
+            base64 = Convert.ToBase64String(f.Bytes)
+        }).ToArray();
+
+        try
+        {
+            await JS.InvokeVoidAsync("unchainedStudio.saveFilesToFolder", ct, flat);
+            Snackbar.Add($"Saved {files.Count} files to folder.", Severity.Success);
+        }
+        catch (JSException ex) when (ex.Message.Contains("AbortError") || ex.Message.Contains("cancelled"))
+        {
+            Snackbar.Add("Folder save cancelled.", Severity.Info);
+        }
+    }
+
+    private async Task SaveAsZip(List<(string Name, byte[] Bytes)> files, string baseName)
+    {
+        var zipBytes = BuildZip(files);
+        await Exporter.TriggerDownloadAsync(
+            zipBytes,
+            $"{baseName}_comparison_{_dpi}dpi.zip",
+            "application/zip");
+        Snackbar.Add($"ZIP with {files.Count} files downloaded.", Severity.Success);
+    }
+
+    private static byte[] BuildZip(List<(string Name, byte[] Bytes)> files)
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(
+                   ms,
+                   System.IO.Compression.ZipArchiveMode.Create,
+                   leaveOpen: true))
+        {
+            foreach (var (name, bytes) in files)
+            {
+                var entry = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal);
+                using var stream = entry.Open();
+                stream.Write(bytes);
+            }
+        }
+        return ms.ToArray();
+    }
+
+    // Parses the page selection and returns a validated, sorted, deduplicated list.
+    private List<int>? ResolvePages()
+    {
+        _rangeError = null;
+
+        return _pageMode switch
+        {
+            PageMode.Current => [CurrentPage],
+            PageMode.All    => Enumerable.Range(1, PageCount).ToList(),
+            PageMode.Range  => ParseRange(_rangeText, PageCount),
+            _               => [CurrentPage]
+        };
+    }
+
+    private List<int>? ParseRange(string text, int max)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _rangeError = "Enter at least one page number.";
+            return null;
+        }
+
+        var pages = new SortedSet<int>();
+
+        foreach (var token in text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (token.Contains('-'))
+            {
+                var parts = token.Split('-');
+                if (parts.Length != 2 ||
+                    !int.TryParse(parts[0].Trim(), out var from) ||
+                    !int.TryParse(parts[1].Trim(), out var to))
+                {
+                    _rangeError = $"Invalid range: \"{token}\"";
+                    return null;
+                }
+                if (from < 1 || to > max || from > to)
+                {
+                    _rangeError = $"Range {from}-{to} is out of bounds (1-{max}).";
+                    return null;
+                }
+                for (var p = from; p <= to; p++) pages.Add(p);
+            }
+            else
+            {
+                if (!int.TryParse(token, out var p) || p < 1 || p > max)
+                {
+                    _rangeError = $"Invalid page number: \"{token}\" (1-{max}).";
+                    return null;
+                }
+                pages.Add(p);
+            }
+        }
+
+        if (pages.Count == 0)
+        {
+            _rangeError = "No valid pages found.";
+            return null;
+        }
+
+        return [.. pages];
+    }
+}

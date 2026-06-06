@@ -1,0 +1,81 @@
+<div class="properties-panel">
+    @if (Bag is null || (Bag.Groups.Count == 0 && Bag.RawText is null))
+    {
+        <div class="properties-empty">
+            <MudIcon Icon="@Icons.Material.Outlined.TouchApp" Style="font-size:2rem; opacity:0.3;" />
+            <MudText Typo="Typo.body2" Style="opacity:0.4; margin-top:8px;">
+                Select a tree node to inspect
+            </MudText>
+        </div>
+    }
+    else
+    {
+        <div class="properties-header">
+            <MudText Typo="Typo.subtitle1" Class="prop-title">@Bag.Title</MudText>
+            @if (Bag.Subtitle is not null)
+            {
+                <MudText Typo="Typo.caption" Style="opacity:0.6;">@Bag.Subtitle</MudText>
+            }
+        </div>
+
+        <div class="properties-scroll">
+            @foreach (var group in Bag.Groups)
+            {
+                @if (group.Header is not null)
+                {
+                    <MudText Typo="Typo.overline" Class="prop-group-header">@group.Header</MudText>
+                }
+
+                <MudSimpleTable Dense="true" Hover="false" Striped="false" Class="prop-table">
+                    <tbody>
+                        @foreach (var entry in group.Entries)
+                        {
+                            <tr>
+                                <td class="prop-key">@entry.Key</td>
+                                <td class="prop-value @GetValueClass(entry.Kind)">
+                                    <span title="@entry.DisplayValue">@entry.DisplayValue</span>
+                                    @if (entry.CopyValue is not null)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy"
+                                                       Size="Size.Small"
+                                                       Class="prop-copy-btn"
+                                                       OnClick="() => CopyToClipboard(entry.CopyValue)"
+                                                       title="Copy value" />
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+
+            @if (Bag.RawText is not null)
+            {
+                <MudText Typo="Typo.overline" Class="prop-group-header">
+                    @(Bag.RawTextLabel ?? "Raw")
+                </MudText>
+                <MudPaper Class="raw-text-box" Elevation="0">
+                    <pre class="raw-text">@Bag.RawText</pre>
+                </MudPaper>
+            }
+        </div>
+    }
+</div>
+
+@inject IJSRuntime JS
+
+@code {
+    [Parameter] public PropertyBag? Bag { get; set; }
+
+    private static string GetValueClass(PropertyValueKind kind) => kind switch
+    {
+        PropertyValueKind.Hex => "val-hex",
+        PropertyValueKind.Number => "val-number",
+        PropertyValueKind.Boolean => "val-bool",
+        PropertyValueKind.Date => "val-date",
+        _ => string.Empty
+    };
+
+    private async Task CopyToClipboard(string text) =>
+        await JS.InvokeVoidAsync("unchainedStudio.copyToClipboard", text);
+}

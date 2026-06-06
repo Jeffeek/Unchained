@@ -1,0 +1,106 @@
+<div class="tree-panel">
+    <div class="tree-toolbar">
+        <MudTextField @bind-Value="_filter"
+                      Placeholder="Filter…"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Outlined.Search"
+                      Variant="Variant.Text"
+                      Margin="Margin.Dense"
+                      DebounceInterval="200"
+                      Class="tree-search" />
+        <MudIconButton Icon="@Icons.Material.Outlined.Refresh"
+                       Size="Size.Small"
+                       OnClick="OnRefresh"
+                       title="Refresh tree" />
+    </div>
+
+    @if (Root is not null)
+    {
+        <div class="tree-scroll">
+            <MudTreeView T="TreeNode" Dense="true" Hover="true" Color="Color.Primary">
+                @RenderNode(Root)
+            </MudTreeView>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public TreeNode? Root { get; set; }
+    [Parameter] public EventCallback<TreeNode?> SelectedNodeChanged { get; set; }
+    [Parameter] public EventCallback OnRefreshRequested { get; set; }
+
+    private string _filter = string.Empty;
+    private TreeNode? _selectedNode;
+
+    private RenderFragment RenderNode(TreeNode node) => __builder =>
+    {
+        if (!NodeOrChildMatchesFilter(node))
+            return;
+
+        <MudTreeViewItem Value="@node"
+                         Icon="@node.Icon"
+                         Text="@node.Label"
+                         CanExpand="@node.HasChildren"
+                         Expanded="@node.IsExpanded"
+                         ExpandedChanged="@(async val => await OnExpandedChanged(node, val))"
+                         OnClick="@(() => SelectNode(node))"
+                         Selected="@(node == _selectedNode)"
+                         Style="@(node == _selectedNode ? "background:rgba(92,107,192,0.08);" : string.Empty)">
+            @if (node.IsExpanded && node.Children.Count > 0)
+            {
+                @foreach (var child in VisibleChildren(node.Children))
+                {
+                    @RenderNode(child)
+                }
+            }
+        </MudTreeViewItem>
+    };
+
+    // Returns true if the node itself or any descendant matches the filter.
+    // As a side-effect, auto-expands ancestor nodes so matching children are visible.
+    private bool NodeOrChildMatchesFilter(TreeNode node)
+    {
+        if (string.IsNullOrWhiteSpace(_filter))
+            return true;
+
+        var selfMatches = node.Label.Contains(_filter, StringComparison.OrdinalIgnoreCase);
+        var childMatches = node.Children.Any(NodeOrChildMatchesFilter);
+
+        if (childMatches && !node.IsExpanded)
+            node.IsExpanded = true;
+
+        return selfMatches || childMatches;
+    }
+
+    private IEnumerable<TreeNode> VisibleChildren(List<TreeNode> nodes)
+    {
+        if (string.IsNullOrWhiteSpace(_filter))
+            return nodes;
+        return nodes.Where(NodeOrChildMatchesFilter);
+    }
+
+    private async Task OnExpandedChanged(TreeNode node, bool expanded)
+    {
+        node.IsExpanded = expanded;
+
+        if (!expanded)
+            return;
+
+        // Lazy-load children on first expand
+        if (node.HasLazyChildren && !node.LazyChildrenLoaded && node.LoadChildrenAsync is not null)
+        {
+            node.LazyChildrenLoaded = true; // set before await to guard against re-entry
+            var children = await node.LoadChildrenAsync();
+            node.Children.AddRange(children);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SelectNode(TreeNode node)
+    {
+        _selectedNode = node;
+        await SelectedNodeChanged.InvokeAsync(node);
+    }
+
+    private async Task OnRefresh() => await OnRefreshRequested.InvokeAsync();
+}

@@ -33,6 +33,16 @@ internal sealed class GraphicsState
     internal double HorizontalScale { get; set; } = 100;
     internal double Leading { get; set; }
 
+    // Text rendering mode (Tr):
+    // 0 = fill (default), 1 = stroke, 2 = fill+stroke, 3 = invisible,
+    // 4–7 = clip variants. Mode 3 suppresses visible output.
+    internal int TextRenderMode { get; set; }
+
+    // Resource name of the current font (e.g. "F1") — distinct from FontName
+    // (which is the base font name like "Helvetica").  Used to look up embedded
+    // font bytes whose dictionary is keyed by resource name, not base font name.
+    internal string FontResourceName { get; set; } = string.Empty;
+
     internal GraphicsState Clone() =>
         new()
         {
@@ -43,11 +53,13 @@ internal sealed class GraphicsState
             TextMatrix = (double[])TextMatrix.Clone(),
             TextLineMatrix = (double[])TextLineMatrix.Clone(),
             FontName = FontName,
+            FontResourceName = FontResourceName,
             FontSize = FontSize,
             CharSpace = CharSpace,
             WordSpace = WordSpace,
             HorizontalScale = HorizontalScale,
-            Leading = Leading
+            Leading = Leading,
+            TextRenderMode = TextRenderMode
         };
 
     // Transform a PDF user-space point through the current CTM.

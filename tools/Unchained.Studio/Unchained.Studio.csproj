@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Unchained.Studio</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Unchained.Pdf/Unchained.Pdf.csproj" />
+    <ProjectReference Include="../../src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj" />
+    <ProjectReference Include="../../src/Unchained.Pptx/Unchained.Pptx.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MudBlazor" />
+    <PackageReference Include="PDFiumCore" />
+  </ItemGroup>
+
+</Project>

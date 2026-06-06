@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Unchained.Studio": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:58280;http://localhost:58281"
+    }
+  }
+}

@@ -16,6 +16,8 @@ internal sealed class RasterBuffer(int width, int height)
 
     internal void Clear(byte r = 255, byte g = 255, byte b = 255)
     {
+        GlyphPixelsWritten = GlyphCallsWithZeroDims = GlyphCallsWithNullBuf =
+            GlyphCallsWithZeroPitch = GlyphCallsUnknownMode = GlyphCallsAllAlphaZero = 0;
         for (var i = 0; i < _data.Length; i += 4)
         {
             _data[i] = r;
@@ -102,30 +104,95 @@ internal sealed class RasterBuffer(int width, int height)
         }
     }
 
-    // Blit a FreeType2 grayscale glyph bitmap at (destX, destY) using the given colour.
+    // Diagnostic counters reset by Clear() each render.
+    internal int GlyphPixelsWritten  { get; private set; }
+    internal int GlyphCallsWithZeroDims  { get; private set; }  // w=0 or h=0
+    internal int GlyphCallsWithNullBuf   { get; private set; }  // Buffer=Zero
+    internal int GlyphCallsWithZeroPitch { get; private set; }  // absPitch=0
+    internal int GlyphCallsUnknownMode   { get; private set; }  // PixelMode not Gray/Mono
+    internal int GlyphCallsAllAlphaZero  { get; private set; }  // ran loop, no non-zero alpha
+    // Last glyph diagnostic (overwritten each call)
+    internal (int W, int H, int Pitch, int PixelMode, int NonZeroAlpha) LastGlyphDiag { get; private set; }
+
+    // Blit a FreeType2 glyph bitmap at (destX, destY) using the given colour.
+    // Handles Gray (anti-aliased) and Mono (1-bit) pixel modes.
+    //
+    // IMPORTANT: We do NOT use bitmap.BufferData (the SharpFont property).
+    // That property throws OverflowException for bottom-up bitmaps (Pitch < 0)
+    // because it multiplies Pitch * Rows with signed arithmetic. Instead we
+    // read each row directly via Marshal.Copy from bitmap.Buffer, which is always valid.
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
     internal void BlitGlyphBitmap(int destX, int destY, FTBitmap bitmap, byte r, byte g, byte b)
     {
-        if (bitmap.PixelMode != PixelMode.Gray)
-            return;
+        var w    = bitmap.Width;
+        var h    = bitmap.Rows;
 
-        var w = bitmap.Width;
-        var h = bitmap.Rows;
-        var pitch = Math.Abs(bitmap.Pitch);
-        var buffer = bitmap.BufferData;
+        if (w <= 0 || h <= 0) { GlyphCallsWithZeroDims++; return; }
+        if (bitmap.Buffer == IntPtr.Zero) { GlyphCallsWithNullBuf++; return; }
 
-        for (var row = 0; row < h; row++)
+        var pitch    = bitmap.Pitch;
+        var absPitch = Math.Abs(pitch);
+        if (absPitch == 0) { GlyphCallsWithZeroPitch++; return; }
+
+        LastGlyphDiag = (w, h, pitch, (int)bitmap.PixelMode, 0);
+
+        switch (bitmap.PixelMode)
         {
-            var srcRow = bitmap.Pitch < 0 ? h - 1 - row : row;
-            var rowOffset = srcRow * pitch;
-            for (var col = 0; col < w; col++)
+            case PixelMode.Gray:
             {
-                var alpha = buffer[rowOffset + col];
-                if (alpha == 0)
-                    continue;
+                // 8 bits per pixel: alpha coverage (0 = transparent, 255 = opaque)
+                var rowBuf   = new byte[absPitch];
+                var nonZeroA = 0;
+                for (var row = 0; row < h; row++)
+                {
+                    var srcRow = pitch >= 0 ? row : h - 1 - row;
+                    System.Runtime.InteropServices.Marshal.Copy(
+                        IntPtr.Add(bitmap.Buffer, srcRow * absPitch), rowBuf, 0, absPitch);
 
-                SetPixel(destX + col, destY + row, r, g, b, alpha);
+                    for (var col = 0; col < w; col++)
+                    {
+                        var alpha = rowBuf[col];
+                        if (alpha == 0) continue;
+                        nonZeroA++;
+                        SetPixel(destX + col, destY + row, r, g, b, alpha);
+                        GlyphPixelsWritten++;
+                    }
+                }
+                if (nonZeroA == 0) GlyphCallsAllAlphaZero++;
+                LastGlyphDiag = (w, h, pitch, (int)bitmap.PixelMode, nonZeroA);
+                break;
             }
+
+            case PixelMode.Mono:
+            {
+                // 1 bit per pixel, packed MSB-first; 1 = opaque, 0 = transparent
+                var rowBuf   = new byte[absPitch];
+                var nonZeroA = 0;
+                for (var row = 0; row < h; row++)
+                {
+                    var srcRow = pitch >= 0 ? row : h - 1 - row;
+                    System.Runtime.InteropServices.Marshal.Copy(
+                        IntPtr.Add(bitmap.Buffer, srcRow * absPitch), rowBuf, 0, absPitch);
+
+                    for (var col = 0; col < w; col++)
+                    {
+                        var byteIdx = col >> 3;
+                        var bitMask = 0x80 >> (col & 7);
+                        if ((rowBuf[byteIdx] & bitMask) == 0) continue;
+                        nonZeroA++;
+                        SetPixel(destX + col, destY + row, r, g, b, 255);
+                        GlyphPixelsWritten++;
+                    }
+                }
+                if (nonZeroA == 0) GlyphCallsAllAlphaZero++;
+                LastGlyphDiag = (w, h, pitch, (int)bitmap.PixelMode, nonZeroA);
+                break;
+            }
+
+            default:
+                GlyphCallsUnknownMode++;
+                LastGlyphDiag = (w, h, pitch, (int)bitmap.PixelMode, -1);
+                break;
         }
     }
 
