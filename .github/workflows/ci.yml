@@ -53,9 +53,7 @@ jobs:
 
       - name: Fetch native FreeType2 library
         shell: bash
-        run: |
-          bash scripts/FetchNatives/fetch-natives.sh --rid ${{ matrix.rid }}
-          bash scripts/FetchNatives/fetch-drawing-natives.sh --rid ${{ matrix.rid }}
+        run: bash scripts/FetchNatives/fetch-natives.sh --rid ${{ matrix.rid }}
 
       - name: Setup .NET (restore + build)
         uses: ./.github/actions/dotnet-setup
@@ -63,7 +61,7 @@ jobs:
       - name: Test with coverage
         timeout-minutes: 30
         run: >
-          dotnet test tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj
+          dotnet test
           -c Release --no-build
           --collect:"XPlat Code Coverage"
           --logger "trx;LogFileName=test-results.trx"

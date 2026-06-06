@@ -1,0 +1,56 @@
+@page "/"
+@namespace Unchained.Studio.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unchained Studio</title>
+    <base href="/" />
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
+</head>
+<body>
+    <component type="typeof(Unchained.Studio.Components.App)" render-mode="Server" />
+
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="js/interop.js"></script>
+    <script src="_framework/blazor.server.js"></script>
+
+    <script>
+        // Catch "No interop methods are registered for renderer N" errors.
+        // Per https://github.com/dotnet/aspnetcore/issues/56813, this is a known
+        // Blazor race condition: when the circuit closes, global event listeners
+        // are not cleaned up, so the next interaction fires through a stale bridge.
+        // The ErrorBoundary in MainLayout.razor prevents the circuit from closing
+        // due to unhandled exceptions. This handler logs the root cause so it
+        // becomes visible instead of silently breaking the UI.
+        window.addEventListener('error', function (e) {
+            if (e.message && e.message.includes('No interop methods are registered')) {
+                console.error(
+                    '[Unchained Studio] Blazor circuit interop error. ' +
+                    'The circuit may have closed due to an unhandled exception. ' +
+                    'Check server logs for the root cause. ' +
+                    'The Blazor reconnect UI will appear shortly.',
+                    e
+                );
+                // Prevent the error from surfacing as an uncaught JS exception.
+                // Blazor's own reconnect mechanism will handle recovery.
+                e.preventDefault();
+            }
+        });
+
+        // Log all unhandled promise rejections so the root cause is visible.
+        window.addEventListener('unhandledrejection', function (e) {
+            if (e.reason && String(e.reason).includes('interop')) {
+                console.error('[Unchained Studio] Unhandled interop rejection:', e.reason);
+            }
+        });
+    </script>
+</body>
+</html>

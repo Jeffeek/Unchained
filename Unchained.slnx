@@ -49,4 +49,7 @@
     <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
     <Project Path="tests/Unchained.Pptx.Tests/Unchained.Pptx.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Unchained.Studio/Unchained.Studio.csproj" />
+  </Folder>
 </Solution>

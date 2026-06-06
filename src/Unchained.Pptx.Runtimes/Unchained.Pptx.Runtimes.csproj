@@ -1,14 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!--
-    Native-binary carrier project for FreeType2 (used by Unchained.Pptx.Rendering).
-    No C# code is produced — the output is only the native files.
-
-    This scaffold is a placeholder. Native binaries and fetch scripts will be wired up
-    when Unchained.Pptx.Rendering rendering is implemented (post M4).
-
-    Mirrors the structure of Unchained.Pdf.Runtimes exactly.
-  -->
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
@@ -17,5 +8,9 @@
     <Nullable>disable</Nullable>
     <PackageTags>pptx;powerpoint;presentation;native;runtimes;dotnet;document-processing</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unchained.Drawing.Runtimes\Unchained.Drawing.Runtimes.csproj" />
+  </ItemGroup>
 
 </Project>

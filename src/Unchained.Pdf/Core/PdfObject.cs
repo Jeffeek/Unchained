@@ -518,3 +518,21 @@ public sealed class PdfIndirectObject(int objectNumber, int generation, PdfObjec
     /// <inheritdoc />
     public override string ToString() => $"{ObjectNumber} {Generation} obj ... endobj";
 }
+
+/// <summary>
+/// Carries a decoded inline image (BI…ID…EI) as a single content-operator operand.
+/// Not part of the ISO 32000 object model; used internally to pass decoded image
+/// pixels from the content-stream parser to the page renderer.
+/// </summary>
+internal sealed class PdfInlineImage(
+    int width, int height, byte[] rgbData,
+    double userWidth, double userHeight) : PdfObject
+{
+    internal int     Width      { get; } = width;
+    internal int     Height     { get; } = height;
+    internal byte[]  RgbData    { get; } = rgbData;
+    /// <summary>Image width in PDF user-space points (from the BI /W entry × CTM scale).</summary>
+    internal double  UserWidth  { get; } = userWidth;
+    /// <summary>Image height in PDF user-space points (from the BI /H entry × CTM scale).</summary>
+    internal double  UserHeight { get; } = userHeight;
+}

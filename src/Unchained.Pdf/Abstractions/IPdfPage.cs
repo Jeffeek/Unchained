@@ -24,6 +24,12 @@ public interface IPdfPage
     double Height { get; }
 
     /// <summary>
+    /// Page rotation in degrees clockwise as specified by the <c>/Rotate</c> entry
+    /// (ISO 32000-1 §7.7.3.3). Always 0, 90, 180, or 270.
+    /// </summary>
+    int Rotate { get; }
+
+    /// <summary>
     /// <see langword="true"/> when <see cref="Width"/> is greater than <see cref="Height"/>.
     /// </summary>
     bool IsLandscape => Width > Height;

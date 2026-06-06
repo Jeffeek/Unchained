@@ -1,0 +1,406 @@
+@inject RenderingService Renderer
+@inject IJSRuntime JS
+@inject IDialogService Dialogs
+@implements IAsyncDisposable
+
+<div class="preview-panel">
+    <div class="preview-toolbar">
+        <!-- Page navigation -->
+        <MudIconButton Icon="@Icons.Material.Outlined.NavigateBefore"
+                       Size="Size.Small"
+                       Disabled="@(CurrentPage <= 1)"
+                       OnClick="PreviousPage"
+                       title="Previous page (←)" />
+        <span class="preview-page-label">
+            <MudText Typo="Typo.body2" Style="white-space:nowrap;">Page</MudText>
+            <input class="preview-page-input"
+                   type="number"
+                   min="1" max="@PageCount"
+                   value="@CurrentPage"
+                   @onchange="OnPageInputChanged"
+                   @onkeydown="OnPageInputKeyDown" />
+            <MudText Typo="Typo.body2" Style="white-space:nowrap;">/ @PageCount</MudText>
+        </span>
+        <MudIconButton Icon="@Icons.Material.Outlined.NavigateNext"
+                       Size="Size.Small"
+                       Disabled="@(CurrentPage >= PageCount)"
+                       OnClick="NextPage"
+                       title="Next page (→)" />
+
+        <MudDivider Vertical="true" Class="mx-1" Style="height:24px;" />
+
+        <!-- Zoom -->
+        <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" OnClick="ZoomOut" title="Zoom out" />
+        <MudText Typo="Typo.caption" Class="mx-1" Style="min-width:36px;text-align:center;">@(_zoom)%</MudText>
+        <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" OnClick="ZoomIn" title="Zoom in" />
+        <MudIconButton Icon="@Icons.Material.Outlined.FitScreen" Size="Size.Small" OnClick="ZoomFit" title="Fit" />
+
+        <MudDivider Vertical="true" Class="mx-1" Style="height:24px;" />
+
+        <!-- DPI selector (our renderer only) -->
+        <MudText Typo="Typo.caption" Class="mr-1" Style="white-space:nowrap;">DPI:</MudText>
+        <MudSelect T="int" Value="_dpi" ValueChanged="OnDpiChanged"
+                   Variant="Variant.Text" Margin="Margin.Dense"
+                   Style="width:70px; font-size:12px;"
+                   Dense="true">
+            <MudSelectItem Value="72">72</MudSelectItem>
+            <MudSelectItem Value="96">96</MudSelectItem>
+            <MudSelectItem Value="150">150</MudSelectItem>
+            <MudSelectItem Value="300">300</MudSelectItem>
+        </MudSelect>
+
+        <MudSpacer />
+
+        <!-- Text overlay: ToggledChanged so we receive the new value synchronously -->
+        <MudToggleIconButton Toggled="_showText"
+                             ToggledChanged="OnTextToggled"
+                             Icon="@Icons.Material.Outlined.TextFields"
+                             ToggledIcon="@Icons.Material.Filled.TextFields"
+                             ToggledColor="Color.Primary"
+                             Size="Size.Small"
+                             title="Toggle text span overlay" />
+
+        <!-- Compare toggle: use ToggledChanged, not OnClick.
+             OnClick fires before Toggled is updated; ToggledChanged carries the new value. -->
+        <MudToggleIconButton Toggled="_compareMode"
+                             ToggledChanged="OnCompareToggled"
+                             Icon="@Icons.Material.Outlined.Compare"
+                             ToggledIcon="@Icons.Material.Filled.Compare"
+                             ToggledColor="Color.Secondary"
+                             Size="Size.Small"
+                             title="Compare with browser's native PDF renderer" />
+
+        <!-- Export comparison images -->
+        <MudIconButton Icon="@Icons.Material.Outlined.FileDownload"
+                       Size="Size.Small"
+                       Disabled="@(Document is null || DocumentBytes is null)"
+                       OnClick="OpenExportDialog"
+                       title="Export comparison images (Unchained vs PDF.js)" />
+    </div>
+
+    <div class="preview-content @(_compareMode ? "preview-content--compare" : string.Empty)">
+        <!-- ── Pane A: Unchained renderer ─────────────────────────── -->
+        <div class="preview-pane">
+            @if (_compareMode)
+            {
+                <div class="pane-label pane-label--left">Unchained (FreeType2 + HarfBuzz)</div>
+            }
+
+            @if (_loading)
+            {
+                <div class="preview-center">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
+                    <MudText Typo="Typo.caption" Class="mt-2" Style="opacity:.6">Rendering page @CurrentPage at @(_dpi) DPI…</MudText>
+                </div>
+            }
+            else if (_pageBytes is null)
+            {
+                <div class="preview-center">
+                    <MudIcon Icon="@Icons.Material.Outlined.ImageNotSupported" Style="font-size:3rem;opacity:.3;" />
+                    <MudText Typo="Typo.body2" Style="opacity:.5;text-align:center;max-width:240px;margin-top:8px;">
+                        Rendering unavailable — ensure native DLLs are installed.
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <div class="preview-scroll">
+                    <div class="preview-image-wrap"
+                         style="transform-origin:top center;transform:scale(@((_zoom/100.0).ToString("F2",System.Globalization.CultureInfo.InvariantCulture)))">
+                        <img src="data:image/png;base64,@Convert.ToBase64String(_pageBytes)"
+                             class="preview-page-img"
+                             alt="Page @CurrentPage" />
+
+                        @if (_showText && _textSpans is not null)
+                        {
+                            @foreach (var span in _textSpans.Take(500))
+                            {
+                                <div class="text-overlay-span"
+                                     title="@span.Text (@span.FontName @span.FontSize:F1pt)"
+                                     style="left:@Pct(span.X, _pageWidthPt)%;
+                                            bottom:@Pct(span.Y, _pageHeightPt)%;
+                                            width:@Pct(span.Width, _pageWidthPt)%;">
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- ── Pane B: Browser native renderer (compare mode only) ── -->
+        @if (_compareMode)
+        {
+            <div class="preview-pane preview-pane--native">
+                <div class="pane-label pane-label--right">Browser native PDF renderer</div>
+                @if (_blobUrl is not null)
+                {
+                    <object data="@_blobUrl#page=@CurrentPage"
+                            type="application/pdf"
+                            class="native-pdf-object">
+                        <div class="preview-center">
+                            <MudText Typo="Typo.body2" Style="opacity:.5;text-align:center;max-width:220px;">
+                                Your browser doesn't have a built-in PDF viewer.
+                                Install a PDF extension or use Chrome / Edge.
+                            </MudText>
+                        </div>
+                    </object>
+                }
+                else
+                {
+                    <div class="preview-center">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Unchained.Pdf.Abstractions.IPdfDocument? Document { get; set; }
+    [Parameter] public byte[]? DocumentBytes { get; set; }
+    [Parameter] public string FileName { get; set; } = "document";
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageCount { get; set; } = 1;
+    [Parameter] public EventCallback<int> CurrentPageChanged { get; set; }
+
+    private byte[]? _pageBytes;
+    private bool _loading;
+    private int _zoom = 100;
+    private bool _showText;
+    private bool _compareMode;
+    private int _dpi = 96;
+    private string? _blobUrl;
+
+    private IReadOnlyList<Unchained.Pdf.Models.TextSpan>? _textSpans;
+    private double _pageWidthPt = 595;
+    private double _pageHeightPt = 842;
+
+    // Track what we last rendered so we don't re-render on unrelated parameter changes
+    private Unchained.Pdf.Abstractions.IPdfDocument? _lastDocument;
+    private int _lastPage;
+    private int _lastDpi;
+
+    // Track last DocumentBytes reference so we know when to refresh the native blob
+    private byte[]? _lastDocumentBytes;
+
+    // Flags set synchronously in OnParametersSetAsync; acted on in OnAfterRenderAsync
+    // so the browser receives the "spinner visible" state BEFORE FreeType starts work.
+    private bool _pendingPageRender;
+    private bool _pendingBlobRefresh;
+
+    protected override Task OnParametersSetAsync()
+    {
+        var needsRender = Document != _lastDocument || CurrentPage != _lastPage || _dpi != _lastDpi;
+        if (needsRender)
+        {
+            _pendingPageRender = true;
+            // Set loading=true now so the render cycle sends the spinner to the browser
+            // immediately, before OnAfterRenderAsync kicks off the actual FreeType work.
+            _loading = true;
+        }
+
+        var needsBlob = _compareMode && !ReferenceEquals(DocumentBytes, _lastDocumentBytes);
+        if (needsBlob)
+            _pendingBlobRefresh = true;
+
+        // Return synchronously — do NOT await anything here.
+        // Blazor will flush this render to the browser, showing the spinner,
+        // then call OnAfterRenderAsync where we do the actual heavy lifting.
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingPageRender)
+        {
+            _pendingPageRender = false;
+            await RenderCurrentPageAsync();
+        }
+
+        if (_pendingBlobRefresh)
+        {
+            _pendingBlobRefresh = false;
+            await RefreshBlobUrlAsync();
+        }
+    }
+
+    private async Task RenderCurrentPageAsync()
+    {
+        if (Document is null)
+        {
+            _pageBytes = null;
+            _textSpans = null;
+            _lastDocument = null;
+            _lastPage = 0;
+            _loading = false;
+            StateHasChanged();
+            return;
+        }
+
+        // _loading was already set to true in OnParametersSetAsync; no need to set it again.
+        // Just proceed directly to the FreeType work.
+        try
+        {
+            _pageBytes = await Renderer.RenderPdfPageAsync(Document, CurrentPage, _dpi);
+
+            if (_pageBytes is not null)
+            {
+                var page = Document.Pages[CurrentPage];
+                if (page is not null)
+                {
+                    _pageWidthPt = page.Width;
+                    _pageHeightPt = page.Height;
+                    _textSpans = _showText ? page.GetTextSpans() : null;
+                }
+            }
+
+            _lastDocument = Document;
+            _lastPage = CurrentPage;
+            _lastDpi = _dpi;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged(); // always clear spinner even if an exception occurred
+        }
+    }
+
+    private async Task OnCompareToggled(bool toggled)
+    {
+        _compareMode = toggled;
+        if (_compareMode)
+            await RefreshBlobUrlAsync();
+        else
+            await RevokeBlobAsync();
+    }
+
+    private async Task RefreshBlobUrlAsync()
+    {
+        if (DocumentBytes is null)
+            return;
+
+        await RevokeBlobAsync();
+
+        try
+        {
+            _blobUrl = await JS.InvokeAsync<string>(
+                "unchainedStudio.createPdfBlobUrl",
+                Convert.ToBase64String(DocumentBytes));
+            _lastDocumentBytes = DocumentBytes;
+        }
+        catch
+        {
+            _blobUrl = null;
+        }
+    }
+
+    private async Task RevokeBlobAsync()
+    {
+        if (_blobUrl is null)
+            return;
+        try
+        {
+            await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", _blobUrl);
+        }
+        catch
+        {
+            // ignore — page might already be navigating away
+        }
+        _blobUrl = null;
+        _lastDocumentBytes = null;
+    }
+
+    private void OnTextToggled(bool toggled)
+    {
+        _showText = toggled;
+        if (_showText && _pageBytes is not null && Document is not null)
+        {
+            var page = Document.Pages[CurrentPage];
+            _textSpans = page?.GetTextSpans();
+        }
+        else
+        {
+            _textSpans = null;
+        }
+    }
+
+    private async Task OnDpiChanged(int dpi)
+    {
+        _dpi = dpi;
+        _loading = true;
+        await RenderCurrentPageAsync();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CurrentPage <= 1) return;
+        CurrentPage--;
+        _loading = true;
+        await CurrentPageChanged.InvokeAsync(CurrentPage);
+        await RenderCurrentPageAsync();
+    }
+
+    private async Task NextPage()
+    {
+        if (CurrentPage >= PageCount) return;
+        CurrentPage++;
+        _loading = true;
+        await CurrentPageChanged.InvokeAsync(CurrentPage);
+        await RenderCurrentPageAsync();
+    }
+
+    private async Task OnPageInputChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var p) && p >= 1 && p <= PageCount && p != CurrentPage)
+        {
+            CurrentPage = p;
+            _loading = true;
+            await CurrentPageChanged.InvokeAsync(CurrentPage);
+            await RenderCurrentPageAsync();
+        }
+    }
+
+    private async Task OnPageInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "ArrowLeft") await PreviousPage();
+        else if (e.Key == "ArrowRight") await NextPage();
+    }
+
+    private void ZoomIn() => _zoom = Math.Min(200, _zoom + 25);
+    private void ZoomOut() => _zoom = Math.Max(25, _zoom - 25);
+    private void ZoomFit() => _zoom = 100;
+
+    private static string Pct(double value, double total) =>
+        total > 0 ? (value / total * 100).ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0";
+
+    private async Task OpenExportDialog()
+    {
+        if (Document is null || DocumentBytes is null) return;
+
+        var parameters = new DialogParameters
+        {
+            [nameof(ExportComparisonDialog.Document)]      = Document,
+            [nameof(ExportComparisonDialog.DocumentBytes)] = DocumentBytes,
+            [nameof(ExportComparisonDialog.FileName)]      = FileName,
+            [nameof(ExportComparisonDialog.CurrentPage)]   = CurrentPage,
+            [nameof(ExportComparisonDialog.PageCount)]     = PageCount,
+            // Reuse the blob URL that compare mode already created, if available.
+            // This avoids encoding the PDF bytes a second time.
+            [nameof(ExportComparisonDialog.ExistingBlobUrl)] = _blobUrl,
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = false,
+            CloseButton = false,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = false
+        };
+
+        await Dialogs.ShowAsync<ExportComparisonDialog>("Export Comparison", parameters, options);
+    }
+
+    public async ValueTask DisposeAsync() => await RevokeBlobAsync();
+}

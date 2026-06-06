@@ -1,0 +1,521 @@
+/* ── Layout shell ────────────────────────────────────────────────────── */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+.studio-main {
+    height: calc(100vh - 64px); /* subtract app bar height */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.studio-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ── Header tabs ────────────────────────────────────────────────────── */
+
+.header-tabs .mud-tab {
+    color: rgba(255,255,255,0.7) !important;
+    min-width: 80px;
+}
+
+.header-tabs .mud-tab-active {
+    color: #fff !important;
+}
+
+/* ── Drop zone page ─────────────────────────────────────────────────── */
+
+.drop-zone-page {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+}
+
+.drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #bdbdbd;
+    border-radius: 12px;
+    padding: 48px 64px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    min-width: 360px;
+    min-height: 240px;
+    text-align: center;
+}
+
+.drop-zone--dragging {
+    border-color: #5C6BC0;
+    background: #e8eaf6;
+}
+
+.drop-zone:hover {
+    border-color: #9fa8da;
+    background: #f8f9ff;
+}
+
+/* ── Three-panel layout ─────────────────────────────────────────────── */
+
+.three-panel {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    grid-template-rows: 1fr;
+    overflow: hidden;
+    border-top: 1px solid #e0e0e0;
+}
+
+.panel-tree {
+    border-right: 1px solid #e0e0e0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #fafafa;
+}
+
+.panel-preview {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #eeeeee;
+    position: relative;
+}
+
+.panel-properties {
+    border-left: 1px solid #e0e0e0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+/* ── Tree panel ─────────────────────────────────────────────────────── */
+
+.tree-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.tree-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-bottom: 1px solid #e0e0e0;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.tree-search {
+    flex: 1;
+}
+
+.tree-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+/* ── Preview panel ──────────────────────────────────────────────────── */
+
+.preview-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.preview-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-bottom: 1px solid #d0d0d0;
+    background: #f5f5f5;
+    flex-shrink: 0;
+    gap: 2px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.preview-page-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.preview-page-input {
+    width: 44px;
+    border: 1px solid #bdbdbd;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 13px;
+    text-align: center;
+    background: white;
+    outline: none;
+    -moz-appearance: textfield;
+}
+.preview-page-input::-webkit-inner-spin-button,
+.preview-page-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+/* Single-pane layout (default) */
+.preview-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+}
+
+.preview-pane {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    position: relative;
+    background: #eeeeee;
+}
+
+/* Split layout when compare mode is active */
+.preview-content--compare {
+    gap: 4px;
+}
+
+.preview-content--compare .preview-pane:first-child {
+    border-right: 2px solid #5C6BC0;
+}
+
+.preview-pane--native {
+    background: #f5f5f5;
+    padding: 0;
+}
+
+.pane-label {
+    position: absolute;
+    top: 8px;
+    z-index: 10;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    font-size: 11px;
+    font-family: 'Roboto Mono', monospace;
+    padding: 3px 10px;
+    border-radius: 4px;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+}
+
+.pane-label--left { left: 8px; background: rgba(92,107,192,0.85); }
+.pane-label--right { left: 8px; background: rgba(38,166,154,0.85); }
+
+.preview-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    width: 100%;
+    color: #9e9e9e;
+}
+
+.preview-scroll {
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex: 1;
+    width: 100%;
+}
+
+.preview-image-wrap {
+    transform-origin: top center;
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.preview-page-img {
+    display: block;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    background: white;
+    max-width: 100%;
+}
+
+.native-pdf-object {
+    width: 100%;
+    flex: 1;
+    min-height: 300px;
+    border: none;
+    display: block;
+}
+
+/* Text overlay spans */
+.text-overlay-span {
+    position: absolute;
+    height: 1.2em;
+    background: rgba(255, 230, 0, 0.25);
+    border: 1px solid rgba(255, 200, 0, 0.4);
+    pointer-events: none;
+}
+
+/* Text extraction panel */
+.text-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: white;
+    border-top: 2px solid #5C6BC0;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+}
+
+.text-panel-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.text-content {
+    flex: 1;
+    resize: none;
+    border: none;
+    outline: none;
+    padding: 12px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 12px;
+    color: #333;
+    overflow-y: auto;
+}
+
+/* ── Properties panel ───────────────────────────────────────────────── */
+
+.properties-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.properties-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.properties-header {
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.prop-title {
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.properties-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.prop-group-header {
+    padding: 8px 16px 2px;
+    color: #757575;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    display: block;
+}
+
+.prop-table {
+    width: 100%;
+    margin-bottom: 4px;
+}
+
+.prop-table td {
+    padding: 2px 16px !important;
+    font-size: 12px !important;
+    vertical-align: top;
+}
+
+.prop-key {
+    color: #616161;
+    white-space: nowrap;
+    width: 40%;
+    font-weight: 500;
+}
+
+.prop-value {
+    color: #212121;
+    word-break: break-all;
+    position: relative;
+}
+
+.prop-value:hover .prop-copy-btn {
+    opacity: 1;
+}
+
+.prop-copy-btn {
+    opacity: 0;
+    transition: opacity 0.1s;
+    float: right;
+    margin-top: -4px;
+}
+
+.val-hex { font-family: 'Roboto Mono', monospace; color: #1565C0; }
+.val-number { color: #2E7D32; }
+.val-bool { color: #6A1B9A; }
+.val-date { color: #E65100; font-size: 11px; }
+
+.raw-text-box {
+    background: #f5f5f5 !important;
+    margin: 4px 12px;
+    border-radius: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.raw-text {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    color: #37474F;
+    margin: 0;
+    padding: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* ── Operations bar ─────────────────────────────────────────────────── */
+
+.operations-bar {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-top: 1px solid #e0e0e0;
+    background: #f9f9f9;
+    flex-shrink: 0;
+    gap: 4px;
+    flex-wrap: wrap;
+    min-height: 44px;
+}
+
+.ops-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.ops-group--right {
+    margin-left: auto;
+}
+
+.ops-divider {
+    height: 24px;
+    margin: 0 4px;
+}
+
+/* ── Loading overlay ────────────────────────────────────────────────── */
+
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.75);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(2px);
+}
+
+/* ── Batch export dialog ────────────────────────────────────────────── */
+
+.batch-file-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.batch-drop-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #bdbdbd;
+    border-radius: 8px;
+    padding: 24px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    background: #fafafa;
+}
+.batch-drop-hint:hover { border-color: #9fa8da; background: #f5f5ff; }
+
+.batch-file-list {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fafafa;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.batch-file-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 8px;
+    transition: background 0.1s;
+}
+.batch-file-row:hover { background: #f0f0f0; }
+
+.batch-status-list {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fafafa;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.batch-status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+}
+
+.batch-file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* ── Scrollbars ─────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #bdbdbd; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9e9e9e; }

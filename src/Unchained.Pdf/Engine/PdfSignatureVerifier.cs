@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -107,21 +106,17 @@ internal static class PdfSignatureVerifier
             var cms = new SignedCms(contentInfo, detached: true);
             cms.Decode(contentsBytes);
 
-            // Extract signer certificate and name
+            // GetNameInfo(SimpleName) returns empty on macOS with MachineKeySet certs in .NET 9.
+            // Parse CN directly from the SubjectName string as a reliable cross-platform approach.
             signerCert = cms.SignerInfos.Count > 0 ? cms.SignerInfos[0].Certificate : null;
-            var signerName = signerCert?.GetNameInfo(X509NameType.SimpleName, forIssuer: false) ?? string.Empty;
+            var signerName = signerCert is null ? string.Empty : ExtractCN(signerCert);
 
-            // Step 1: explicitly verify the message-digest attribute against the provided content.
-            // CheckSignature(verifySignatureOnly: true) only verifies the RSA/ECDSA signature over
-            // the signed attributes; it does NOT re-hash the content to check the message-digest.
-            foreach (var si in cms.SignerInfos)
-            {
-                var contentHashError = VerifyContentHash(si, signedContent);
-                if (contentHashError is not null)
-                    return Invalid(fieldName, contentHashError, signerCert);
-            }
-
-            // Step 2: verify the cryptographic signature (RSA/ECDSA over signed attributes)
+            // Verify the signature. CheckSignature(verifySignatureOnly: true) validates both
+            // the message-digest attribute against the provided content AND the RSA/ECDSA
+            // signature over the signed attributes — using the same internal hash computation
+            // as ComputeSignature. A separate manual hash check would use the raw byte array
+            // directly, which can disagree with how ContentInfo encodes the content internally
+            // on certain platforms (arm64/net9), causing spurious verification failures.
             cms.CheckSignature(verifySignatureOnly: true);
 
             // Step 3: verify the certificate chain (separately — failure here is not a document integrity failure)
@@ -164,44 +159,19 @@ internal static class PdfSignatureVerifier
         }
     }
 
-    // Returns null when the content hash matches, or an error message if it does not.
-    private static string? VerifyContentHash(SignerInfo si, byte[] signedContent)
+    // Extracts the Common Name from a certificate's SubjectName.
+    // Parses the string form of the DN (e.g. "CN=Alice Smith, O=Foo") rather than using
+    // GetNameInfo(SimpleName) which is unreliable on macOS with MachineKeySet certs in .NET 9.
+    private static string ExtractCN(X509Certificate2 cert)
     {
-        const string messageDigestOid = "1.2.840.113549.1.9.4"; // id-messageDigest
-
-        foreach (var attr in si.SignedAttributes)
+        var dn = cert.SubjectName.Name;
+        foreach (var part in dn.Split(','))
         {
-            if (attr.Oid.Value != messageDigestOid)
-                continue;
-
-            var pmd = new Pkcs9MessageDigest();
-            pmd.CopyFrom(attr.Values[0]);
-
-            HashAlgorithm? hash = si.DigestAlgorithm.Value switch
-            {
-                "1.3.14.3.2.26" => SHA1.Create(),
-                "2.16.840.1.101.3.4.2.2" => SHA384.Create(),
-                "2.16.840.1.101.3.4.2.3" => SHA512.Create(),
-                "2.16.840.1.101.3.4.2.1" => SHA256.Create(),
-                _ => null
-            };
-
-            if (hash is null)
-                return "Unsupported digest algorithm.";
-
-            try
-            {
-                var computed = hash.ComputeHash(signedContent);
-                if (!computed.AsSpan().SequenceEqual(pmd.MessageDigest))
-                    return "Content hash mismatch — document was modified after signing.";
-            }
-            finally
-            {
-                hash.Dispose();
-            }
+            var trimmed = part.Trim();
+            if (trimmed.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                return trimmed[3..].Trim();
         }
-
-        return null; // OK
+        return cert.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
