@@ -9,6 +9,7 @@ using Unchained.Pptx.Security;
 using Unchained.Pptx.Slides;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Writing;
+using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Engine;
 
@@ -128,6 +129,72 @@ public sealed class PresentationProcessor : IDisposable
         var protection = new ProtectionInfo();
 
         return new PresentationDocument(slides, masters, mediaStore, properties, protection, slideSize);
+    }
+
+    // ── HTML Export (M10) ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Exports each slide of <paramref name="document"/> as an HTML5 file in
+    /// <paramref name="directoryPath"/>, creating the directory if it does not exist.
+    /// Returns the list of file paths written.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SaveAsHtmlAsync(
+        PresentationDocument document,
+        string directoryPath,
+        HtmlSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(directoryPath);
+
+        var opts = options ?? HtmlSaveOptions.Default;
+        var files = await Task.Run(
+            () => PptxToHtmlWriter.Write(document, opts),
+            cancellationToken).ConfigureAwait(false);
+
+        Directory.CreateDirectory(directoryPath);
+        var written = new List<string>(files.Count);
+        foreach (var (name, bytes) in files)
+        {
+            var path = Path.Combine(directoryPath, name);
+            await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
+            written.Add(path);
+        }
+        return written;
+    }
+
+    // ── SVG Export (M10) ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Exports a single slide as an SVG byte array.
+    /// </summary>
+    public Task<byte[]> ExportSlideAsSvgAsync(
+        Slide slide,
+        SlideSize slideSize,
+        SvgSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(slide);
+        var opts = options ?? SvgSaveOptions.Default;
+        return Task.Run(
+            () => PptxToSvgWriter.WriteSlide(slide, slideSize, opts),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Exports every non-hidden slide in <paramref name="document"/> as SVG bytes,
+    /// one element per slide.
+    /// </summary>
+    public Task<byte[][]> ExportAsSvgAsync(
+        PresentationDocument document,
+        SvgSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var opts = options ?? SvgSaveOptions.Default;
+        return Task.Run(
+            () => PptxToSvgWriter.WriteAll(document, opts),
+            cancellationToken);
     }
 
     // ── PDF Export (M9) ───────────────────────────────────────────────────────
