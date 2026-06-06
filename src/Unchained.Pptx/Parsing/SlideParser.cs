@@ -3,6 +3,7 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Media;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Parsing;
@@ -90,6 +91,9 @@ internal sealed class SlideParser
         // Resolve embedded images (second pass)
         ResolveImages(part, slide);
 
+        // Resolve chart parts (second pass)
+        ResolveCharts(part, slide);
+
         // Notes slide
         var notesRel = part.FindRelationship(PmlNames.RelTypeNotesSlide);
         if (notesRel != null)
@@ -146,6 +150,38 @@ internal sealed class SlideParser
             RelationshipId = relationshipId
         };
         return _mediaStore.AddImage(image);
+    }
+
+    // ── Chart resolution ──────────────────────────────────────────────────────
+
+    private void ResolveCharts(OpcPart slidePart, Slide slide)
+    {
+        foreach (var shape in slide.Shapes.OfType<ChartShape>())
+        {
+            if (!string.IsNullOrEmpty(shape.RelationshipId))
+                LoadChartPart(slidePart, shape);
+        }
+    }
+
+    private void LoadChartPart(OpcPart slidePart, ChartShape shape)
+    {
+        var rel = slidePart.Relationships.FirstOrDefault(r =>
+            r.Id.Equals(shape.RelationshipId, StringComparison.Ordinal));
+        if (rel == null) return;
+
+        var chartUri = slidePart.ResolveUri(rel.TargetUri);
+        shape.PartUri = chartUri;
+
+        var chartPart = _package.TryGetPart(chartUri);
+        if (chartPart == null) return;
+
+        // Preserve raw bytes for lossless round-trip
+        shape.ChartPartData = chartPart.Data;
+
+        // Parse into ChartModel so callers can inspect and modify chart data
+        var chartDoc = OoXmlHelper.ParseXml(chartPart.Data);
+        if (chartDoc.Root != null)
+            ChartParser.Parse(chartDoc.Root, shape.Chart);
     }
 
     // ── Layout resolution ─────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Writing;
@@ -65,8 +66,9 @@ internal sealed class PresentationWriter
         // Write masters + their themes + layouts
         var masterUris = WriteMasters(package, masters, contentTypes, imageRelIds);
 
-        // Write slides
-        var slideUris = WriteSlides(package, slides, contentTypes, imageRelIds);
+        // Write slides (chart part index shared across all slides)
+        var chartPartIndex = 1;
+        var slideUris = WriteSlides(package, slides, contentTypes, imageRelIds, ref chartPartIndex);
 
         // Write presentation.xml
         WritePresentationPart(package, slides, masters, masterUris, slideUris, slideSize, contentTypes);
@@ -198,7 +200,8 @@ internal sealed class PresentationWriter
         OpcPackage package,
         SlideCollection slides,
         ContentTypeMap contentTypes,
-        Dictionary<string, string> imageRelIds)
+        Dictionary<string, string> imageRelIds,
+        ref int chartPartIndex)
     {
         var slideUris = new Dictionary<Slide, string>();
 
@@ -210,31 +213,60 @@ internal sealed class PresentationWriter
                 : slide.PartUri;
 
             slide.PartUri = slideUri;
-            contentTypes.Register(slideUri, PmlNames.ContentTypeSlide);
 
+            // Pre-assign all relationship IDs before generating the slide XML,
+            // so that shape writers can embed the correct rId values.
+            var rId = 2; // rId1 is reserved for the layout relationship
+
+            foreach (var shape in slide.Shapes.OfType<PictureShape>()
+                .Where(static p => p.Image != null && p.Image.PartUri.Length > 0))
+            {
+                if (string.IsNullOrEmpty(shape.Image!.RelationshipId))
+                    shape.Image.RelationshipId = $"rId{rId++}";
+            }
+
+            foreach (var chartShape in slide.Shapes.OfType<ChartShape>())
+            {
+                if (string.IsNullOrEmpty(chartShape.PartUri))
+                    chartShape.PartUri = $"/ppt/charts/chart{chartPartIndex++}.xml";
+                if (string.IsNullOrEmpty(chartShape.RelationshipId))
+                    chartShape.RelationshipId = $"rId{rId++}";
+            }
+
+            // Write slide XML (all relationship IDs now set)
+            contentTypes.Register(slideUri, PmlNames.ContentTypeSlide);
             var slideXml = SlideWriter.Write(slide);
             package.AddOrReplacePart(slideUri, PmlNames.ContentTypeSlide,
                 new XDocument(slideXml).ToUtf8Bytes());
 
             // Slide relationships
-            var rId = 1;
-
-            // Layout relationship
-            package.AddRelationship(slideUri, $"rId{rId++}",
+            package.AddRelationship(slideUri, "rId1",
                 PmlNames.RelTypeSlideLayout,
                 RelativeUri(slideUri, slide.Layout.PartUri));
 
-            // Image relationships
-            foreach (var shape in slide.Shapes.OfType<Shapes.PictureShape>()
+            foreach (var shape in slide.Shapes.OfType<PictureShape>()
                 .Where(static p => p.Image != null && p.Image.PartUri.Length > 0))
             {
-                if (string.IsNullOrEmpty(shape.Image!.RelationshipId))
-                    shape.Image.RelationshipId = $"rId{rId++}";
-
                 package.AddRelationship(slideUri,
-                    shape.Image.RelationshipId,
+                    shape.Image!.RelationshipId,
                     PmlNames.RelTypeImage,
                     RelativeUri(slideUri, shape.Image.PartUri));
+            }
+
+            foreach (var chartShape in slide.Shapes.OfType<ChartShape>())
+            {
+                // Use raw bytes for loaded charts (preserves workbook links);
+                // generate from ChartModel for new charts.
+                var chartBytes = chartShape.ChartPartData
+                    ?? ChartWriter.Write(chartShape.Chart);
+
+                package.AddOrReplacePart(chartShape.PartUri, PmlNames.ContentTypeChart, chartBytes);
+                contentTypes.Register(chartShape.PartUri, PmlNames.ContentTypeChart);
+
+                package.AddRelationship(slideUri,
+                    chartShape.RelationshipId,
+                    PmlNames.RelTypeChart,
+                    RelativeUri(slideUri, chartShape.PartUri));
             }
 
             slideUris[slide] = slideUri;
@@ -396,9 +428,9 @@ internal sealed class PresentationWriter
         if (targetUri.StartsWith(sourceDir, StringComparison.OrdinalIgnoreCase))
             return targetUri[sourceDir.Length..];
 
-        // Walk up
-        var sourceParts = sourceDir.TrimStart('/').Split('/');
-        var targetParts = targetUri.TrimStart('/').Split('/');
+        // Walk up — remove empty entries so the trailing '/' doesn't add a phantom level
+        var sourceParts = sourceDir.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var targetParts = targetUri.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
         var common = 0;
 
         while (common < sourceParts.Length &&

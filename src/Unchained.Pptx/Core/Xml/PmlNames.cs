@@ -107,6 +107,10 @@ internal static class PmlNames
     public const string ContentTypeExtendedProperties =
         "application/vnd.openxmlformats-officedocument.extended-properties+xml";
 
+    /// <summary>Content type for a chart part.</summary>
+    public const string ContentTypeChart =
+        "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
+
     // ── PresentationML element names ──────────────────────────────────────────
 
     /// <summary><c>&lt;p:presentation&gt;</c> — root element of the presentation part.</summary>

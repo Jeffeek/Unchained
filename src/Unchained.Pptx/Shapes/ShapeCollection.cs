@@ -1,4 +1,5 @@
 using Unchained.Ooxml;
+using Unchained.Pptx.Charts;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Ooxml.Drawing;
@@ -174,6 +175,35 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         var shape = new ConnectorShape
         {
             ConnectorType = type,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height
+        };
+        Enroll(shape);
+        return shape;
+    }
+
+    /// <summary>
+    /// Adds a new <see cref="ChartShape"/> of the given type at the specified position
+    /// and returns the new shape. Populate <see cref="ChartShape.Chart"/> to set the
+    /// chart data before saving.
+    /// </summary>
+    /// <param name="type">The visual type of the chart.</param>
+    /// <param name="x">Horizontal position of the top-left corner.</param>
+    /// <param name="y">Vertical position of the top-left corner.</param>
+    /// <param name="width">Width of the chart frame.</param>
+    /// <param name="height">Height of the chart frame.</param>
+    public ChartShape AddChart(
+        ChartType type,
+        Emu x,
+        Emu y,
+        Emu width,
+        Emu height)
+    {
+        var shape = new ChartShape
+        {
+            Chart = new ChartModel { Type = type },
             X = x,
             Y = y,
             Width = width,
