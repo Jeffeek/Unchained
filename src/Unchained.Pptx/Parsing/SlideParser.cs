@@ -2,10 +2,11 @@ using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Animations;
+using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Animations;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -17,15 +18,18 @@ internal sealed class SlideParser
     private readonly OpcPackage _package;
     private readonly MediaStore _mediaStore;
     private readonly IReadOnlyList<MasterSlide> _masters;
+    private readonly CommentAuthorCollection _commentAuthors;
 
     public SlideParser(
         OpcPackage package,
         MediaStore mediaStore,
-        IReadOnlyList<MasterSlide> masters)
+        IReadOnlyList<MasterSlide> masters,
+        CommentAuthorCollection commentAuthors)
     {
         _package = package;
         _mediaStore = mediaStore;
         _masters = masters;
+        _commentAuthors = commentAuthors;
     }
 
     /// <summary>
@@ -101,14 +105,32 @@ internal sealed class SlideParser
         // Resolve chart parts (second pass)
         ResolveCharts(part, slide);
 
-        // Notes slide
+        // Notes slide (M7)
         var notesRel = part.FindRelationship(PmlNames.RelTypeNotesSlide);
         if (notesRel != null)
         {
             var notesUri = part.ResolveUri(notesRel.TargetUri);
             var notesPart = _package.TryGetPart(notesUri);
             if (notesPart != null)
-                slide.Notes.RawElement = OoXmlHelper.ParseXml(notesPart.Data).Root;
+            {
+                var notesDoc = OoXmlHelper.ParseXml(notesPart.Data);
+                if (notesDoc.Root != null)
+                    NotesParser.Parse(notesDoc.Root, slide.Notes);
+            }
+        }
+
+        // Comments (M7)
+        var commentsRel = part.FindRelationship(PmlNames.RelTypeComments);
+        if (commentsRel != null)
+        {
+            var commentsUri = part.ResolveUri(commentsRel.TargetUri);
+            var commentsPart = _package.TryGetPart(commentsUri);
+            if (commentsPart != null)
+            {
+                var cmDoc = OoXmlHelper.ParseXml(commentsPart.Data);
+                if (cmDoc.Root != null)
+                    CommentParser.Parse(cmDoc.Root, slide, _commentAuthors);
+            }
         }
 
         return slide;

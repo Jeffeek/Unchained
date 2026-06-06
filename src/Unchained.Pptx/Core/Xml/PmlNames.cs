@@ -60,6 +60,12 @@ internal static class PmlNames
     /// <summary>Relationship type for a chart part.</summary>
     public const string RelTypeChart = RelBase + "chart";
 
+    /// <summary>Relationship type for a slide comment part.</summary>
+    public const string RelTypeComments = RelBase + "comments";
+
+    /// <summary>Relationship type for the presentation-level comment authors part.</summary>
+    public const string RelTypeCommentAuthors = RelBase + "commentAuthors";
+
     /// <summary>Relationship type for a hyperlink.</summary>
     public const string RelTypeHyperlink = RelBase + "hyperlink";
 
@@ -110,6 +116,14 @@ internal static class PmlNames
     /// <summary>Content type for a chart part.</summary>
     public const string ContentTypeChart =
         "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
+
+    /// <summary>Content type for a slide comment part.</summary>
+    public const string ContentTypeComments =
+        "application/vnd.openxmlformats-officedocument.presentationml.comments+xml";
+
+    /// <summary>Content type for the comment authors part.</summary>
+    public const string ContentTypeCommentAuthors =
+        "application/vnd.openxmlformats-officedocument.presentationml.commentAuthors+xml";
 
     // ── PresentationML element names ──────────────────────────────────────────
 

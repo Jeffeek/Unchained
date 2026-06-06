@@ -191,7 +191,9 @@ public sealed class PresentationProcessor : IDisposable
                 parsed.MediaStore,
                 parsed.Properties,
                 parsed.Protection,
-                parsed.SlideSize);
+                parsed.SlideSize,
+                parsed.CommentAuthors,
+                parsed.Sections);
         }
         finally
         {
@@ -217,6 +219,8 @@ public sealed class PresentationProcessor : IDisposable
                     document.Media,
                     document.Properties,
                     document.SlideSize,
+                    document.CommentAuthors,
+                    document.Sections,
                     options),
                 cancellationToken).ConfigureAwait(false);
         }

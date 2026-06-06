@@ -3,6 +3,7 @@ using Unchained.Pptx.Core;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
@@ -64,6 +65,8 @@ internal sealed class PresentationParser
         var mediaStore = new MediaStore();
         var masters = new MasterSlideCollection();
         var slides = new SlideCollection();
+        var commentAuthors = new CommentAuthorCollection();
+        var sections = new SectionCollection();
 
         // Parse slide size
         var slideSize = ParseSlideSize(root);
@@ -93,8 +96,27 @@ internal sealed class PresentationParser
             masters.Add(master);
         }
 
+        // Parse comment authors (M7)
+        var commentAuthorsRel = presentationPart.Relationships
+            .FirstOrDefault(static r => r.RelationshipType.Equals(
+                PmlNames.RelTypeCommentAuthors, StringComparison.Ordinal));
+        if (commentAuthorsRel != null)
+        {
+            var caUri = presentationPart.ResolveUri(commentAuthorsRel.TargetUri);
+            var caPart = package.TryGetPart(caUri);
+            if (caPart != null)
+            {
+                var caDoc = OoXmlHelper.ParseXml(caPart.Data);
+                if (caDoc.Root != null)
+                    CommentAuthorParser.Parse(caDoc.Root, commentAuthors);
+            }
+        }
+
+        // Parse sections (M7)
+        SectionParser.Parse(root, sections);
+
         // Parse slides
-        var slideParser = new SlideParser(package, mediaStore, ToList(masters));
+        var slideParser = new SlideParser(package, mediaStore, ToList(masters), commentAuthors);
         foreach (var slideIdEl in root.Elements(PmlNames.SlideIdList)
                                        .SelectMany(static l => l.Elements(PmlNames.SlideId)))
         {
@@ -124,7 +146,9 @@ internal sealed class PresentationParser
             mediaStore,
             properties,
             protection,
-            slideSize);
+            slideSize,
+            commentAuthors,
+            sections);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -214,7 +238,9 @@ internal sealed class ParsedPresentation(
     MediaStore mediaStore,
     Models.DocumentProperties properties,
     Security.ProtectionInfo protection,
-    Core.SlideSize slideSize)
+    Core.SlideSize slideSize,
+    CommentAuthorCollection commentAuthors,
+    SectionCollection sections)
 {
     public OpcPackage Package { get; } = package;
     public SlideCollection Slides { get; } = slides;
@@ -223,4 +249,6 @@ internal sealed class ParsedPresentation(
     public Models.DocumentProperties Properties { get; } = properties;
     public Security.ProtectionInfo Protection { get; } = protection;
     public Core.SlideSize SlideSize { get; } = slideSize;
+    public CommentAuthorCollection CommentAuthors { get; } = commentAuthors;
+    public SectionCollection Sections { get; } = sections;
 }
