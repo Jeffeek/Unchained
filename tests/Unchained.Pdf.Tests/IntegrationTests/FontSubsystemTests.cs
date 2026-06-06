@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Shouldly;
+using Unchained.Drawing.Text;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
@@ -208,14 +209,14 @@ public sealed class FontSubsystemTests : RendererTestBase
         0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37
     ];
 
-    // Loads the bundled DejaVuSans-Regular.ttf from the Rendering assembly (valid TrueType,
-    // usable by FreeType2 for rendering tests).
+    // Loads the bundled DejaVuSans-Regular.ttf from the Drawing.Text assembly (valid TrueType,
+    // usable by FreeType2 for rendering tests). Fonts moved from Pdf.Rendering → Drawing.Text.
     private static byte[] LoadBundledDejaVuBytes()
     {
-        var asm = typeof(PdfRenderer).Assembly;
-        using var stream = asm.GetManifestResourceStream("Unchained.Pdf.Rendering.Rendering.Fonts.DejaVuSans-Regular.ttf")
+        var asm = typeof(Unchained.Drawing.Text.FontCache).Assembly;
+        using var stream = asm.GetManifestResourceStream("Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
                            ?? throw new InvalidOperationException(
-                               "DejaVuSans-Regular.ttf not found in Rendering assembly.");
+                               "DejaVuSans-Regular.ttf not found in Drawing.Text assembly.");
         using var ms = new MemoryStream();
         stream.CopyTo(ms);
         return ms.ToArray();

@@ -388,3 +388,9 @@ docs/readthedocs/assets/
 src/Unchained.Pdf.Runtimes/runtimes/**/*.dll
 src/Unchained.Pdf.Runtimes/runtimes/**/*.so*
 src/Unchained.Pdf.Runtimes/runtimes/**/*.dylib
+src/Unchained.Drawing.Runtimes/runtimes/**/*.dll
+src/Unchained.Drawing.Runtimes/runtimes/**/*.so*
+src/Unchained.Drawing.Runtimes/runtimes/**/*.dylib
+src/Unchained.Pptx.Runtimes/runtimes/**/*.dll
+src/Unchained.Pptx.Runtimes/runtimes/**/*.so*
+src/Unchained.Pptx.Runtimes/runtimes/**/*.dylib

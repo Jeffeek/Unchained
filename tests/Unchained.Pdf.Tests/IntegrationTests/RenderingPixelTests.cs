@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Shouldly;
+using Unchained.Drawing.Text;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -182,9 +183,9 @@ public sealed class RenderingPixelTests : RendererTestBase
 
     private static byte[] LoadDejaVuBytes()
     {
-        var asm = typeof(Unchained.Pdf.Rendering.Engine.PdfRenderer).Assembly;
+        var asm = typeof(Unchained.Drawing.Text.FontCache).Assembly;
         using var stream = asm.GetManifestResourceStream(
-            "Unchained.Pdf.Rendering.Rendering.Fonts.DejaVuSans-Regular.ttf")
+            "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
             ?? throw new InvalidOperationException("DejaVuSans-Regular not found");
         using var ms = new MemoryStream();
         stream.CopyTo(ms);
@@ -213,7 +214,7 @@ public sealed class RenderingPixelTests : RendererTestBase
         ms.Write(L("1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj"));
 
         var o2 = Pos();
-        ms.Write(L("2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj"));
+        ms.Write(L("2 0 obj << /Type /Pages /Kids [5 0 R] /Count 1 >> endobj"));
 
         var csBytes = System.Text.Encoding.Latin1.GetBytes(contentStream);
         var o3 = Pos();

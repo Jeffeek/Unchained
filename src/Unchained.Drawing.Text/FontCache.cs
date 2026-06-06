@@ -226,13 +226,19 @@ internal sealed class FontCache : IDisposable
             var bm = ftFace.Glyph.Bitmap;
             // Do NOT use bm.BufferData — throws OverflowException for negative Pitch.
             // Read via Marshal.Copy from bm.Buffer instead.
+            // Guard against garbage values from SharpFont struct offset mismatch on Windows x64.
             int nonZero = -1;
-            if (bm.Buffer != IntPtr.Zero && bm.Width > 0 && bm.Rows > 0)
+            const int maxGlyphDim = 4096;
+            if (bm.Buffer != IntPtr.Zero && bm.Width > 0 && bm.Rows > 0
+                && bm.Width <= maxGlyphDim && bm.Rows <= maxGlyphDim)
             {
                 var absPitch = Math.Abs(bm.Pitch);
-                var rawBytes = new byte[absPitch * bm.Rows];
-                System.Runtime.InteropServices.Marshal.Copy(bm.Buffer, rawBytes, 0, rawBytes.Length);
-                nonZero = rawBytes.Count(b => b > 0);
+                if (absPitch > 0 && absPitch <= maxGlyphDim * 4)
+                {
+                    var rawBytes = new byte[absPitch * bm.Rows];
+                    System.Runtime.InteropServices.Marshal.Copy(bm.Buffer, rawBytes, 0, rawBytes.Length);
+                    nonZero = rawBytes.Count(b => b > 0);
+                }
             }
 
             return $"OK: glyphId={glyphId}, xAdv={xAdv}, " +

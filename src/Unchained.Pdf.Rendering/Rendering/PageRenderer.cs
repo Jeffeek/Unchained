@@ -345,20 +345,15 @@ internal sealed class PageRenderer(
 
             GlyphsAttempted++;
 
-            var glyph = ftFace.Glyph;
-
             // HarfBuzz XOffset/YOffset are in 26.6 pixel units; convert to user-space points.
             var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
             var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale);
             var (px, py) = UToPixel(originX, originY);
 
-            buffer.BlitGlyphBitmap(
-                (int)(px + glyph.BitmapLeft),
-                (int)(py - glyph.BitmapTop),
-                glyph.Bitmap,
-                _gs.FillR,
-                _gs.FillG,
-                _gs.FillB);
+            // Use BlitGlyphFromFace so we can read BitmapLeft/BitmapTop and the bitmap
+            // itself directly from the FT_GlyphSlotRec at correct native struct offsets.
+            // SharpFont's face->glyph offset is wrong on Windows x64 (NativeLong mismatch).
+            buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
 
             // Advance in 26.6 px → convert to user-space points.
             var advance = ((glyphPositions[i].XAdvance / 64.0 / scale) + _gs.CharSpace)
