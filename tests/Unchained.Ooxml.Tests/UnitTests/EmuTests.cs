@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Ooxml;
 using Xunit;
 
-namespace Unchained.Pptx.Tests.UnitTests.Core;
+namespace Unchained.Ooxml.Tests.UnitTests;
 
 public sealed class EmuTests
 {

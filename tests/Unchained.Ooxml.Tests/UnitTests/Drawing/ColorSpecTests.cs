@@ -1,10 +1,8 @@
 using Shouldly;
-using Unchained.Ooxml;
-using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Drawing;
 using Xunit;
 
-namespace Unchained.Pptx.Tests.UnitTests.Core;
+namespace Unchained.Ooxml.Tests.UnitTests.Drawing;
 
 public sealed class ColorSpecTests
 {

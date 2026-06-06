@@ -41,6 +41,7 @@
     <Project Path="src/Unchained.Pptx.Runtimes/Unchained.Pptx.Runtimes.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Unchained.Ooxml.Tests/Unchained.Ooxml.Tests.csproj" />
     <Project Path="tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj" />
     <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
     <Project Path="tests/Unchained.Pptx.Tests/Unchained.Pptx.Tests.csproj" />

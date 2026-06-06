@@ -3,7 +3,7 @@ using Unchained.Ooxml;
 using Unchained.Ooxml.Opc;
 using Xunit;
 
-namespace Unchained.Pptx.Tests.UnitTests.Core;
+namespace Unchained.Ooxml.Tests.UnitTests.Opc;
 
 public sealed class OpcPackageTests
 {
