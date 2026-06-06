@@ -1,4 +1,5 @@
 using Unchained.Ooxml;
+using Unchained.Pptx.Animations;
 using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Slides;
@@ -41,6 +42,20 @@ public sealed class Slide
     /// <summary>The slide background.</summary>
     public SlideBackground Background { get; } = new();
 
+    // ── Animations & Transitions ───────────────────────────────────────────────
+
+    /// <summary>
+    /// The animation effects applied to shapes on this slide.
+    /// Modify the <see cref="AnimationTimeline.MainSequence"/> to add or remove effects.
+    /// </summary>
+    public AnimationTimeline Animations { get; } = new();
+
+    /// <summary>
+    /// The visual transition that plays when advancing to this slide.
+    /// Set <see cref="SlideTransition.Effect"/> to configure the transition type.
+    /// </summary>
+    public SlideTransition Transition { get; } = new();
+
     // ── Layout / Master ────────────────────────────────────────────────────────
 
     /// <summary>The layout that controls placeholder positions and default formatting.</summary>
@@ -64,12 +79,6 @@ public sealed class Slide
     internal bool HasNotes => _notes != null;
 
     // ── Round-trip blobs ──────────────────────────────────────────────────────
-
-    /// <summary>Animation timing XML, preserved verbatim until M6 implementation.</summary>
-    internal System.Xml.Linq.XElement? TimingElement { get; set; }
-
-    /// <summary>Slide transition XML, preserved verbatim until M6 implementation.</summary>
-    internal System.Xml.Linq.XElement? TransitionElement { get; set; }
 
     /// <summary>Colour map override element, preserved verbatim.</summary>
     internal System.Xml.Linq.XElement? ColorMapOverrideElement { get; set; }

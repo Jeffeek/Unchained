@@ -5,6 +5,7 @@ using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
+using Unchained.Pptx.Animations;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -83,9 +84,15 @@ internal sealed class SlideParser
             shapeParser.ParseTree(spTree, slide.Shapes);
         }
 
-        // Preserve round-trip blobs
-        slide.TransitionElement = root.Element(PmlNames.Transition);
-        slide.TimingElement = root.Element(PmlNames.Timing);
+        // Parse transition and animations (M6)
+        var transitionEl = root.Element(PmlNames.Transition);
+        if (transitionEl != null)
+            TransitionParser.Parse(transitionEl, slide.Transition);
+
+        var timingEl = root.Element(PmlNames.Timing);
+        if (timingEl != null)
+            AnimationParser.Parse(timingEl, slide.Animations);
+
         slide.ColorMapOverrideElement = root.Element(PmlNames.ColorMapOverride);
 
         // Resolve embedded images (second pass)
