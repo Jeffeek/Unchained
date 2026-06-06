@@ -1,24 +1,127 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!--
-    Slide rasterization for Unchained.Pptx.
-    Depends on Unchained.Pptx + Unchained.Pptx.Runtimes + HarfBuzzSharp.
-    Implementation is deferred — this scaffold exists so the solution compiles
-    and the package dependency chain is established.
-  -->
-
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- SharpFont 4.0.1 targets net45; enable fallback so the DLL resolves. -->
+    <AssetTargetFallback>$(AssetTargetFallback);net45</AssetTargetFallback>
     <PackageTags>pptx;powerpoint;presentation;rendering;dotnet;csharp;document-processing</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Unchained.Pptx.Tests" />
+  </ItemGroup>
+
+  <!-- Core managed library and native-assets package -->
+  <ItemGroup>
     <ProjectReference Include="..\Unchained.Pptx\Unchained.Pptx.csproj" />
-    <ProjectReference Include="..\Unchained.Pptx.Runtimes\Unchained.Pptx.Runtimes.csproj" />
+    <ProjectReference Include="..\Unchained.Pdf.Runtimes\Unchained.Pdf.Runtimes.csproj" />
+  </ItemGroup>
+
+  <!--
+    Copy FreeType2 native libraries into runtimes/{rid}/native/ in the output so the
+    resolver (using AppContext.BaseDirectory + NuGet convention path) finds them on all
+    platforms. All six entries are unconditional — only the Exists() guard is needed;
+    MSBuild skips missing files silently. No platform conditions means no evaluation
+    surprises across different OS/arch combinations.
+  -->
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-x64\native\freetype6.dll')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-x64\native\freetype6.dll"
+              Link="runtimes\win-x64\native\freetype6.dll"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-arm64\native\freetype6.dll')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\win-arm64\native\freetype6.dll"
+              Link="runtimes\win-arm64\native\freetype6.dll"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-x64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-x64\native\libfreetype.so.6"
+              Link="runtimes\linux-x64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6"
+              Link="runtimes\linux-arm64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib"
+              Link="runtimes\osx-x64\native\libfreetype.6.dylib"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Pdf.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib"
+              Link="runtimes\osx-arm64\native\libfreetype.6.dylib"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <!-- SharpFont 4.0.1 (MIT) — managed P/Invoke wrapper for FreeType2.
+       Directly referenced because the NuGet package only ships a net45 TFM. -->
+  <ItemGroup>
+    <Reference Include="SharpFont">
+      <HintPath>..\Unchained.Pdf.Rendering\libs\SharpFont.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- HarfBuzz (MIT) — text shaping for complex scripts (Arabic, Devanagari, CJK, ligatures). -->
+  <ItemGroup Label="HarfBuzz">
+    <PackageReference Include="HarfBuzzSharp" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
+  </ItemGroup>
+
+  <!-- Substitute fonts for Standard 14 (DejaVu — Bitstream Vera / SIL OFL). -->
+  <!-- NotoSans-Regular (OFL) — primary fallback for unrecognised/unembedded fonts;
+       broader Unicode coverage than DejaVu (Latin, Greek, Cyrillic, and more). -->
+  <ItemGroup Label="Substitute fonts">
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\NotoSans-Regular.ttf"
+                      Link="Rendering\Fonts\NotoSans-Regular.ttf" />
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\DejaVuSans-Regular.ttf"
+                      Link="Rendering\Fonts\DejaVuSans-Regular.ttf" />
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\DejaVuSans-Bold.ttf"
+                      Link="Rendering\Fonts\DejaVuSans-Bold.ttf" />
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\DejaVuSans-Oblique.ttf"
+                      Link="Rendering\Fonts\DejaVuSans-Oblique.ttf" />
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\DejaVuSans-BoldOblique.ttf"
+                      Link="Rendering\Fonts\DejaVuSans-BoldOblique.ttf" />
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\DejaVuSerif-Regular.ttf"
+                      Link="Rendering\Fonts\DejaVuSerif-Regular.ttf" />
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\DejaVuSerif-Bold.ttf"
+                      Link="Rendering\Fonts\DejaVuSerif-Bold.ttf" />
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\DejaVuSansMono-Regular.ttf"
+                      Link="Rendering\Fonts\DejaVuSansMono-Regular.ttf" />
+    <EmbeddedResource Include="..\Unchained.Pdf.Rendering\Rendering\Fonts\DejaVuSansMono-Bold.ttf"
+                      Link="Rendering\Fonts\DejaVuSansMono-Bold.ttf" />
   </ItemGroup>
 
 </Project>

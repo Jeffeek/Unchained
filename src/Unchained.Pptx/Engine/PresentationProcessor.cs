@@ -1,6 +1,7 @@
 using Unchained.Pptx.Themes;
 using Unchained.Pptx.Core;
 using Unchained.Ooxml;
+using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Parsing;
@@ -127,6 +128,58 @@ public sealed class PresentationProcessor : IDisposable
         var protection = new ProtectionInfo();
 
         return new PresentationDocument(slides, masters, mediaStore, properties, protection, slideSize);
+    }
+
+    // ── PDF Export (M9) ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Exports <paramref name="document"/> to a PDF file.
+    /// Each non-hidden slide becomes one PDF page at the correct dimensions.
+    /// </summary>
+    public async Task SaveAsPdfAsync(
+        PresentationDocument document,
+        string path,
+        PdfSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var bytes = await ExportPdfAsync(document, options, cancellationToken).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Exports <paramref name="document"/> to a PDF stream.
+    /// </summary>
+    public async Task SaveAsPdfAsync(
+        PresentationDocument document,
+        Stream stream,
+        PdfSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(stream);
+        var bytes = await ExportPdfAsync(document, options, cancellationToken).ConfigureAwait(false);
+        await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<byte[]> ExportPdfAsync(
+        PresentationDocument document,
+        PdfSaveOptions? options,
+        CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var opts = options ?? PdfSaveOptions.Default;
+            return await Task.Run(
+                () => PptxToPdfWriter.Write(document, opts),
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     // ── Save ──────────────────────────────────────────────────────────────────
