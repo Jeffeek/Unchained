@@ -1,4 +1,4 @@
-using Unchained.Pptx.Core;
+using Unchained.Ooxml;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Text;
 

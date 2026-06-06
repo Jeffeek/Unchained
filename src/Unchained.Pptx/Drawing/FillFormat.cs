@@ -1,4 +1,4 @@
-using Unchained.Pptx.Themes;
+using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Drawing;
 
@@ -9,29 +9,29 @@ namespace Unchained.Pptx.Drawing;
 public sealed class FillFormat
 {
     /// <summary>The active fill type. Change this and set the corresponding sub-object.</summary>
-    public Models.Shapes.FillType Type { get; set; } = Models.Shapes.FillType.None;
+    public FillType Type { get; set; } = FillType.None;
 
     /// <summary>
     /// The solid fill settings. Only meaningful when <see cref="Type"/> is
-    /// <see cref="Models.Shapes.FillType.Solid"/>.
+    /// <see cref="FillType.Solid"/>.
     /// </summary>
     public SolidFill? Solid { get; set; }
 
     /// <summary>
     /// The gradient fill settings. Only meaningful when <see cref="Type"/> is
-    /// <see cref="Models.Shapes.FillType.Gradient"/>.
+    /// <see cref="FillType.Gradient"/>.
     /// </summary>
     public GradientFill? Gradient { get; set; }
 
     /// <summary>
     /// The pattern fill settings. Only meaningful when <see cref="Type"/> is
-    /// <see cref="Models.Shapes.FillType.Pattern"/>.
+    /// <see cref="FillType.Pattern"/>.
     /// </summary>
     public PatternFill? Pattern { get; set; }
 
     /// <summary>
     /// The picture fill settings. Only meaningful when <see cref="Type"/> is
-    /// <see cref="Models.Shapes.FillType.Picture"/>.
+    /// <see cref="FillType.Picture"/>.
     /// </summary>
     public PictureFill? Picture { get; set; }
 
@@ -40,7 +40,7 @@ public sealed class FillFormat
     /// <summary>Sets the fill to a single solid colour and returns the new settings.</summary>
     public SolidFill SetSolid(ColorSpec color)
     {
-        Type = Models.Shapes.FillType.Solid;
+        Type = FillType.Solid;
         Solid = new SolidFill { Color = color };
         Gradient = null;
         Pattern = null;
@@ -51,7 +51,7 @@ public sealed class FillFormat
     /// <summary>Sets the fill to a gradient and returns a new empty <see cref="GradientFill"/> to configure.</summary>
     public GradientFill SetGradient()
     {
-        Type = Models.Shapes.FillType.Gradient;
+        Type = FillType.Gradient;
         Gradient = new GradientFill();
         Solid = null;
         Pattern = null;
@@ -62,7 +62,7 @@ public sealed class FillFormat
     /// <summary>Removes all fill (makes the shape transparent).</summary>
     public void SetNone()
     {
-        Type = Models.Shapes.FillType.None;
+        Type = FillType.None;
         Solid = null;
         Gradient = null;
         Pattern = null;

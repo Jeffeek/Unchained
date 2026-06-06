@@ -1,8 +1,10 @@
+using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Core;
 using System.Text;
 using System.Xml.Linq;
-using Unchained.Pptx.Core;
-using Unchained.Pptx.Core.Opc;
-using Unchained.Pptx.Core.Xml;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;

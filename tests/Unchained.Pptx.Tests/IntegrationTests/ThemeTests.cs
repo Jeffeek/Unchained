@@ -1,6 +1,6 @@
 using Shouldly;
 using Unchained.Pptx.Tests.Helpers;
-using Unchained.Pptx.Themes;
+using Unchained.Ooxml.Drawing;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -35,8 +35,8 @@ public sealed class ThemeTests : PptxTestBase
     {
         var doc = PptxFixtures.BlankPresentation();
         var red = ColorSpec.FromRgb(0xFF, 0x00, 0x00);
-        doc.Masters[0].Theme.Colors[Models.Drawing.ThemeColorSlot.Accent1] = red;
-        doc.Masters[0].Theme.Colors[Models.Drawing.ThemeColorSlot.Accent1].ShouldBe(red);
+        doc.Masters[0].Theme.Colors[ThemeColorSlot.Accent1] = red;
+        doc.Masters[0].Theme.Colors[ThemeColorSlot.Accent1].ShouldBe(red);
     }
 
     [Fact]

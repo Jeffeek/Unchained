@@ -1,3 +1,6 @@
+using Unchained.Ooxml;
+using Unchained.Pptx.Core;
+using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
 
 namespace Unchained.Pptx.Core.Xml;

@@ -1,4 +1,5 @@
-using Unchained.Pptx.Core;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Text;
 

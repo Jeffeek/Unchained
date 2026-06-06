@@ -1,7 +1,7 @@
-using Unchained.Pptx.Core;
+using Unchained.Ooxml;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models.Shapes;
-using Unchained.Pptx.Themes;
+using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Shapes;
 

@@ -1,10 +1,13 @@
+using Unchained.Pptx.Core;
+using Unchained.Ooxml;
+
 namespace Unchained.Pptx.Core;
 
 /// <summary>
 /// The exception thrown when an error is encountered while reading, writing, or
 /// processing a presentation file.
 /// </summary>
-public class PptxException : Exception
+public class PptxException : OoXmlException
 {
     /// <summary>Initialises a new <see cref="PptxException"/> with the given message.</summary>
     public PptxException(string message) : base(message) { }

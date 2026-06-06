@@ -1,5 +1,5 @@
-using Unchained.Pptx.Core;
-using Unchained.Pptx.Models.Text;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Text;
 
@@ -44,16 +44,16 @@ public sealed class Paragraph
     public LineSpacing? Spacing { get; set; }
 
     /// <summary>Left margin in EMU. <see langword="null"/> means inherit.</summary>
-    public Core.Emu? MarginLeft { get; set; }
+    public Emu? MarginLeft { get; set; }
 
     /// <summary>Right margin in EMU. <see langword="null"/> means inherit.</summary>
-    public Core.Emu? MarginRight { get; set; }
+    public Emu? MarginRight { get; set; }
 
     /// <summary>
     /// Indent (first-line indent) in EMU. A negative value creates a hanging indent.
     /// <see langword="null"/> means inherit.
     /// </summary>
-    public Core.Emu? Indent { get; set; }
+    public Emu? Indent { get; set; }
 
     /// <summary>Outline level (0 = top level). Used for SmartArt and outline views.</summary>
     public int OutlineLevel { get; set; }

@@ -1,5 +1,6 @@
-using System.Xml.Linq;
 using Unchained.Pptx.Core.Xml;
+using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Writing;

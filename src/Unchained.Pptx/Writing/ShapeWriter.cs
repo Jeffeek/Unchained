@@ -1,6 +1,8 @@
-using System.Xml.Linq;
-using Unchained.Pptx.Core;
 using Unchained.Pptx.Core.Xml;
+using Unchained.Ooxml.Drawing;
+using System.Xml.Linq;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Writing;

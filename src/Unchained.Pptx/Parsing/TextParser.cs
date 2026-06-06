@@ -1,9 +1,9 @@
 using System.Xml.Linq;
-using Unchained.Pptx.Core;
-using Unchained.Pptx.Core.Xml;
-using Unchained.Pptx.Models.Text;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Xml;
+using Unchained.Ooxml.Text;
 using Unchained.Pptx.Text;
-using Unchained.Pptx.Themes;
+using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -54,22 +54,22 @@ internal static class TextParser
             format.WrapText = wrap != "none";
 
         var marL = bodyPr.GetAttrLong("marL");
-        if (marL.HasValue) format.MarginLeft = new Core.Emu(marL.Value);
+        if (marL.HasValue) format.MarginLeft = new Emu(marL.Value);
 
         var marR = bodyPr.GetAttrLong("marR");
-        if (marR.HasValue) format.MarginRight = new Core.Emu(marR.Value);
+        if (marR.HasValue) format.MarginRight = new Emu(marR.Value);
 
         var marT = bodyPr.GetAttrLong("marT");
-        if (marT.HasValue) format.MarginTop = new Core.Emu(marT.Value);
+        if (marT.HasValue) format.MarginTop = new Emu(marT.Value);
 
         var marB = bodyPr.GetAttrLong("marB");
-        if (marB.HasValue) format.MarginBottom = new Core.Emu(marB.Value);
+        if (marB.HasValue) format.MarginBottom = new Emu(marB.Value);
 
         var numCol = bodyPr.GetAttrInt("numCol");
         if (numCol.HasValue) format.ColumnCount = numCol.Value;
 
         var spcCol = bodyPr.GetAttrLong("spcCol");
-        if (spcCol.HasValue) format.ColumnSpacing = new Core.Emu(spcCol.Value);
+        if (spcCol.HasValue) format.ColumnSpacing = new Emu(spcCol.Value);
 
         var vert = bodyPr.GetAttr("vert");
         if (vert != null) format.Direction = ParseTextDirection(vert);
@@ -110,13 +110,13 @@ internal static class TextParser
         if (algn != null) para.Alignment = ParseAlignment(algn);
 
         var marL = pPr.GetAttrLong("marL");
-        if (marL.HasValue) para.MarginLeft = new Core.Emu(marL.Value);
+        if (marL.HasValue) para.MarginLeft = new Emu(marL.Value);
 
         var marR = pPr.GetAttrLong("marR");
-        if (marR.HasValue) para.MarginRight = new Core.Emu(marR.Value);
+        if (marR.HasValue) para.MarginRight = new Emu(marR.Value);
 
         var indent = pPr.GetAttrLong("indent");
-        if (indent.HasValue) para.Indent = new Core.Emu(indent.Value);
+        if (indent.HasValue) para.Indent = new Emu(indent.Value);
 
         var lvl = pPr.GetAttrInt("lvl");
         if (lvl.HasValue) para.OutlineLevel = lvl.Value;
@@ -173,10 +173,10 @@ internal static class TextParser
         if (sz.HasValue) format.FontSizePoints = sz.Value / 100.0;
 
         var bold = rPr.GetAttrBool(DmlNames.AttributeBold);
-        format.Bold = Core.InheritableBool.From(bold);
+        format.Bold = InheritableBool.From(bold);
 
         var italic = rPr.GetAttrBool(DmlNames.AttributeItalic);
-        format.Italic = Core.InheritableBool.From(italic);
+        format.Italic = InheritableBool.From(italic);
 
         var underline = rPr.GetAttr(DmlNames.AttributeUnderline);
         if (underline != null) format.Underline = ParseUnderline(underline);

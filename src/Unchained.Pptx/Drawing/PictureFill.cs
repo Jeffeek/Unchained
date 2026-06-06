@@ -1,5 +1,5 @@
 using Unchained.Pptx.Media;
-using Unchained.Pptx.Models.Drawing;
+using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Drawing;
 

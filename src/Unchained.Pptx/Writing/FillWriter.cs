@@ -1,7 +1,8 @@
-using System.Xml.Linq;
 using Unchained.Pptx.Core.Xml;
+using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
+using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Drawing;
-using Unchained.Pptx.Models.Shapes;
 
 namespace Unchained.Pptx.Writing;
 
@@ -110,22 +111,22 @@ internal static class FillWriter
         return blipFill;
     }
 
-    private static string PatternPresetToString(Models.Drawing.PatternPreset preset) => preset switch
+    private static string PatternPresetToString(PatternPreset preset) => preset switch
     {
-        Models.Drawing.PatternPreset.Percent5 => "pct5",
-        Models.Drawing.PatternPreset.Percent10 => "pct10",
-        Models.Drawing.PatternPreset.Percent20 => "pct20",
-        Models.Drawing.PatternPreset.Percent25 => "pct25",
-        Models.Drawing.PatternPreset.Percent30 => "pct30",
-        Models.Drawing.PatternPreset.Percent40 => "pct40",
-        Models.Drawing.PatternPreset.Percent50 => "pct50",
-        Models.Drawing.PatternPreset.Percent60 => "pct60",
-        Models.Drawing.PatternPreset.Percent70 => "pct70",
-        Models.Drawing.PatternPreset.Percent75 => "pct75",
-        Models.Drawing.PatternPreset.Percent80 => "pct80",
-        Models.Drawing.PatternPreset.Percent90 => "pct90",
-        Models.Drawing.PatternPreset.HorizontalLines => "horz",
-        Models.Drawing.PatternPreset.VerticalLines => "vert",
+        PatternPreset.Percent5 => "pct5",
+        PatternPreset.Percent10 => "pct10",
+        PatternPreset.Percent20 => "pct20",
+        PatternPreset.Percent25 => "pct25",
+        PatternPreset.Percent30 => "pct30",
+        PatternPreset.Percent40 => "pct40",
+        PatternPreset.Percent50 => "pct50",
+        PatternPreset.Percent60 => "pct60",
+        PatternPreset.Percent70 => "pct70",
+        PatternPreset.Percent75 => "pct75",
+        PatternPreset.Percent80 => "pct80",
+        PatternPreset.Percent90 => "pct90",
+        PatternPreset.HorizontalLines => "horz",
+        PatternPreset.VerticalLines => "vert",
         _ => "pct5"
     };
 }

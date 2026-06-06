@@ -1,7 +1,7 @@
-using Unchained.Pptx.Core;
+using Unchained.Ooxml;
 using Unchained.Pptx.Drawing;
-using Unchained.Pptx.Models.Text;
-using Unchained.Pptx.Themes;
+using Unchained.Ooxml.Text;
+using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Text;
 
