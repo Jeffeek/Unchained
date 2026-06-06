@@ -8,6 +8,7 @@ using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Slides;
+using System.Xml.Linq;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -25,6 +26,17 @@ internal sealed class PresentationParser
     {
         ArgumentNullException.ThrowIfNull(data);
 
+        // Detect OLE CFB (encrypted OOXML) and decrypt if needed (M8)
+        var wasEncrypted = false;
+        if (AgileEncryption.IsCfb(data))
+        {
+            wasEncrypted = true;
+            if (string.IsNullOrEmpty(options?.Password))
+                throw new PptxEncryptedException();
+
+            data = AgileEncryption.Decrypt(data, options!.Password);
+        }
+
         OpcPackage package;
         try
         {
@@ -39,7 +51,9 @@ internal sealed class PresentationParser
             throw new PptxException("Failed to open the presentation package.", ex);
         }
 
-        return ParsePackage(package, options);
+        var result = ParsePackage(package, options);
+        if (wasEncrypted) result.Protection.IsEncrypted = true;
+        return result;
     }
 
     /// <summary>
@@ -74,8 +88,8 @@ internal sealed class PresentationParser
         // Parse properties
         var properties = ParseDocumentProperties(package);
 
-        // Parse protection
-        var protection = new ProtectionInfo { IsEncrypted = false };
+        // Parse protection (M8)
+        var protection = ParseProtection(root);
 
         // Parse masters (and their themes + layouts)
         var masterParser = new MasterParser(package, mediaStore);
@@ -153,7 +167,22 @@ internal sealed class PresentationParser
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static SlideSize ParseSlideSize(System.Xml.Linq.XElement root)
+    private static ProtectionInfo ParseProtection(XElement root)
+    {
+        var protection = new ProtectionInfo();
+        var pml = PmlNames.Pml;
+
+        var modVerEl = root.Element(pml + "modifyVerifier");
+        if (modVerEl != null)
+        {
+            protection.WriteProtectionSaltBase64 = modVerEl.GetAttr("saltValue");
+            protection.WriteProtectionHashBase64 = modVerEl.GetAttr("hashValue");
+        }
+
+        return protection;
+    }
+
+    private static SlideSize ParseSlideSize(XElement root)
     {
         var sldSz = root.Element(PmlNames.SlideSize);
         if (sldSz == null) return SlideSize.Widescreen;

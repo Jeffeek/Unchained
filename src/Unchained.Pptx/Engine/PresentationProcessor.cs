@@ -221,6 +221,7 @@ public sealed class PresentationProcessor : IDisposable
                     document.SlideSize,
                     document.CommentAuthors,
                     document.Sections,
+                    document.Protection,
                     options),
                 cancellationToken).ConfigureAwait(false);
         }

@@ -38,6 +38,7 @@ internal sealed class PresentationWriter
         SlideSize slideSize,
         CommentAuthorCollection? commentAuthors = null,
         SectionCollection? sections = null,
+        ProtectionInfo? protection = null,
         Models.SaveOptions? options = null)
     {
         var package = OpcPackage.CreateEmpty();
@@ -85,8 +86,8 @@ internal sealed class PresentationWriter
             WriteCommentAuthors(package, authors, contentTypes);
         }
 
-        // Write presentation.xml (includes sections)
-        WritePresentationPart(package, slides, masters, masterUris, slideUris, slideSize, sections, contentTypes);
+        // Write presentation.xml (includes sections and write-protection)
+        WritePresentationPart(package, slides, masters, masterUris, slideUris, slideSize, sections, protection, contentTypes);
 
         // Write core properties
         WriteCoreProperties(package, properties, contentTypes);
@@ -97,7 +98,13 @@ internal sealed class PresentationWriter
         package.AddPackageRelationship("rId2", PmlNames.RelTypeCoreProperties,
             CorePropsPartUri.TrimStart('/'));
 
-        return package.Save();
+        var zipBytes = package.Save();
+
+        // Encrypt output if password was provided (M8)
+        if (!string.IsNullOrEmpty(options?.Password))
+            return AgileEncryption.Encrypt(zipBytes, options.Password);
+
+        return zipBytes;
     }
 
     // ── Media ─────────────────────────────────────────────────────────────────
@@ -347,6 +354,7 @@ internal sealed class PresentationWriter
         Dictionary<Slide, string> slideUris,
         SlideSize slideSize,
         SectionCollection? sections,
+        ProtectionInfo? protection,
         ContentTypeMap contentTypes)
     {
         var pml = PmlNames.Pml;
@@ -389,6 +397,10 @@ internal sealed class PresentationWriter
                     slide.RelationshipId.Length > 0 ? slide.RelationshipId : $"rId{i + 1}")));
         }
         pres.Add(slideIdLst);
+
+        // Write-protection (M8)
+        if (protection?.IsWriteProtected == true)
+            pres.Add(WriteModifyVerifier(protection));
 
         // Sections extension (M7 — PowerPoint 2010+)
         if (sections != null && sections.Count > 0)
@@ -437,6 +449,19 @@ internal sealed class PresentationWriter
                 PmlNames.RelTypeCommentAuthors,
                 RelativeUri(PresentationPartUri, CommentAuthorsPartUri));
         }
+    }
+
+    private static XElement WriteModifyVerifier(ProtectionInfo protection)
+    {
+        var pml = PmlNames.Pml;
+        return new XElement(pml + "modifyVerifier",
+            new XAttribute("cryptProviderType", "rsaAES"),
+            new XAttribute("cryptAlgorithmClass", "hash"),
+            new XAttribute("cryptAlgorithmType", "typeAny"),
+            new XAttribute("cryptAlgorithmSid", "14"),          // SHA-512
+            new XAttribute("spinCount", ProtectionInfo.WriteProtectionSpinCount),
+            new XAttribute("saltValue", protection.WriteProtectionSaltBase64!),
+            new XAttribute("hashValue", protection.WriteProtectionHashBase64!));
     }
 
     private static XElement WriteSectionsExtLst(SectionCollection sections)
