@@ -1,6 +1,8 @@
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Rendering.Rendering;
+using Unchained.Drawing;
+using Unchained.Drawing.Text;
 
 namespace Unchained.Pdf.Rendering.Engine;
 
@@ -41,15 +43,6 @@ public sealed class PdfRenderer : IRenderer
     /// <summary>Glyph bitmaps skipped because LoadGlyph threw in the last render.</summary>
     internal int LastGlyphsSkipped { get; private set; }
 
-    /// <summary>Actual non-transparent pixels written by BlitGlyphBitmap in the last render.</summary>
-    internal int LastGlyphPixelsWritten { get; private set; }
-    internal int LastGlyphZeroDims     { get; private set; }
-    internal int LastGlyphNullBuf      { get; private set; }
-    internal int LastGlyphZeroPitch    { get; private set; }
-    internal int LastGlyphUnknownMode  { get; private set; }
-    internal int LastGlyphAllAlphaZero { get; private set; }
-    internal (int W, int H, int Pitch, int PixelMode, int NonZeroAlpha) LastGlyphDiag { get; private set; }
-    internal (int W, int H, int Pitch, int Mode, int Left, int Top) LastBitmapAfterLoad { get; private set; }
 
     /// <summary>
     /// Creates a new <see cref="PdfRenderer"/> and initialises the FreeType2 library.
@@ -173,19 +166,11 @@ public sealed class PdfRenderer : IRenderer
             embeddedFontBytes, imageXObjects, initialCtm);
         renderer.Render(page.GetContentOperators(), fontMap);
 
-        LastTextErrors            = renderer.TextErrorCount;
-        LastGlyphsAttempted       = renderer.GlyphsAttempted;
-        LastGlyphsSkipped         = renderer.GlyphsSkipped;
-        LastGlyphPixelsWritten    = buffer.GlyphPixelsWritten;
-        LastGlyphZeroDims         = buffer.GlyphCallsWithZeroDims;
-        LastGlyphNullBuf          = buffer.GlyphCallsWithNullBuf;
-        LastGlyphZeroPitch        = buffer.GlyphCallsWithZeroPitch;
-        LastGlyphUnknownMode      = buffer.GlyphCallsUnknownMode;
-        LastGlyphAllAlphaZero     = buffer.GlyphCallsAllAlphaZero;
-        LastGlyphDiag             = buffer.LastGlyphDiag;
-        LastBitmapAfterLoad       = renderer.LastBitmapAfterLoad;
+        LastTextErrors      = renderer.TextErrorCount;
+        LastGlyphsAttempted = renderer.GlyphsAttempted;
+        LastGlyphsSkipped   = renderer.GlyphsSkipped;
 
-        return PdfPngEncoder.Encode(buffer);
+        return PngEncoder.Encode(buffer);
     }
 
     /// <inheritdoc />

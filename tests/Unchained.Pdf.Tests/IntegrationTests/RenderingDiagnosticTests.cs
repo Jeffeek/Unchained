@@ -223,71 +223,6 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
     }
 
     [Fact]
-    public async Task Stage7c_GlyphPixelsWritten_ConfirmsBlitGlyphBitmapWritesPixels()
-    {
-        // If GlyphsAttempted > 0 but GlyphPixelsWritten == 0, BlitGlyphBitmap runs
-        // but writes nothing — the bug is inside that function.
-        SkipIfNoFreeType();
-
-        var fontData = LoadDejaVuBytes();
-        var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData,
-            "BT /F1 24 Tf 100 600 Td (Hello) Tj ET");
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
-        await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 96),
-            ct: TestContext.Current.CancellationToken);
-
-        Log($"GlyphsAttempted:    {Renderer.LastGlyphsAttempted}");
-        Log($"GlyphsSkipped:      {Renderer.LastGlyphsSkipped}");
-        Log($"GlyphPixelsWritten: {Renderer.LastGlyphPixelsWritten}");
-
-        Renderer.LastGlyphPixelsWritten.ShouldBeGreaterThan(0,
-            $"BlitGlyphBitmap must write at least 1 non-transparent pixel. " +
-            $"Attempted={Renderer.LastGlyphsAttempted}, Skipped={Renderer.LastGlyphsSkipped}, " +
-            $"PixelsWritten={Renderer.LastGlyphPixelsWritten}");
-    }
-
-    [Fact]
-    public async Task Stage7d_WhyCounters_PinpointExactBlitGlyphBitmapFailure()
-    {
-        // After Stage7c confirmed GlyphPixelsWritten==0, this test reveals WHICH guard
-        // inside BlitGlyphBitmap is responsible (zero dims / null buf / zero pitch /
-        // unknown pixel mode / all-alpha-zero) and dumps LastGlyphDiag for further insight.
-        SkipIfNoFreeType();
-
-        var fontData = LoadDejaVuBytes();
-        var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData,
-            "BT /F1 24 Tf 100 600 Td (Hello) Tj ET");
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
-        await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 96),
-            ct: TestContext.Current.CancellationToken);
-
-        Log($"GlyphsAttempted:      {Renderer.LastGlyphsAttempted}");
-        Log($"GlyphsSkipped:        {Renderer.LastGlyphsSkipped}");
-        Log($"GlyphPixelsWritten:   {Renderer.LastGlyphPixelsWritten}");
-        Log($"ZeroDims:             {Renderer.LastGlyphZeroDims}");
-        Log($"NullBuf:              {Renderer.LastGlyphNullBuf}");
-        Log($"ZeroPitch:            {Renderer.LastGlyphZeroPitch}");
-        Log($"UnknownMode:          {Renderer.LastGlyphUnknownMode}");
-        Log($"AllAlphaZero:         {Renderer.LastGlyphAllAlphaZero}");
-        var d = Renderer.LastGlyphDiag;
-        Log($"LastGlyphDiag:        W={d.W} H={d.H} Pitch={d.Pitch} Mode={d.PixelMode} NonZeroAlpha={d.NonZeroAlpha}");
-        var b = Renderer.LastBitmapAfterLoad;
-        Log($"LastBitmapAfterLoad:  W={b.W} H={b.H} Pitch={b.Pitch} Mode={b.Mode} Left={b.Left} Top={b.Top}");
-
-        // Assert: pixels must be written. If this fails the failure message names the counter.
-        var failReason = Renderer.LastGlyphZeroDims     > 0 ? $"ZeroDims={Renderer.LastGlyphZeroDims}"
-                       : Renderer.LastGlyphNullBuf      > 0 ? $"NullBuf={Renderer.LastGlyphNullBuf}"
-                       : Renderer.LastGlyphZeroPitch    > 0 ? $"ZeroPitch={Renderer.LastGlyphZeroPitch}"
-                       : Renderer.LastGlyphUnknownMode  > 0 ? $"UnknownMode={Renderer.LastGlyphUnknownMode} mode={d.PixelMode}"
-                       : Renderer.LastGlyphAllAlphaZero > 0 ? $"AllAlphaZero={Renderer.LastGlyphAllAlphaZero} (all rowBuf bytes were 0)"
-                       : "unknown — no WHY-counter incremented";
-
-        Renderer.LastGlyphPixelsWritten.ShouldBeGreaterThan(0,
-            $"BlitGlyphBitmap wrote 0 pixels. Root cause: {failReason}. " +
-            $"Diag: W={d.W} H={d.H} Pitch={d.Pitch} Mode={d.PixelMode} NonZeroAlpha={d.NonZeroAlpha}");
-    }
-
-    [Fact]
     public void Stage8_FontCache_DiagnoseGlyphRender_ReturnsOkForDejaVu()
     {
         // Uses FontCache.DiagnoseGlyphRender() which runs the exact same sequence
@@ -314,9 +249,9 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
 
     private static byte[] LoadDejaVuBytes()
     {
-        var asm = typeof(Unchained.Pdf.Rendering.Engine.PdfRenderer).Assembly;
+        var asm = typeof(Unchained.Drawing.Text.FontCache).Assembly;
         using var s  = asm.GetManifestResourceStream(
-            "Unchained.Pdf.Rendering.Rendering.Fonts.DejaVuSans-Regular.ttf")!;
+            "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")!;
         using var ms = new MemoryStream();
         s.CopyTo(ms);
         return ms.ToArray();

@@ -1,4 +1,6 @@
-using Unchained.Pptx.Core;
+using Unchained.Ooxml;
+using Unchained.Pptx.Animations;
+using Unchained.Pptx.Comments;
 using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Slides;
@@ -41,6 +43,20 @@ public sealed class Slide
     /// <summary>The slide background.</summary>
     public SlideBackground Background { get; } = new();
 
+    // ── Animations & Transitions ───────────────────────────────────────────────
+
+    /// <summary>
+    /// The animation effects applied to shapes on this slide.
+    /// Modify the <see cref="AnimationTimeline.MainSequence"/> to add or remove effects.
+    /// </summary>
+    public AnimationTimeline Animations { get; } = new();
+
+    /// <summary>
+    /// The visual transition that plays when advancing to this slide.
+    /// Set <see cref="SlideTransition.Effect"/> to configure the transition type.
+    /// </summary>
+    public SlideTransition Transition { get; } = new();
+
     // ── Layout / Master ────────────────────────────────────────────────────────
 
     /// <summary>The layout that controls placeholder positions and default formatting.</summary>
@@ -63,13 +79,51 @@ public sealed class Slide
     /// <summary><see langword="true"/> when notes have been created for this slide.</summary>
     internal bool HasNotes => _notes != null;
 
+    // ── Comments ──────────────────────────────────────────────────────────────
+
+    private readonly List<Comment> _comments = [];
+
+    /// <summary>Returns all comments on this slide.</summary>
+    public IReadOnlyList<Comment> GetComments() => _comments;
+
+    /// <summary>
+    /// Adds a new comment to this slide and returns it.
+    /// </summary>
+    /// <param name="text">The comment body text.</param>
+    /// <param name="position">The anchor position on the slide.</param>
+    /// <param name="author">
+    /// The author. When <see langword="null"/>, a default author named
+    /// <c>"Unknown"</c> is used if no authors exist yet (managed by the caller).
+    /// </param>
+    /// <param name="createdAt">Timestamp. Defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
+    public Comment AddComment(
+        string text,
+        SlidePosition position,
+        CommentAuthor? author,
+        DateTimeOffset? createdAt = null)
+    {
+        ArgumentNullException.ThrowIfNull(author);
+        var index = ++author.LastIndex;
+        var comment = new Comment(author, text, position, createdAt ?? DateTimeOffset.UtcNow, index);
+        _comments.Add(comment);
+        return comment;
+    }
+
+    /// <summary>Removes the given comment from this slide.</summary>
+    /// <exception cref="ArgumentException">Thrown when the comment is not on this slide.</exception>
+    public void RemoveComment(Comment comment)
+    {
+        if (!_comments.Remove(comment))
+            throw new ArgumentException("The comment does not belong to this slide.", nameof(comment));
+    }
+
+    /// <summary>Adds a pre-parsed comment (used by the parser).</summary>
+    internal void AddParsedComment(Comment comment) => _comments.Add(comment);
+
+    /// <summary><see langword="true"/> when this slide has at least one comment.</summary>
+    internal bool HasComments => _comments.Count > 0;
+
     // ── Round-trip blobs ──────────────────────────────────────────────────────
-
-    /// <summary>Animation timing XML, preserved verbatim until M6 implementation.</summary>
-    internal System.Xml.Linq.XElement? TimingElement { get; set; }
-
-    /// <summary>Slide transition XML, preserved verbatim until M6 implementation.</summary>
-    internal System.Xml.Linq.XElement? TransitionElement { get; set; }
 
     /// <summary>Colour map override element, preserved verbatim.</summary>
     internal System.Xml.Linq.XElement? ColorMapOverrideElement { get; set; }

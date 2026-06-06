@@ -1,4 +1,6 @@
 using Unchained.Pptx.Core;
+using Unchained.Ooxml;
+using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
@@ -20,7 +22,9 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
         MediaStore mediaStore,
         DocumentProperties properties,
         ProtectionInfo protection,
-        SlideSize slideSize)
+        SlideSize slideSize,
+        CommentAuthorCollection? commentAuthors = null,
+        SectionCollection? sections = null)
     {
         Slides = slides;
         Masters = masters;
@@ -28,6 +32,8 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
         Properties = properties;
         Protection = protection;
         SlideSize = slideSize;
+        CommentAuthors = commentAuthors ?? new CommentAuthorCollection();
+        Sections = sections ?? new SectionCollection();
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -50,6 +56,18 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
 
     /// <summary>Document metadata (title, author, keywords, dates, etc.).</summary>
     public DocumentProperties Properties { get; }
+
+    /// <summary>
+    /// The registry of all comment authors in this presentation.
+    /// Add authors here before adding comments to slides.
+    /// </summary>
+    public CommentAuthorCollection CommentAuthors { get; }
+
+    /// <summary>
+    /// Named sections that group consecutive slides into labelled regions
+    /// visible in PowerPoint's slide panel (PowerPoint 2010+ feature).
+    /// </summary>
+    public SectionCollection Sections { get; }
 
     /// <summary>
     /// Synchronises the live statistics on <see cref="Properties"/> from the current

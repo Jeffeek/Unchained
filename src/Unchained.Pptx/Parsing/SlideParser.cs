@@ -1,7 +1,11 @@
-using System.Xml.Linq;
-using Unchained.Pptx.Core.Opc;
 using Unchained.Pptx.Core.Xml;
+using System.Xml.Linq;
+using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Animations;
+using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Parsing;
@@ -14,15 +18,18 @@ internal sealed class SlideParser
     private readonly OpcPackage _package;
     private readonly MediaStore _mediaStore;
     private readonly IReadOnlyList<MasterSlide> _masters;
+    private readonly CommentAuthorCollection _commentAuthors;
 
     public SlideParser(
         OpcPackage package,
         MediaStore mediaStore,
-        IReadOnlyList<MasterSlide> masters)
+        IReadOnlyList<MasterSlide> masters,
+        CommentAuthorCollection commentAuthors)
     {
         _package = package;
         _mediaStore = mediaStore;
         _masters = masters;
+        _commentAuthors = commentAuthors;
     }
 
     /// <summary>
@@ -81,22 +88,49 @@ internal sealed class SlideParser
             shapeParser.ParseTree(spTree, slide.Shapes);
         }
 
-        // Preserve round-trip blobs
-        slide.TransitionElement = root.Element(PmlNames.Transition);
-        slide.TimingElement = root.Element(PmlNames.Timing);
+        // Parse transition and animations (M6)
+        var transitionEl = root.Element(PmlNames.Transition);
+        if (transitionEl != null)
+            TransitionParser.Parse(transitionEl, slide.Transition);
+
+        var timingEl = root.Element(PmlNames.Timing);
+        if (timingEl != null)
+            AnimationParser.Parse(timingEl, slide.Animations);
+
         slide.ColorMapOverrideElement = root.Element(PmlNames.ColorMapOverride);
 
         // Resolve embedded images (second pass)
         ResolveImages(part, slide);
 
-        // Notes slide
+        // Resolve chart parts (second pass)
+        ResolveCharts(part, slide);
+
+        // Notes slide (M7)
         var notesRel = part.FindRelationship(PmlNames.RelTypeNotesSlide);
         if (notesRel != null)
         {
             var notesUri = part.ResolveUri(notesRel.TargetUri);
             var notesPart = _package.TryGetPart(notesUri);
             if (notesPart != null)
-                slide.Notes.RawElement = OoXmlHelper.ParseXml(notesPart.Data).Root;
+            {
+                var notesDoc = OoXmlHelper.ParseXml(notesPart.Data);
+                if (notesDoc.Root != null)
+                    NotesParser.Parse(notesDoc.Root, slide.Notes);
+            }
+        }
+
+        // Comments (M7)
+        var commentsRel = part.FindRelationship(PmlNames.RelTypeComments);
+        if (commentsRel != null)
+        {
+            var commentsUri = part.ResolveUri(commentsRel.TargetUri);
+            var commentsPart = _package.TryGetPart(commentsUri);
+            if (commentsPart != null)
+            {
+                var cmDoc = OoXmlHelper.ParseXml(commentsPart.Data);
+                if (cmDoc.Root != null)
+                    CommentParser.Parse(cmDoc.Root, slide, _commentAuthors);
+            }
         }
 
         return slide;
@@ -145,6 +179,38 @@ internal sealed class SlideParser
             RelationshipId = relationshipId
         };
         return _mediaStore.AddImage(image);
+    }
+
+    // ── Chart resolution ──────────────────────────────────────────────────────
+
+    private void ResolveCharts(OpcPart slidePart, Slide slide)
+    {
+        foreach (var shape in slide.Shapes.OfType<ChartShape>())
+        {
+            if (!string.IsNullOrEmpty(shape.RelationshipId))
+                LoadChartPart(slidePart, shape);
+        }
+    }
+
+    private void LoadChartPart(OpcPart slidePart, ChartShape shape)
+    {
+        var rel = slidePart.Relationships.FirstOrDefault(r =>
+            r.Id.Equals(shape.RelationshipId, StringComparison.Ordinal));
+        if (rel == null) return;
+
+        var chartUri = slidePart.ResolveUri(rel.TargetUri);
+        shape.PartUri = chartUri;
+
+        var chartPart = _package.TryGetPart(chartUri);
+        if (chartPart == null) return;
+
+        // Preserve raw bytes for lossless round-trip
+        shape.ChartPartData = chartPart.Data;
+
+        // Parse into ChartModel so callers can inspect and modify chart data
+        var chartDoc = OoXmlHelper.ParseXml(chartPart.Data);
+        if (chartDoc.Root != null)
+            ChartParser.Parse(chartDoc.Root, shape.Chart);
     }
 
     // ── Layout resolution ─────────────────────────────────────────────────────

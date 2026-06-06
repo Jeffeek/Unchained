@@ -1,6 +1,8 @@
-using System.Xml.Linq;
 using Unchained.Pptx.Core.Xml;
+using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Slides;
+using Unchained.Pptx.Animations;
 
 namespace Unchained.Pptx.Writing;
 
@@ -51,12 +53,15 @@ internal static class SlideWriter
             sld.Add(new XElement(PmlNames.ColorMapOverride,
                 new XElement(dml + "masterClrMapping")));
 
-        // Round-trip blobs
-        if (slide.TransitionElement != null)
-            sld.Add(slide.TransitionElement);
+        // Transition (M6)
+        var transitionEl = TransitionWriter.Write(slide.Transition);
+        if (transitionEl != null)
+            sld.Add(transitionEl);
 
-        if (slide.TimingElement != null)
-            sld.Add(slide.TimingElement);
+        // Animation timing (M6)
+        var timingEl = AnimationWriter.Write(slide.Animations);
+        if (timingEl != null)
+            sld.Add(timingEl);
 
         return sld;
     }

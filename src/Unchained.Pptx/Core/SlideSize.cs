@@ -1,3 +1,5 @@
+using Unchained.Pptx.Core;
+using Unchained.Ooxml;
 namespace Unchained.Pptx.Core;
 
 /// <summary>

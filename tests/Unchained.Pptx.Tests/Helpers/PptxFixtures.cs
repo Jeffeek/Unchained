@@ -1,7 +1,8 @@
 using Unchained.Pptx.Core;
+using Unchained.Ooxml;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Themes;
+using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Tests.Helpers;
 

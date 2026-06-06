@@ -1,6 +1,8 @@
-using System.Xml.Linq;
-using Unchained.Pptx.Core;
 using Unchained.Pptx.Core.Xml;
+using Unchained.Ooxml.Drawing;
+using System.Xml.Linq;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Writing;
@@ -238,10 +240,47 @@ internal static class ShapeWriter
         return grpEl;
     }
 
-    // ── Chart (round-trip) ────────────────────────────────────────────────────
+    // ── Chart ─────────────────────────────────────────────────────────────────
 
-    private static XElement WriteChart(ChartShape shape) =>
-        shape.RawElement ?? new XElement(PmlNames.GraphicFrame);
+    private static XElement WriteChart(ChartShape shape)
+    {
+        // Loaded charts: preserve the original graphic-frame XML verbatim.
+        // The raw element already contains the correct c:chart r:id="..." reference.
+        if (shape.RawElement != null)
+            return shape.RawElement;
+
+        // New charts: generate the p:graphicFrame that references the chart part.
+        var frameEl = new XElement(PmlNames.GraphicFrame);
+
+        var nvGraphicFramePr = new XElement(PmlNames.NonVisualGraphicFrameProperties);
+        nvGraphicFramePr.Add(WriteCommonNonVisualProperties(shape));
+        nvGraphicFramePr.Add(new XElement(PmlNames.Pml + "cNvGraphicFramePr",
+            new XElement(DmlNames.Dml + "graphicFrameLocks",
+                new XAttribute("noGrp", "1"))));
+        nvGraphicFramePr.Add(new XElement(PmlNames.ApplicationNonVisualProperties));
+        frameEl.Add(nvGraphicFramePr);
+
+        // Frame transform (p:xfrm, not a:xfrm)
+        var xfrm = new XElement(PmlNames.Pml + "xfrm");
+        xfrm.Add(new XElement(DmlNames.Offset,
+            new XAttribute(DmlNames.AttributeX, shape.X.Value),
+            new XAttribute(DmlNames.AttributeY, shape.Y.Value)));
+        xfrm.Add(new XElement(DmlNames.Extents,
+            new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
+            new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)));
+        frameEl.Add(xfrm);
+
+        // Graphic data referencing the chart part by relationship ID
+        var graphic = new XElement(DmlNames.Graphic);
+        var graphicData = new XElement(DmlNames.GraphicData,
+            new XAttribute(DmlNames.AttributeUri, DmlNames.GraphicDataChartUri));
+        graphicData.Add(new XElement(DmlNames.Chart + "chart",
+            new XAttribute(PmlNames.RelationshipId, shape.RelationshipId)));
+        graphic.Add(graphicData);
+        frameEl.Add(graphic);
+
+        return frameEl;
+    }
 
     // ── Shared helpers ─────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-using Unchained.Pptx.Models.Text;
+using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Text;
 

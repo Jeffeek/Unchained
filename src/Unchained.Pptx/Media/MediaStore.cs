@@ -1,3 +1,6 @@
+using Unchained.Pptx.Shapes;
+using Unchained.Pptx.Slides;
+
 namespace Unchained.Pptx.Media;
 
 /// <summary>
@@ -63,12 +66,65 @@ public sealed class MediaStore
     // ── Cleanup ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Removes media assets that are not referenced by any shape in the presentation
-    /// and returns the number of items removed.
+    /// Removes all media assets that are not referenced by any shape across
+    /// all slides, masters, and layouts in the given <paramref name="slides"/> collection.
+    /// Returns the total number of items removed.
     /// </summary>
-    /// <remarks>
-    /// This method is a no-op in M1–M4 because reference tracking across the full
-    /// shape graph is deferred. Call it after removing shapes or slides to reclaim space.
-    /// </remarks>
-    public int RemoveUnused() => 0; // Full implementation in a later milestone.
+    /// <param name="slides">
+    /// The slide collection to scan for live references.
+    /// Pass <see cref="Engine.PresentationDocument.Slides"/> to purge unreferenced media
+    /// after removing shapes or slides.
+    /// </param>
+    public int RemoveUnused(SlideCollection slides)
+    {
+        ArgumentNullException.ThrowIfNull(slides);
+
+        // Collect all EmbeddedImage instances that are reachable from any shape.
+        var usedImages = new HashSet<EmbeddedImage>(ReferenceEqualityComparer.Instance);
+        for (var i = 0; i < slides.Count; i++)
+            CollectImages(slides[i].Shapes, usedImages);
+
+        // Remove images that are not reachable.
+        var removedCount = _images.RemoveAll(img => !usedImages.Contains(img));
+
+        // Audio and video are stored on AudioShape / VideoShape respectively.
+        var usedAudio = new HashSet<EmbeddedAudio>(ReferenceEqualityComparer.Instance);
+        var usedVideo = new HashSet<EmbeddedVideo>(ReferenceEqualityComparer.Instance);
+        for (var i = 0; i < slides.Count; i++)
+            CollectMedia(slides[i].Shapes, usedAudio, usedVideo);
+
+        removedCount += _audioFiles.RemoveAll(a => !usedAudio.Contains(a));
+        removedCount += _videoFiles.RemoveAll(v => !usedVideo.Contains(v));
+
+        return removedCount;
+    }
+
+    // ── Internal helpers ──────────────────────────────────────────────────────
+
+    private static void CollectImages(ShapeCollection shapes, HashSet<EmbeddedImage> used)
+    {
+        foreach (var shape in shapes)
+        {
+            if (shape is PictureShape pic && pic.Image != null)
+                used.Add(pic.Image);
+            else if (shape is GroupShape grp)
+                CollectImages(grp.Children, used);
+        }
+    }
+
+    private static void CollectMedia(
+        ShapeCollection shapes,
+        HashSet<EmbeddedAudio> usedAudio,
+        HashSet<EmbeddedVideo> usedVideo)
+    {
+        foreach (var shape in shapes)
+        {
+            if (shape is AudioShape audio && audio.Audio != null)
+                usedAudio.Add(audio.Audio);
+            else if (shape is VideoShape video && video.Video != null)
+                usedVideo.Add(video.Video);
+            else if (shape is GroupShape grp)
+                CollectMedia(grp.Children, usedAudio, usedVideo);
+        }
+    }
 }

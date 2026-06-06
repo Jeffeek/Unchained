@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Native-binary carrier for FreeType2 — shared across all Unchained rendering packages.
+    No C# code is produced; this project only carries the native files.
+
+    Run scripts/FetchNatives/fetch-drawing-natives.{ps1,sh} to populate the
+    runtimes/ folders before building a rendering package.
+
+    Consolidates what used to be split across Unchained.Pdf.Runtimes and
+    Unchained.Pptx.Runtimes into a single, format-neutral package.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <PackageTags>drawing;freetype;native;runtimes;dotnet;document-processing</PackageTags>
+  </PropertyGroup>
+
+</Project>

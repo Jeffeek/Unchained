@@ -1,5 +1,7 @@
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
+using Unchained.Drawing;
+using Unchained.Drawing.Text;
 using LoadFlags = SharpFont.LoadFlags;
 using LoadTarget = SharpFont.LoadTarget;
 
@@ -39,9 +41,6 @@ internal sealed class PageRenderer(
 
     // Total glyph bitmaps whose LoadGlyph failed (inner catch { continue; }).
     internal int GlyphsSkipped { get; private set; }
-
-    // Bitmap dims read directly in ShowString right after LoadGlyph (before BlitGlyphBitmap).
-    internal (int W, int H, int Pitch, int Mode, int Left, int Top) LastBitmapAfterLoad { get; private set; }
 
     internal void Render(
         IEnumerable<ContentOperator> operators,
@@ -347,8 +346,6 @@ internal sealed class PageRenderer(
             GlyphsAttempted++;
 
             var glyph = ftFace.Glyph;
-            var bm    = glyph.Bitmap;
-            LastBitmapAfterLoad = (bm.Width, bm.Rows, bm.Pitch, (int)bm.PixelMode, glyph.BitmapLeft, glyph.BitmapTop);
 
             // HarfBuzz XOffset/YOffset are in 26.6 pixel units; convert to user-space points.
             var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
@@ -358,7 +355,7 @@ internal sealed class PageRenderer(
             buffer.BlitGlyphBitmap(
                 (int)(px + glyph.BitmapLeft),
                 (int)(py - glyph.BitmapTop),
-                bm,
+                glyph.Bitmap,
                 _gs.FillR,
                 _gs.FillG,
                 _gs.FillB);
