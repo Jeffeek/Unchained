@@ -1,6 +1,7 @@
 using Unchained.Pptx.Themes;
 using Unchained.Pptx.Core;
 using Unchained.Ooxml;
+using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Parsing;
@@ -8,6 +9,7 @@ using Unchained.Pptx.Security;
 using Unchained.Pptx.Slides;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Writing;
+using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Engine;
 
@@ -129,6 +131,124 @@ public sealed class PresentationProcessor : IDisposable
         return new PresentationDocument(slides, masters, mediaStore, properties, protection, slideSize);
     }
 
+    // ── HTML Export (M10) ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Exports each slide of <paramref name="document"/> as an HTML5 file in
+    /// <paramref name="directoryPath"/>, creating the directory if it does not exist.
+    /// Returns the list of file paths written.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SaveAsHtmlAsync(
+        PresentationDocument document,
+        string directoryPath,
+        HtmlSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(directoryPath);
+
+        var opts = options ?? HtmlSaveOptions.Default;
+        var files = await Task.Run(
+            () => PptxToHtmlWriter.Write(document, opts),
+            cancellationToken).ConfigureAwait(false);
+
+        Directory.CreateDirectory(directoryPath);
+        var written = new List<string>(files.Count);
+        foreach (var (name, bytes) in files)
+        {
+            var path = Path.Combine(directoryPath, name);
+            await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
+            written.Add(path);
+        }
+        return written;
+    }
+
+    // ── SVG Export (M10) ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Exports a single slide as an SVG byte array.
+    /// </summary>
+    public Task<byte[]> ExportSlideAsSvgAsync(
+        Slide slide,
+        SlideSize slideSize,
+        SvgSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(slide);
+        var opts = options ?? SvgSaveOptions.Default;
+        return Task.Run(
+            () => PptxToSvgWriter.WriteSlide(slide, slideSize, opts),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Exports every non-hidden slide in <paramref name="document"/> as SVG bytes,
+    /// one element per slide.
+    /// </summary>
+    public Task<byte[][]> ExportAsSvgAsync(
+        PresentationDocument document,
+        SvgSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var opts = options ?? SvgSaveOptions.Default;
+        return Task.Run(
+            () => PptxToSvgWriter.WriteAll(document, opts),
+            cancellationToken);
+    }
+
+    // ── PDF Export (M9) ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Exports <paramref name="document"/> to a PDF file.
+    /// Each non-hidden slide becomes one PDF page at the correct dimensions.
+    /// </summary>
+    public async Task SaveAsPdfAsync(
+        PresentationDocument document,
+        string path,
+        PdfSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var bytes = await ExportPdfAsync(document, options, cancellationToken).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Exports <paramref name="document"/> to a PDF stream.
+    /// </summary>
+    public async Task SaveAsPdfAsync(
+        PresentationDocument document,
+        Stream stream,
+        PdfSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(stream);
+        var bytes = await ExportPdfAsync(document, options, cancellationToken).ConfigureAwait(false);
+        await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<byte[]> ExportPdfAsync(
+        PresentationDocument document,
+        PdfSaveOptions? options,
+        CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var opts = options ?? PdfSaveOptions.Default;
+            return await Task.Run(
+                () => PptxToPdfWriter.Write(document, opts),
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     // ── Save ──────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -191,7 +311,9 @@ public sealed class PresentationProcessor : IDisposable
                 parsed.MediaStore,
                 parsed.Properties,
                 parsed.Protection,
-                parsed.SlideSize);
+                parsed.SlideSize,
+                parsed.CommentAuthors,
+                parsed.Sections);
         }
         finally
         {
@@ -217,6 +339,9 @@ public sealed class PresentationProcessor : IDisposable
                     document.Media,
                     document.Properties,
                     document.SlideSize,
+                    document.CommentAuthors,
+                    document.Sections,
+                    document.Protection,
                     options),
                 cancellationToken).ConfigureAwait(false);
         }

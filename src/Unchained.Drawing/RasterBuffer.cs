@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using SharpFont;
 
-namespace Unchained.Pdf.Rendering.Rendering;
+namespace Unchained.Drawing;
 
 /// <summary>
 /// ARGB (4 bytes per pixel, row-major) pixel buffer used as the render target.
@@ -26,7 +25,7 @@ internal sealed class RasterBuffer(int width, int height)
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private void SetPixel(int x, int y, byte r, byte g, byte b, byte a)
+    internal void SetPixel(int x, int y, byte r, byte g, byte b, byte a)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
             return;
@@ -59,7 +58,6 @@ internal sealed class RasterBuffer(int width, int height)
         var y2 = Math.Min(Height, y + h);
         for (var py = y1; py < y2; py++)
         for (var px = x1; px < x2; px++)
-            // ReSharper disable once BadListLineBreaks
             SetPixel(px, py, r, g, b, a);
     }
 
@@ -68,8 +66,7 @@ internal sealed class RasterBuffer(int width, int height)
     internal void DrawLine(
         int x0, int y0, int x1, int y1,
         byte r, byte g, byte b,
-        int thicknessPx = 1
-    )
+        int thicknessPx = 1)
     {
         var dx = Math.Abs(x1 - x0);
         var dy = Math.Abs(y1 - y0);
@@ -102,25 +99,37 @@ internal sealed class RasterBuffer(int width, int height)
         }
     }
 
-    // Blit a FreeType2 grayscale glyph bitmap at (destX, destY) using the given colour.
+    /// <summary>
+    /// Blits a grayscale glyph bitmap (one byte per pixel = alpha) onto the buffer.
+    /// Called by <c>RasterBufferGlyphExtensions.BlitGlyphBitmap</c> in Drawing.Text.
+    /// </summary>
+    /// <param name="destX">Left edge of the glyph in buffer coordinates.</param>
+    /// <param name="destY">Top edge of the glyph in buffer coordinates.</param>
+    /// <param name="glyphWidth">Width of the glyph bitmap in pixels.</param>
+    /// <param name="glyphHeight">Height of the glyph bitmap in rows.</param>
+    /// <param name="pitch">Absolute row stride of the glyph buffer in bytes.</param>
+    /// <param name="glyphBuffer">Raw grayscale alpha bytes from FreeType2.</param>
+    /// <param name="invertRows">
+    /// <see langword="true"/> when <c>FTBitmap.Pitch</c> is negative (top-down).
+    /// </param>
+    /// <param name="r">Red channel of the glyph colour.</param>
+    /// <param name="g">Green channel of the glyph colour.</param>
+    /// <param name="b">Blue channel of the glyph colour.</param>
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    internal void BlitGlyphBitmap(int destX, int destY, FTBitmap bitmap, byte r, byte g, byte b)
+    internal void BlitGrayBitmap(
+        int destX, int destY,
+        int glyphWidth, int glyphHeight,
+        int pitch, byte[] glyphBuffer,
+        bool invertRows,
+        byte r, byte g, byte b)
     {
-        if (bitmap.PixelMode != PixelMode.Gray)
-            return;
-
-        var w = bitmap.Width;
-        var h = bitmap.Rows;
-        var pitch = Math.Abs(bitmap.Pitch);
-        var buffer = bitmap.BufferData;
-
-        for (var row = 0; row < h; row++)
+        for (var row = 0; row < glyphHeight; row++)
         {
-            var srcRow = bitmap.Pitch < 0 ? h - 1 - row : row;
+            var srcRow = invertRows ? glyphHeight - 1 - row : row;
             var rowOffset = srcRow * pitch;
-            for (var col = 0; col < w; col++)
+            for (var col = 0; col < glyphWidth; col++)
             {
-                var alpha = buffer[rowOffset + col];
+                var alpha = glyphBuffer[rowOffset + col];
                 if (alpha == 0)
                     continue;
 
@@ -129,7 +138,7 @@ internal sealed class RasterBuffer(int width, int height)
         }
     }
 
-    // Writes an opaque RGB pixel directly (used for image XObject blitting, no alpha).
+    // Writes an opaque RGB pixel directly (used for image blitting, no alpha).
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
     internal void BlitImagePixel(int x, int y, byte r, byte g, byte b)
     {

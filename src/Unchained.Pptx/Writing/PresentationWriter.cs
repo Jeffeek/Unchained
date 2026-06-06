@@ -5,9 +5,11 @@ using System.Xml.Linq;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Writing;
@@ -34,6 +36,9 @@ internal sealed class PresentationWriter
         MediaStore mediaStore,
         DocumentProperties properties,
         SlideSize slideSize,
+        CommentAuthorCollection? commentAuthors = null,
+        SectionCollection? sections = null,
+        ProtectionInfo? protection = null,
         Models.SaveOptions? options = null)
     {
         var package = OpcPackage.CreateEmpty();
@@ -65,11 +70,24 @@ internal sealed class PresentationWriter
         // Write masters + their themes + layouts
         var masterUris = WriteMasters(package, masters, contentTypes, imageRelIds);
 
-        // Write slides
-        var slideUris = WriteSlides(package, slides, contentTypes, imageRelIds);
+        // Write slides (chart part index + notes/comment index shared across slides)
+        var chartPartIndex = 1;
+        var notesPartIndex = 1;
+        var commentPartIndex = 1;
+        var slideUris = WriteSlides(
+            package, slides, contentTypes, imageRelIds,
+            ref chartPartIndex, ref notesPartIndex, ref commentPartIndex);
 
-        // Write presentation.xml
-        WritePresentationPart(package, slides, masters, masterUris, slideUris, slideSize, contentTypes);
+        // Write comment authors (M7) — before presentation.xml so we can add relationship
+        var hasAnyComments = slides.Any(static s => s.HasComments);
+        if (hasAnyComments || (commentAuthors != null && commentAuthors.Count > 0))
+        {
+            var authors = commentAuthors ?? new CommentAuthorCollection();
+            WriteCommentAuthors(package, authors, contentTypes);
+        }
+
+        // Write presentation.xml (includes sections and write-protection)
+        WritePresentationPart(package, slides, masters, masterUris, slideUris, slideSize, sections, protection, contentTypes);
 
         // Write core properties
         WriteCoreProperties(package, properties, contentTypes);
@@ -80,7 +98,13 @@ internal sealed class PresentationWriter
         package.AddPackageRelationship("rId2", PmlNames.RelTypeCoreProperties,
             CorePropsPartUri.TrimStart('/'));
 
-        return package.Save();
+        var zipBytes = package.Save();
+
+        // Encrypt output if password was provided (M8)
+        if (!string.IsNullOrEmpty(options?.Password))
+            return AgileEncryption.Encrypt(zipBytes, options.Password);
+
+        return zipBytes;
     }
 
     // ── Media ─────────────────────────────────────────────────────────────────
@@ -198,7 +222,10 @@ internal sealed class PresentationWriter
         OpcPackage package,
         SlideCollection slides,
         ContentTypeMap contentTypes,
-        Dictionary<string, string> imageRelIds)
+        Dictionary<string, string> imageRelIds,
+        ref int chartPartIndex,
+        ref int notesPartIndex,
+        ref int commentPartIndex)
     {
         var slideUris = new Dictionary<Slide, string>();
 
@@ -210,37 +237,111 @@ internal sealed class PresentationWriter
                 : slide.PartUri;
 
             slide.PartUri = slideUri;
-            contentTypes.Register(slideUri, PmlNames.ContentTypeSlide);
 
+            // Pre-assign all relationship IDs before generating the slide XML,
+            // so that shape writers can embed the correct rId values.
+            var rId = 2; // rId1 is reserved for the layout relationship
+
+            foreach (var shape in slide.Shapes.OfType<PictureShape>()
+                .Where(static p => p.Image != null && p.Image.PartUri.Length > 0))
+            {
+                if (string.IsNullOrEmpty(shape.Image!.RelationshipId))
+                    shape.Image.RelationshipId = $"rId{rId++}";
+            }
+
+            foreach (var chartShape in slide.Shapes.OfType<ChartShape>())
+            {
+                if (string.IsNullOrEmpty(chartShape.PartUri))
+                    chartShape.PartUri = $"/ppt/charts/chart{chartPartIndex++}.xml";
+                if (string.IsNullOrEmpty(chartShape.RelationshipId))
+                    chartShape.RelationshipId = $"rId{rId++}";
+            }
+
+            // Write slide XML (all relationship IDs now set)
+            contentTypes.Register(slideUri, PmlNames.ContentTypeSlide);
             var slideXml = SlideWriter.Write(slide);
             package.AddOrReplacePart(slideUri, PmlNames.ContentTypeSlide,
                 new XDocument(slideXml).ToUtf8Bytes());
 
             // Slide relationships
-            var rId = 1;
-
-            // Layout relationship
-            package.AddRelationship(slideUri, $"rId{rId++}",
+            package.AddRelationship(slideUri, "rId1",
                 PmlNames.RelTypeSlideLayout,
                 RelativeUri(slideUri, slide.Layout.PartUri));
 
-            // Image relationships
-            foreach (var shape in slide.Shapes.OfType<Shapes.PictureShape>()
+            foreach (var shape in slide.Shapes.OfType<PictureShape>()
                 .Where(static p => p.Image != null && p.Image.PartUri.Length > 0))
             {
-                if (string.IsNullOrEmpty(shape.Image!.RelationshipId))
-                    shape.Image.RelationshipId = $"rId{rId++}";
-
                 package.AddRelationship(slideUri,
-                    shape.Image.RelationshipId,
+                    shape.Image!.RelationshipId,
                     PmlNames.RelTypeImage,
                     RelativeUri(slideUri, shape.Image.PartUri));
+            }
+
+            foreach (var chartShape in slide.Shapes.OfType<ChartShape>())
+            {
+                // Use raw bytes for loaded charts (preserves workbook links);
+                // generate from ChartModel for new charts.
+                var chartBytes = chartShape.ChartPartData
+                    ?? ChartWriter.Write(chartShape.Chart);
+
+                package.AddOrReplacePart(chartShape.PartUri, PmlNames.ContentTypeChart, chartBytes);
+                contentTypes.Register(chartShape.PartUri, PmlNames.ContentTypeChart);
+
+                package.AddRelationship(slideUri,
+                    chartShape.RelationshipId,
+                    PmlNames.RelTypeChart,
+                    RelativeUri(slideUri, chartShape.PartUri));
+            }
+
+            // Notes (M7)
+            if (!string.IsNullOrEmpty(slide.Notes.NotesText))
+            {
+                var notesUri = $"/ppt/notesSlides/notesSlide{notesPartIndex++}.xml";
+                var notesDoc = NotesWriter.Write(slide.Notes);
+                if (notesDoc != null)
+                {
+                    package.AddOrReplacePart(notesUri, PmlNames.ContentTypeNotesSlide,
+                        notesDoc.ToUtf8Bytes());
+                    contentTypes.Register(notesUri, PmlNames.ContentTypeNotesSlide);
+                    package.AddRelationship(slideUri, $"rId{rId++}",
+                        PmlNames.RelTypeNotesSlide,
+                        RelativeUri(slideUri, notesUri));
+                }
+            }
+
+            // Comments (M7)
+            if (slide.HasComments)
+            {
+                var comments = slide.GetComments();
+                var commentsUri = $"/ppt/comments/comment{commentPartIndex++}.xml";
+                var cmDoc = CommentWriter.Write(comments);
+                package.AddOrReplacePart(commentsUri, PmlNames.ContentTypeComments,
+                    cmDoc.ToUtf8Bytes());
+                contentTypes.Register(commentsUri, PmlNames.ContentTypeComments);
+                package.AddRelationship(slideUri, $"rId{rId++}",
+                    PmlNames.RelTypeComments,
+                    RelativeUri(slideUri, commentsUri));
             }
 
             slideUris[slide] = slideUri;
         }
 
         return slideUris;
+    }
+
+    // ── Comment authors (M7) ─────────────────────────────────────────────────
+
+    private const string CommentAuthorsPartUri = "/ppt/commentAuthors.xml";
+
+    private static void WriteCommentAuthors(
+        OpcPackage package,
+        CommentAuthorCollection authors,
+        ContentTypeMap contentTypes)
+    {
+        var caDoc = CommentAuthorWriter.Write(authors);
+        package.AddOrReplacePart(CommentAuthorsPartUri, PmlNames.ContentTypeCommentAuthors,
+            caDoc.ToUtf8Bytes());
+        contentTypes.Register(CommentAuthorsPartUri, PmlNames.ContentTypeCommentAuthors);
     }
 
     // ── Presentation part ─────────────────────────────────────────────────────
@@ -252,6 +353,8 @@ internal sealed class PresentationWriter
         Dictionary<MasterSlide, string> masterUris,
         Dictionary<Slide, string> slideUris,
         SlideSize slideSize,
+        SectionCollection? sections,
+        ProtectionInfo? protection,
         ContentTypeMap contentTypes)
     {
         var pml = PmlNames.Pml;
@@ -295,6 +398,14 @@ internal sealed class PresentationWriter
         }
         pres.Add(slideIdLst);
 
+        // Write-protection (M8)
+        if (protection?.IsWriteProtected == true)
+            pres.Add(WriteModifyVerifier(protection));
+
+        // Sections extension (M7 — PowerPoint 2010+)
+        if (sections != null && sections.Count > 0)
+            pres.Add(WriteSectionsExtLst(sections));
+
         var presXml = new XDocument(
             new XDeclaration("1.0", "UTF-8", "yes"),
             pres);
@@ -329,6 +440,55 @@ internal sealed class PresentationWriter
                 PmlNames.RelTypeSlide,
                 RelativeUri(PresentationPartUri, slide.PartUri));
         }
+
+        // Comment authors relationship (M7)
+        if (package.TryGetPart(CommentAuthorsPartUri) != null)
+        {
+            package.AddRelationship(PresentationPartUri,
+                $"rId{rIdCounter++}",
+                PmlNames.RelTypeCommentAuthors,
+                RelativeUri(PresentationPartUri, CommentAuthorsPartUri));
+        }
+    }
+
+    private static XElement WriteModifyVerifier(ProtectionInfo protection)
+    {
+        var pml = PmlNames.Pml;
+        return new XElement(pml + "modifyVerifier",
+            new XAttribute("cryptProviderType", "rsaAES"),
+            new XAttribute("cryptAlgorithmClass", "hash"),
+            new XAttribute("cryptAlgorithmType", "typeAny"),
+            new XAttribute("cryptAlgorithmSid", "14"),          // SHA-512
+            new XAttribute("spinCount", ProtectionInfo.WriteProtectionSpinCount),
+            new XAttribute("saltValue", protection.WriteProtectionSaltBase64!),
+            new XAttribute("hashValue", protection.WriteProtectionHashBase64!));
+    }
+
+    private static XElement WriteSectionsExtLst(SectionCollection sections)
+    {
+        var pml = PmlNames.Pml;
+        var p14 = XNamespace.Get("http://schemas.microsoft.com/office/powerpoint/2010/main");
+
+        var sectionLst = new XElement(p14 + "sectionLst");
+
+        foreach (var section in sections)
+        {
+            var sec = new XElement(p14 + "section",
+                new XAttribute("name", section.Name),
+                new XAttribute("id", $"{{{Guid.NewGuid()}}}"));
+
+            var sldIdLst = new XElement(p14 + "sldIdLst");
+            foreach (var id in section.SlideIds)
+                sldIdLst.Add(new XElement(p14 + "sldId", new XAttribute("id", id)));
+            sec.Add(sldIdLst);
+            sectionLst.Add(sec);
+        }
+
+        var ext = new XElement(pml + "ext",
+            new XAttribute("uri", "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}"),
+            sectionLst);
+
+        return new XElement(pml + "extLst", ext);
     }
 
     // ── Core properties ───────────────────────────────────────────────────────
@@ -396,9 +556,9 @@ internal sealed class PresentationWriter
         if (targetUri.StartsWith(sourceDir, StringComparison.OrdinalIgnoreCase))
             return targetUri[sourceDir.Length..];
 
-        // Walk up
-        var sourceParts = sourceDir.TrimStart('/').Split('/');
-        var targetParts = targetUri.TrimStart('/').Split('/');
+        // Walk up — remove empty entries so the trailing '/' doesn't add a phantom level
+        var sourceParts = sourceDir.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var targetParts = targetUri.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
         var common = 0;
 
         while (common < sourceParts.Length &&

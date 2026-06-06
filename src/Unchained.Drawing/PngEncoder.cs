@@ -1,13 +1,14 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 
-namespace Unchained.Pdf.Rendering.Rendering;
+namespace Unchained.Drawing;
 
 /// <summary>
 /// Encodes a <see cref="RasterBuffer"/> to PNG bytes using only BCL APIs
 /// (ZLibStream for DEFLATE, CRC32 computed from a look-up table).
+/// No external image library is required.
 /// </summary>
-internal static class PdfPngEncoder
+internal static class PngEncoder
 {
     private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
     private static readonly uint[] Crc32Table = BuildCrcTable();
@@ -29,7 +30,7 @@ internal static class PdfPngEncoder
         Span<byte> data = stackalloc byte[13];
         BinaryPrimitives.WriteInt32BigEndian(data[..], width);
         BinaryPrimitives.WriteInt32BigEndian(data[4..], height);
-        data[8] = 8;   // a bit of depth
+        data[8] = 8;   // bit depth
         data[9] = 6;   // colour type: RGBA
         data[10] = 0;  // compression method
         data[11] = 0;  // filter method
@@ -44,7 +45,7 @@ internal static class PdfPngEncoder
         var h = buffer.Height;
         var pixels = buffer.ToArgbBytes();
 
-        // Build filtered scanline data: filter_byte(0=None) + R G B A per pixel
+        // Filtered scanline data: filter_byte(0=None) + R G B A per pixel
         var raw = new byte[h * (1 + (w * 4))];
         for (var y = 0; y < h; y++)
         {
@@ -54,7 +55,6 @@ internal static class PdfPngEncoder
             Buffer.BlockCopy(pixels, srcOffset, raw, outOffset + 1, w * 4);
         }
 
-        // Compress with ZLib
         using var compressedMs = new MemoryStream();
         using (var zlib = new ZLibStream(compressedMs, CompressionLevel.Optimal, leaveOpen: true))
             zlib.Write(raw);
@@ -70,7 +70,6 @@ internal static class PdfPngEncoder
         stream.Write(type);
         if (data.Length > 0) stream.Write(data);
 
-        // CRC32 over type + data
         var crc = UpdateCrc(0xffffffff, type);
         crc = UpdateCrc(crc, data);
         crc ^= 0xffffffff;

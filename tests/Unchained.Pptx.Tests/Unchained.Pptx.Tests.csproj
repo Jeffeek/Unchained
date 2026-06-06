@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Unchained.Pptx\Unchained.Pptx.csproj" />
+    <ProjectReference Include="..\..\src\Unchained.Pptx.Rendering\Unchained.Pptx.Rendering.csproj" />
   </ItemGroup>
 
   <!-- Real PPTX test files: copied to output so tests can load from AppContext.BaseDirectory. -->
