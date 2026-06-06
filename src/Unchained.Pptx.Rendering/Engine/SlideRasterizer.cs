@@ -1,4 +1,6 @@
 using HarfBuzzSharp;
+using Unchained.Drawing;
+using Unchained.Drawing.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Core;

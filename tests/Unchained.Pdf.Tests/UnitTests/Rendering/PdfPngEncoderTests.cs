@@ -1,11 +1,11 @@
 using Shouldly;
+using Unchained.Drawing;
 using Unchained.Pdf.Tests.Helpers;
-using Unchained.Pdf.Rendering.Rendering; // RasterBuffer, PdfPngEncoder live in Unchained.Pdf.Rendering assembly
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Rendering;
 
-public sealed class PdfPngEncoderTests
+public sealed class PngEncoderTests
 {
     private static RasterBuffer SinglePixel(byte r, byte g, byte b)
     {
@@ -17,7 +17,7 @@ public sealed class PdfPngEncoderTests
     [Fact]
     public void Encode_1x1Buffer_StartsWithPngSignature()
     {
-        var png = PdfPngEncoder.Encode(SinglePixel(255, 0, 0));
+        var png = PngEncoder.Encode(SinglePixel(255, 0, 0));
         png.Length.ShouldBeGreaterThan(8);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
@@ -25,7 +25,7 @@ public sealed class PdfPngEncoderTests
     [Fact]
     public void Encode_1x1Buffer_IhdrContainsCorrectWidth()
     {
-        var png = PdfPngEncoder.Encode(SinglePixel(0, 255, 0));
+        var png = PngEncoder.Encode(SinglePixel(0, 255, 0));
         // IHDR starts at byte 16 (after 8-byte sig + 4-byte len + 4-byte "IHDR")
         // Width is at bytes 16..19
         var width = PdfTestConstants.PngWidth(png);
@@ -35,7 +35,7 @@ public sealed class PdfPngEncoderTests
     [Fact]
     public void Encode_1x1Buffer_IhdrContainsCorrectHeight()
     {
-        var png = PdfPngEncoder.Encode(SinglePixel(0, 0, 255));
+        var png = PngEncoder.Encode(SinglePixel(0, 0, 255));
         var height = PdfTestConstants.PngHeight(png);
         height.ShouldBe(1);
     }
@@ -45,7 +45,7 @@ public sealed class PdfPngEncoderTests
     {
         var buf = new RasterBuffer(10, 20);
         buf.Clear();
-        var png = PdfPngEncoder.Encode(buf);
+        var png = PngEncoder.Encode(buf);
         var width = PdfTestConstants.PngWidth(png);
         var height = PdfTestConstants.PngHeight(png);
         width.ShouldBe(10);
@@ -55,7 +55,7 @@ public sealed class PdfPngEncoderTests
     [Fact]
     public void Encode_Buffer_EndsWithIENDChunk()
     {
-        var png = PdfPngEncoder.Encode(SinglePixel(128, 128, 128));
+        var png = PngEncoder.Encode(SinglePixel(128, 128, 128));
         // Last 12 bytes: 4-byte len (0) + "IEND" + 4-byte CRC
         var iendStart = png.Length - 12;
         iendStart.ShouldBeGreaterThanOrEqualTo(0);
@@ -69,6 +69,6 @@ public sealed class PdfPngEncoderTests
     {
         var buf = new RasterBuffer(5, 5);
         buf.Clear(200, 200, 200);
-        PdfPngEncoder.Encode(buf).Length.ShouldBeGreaterThan(0);
+        PngEncoder.Encode(buf).Length.ShouldBeGreaterThan(0);
     }
 }

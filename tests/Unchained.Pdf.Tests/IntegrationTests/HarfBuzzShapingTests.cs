@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Drawing.Text;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
@@ -98,28 +99,30 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
     [Fact]
     public void FontCache_NotoSansIsEmbeddedResource()
     {
-        var asm = typeof(PdfRenderer).Assembly;
-        const string name = "Unchained.Pdf.Rendering.Rendering.Fonts.NotoSans-Regular.ttf";
+        // Fonts are now bundled in Unchained.Drawing.Text
+        var asm = typeof(FontCache).Assembly;
+        const string name = "Unchained.Drawing.Text.Fonts.NotoSans-Regular.ttf";
         using var stream = asm.GetManifestResourceStream(name);
-        stream.ShouldNotBeNull();
+        stream.ShouldNotBeNull($"Expected '{name}' in {asm.GetName().Name}");
         stream.Length.ShouldBeGreaterThan(100_000); // NotoSans-Regular is ~500KB
     }
 
     [Fact]
     public void FontCache_DejaVuFontsStillEmbedded()
     {
-        var asm = typeof(PdfRenderer).Assembly;
+        // Fonts are now bundled in Unchained.Drawing.Text
+        var asm = typeof(FontCache).Assembly;
         var names = new[]
         {
-            "Unchained.Pdf.Rendering.Rendering.Fonts.DejaVuSans-Regular.ttf",
-            "Unchained.Pdf.Rendering.Rendering.Fonts.DejaVuSans-Bold.ttf",
-            "Unchained.Pdf.Rendering.Rendering.Fonts.DejaVuSerif-Regular.ttf",
-            "Unchained.Pdf.Rendering.Rendering.Fonts.DejaVuSansMono-Regular.ttf"
+            "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf",
+            "Unchained.Drawing.Text.Fonts.DejaVuSans-Bold.ttf",
+            "Unchained.Drawing.Text.Fonts.DejaVuSerif-Regular.ttf",
+            "Unchained.Drawing.Text.Fonts.DejaVuSansMono-Regular.ttf"
         };
         foreach (var name in names)
         {
             using var stream = asm.GetManifestResourceStream(name);
-            stream.ShouldNotBeNull($"{name} not found");
+            stream.ShouldNotBeNull($"{name} not found in {asm.GetName().Name}");
         }
     }
 
@@ -127,9 +130,9 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
 
     private static byte[] LoadBundledDejaVuBytes()
     {
-        var asm = typeof(PdfRenderer).Assembly;
+        var asm = typeof(FontCache).Assembly; // fonts are in Unchained.Drawing.Text
         using var stream = asm.GetManifestResourceStream(
-                               "Unchained.Pdf.Rendering.Rendering.Fonts.DejaVuSans-Regular.ttf")
+                               "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
                            ?? throw new InvalidOperationException("DejaVuSans-Regular.ttf not found.");
         using var ms = new MemoryStream();
         stream.CopyTo(ms);

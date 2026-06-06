@@ -1,6 +1,8 @@
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Rendering.Rendering;
+using Unchained.Drawing;
+using Unchained.Drawing.Text;
 
 namespace Unchained.Pdf.Rendering.Engine;
 
@@ -87,7 +89,7 @@ public sealed class PdfRenderer : IRenderer
         var renderer = new PageRenderer(buffer, _fonts, scale, page.Height, embeddedFontBytes, imageXObjects);
         renderer.Render(page.GetContentOperators(), fontMap);
 
-        return PdfPngEncoder.Encode(buffer);
+        return PngEncoder.Encode(buffer);
     }
 
     /// <inheritdoc />

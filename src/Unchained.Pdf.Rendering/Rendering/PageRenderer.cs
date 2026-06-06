@@ -1,5 +1,7 @@
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
+using Unchained.Drawing;
+using Unchained.Drawing.Text;
 using LoadFlags = SharpFont.LoadFlags;
 using LoadTarget = SharpFont.LoadTarget;
 

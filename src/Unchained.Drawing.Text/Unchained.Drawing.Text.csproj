@@ -1,0 +1,111 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- SharpFont 4.0.1 targets net45; enable fallback so the DLL resolves. -->
+    <AssetTargetFallback>$(AssetTargetFallback);net45</AssetTargetFallback>
+    <PackageTags>drawing;text;freetype;harfbuzz;fonts;dotnet;csharp;document-processing</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Unchained.Pdf.Rendering" />
+    <InternalsVisibleTo Include="Unchained.Pptx.Rendering" />
+    <InternalsVisibleTo Include="Unchained.Pdf.Tests" />
+    <InternalsVisibleTo Include="Unchained.Pptx.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unchained.Drawing\Unchained.Drawing.csproj" />
+    <ProjectReference Include="..\Unchained.Drawing.Runtimes\Unchained.Drawing.Runtimes.csproj" />
+  </ItemGroup>
+
+  <!-- Copy FreeType2 native libraries into runtimes/{rid}/native/ in the output. -->
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-x64\native\freetype6.dll')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-x64\native\freetype6.dll"
+              Link="runtimes\win-x64\native\freetype6.dll"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-arm64\native\freetype6.dll')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-arm64\native\freetype6.dll"
+              Link="runtimes\win-arm64\native\freetype6.dll"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-x64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-x64\native\libfreetype.so.6"
+              Link="runtimes\linux-x64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6"
+              Link="runtimes\linux-arm64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib"
+              Link="runtimes\osx-x64\native\libfreetype.6.dylib"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib"
+              Link="runtimes\osx-arm64\native\libfreetype.6.dylib"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <!-- SharpFont 4.0.1 (MIT) — managed P/Invoke wrapper for FreeType2. -->
+  <ItemGroup>
+    <Reference Include="SharpFont">
+      <HintPath>libs\SharpFont.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- HarfBuzz (MIT) — text shaping for complex scripts. -->
+  <ItemGroup Label="HarfBuzz">
+    <PackageReference Include="HarfBuzzSharp" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
+  </ItemGroup>
+
+  <!-- Bundled fonts: DejaVu (Bitstream Vera / SIL OFL) + NotoSans (SIL OFL). -->
+  <ItemGroup Label="Fonts">
+    <EmbeddedResource Include="Fonts\NotoSans-Regular.ttf" />
+    <EmbeddedResource Include="Fonts\DejaVuSans-Regular.ttf" />
+    <EmbeddedResource Include="Fonts\DejaVuSans-Bold.ttf" />
+    <EmbeddedResource Include="Fonts\DejaVuSans-Oblique.ttf" />
+    <EmbeddedResource Include="Fonts\DejaVuSans-BoldOblique.ttf" />
+    <EmbeddedResource Include="Fonts\DejaVuSerif-Regular.ttf" />
+    <EmbeddedResource Include="Fonts\DejaVuSerif-Bold.ttf" />
+    <EmbeddedResource Include="Fonts\DejaVuSansMono-Regular.ttf" />
+    <EmbeddedResource Include="Fonts\DejaVuSansMono-Bold.ttf" />
+  </ItemGroup>
+
+</Project>

@@ -5,18 +5,18 @@ using HarfBuzzSharp;
 using FtFace = SharpFont.Face;
 using FtLibrary = SharpFont.Library;
 
-namespace Unchained.Pptx.Rendering.Engine;
+namespace Unchained.Drawing.Text;
 
 /// <summary>
 /// Owns the FreeType2 library handle, one HarfBuzz font per loaded typeface,
 /// and the corresponding raw font bytes used to create both.
+/// Standard 14 fonts are substituted with bundled DejaVu fonts (Bitstream Vera / SIL OFL).
 /// Unrecognised fonts fall back to bundled NotoSans-Regular (SIL OFL).
 /// </summary>
 internal sealed class FontCache : IDisposable
 {
     private readonly FtLibrary _ftLibrary;
 
-    // Each entry: FreeType2 Face (for rasterisation) + HarfBuzz Font (for shaping).
     private readonly Dictionary<string, (FtFace FtFace, Font HbFont)> _fonts =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -24,7 +24,7 @@ internal sealed class FontCache : IDisposable
 
     private static int _resolverRegistered;
 
-    // ModuleInitializer runs when the Unchained.Pptx.Rendering assembly is first loaded —
+    // ModuleInitializer runs when the Unchained.Drawing.Text assembly is first loaded —
     // before any P/Invoke in SharpFont can fire, regardless of which class triggers the load.
 #pragma warning disable CA2255
     [ModuleInitializer]
@@ -74,15 +74,15 @@ internal sealed class FontCache : IDisposable
         else
             return nint.Zero;
 
-        // 1. runtimes/{rid}/native/ under the output root (NuGet package convention).
+        // 1. runtimes/{rid}/native/ under the output root (NuGet package convention)
         var runtimesPath = Path.Combine(AppContext.BaseDirectory, "runtimes", rid, "native", fileName);
         if (NativeLibrary.TryLoad(runtimesPath, out var h1)) return h1;
 
-        // 2. Output root directly (flattened copy from Unchained.Pdf.Runtimes).
+        // 2. Output root directly (flattened copy from Unchained.Drawing.Runtimes)
         var rootPath = Path.Combine(AppContext.BaseDirectory, fileName);
         if (NativeLibrary.TryLoad(rootPath, out var h2)) return h2;
 
-        // 3. System-installed FreeType (e.g. apt/yum on Linux).
+        // 3. System-installed FreeType (e.g. apt/yum on Linux)
         foreach (var name in systemFallbacks)
         {
             if (NativeLibrary.TryLoad(name, assembly, searchPath, out var h3))
@@ -95,9 +95,9 @@ internal sealed class FontCache : IDisposable
     internal FontCache() => _ftLibrary = new FtLibrary();
 
     /// <summary>
-    /// Returns the FreeType2 face and HarfBuzz font for the given font name.
+    /// Returns the FreeType2 face and HarfBuzz font for the named typeface.
     /// When <paramref name="embeddedBytes"/> are provided they are used directly;
-    /// otherwise the closest bundled substitute font is selected.
+    /// otherwise a bundled substitute font is selected.
     /// </summary>
     internal (FtFace FtFace, Font HbFont) GetFonts(string fontName, byte[]? embeddedBytes = null)
     {
@@ -113,7 +113,6 @@ internal sealed class FontCache : IDisposable
         return pair;
     }
 
-    // Convenience overload — returns only the FreeType2 face.
     internal FtFace GetFace(string fontName, byte[]? embeddedBytes = null) =>
         GetFonts(fontName, embeddedBytes).FtFace;
 
@@ -121,9 +120,6 @@ internal sealed class FontCache : IDisposable
     {
         var ftFace = _ftLibrary.NewMemoryFace(fontBytes, 0);
 
-        // HarfBuzz Blob requires an IntPtr to the data.
-        // GCHandle.Alloc pins the managed array; MemoryMode.Duplicate copies it internally
-        // so we can safely release the pin after the Blob is constructed.
         var gch = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
         Font hbFont;
         try
@@ -131,8 +127,6 @@ internal sealed class FontCache : IDisposable
             using var blob = new Blob(gch.AddrOfPinnedObject(), fontBytes.Length, MemoryMode.Duplicate);
             using var hbFace = new Face(blob, 0);
             hbFont = new Font(hbFace);
-            // Scale HarfBuzz advances to FreeType2 glyph-space (units-per-em).
-            // SlideRasterizer rescales to pixel units via SetScale before each shaping call.
             hbFont.SetScale(ftFace.UnitsPerEM, ftFace.UnitsPerEM);
         }
         finally
@@ -148,44 +142,39 @@ internal sealed class FontCache : IDisposable
     private static byte[] LoadSubstituteFont(string fontName) =>
         LoadEmbeddedFont(SelectResourceName(fontName));
 
-    // Priority: known OOXML theme font names → DejaVu variant → NotoSans (broadest Unicode coverage).
     private static string SelectResourceName(string fontName) => fontName switch
     {
-        "Calibri Bold" or "Arial Bold" or "Helvetica-Bold" or "Helvetica-BoldOblique"
-            => "DejaVuSans-Bold.ttf",
-        "Calibri Italic" or "Arial Italic" or "Helvetica-Oblique"
-            => "DejaVuSans-Oblique.ttf",
-        "Calibri" or "Arial" or "Helvetica" or "Helvetica-Regular"
-            => "DejaVuSans-Regular.ttf",
-        "Times New Roman Bold" or "Times-Bold" or "Times-BoldItalic"
-            => "DejaVuSerif-Bold.ttf",
-        "Times New Roman" or "Times-Roman" or "Times-Italic"
-            => "DejaVuSerif-Regular.ttf",
-        "Courier New" or "Courier" or "Courier-Bold" or "Courier-Oblique" or "Courier-BoldOblique"
+        "Helvetica-Bold" or "Helvetica-BoldOblique"
+            or "Arial-Bold" or "Arial-BoldItalic" => "DejaVuSans-Bold.ttf",
+        "Helvetica-Oblique" or "Arial-Italic" => "DejaVuSans-Oblique.ttf",
+        "Helvetica" or "Helvetica-Regular" or "Arial" or "Arial-Regular"
+            or "Calibri" or "Calibri-Regular" => "DejaVuSans-Regular.ttf",
+        "Times-Bold" or "Times-BoldItalic" => "DejaVuSerif-Bold.ttf",
+        "Times-Roman" or "Times-Italic" => "DejaVuSerif-Regular.ttf",
+        "Courier" or "Courier-Bold" or "Courier-Oblique" or "Courier-BoldOblique"
             => "DejaVuSansMono-Regular.ttf",
-        // All other fonts fall back to NotoSans-Regular — better Unicode coverage than DejaVu.
         _ => "NotoSans-Regular.ttf"
     };
 
     private static byte[] LoadEmbeddedFont(string resourceFileName)
     {
         var asm = typeof(FontCache).Assembly;
-        var resourceName = $"Unchained.Pptx.Rendering.Rendering.Fonts.{resourceFileName}";
+        var resourceName = $"Unchained.Drawing.Text.Fonts.{resourceFileName}";
         using var stream = asm.GetManifestResourceStream(resourceName)
                            ?? throw new InvalidOperationException(
-                               $"Bundled font resource '{resourceName}' not found. " +
-                               "Ensure the font files are included as EmbeddedResource in the project.");
+                               $"Bundled font resource '{resourceName}' not found in " +
+                               $"'{asm.GetName().Name}'. Ensure the font files are included " +
+                               "as EmbeddedResource in the project.");
         using var ms = new MemoryStream();
         stream.CopyTo(ms);
-
         return ms.ToArray();
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-
         _disposed = true;
+
         foreach (var (ftFace, hbFont) in _fonts.Values)
         {
             hbFont.Dispose();

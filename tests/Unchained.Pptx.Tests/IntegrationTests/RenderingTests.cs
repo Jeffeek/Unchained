@@ -10,9 +10,6 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 
 public sealed class RenderingTests : PptxTestBase
 {
-    private static readonly ReadOnlyMemory<byte> PngMagic =
-        new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-
     // ── Model types ───────────────────────────────────────────────────────────
 
     [Fact]
@@ -41,39 +38,17 @@ public sealed class RenderingTests : PptxTestBase
         image.Data.Length.ShouldBe(100);
     }
 
-    // ── Rendering (requires FreeType2 native DLLs via fetch-natives script) ──
-    // When FreeType2 is not present, the render calls throw DllNotFoundException
-    // and the tests return early (vacuous pass). They run fully on CI.
-
-    private static async Task<PptxImage?> TryRenderAsync(
-        Slides.Slide slide, Core.SlideSize slideSize, RenderOptions options)
-    {
-        try
-        {
-            return await SlideRenderer.RenderAsync(slide, slideSize, options);
-        }
-        catch (DllNotFoundException) { return null; }
-        catch (Exception ex) when (ex.GetType().Name.Contains("FreeType")) { return null; }
-    }
-
-    private static async Task<PptxImage[]?> TryRenderAllAsync(
-        Engine.PresentationDocument document, RenderOptions options)
-    {
-        try
-        {
-            return await SlideRenderer.RenderAllAsync(document, options);
-        }
-        catch (DllNotFoundException) { return null; }
-        catch (Exception ex) when (ex.GetType().Name.Contains("FreeType")) { return null; }
-    }
+    // ── Rendering (requires FreeType2 native DLLs via fetch-drawing-natives) ──
+    // If FreeType2 is not present, these tests throw DllNotFoundException and fail —
+    // the same behaviour as Unchained.Pdf.Tests rendering tests.
+    // Run scripts/FetchNatives/fetch-drawing-natives.{ps1,sh} before executing.
 
     [Fact]
     public async Task RenderSlide_BlankSlide_ProducesNonEmptyData()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await TryRenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
-        if (image == null) return; // natives not available
 
         image.Data.IsEmpty.ShouldBeFalse();
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -83,10 +58,10 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_OutputIsPng()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await TryRenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
-        if (image == null) return;
 
+        // PNG magic bytes: 89 50 4E 47
         var bytes = image.Data.Span;
         bytes[0].ShouldBe((byte)0x89);
         bytes[1].ShouldBe((byte)0x50); // 'P'
@@ -98,9 +73,8 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_DimensionsMatchOptions()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await TryRenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
             new RenderOptions { WidthPx = 640, HeightPx = 360 });
-        if (image == null) return;
 
         image.WidthPx.ShouldBe(640);
         image.HeightPx.ShouldBe(360);
@@ -115,9 +89,8 @@ public sealed class RenderingTests : PptxTestBase
             Emu.FromInches(4), Emu.FromInches(2),
             "Hello Renderer");
 
-        var image = await TryRenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
-        if (image == null) return;
 
         image.Data.Length.ShouldBeGreaterThan(100);
     }
@@ -131,9 +104,8 @@ public sealed class RenderingTests : PptxTestBase
             Emu.FromInches(3), Emu.FromInches(2));
         shape.Fill.SetSolid(Unchained.Ooxml.Drawing.ColorSpec.FromRgb(0, 112, 192));
 
-        var image = await TryRenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
-        if (image == null) return;
 
         image.Data.Length.ShouldBeGreaterThan(0);
     }
@@ -142,9 +114,8 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderAllAsync_FiveSlides_ReturnsFiveImages()
     {
         var doc = PptxFixtures.WithSlides(5);
-        var images = await TryRenderAllAsync(doc,
+        var images = await SlideRenderer.RenderAllAsync(doc,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
-        if (images == null) return;
 
         images.Length.ShouldBe(5);
         foreach (var img in images)
@@ -155,14 +126,13 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderAllAsync_AllImagesArePng()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var images = await TryRenderAllAsync(doc,
+        var images = await SlideRenderer.RenderAllAsync(doc,
             new RenderOptions { WidthPx = 160, HeightPx = 90 });
-        if (images == null) return;
 
         foreach (var img in images)
         {
             img.Format.ShouldBe(RenderImageFormat.Png);
-            img.Data.Span[0].ShouldBe((byte)0x89);
+            img.Data.Span[0].ShouldBe((byte)0x89); // PNG magic
         }
     }
 
@@ -170,9 +140,8 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderAllAsync_EmptyPresentation_ReturnsEmpty()
     {
         var doc = new Engine.PresentationProcessor().CreateBlank();
-        var images = await TryRenderAllAsync(doc,
+        var images = await SlideRenderer.RenderAllAsync(doc,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
-        if (images == null) return;
 
         images.Length.ShouldBe(0);
     }

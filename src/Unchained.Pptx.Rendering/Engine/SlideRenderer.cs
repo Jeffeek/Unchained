@@ -1,6 +1,8 @@
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Slides;
+using Unchained.Drawing;
+using Unchained.Drawing.Text;
 
 namespace Unchained.Pptx.Rendering.Engine;
 
@@ -77,7 +79,7 @@ public static class SlideRenderer
         using var fontCache = new FontCache();
         var rasterizer = new SlideRasterizer(fontCache);
         var buffer = rasterizer.Rasterize(slide, slideSize, options);
-        var encoded = PptxPngEncoder.Encode(buffer);
+        var encoded = PngEncoder.Encode(buffer);
 
         return new PptxImage(
             options.WidthPx,
