@@ -1,5 +1,6 @@
 using Shouldly;
-using Unchained.Pptx.Core;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
@@ -50,7 +51,7 @@ public sealed class TextTests : PptxTestBase
             Emu.Zero, Emu.Zero, Emu.FromInches(3), Emu.FromInches(1));
         var para = tb.TextFrame.Paragraphs.Add();
         var run = para.Runs.Add("Bold text");
-        run.Format.Bold = Core.InheritableBool.True;
+        run.Format.Bold = InheritableBool.True;
         run.Format.Bold.Value.ShouldBe(true);
     }
 

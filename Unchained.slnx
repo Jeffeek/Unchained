@@ -32,6 +32,7 @@
     <File Path=".github/workflows/scorecard.yml" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Unchained.Ooxml/Unchained.Ooxml.csproj" />
     <Project Path="src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj" />
     <Project Path="src/Unchained.Pdf.Runtimes/Unchained.Pdf.Runtimes.csproj" />
     <Project Path="src/Unchained.Pdf/Unchained.Pdf.csproj" />

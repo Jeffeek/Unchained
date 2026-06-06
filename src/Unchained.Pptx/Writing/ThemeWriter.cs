@@ -1,6 +1,7 @@
-using System.Xml.Linq;
-using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Themes;
+using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
+using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Writing;
 

@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../Unchained.Ooxml/Unchained.Ooxml.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Unchained.Pptx.Tests" />
     <InternalsVisibleTo Include="Unchained.Pptx.Rendering" />
   </ItemGroup>

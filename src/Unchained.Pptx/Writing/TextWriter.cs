@@ -1,6 +1,8 @@
-using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Pptx.Core.Xml;
-using Unchained.Pptx.Models.Text;
+using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
+using Unchained.Ooxml.Text;
 using Unchained.Pptx.Text;
 
 namespace Unchained.Pptx.Writing;
@@ -53,13 +55,13 @@ internal static class TextWriter
 
         bodyPr.Add(new XAttribute("anchor", AnchorToString(format.VerticalAnchor)));
 
-        if (format.MarginLeft != Core.Emu.FromPoints(7.2))
+        if (format.MarginLeft != Emu.FromPoints(7.2))
             bodyPr.Add(new XAttribute("marL", format.MarginLeft.Value));
-        if (format.MarginRight != Core.Emu.FromPoints(7.2))
+        if (format.MarginRight != Emu.FromPoints(7.2))
             bodyPr.Add(new XAttribute("marR", format.MarginRight.Value));
-        if (format.MarginTop != Core.Emu.FromPoints(3.6))
+        if (format.MarginTop != Emu.FromPoints(3.6))
             bodyPr.Add(new XAttribute("marT", format.MarginTop.Value));
-        if (format.MarginBottom != Core.Emu.FromPoints(3.6))
+        if (format.MarginBottom != Emu.FromPoints(3.6))
             bodyPr.Add(new XAttribute("marB", format.MarginBottom.Value));
 
         if (format.ColumnCount > 1)

@@ -1,5 +1,5 @@
-using Unchained.Pptx.Core;
-using Unchained.Pptx.Models.Text;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Text;
 

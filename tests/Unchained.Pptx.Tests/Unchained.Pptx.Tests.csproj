@@ -35,6 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Unchained.Ooxml\Unchained.Ooxml.csproj" />
     <ProjectReference Include="..\..\src\Unchained.Pptx\Unchained.Pptx.csproj" />
   </ItemGroup>
 

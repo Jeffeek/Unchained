@@ -1,8 +1,10 @@
-using System.Xml.Linq;
-using Unchained.Pptx.Core;
-using Unchained.Pptx.Core.Opc;
 using Unchained.Pptx.Core.Xml;
+using System.Xml.Linq;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;
 

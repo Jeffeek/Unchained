@@ -1,3 +1,4 @@
+using Unchained.Pptx.Core;
 namespace Unchained.Pptx.Core;
 
 /// <summary>

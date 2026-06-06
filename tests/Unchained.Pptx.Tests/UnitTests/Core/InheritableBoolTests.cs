@@ -1,5 +1,5 @@
 using Shouldly;
-using Unchained.Pptx.Core;
+using Unchained.Ooxml;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Core;

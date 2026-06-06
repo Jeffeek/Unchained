@@ -1,5 +1,6 @@
 using Shouldly;
-using Unchained.Pptx.Core.Opc;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Opc;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Core;
@@ -27,10 +28,10 @@ public sealed class OpcPackageTests
     }
 
     [Fact]
-    public void GetPart_NonExistentUri_ThrowsPptxException()
+    public void GetPart_NonExistentUri_ThrowsOoXmlException()
     {
         using var package = OpcPackage.CreateEmpty();
-        Should.Throw<Unchained.Pptx.Core.PptxException>(() => package.GetPart("/missing.xml"));
+        Should.Throw<OoXmlException>(() => package.GetPart("/missing.xml"));
     }
 
     [Fact]

@@ -1,7 +1,7 @@
 using Shouldly;
-using Unchained.Pptx.Core;
-using Unchained.Pptx.Models.Drawing;
-using Unchained.Pptx.Themes;
+using Unchained.Ooxml;
+using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Drawing;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Core;
