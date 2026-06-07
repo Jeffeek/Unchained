@@ -149,7 +149,9 @@ internal sealed class SlideParser
 
             var blipFill = rawEl.Element(PmlNames.BlipFill);
             var blip = blipFill?.Element(DmlNames.Blip);
-            var rId = (string?)blip?.Attribute(PmlNames.RelationshipId);
+            // The blip references its image via r:embed (not r:id). Fall back to r:id defensively.
+            var rId = (string?)blip?.Attribute(PmlNames.RelationshipEmbed)
+                      ?? (string?)blip?.Attribute(PmlNames.RelationshipId);
             if (rId == null) continue;
 
             shape.Image = ResolveImageRelationship(slidePart, rId);

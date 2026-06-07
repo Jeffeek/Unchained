@@ -269,6 +269,9 @@ internal static class PmlNames
     /// <summary>Relationship reference attribute: <c>r:id</c></summary>
     public static readonly XName RelationshipId = Relationships + "id";
 
+    /// <summary>Blip embed-reference attribute: <c>r:embed</c> (used by <c>&lt;a:blip&gt;</c>).</summary>
+    public static readonly XName RelationshipEmbed = Relationships + "embed";
+
     /// <summary>Slide identifier attribute: <c>id</c></summary>
     public const string AttributeId = "id";
 
