@@ -13,6 +13,7 @@ public sealed class MediaStore
     private readonly List<EmbeddedImage> _images = [];
     private readonly List<EmbeddedAudio> _audioFiles = [];
     private readonly List<EmbeddedVideo> _videoFiles = [];
+    private readonly List<EmbeddedFont> _fonts = [];
 
     /// <summary>All images currently embedded in the presentation.</summary>
     public IReadOnlyList<EmbeddedImage> Images => _images;
@@ -22,6 +23,9 @@ public sealed class MediaStore
 
     /// <summary>All video clips currently embedded in or linked from the presentation.</summary>
     public IReadOnlyList<EmbeddedVideo> VideoFiles => _videoFiles;
+
+    /// <summary>All fonts embedded in the presentation (from <c>&lt;p:embeddedFontLst&gt;</c>).</summary>
+    public IReadOnlyList<EmbeddedFont> Fonts => _fonts;
 
     // ── Images ───────────────────────────────────────────────────────────────
 
@@ -61,6 +65,42 @@ public sealed class MediaStore
     {
         _videoFiles.Add(video);
         return video;
+    }
+
+    // ── Fonts ─────────────────────────────────────────────────────────────────
+
+    /// <summary>Adds an embedded font to the store.</summary>
+    internal EmbeddedFont AddFont(EmbeddedFont font)
+    {
+        _fonts.Add(font);
+        return font;
+    }
+
+    /// <summary>
+    /// Returns the embedded font bytes best matching <paramref name="typeface"/> and the
+    /// requested style, or <see langword="null"/> when no embedded font matches. Falls back
+    /// to the regular variant of the same typeface when the exact style is absent.
+    /// </summary>
+    public ReadOnlyMemory<byte>? FindFontData(string typeface, EmbeddedFontStyle style)
+    {
+        if (string.IsNullOrEmpty(typeface) || _fonts.Count == 0)
+            return null;
+
+        EmbeddedFont? exact = null;
+        EmbeddedFont? regular = null;
+        EmbeddedFont? anyOfTypeface = null;
+
+        foreach (var font in _fonts)
+        {
+            if (!font.Typeface.Equals(typeface, StringComparison.OrdinalIgnoreCase))
+                continue;
+            anyOfTypeface ??= font;
+            if (font.Style == style) exact = font;
+            if (font.Style == EmbeddedFontStyle.Regular) regular = font;
+        }
+
+        var chosen = exact ?? regular ?? anyOfTypeface;
+        return chosen?.Data;
     }
 
     // ── Cleanup ───────────────────────────────────────────────────────────────

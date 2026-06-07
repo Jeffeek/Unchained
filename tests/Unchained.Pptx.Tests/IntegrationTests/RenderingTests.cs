@@ -38,10 +38,10 @@ public sealed class RenderingTests : PptxTestBase
         image.Data.Length.ShouldBe(100);
     }
 
-    // ── Rendering (requires FreeType2 native DLLs via fetch-drawing-natives) ──
+    // ── Rendering (requires FreeType2 native DLLs via fetch-natives) ──
     // If FreeType2 is not present, these tests throw DllNotFoundException and fail —
     // the same behaviour as Unchained.Pdf.Tests rendering tests.
-    // Run scripts/FetchNatives/fetch-drawing-natives.{ps1,sh} before executing.
+    // Run scripts/FetchNatives/fetch-natives.{ps1,sh} before executing.
 
     [Fact]
     public async Task RenderSlide_BlankSlide_ProducesNonEmptyData()
@@ -144,5 +144,28 @@ public sealed class RenderingTests : PptxTestBase
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
 
         images.Length.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task RenderSlide_BmpFormat_ProducesBmpBytesAndLabel()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Bmp });
+
+        image.Format.ShouldBe(RenderImageFormat.Bmp);
+        var bytes = image.Data.Span;
+        bytes[0].ShouldBe((byte)0x42); // 'B'
+        bytes[1].ShouldBe((byte)0x4D); // 'M'
+    }
+
+    [Fact]
+    public async Task RenderSlide_JpegFormat_ThrowsNotSupported()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+
+        await Should.ThrowAsync<NotSupportedException>(async () =>
+            await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+                new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Jpeg }));
     }
 }

@@ -129,6 +129,9 @@ internal sealed class PresentationParser
         // Parse sections (M7)
         SectionParser.Parse(root, sections);
 
+        // Parse embedded fonts (<p:embeddedFontLst>) so the renderer can use the real typefaces
+        ParseEmbeddedFonts(root, presentationPart, package, mediaStore);
+
         // Parse slides
         var slideParser = new SlideParser(package, mediaStore, ToList(masters), commentAuthors);
         foreach (var slideIdEl in root.Elements(PmlNames.SlideIdList)
@@ -166,6 +169,50 @@ internal sealed class PresentationParser
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static void ParseEmbeddedFonts(
+        XElement root,
+        OpcPart presentationPart,
+        OpcPackage package,
+        MediaStore mediaStore)
+    {
+        var listEl = root.Element(PmlNames.EmbeddedFontList);
+        if (listEl == null) return;
+
+        var rNs = PmlNames.Relationships;
+
+        foreach (var fontEl in listEl.Elements(PmlNames.EmbeddedFont))
+        {
+            var typeface = fontEl.Element(PmlNames.Font)?.Attribute(PmlNames.AttributeTypeface)?.Value;
+            if (string.IsNullOrEmpty(typeface)) continue;
+
+            AddVariant(fontEl.Element(PmlNames.FontRegular), EmbeddedFontStyle.Regular);
+            AddVariant(fontEl.Element(PmlNames.FontBold), EmbeddedFontStyle.Bold);
+            AddVariant(fontEl.Element(PmlNames.FontItalic), EmbeddedFontStyle.Italic);
+            AddVariant(fontEl.Element(PmlNames.FontBoldItalic), EmbeddedFontStyle.BoldItalic);
+
+            void AddVariant(XElement? variantEl, EmbeddedFontStyle style)
+            {
+                var rId = (string?)variantEl?.Attribute(rNs + "id");
+                if (string.IsNullOrEmpty(rId)) return;
+
+                var rel = presentationPart.Relationships
+                    .FirstOrDefault(r => r.Id.Equals(rId, StringComparison.Ordinal));
+                if (rel == null) return;
+
+                var fontUri = presentationPart.ResolveUri(rel.TargetUri);
+                var part = package.TryGetPart(fontUri);
+                if (part == null) return;
+
+                mediaStore.AddFont(new EmbeddedFont
+                {
+                    Typeface = typeface,
+                    Style = style,
+                    Data = part.Data
+                });
+            }
+        }
+    }
 
     private static ProtectionInfo ParseProtection(XElement root)
     {

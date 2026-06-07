@@ -303,8 +303,25 @@ internal sealed class ShapeParser
     private static void ReadGroupTransform(XElement grpSpPr, Shape shape)
     {
         var xfrm = grpSpPr.Element(DmlNames.Transform);
-        if (xfrm != null)
-            ReadTransformFromXfrm(xfrm, shape);
+        if (xfrm == null) return;
+
+        ReadTransformFromXfrm(xfrm, shape);
+
+        if (shape is not GroupShape group) return;
+
+        var chOff = xfrm.Element(DmlNames.ChildOffset);
+        if (chOff != null)
+        {
+            group.ChildOffsetX = new Emu(chOff.GetAttrLong(DmlNames.AttributeX, 0));
+            group.ChildOffsetY = new Emu(chOff.GetAttrLong(DmlNames.AttributeY, 0));
+        }
+
+        var chExt = xfrm.Element(DmlNames.ChildExtent);
+        if (chExt != null)
+        {
+            group.ChildExtentWidth = new Emu(chExt.GetAttrLong(DmlNames.AttributeWidth, 0));
+            group.ChildExtentHeight = new Emu(chExt.GetAttrLong(DmlNames.AttributeHeight, 0));
+        }
     }
 
     private static void ReadTransformFromXfrm(XElement xfrm, Shape shape)

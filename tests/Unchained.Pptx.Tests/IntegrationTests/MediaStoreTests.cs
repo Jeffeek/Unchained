@@ -66,6 +66,28 @@ public sealed class MediaStoreTests : PptxTestBase
         doc.Media.Images.Count.ShouldBe(1);
     }
 
+    // Regression: a picture's blip references its image via r:embed (not r:id). The parser
+    // must read r:embed when resolving images on reload, or every picture loses its image.
+    [Fact]
+    public async Task Picture_ImageData_SurvivesRoundTripViaEmbed()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var payload = FakePng(42);
+        var image = doc.Media.AddImage(payload, "image/png");
+        doc.Slides[0].Shapes.AddPicture(
+            image,
+            Emu.FromInches(1), Emu.FromInches(1),
+            Emu.FromInches(3), Emu.FromInches(2));
+
+        var reloaded = await PptxFixtures.RoundTripAsync(doc);
+
+        reloaded.Media.Images.Count.ShouldBe(1);
+        var pic = reloaded.Slides[0].Shapes
+            .OfType<Unchained.Pptx.Shapes.PictureShape>().Single();
+        pic.Image.ShouldNotBeNull();
+        pic.Image.Data.ToArray().ShouldBe(payload);
+    }
+
     [Fact]
     public void RemoveUnused_MixedImages_RemovesOnlyUnreferenced()
     {

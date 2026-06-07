@@ -33,6 +33,12 @@ internal static class DmlNames
     /// <summary><c>&lt;a:ext&gt;</c> — extents (cx/cy size).</summary>
     public static readonly XName Extents = Dml + "ext";
 
+    /// <summary><c>&lt;a:chOff&gt;</c> — group child coordinate-space origin.</summary>
+    public static readonly XName ChildOffset = Dml + "chOff";
+
+    /// <summary><c>&lt;a:chExt&gt;</c> — group child coordinate-space extent.</summary>
+    public static readonly XName ChildExtent = Dml + "chExt";
+
     /// <summary><c>&lt;a:prstGeom&gt;</c> — preset geometry.</summary>
     public static readonly XName PresetGeometry = Dml + "prstGeom";
 

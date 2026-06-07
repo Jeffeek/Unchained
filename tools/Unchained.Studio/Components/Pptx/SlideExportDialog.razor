@@ -1,0 +1,240 @@
+@using System.IO.Compression
+@using Unchained.Pptx.Engine
+@using Unchained.Pptx.Rendering
+@using Unchained.Pptx.Rendering.Engine
+@inject FileExportService Exporter
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:480px; max-width:640px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.FolderZip" Class="mr-2" Style="vertical-align:middle;" />
+            Export Slides as ZIP
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        @if (_phase == Phase.Configure)
+        {
+            <MudStack Spacing="4">
+                <MudText Typo="Typo.body2" Style="opacity:.7;">
+                    Renders slides from <strong>@FileName</strong> to PNG and packages them into a ZIP.
+                </MudText>
+
+                <MudGrid Spacing="3">
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Slides</MudText>
+                        <MudRadioGroup @bind-Value="_scope" T="SlideScope">
+                            <MudRadio Value="SlideScope.Current" Color="Color.Primary" Dense="true">
+                                Current slide (@CurrentSlide)
+                            </MudRadio>
+                            <MudRadio Value="SlideScope.All" Color="Color.Primary" Dense="true">
+                                All slides (@SlideCount)
+                            </MudRadio>
+                        </MudRadioGroup>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Resolution</MudText>
+                        <MudSelect T="int" @bind-Value="_width"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="1280">1280 × 720 — HD</MudSelectItem>
+                            <MudSelectItem Value="1920">1920 × 1080 — Full HD</MudSelectItem>
+                            <MudSelectItem Value="2560">2560 × 1440 — QHD</MudSelectItem>
+                        </MudSelect>
+
+                        <MudCheckBox @bind-Value="_includeReferenceSlot"
+                                     Color="Color.Secondary" Dense="true" Class="mt-3">
+                            Add reference/ slot
+                        </MudCheckBox>
+                    </MudItem>
+                </MudGrid>
+
+                @if (_includeReferenceSlot)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.55;">
+                        The ZIP will contain an <code>unchained/</code> folder with the rendered PNGs and an
+                        empty <code>reference/</code> folder (with a README) where you can drop the production
+                        engine's exports to compare side by side.
+                    </MudText>
+                }
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="3" Style="min-width:420px;">
+                <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <MudText Typo="Typo.body2">@_message</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity:.6;">
+                            @_done / @_total
+                        </MudText>
+                    </div>
+                    <MudProgressLinear Value="@Percent" Color="Color.Primary" Rounded="true" />
+                </div>
+                @if (_phase == Phase.Done && _errors > 0)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        @_errors slide(s) failed to render — see README in the ZIP.
+                    </MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        @if (_phase == Phase.Configure)
+        {
+            <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+            <MudButton OnClick="StartExport"
+                       Color="Color.Primary" Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Outlined.FileDownload">
+                Export ZIP
+            </MudButton>
+        }
+        else if (_phase == Phase.Running)
+        {
+            <MudButton OnClick="RequestCancel" Color="Color.Error" Variant="Variant.Text">Cancel</MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Close</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public PresentationDocument Document { get; set; } = default!;
+    [Parameter] public string FileName { get; set; } = "presentation.pptx";
+    [Parameter] public int CurrentSlide { get; set; } = 1;
+
+    private enum Phase { Configure, Running, Done }
+    private enum SlideScope { Current, All }
+
+    private SlideScope _scope = SlideScope.All;
+    private int _width = 1920;
+    private bool _includeReferenceSlot = true;
+
+    private Phase _phase = Phase.Configure;
+    private string _message = string.Empty;
+    private int _done;
+    private int _total;
+    private int _errors;
+    private bool _cancel;
+
+    private int SlideCount => Document.Slides.Count;
+    private double Percent => _total == 0 ? 0 : _done * 100.0 / _total;
+
+    private async Task StartExport()
+    {
+        var indices = _scope == SlideScope.Current
+            ? [Math.Clamp(CurrentSlide, 1, Math.Max(1, SlideCount)) - 1]
+            : Enumerable.Range(0, SlideCount).ToList();
+
+        _phase = Phase.Running;
+        _done = 0;
+        _total = indices.Count;
+        _errors = 0;
+        _cancel = false;
+        StateHasChanged();
+
+        var height = _width * 9 / 16;
+        var prefix = _includeReferenceSlot ? "unchained/" : string.Empty;
+        var entries = new List<(string Path, byte[] Data)>();
+        var renderErrors = new List<string>();
+
+        foreach (var index in indices)
+        {
+            if (_cancel) break;
+
+            _message = $"Rendering slide {index + 1}…";
+            StateHasChanged();
+
+            try
+            {
+                var image = await SlideRenderer.RenderAsync(
+                    Document.Slides[index],
+                    Document.SlideSize,
+                    new RenderOptions { WidthPx = _width, HeightPx = height });
+                entries.Add(($"{prefix}slide_{index + 1:D3}.png", image.Data.ToArray()));
+            }
+            catch (DllNotFoundException)
+            {
+                renderErrors.Add($"slide {index + 1}: FreeType native not found (run fetch-natives)");
+                _errors++;
+            }
+            catch (Exception ex)
+            {
+                renderErrors.Add($"slide {index + 1}: {ex.Message}");
+                _errors++;
+            }
+
+            _done++;
+            StateHasChanged();
+        }
+
+        entries.Add(("README.md", BuildReadme(indices.Count, renderErrors)));
+        if (_includeReferenceSlot)
+            entries.Add(("reference/PUT_PRODUCTION_PNGS_HERE.md", BuildReferenceReadme()));
+
+        _message = "Building ZIP…";
+        StateHasChanged();
+
+        var zipBytes = BuildZip(entries);
+        var zipName = $"{Path.GetFileNameWithoutExtension(FileName)}_slides.zip";
+        await Exporter.TriggerDownloadAsync(zipBytes, zipName, "application/zip");
+
+        _phase = Phase.Done;
+        _message = _cancel ? "Cancelled — partial ZIP downloaded." : $"Done — {_done} slide(s) exported.";
+        StateHasChanged();
+    }
+
+    private void RequestCancel() => _cancel = true;
+    private void Cancel() => MudDialog.Cancel();
+    private void Close() => MudDialog.Close();
+
+    private byte[] BuildReadme(int count, List<string> errors)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"# {FileName} — slide export");
+        sb.AppendLine();
+        sb.AppendLine($"- Slides rendered: {count - _errors}/{count}");
+        sb.AppendLine($"- Resolution: {_width} × {_width * 9 / 16}");
+        sb.AppendLine($"- Renderer: Unchained.Pptx.Rendering (FreeType2 + HarfBuzz)");
+        if (_includeReferenceSlot)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Compare `unchained/slide_NNN.png` against the matching file in `reference/`.");
+        }
+        if (errors.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Render errors");
+            sb.AppendLine();
+            foreach (var e in errors)
+                sb.AppendLine($"- {e}");
+        }
+        return System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+    }
+
+    private byte[] BuildReferenceReadme() =>
+        System.Text.Encoding.UTF8.GetBytes(
+            "Drop the production engine's slide PNGs here, named slide_001.png, slide_002.png, …\n" +
+            "so they line up with the files in ../unchained/ for visual comparison.\n");
+
+    private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (path, data) in entries)
+            {
+                var entry = zip.CreateEntry(path, CompressionLevel.Optimal);
+                using var stream = entry.Open();
+                stream.Write(data);
+            }
+        }
+        return ms.ToArray();
+    }
+}

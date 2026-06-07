@@ -415,6 +415,25 @@ public sealed class ChartTests : PptxTestBase
     }
 
     [Fact]
+    public async Task RoundTrip_ScatterChart_PreservesExplicitXValues()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var shape = doc.Slides[0].Shapes.AddChart(ChartType.ScatterWithMarkersOnly,
+            Emu.FromInches(1), Emu.FromInches(1),
+            Emu.FromInches(6), Emu.FromInches(4));
+        var series = new ChartSeries { Name = "XY" };
+        series.XValues.AddRange([1.5, 2.5, 3.5]);
+        series.Values.AddRange([10.0, 20.0, 30.0]);
+        shape.Chart.Data.Series.Add(series);
+
+        var reloaded = await PptxFixtures.RoundTripAsync(doc);
+        var reloadedSeries = reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+                                     .Chart.Data.Series.Single();
+        reloadedSeries.XValues.ShouldBe([1.5, 2.5, 3.5]);
+        reloadedSeries.Values.ShouldBe([10.0, 20.0, 30.0]);
+    }
+
+    [Fact]
     public async Task RoundTrip_RadarChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
