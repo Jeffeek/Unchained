@@ -108,6 +108,37 @@ public sealed class PdfString(ReadOnlyMemory<byte> bytes, bool isHex = false) : 
     /// </summary>
     public static PdfString FromUtf16(string value) =>
         new(System.Text.Encoding.BigEndianUnicode.GetBytes(value));
+
+    /// <summary>
+    /// When <see cref="IsHex"/> is <see langword="true"/>, decodes the raw hex-digit
+    /// bytes (e.g. <c>{'3','0','3','1'}</c> for <c>&lt;3031&gt;</c>) into the actual
+    /// binary bytes (<c>{0x30, 0x31}</c>). Returns <see cref="Bytes"/> unchanged when
+    /// <see cref="IsHex"/> is <see langword="false"/> (literal string already binary).
+    /// </summary>
+    internal ReadOnlyMemory<byte> GetBinaryBytes()
+    {
+        if (!IsHex) return Bytes;
+        var span = Bytes.Span;
+        var result = new byte[(span.Length + 1) / 2];
+        var j = 0;
+        var hi = -1;
+        foreach (var c in span)
+        {
+            if (c is (byte)' ' or (byte)'\t' or (byte)'\n' or (byte)'\r') continue;
+            var n = c switch
+            {
+                >= (byte)'0' and <= (byte)'9' => c - '0',
+                >= (byte)'a' and <= (byte)'f' => c - 'a' + 10,
+                >= (byte)'A' and <= (byte)'F' => c - 'A' + 10,
+                _ => -1
+            };
+            if (n < 0) continue;
+            if (hi < 0) { hi = n; }
+            else { result[j++] = (byte)((hi << 4) | n); hi = -1; }
+        }
+        if (hi >= 0) result[j++] = (byte)(hi << 4);
+        return result.AsMemory(0, j);
+    }
 }
 
 /// <summary>

@@ -37,6 +37,7 @@ public sealed class PdfRenderer : IRenderer
     /// <summary>Exposes the font cache for diagnostic tests.</summary>
     internal FontCache FontsForDiagnostics => _fonts;
 
+
     /// <summary>Glyph bitmaps successfully passed to BlitGlyphBitmap in the last render.</summary>
     internal int LastGlyphsAttempted { get; private set; }
 
@@ -130,40 +131,48 @@ public sealed class PdfRenderer : IRenderer
         // We choose pageHeightPt and the initial CTM so that content rendered in the
         // unrotated coordinate space lands at the correct pixel.
         //
-        // MediaBox raw dimensions (before rotation swap):
+        // CropBox visible dimensions (before rotation swap).
+        // Width/Height are already CropBox-based; we also need the origin offset
+        // to translate content-stream coordinates (MediaBox space) into CropBox space.
+        var cropLlx = page.CropOriginX;
+        var cropLly = page.CropOriginY;
+
         var rawW = rotate is 90 or 270 ? page.Height : page.Width;
         var rawH = rotate is 90 or 270 ? page.Width  : page.Height;
 
         // ReSharper disable BadListLineBreaks
+        // The initial CTM maps content-stream points to the pixel canvas.
+        // For each rotation, the CropBox lower-left corner (cropLlx, cropLly) is
+        // subtracted so that point (cropLlx, cropLly) maps to pixel (0, 0).
         double[] initialCtm = rotate switch
         {
-            // 90° CW: content (x,y) → pixel (y*s, (rawW-x)*s)
-            //   CTM(x,y) = (y, x)  with pageHeightPt = rawW
-            90  => [0, 1, 1, 0, 0, 0],
+            // 90° CW: (x,y) → pixel (y-cropLly, rawW-(x-cropLlx))
+            //   = [0,1,1,0,-cropLly, rawW+cropLlx]? Simplification: shift before rotate
+            90  => [0, 1, 1, 0, -cropLly, cropLlx],
 
-            // 180°: content (x,y) → pixel ((rawW-x)*s, (rawH-y)*s)
-            //   CTM(x,y) = (rawW-x, y)  with pageHeightPt = rawH
-            180 => [-1, 0, 0, 1, rawW, 0],
+            // 180°: (x,y) → pixel (rawW-(x-cropLlx), rawH-(y-cropLly))
+            180 => [-1, 0, 0, 1, rawW + cropLlx, cropLly],
 
-            // 270° CW (= 90° CCW): content (x,y) → pixel ((rawH-y)*s, x*s)
-            //   CTM(x,y) = (rawH-y, rawW-x)  with pageHeightPt = rawW
-            270 => [0, -1, -1, 0, rawH, rawW],
+            // 270° CW (= 90° CCW)
+            270 => [0, -1, -1, 0, rawH + cropLly, rawW - cropLlx],
 
-            // 0°: identity
-            _   => [1, 0, 0, 1, 0, 0]
+            // 0°: translate by -cropLlx, -cropLly so crop origin maps to pixel (0,0)
+            _   => [1, 0, 0, 1, -cropLlx, -cropLly]
         };
         // ReSharper restore BadListLineBreaks
 
         // pageHeightPt is the Y reference used by UToPixel for the Y-flip.
+        // For rotation 0/180 this is the CropBox height; for 90/270 it's the CropBox width.
         var pageHeightPt = rotate is 90 or 270 ? rawW : rawH;
 
         var fontMap          = page.GetFontNameMap();
         var embeddedFontBytes = page.GetEmbeddedFontBytes();
         var imageXObjects    = page.GetImageXObjects();
+        var toUnicodeMaps    = page.GetToUnicodeMaps();
 
         var renderer = new PageRenderer(
             buffer, _fonts, scale, pageHeightPt,
-            embeddedFontBytes, imageXObjects, initialCtm);
+            embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps);
         renderer.Render(page.GetContentOperators(), fontMap);
 
         LastTextErrors      = renderer.TextErrorCount;

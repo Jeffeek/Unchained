@@ -1,3 +1,4 @@
+@using Unchained.Studio.Enums
 @inject RenderingService Renderer
 @inject FileExportService Exporter
 @inject IJSRuntime JS
@@ -126,6 +127,7 @@
     </DialogActions>
 </MudDialog>
 
+@* ReSharper disable once RedundantNameQualifier *@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
@@ -136,11 +138,8 @@
     [Parameter] public int PageCount { get; set; } = 1;
     [Parameter] public string? ExistingBlobUrl { get; set; }
 
-    private enum PageMode { Current, All, Range }
-    private enum OutputMode { Folder, Zip }
-
     private PageMode _pageMode = PageMode.Current;
-    private OutputMode _outputMode = OutputMode.Zip;
+    private Enums.OutputMode _outputMode = OutputMode.Zip;
     private string _rangeText = string.Empty;
     private string? _rangeError;
     private int _dpi = 96;

@@ -80,7 +80,13 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
 
         lexer.ReadNext(); // consume "stream"
         SkipNewline(lexer);
-        var length = dict.Get<PdfInteger>(PdfName.Length)?.Value ?? 0;
+
+        // /Length may be stored as an indirect reference (/Length 3 0 R).
+        // dict.Get<PdfInteger> returns null in that case, giving length=0 and an
+        // empty stream. Fall back to scanning for "endstream" when this happens.
+        var length = dict.Get<PdfInteger>(PdfName.Length)?.Value
+                     ?? ScanForStreamLength(source.Span, lexer.Position);
+
         var data = source.Slice(lexer.Position, (int)length);
         value = new PdfStream(dict, data);
 
@@ -196,6 +202,30 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         }
 
         return new PdfDictionary(entries);
+    }
+
+    // ── Stream length fallback ────────────────────────────────────────────────
+
+    // When /Length is an indirect reference (e.g. /Length 3 0 R), dict.Get<PdfInteger>
+    // returns null. This helper scans forward from the stream data start for the
+    // "endstream" keyword (preceded by CR, LF, or CRLF) to determine the true length.
+    private static long ScanForStreamLength(ReadOnlySpan<byte> source, int dataStart)
+    {
+        // Search for <LF>endstream or <CR><LF>endstream
+        var endstream = "endstream"u8;
+        for (var i = dataStart; i < source.Length - endstream.Length; i++)
+        {
+            if (source[i] != (byte)'e') continue;
+            if (!source.Slice(i, endstream.Length).SequenceEqual(endstream)) continue;
+
+            // Verify it's preceded by a newline
+            var beforeLen = i - dataStart;
+            if (beforeLen > 0 && source[i - 1] == '\n') return beforeLen - 1; // strip LF
+            if (beforeLen > 1 && source[i - 2] == '\r' && source[i - 1] == '\n') return beforeLen - 2;
+            if (beforeLen > 0 && source[i - 1] == '\r') return beforeLen - 1;
+            return beforeLen; // endstream without newline — accept as-is
+        }
+        return 0;
     }
 
     // ── Cross-reference parsing ───────────────────────────────────────────────
@@ -470,6 +500,9 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     }
 
     // Strips the surrounding angle brackets from a hex string token.
+    // The raw hex digit characters are preserved in Bytes so that PdfWriter can
+    // round-trip them faithfully. Call PdfString.DecodeHexBytes() when the actual
+    // binary content is needed (e.g. for text char-code decoding in the renderer).
     private static PdfString ParseHexString(PdfToken token)
     {
         var inner = token.Raw.Slice(1, token.Raw.Length - 2);

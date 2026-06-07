@@ -18,7 +18,8 @@ internal sealed class PageRenderer(
     double pageHeightPt,
     IReadOnlyDictionary<string, byte[]?>? embeddedFontBytes = null,
     IReadOnlyDictionary<string, ImageXObject>? imageXObjects = null,
-    double[]? initialCtm = null
+    double[]? initialCtm = null,
+    IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null
 )
 {
     private readonly List<(double X, double Y)> _currentPath = [];
@@ -256,17 +257,17 @@ internal sealed class PageRenderer(
 
             // ── Text showing ──────────────────────────────────────────────────
             case "Tj" when op.Operands.Count >= 1:
-                if (op.Operands[0] is PdfString tj) ShowString(tj.Bytes.Span);
+                if (op.Operands[0] is PdfString tj) ShowString(tj.GetBinaryBytes().Span);
                 break;
             case "'":
                 MoveTextLine(0, -_gs.Leading);
-                if (op.Operands is [PdfString sq, ..]) ShowString(sq.Bytes.Span);
+                if (op.Operands is [PdfString sq, ..]) ShowString(sq.GetBinaryBytes().Span);
                 break;
             case "\"" when op.Operands.Count >= 3:
                 _gs.WordSpace = Num(op, 0);
                 _gs.CharSpace = Num(op, 1);
                 MoveTextLine(0, -_gs.Leading);
-                if (op.Operands[2] is PdfString sdq) ShowString(sdq.Bytes.Span);
+                if (op.Operands[2] is PdfString sdq) ShowString(sdq.GetBinaryBytes().Span);
                 break;
             case "TJ" when op.Operands.Count >= 1:
                 if (op.Operands[0] is PdfArray arr) ShowArray(arr);
@@ -321,11 +322,46 @@ internal sealed class PageRenderer(
         var hbScale = (int)(pixelSize * 64);
         hbFont.SetScale(hbScale, hbScale);
 
-        // Interpret PDF string bytes as Latin-1 (the most common PDF string encoding),
-        // convert to Unicode codepoints so HarfBuzz can map them correctly to glyphs
-        // in the TrueType substitute font.  For embedded CID fonts the mapping may still
-        // be approximate, but for Standard 14 + Latin-1 this is correct.
-        var unicodeText = System.Text.Encoding.Latin1.GetString(bytes.ToArray());
+        // Map char codes to Unicode. When the font has a /ToUnicode CMap, use it to
+        // decode each char code to the correct Unicode string. Otherwise fall back to
+        // Latin-1 (covers Standard 14 and most WinAnsi-encoded fonts correctly).
+        IReadOnlyDictionary<uint, string>? toUnicodeMap = null;
+        toUnicodeMaps?.TryGetValue(_gs.FontResourceName, out toUnicodeMap);
+        if (toUnicodeMap is null)
+            toUnicodeMaps?.TryGetValue(_gs.FontName, out toUnicodeMap);
+
+        string unicodeText;
+        if (toUnicodeMap is { Count: > 0 })
+        {
+            var sb = new System.Text.StringBuilder();
+            var span = bytes;
+            while (!span.IsEmpty)
+            {
+                // Try 2-byte code first, then 1-byte
+                uint code2 = span.Length >= 2 ? (uint)((span[0] << 8) | span[1]) : 0;
+                uint code1 = span[0];
+                if (span.Length >= 2 && toUnicodeMap.TryGetValue(code2, out var u2))
+                {
+                    sb.Append(u2);
+                    span = span[2..];
+                }
+                else if (toUnicodeMap.TryGetValue(code1, out var u1))
+                {
+                    sb.Append(u1);
+                    span = span[1..];
+                }
+                else
+                {
+                    sb.Append('�'); // replacement char for unmapped codes
+                    span = span[1..];
+                }
+            }
+            unicodeText = sb.ToString();
+        }
+        else
+        {
+            unicodeText = System.Text.Encoding.Latin1.GetString(bytes.ToArray());
+        }
 
         using var hbBuffer = new HarfBuzzSharp.Buffer();
         hbBuffer.AddUtf8(unicodeText);
@@ -334,6 +370,23 @@ internal sealed class PageRenderer(
 
         var glyphInfos    = hbBuffer.GlyphInfos;
         var glyphPositions = hbBuffer.GlyphPositions;
+
+        // HarfBuzz resolves glyphs through the font's Unicode cmap. Embedded subset
+        // Type1 fonts (e.g. Computer Modern) have a custom/builtin encoding and no
+        // Unicode cmap, so HarfBuzz returns .notdef (glyph 0) for every character and
+        // the text renders blank. Detect that case and fall back to resolving each raw
+        // char code directly through FreeType's own charmap (FT_Get_Char_Index), which
+        // honours the font's builtin encoding. Composite (Type0/CID) fonts and fonts
+        // with a real Unicode cmap produce non-zero glyphs and keep the HarfBuzz path.
+        var allNotdef = glyphInfos.Length > 0;
+        for (var i = 0; i < glyphInfos.Length; i++)
+            if (glyphInfos[i].Codepoint != 0) { allNotdef = false; break; }
+
+        if (allNotdef)
+        {
+            ShowStringDirect(bytes, ftFace, pixelSize);
+            return;
+        }
 
         for (var i = 0; i < glyphInfos.Length; i++)
         {
@@ -362,6 +415,43 @@ internal sealed class PageRenderer(
         }
     }
 
+    // Fallback path for simple fonts whose embedded program has no Unicode cmap
+    // (e.g. subset Computer Modern Type1). Each raw single-byte char code is resolved
+    // to a glyph index through FreeType's own charmap, which honours the font's
+    // builtin/custom encoding. Glyph advances come from FreeType (FT_Get_Advance),
+    // scaled to user-space points. Word-spacing applies to byte code 32 (§9.3.3).
+    private void ShowStringDirect(ReadOnlySpan<byte> bytes, SharpFont.Face ftFace, uint pixelSize)
+    {
+        foreach (var code in bytes)
+        {
+            uint glyphId;
+            try { glyphId = ftFace.GetCharIndex(code); }
+            catch { GlyphsSkipped++; continue; }
+
+            if (glyphId != 0)
+            {
+                try { ftFace.LoadGlyph(glyphId, LoadFlags.Render, LoadTarget.Normal); }
+                catch { GlyphsSkipped++; glyphId = 0; }
+            }
+
+            if (glyphId != 0)
+            {
+                GlyphsAttempted++;
+                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5]);
+                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
+            }
+
+            // Glyph advance (16.16 fixed-point pixels when scaled) → user-space points.
+            double advancePts;
+            try { advancePts = ftFace.GetAdvance(glyphId, LoadFlags.Default).ToDouble() / scale; }
+            catch { advancePts = pixelSize / scale * 0.5; }
+
+            var advance = (advancePts + _gs.CharSpace + (code == 32 ? _gs.WordSpace : 0))
+                          * (_gs.HorizontalScale / 100.0);
+            _gs.TextMatrix[4] += advance;
+        }
+    }
+
     private void ShowArray(PdfArray arr)
     {
         foreach (var elem in arr.Elements)
@@ -369,7 +459,7 @@ internal sealed class PageRenderer(
             switch (elem)
             {
                 case PdfString s:
-                    ShowString(s.Bytes.Span);
+                    ShowString(s.GetBinaryBytes().Span);
                     break;
                 case PdfInteger n:
                     _gs.TextMatrix[4] -= n.Value / 1000.0 * _gs.FontSize * (_gs.HorizontalScale / 100.0);

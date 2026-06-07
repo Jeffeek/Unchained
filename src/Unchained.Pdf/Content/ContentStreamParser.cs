@@ -145,9 +145,11 @@ internal static class ContentStreamParser
             // ── Convert to RGB ────────────────────────────────────────────
             var rgb = ConvertToRgb(decoded, w, h, cs, bpc);
             if (rgb is null) return null;
-            // Pass pixel W/H as user-space dimensions so the renderer can place the
-            // image correctly even when no cm transformation precedes it.
-            return new PdfInlineImage(w, h, rgb, userWidth: w, userHeight: h);
+            // Inline images fill the unit square [0,0]→[1,1] in the current CTM,
+            // exactly like Do XObjects. The cm matrix placed before BI maps the
+            // unit square to the desired position and size; pixel dimensions here
+            // would cause wrong placement when a cm transform is present.
+            return new PdfInlineImage(w, h, rgb, userWidth: 1, userHeight: 1);
         }
         catch
         {
