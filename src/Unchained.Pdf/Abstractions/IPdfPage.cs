@@ -14,14 +14,29 @@ public interface IPdfPage
     int PageNumber { get; }
 
     /// <summary>
-    /// The width of the page's media box in points (horizontal dimension).
+    /// The visible width of the page in points — taken from <c>/CropBox</c> when present,
+    /// otherwise from <c>/MediaBox</c> (horizontal dimension).
     /// </summary>
     double Width { get; }
 
     /// <summary>
-    /// The height of the page's media box in points (vertical dimension).
+    /// The visible height of the page in points — taken from <c>/CropBox</c> when present,
+    /// otherwise from <c>/MediaBox</c> (vertical dimension).
     /// </summary>
     double Height { get; }
+
+    /// <summary>
+    /// The X coordinate (in PDF user-space points) of the lower-left corner of the visible
+    /// area (<c>/CropBox llx</c>, or 0 when no CropBox is defined). Renderers must subtract
+    /// this from all content coordinates to clip correctly to the visible region.
+    /// </summary>
+    double CropOriginX { get; }
+
+    /// <summary>
+    /// The Y coordinate (in PDF user-space points) of the lower-left corner of the visible
+    /// area (<c>/CropBox lly</c>, or 0 when no CropBox is defined).
+    /// </summary>
+    double CropOriginY { get; }
 
     /// <summary>
     /// Page rotation in degrees clockwise as specified by the <c>/Rotate</c> entry

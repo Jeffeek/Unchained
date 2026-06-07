@@ -1,3 +1,4 @@
+@using Unchained.Studio.Enums
 @inject Unchained.Pdf.Engine.DocumentProcessor Processor
 @inject RenderingService Renderer
 @inject PdfiumReferenceRenderer PdfiumRenderer
@@ -232,25 +233,6 @@
         }
     </DialogActions>
 </MudDialog>
-
-@code {
-    private enum Phase { Configure, Running, Done }
-    private enum PageScope { FirstOnly, All, FirstN }
-    private enum BatchStatus { Waiting, Processing, Done, Failed }
-
-    private sealed class BatchEntry
-    {
-        public string FileName { get; init; } = string.Empty;
-        public long SizeBytes { get; init; }
-        public byte[] Bytes { get; init; } = [];
-        public BatchStatus Status { get; set; } = BatchStatus.Waiting;
-        public int TotalPages { get; set; }
-        public int PagesOkUnchained { get; set; }
-        public int PagesOkPdfJs { get; set; }
-        public List<string> RenderErrors { get; } = [];
-        public string? LoadError { get; set; }
-    }
-}
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;

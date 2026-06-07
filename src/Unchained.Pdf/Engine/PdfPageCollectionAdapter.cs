@@ -45,6 +45,12 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     public int PageNumber { get; } = pageNumber;
 
     /// <inheritdoc />
+    public double CropOriginX => GetArrayBoxValue("CropBox", 0) ?? GetArrayBoxValue("MediaBox", 0) ?? 0;
+
+    /// <inheritdoc />
+    public double CropOriginY => GetArrayBoxValue("CropBox", 1) ?? GetArrayBoxValue("MediaBox", 1) ?? 0;
+
+    /// <inheritdoc />
     // CropBox (if present) defines the visible area; fall back to MediaBox.
     // [llx lly urx ury]; width = |urx - llx|, height = |ury - lly|.
     // Rotation swaps the meaning: for Rotate 90/270 the logical width = ury-lly.
@@ -542,7 +548,17 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     {
         var pixelCount = w * h;
 
-        // When cs is still null, infer it from the data length.
+        // When cs is null, or the declared colorspace doesn't match the actual decoded
+        // channel count (e.g. a CMYK ICC profile but the JPEG decoder collapsed to 1 channel),
+        // fall back to the data-length heuristic so we get the best possible rendering
+        // rather than a grey placeholder.
+        var expectedChannels = cs switch
+        {
+            "DeviceCMYK" => 4, "DeviceRGB" => 3, "DeviceGray" => 1, _ => 0
+        };
+        if (bpc == 8 && expectedChannels > 0 && decoded.Length != pixelCount * expectedChannels)
+            cs = null; // declared cs doesn't match data; re-infer below
+
         cs ??= decoded.Length switch
         {
             var n when n == pixelCount * 4 => "DeviceCMYK",
