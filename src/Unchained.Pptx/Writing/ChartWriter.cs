@@ -346,10 +346,12 @@ internal static class ChartWriter
         ser.Add(new XElement(CmlNames.Order, new XAttribute(CmlNames.AttributeValue, index)));
         ser.Add(WriteSeriesName(series.Name));
 
-        // X values — use category indices (1, 2, 3, …) when categories are strings
-        var xValues = Enumerable.Range(1, series.Values.Count)
-                                .Select(static n => (double)n)
-                                .ToList();
+        // X values — use explicit XValues when present, else fall back to indices (1, 2, 3, …)
+        var xValues = series.XValues.Count > 0
+            ? series.XValues
+            : Enumerable.Range(1, series.Values.Count)
+                        .Select(static n => (double)n)
+                        .ToList();
         var xVal = new XElement(CmlNames.XValues);
         xVal.Add(WriteNumberLiteral(xValues));
         ser.Add(xVal);

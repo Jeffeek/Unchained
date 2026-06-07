@@ -1,0 +1,281 @@
+@page "/pptx"
+@inject SessionStateService Session
+@inject FileExportService Exporter
+@inject ISnackbar Snackbar
+
+<div class="studio-tab">
+    @if (Session.Pptx is null)
+    {
+        <div class="drop-zone-page">
+            <FileDropZone Title="Drop a PPTX here"
+                          Subtitle="Supports PowerPoint .pptx (OOXML). Legacy binary .ppt is not supported."
+                          Icon="@Icons.Material.Outlined.Slideshow"
+                          Accept=".pptx,.ppt"
+                          OnFileLoaded="LoadPptx"
+                          OnError="ShowError" />
+        </div>
+    }
+    else
+    {
+        var state = Session.Pptx;
+
+        <div class="three-panel">
+            <!-- LEFT: tree -->
+            <div class="panel-tree">
+                <DocumentTree Root="state.Tree"
+                              SelectedNodeChanged="OnNodeSelected"
+                              OnRefreshRequested="RefreshTree" />
+            </div>
+
+            <!-- CENTRE: slide preview -->
+            <div class="panel-preview">
+                <SlidePreviewPanel Document="state.Document"
+                                   CurrentSlide="state.CurrentSlide"
+                                   CurrentSlideChanged="s => state.CurrentSlide = s" />
+            </div>
+
+            <!-- RIGHT: properties -->
+            <div class="panel-properties">
+                <PropertiesPanel Bag="_selectedProperties" />
+            </div>
+        </div>
+
+        <!-- BOTTOM: operations bar -->
+        <div class="operations-bar">
+            <div class="ops-group">
+                <MudButton StartIcon="@Icons.Material.Outlined.TextFields"
+                           Variant="Variant.Text" Size="Size.Small"
+                           OnClick="ExtractText">Extract text</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.Image"
+                           Variant="Variant.Text" Size="Size.Small"
+                           OnClick="ExportCurrentSlideImage">Export slide PNG</MudButton>
+            </div>
+            <MudDivider Vertical="true" Class="ops-divider" />
+            <div class="ops-group ops-group--right">
+                <MudButton StartIcon="@Icons.Material.Outlined.Download"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           OnClick="DownloadDocument">Download</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.Close"
+                           Variant="Variant.Text" Size="Size.Small"
+                           Color="Color.Error"
+                           OnClick="CloseDocument">Close</MudButton>
+            </div>
+        </div>
+
+        @if (_showTextPanel)
+        {
+            <div class="text-panel">
+                <div class="text-panel-toolbar">
+                    <MudText Typo="Typo.subtitle2">Extracted Text</MudText>
+                    <MudSpacer />
+                    <MudIconButton Icon="@Icons.Material.Outlined.Download"
+                                   Size="Size.Small"
+                                   OnClick="DownloadText"
+                                   title="Download as .txt" />
+                    <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                                   Size="Size.Small"
+                                   OnClick="() => _showTextPanel = false" />
+                </div>
+                <textarea class="text-content" readonly>@_extractedText</textarea>
+            </div>
+        }
+    }
+
+    @if (_busy)
+    {
+        <div class="loading-overlay">
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.body1" Class="mt-3">@_busyMessage</MudText>
+        </div>
+    }
+</div>
+
+@code {
+    private PropertyBag? _selectedProperties;
+    private bool _busy;
+    private string _busyMessage = string.Empty;
+    private bool _showTextPanel;
+    private string? _extractedText;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        if (Session.Pptx is not null)
+            Session.Pptx.Refreshed += OnSessionRefreshed;
+    }
+
+    private void OnSessionRefreshed() =>
+        InvokeAsync(StateHasChanged);
+
+    private async Task LoadPptx((byte[] Bytes, string FileName) file)
+    {
+        // Legacy binary .ppt (BIFF/OLE compound document) is not OOXML and not supported.
+        if (file.FileName.EndsWith(".ppt", StringComparison.OrdinalIgnoreCase)
+            && !file.FileName.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase))
+        {
+            ShowError("Legacy binary .ppt is not supported. Please convert it to .pptx and try again.");
+            return;
+        }
+
+        SetBusy("Loading PPTX…");
+        try
+        {
+            if (Session.Pptx is not null)
+                Session.Pptx.Refreshed -= OnSessionRefreshed;
+
+            await Session.LoadPptxAsync(file.Bytes, file.FileName);
+
+            if (Session.Pptx is not null)
+                Session.Pptx.Refreshed += OnSessionRefreshed;
+
+            ShowInfo($"Loaded {file.FileName}");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to load PPTX: {ex.Message}");
+        }
+        finally
+        {
+            ClearBusy();
+        }
+    }
+
+    private void OnNodeSelected(TreeNode? node)
+    {
+        _selectedProperties = node is null
+            ? null
+            : PptxPropertyAdapter.Build(node);
+    }
+
+    private async Task RefreshTree()
+    {
+        if (Session.Pptx is null)
+            return;
+        SetBusy("Refreshing…");
+        try
+        {
+            await Session.Pptx.RefreshAsync();
+        }
+        finally
+        {
+            ClearBusy();
+        }
+    }
+
+    private async Task DownloadDocument()
+    {
+        if (Session.Pptx is null)
+            return;
+        await Exporter.TriggerDownloadAsync(
+            Session.Pptx.CurrentBytes,
+            Session.Pptx.FileName,
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+    }
+
+    private async Task ExtractText()
+    {
+        if (Session.Pptx is null)
+            return;
+        SetBusy("Extracting text…");
+        try
+        {
+            var sb = new System.Text.StringBuilder();
+            var slides = Session.Pptx.Document.Slides;
+            for (var i = 0; i < slides.Count; i++)
+            {
+                sb.AppendLine($"─── Slide {i + 1} ───");
+                sb.AppendLine(slides[i].GetAllText());
+                sb.AppendLine();
+            }
+            _extractedText = sb.ToString();
+            _showTextPanel = true;
+        }
+        finally
+        {
+            ClearBusy();
+        }
+    }
+
+    private async Task DownloadText()
+    {
+        if (_extractedText is null)
+            return;
+        try
+        {
+            await Exporter.TriggerDownloadAsync(
+                System.Text.Encoding.UTF8.GetBytes(_extractedText),
+                Path.ChangeExtension(Session.Pptx?.FileName ?? "presentation", ".txt"),
+                "text/plain");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Download failed: {ex.Message}");
+        }
+    }
+
+    private async Task ExportCurrentSlideImage()
+    {
+        if (Session.Pptx is null)
+            return;
+        SetBusy("Rendering slide…");
+        try
+        {
+            var state = Session.Pptx;
+            var index = Math.Clamp(state.CurrentSlide, 1, state.Document.Slides.Count) - 1;
+            var slide = state.Document.Slides[index];
+            var image = await Unchained.Pptx.Rendering.Engine.SlideRenderer.RenderAsync(
+                slide,
+                state.Document.SlideSize,
+                new Unchained.Pptx.Rendering.RenderOptions { WidthPx = 1920, HeightPx = 1080 });
+
+            var baseName = Path.GetFileNameWithoutExtension(state.FileName);
+            await Exporter.TriggerDownloadAsync(
+                image.Data.ToArray(),
+                $"{baseName}-slide{index + 1}.png",
+                "image/png");
+        }
+        catch (DllNotFoundException)
+        {
+            ShowError("FreeType native library not found. Run scripts/FetchNatives/fetch-natives to enable rendering.");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Slide export failed: {ex.Message}");
+        }
+        finally
+        {
+            ClearBusy();
+        }
+    }
+
+    private async Task CloseDocument()
+    {
+        if (Session.Pptx is not null)
+            Session.Pptx.Refreshed -= OnSessionRefreshed;
+        await Session.ClosePptxAsync();
+        _selectedProperties = null;
+        _showTextPanel = false;
+        _extractedText = null;
+    }
+
+    private void SetBusy(string message)
+    {
+        _busy = true;
+        _busyMessage = message;
+        StateHasChanged();
+    }
+
+    private void ClearBusy()
+    {
+        _busy = false;
+        StateHasChanged();
+    }
+
+    private void ShowInfo(string message) =>
+        Snackbar.Add(message, Severity.Info);
+
+    private void ShowError(string message) =>
+        Snackbar.Add(message, Severity.Error);
+}

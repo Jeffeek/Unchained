@@ -192,6 +192,7 @@ internal static class ChartParser
             }
 
             ParseValues(serEl, series);
+            ParseXValues(serEl, series);
             data.Series.Add(series);
         }
     }
@@ -222,13 +223,23 @@ internal static class ChartParser
 
     private static void ParseCategories(XElement serEl, ChartData data)
     {
-        // <c:cat> for standard charts; <c:xVal> for scatter/bubble
-        var catEl = serEl.Element(CmlNames.Category)
-                  ?? serEl.Element(CmlNames.XValues);
+        // <c:cat> for category-based charts; <c:xVal> for scatter/bubble holds numeric X values,
+        // which are parsed separately into ChartSeries.XValues (see ParseXValues).
+        var catEl = serEl.Element(CmlNames.Category);
         if (catEl == null) return;
 
         var points = ReadStringPoints(catEl);
         data.Categories.AddRange(points);
+    }
+
+    private static void ParseXValues(XElement serEl, ChartSeries series)
+    {
+        // <c:xVal> holds numeric X-axis values for scatter/bubble charts.
+        var xValEl = serEl.Element(CmlNames.XValues);
+        if (xValEl == null) return;
+
+        var points = ReadNumericPoints(xValEl);
+        series.XValues.AddRange(points);
     }
 
     private static void ParseValues(XElement serEl, ChartSeries series)

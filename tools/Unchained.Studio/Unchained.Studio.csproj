@@ -12,6 +12,7 @@
     <ProjectReference Include="../../src/Unchained.Pdf/Unchained.Pdf.csproj" />
     <ProjectReference Include="../../src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj" />
     <ProjectReference Include="../../src/Unchained.Pptx/Unchained.Pptx.csproj" />
+    <ProjectReference Include="../../src/Unchained.Pptx.Rendering/Unchained.Pptx.Rendering.csproj" />
   </ItemGroup>
 
   <ItemGroup>

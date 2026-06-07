@@ -24,7 +24,7 @@ internal static class ColorParser
             var hex = srgb.GetAttr(DmlNames.AttributeValue, "000000");
             if (TryParseHex(hex, out var argb))
                 return ColorSpec.FromArgb(
-                    (byte)((argb >> 24) & 0xFF),
+                    ReadAlpha(srgb),
                     (byte)((argb >> 16) & 0xFF),
                     (byte)((argb >> 8) & 0xFF),
                     (byte)(argb & 0xFF));
@@ -65,6 +65,19 @@ internal static class ColorParser
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static byte ReadAlpha(XElement colorElement)
+    {
+        var alphaEl = colorElement.Element(DmlNames.Alpha);
+        if (alphaEl == null)
+            return 255;
+
+        var raw = alphaEl.GetAttrInt(DmlNames.AttributeValue);
+        if (raw == null)
+            return 255;
+
+        return (byte)Math.Clamp((int)Math.Round(raw.Value / 100_000.0 * 255), 0, 255);
+    }
 
     private static double ReadTransformValue(XElement parent, XName childName)
     {

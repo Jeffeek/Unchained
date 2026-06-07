@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject ISnackbar Snackbar
+@inject NavigationManager Nav
 
 <MudThemeProvider Theme="_theme" />
 <MudPopoverProvider />
@@ -11,14 +12,16 @@
         <MudIcon Icon="@Icons.Material.Filled.AutoStories" Class="mr-2" />
         <MudText Typo="Typo.h6" Class="mr-4">Unchained Studio</MudText>
 
-        <MudChip T="string" Text="PDF" Color="Color.Primary" Size="Size.Small" />
-        <MudChip T="string" Text="PPTX" Size="Size.Small" Disabled="true" />
+        <MudChip T="string" Text="PDF" Color="@ChipColor("/")" Size="Size.Small"
+                 OnClick="@(() => Navigate("/"))" />
+        <MudChip T="string" Text="PPTX" Color="@ChipColor("/pptx")" Size="Size.Small"
+                 OnClick="@(() => Navigate("/pptx"))" />
         <MudChip T="string" Text="DOCX" Size="Size.Small" Disabled="true" />
         <MudChip T="string" Text="XLSX" Size="Size.Small" Disabled="true" />
 
         <MudSpacer />
         <MudText Typo="Typo.caption" Class="mr-2" Style="opacity:0.6">
-            Unchained.Pdf v0.1.0
+            Unchained v0.1.0
         </MudText>
         <MudIconButton Icon="@Icons.Material.Outlined.Help"
                        Href="https://github.com/Jeffeek/Unchained"
@@ -69,5 +72,14 @@
     private void RecoverFromError()
     {
         _errorBoundary?.Recover();
+    }
+
+    private void Navigate(string path) => Nav.NavigateTo(path);
+
+    private Color ChipColor(string path)
+    {
+        var relative = "/" + Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
+        if (relative == string.Empty) relative = "/";
+        return relative == path ? Color.Primary : Color.Default;
     }
 }

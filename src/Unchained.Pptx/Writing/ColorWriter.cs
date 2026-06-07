@@ -41,7 +41,7 @@ internal static class ColorWriter
 
         if (alpha < 255)
             srgbEl.Add(new XElement(DmlNames.Alpha,
-                new XAttribute(DmlNames.AttributeValue, (int)(alpha / 255.0 * 100_000))));
+                new XAttribute(DmlNames.AttributeValue, (int)Math.Round(alpha / 255.0 * 100_000))));
 
         return srgbEl;
     }

@@ -11,12 +11,19 @@ Slide rasterization for `Unchained.Pptx`. Renders PPTX slides to PNG (or other i
 Before building or running, fetch the FreeType2 native library for your platform:
 
 ```bash
-# Linux / macOS / Windows (Git Bash)
-bash scripts/FetchNatives/fetch-drawing-natives.sh
+# Linux / macOS / Windows (Git Bash) — auto-detects host RID
+bash scripts/FetchNatives/fetch-natives.sh
+
+# Or target a specific RID
+bash scripts/FetchNatives/fetch-natives.sh --rid win-x64
 
 # Windows (PowerShell)
-pwsh scripts/FetchNatives/fetch-drawing-natives.ps1
+pwsh scripts/FetchNatives/fetch-natives.ps1
 ```
+
+If the native library is missing, rendering calls throw `DllNotFoundException`
+(`Unable to load DLL 'freetype6'`). The fetch script copies FreeType into
+`Unchained.Drawing.Runtimes`, which the rendering stack depends on transitively.
 
 ## Quick start
 
@@ -41,6 +48,21 @@ var thumbnail = await SlideRenderer.RenderAsync(
     doc.SlideSize,
     new RenderOptions { WidthPx = 640, HeightPx = 360 });
 ```
+
+## Output formats
+
+`RenderOptions.Format` selects the encoder:
+
+| Format | Status | Notes |
+|---|---|---|
+| `RenderImageFormat.Png` (default) | Supported | Lossless, recommended |
+| `RenderImageFormat.Bmp` | Supported | Uncompressed 24-bit, large files |
+| `RenderImageFormat.Jpeg` | Not implemented | Throws `NotSupportedException` |
+
+The returned `PptxImage.Format` always matches the bytes in `PptxImage.Data`.
+
+> Note: embedded raster images inside slides (`p:pic`) are not yet decoded by the
+> rasterizer — their region is left transparent. Text, shapes, and solid fills render.
 
 ## Dependencies
 
