@@ -35,8 +35,9 @@ internal sealed class PdfPageCollectionAdapter(PdfDocumentCore core) : IPageColl
 
 /// <summary>
 /// Adapts a raw PDF page dictionary to the <see cref="IPdfPage"/> interface.
-/// Dimensions are read from the page's <c>/MediaBox</c> array (ISO 32000-1 §14.11.2).
-/// Content operators are parsed on demand from the page's <c>/Contents</c> stream(s).
+/// Dimensions are read from <c>/CropBox</c> when present, falling back to
+/// <c>/MediaBox</c> (ISO 32000-1 §14.11.2). Content operators are parsed on
+/// demand from the page's <c>/Contents</c> stream(s).
 /// </summary>
 internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocumentCore core) : IPdfPage
 {
@@ -44,7 +45,8 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     public int PageNumber { get; } = pageNumber;
 
     /// <inheritdoc />
-    // MediaBox is [llx lly urx ury]; width = |urx - llx|, height = |ury - lly|.
+    // CropBox (if present) defines the visible area; fall back to MediaBox.
+    // [llx lly urx ury]; width = |urx - llx|, height = |ury - lly|.
     // Rotation swaps the meaning: for Rotate 90/270 the logical width = ury-lly.
     public double Width
     {
@@ -52,8 +54,8 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         {
             var rotate = Rotate;
             return rotate is 90 or 270
-                ? Math.Abs(GetMediaBoxValue(3) - GetMediaBoxValue(1))
-                : Math.Abs(GetMediaBoxValue(2) - GetMediaBoxValue(0));
+                ? Math.Abs(GetBoxValue(3) - GetBoxValue(1))
+                : Math.Abs(GetBoxValue(2) - GetBoxValue(0));
         }
     }
 
@@ -64,8 +66,8 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         {
             var rotate = Rotate;
             return rotate is 90 or 270
-                ? Math.Abs(GetMediaBoxValue(2) - GetMediaBoxValue(0))
-                : Math.Abs(GetMediaBoxValue(3) - GetMediaBoxValue(1));
+                ? Math.Abs(GetBoxValue(2) - GetBoxValue(0))
+                : Math.Abs(GetBoxValue(3) - GetBoxValue(1));
         }
     }
 
@@ -360,14 +362,15 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             var h = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("Height"))?.Value ?? 0);
             if (w <= 0 || h <= 0) continue;
 
-            var cs  = stream.Dictionary.GetName("ColorSpace");
-            var bpc = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 8);
+            var cs     = ReadColorSpace(stream.Dictionary);
+            var bpc    = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 8);
+            var decode = ReadDecodeArray(stream.Dictionary);
 
             byte[] rgb;
             try
             {
                 var decoded = StreamFilters.Decode(stream);
-                rgb = DecodeImageToRgb(decoded, w, h, cs, bpc);
+                rgb = DecodeImageToRgb(decoded, w, h, cs, bpc, decode);
             }
             catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
             {
@@ -454,39 +457,124 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         return ms.ToArray();
     }
 
-    // ── MediaBox helpers ──────────────────────────────────────────────────────
+    // ── Box helpers ───────────────────────────────────────────────────────────
 
-    // Returns the raw value at the given index from /MediaBox [llx lly urx ury].
-    // Callers compute width = |urx - llx| and height = |ury - lly|.
-    private double GetMediaBoxValue(int index)
+    // Returns the raw value at the given index from /CropBox if present,
+    // otherwise from /MediaBox. Both follow [llx lly urx ury] order.
+    private double GetBoxValue(int index) =>
+        GetArrayBoxValue("CropBox", index) ??
+        GetArrayBoxValue("MediaBox", index) ??
+        0;
+
+    private double? GetArrayBoxValue(string name, int index)
     {
-        if (page[PdfName.MediaBox] is not PdfArray mediaBox || mediaBox.Count < 4)
-            return 0;
-
-        return mediaBox[index] switch
+        if (page[PdfName.Get(name)] is not PdfArray box || box.Count < 4)
+            return null;
+        return box[index] switch
         {
             PdfInteger i => i.Value,
             PdfReal r    => r.Value,
-            _            => 0
+            _            => null
         };
     }
 
+    // Kept for compatibility — still used by the inline-image coordinate path.
+    private double GetMediaBoxValue(int index) => GetArrayBoxValue("MediaBox", index) ?? 0;
+
+    // Resolves the /ColorSpace entry to a canonical name string.
+    // Handles both direct names (/DeviceRGB) and arrays ([/ICCBased <stream>],
+    // [/Indexed /DeviceRGB …]) by reading the base-space name or channel count.
+    private string? ReadColorSpace(PdfDictionary dict)
+    {
+        var csObj = dict["ColorSpace"];
+        if (csObj is PdfName name)
+            return name.Value;
+
+        if (csObj is PdfIndirectReference r)
+            csObj = core.ResolveIndirect(r.ObjectNumber).Value;
+
+        if (csObj is PdfArray arr && arr.Count >= 1)
+        {
+            var kind = (arr[0] as PdfName)?.Value;
+            if (kind == "ICCBased" && arr.Count >= 2)
+            {
+                // The ICC stream's /N entry gives the number of color channels.
+                var iccStream = arr[1] is PdfIndirectReference iccRef
+                    ? core.ResolveIndirect(iccRef.ObjectNumber).Value as PdfStream
+                    : arr[1] as PdfStream;
+                var n = (int)(iccStream?.Dictionary.Get<PdfInteger>(PdfName.Get("N"))?.Value ?? 0);
+                return n switch { 1 => "DeviceGray", 3 => "DeviceRGB", 4 => "DeviceCMYK", _ => null };
+            }
+            if (kind == "Indexed" && arr.Count >= 2)
+                return (arr[1] as PdfName)?.Value; // return base space
+        }
+
+        return null;
+    }
+
+    // Reads the /Decode array as a float[]. Returns null when absent (= identity).
+    private static float[]? ReadDecodeArray(PdfDictionary dict)
+    {
+        if (dict["Decode"] is not PdfArray da || da.Count == 0)
+            return null;
+        var values = new float[da.Count];
+        for (var i = 0; i < da.Count; i++)
+            values[i] = ReadFloat(da[i]);
+        return values;
+    }
+
+    // Applies a /Decode array to a single 8-bit sample for one channel.
+    // decode[2*ch] = Dmin, decode[2*ch+1] = Dmax per PDF spec §8.9.5.3.
+    private static byte ApplyDecode(byte sample, float[]? decode, int channel)
+    {
+        if (decode is null) return sample;
+        var idx = channel * 2;
+        if (idx + 1 >= decode.Length) return sample;
+        var dmin = decode[idx];
+        var dmax = decode[idx + 1];
+        if (Math.Abs(dmax - dmin - 1f) < 1e-4f && Math.Abs(dmin) < 1e-4f) return sample; // identity
+        var component = dmin + (sample / 255f) * (dmax - dmin);
+        return (byte)Math.Clamp(component * 255f, 0, 255);
+    }
+
     // Decode raw image bytes into a packed RGB (3 bytes/pixel) array.
-    private static byte[] DecodeImageToRgb(ReadOnlyMemory<byte> decoded, int w, int h, string? cs, int bpc)
+    private static byte[] DecodeImageToRgb(ReadOnlyMemory<byte> decoded, int w, int h, string? cs, int bpc, float[]? decode)
     {
         var pixelCount = w * h;
 
+        // When cs is still null, infer it from the data length.
+        cs ??= decoded.Length switch
+        {
+            var n when n == pixelCount * 4 => "DeviceCMYK",
+            var n when n == pixelCount * 3 => "DeviceRGB",
+            _                              => "DeviceGray"
+        };
+
         // DeviceRGB — direct 3-channel, 8 bpc
         if (cs == "DeviceRGB" && bpc == 8 && decoded.Length == pixelCount * 3)
-            return decoded.ToArray();
+        {
+            if (decode is null) return decoded.ToArray();
+            var span = decoded.Span;
+            var rgb  = new byte[pixelCount * 3];
+            for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
+            {
+                rgb[j]     = ApplyDecode(span[j],     decode, 0);
+                rgb[j + 1] = ApplyDecode(span[j + 1], decode, 1);
+                rgb[j + 2] = ApplyDecode(span[j + 2], decode, 2);
+            }
+            return rgb;
+        }
 
         // DeviceGray — single channel; replicate to R, G, B
-        if ((cs == "DeviceGray" || cs == null) && bpc == 8 && decoded.Length == pixelCount)
+        if (cs == "DeviceGray" && bpc == 8 && decoded.Length == pixelCount)
         {
             var span = decoded.Span;
             var rgb  = new byte[pixelCount * 3];
             for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
-                rgb[j] = rgb[j + 1] = rgb[j + 2] = span[i];
+            {
+                var v = ApplyDecode(span[i], decode, 0);
+                rgb[j] = rgb[j + 1] = rgb[j + 2] = v;
+            }
             return rgb;
         }
 
@@ -497,10 +585,10 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             var rgb  = new byte[pixelCount * 3];
             for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
             {
-                var c = span[(i * 4)    ] / 255.0;
-                var m = span[(i * 4) + 1] / 255.0;
-                var y = span[(i * 4) + 2] / 255.0;
-                var k = span[(i * 4) + 3] / 255.0;
+                var c = ApplyDecode(span[i * 4    ], decode, 0) / 255.0;
+                var m = ApplyDecode(span[i * 4 + 1], decode, 1) / 255.0;
+                var y = ApplyDecode(span[i * 4 + 2], decode, 2) / 255.0;
+                var k = ApplyDecode(span[i * 4 + 3], decode, 3) / 255.0;
                 rgb[j]     = (byte)Math.Clamp(((1 - c) * (1 - k)) * 255, 0, 255);
                 rgb[j + 1] = (byte)Math.Clamp(((1 - m) * (1 - k)) * 255, 0, 255);
                 rgb[j + 2] = (byte)Math.Clamp(((1 - y) * (1 - k)) * 255, 0, 255);
@@ -510,8 +598,10 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
 
         // DeviceGray 1 bpc (bi-level / CCITTFax) — unpack bit rows to RGB.
         // PDF convention: sample 0 = minimum = white (paper), 1 = maximum = black (ink).
-        if ((cs == "DeviceGray" || cs == null) && bpc == 1)
+        if (cs == "DeviceGray" && bpc == 1)
         {
+            // /Decode default for 1bpc is [0.0 1.0]; [1.0 0.0] inverts black/white.
+            var invertBits = decode is { Length: >= 2 } && decode[0] > decode[1];
             var span = decoded.Span;
             var rgb  = new byte[pixelCount * 3];
             var rowBytes = (w + 7) / 8;
@@ -521,6 +611,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 var byteIdx = (row * rowBytes) + (col >> 3);
                 if (byteIdx >= span.Length) break;
                 var bit = (span[byteIdx] >> (7 - (col & 7))) & 1;
+                if (invertBits) bit = 1 - bit;
                 var val = (byte)(bit == 0 ? 255 : 0); // 0=white paper, 1=black ink
                 var j   = ((row * w) + col) * 3;
                 rgb[j] = rgb[j + 1] = rgb[j + 2] = val;

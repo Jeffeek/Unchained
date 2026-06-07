@@ -234,13 +234,8 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-
-    // ── State ──────────────────────────────────────────────────────────────────
-
     private enum Phase { Configure, Running, Done }
     private enum PageScope { FirstOnly, All, FirstN }
-
     private enum BatchStatus { Waiting, Processing, Done, Failed }
 
     private sealed class BatchEntry
@@ -255,6 +250,12 @@
         public List<string> RenderErrors { get; } = [];
         public string? LoadError { get; set; }
     }
+}
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    // ── State ──────────────────────────────────────────────────────────────────
 
     private readonly List<BatchEntry> _files = [];
     private Phase _phase = Phase.Configure;
