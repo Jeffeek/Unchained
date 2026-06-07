@@ -1,5 +1,6 @@
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
+using Unchained.Pptx.Media;
 using Unchained.Pptx.Slides;
 using Unchained.Drawing;
 using Unchained.Drawing.Text;
@@ -22,13 +23,19 @@ public static class SlideRenderer
     /// <param name="slide">The slide to render.</param>
     /// <param name="slideSize">The logical dimensions of the slide in EMUs.</param>
     /// <param name="options">Render options; defaults are used when <see langword="null"/>.</param>
+    /// <param name="media">
+    /// The presentation's media store, used to resolve embedded fonts so custom typefaces
+    /// render in their real shape. Pass <c>document.Media</c>; <see langword="null"/> falls
+    /// back to bundled substitute fonts.
+    /// </param>
     /// <param name="ct">Cancellation token.</param>
     public static Task<PptxImage> RenderAsync(
         Slide slide,
         SlideSize slideSize,
         RenderOptions? options = null,
+        MediaStore? media = null,
         CancellationToken ct = default
-    ) => RenderWithGateAsync(slide, slideSize, options ?? new RenderOptions(), ct);
+    ) => RenderWithGateAsync(slide, slideSize, options ?? new RenderOptions(), media, ct);
 
     /// <summary>
     /// Rasterizes all slides in the presentation and returns an image per slide.
@@ -46,12 +53,13 @@ public static class SlideRenderer
         var opts = options ?? new RenderOptions();
         var slideSize = document.SlideSize;
         var slides = document.Slides;
+        var media = document.Media;
 
         var tasks = new Task<PptxImage>[slides.Count];
         for (var i = 0; i < slides.Count; i++)
         {
             var slide = slides[i];
-            tasks[i] = RenderWithGateAsync(slide, slideSize, opts, ct);
+            tasks[i] = RenderWithGateAsync(slide, slideSize, opts, media, ct);
         }
 
         return await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -61,12 +69,13 @@ public static class SlideRenderer
         Slide slide,
         SlideSize slideSize,
         RenderOptions options,
+        MediaStore? media,
         CancellationToken ct)
     {
         await Gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            return await Task.Run(() => Render(slide, slideSize, options), ct).ConfigureAwait(false);
+            return await Task.Run(() => Render(slide, slideSize, options, media), ct).ConfigureAwait(false);
         }
         finally
         {
@@ -74,10 +83,10 @@ public static class SlideRenderer
         }
     }
 
-    private static PptxImage Render(Slide slide, SlideSize slideSize, RenderOptions options)
+    private static PptxImage Render(Slide slide, SlideSize slideSize, RenderOptions options, MediaStore? media)
     {
         using var fontCache = new FontCache();
-        var rasterizer = new SlideRasterizer(fontCache);
+        var rasterizer = new SlideRasterizer(fontCache, media);
         var buffer = rasterizer.Rasterize(slide, slideSize, options);
         var encoded = Encode(buffer, options.Format);
 

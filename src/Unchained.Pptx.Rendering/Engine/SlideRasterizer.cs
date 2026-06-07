@@ -18,7 +18,7 @@ namespace Unchained.Pptx.Rendering.Engine;
 /// Rasterizes a single <see cref="Slide"/> into a <see cref="RasterBuffer"/>
 /// using FreeType2 for glyph rendering and HarfBuzz for text shaping.
 /// </summary>
-internal sealed class SlideRasterizer(FontCache fonts)
+internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 {
     /// <summary>
     /// Renders the slide and returns a pixel buffer ready for encoding.
@@ -155,10 +155,16 @@ internal sealed class SlideRasterizer(FontCache fonts)
                 // Select font name — use LatinFont if set, else fallback key
                 var fontName = run.Format.LatinFont ?? SelectFontName(run);
 
+                // Prefer an embedded font (matched by typeface + style) so custom fonts
+                // render in their real shape instead of a bundled substitute. The cache key
+                // is style-qualified so regular/bold of the same typeface don't collide.
+                var embeddedBytes = ResolveEmbeddedFont(run, fontName, out var cacheKey);
+
                 cursorX = RenderRunText(
                     buffer,
                     run.Text,
-                    fontName,
+                    cacheKey,
+                    embeddedBytes,
                     fontSizePt,
                     scale,
                     cursorX,
@@ -177,6 +183,7 @@ internal sealed class SlideRasterizer(FontCache fonts)
         RasterBuffer buffer,
         string text,
         string fontName,
+        byte[]? embeddedBytes,
         double fontSizePt,
         double scale,
         int startX, int startY,
@@ -189,7 +196,7 @@ internal sealed class SlideRasterizer(FontCache fonts)
         // ReSharper disable once EmptyGeneralCatchClause
         try
         {
-            var (ftFace, hbFont) = fonts.GetFonts(fontName);
+            var (ftFace, hbFont) = fonts.GetFonts(fontName, embeddedBytes);
             var pixelSize = (uint)Math.Max(1, Math.Round(fontSizePt * scale));
             ftFace.SetPixelSizes(0, pixelSize);
 
@@ -221,13 +228,15 @@ internal sealed class SlideRasterizer(FontCache fonts)
                     continue;
                 }
 
-                var glyph = ftFace.Glyph;
-                var bm = glyph.Bitmap;
+                // Pen baseline position. BlitGlyphFromFace applies BitmapLeft/BitmapTop itself,
+                // reading the glyph slot at correct native struct offsets. SharpFont's managed
+                // ftFace.Glyph accessor uses the wrong face->glyph offset on Windows x64
+                // (FT_Long NativeLong mismatch) and yields a garbage/empty bitmap — which is
+                // why text was missing from slide renders on Windows.
+                var penX = cursorX + (glyphPositions[i].XOffset / 64);
+                var penY = startY + (int)pixelSize + (glyphPositions[i].YOffset / 64);
 
-                var destX = cursorX + (glyphPositions[i].XOffset / 64) + glyph.BitmapLeft;
-                var destY = startY + (int)pixelSize - glyph.BitmapTop + (glyphPositions[i].YOffset / 64);
-
-                buffer.BlitGlyphBitmap(destX, destY, bm, r, g, b);
+                buffer.BlitGlyphFromFace(penX, penY, ftFace, r, g, b);
 
                 cursorX += glyphPositions[i].XAdvance / 64;
 
@@ -283,19 +292,22 @@ internal sealed class SlideRasterizer(FontCache fonts)
         width = 0;
         height = 0;
 
-        // For PNG: minimal BCL-based decoder — read IHDR for dimensions, then
-        // use the known pixel size from the model if available, or fall back.
-        if (image.PixelWidth > 0 && image.PixelHeight > 0)
-        {
-            width = image.PixelWidth;
-            height = image.PixelHeight;
-        }
+        var bytes = image.Data.Span;
+        if (bytes.IsEmpty)
+            return null;
 
-        // Without a full image codec, we can only handle PNG by reading the IHDR chunk.
-        // Return null for unsupported formats — the shape slot is left empty (transparent).
-        // A full image decoding pipeline is out of scope for M9 (tracked for future milestone).
+        // PNG is decodable with BCL-only inflate. JPEG/EMF/WMF/SVG/WDP are not yet
+        // supported here — those shapes are left transparent (tracked as a known gap).
+        if (IsPng(bytes))
+            return PngDecoder.TryDecodeToRgb(bytes, out width, out height);
+
         return null;
     }
+
+    private static bool IsPng(ReadOnlySpan<byte> bytes) =>
+        bytes.Length >= 8 &&
+        bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 &&
+        bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A;
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -305,6 +317,38 @@ internal sealed class SlideRasterizer(FontCache fonts)
             return "Arial Bold";
 
         return "Arial";
+    }
+
+    // Looks up embedded font bytes for the run's typeface + style. Returns the bytes (or null
+    // when no embedded font matches) and sets cacheKey: a style-qualified key for embedded
+    // fonts so the FontCache keeps regular/bold/italic of the same typeface as distinct faces,
+    // or the plain font name when falling back to a bundled substitute.
+    private byte[]? ResolveEmbeddedFont(Run run, string fontName, out string cacheKey)
+    {
+        cacheKey = fontName;
+        if (media is null || media.Fonts.Count == 0)
+            return null;
+
+        var style = ResolveStyle(run);
+        var data = media.FindFontData(fontName, style);
+        if (data is null)
+            return null;
+
+        cacheKey = $"{fontName}#{style}#embedded";
+        return data.Value.ToArray();
+    }
+
+    private static EmbeddedFontStyle ResolveStyle(Run run)
+    {
+        var bold = run.Format.Bold == InheritableBool.True;
+        var italic = run.Format.Italic == InheritableBool.True;
+        return (bold, italic) switch
+        {
+            (true, true) => EmbeddedFontStyle.BoldItalic,
+            (true, false) => EmbeddedFontStyle.Bold,
+            (false, true) => EmbeddedFontStyle.Italic,
+            _ => EmbeddedFontStyle.Regular
+        };
     }
 
     private static void ExtractArgb(uint argb, out byte a, out byte r, out byte g, out byte b)

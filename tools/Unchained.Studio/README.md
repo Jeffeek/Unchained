@@ -37,7 +37,9 @@ Upload a `.pptx` presentation (drag-and-drop or Browse). The tab then shows thre
   info, embedded-image details.
 
 Operations bar: **Extract text** (all slides), **Export slide PNG** (current slide at
-1920×1080), **Download** (the original bytes), **Close**.
+1920×1080), **Export ZIP…** (render current/all slides to PNG and download a ZIP, with an
+optional `reference/` folder for comparing against a production engine's output),
+**Download** (the original bytes), **Close**.
 
 ### Slide rendering prerequisite
 

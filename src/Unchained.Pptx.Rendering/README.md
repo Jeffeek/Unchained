@@ -46,8 +46,27 @@ for (var i = 0; i < images.Length; i++)
 var thumbnail = await SlideRenderer.RenderAsync(
     doc.Slides[0],
     doc.SlideSize,
-    new RenderOptions { WidthPx = 640, HeightPx = 360 });
+    new RenderOptions { WidthPx = 640, HeightPx = 360 },
+    doc.Media); // pass Media so embedded fonts are used
 ```
+
+> Pass `document.Media` to `RenderAsync` (it is passed automatically by `RenderAllAsync`)
+> so embedded fonts resolve. Without it, custom typefaces fall back to bundled substitutes.
+
+## Fonts
+
+Runs are rendered with FreeType2 + HarfBuzz. Font resolution order per run:
+
+1. **Embedded font** — if the presentation embeds the run's typeface
+   (`<p:embeddedFontLst>` → `/ppt/fonts/*.fntdata`), the real font bytes are used,
+   matched by typeface **and** style (regular/bold/italic/bold-italic).
+2. **Bundled substitute** — Standard-14 names map to DejaVu; everything else falls
+   back to NotoSans-Regular.
+
+Glyphs are blitted via `BlitGlyphFromFace`, which reads the FreeType glyph slot at
+correct native struct offsets — necessary on Windows x64, where SharpFont's managed
+`Face.Glyph` accessor uses a wrong offset and yields empty bitmaps (this was the cause
+of missing text in slide renders).
 
 ## Output formats
 
@@ -61,8 +80,12 @@ var thumbnail = await SlideRenderer.RenderAsync(
 
 The returned `PptxImage.Format` always matches the bytes in `PptxImage.Data`.
 
-> Note: embedded raster images inside slides (`p:pic`) are not yet decoded by the
-> rasterizer — their region is left transparent. Text, shapes, and solid fills render.
+## Embedded images
+
+Embedded **PNG** pictures (`p:pic`) are decoded (BCL-only inflate + unfiltering) and
+blitted into their shape rectangle. Other formats — **JPEG, EMF/WMF, SVG, WDP** — are
+not yet decoded; those picture regions are left transparent. Text, shapes, and solid
+fills always render.
 
 ## Dependencies
 

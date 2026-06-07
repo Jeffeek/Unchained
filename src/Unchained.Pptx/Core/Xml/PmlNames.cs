@@ -75,6 +75,35 @@ internal static class PmlNames
     /// <summary>Relationship type for extended (app) properties.</summary>
     public const string RelTypeExtendedProperties = RelBase + "extended-properties";
 
+    /// <summary>Relationship type for an embedded font part (<c>/ppt/fonts/*.fntdata</c>).</summary>
+    public const string RelTypeFont = RelBase + "font";
+
+    // ── Embedded fonts ──────────────────────────────────────────────────────────
+
+    /// <summary><c>&lt;p:embeddedFontLst&gt;</c> — list of embedded fonts in presentation.xml.</summary>
+    public static readonly XName EmbeddedFontList = Pml + "embeddedFontLst";
+
+    /// <summary><c>&lt;p:embeddedFont&gt;</c> — one embedded typeface with its style variants.</summary>
+    public static readonly XName EmbeddedFont = Pml + "embeddedFont";
+
+    /// <summary><c>&lt;p:font&gt;</c> — the typeface descriptor (carries the <c>typeface</c> attribute).</summary>
+    public static readonly XName Font = Pml + "font";
+
+    /// <summary><c>&lt;p:regular&gt;</c> — regular style variant reference.</summary>
+    public static readonly XName FontRegular = Pml + "regular";
+
+    /// <summary><c>&lt;p:bold&gt;</c> — bold style variant reference.</summary>
+    public static readonly XName FontBold = Pml + "bold";
+
+    /// <summary><c>&lt;p:italic&gt;</c> — italic style variant reference.</summary>
+    public static readonly XName FontItalic = Pml + "italic";
+
+    /// <summary><c>&lt;p:boldItalic&gt;</c> — bold-italic style variant reference.</summary>
+    public static readonly XName FontBoldItalic = Pml + "boldItalic";
+
+    /// <summary>The <c>typeface</c> attribute on <c>&lt;p:font&gt;</c>.</summary>
+    public const string AttributeTypeface = "typeface";
+
     // ── Content types ─────────────────────────────────────────────────────────
 
     /// <summary>Content type for <c>presentation.xml</c>.</summary>
