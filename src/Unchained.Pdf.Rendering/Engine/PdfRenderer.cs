@@ -37,6 +37,7 @@ public sealed class PdfRenderer : IRenderer
     /// <summary>Exposes the font cache for diagnostic tests.</summary>
     internal FontCache FontsForDiagnostics => _fonts;
 
+
     /// <summary>Glyph bitmaps successfully passed to BlitGlyphBitmap in the last render.</summary>
     internal int LastGlyphsAttempted { get; private set; }
 
@@ -167,10 +168,11 @@ public sealed class PdfRenderer : IRenderer
         var fontMap          = page.GetFontNameMap();
         var embeddedFontBytes = page.GetEmbeddedFontBytes();
         var imageXObjects    = page.GetImageXObjects();
+        var toUnicodeMaps    = page.GetToUnicodeMaps();
 
         var renderer = new PageRenderer(
             buffer, _fonts, scale, pageHeightPt,
-            embeddedFontBytes, imageXObjects, initialCtm);
+            embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps);
         renderer.Render(page.GetContentOperators(), fontMap);
 
         LastTextErrors      = renderer.TextErrorCount;

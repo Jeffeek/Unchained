@@ -9,12 +9,4 @@
     <PackageTags>drawing;graphics;rasterization;dotnet;csharp;document-processing</PackageTags>
   </PropertyGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Unchained.Drawing.Text" />
-    <InternalsVisibleTo Include="Unchained.Pdf.Rendering" />
-    <InternalsVisibleTo Include="Unchained.Pptx.Rendering" />
-    <InternalsVisibleTo Include="Unchained.Pdf.Tests" />
-    <InternalsVisibleTo Include="Unchained.Pptx.Tests" />
-  </ItemGroup>
-
 </Project>

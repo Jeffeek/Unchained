@@ -384,7 +384,7 @@ docs/readthedocs/assets/
 # JetBrains Resharper
 /linter-reports
 
-# FreeType2 native binaries — fetched by scripts/FetchNatives/, not committed
+# native binaries — fetched by scripts/FetchNatives/, not committed
 src/Unchained.Pdf.Runtimes/runtimes/**/*.dll
 src/Unchained.Pdf.Runtimes/runtimes/**/*.so*
 src/Unchained.Pdf.Runtimes/runtimes/**/*.dylib
@@ -394,3 +394,9 @@ src/Unchained.Drawing.Runtimes/runtimes/**/*.dylib
 src/Unchained.Pptx.Runtimes/runtimes/**/*.dll
 src/Unchained.Pptx.Runtimes/runtimes/**/*.so*
 src/Unchained.Pptx.Runtimes/runtimes/**/*.dylib
+# Local development tools — not part of the public repo
+invisible/
+
+# Generated artifacts from invisible/ dev tools
+invisible/*/out/
+invisible/*/batch/

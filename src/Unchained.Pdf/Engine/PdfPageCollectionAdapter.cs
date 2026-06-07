@@ -316,7 +316,26 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 continue;
             }
 
-            var descriptor = ResolveDict(fontEntry[PdfName.Get("FontDescriptor")]);
+            // For composite fonts (/Subtype /Type0) the embedded font program lives in
+            // the FontDescriptor of the descendant CIDFont, not the top-level font dict
+            // (§9.7.4). Follow /DescendantFonts to reach it.
+            var descriptorHolder = fontEntry;
+            if (fontEntry.GetName(PdfName.Subtype.Value) == "Type0")
+            {
+                var descendants = fontEntry[PdfName.Get("DescendantFonts")];
+                if (descendants is PdfIndirectReference dr)
+                    descendants = core.ResolveIndirect(dr.ObjectNumber).Value;
+                var cidFont = descendants switch
+                {
+                    PdfArray { Count: > 0 } a => ResolveDict(a[0]),
+                    PdfDictionary d => d,
+                    _ => null
+                };
+                if (cidFont is not null)
+                    descriptorHolder = cidFont;
+            }
+
+            var descriptor = ResolveDict(descriptorHolder[PdfName.Get("FontDescriptor")]);
             if (descriptor is null)
             {
                 result[key] = null;
@@ -347,6 +366,120 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     }
 
     /// <inheritdoc />
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>> GetToUnicodeMaps()
+    {
+        var result = new Dictionary<string, IReadOnlyDictionary<uint, string>>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Font]);
+        if (fontDict is null) return result;
+
+        foreach (var (key, value) in fontDict.Entries)
+        {
+            var fontEntry = ResolveDict(value);
+            if (fontEntry is null) continue;
+
+            var tuRef = fontEntry[PdfName.Get("ToUnicode")];
+            var tuStream = tuRef is PdfIndirectReference r
+                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfStream
+                : tuRef as PdfStream;
+            if (tuStream is null) continue;
+
+            try
+            {
+                var cmap = ParseToUnicodeCmap(StreamFilters.Decode(tuStream).Span);
+                if (cmap.Count > 0) result[key] = cmap;
+            }
+            catch { /* malformed CMap — skip */ }
+        }
+
+        return result;
+    }
+
+    // Parses a PDF ToUnicode CMap stream and returns a char-code → Unicode string mapping.
+    // Handles beginbfchar (individual mappings) and beginbfrange (range mappings).
+    private static IReadOnlyDictionary<uint, string> ParseToUnicodeCmap(ReadOnlySpan<byte> cmap)
+    {
+        var result = new Dictionary<uint, string>();
+        var text = System.Text.Encoding.Latin1.GetString(cmap);
+        var lines = text.Split('\n');
+        var mode  = 0; // 0=none, 1=bfchar, 2=bfrange
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            // The count is usually prefixed: "27 beginbfchar", so check EndsWith.
+            if (line.EndsWith("beginbfchar"))  { mode = 1; continue; }
+            if (line == "endbfchar")           { mode = 0; continue; }
+            if (line.EndsWith("beginbfrange")) { mode = 2; continue; }
+            if (line == "endbfrange")          { mode = 0; continue; }
+            if (mode == 0) continue;
+
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (mode == 1 && parts.Length >= 2)
+            {
+                // <charCode> <unicodeValue>
+                var charCode = ParseHexToken(parts[0]);
+                var unicode  = ParseHexToken(parts[1]);
+                if (charCode.Length == 0 || unicode.Length == 0) continue;
+                uint key = 0;
+                foreach (var b in charCode) key = (key << 8) | b;
+                var uniStr = DecodeUtf16Be(unicode);
+                if (uniStr.Length > 0) result[key] = uniStr;
+            }
+            else if (mode == 2 && parts.Length >= 3)
+            {
+                // <srcLo> <srcHi> <dstStart>   — maps a contiguous range
+                var lo  = ParseHexToken(parts[0]);
+                var hi  = ParseHexToken(parts[1]);
+                var dst = ParseHexToken(parts[2]);
+                if (lo.Length == 0 || hi.Length == 0 || dst.Length == 0) continue;
+
+                uint loKey = 0, hiKey = 0;
+                foreach (var b in lo)  loKey  = (loKey  << 8) | b;
+                foreach (var b in hi)  hiKey  = (hiKey  << 8) | b;
+
+                // dst is the starting Unicode code point (UTF-16BE big-endian)
+                uint dstCp = 0;
+                foreach (var b in dst) dstCp = (dstCp << 8) | b;
+
+                for (var key = loKey; key <= hiKey; key++)
+                {
+                    var cp = dstCp + (key - loKey);
+                    result[key] = char.ConvertFromUtf32((int)cp);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // Parses a <hexhex> token and returns the decoded bytes. Returns empty on failure.
+    private static byte[] ParseHexToken(string token)
+    {
+        token = token.Trim();
+        if (!token.StartsWith('<') || !token.EndsWith('>')) return [];
+        var hex = token[1..^1];
+        if (hex.Length % 2 != 0) hex = hex + "0";
+        var bytes = new byte[hex.Length / 2];
+        for (var i = 0; i < bytes.Length; i++)
+        {
+            try { bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16); }
+            catch { return []; }
+        }
+        return bytes;
+    }
+
+    private static string DecodeUtf16Be(byte[] bytes)
+    {
+        if (bytes.Length % 2 != 0 || bytes.Length == 0) return string.Empty;
+        var chars = new char[bytes.Length / 2];
+        for (var i = 0; i < chars.Length; i++)
+            chars[i] = (char)((bytes[i * 2] << 8) | bytes[i * 2 + 1]);
+        return new string(chars);
+    }
+
+    /// <inheritdoc />
     public IReadOnlyDictionary<string, ImageXObject> GetImageXObjects()
     {
         var result = new Dictionary<string, ImageXObject>();
@@ -371,12 +504,15 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             var cs     = ReadColorSpace(stream.Dictionary);
             var bpc    = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 8);
             var decode = ReadDecodeArray(stream.Dictionary);
+            var indexed = ReadIndexedPalette(stream.Dictionary);
 
             byte[] rgb;
             try
             {
                 var decoded = StreamFilters.Decode(stream);
-                rgb = DecodeImageToRgb(decoded, w, h, cs, bpc, decode);
+                rgb = indexed is not null
+                    ? DecodeIndexedToRgb(decoded, w, h, bpc, indexed)
+                    : DecodeImageToRgb(decoded, w, h, cs, bpc, decode);
             }
             catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
             {
@@ -527,6 +663,151 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         for (var i = 0; i < da.Count; i++)
             values[i] = ReadFloat(da[i]);
         return values;
+    }
+
+    // An [/Indexed base hival lookup] colour space (§8.6.6.3). BaseChannels is the
+    // number of colour components in the base space (1=Gray, 3=RGB, 4=CMYK); Lookup
+    // holds (hival+1)*BaseChannels palette bytes, one base-space colour per index.
+    private sealed record IndexedPalette(string Base, int BaseChannels, int HiVal, byte[] Lookup);
+
+    // Detects an [/Indexed base hival lookup] /ColorSpace and parses its palette.
+    // Returns null when the colour space is not Indexed.
+    private IndexedPalette? ReadIndexedPalette(PdfDictionary dict)
+    {
+        var csObj = dict["ColorSpace"];
+        if (csObj is PdfIndirectReference r)
+            csObj = core.ResolveIndirect(r.ObjectNumber).Value;
+
+        if (csObj is not PdfArray arr || arr.Count < 4)
+            return null;
+        if ((arr[0] as PdfName)?.Value != "Indexed")
+            return null;
+
+        // Base colour space: a name, or a nested array (e.g. [/ICCBased ...]).
+        var baseName = ResolveBaseSpaceName(arr[1]);
+        if (baseName is null)
+            return null;
+        var baseChannels = baseName switch
+        {
+            "DeviceGray" => 1, "DeviceRGB" => 3, "DeviceCMYK" => 4, _ => 0
+        };
+        if (baseChannels == 0)
+            return null;
+
+        var hival = (int)((arr[2] as PdfInteger)?.Value ?? 0);
+        if (hival < 0)
+            return null;
+
+        // Lookup table: a byte string or a stream of (hival+1)*baseChannels bytes.
+        var lookupObj = arr[3];
+        if (lookupObj is PdfIndirectReference lr)
+            lookupObj = core.ResolveIndirect(lr.ObjectNumber).Value;
+
+        byte[] lookup = lookupObj switch
+        {
+            PdfString s => s.GetBinaryBytes().ToArray(),
+            PdfStream st => StreamFilters.Decode(st).ToArray(),
+            _ => []
+        };
+        return lookup.Length == 0 ? null : new IndexedPalette(baseName, baseChannels, hival, lookup);
+    }
+
+    // Resolves the base colour space of an Indexed space to a Device* name.
+    private string? ResolveBaseSpaceName(PdfObject? obj)
+    {
+        if (obj is PdfIndirectReference r)
+            obj = core.ResolveIndirect(r.ObjectNumber).Value;
+
+        if (obj is PdfName n)
+            return n.Value;
+
+        if (obj is PdfArray arr && arr.Count >= 1)
+        {
+            var kind = (arr[0] as PdfName)?.Value;
+            if (kind == "ICCBased" && arr.Count >= 2)
+            {
+                var iccStream = arr[1] is PdfIndirectReference iccRef
+                    ? core.ResolveIndirect(iccRef.ObjectNumber).Value as PdfStream
+                    : arr[1] as PdfStream;
+                var nn = (int)(iccStream?.Dictionary.Get<PdfInteger>(PdfName.Get("N"))?.Value ?? 0);
+                return nn switch { 1 => "DeviceGray", 3 => "DeviceRGB", 4 => "DeviceCMYK", _ => null };
+            }
+            if (kind is "CalRGB" or "Lab") return "DeviceRGB";
+            if (kind == "CalGray") return "DeviceGray";
+        }
+
+        return null;
+    }
+
+    // Expands an Indexed (paletted) image to packed RGB. Each sample is a palette
+    // index (bpc bits) that is looked up in the base-space palette and converted to RGB.
+    private static byte[] DecodeIndexedToRgb(ReadOnlyMemory<byte> decoded, int w, int h, int bpc, IndexedPalette pal)
+    {
+        var pixelCount = w * h;
+        var rgb = new byte[pixelCount * 3];
+        var data = decoded.Span;
+        var lut = pal.Lookup;
+        var bc = pal.BaseChannels;
+        var rowBytes = (w * bpc + 7) / 8;
+
+        for (var row = 0; row < h; row++)
+        for (var col = 0; col < w; col++)
+        {
+            var index = ReadSample(data, row, col, bpc, rowBytes);
+            if (index > pal.HiVal) index = pal.HiVal;
+
+            var off = index * bc;
+            byte rr, gg, bb;
+            if (off + bc > lut.Length)
+            {
+                rr = gg = bb = 0;
+            }
+            else if (bc == 1)
+            {
+                rr = gg = bb = lut[off];
+            }
+            else if (bc == 3)
+            {
+                rr = lut[off]; gg = lut[off + 1]; bb = lut[off + 2];
+            }
+            else // CMYK base
+            {
+                var c = lut[off] / 255.0; var m = lut[off + 1] / 255.0;
+                var y = lut[off + 2] / 255.0; var k = lut[off + 3] / 255.0;
+                rr = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
+                gg = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
+                bb = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
+            }
+
+            var j = ((row * w) + col) * 3;
+            rgb[j] = rr; rgb[j + 1] = gg; rgb[j + 2] = bb;
+        }
+
+        return rgb;
+    }
+
+    // Reads a single bpc-bit sample (1/2/4/8) at the given row/column from packed image data.
+    private static int ReadSample(ReadOnlySpan<byte> data, int row, int col, int bpc, int rowBytes)
+    {
+        switch (bpc)
+        {
+            case 8:
+            {
+                var idx = (row * rowBytes) + col;
+                return idx < data.Length ? data[idx] : 0;
+            }
+            case 1 or 2 or 4:
+            {
+                var bitPos = col * bpc;
+                var byteIdx = (row * rowBytes) + (bitPos >> 3);
+                if (byteIdx >= data.Length) return 0;
+                var shift = 8 - bpc - (bitPos & 7);
+                var mask = (1 << bpc) - 1;
+                return (data[byteIdx] >> shift) & mask;
+            }
+            default:
+                return 0;
+        }
     }
 
     // Applies a /Decode array to a single 8-bit sample for one channel.

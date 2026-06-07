@@ -103,6 +103,15 @@ public interface IPdfPage
     IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes();
 
     /// <summary>
+    /// Returns a map from PDF font resource name to a char-code→Unicode dictionary parsed
+    /// from the font's <c>/ToUnicode</c> CMap stream. Keys are font resource names (e.g.
+    /// <c>F1</c>); values are dictionaries mapping raw PDF char codes (as byte arrays)
+    /// to Unicode strings. Returns an empty outer dictionary when no /ToUnicode entries
+    /// are present.
+    /// </summary>
+    IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>> GetToUnicodeMaps();
+
+    /// <summary>
     /// Decodes and returns all raster image XObjects referenced in this page's
     /// <c>/Resources /XObject</c> dictionary. Only <c>/DeviceRGB</c> images with 8 bits per
     /// component are decoded; other colour spaces produce a solid mid-grey placeholder.
