@@ -1,7 +1,7 @@
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
-using Unchained.Pptx.Text;
+using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Shapes;
 

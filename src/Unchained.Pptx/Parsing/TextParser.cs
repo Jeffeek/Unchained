@@ -2,7 +2,6 @@ using System.Xml.Linq;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Text;
-using Unchained.Pptx.Text;
 using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Parsing;
@@ -206,7 +205,7 @@ internal static class TextParser
         var solidFill = rPr.Element(DmlNames.SolidFill);
         if (solidFill != null)
         {
-            format.Fill ??= new Drawing.FillFormat();
+            format.Fill ??= new FillFormat();
             format.Fill.SetSolid(ColorParser.Parse(solidFill));
         }
     }

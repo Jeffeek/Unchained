@@ -17,7 +17,11 @@ internal sealed class OpcPackage : IDisposable
 {
     private readonly Dictionary<string, OpcPart> _parts = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<OpcRelationship> _packageRelationships = [];
-    private ContentTypeMap _contentTypes = new();
+    // Seed with the OPC standard defaults (rels, xml). Required so serialized
+    // [Content_Types].xml contains the <Default> entries that System.IO.Packaging and the
+    // Open XML SDK need to resolve relationship parts. The Open() path replaces this with the
+    // parsed map from the source file.
+    private ContentTypeMap _contentTypes = ContentTypeMap.CreateWithDefaults();
     private bool _disposed;
 
     private OpcPackage() { }

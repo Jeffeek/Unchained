@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Charts;
+using Unchained.Ooxml.Charts;
 using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;

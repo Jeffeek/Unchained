@@ -22,6 +22,10 @@ Tests skip gracefully when a file is absent — you can provide as many or as fe
 
 ## Notes
 
-- Files are **not** committed to the repository (`*.pptx` is in `.gitignore`).
-- Build copies any `*.pptx` present here to the test output directory automatically.
-- CI pipelines skip real-PPTX tests when no files are present.
+- The `python-pptx/` subfolder contains **committed, MIT-licensed** sample files (see its
+  own README) used by `OpenXmlParserParityTests`. These run in CI for everyone.
+- You may also drop your own `*.pptx` directly here for the named tests above; those are
+  optional and tests skip gracefully when absent.
+- The build copies any `*.pptx` under `TestFiles/` (recursively) to the test output
+  directory automatically, and tests resolve them from `AppContext.BaseDirectory/TestFiles`.
+- `*.pptx` is **not** gitignored — committed samples are picked up by CI as-is.

@@ -5,7 +5,7 @@ using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Text;
+using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Export;
 

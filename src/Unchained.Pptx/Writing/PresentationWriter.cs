@@ -7,6 +7,7 @@ using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Shapes;
@@ -162,14 +163,14 @@ internal sealed class PresentationWriter
             package.AddOrReplacePart(masterUri, PmlNames.ContentTypeSlideMaster,
                 new XDocument(masterXml).ToUtf8Bytes());
 
-            // Master relationships
-            var rId = 1;
+            // Master relationships. Layout rels reuse layout.RelationshipId (rId1..N), so the
+            // theme rel must take an ID past that range to avoid colliding on the master part.
             package.AddRelationship(masterUri,
-                $"rId{rId++}", PmlNames.RelTypeTheme, themeUri);
+                $"rId{layoutUris.Count + 1}", PmlNames.RelTypeTheme, themeUri);
             foreach (var (layout, layoutUri) in layoutUris)
             {
                 package.AddRelationship(masterUri,
-                    layout.RelationshipId.Length > 0 ? layout.RelationshipId : $"rId{rId++}",
+                    layout.RelationshipId.Length > 0 ? layout.RelationshipId : "rId1",
                     PmlNames.RelTypeSlideLayout,
                     RelativeUri(masterUri, layoutUri));
             }

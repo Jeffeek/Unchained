@@ -4,6 +4,7 @@ using Unchained.Ooxml;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;

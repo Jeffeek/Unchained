@@ -1,7 +1,7 @@
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Charts;
+using Unchained.Ooxml.Charts;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Shapes;

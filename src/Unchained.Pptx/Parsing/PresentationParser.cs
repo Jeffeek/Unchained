@@ -5,6 +5,7 @@ using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Slides;
@@ -308,7 +309,7 @@ internal sealed class PresentationParser
 /// the public presentation adapter.
 /// </summary>
 internal sealed class ParsedPresentation(
-    OpcPackage package,
+    OpcPackage? package,
     SlideCollection slides,
     MasterSlideCollection masters,
     MediaStore mediaStore,
@@ -318,7 +319,12 @@ internal sealed class ParsedPresentation(
     CommentAuthorCollection commentAuthors,
     SectionCollection sections)
 {
-    public OpcPackage Package { get; } = package;
+    /// <summary>
+    /// The source OPC package, when parsed via the custom OPC layer. <see langword="null"/>
+    /// when the presentation was read through the OpenXML-SDK-backed engine (which owns its
+    /// own package). Not consumed downstream of construction.
+    /// </summary>
+    public OpcPackage? Package { get; } = package;
     public SlideCollection Slides { get; } = slides;
     public MasterSlideCollection Masters { get; } = masters;
     public MediaStore MediaStore { get; } = mediaStore;

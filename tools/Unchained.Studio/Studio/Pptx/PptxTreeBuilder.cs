@@ -1,4 +1,4 @@
-using Unchained.Pptx.Charts;
+using Unchained.Ooxml.Charts;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;

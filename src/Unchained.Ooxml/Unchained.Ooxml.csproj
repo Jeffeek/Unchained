@@ -5,4 +5,10 @@
     <PackageTags>ooxml;opc;drawingml;dotnet;csharp;document-processing</PackageTags>
   </PropertyGroup>
 
+  <!-- OOXML engine: the MIT-licensed Open XML SDK (.NET Foundation) provides the
+       validated typed DOM + OPC packaging that the shared core builds on. -->
+  <ItemGroup Label="OpenXmlEngine">
+    <PackageReference Include="DocumentFormat.OpenXml" />
+  </ItemGroup>
+
 </Project>

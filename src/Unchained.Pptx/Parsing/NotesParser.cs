@@ -2,7 +2,7 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Text;
+using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Parsing;
 

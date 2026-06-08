@@ -3,7 +3,6 @@ using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Text;
-using Unchained.Pptx.Text;
 
 namespace Unchained.Pptx.Writing;
 

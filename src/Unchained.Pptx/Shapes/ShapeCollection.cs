@@ -1,6 +1,7 @@
 using Unchained.Ooxml;
-using Unchained.Pptx.Charts;
+using Unchained.Ooxml.Charts;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Ooxml.Drawing;
 

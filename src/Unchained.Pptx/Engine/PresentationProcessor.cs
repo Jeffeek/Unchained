@@ -3,6 +3,7 @@ using Unchained.Pptx.Core;
 using Unchained.Ooxml;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Security;
@@ -302,7 +303,9 @@ public sealed class PresentationProcessor : IDisposable
         try
         {
             var parsed = await Task.Run(
-                () => PresentationParser.Parse(bytes, options),
+                () => options?.UseOpenXmlEngine == true
+                    ? OpenXmlPresentationParser.Parse(bytes, options)
+                    : PresentationParser.Parse(bytes, options),
                 cancellationToken).ConfigureAwait(false);
 
             return new PresentationDocument(

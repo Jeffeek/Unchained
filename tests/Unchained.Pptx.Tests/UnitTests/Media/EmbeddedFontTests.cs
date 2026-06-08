@@ -1,5 +1,6 @@
 using Shouldly;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Media;
