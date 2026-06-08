@@ -60,27 +60,45 @@ internal static class OpenXmlPresentationParser
         var slideSize = ReadSlideSize(presPart);
         var properties = ReadProperties(doc);
 
-        // A single minimal master + layout keeps the model self-consistent (every slide needs a
-        // Layout whose Master resolves). Full master/layout mapping is a later parity step.
-        var master = new MasterSlide { Name = "Office Theme", Theme = new PptxTheme() };
-        var fallbackLayout = new SlideLayout
+        // Masters, their themes, and layouts. layoutMap lets slides resolve their own layout
+        // by SlideLayoutPart so the slide -> layout -> master chain matches the custom parser.
+        var layoutMap = new Dictionary<SlideLayoutPart, SlideLayout>();
+        foreach (var masterPart in presPart.SlideMasterParts)
         {
-            Name = "Blank",
-            LayoutType = Models.Themes.LayoutType.Blank,
-            Master = master
-        };
-        master.Layouts.Add(fallbackLayout);
-        masters.Add(master);
+            var master = ReadMaster(masterPart, mediaStore, imageCache, layoutMap);
+            masters.Add(master);
+        }
 
-        // Slides, in presentation order.
+        // Every slide needs a Layout whose Master resolves; fall back to the first available
+        // layout (or a synthesized blank) when a slide has no layout part.
+        var fallbackLayout = masters.SelectMany(static m => ToList(m.Layouts)).FirstOrDefault()
+                             ?? SynthesizeFallback(masters);
+
+        // Slides, in presentation order, linked to their real layout.
         foreach (var (slidePart, slideId) in EnumerateSlidesInOrder(presPart))
         {
-            var slide = ReadSlide(slidePart, fallbackLayout, slideId, mediaStore, imageCache);
+            var layout = slidePart.SlideLayoutPart is { } lp && layoutMap.TryGetValue(lp, out var l)
+                ? l
+                : fallbackLayout;
+            var slide = ReadSlide(slidePart, layout, slideId, mediaStore, imageCache);
             slides.AddParsed(slide);
         }
 
         properties.SlideCount = slides.Count;
         properties.HiddenSlideCount = slides.Count(static s => s.IsHidden);
+
+        // Sections (presentation extLst) and comment authors — reuse the shared parsers.
+        if (presPart.Presentation is { } presentation)
+        {
+            var presXml = System.Xml.Linq.XElement.Parse(presentation.OuterXml, System.Xml.Linq.LoadOptions.None);
+            SectionParser.Parse(presXml, sections);
+        }
+
+        if (presPart.CommentAuthorsPart?.CommentAuthorList is { } authorList)
+        {
+            var authorsXml = System.Xml.Linq.XElement.Parse(authorList.OuterXml, System.Xml.Linq.LoadOptions.None);
+            CommentAuthorParser.Parse(authorsXml, commentAuthors);
+        }
 
         return new ParsedPresentation(
             package: null, // the SDK engine owns the real package; not consumed downstream
@@ -102,6 +120,126 @@ internal static class OpenXmlPresentationParser
         if (sz?.Cx is null || sz.Cy is null)
             return SlideSize.Widescreen;
         return new SlideSize(new Emu(sz.Cx!.Value), new Emu(sz.Cy!.Value));
+    }
+
+    // ── Masters / layouts / themes ─────────────────────────────────────────────────
+
+    private static MasterSlide ReadMaster(
+        SlideMasterPart masterPart,
+        MediaStore mediaStore,
+        Dictionary<string, EmbeddedImage> imageCache,
+        Dictionary<SlideLayoutPart, SlideLayout> layoutMap)
+    {
+        var master = new MasterSlide
+        {
+            Name = "Office Theme",
+            PartUri = masterPart.Uri.ToString()
+        };
+
+        // Theme — reuse the shared ThemeParser on the theme part's XML.
+        if (masterPart.ThemePart?.Theme is { } sdkTheme)
+        {
+            var themeXml = System.Xml.Linq.XElement.Parse(sdkTheme.OuterXml, System.Xml.Linq.LoadOptions.None);
+            master.Theme = ThemeParser.Parse(themeXml);
+        }
+
+        // Master shape tree.
+        var masterTree = masterPart.SlideMaster?.CommonSlideData?.ShapeTree;
+        if (masterTree is not null)
+            ReadShapeTreeNoSlide(masterTree, master.Shapes, mediaStore, imageCache);
+
+        // Layouts owned by this master.
+        foreach (var layoutPart in masterPart.SlideLayoutParts)
+        {
+            var layout = ReadLayout(layoutPart, master, mediaStore, imageCache);
+            master.Layouts.Add(layout);
+            layoutMap[layoutPart] = layout;
+        }
+
+        return master;
+    }
+
+    private static SlideLayout ReadLayout(
+        SlideLayoutPart layoutPart,
+        MasterSlide master,
+        MediaStore mediaStore,
+        Dictionary<string, EmbeddedImage> imageCache)
+    {
+        var sdkLayout = layoutPart.SlideLayout;
+        var layout = new SlideLayout
+        {
+            Master = master,
+            PartUri = layoutPart.Uri.ToString(),
+            Name = sdkLayout?.CommonSlideData?.Name?.Value ?? string.Empty,
+            LayoutType = MapLayoutType(sdkLayout?.Type?.InnerText)
+        };
+
+        var tree = sdkLayout?.CommonSlideData?.ShapeTree;
+        if (tree is not null)
+            ReadShapeTreeNoSlide(tree, layout.Shapes, mediaStore, imageCache);
+
+        return layout;
+    }
+
+    // Masters/layouts have no SlidePart context for blip resolution; image parts on those parts
+    // are uncommon and resolved lazily elsewhere. Reuse the shape mapping without picture bytes.
+    private static void ReadShapeTreeNoSlide(
+        P.ShapeTree tree,
+        ShapeCollection target,
+        MediaStore mediaStore,
+        Dictionary<string, EmbeddedImage> imageCache)
+    {
+        foreach (var child in tree.ChildElements)
+        {
+            Shape? shape = child switch
+            {
+                P.Shape sp => ReadAutoShape(sp),
+                P.GraphicFrame gf => gf.Graphic?.GraphicData?.Uri?.Value == DmlNames.GraphicDataTableUri
+                    ? ReadGraphicFrame(gf, null)
+                    : null,
+                P.ConnectionShape cxn => ReadConnector(cxn),
+                _ => null
+            };
+            if (shape is not null)
+                target.AddParsed(shape);
+        }
+    }
+
+    private static Models.Themes.LayoutType MapLayoutType(string? type) => type switch
+    {
+        "blank" => Models.Themes.LayoutType.Blank,
+        "title" => Models.Themes.LayoutType.Title,
+        "tx" or "obj" or "twoObj" => Models.Themes.LayoutType.TitleAndContent,
+        "twoTxTwoObj" => Models.Themes.LayoutType.TitleAndTwoContent,
+        "titleOnly" => Models.Themes.LayoutType.TitleOnly,
+        "secHead" => Models.Themes.LayoutType.SectionHeader,
+        "twoTx" => Models.Themes.LayoutType.TwoTextColumns,
+        "vertTx" => Models.Themes.LayoutType.TitleAndVerticalText,
+        "picTx" => Models.Themes.LayoutType.PictureWithCaption,
+        "ctrTitle" => Models.Themes.LayoutType.TitleSlide,
+        _ => Models.Themes.LayoutType.Custom
+    };
+
+    private static SlideLayout SynthesizeFallback(MasterSlideCollection masters)
+    {
+        var master = new MasterSlide { Name = "Office Theme" };
+        var layout = new SlideLayout
+        {
+            Name = "Blank",
+            LayoutType = Models.Themes.LayoutType.Blank,
+            Master = master
+        };
+        master.Layouts.Add(layout);
+        masters.Add(master);
+        return layout;
+    }
+
+    private static List<SlideLayout> ToList(SlideLayoutCollection layouts)
+    {
+        var list = new List<SlideLayout>(layouts.Count);
+        for (var i = 0; i < layouts.Count; i++)
+            list.Add(layouts[i]);
+        return list;
     }
 
     // ── Document properties ────────────────────────────────────────────────────────
@@ -166,6 +304,13 @@ internal static class OpenXmlPresentationParser
         var tree = slidePart.Slide?.CommonSlideData?.ShapeTree;
         if (tree is not null)
             ReadShapeTree(tree, slide.Shapes, slidePart, mediaStore, imageCache);
+
+        // Speaker notes — reuse the shared NotesParser on the notes-slide XML.
+        if (slidePart.NotesSlidePart?.NotesSlide is { } sdkNotes)
+        {
+            var notesXml = System.Xml.Linq.XElement.Parse(sdkNotes.OuterXml, System.Xml.Linq.LoadOptions.None);
+            NotesParser.Parse(notesXml, slide.Notes);
+        }
 
         return slide;
     }
@@ -232,7 +377,7 @@ internal static class OpenXmlPresentationParser
         return shape;
     }
 
-    private static Shape ReadGraphicFrame(P.GraphicFrame gf, SlidePart slidePart)
+    private static Shape ReadGraphicFrame(P.GraphicFrame gf, SlidePart? slidePart)
     {
         var uri = gf.Graphic?.GraphicData?.Uri?.Value;
 
@@ -245,12 +390,14 @@ internal static class OpenXmlPresentationParser
             return table;
         }
 
+        // Chart resolution needs the owning slide part; masters/layouts pass null and skip it.
         if (uri == DmlNames.GraphicDataChartUri)
         {
             var chart = new ChartShape();
             ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, chart);
             ReadFrameGeometry(gf.Transform, chart);
-            ReadChart(gf, slidePart, chart);
+            if (slidePart is not null)
+                ReadChart(gf, slidePart, chart);
             return chart;
         }
 

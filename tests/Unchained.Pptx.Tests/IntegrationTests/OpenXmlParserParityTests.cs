@@ -86,8 +86,37 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         sdk.SlideSize.Width.Value.ShouldBe(custom.SlideSize.Width.Value, $"{fileName}: width");
         sdk.SlideSize.Height.Value.ShouldBe(custom.SlideSize.Height.Value, $"{fileName}: height");
 
+        // Masters / layouts / theme parity (M3).
+        sdk.Masters.Count.ShouldBe(custom.Masters.Count, $"{fileName}: master count");
+        for (var m = 0; m < custom.Masters.Count; m++)
+        {
+            var cm = custom.Masters[m];
+            var sm = sdk.Masters[m];
+            sm.Layouts.Count.ShouldBe(cm.Layouts.Count, $"{fileName}: master {m + 1} layout count");
+
+            // Theme colours (dark1/light1/accent1) should resolve identically.
+            sm.Theme.Colors.Dark1.ShouldBe(cm.Theme.Colors.Dark1, $"{fileName}: master {m + 1} theme dark1");
+            sm.Theme.Colors.Accent1.ShouldBe(cm.Theme.Colors.Accent1, $"{fileName}: master {m + 1} theme accent1");
+
+            for (var l = 0; l < cm.Layouts.Count; l++)
+                sm.Layouts[l].LayoutType.ShouldBe(cm.Layouts[l].LayoutType,
+                    $"{fileName}: master {m + 1} layout {l + 1} type");
+        }
+
+        // Each slide resolves to a layout whose type matches the custom parser's.
+        for (var i = 0; i < custom.Slides.Count; i++)
+            sdk.Slides[i].Layout.LayoutType.ShouldBe(custom.Slides[i].Layout.LayoutType,
+                $"{fileName}: slide {i + 1} layout type");
+
         for (var i = 0; i < custom.Slides.Count; i++)
             sdk.Slides[i].IsHidden.ShouldBe(custom.Slides[i].IsHidden, $"{fileName}: slide {i + 1} hidden flag");
+
+        // Notes / sections / comment authors parity (M4).
+        for (var i = 0; i < custom.Slides.Count; i++)
+            sdk.Slides[i].Notes.NotesText.ShouldBe(custom.Slides[i].Notes.NotesText,
+                $"{fileName}: slide {i + 1} notes text");
+        sdk.Sections.Count.ShouldBe(custom.Sections.Count, $"{fileName}: section count");
+        sdk.CommentAuthors.Count.ShouldBe(custom.CommentAuthors.Count, $"{fileName}: comment author count");
 
         // Top-level shape count + type sequence per slide, plus picture image resolution.
         for (var i = 0; i < custom.Slides.Count; i++)
