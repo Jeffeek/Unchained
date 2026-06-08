@@ -1,6 +1,8 @@
 using DocumentFormat.OpenXml.Packaging;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Engine;
+using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Text;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Comments;
@@ -50,6 +52,11 @@ internal static class OpenXmlPresentationParser
         var commentAuthors = new CommentAuthorCollection();
         var sections = new SectionCollection();
 
+        // De-duplicates embedded images across slides by image-part URI, mirroring the custom
+        // parser (which keys MediaStore entries by PartUri). One physical image part shared by
+        // many pictures yields a single EmbeddedImage.
+        var imageCache = new Dictionary<string, EmbeddedImage>(StringComparer.OrdinalIgnoreCase);
+
         var slideSize = ReadSlideSize(presPart);
         var properties = ReadProperties(doc);
 
@@ -68,7 +75,7 @@ internal static class OpenXmlPresentationParser
         // Slides, in presentation order.
         foreach (var (slidePart, slideId) in EnumerateSlidesInOrder(presPart))
         {
-            var slide = ReadSlide(slidePart, fallbackLayout, slideId);
+            var slide = ReadSlide(slidePart, fallbackLayout, slideId, mediaStore, imageCache);
             slides.AddParsed(slide);
         }
 
@@ -139,7 +146,12 @@ internal static class OpenXmlPresentationParser
         }
     }
 
-    private static Slide ReadSlide(SlidePart slidePart, SlideLayout layout, uint slideId)
+    private static Slide ReadSlide(
+        SlidePart slidePart,
+        SlideLayout layout,
+        uint slideId,
+        MediaStore mediaStore,
+        Dictionary<string, EmbeddedImage> imageCache)
     {
         var slide = new Slide
         {
@@ -153,7 +165,7 @@ internal static class OpenXmlPresentationParser
 
         var tree = slidePart.Slide?.CommonSlideData?.ShapeTree;
         if (tree is not null)
-            ReadShapeTree(tree, slide.Shapes);
+            ReadShapeTree(tree, slide.Shapes, slidePart, mediaStore, imageCache);
 
         return slide;
     }
@@ -162,16 +174,21 @@ internal static class OpenXmlPresentationParser
 
     // Walks a shape-tree (or group) child collection in document order, mapping each element to
     // its concrete Shape subtype. Skips the non-visual group properties container.
-    private static void ReadShapeTree(DocumentFormat.OpenXml.OpenXmlCompositeElement tree, ShapeCollection target)
+    private static void ReadShapeTree(
+        DocumentFormat.OpenXml.OpenXmlCompositeElement tree,
+        ShapeCollection target,
+        SlidePart slidePart,
+        MediaStore mediaStore,
+        Dictionary<string, EmbeddedImage> imageCache)
     {
         foreach (var child in tree.ChildElements)
         {
             Shape? shape = child switch
             {
                 P.Shape sp => ReadAutoShape(sp),
-                P.Picture pic => ReadPicture(pic),
+                P.Picture pic => ReadPicture(pic, slidePart, mediaStore, imageCache),
                 P.GraphicFrame gf => ReadGraphicFrame(gf),
-                P.GroupShape grp => ReadGroup(grp),
+                P.GroupShape grp => ReadGroup(grp, slidePart, mediaStore, imageCache),
                 P.ConnectionShape cxn => ReadConnector(cxn),
                 _ => null // nvGrpSpPr, grpSpPr, and unknown elements are not shapes
             };
@@ -185,6 +202,7 @@ internal static class OpenXmlPresentationParser
         var shape = new AutoShape();
         ReadCommon(sp.NonVisualShapeProperties?.NonVisualDrawingProperties, shape);
         ReadGeometry(sp.ShapeProperties?.Transform2D, shape);
+        ReadSolidFill(sp.ShapeProperties, shape.Fill);
 
         if (sp.TextBody is { } body)
         {
@@ -195,12 +213,22 @@ internal static class OpenXmlPresentationParser
         return shape;
     }
 
-    private static PictureShape ReadPicture(P.Picture pic)
+    private static PictureShape ReadPicture(
+        P.Picture pic,
+        SlidePart slidePart,
+        MediaStore mediaStore,
+        Dictionary<string, EmbeddedImage> imageCache)
     {
         var shape = new PictureShape();
         ReadCommon(pic.NonVisualPictureProperties?.NonVisualDrawingProperties, shape);
         ReadGeometry(pic.ShapeProperties?.Transform2D, shape);
-        // Image bytes are resolved from the blip r:embed relationship in a later parity step.
+
+        // Resolve the embedded image bytes from the blip r:embed relationship into the store,
+        // de-duplicating by image-part URI so a shared image yields one EmbeddedImage.
+        var embedId = pic.BlipFill?.Blip?.Embed?.Value;
+        if (!string.IsNullOrEmpty(embedId) && slidePart.GetPartById(embedId) is ImagePart imagePart)
+            shape.Image = LoadImage(imagePart, mediaStore, imageCache);
+
         return shape;
     }
 
@@ -233,7 +261,11 @@ internal static class OpenXmlPresentationParser
         return stub;
     }
 
-    private static GroupShape ReadGroup(P.GroupShape grp)
+    private static GroupShape ReadGroup(
+        P.GroupShape grp,
+        SlidePart slidePart,
+        MediaStore mediaStore,
+        Dictionary<string, EmbeddedImage> imageCache)
     {
         var shape = new GroupShape();
         ReadCommon(grp.NonVisualGroupShapeProperties?.NonVisualDrawingProperties, shape);
@@ -260,7 +292,7 @@ internal static class OpenXmlPresentationParser
             shape.ChildExtentHeight = new Emu(chExt.Cy ?? 0);
         }
 
-        ReadShapeTree(grp, shape.Children);
+        ReadShapeTree(grp, shape.Children, slidePart, mediaStore, imageCache);
         return shape;
     }
 
@@ -287,6 +319,47 @@ internal static class OpenXmlPresentationParser
         if (nv is null) return;
         shape.Name = nv.Name?.Value ?? string.Empty;
         shape.AltText = nv.Description?.Value;
+    }
+
+    // Maps a direct <a:solidFill><a:srgbClr> on the shape properties to the model fill. Theme/
+    // scheme colours and gradient/pattern/blip fills are later parity steps.
+    private static void ReadSolidFill(P.ShapeProperties? spPr, FillFormat fill)
+    {
+        var hex = spPr?.GetFirstChild<D.SolidFill>()?.RgbColorModelHex?.Val?.Value;
+        if (string.IsNullOrEmpty(hex) || hex.Length != 6)
+            return;
+
+        if (TryParseHex(hex, out var r, out var g, out var b))
+            fill.SetSolid(ColorSpec.FromRgb(r, g, b));
+    }
+
+    private static bool TryParseHex(string hex, out byte r, out byte g, out byte b)
+    {
+        r = g = b = 0;
+        if (!byte.TryParse(hex.AsSpan(0, 2), System.Globalization.NumberStyles.HexNumber, null, out r))
+            return false;
+        if (!byte.TryParse(hex.AsSpan(2, 2), System.Globalization.NumberStyles.HexNumber, null, out g))
+            return false;
+        return byte.TryParse(hex.AsSpan(4, 2), System.Globalization.NumberStyles.HexNumber, null, out b);
+    }
+
+    // Reads image bytes from the SDK ImagePart, de-duplicating by image-part URI so a single
+    // physical image referenced by multiple pictures yields one shared EmbeddedImage.
+    private static EmbeddedImage LoadImage(
+        ImagePart imagePart,
+        MediaStore mediaStore,
+        Dictionary<string, EmbeddedImage> imageCache)
+    {
+        var key = imagePart.Uri.ToString();
+        if (imageCache.TryGetValue(key, out var existing))
+            return existing;
+
+        using var stream = imagePart.GetStream();
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        var image = mediaStore.AddImage(ms.ToArray(), imagePart.ContentType);
+        imageCache[key] = image;
+        return image;
     }
 
     private static void ReadGeometry(D.Transform2D? xfrm, Shape shape)

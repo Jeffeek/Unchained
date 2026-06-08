@@ -89,7 +89,7 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         for (var i = 0; i < custom.Slides.Count; i++)
             sdk.Slides[i].IsHidden.ShouldBe(custom.Slides[i].IsHidden, $"{fileName}: slide {i + 1} hidden flag");
 
-        // Top-level shape count + type sequence per slide.
+        // Top-level shape count + type sequence per slide, plus picture image resolution.
         for (var i = 0; i < custom.Slides.Count; i++)
         {
             var customShapes = custom.Slides[i].Shapes;
@@ -97,9 +97,26 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
             sdkShapes.Count.ShouldBe(customShapes.Count, $"{fileName}: slide {i + 1} shape count");
 
             for (var j = 0; j < customShapes.Count; j++)
-                sdkShapes[j].GetType().ShouldBe(customShapes[j].GetType(),
-                    $"{fileName}: slide {i + 1} shape {j + 1} type");
+            {
+                var cs = customShapes[j];
+                var ss = sdkShapes[j];
+                ss.GetType().ShouldBe(cs.GetType(), $"{fileName}: slide {i + 1} shape {j + 1} type");
+
+                // Pictures must resolve their embedded image bytes identically.
+                if (cs is Unchained.Pptx.Shapes.PictureShape cp
+                    && ss is Unchained.Pptx.Shapes.PictureShape sp)
+                {
+                    (sp.Image is not null).ShouldBe(cp.Image is not null,
+                        $"{fileName}: slide {i + 1} shape {j + 1} image presence");
+                    if (cp.Image is not null && sp.Image is not null)
+                        sp.Image.Data.Length.ShouldBe(cp.Image.Data.Length,
+                            $"{fileName}: slide {i + 1} shape {j + 1} image byte length");
+                }
+            }
         }
+
+        // Resolved media image count should match.
+        sdk.Media.Images.Count.ShouldBe(custom.Media.Images.Count, $"{fileName}: media image count");
 
         custom.Dispose();
         sdk.Dispose();
