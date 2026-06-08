@@ -187,7 +187,7 @@ internal static class OpenXmlPresentationParser
             {
                 P.Shape sp => ReadAutoShape(sp),
                 P.Picture pic => ReadPicture(pic, slidePart, mediaStore, imageCache),
-                P.GraphicFrame gf => ReadGraphicFrame(gf),
+                P.GraphicFrame gf => ReadGraphicFrame(gf, slidePart),
                 P.GroupShape grp => ReadGroup(grp, slidePart, mediaStore, imageCache),
                 P.ConnectionShape cxn => ReadConnector(cxn),
                 _ => null // nvGrpSpPr, grpSpPr, and unknown elements are not shapes
@@ -202,7 +202,7 @@ internal static class OpenXmlPresentationParser
         var shape = new AutoShape();
         ReadCommon(sp.NonVisualShapeProperties?.NonVisualDrawingProperties, shape);
         ReadGeometry(sp.ShapeProperties?.Transform2D, shape);
-        ReadSolidFill(sp.ShapeProperties, shape.Fill);
+        ReadFillAndLine(sp.ShapeProperties, shape.Fill, shape.Line);
 
         if (sp.TextBody is { } body)
         {
@@ -232,7 +232,7 @@ internal static class OpenXmlPresentationParser
         return shape;
     }
 
-    private static Shape ReadGraphicFrame(P.GraphicFrame gf)
+    private static Shape ReadGraphicFrame(P.GraphicFrame gf, SlidePart slidePart)
     {
         var uri = gf.Graphic?.GraphicData?.Uri?.Value;
 
@@ -250,7 +250,7 @@ internal static class OpenXmlPresentationParser
             var chart = new ChartShape();
             ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, chart);
             ReadFrameGeometry(gf.Transform, chart);
-            // Chart model (type/series/data) is resolved from the chart part in a later step.
+            ReadChart(gf, slidePart, chart);
             return chart;
         }
 
@@ -301,6 +301,7 @@ internal static class OpenXmlPresentationParser
         var shape = new ConnectorShape();
         ReadCommon(cxn.NonVisualConnectionShapeProperties?.NonVisualDrawingProperties, shape);
         ReadGeometry(cxn.ShapeProperties?.Transform2D, shape);
+        ReadFillAndLine(cxn.ShapeProperties, shape.Fill, shape.Line);
 
         var prst = cxn.ShapeProperties?.GetFirstChild<D.PresetGeometry>()?.Preset?.InnerText;
         shape.ConnectorType = prst switch
@@ -321,26 +322,18 @@ internal static class OpenXmlPresentationParser
         shape.AltText = nv.Description?.Value;
     }
 
-    // Maps a direct <a:solidFill><a:srgbClr> on the shape properties to the model fill. Theme/
-    // scheme colours and gradient/pattern/blip fills are later parity steps.
-    private static void ReadSolidFill(P.ShapeProperties? spPr, FillFormat fill)
+    // Maps the shape's <p:spPr> fill and outline to the model by reusing the shared FillParser
+    // and LineParser. Feeding the SDK element's OuterXml through the same mapping the custom
+    // parser uses keeps solid/gradient/pattern/blip fills, theme/scheme colours, and line
+    // width/dash/caps/arrowheads identical across both paths — no divergence.
+    private static void ReadFillAndLine(P.ShapeProperties? spPr, FillFormat fill, LineFormat line)
     {
-        var hex = spPr?.GetFirstChild<D.SolidFill>()?.RgbColorModelHex?.Val?.Value;
-        if (string.IsNullOrEmpty(hex) || hex.Length != 6)
+        if (spPr is null)
             return;
 
-        if (TryParseHex(hex, out var r, out var g, out var b))
-            fill.SetSolid(ColorSpec.FromRgb(r, g, b));
-    }
-
-    private static bool TryParseHex(string hex, out byte r, out byte g, out byte b)
-    {
-        r = g = b = 0;
-        if (!byte.TryParse(hex.AsSpan(0, 2), System.Globalization.NumberStyles.HexNumber, null, out r))
-            return false;
-        if (!byte.TryParse(hex.AsSpan(2, 2), System.Globalization.NumberStyles.HexNumber, null, out g))
-            return false;
-        return byte.TryParse(hex.AsSpan(4, 2), System.Globalization.NumberStyles.HexNumber, null, out b);
+        var element = System.Xml.Linq.XElement.Parse(spPr.OuterXml, System.Xml.Linq.LoadOptions.None);
+        FillParser.Parse(element, fill);
+        LineParser.Parse(element, line);
     }
 
     // Reads image bytes from the SDK ImagePart, de-duplicating by image-part URI so a single
@@ -417,31 +410,42 @@ internal static class OpenXmlPresentationParser
         return cell;
     }
 
-    private static void ReadTextBody(D.TextBody body, TextFrame frame)
+    // Resolves the chart part referenced by the graphic frame and reuses the existing ChartParser
+    // to populate the chart model (type/title/data/legend) — the SDK exposes the chart XML; the
+    // mapping logic is shared with the custom parser to avoid divergence.
+    private static void ReadChart(P.GraphicFrame gf, SlidePart slidePart, ChartShape shape)
     {
-        foreach (var para in body.Elements<D.Paragraph>())
-        {
-            var p = frame.Paragraphs.Add();
-            foreach (var run in para.Elements<D.Run>())
-            {
-                var text = run.Text?.Text;
-                if (!string.IsNullOrEmpty(text))
-                    p.Runs.Add(text);
-            }
-        }
+        var chartRef = gf.Graphic?.GraphicData
+            ?.GetFirstChild<DocumentFormat.OpenXml.Drawing.Charts.ChartReference>();
+        var rId = chartRef?.Id?.Value;
+        if (string.IsNullOrEmpty(rId))
+            return;
+
+        if (slidePart.GetPartById(rId) is not ChartPart chartPart)
+            return;
+
+        shape.RelationshipId = rId;
+        shape.PartUri = chartPart.Uri.ToString();
+
+        using var stream = chartPart.GetStream();
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        var bytes = ms.ToArray();
+        shape.ChartPartData = bytes; // preserve raw bytes for round-trip parity
+
+        var chartDoc = OoXmlHelper.ParseXml(bytes);
+        if (chartDoc.Root != null)
+            ChartParser.Parse(chartDoc.Root, shape.Chart);
     }
 
-    private static void ReadTextBody(P.TextBody body, TextFrame frame)
+    // Maps a shape/cell text body (P.TextBody for shapes, D.TextBody for table cells — both use
+    // the a: paragraph/run vocabulary) into the model. Reuses the shared TextParser so run/
+    // paragraph formatting (bold/italic/size/font/colour/underline/caps, alignment, bullets,
+    // spacing, body anchor/margins) maps identically to the custom parser — no divergence.
+    private static void ReadTextBody(DocumentFormat.OpenXml.OpenXmlElement body, TextFrame frame)
     {
-        foreach (var para in body.Elements<D.Paragraph>())
-        {
-            var p = frame.Paragraphs.Add();
-            foreach (var run in para.Elements<D.Run>())
-            {
-                var text = run.Text?.Text;
-                if (!string.IsNullOrEmpty(text))
-                    p.Runs.Add(text);
-            }
-        }
+        var element = System.Xml.Linq.XElement.Parse(body.OuterXml, System.Xml.Linq.LoadOptions.None);
+        var parsed = TextParser.ParseTextBody(element);
+        frame.AbsorbFrom(parsed);
     }
 }

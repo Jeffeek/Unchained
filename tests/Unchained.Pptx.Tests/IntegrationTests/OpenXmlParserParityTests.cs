@@ -102,6 +102,13 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
                 var ss = sdkShapes[j];
                 ss.GetType().ShouldBe(cs.GetType(), $"{fileName}: slide {i + 1} shape {j + 1} type");
 
+                // Fill + line parity (M2): type, solid colour, line width/dash.
+                ss.Fill.Type.ShouldBe(cs.Fill.Type, $"{fileName}: s{i + 1} sh{j + 1} fill type");
+                if (cs.Fill.Solid is not null && ss.Fill.Solid is not null)
+                    ss.Fill.Solid.Color.ShouldBe(cs.Fill.Solid.Color, $"{fileName}: s{i + 1} sh{j + 1} fill colour");
+                ss.Line.WidthPoints.ShouldBe(cs.Line.WidthPoints, $"{fileName}: s{i + 1} sh{j + 1} line width");
+                ss.Line.DashStyle.ShouldBe(cs.Line.DashStyle, $"{fileName}: s{i + 1} sh{j + 1} line dash");
+
                 // Pictures must resolve their embedded image bytes identically.
                 if (cs is Unchained.Pptx.Shapes.PictureShape cp
                     && ss is Unchained.Pptx.Shapes.PictureShape sp)
@@ -111,6 +118,47 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
                     if (cp.Image is not null && sp.Image is not null)
                         sp.Image.Data.Length.ShouldBe(cp.Image.Data.Length,
                             $"{fileName}: slide {i + 1} shape {j + 1} image byte length");
+                }
+
+                // Charts must resolve the same model (type + series count) from the chart part.
+                if (cs is Unchained.Pptx.Shapes.ChartShape cc
+                    && ss is Unchained.Pptx.Shapes.ChartShape sc)
+                {
+                    sc.Chart.Type.ShouldBe(cc.Chart.Type,
+                        $"{fileName}: slide {i + 1} shape {j + 1} chart type");
+                    sc.Chart.Data.Series.Count.ShouldBe(cc.Chart.Data.Series.Count,
+                        $"{fileName}: slide {i + 1} shape {j + 1} chart series count");
+                }
+
+                // Text runs must carry identical formatting (M1): plain text, bold/italic,
+                // font size, font name, paragraph alignment.
+                if (cs is Unchained.Pptx.Shapes.AutoShape ca
+                    && ss is Unchained.Pptx.Shapes.AutoShape sa)
+                {
+                    var cParas = ca.TextFrame.Paragraphs;
+                    var sParas = sa.TextFrame.Paragraphs;
+                    sParas.Count.ShouldBe(cParas.Count,
+                        $"{fileName}: slide {i + 1} shape {j + 1} paragraph count");
+
+                    for (var pi = 0; pi < cParas.Count; pi++)
+                    {
+                        sParas[pi].Alignment.ShouldBe(cParas[pi].Alignment,
+                            $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} alignment");
+                        sParas[pi].Runs.Count.ShouldBe(cParas[pi].Runs.Count,
+                            $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} run count");
+
+                        for (var ri = 0; ri < cParas[pi].Runs.Count; ri++)
+                        {
+                            var cr = cParas[pi].Runs[ri];
+                            var sr = sParas[pi].Runs[ri];
+                            sr.Text.ShouldBe(cr.Text, $"{fileName}: s{i + 1} sh{j + 1} p{pi + 1} run {ri + 1} text");
+                            sr.Format.Bold.ShouldBe(cr.Format.Bold, $"{fileName}: …run {ri + 1} bold");
+                            sr.Format.Italic.ShouldBe(cr.Format.Italic, $"{fileName}: …run {ri + 1} italic");
+                            sr.Format.FontSizePoints.ShouldBe(cr.Format.FontSizePoints, $"{fileName}: …run {ri + 1} size");
+                            sr.Format.LatinFont.ShouldBe(cr.Format.LatinFont, $"{fileName}: …run {ri + 1} font");
+                            sr.Format.Underline.ShouldBe(cr.Format.Underline, $"{fileName}: …run {ri + 1} underline");
+                        }
+                    }
                 }
             }
         }

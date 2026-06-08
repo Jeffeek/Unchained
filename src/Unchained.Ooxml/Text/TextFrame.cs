@@ -28,4 +28,27 @@ public sealed class TextFrame
             Paragraphs.Add(value);
         }
     }
+
+    /// <summary>
+    /// Replaces this frame's content with that of <paramref name="source"/> — copying the
+    /// format and taking over its paragraphs. Used when a frame is populated by a shared parser
+    /// into a temporary frame and the result must land on a get-only <see cref="TextFrame"/>.
+    /// </summary>
+    internal void AbsorbFrom(TextFrame source)
+    {
+        Format.VerticalAnchor = source.Format.VerticalAnchor;
+        Format.Direction = source.Format.Direction;
+        Format.Autofit = source.Format.Autofit;
+        Format.MarginLeft = source.Format.MarginLeft;
+        Format.MarginRight = source.Format.MarginRight;
+        Format.MarginTop = source.Format.MarginTop;
+        Format.MarginBottom = source.Format.MarginBottom;
+        Format.WrapText = source.Format.WrapText;
+        Format.ColumnCount = source.Format.ColumnCount;
+        Format.ColumnSpacing = source.Format.ColumnSpacing;
+
+        Paragraphs.Clear();
+        foreach (var paragraph in source.Paragraphs)
+            Paragraphs.Add(paragraph);
+    }
 }
