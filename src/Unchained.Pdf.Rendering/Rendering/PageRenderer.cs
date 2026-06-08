@@ -19,7 +19,8 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, byte[]?>? embeddedFontBytes = null,
     IReadOnlyDictionary<string, ImageXObject>? imageXObjects = null,
     double[]? initialCtm = null,
-    IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null
+    IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null,
+    IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null
 )
 {
     private readonly List<(double X, double Y)> _currentPath = [];
@@ -79,7 +80,11 @@ internal sealed class PageRenderer(
             case "cm" when op.Operands.Count >= 6:
             {
                 double[] m = [Num(op, 0), Num(op, 1), Num(op, 2), Num(op, 3), Num(op, 4), Num(op, 5)];
-                _gs.Ctm = GraphicsState.MultiplyMatrix(_gs.Ctm, m);
+                // The cm operator pre-concatenates: CTM_new = m × CTM_old (ISO 32000-1
+                // §8.3.4). The new matrix transforms points first, then the existing CTM.
+                // Using the reverse order corrupts translation whenever the CTM is not the
+                // identity (nested cm, or a rotated/cropped base CTM).
+                _gs.Ctm = GraphicsState.MultiplyMatrix(m, _gs.Ctm);
                 break;
             }
 
@@ -300,6 +305,39 @@ internal sealed class PageRenderer(
         _gs.TextMatrix = (double[])_gs.TextLineMatrix.Clone();
     }
 
+    // Vertical scale magnitude of the text matrix combined with the CTM. Used to size
+    // glyph rasterization when producers carry the visual size in the matrix rather than
+    // in FontSize. Returns 1 for the common unit-scale case.
+    private double TextMatrixVerticalScale()
+    {
+        // Combined vertical basis vector = TextMatrix · CTM applied to (0,1).
+        var tb = _gs.TextMatrix[1];
+        var td = _gs.TextMatrix[3];
+        // Map the text-space vertical direction through the CTM's linear part.
+        var cb = _gs.Ctm[1];
+        var cd = _gs.Ctm[3];
+        var ca = _gs.Ctm[0];
+        var cc = _gs.Ctm[2];
+        var vx = (tb * ca) + (td * cc);
+        var vy = (tb * cb) + (td * cd);
+        var mag = Math.Sqrt((vx * vx) + (vy * vy));
+        return mag > 1e-6 ? mag : 1.0;
+    }
+
+    // Horizontal scale magnitude of the text matrix combined with the CTM's linear part.
+    // Text advances are computed in glyph space and must be scaled by this to land in the
+    // pre-CTM position space that UToPixel consumes. Returns 1 for unit-scale matrices.
+    private double TextMatrixHorizontalScale()
+    {
+        var ta = _gs.TextMatrix[0];
+        var tc = _gs.TextMatrix[2];
+        // Horizontal text-space basis (1,0) through the text matrix linear part.
+        var hx = ta;
+        var hy = tc;
+        var mag = Math.Sqrt((hx * hx) + (hy * hy));
+        return mag > 1e-6 ? mag : 1.0;
+    }
+
     private void ShowString(ReadOnlySpan<byte> bytes)
     {
         // Text rendering mode 3 = invisible; do not draw.
@@ -316,11 +354,32 @@ internal sealed class PageRenderer(
         }
 
         var (ftFace, hbFont) = fonts.GetFonts(_gs.FontName, embeddedBytes);
-        var pixelSize = (uint)Math.Max(1, Math.Round(_gs.FontSize * scale));
+
+        // Effective glyph size in device pixels. The on-page text size is FontSize scaled
+        // by the vertical magnitude of the text matrix combined with the CTM, then by the
+        // device scale (DPI/72). Some producers set FontSize to 1 and carry the real size
+        // in the text/transformation matrix (e.g. `Tf /F 1` with `Tm 16 0 0 -16 …`), so
+        // FontSize alone is not the rasterization size. When the matrices have unit scale
+        // (the common case) this reduces exactly to FontSize * scale.
+        var textVScale = TextMatrixVerticalScale();
+        var pixelSize = (uint)Math.Max(1, Math.Round(_gs.FontSize * textVScale * scale));
         ftFace.SetPixelSizes(0, pixelSize);
 
         var hbScale = (int)(pixelSize * 64);
         hbFont.SetScale(hbScale, hbScale);
+
+        // Composite (Type0) fonts with an Identity encoding: each pair of bytes is a
+        // big-endian code that equals the CID, which maps to a glyph index directly
+        // (Identity /CIDToGIDMap) or via an explicit map. The PDF already holds the
+        // final shaped glyph sequence, so we must NOT re-shape through HarfBuzz or
+        // remap via /ToUnicode — that produces wrong glyphs and positions.
+        CompositeFontInfo? composite = null;
+        compositeFonts?.TryGetValue(_gs.FontResourceName, out composite);
+        if (composite is { IdentityEncoding: true } && embeddedBytes is { Length: > 0 })
+        {
+            ShowStringComposite(bytes, ftFace, composite);
+            return;
+        }
 
         // Map char codes to Unicode. When the font has a /ToUnicode CMap, use it to
         // decode each char code to the correct Unicode string. Otherwise fall back to
@@ -415,11 +474,12 @@ internal sealed class PageRenderer(
         }
     }
 
-    // Fallback path for simple fonts whose embedded program has no Unicode cmap
-    // (e.g. subset Computer Modern Type1). Each raw single-byte char code is resolved
-    // to a glyph index through FreeType's own charmap, which honours the font's
-    // builtin/custom encoding. Glyph advances come from FreeType (FT_Get_Advance),
-    // scaled to user-space points. Word-spacing applies to byte code 32 (§9.3.3).
+    // Fallback path for simple fonts whose embedded program has no usable Unicode cmap
+    // (e.g. subset Computer Modern Type1, or symbolic subset TrueType with /FirstChar 0).
+    // Each raw single-byte char code is resolved to a glyph index through FreeType's own
+    // charmap (FT_Get_Char_Index). When that yields .notdef, the font is a glyph-indexed
+    // subset where the char code IS the glyph index, so we fall back to loading the code
+    // directly. Advances come from FreeType (FT_Get_Advance).
     private void ShowStringDirect(ReadOnlySpan<byte> bytes, SharpFont.Face ftFace, uint pixelSize)
     {
         foreach (var code in bytes)
@@ -427,6 +487,12 @@ internal sealed class PageRenderer(
             uint glyphId;
             try { glyphId = ftFace.GetCharIndex(code); }
             catch { GlyphsSkipped++; continue; }
+
+            // Symbolic subset with no cmap entry: treat the char code as a direct glyph
+            // index (FreeType rejects out-of-range indices in LoadGlyph below). SharpFont's
+            // GlyphCount is unreliable on Windows x64, so we don't pre-check the range.
+            if (glyphId == 0 && code > 0)
+                glyphId = code;
 
             if (glyphId != 0)
             {
@@ -447,6 +513,45 @@ internal sealed class PageRenderer(
             catch { advancePts = pixelSize / scale * 0.5; }
 
             var advance = (advancePts + _gs.CharSpace + (code == 32 ? _gs.WordSpace : 0))
+                          * (_gs.HorizontalScale / 100.0);
+            _gs.TextMatrix[4] += advance;
+        }
+    }
+
+    // Renders a string set in a composite (Type0) font with an Identity encoding.
+    // Each pair of bytes is a big-endian 16-bit code that equals the CID; the CID maps
+    // to a glyph index (Identity /CIDToGIDMap, or an explicit map). Glyphs are loaded by
+    // index directly through FreeType — no cmap/HarfBuzz shaping. Advances come from the
+    // CIDFont /W array (glyph-space 1000-unit em), falling back to /DW.
+    private void ShowStringComposite(ReadOnlySpan<byte> bytes, SharpFont.Face ftFace, CompositeFontInfo info)
+    {
+        for (var i = 0; i + 1 < bytes.Length; i += 2)
+        {
+            var cid = (bytes[i] << 8) | bytes[i + 1];
+
+            var gid = (uint)cid;
+            if (!info.IdentityCidToGid && info.CidToGid is not null)
+                gid = info.CidToGid.TryGetValue(cid, out var mapped) ? (uint)mapped : 0;
+
+            if (gid != 0)
+            {
+                try { ftFace.LoadGlyph(gid, LoadFlags.Render, LoadTarget.Normal); }
+                catch { GlyphsSkipped++; gid = 0; }
+            }
+
+            if (gid != 0)
+            {
+                GlyphsAttempted++;
+                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5]);
+                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
+            }
+
+            // Advance from /W (glyph-space units, 1000 per em) → text-space, then scaled
+            // by the text-matrix horizontal magnitude into the pen-position space that
+            // UToPixel consumes (handles producers that carry size in the matrix).
+            var wGlyph = info.Widths.TryGetValue(cid, out var w) ? w : info.DefaultWidth;
+            var hScale = TextMatrixHorizontalScale();
+            var advance = (((wGlyph / 1000.0 * _gs.FontSize) + _gs.CharSpace) * hScale)
                           * (_gs.HorizontalScale / 100.0);
             _gs.TextMatrix[4] += advance;
         }

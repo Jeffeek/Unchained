@@ -366,6 +366,111 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     }
 
     /// <inheritdoc />
+    public IReadOnlyDictionary<string, Models.CompositeFontInfo> GetCompositeFonts()
+    {
+        var result = new Dictionary<string, Models.CompositeFontInfo>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Font]);
+        if (fontDict is null)
+            return result;
+
+        foreach (var (key, value) in fontDict.Entries)
+        {
+            var fontEntry = ResolveDict(value);
+            if (fontEntry is null || fontEntry.GetName(PdfName.Subtype.Value) != "Type0")
+                continue;
+
+            // /Encoding may be a name (e.g. /Identity-H) or a CMap stream. We only
+            // fast-path the Identity CMaps where each 2-byte code equals the CID.
+            var encName = (fontEntry["Encoding"] as PdfName)?.Value;
+            var identityEncoding = encName is "Identity-H" or "Identity-V";
+
+            var descendants = fontEntry[PdfName.Get("DescendantFonts")];
+            if (descendants is PdfIndirectReference dr)
+                descendants = core.ResolveIndirect(dr.ObjectNumber).Value;
+            var cidFont = descendants switch
+            {
+                PdfArray { Count: > 0 } a => ResolveDict(a[0]),
+                PdfDictionary d => d,
+                _ => null
+            };
+            if (cidFont is null)
+                continue;
+
+            // /CIDToGIDMap: /Identity (or absent) => CID == GID; otherwise a stream of
+            // 2-byte big-endian GIDs indexed by CID.
+            var c2gObj = cidFont["CIDToGIDMap"];
+            if (c2gObj is PdfIndirectReference cr)
+                c2gObj = core.ResolveIndirect(cr.ObjectNumber).Value;
+            var identityCidToGid = c2gObj is null || (c2gObj as PdfName)?.Value == "Identity";
+            IReadOnlyDictionary<int, int>? cidToGid = null;
+            if (!identityCidToGid && c2gObj is PdfStream c2gStream)
+            {
+                var bytes = StreamFilters.Decode(c2gStream).Span;
+                var map = new Dictionary<int, int>();
+                for (var cid = 0; (cid * 2) + 1 < bytes.Length; cid++)
+                {
+                    var gid = (bytes[cid * 2] << 8) | bytes[(cid * 2) + 1];
+                    if (gid != 0) map[cid] = gid;
+                }
+                cidToGid = map;
+            }
+
+            var dwInt = cidFont.Get<PdfInteger>(PdfName.Get("DW"))?.Value;
+            var dwReal = cidFont.Get<PdfReal>(PdfName.Get("DW"))?.Value;
+            var dw = dwInt ?? (dwReal is { } dr2 ? dr2 : 1000.0);
+            var widths = ParseCidWidths(cidFont["W"]);
+
+            result[key] = new Models.CompositeFontInfo(
+                identityEncoding, identityCidToGid, cidToGid, dw, widths);
+        }
+
+        return result;
+    }
+
+    // Parses a CIDFont /W array (§9.7.4.3) into a CID->width map (glyph-space units).
+    // Two forms: "c [w1 w2 ...]" (CIDs c, c+1, ...) and "cFirst cLast w" (range, same width).
+    private IReadOnlyDictionary<int, double> ParseCidWidths(PdfObject? wObj)
+    {
+        var result = new Dictionary<int, double>();
+        if (wObj is PdfIndirectReference r)
+            wObj = core.ResolveIndirect(r.ObjectNumber).Value;
+        if (wObj is not PdfArray arr)
+            return result;
+
+        var i = 0;
+        while (i < arr.Count)
+        {
+            if (arr[i] is not (PdfInteger or PdfReal)) { i++; continue; }
+            var first = (int)ReadCoordinate(arr[i]);
+            if (i + 1 >= arr.Count) break;
+
+            if (arr[i + 1] is PdfArray widthList)
+            {
+                for (var k = 0; k < widthList.Count; k++)
+                    result[first + k] = ReadCoordinate(widthList[k]);
+                i += 2;
+            }
+            else if (i + 2 < arr.Count
+                     && arr[i + 1] is (PdfInteger or PdfReal)
+                     && arr[i + 2] is (PdfInteger or PdfReal))
+            {
+                var last = (int)ReadCoordinate(arr[i + 1]);
+                var w = ReadCoordinate(arr[i + 2]);
+                for (var cid = first; cid <= last && cid - first < 65536; cid++)
+                    result[cid] = w;
+                i += 3;
+            }
+            else
+            {
+                i++;
+            }
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc />
     public IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>> GetToUnicodeMaps()
     {
         var result = new Dictionary<string, IReadOnlyDictionary<uint, string>>();
@@ -610,14 +715,44 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
 
     private double? GetArrayBoxValue(string name, int index)
     {
-        if (page[PdfName.Get(name)] is not PdfArray box || box.Count < 4)
-            return null;
-        return box[index] switch
+        // /MediaBox and /CropBox are inheritable page attributes (§7.7.3.4): a page leaf
+        // may omit them and inherit from an ancestor /Pages node. Walk up /Parent until
+        // the entry is found. Also resolve indirect references on both the array and its
+        // elements.
+        var key = PdfName.Get(name);
+        PdfObject? current = page;
+        var depth = 0;
+        while (current is not null && depth++ < 64)
         {
-            PdfInteger i => i.Value,
-            PdfReal r    => r.Value,
-            _            => null
-        };
+            var dict = current switch
+            {
+                PdfDictionary d => d,
+                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+                _ => null
+            };
+            if (dict is null) break;
+
+            var boxObj = dict[key];
+            if (boxObj is PdfIndirectReference br)
+                boxObj = core.ResolveIndirect(br.ObjectNumber).Value;
+
+            if (boxObj is PdfArray box && box.Count >= 4)
+            {
+                var elem = box[index];
+                if (elem is PdfIndirectReference er)
+                    elem = core.ResolveIndirect(er.ObjectNumber).Value;
+                return elem switch
+                {
+                    PdfInteger i => i.Value,
+                    PdfReal r2   => r2.Value,
+                    _            => null
+                };
+            }
+
+            current = dict[PdfName.Get("Parent")];
+        }
+
+        return null;
     }
 
     // Kept for compatibility — still used by the inline-image coordinate path.

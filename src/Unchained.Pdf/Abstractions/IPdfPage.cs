@@ -118,4 +118,15 @@ public interface IPdfPage
     /// Returns an empty dictionary when the page has no image XObjects.
     /// </summary>
     IReadOnlyDictionary<string, ImageXObject> GetImageXObjects();
+
+    /// <summary>
+    /// Returns metadata for composite (Type0) fonts on this page keyed by font resource
+    /// name. Composite fonts encode text as multi-byte character codes mapped through a
+    /// CMap (e.g. <c>/Identity-H</c>) to CIDs, then to glyph indices via
+    /// <c>/CIDToGIDMap</c> (§9.7). Renderers use this to bypass the simple-font
+    /// code→Unicode→shape pipeline, which produces wrong glyphs for these fonts.
+    /// Returns an empty dictionary when the page has no composite fonts.
+    /// </summary>
+    IReadOnlyDictionary<string, CompositeFontInfo> GetCompositeFonts() =>
+        new Dictionary<string, CompositeFontInfo>();
 }
