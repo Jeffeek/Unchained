@@ -452,7 +452,7 @@ internal sealed class PageRenderer(
             var glyphId = glyphInfos[i].Codepoint;
 
             // ReSharper disable once EmptyGeneralCatchClause
-            try { ftFace.LoadGlyph(glyphId, LoadFlags.Render, LoadTarget.Normal); }
+            try { ftFace.LoadGlyph(glyphId, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
             catch { GlyphsSkipped++; continue; }
 
             GlyphsAttempted++;
@@ -496,7 +496,7 @@ internal sealed class PageRenderer(
 
             if (glyphId != 0)
             {
-                try { ftFace.LoadGlyph(glyphId, LoadFlags.Render, LoadTarget.Normal); }
+                try { ftFace.LoadGlyph(glyphId, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
                 catch { GlyphsSkipped++; glyphId = 0; }
             }
 
@@ -535,7 +535,7 @@ internal sealed class PageRenderer(
 
             if (gid != 0)
             {
-                try { ftFace.LoadGlyph(gid, LoadFlags.Render, LoadTarget.Normal); }
+                try { ftFace.LoadGlyph(gid, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
                 catch { GlyphsSkipped++; gid = 0; }
             }
 
@@ -681,20 +681,7 @@ internal sealed class PageRenderer(
 
         if (dstW <= 0 || dstH <= 0) return;
 
-        for (var py = 0; py < dstH; py++)
-        {
-            var srcY = py * img.Height / dstH;
-            for (var px = 0; px < dstW; px++)
-            {
-                var srcX   = px * img.Width / dstW;
-                var srcOff = ((srcY * img.Width) + srcX) * 3;
-                buffer.BlitImagePixel(
-                    dstX + px, dstY + py,
-                    img.RgbData[srcOff],
-                    img.RgbData[srcOff + 1],
-                    img.RgbData[srcOff + 2]);
-            }
-        }
+        BlitScaledImage(img.RgbData, img.Width, img.Height, dstX, dstY, dstW, dstH);
     }
 
     private void PaintXObject(string resourceName)
@@ -714,21 +701,48 @@ internal sealed class PageRenderer(
 
         if (dstW <= 0 || dstH <= 0) return;
 
-        // Nearest-neighbour blit with scaling.
+        BlitScaledImage(img.RgbData, img.Width, img.Height, dstX, dstY, dstW, dstH);
+    }
+
+    // Scales an RGB image into the destination rectangle. When the image is downscaled
+    // (more source than destination pixels) each destination pixel averages the source
+    // box it covers, matching the area-averaging that Pdfium uses — nearest-neighbour
+    // alone produces harsh aliasing and large pixel differences on small/scaled images.
+    // When upscaling, falls back to nearest-neighbour sampling.
+    private void BlitScaledImage(byte[] rgb, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH)
+    {
+        if (srcW <= 0 || srcH <= 0) return;
+        var downscale = srcW > dstW || srcH > dstH;
+
         for (var py = 0; py < dstH; py++)
+        for (var px = 0; px < dstW; px++)
         {
-            var srcY = py * img.Height / dstH;
-            for (var px = 0; px < dstW; px++)
+            byte r, g, b;
+            if (downscale)
             {
-                var srcX   = px * img.Width / dstW;
-                var srcOff = ((srcY * img.Width) + srcX) * 3;
-                buffer.BlitImagePixel(
-                    dstX + px,
-                    dstY + py,
-                    img.RgbData[srcOff],
-                    img.RgbData[srcOff + 1],
-                    img.RgbData[srcOff + 2]);
+                // Average the source box [sx0,sx1)×[sy0,sy1) covered by this dest pixel.
+                var sx0 = px * srcW / dstW;
+                var sx1 = Math.Max(sx0 + 1, (px + 1) * srcW / dstW);
+                var sy0 = py * srcH / dstH;
+                var sy1 = Math.Max(sy0 + 1, (py + 1) * srcH / dstH);
+                long sr = 0, sg = 0, sb = 0; var n = 0;
+                for (var sy = sy0; sy < sy1 && sy < srcH; sy++)
+                for (var sx = sx0; sx < sx1 && sx < srcW; sx++)
+                {
+                    var o = ((sy * srcW) + sx) * 3;
+                    sr += rgb[o]; sg += rgb[o + 1]; sb += rgb[o + 2]; n++;
+                }
+                if (n == 0) continue;
+                r = (byte)(sr / n); g = (byte)(sg / n); b = (byte)(sb / n);
             }
+            else
+            {
+                var sx = px * srcW / dstW;
+                var sy = py * srcH / dstH;
+                var o = ((sy * srcW) + sx) * 3;
+                r = rgb[o]; g = rgb[o + 1]; b = rgb[o + 2];
+            }
+            buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
         }
     }
 
