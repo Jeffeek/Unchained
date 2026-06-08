@@ -336,6 +336,15 @@ public sealed class PresentationProcessor : IDisposable
             // Keep statistics current before serializing
             document.SyncStatistics();
 
+            // SDK-backed in-place save when requested and a live engine is attached; otherwise
+            // the custom writer. The SDK path preserves unmodelled parts (Phase 2 / M5b).
+            if (options?.UseOpenXmlEngine == true && OpenXmlPresentationWriter.CanSave(document))
+            {
+                return await Task.Run(
+                    () => OpenXmlPresentationWriter.Save(document),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
             return await Task.Run(() =>
                 PresentationWriter.Write(
                     document.Slides,
