@@ -333,4 +333,11 @@ internal sealed class ParsedPresentation(
     public Core.SlideSize SlideSize { get; } = slideSize;
     public CommentAuthorCollection CommentAuthors { get; } = commentAuthors;
     public SectionCollection Sections { get; } = sections;
+
+    /// <summary>
+    /// The still-open OpenXML-SDK engine when parsed via the SDK path; <see langword="null"/>
+    /// for the custom-OPC path. The document takes ownership and disposes it, keeping the source
+    /// package alive for an in-place SDK-backed save.
+    /// </summary>
+    public Ooxml.Engine.OoxmlEngine? Engine { get; init; }
 }

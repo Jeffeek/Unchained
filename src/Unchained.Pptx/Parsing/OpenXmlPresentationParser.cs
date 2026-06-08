@@ -38,7 +38,23 @@ internal static class OpenXmlPresentationParser
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        using var engine = OoxmlEngine.Open(data, editable: false);
+        // Opened editable and kept open: ownership passes to ParsedPresentation -> the document,
+        // so a later SDK-backed save (M5) can mutate this same package in place (parts that the
+        // model does not touch pass through unchanged). Disposed here only if parsing fails.
+        var engine = OoxmlEngine.Open(data, editable: true);
+        try
+        {
+            return ParseWithEngine(engine, options);
+        }
+        catch
+        {
+            engine.Dispose();
+            throw;
+        }
+    }
+
+    private static ParsedPresentation ParseWithEngine(OoxmlEngine engine, OpenOptions? options)
+    {
         if (engine.Format != OoxmlFormat.Presentation)
             throw new PptxException($"Expected a presentation package but found {engine.Format}.");
 
@@ -109,7 +125,12 @@ internal static class OpenXmlPresentationParser
             protection: new ProtectionInfo(),
             slideSize,
             commentAuthors,
-            sections);
+            sections)
+        {
+            // Hand the still-open engine to the parsed result so the document can keep the
+            // source package alive for an in-place SDK-backed save (M5b).
+            Engine = engine
+        };
     }
 
     // ── Slide size ───────────────────────────────────────────────────────────────

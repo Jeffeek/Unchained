@@ -316,7 +316,8 @@ public sealed class PresentationProcessor : IDisposable
                 parsed.Protection,
                 parsed.SlideSize,
                 parsed.CommentAuthors,
-                parsed.Sections);
+                parsed.Sections,
+                parsed.Engine);
         }
         finally
         {

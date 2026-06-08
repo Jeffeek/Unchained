@@ -17,6 +17,11 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
 {
     private bool _disposed;
 
+    // The source OpenXML-SDK engine when loaded via the SDK path; null for the custom path or
+    // CreateBlank. Held open so an in-place SDK-backed save can mutate the original package
+    // (unmodelled parts pass through). Disposed with the document.
+    private readonly Ooxml.Engine.OoxmlEngine? _engine;
+
     internal PresentationDocument(
         SlideCollection slides,
         MasterSlideCollection masters,
@@ -25,7 +30,8 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
         ProtectionInfo protection,
         SlideSize slideSize,
         CommentAuthorCollection? commentAuthors = null,
-        SectionCollection? sections = null)
+        SectionCollection? sections = null,
+        Ooxml.Engine.OoxmlEngine? engine = null)
     {
         Slides = slides;
         Masters = masters;
@@ -35,7 +41,14 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
         SlideSize = slideSize;
         CommentAuthors = commentAuthors ?? new CommentAuthorCollection();
         Sections = sections ?? new SectionCollection();
+        _engine = engine;
     }
+
+    /// <summary>
+    /// The source OpenXML-SDK engine when this document was loaded through the SDK path;
+    /// <see langword="null"/> otherwise. Internal — used by the SDK-backed save path.
+    /// </summary>
+    internal Ooxml.Engine.OoxmlEngine? Engine => _engine;
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -98,6 +111,7 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        _engine?.Dispose();
     }
 
     /// <inheritdoc />
