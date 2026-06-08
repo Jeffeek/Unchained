@@ -89,6 +89,18 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         for (var i = 0; i < custom.Slides.Count; i++)
             sdk.Slides[i].IsHidden.ShouldBe(custom.Slides[i].IsHidden, $"{fileName}: slide {i + 1} hidden flag");
 
+        // Top-level shape count + type sequence per slide.
+        for (var i = 0; i < custom.Slides.Count; i++)
+        {
+            var customShapes = custom.Slides[i].Shapes;
+            var sdkShapes = sdk.Slides[i].Shapes;
+            sdkShapes.Count.ShouldBe(customShapes.Count, $"{fileName}: slide {i + 1} shape count");
+
+            for (var j = 0; j < customShapes.Count; j++)
+                sdkShapes[j].GetType().ShouldBe(customShapes[j].GetType(),
+                    $"{fileName}: slide {i + 1} shape {j + 1} type");
+        }
+
         custom.Dispose();
         sdk.Dispose();
     }
