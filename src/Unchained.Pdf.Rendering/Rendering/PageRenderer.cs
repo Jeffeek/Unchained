@@ -20,7 +20,9 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, ImageXObject>? imageXObjects = null,
     double[]? initialCtm = null,
     IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null,
-    IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null
+    IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null,
+    IReadOnlyDictionary<string, (double Fill, double Stroke)>? extGStateAlphas = null,
+    IReadOnlyDictionary<string, ShadingInfo>? shadings = null
 )
 {
     // Current path as a list of subpaths, each a polyline of user-space points. A new `m`
@@ -181,13 +183,42 @@ internal sealed class PageRenderer(
                 }
 
                 // Set after the numeric setters above (which clear the flag).
-                if (op.Name == "scn") _gs.FillIsPattern = isPattern;
+                if (op.Name == "scn")
+                {
+                    _gs.FillIsPattern = isPattern;
+                    // If the named pattern is a known axial/radial shading, remember it so
+                    // DrawFill paints the gradient rather than the grey approximation.
+                    var patName = op.Operands.OfType<PdfName>().LastOrDefault()?.Value;
+                    _gs.FillShadingName = patName is not null && shadings is not null && shadings.ContainsKey(patName)
+                        ? patName : null;
+                }
                 break;
             }
 
             // ── Misc graphics state ───────────────────────────────────────────
             case "w" when op.Operands.Count >= 1: _gs.LineWidth = Num(op, 0); break;
-            case "J" or "j" or "M" or "d" or "ri" or "i" or "gs": break; // consume; not rendered
+            case "d" when op.Operands.Count >= 1:
+            {
+                // d [dashArray] dashPhase — store the on/off lengths (phase ignored).
+                _gs.DashLengths = op.Operands[0] is PdfArray da
+                    ? da.Elements.Select(NumObj).Where(static v => v >= 0).ToArray()
+                    : [];
+                break;
+            }
+            case "J" or "j" or "M" or "ri" or "i": break; // consume; not rendered
+            case "gs" when op.Operands.Count >= 1:
+            {
+                // Apply the named /ExtGState's constant alpha (/ca fill, /CA stroke).
+                var name = (op.Operands[0] as PdfName)?.Value;
+                if (name is not null && extGStateAlphas is not null
+                    && extGStateAlphas.TryGetValue(name, out var a))
+                {
+                    _gs.FillA = (byte)Math.Clamp((int)Math.Round(a.Fill * 255), 0, 255);
+                    _gs.StrokeA = (byte)Math.Clamp((int)Math.Round(a.Stroke * 255), 0, 255);
+                }
+                break;
+            }
+            case "gs": break;
 
             // ── Path construction ─────────────────────────────────────────────
             case "m" when op.Operands.Count >= 2: PathMoveTo(Num(op, 0), Num(op, 1)); break;
@@ -266,7 +297,7 @@ internal sealed class PageRenderer(
             case "Tz" when op.Operands.Count >= 1: _gs.HorizontalScale = Num(op, 0); break;
             case "TL" when op.Operands.Count >= 1: _gs.Leading = Num(op, 0); break;
             case "Tr" when op.Operands.Count >= 1: _gs.TextRenderMode = (int)Num(op, 0); break;
-            case "Ts": break; // text rise — not yet applied
+            case "Ts" when op.Operands.Count >= 1: _gs.TextRise = Num(op, 0); break;
 
             // ── Text positioning ──────────────────────────────────────────────
             case "Tm" when op.Operands.Count >= 6:
@@ -311,7 +342,14 @@ internal sealed class PageRenderer(
                 break;
             case "BI": break; // parser produced no image (unsupported format)
 
-            // ── Shading / form XObjects (stubs; no rendering) ─────────────────
+            // ── Shading (sh) — paints an axial/radial gradient over the current clip ──
+            case "sh" when op.Operands.Count >= 1:
+            {
+                var name = (op.Operands[0] as PdfName)?.Value;
+                if (name is not null && shadings is not null && shadings.TryGetValue(name, out var sh))
+                    PaintShadingInClip(sh);
+                break;
+            }
             case "sh": break;
         }
     }
@@ -480,8 +518,9 @@ internal sealed class PageRenderer(
             GlyphsAttempted++;
 
             // HarfBuzz XOffset/YOffset are in 26.6 pixel units; convert to user-space points.
+            // Text rise (Ts) shifts the baseline up in text space.
             var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
-            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale);
+            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale) + _gs.TextRise;
             var (px, py) = UToPixel(originX, originY);
 
             // Use BlitGlyphFromFace so we can read BitmapLeft/BitmapTop and the bitmap
@@ -525,7 +564,7 @@ internal sealed class PageRenderer(
             if (glyphId != 0)
             {
                 GlyphsAttempted++;
-                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5]);
+                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
                 buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
             }
 
@@ -564,7 +603,7 @@ internal sealed class PageRenderer(
             if (gid != 0)
             {
                 GlyphsAttempted++;
-                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5]);
+                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
                 buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
             }
 
@@ -659,8 +698,16 @@ internal sealed class PageRenderer(
     {
         if (_subpaths.Count == 0) return;
 
+        // Shading pattern fill: paint the gradient clipped to the path's bounding box.
+        if (_gs.FillShadingName is { } shName && shadings is not null
+            && shadings.TryGetValue(shName, out var shInfo))
+        {
+            PaintShadingInPathBounds(shInfo);
+            return;
+        }
+
         byte fr = _gs.FillR, fg = _gs.FillG, fb = _gs.FillB;
-        // Tiling/shading patterns aren't rendered. Filling them with the (often black)
+        // Tiling/non-shading patterns aren't rendered. Filling them with the (often black)
         // underlying colour produces large wrong dark blocks; skipping them entirely loses
         // the region's visual weight. Real-world patterns (e.g. TikZ /pgfpat hatches)
         // average to roughly a mid-tone, so approximate with a neutral grey.
@@ -674,12 +721,132 @@ internal sealed class PageRenderer(
             buffer.FillRect(
                 (int)px1, (int)py1,
                 (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
-                fr, fg, fb);
+                fr, fg, fb, _gs.FillA);
             return;
         }
 
         FillPolygon(evenOdd, fr, fg, fb);
     }
+
+    // Paints a shading clipped to the current path's device bounding box (used for a
+    // shading-pattern fill, where the path defines the painted region).
+    private void PaintShadingInPathBounds(ShadingInfo sh)
+    {
+        var minX = double.MaxValue; var minY = double.MaxValue;
+        var maxX = double.MinValue; var maxY = double.MinValue;
+        foreach (var sub in _subpaths)
+        foreach (var (ux, uy) in sub)
+        {
+            var (px, py) = UToPixel(ux, uy);
+            if (px < minX) minX = px;
+            if (py < minY) minY = py;
+            if (px > maxX) maxX = px;
+            if (py > maxY) maxY = py;
+        }
+        if (maxX < minX) return;
+        PaintShadingRect(sh, (int)Math.Floor(minX), (int)Math.Floor(minY), (int)Math.Ceiling(maxX), (int)Math.Ceiling(maxY));
+    }
+
+    // Paints a shading over the current clip rectangle (used by the `sh` operator).
+    private void PaintShadingInClip(ShadingInfo sh)
+    {
+        var (x0, y0, x1, y1) = _gs.ClipRect ?? (0, 0, buffer.Width, buffer.Height);
+        PaintShadingRect(sh, x0, y0, x1 - 1, y1 - 1);
+    }
+
+    // Core gradient rasteriser: for each device pixel in [dx0..dx1]×[dy0..dy1], map back to
+    // user space (inverse CTM), compute the shading's parametric t, and write the ramp colour.
+    private void PaintShadingRect(ShadingInfo sh, int dx0, int dy0, int dx1, int dy1)
+    {
+        dx0 = Math.Max(0, dx0); dy0 = Math.Max(0, dy0);
+        dx1 = Math.Min(buffer.Width - 1, dx1); dy1 = Math.Min(buffer.Height - 1, dy1);
+        if (dx1 < dx0 || dy1 < dy0) return;
+
+        // Honour an active clip rectangle.
+        if (_gs.ClipRect is { } c)
+        {
+            dx0 = Math.Max(dx0, c.X0); dy0 = Math.Max(dy0, c.Y0);
+            dx1 = Math.Min(dx1, c.X1 - 1); dy1 = Math.Min(dy1, c.Y1 - 1);
+            if (dx1 < dx0 || dy1 < dy0) return;
+        }
+
+        // Invert the device→user mapping. Device px = ux*scale, py = (H - uy)*scale, where
+        // (ux,uy) = CTM·(x,y). Compose M = CTM then the device flip; invert the whole thing.
+        var m = _gs.Ctm;
+        // Build device-from-userPathPoint via UToPixel for two basis points to derive inverse.
+        // Simpler: map each device pixel centre to user space directly.
+        if (!TryInvertDeviceToUser(out var inv)) return;
+
+        for (var py = dy0; py <= dy1; py++)
+        for (var px = dx0; px <= dx1; px++)
+        {
+            var (ux, uy) = ApplyInv(inv, px + 0.5, py + 0.5);
+            if (!ShadingT(sh, ux, uy, out var t)) continue;
+            var (r, g, b) = sh.ColorAt(t);
+            if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
+            else buffer.BlendPixel(px, py, r, g, b, _gs.FillA);
+        }
+        _ = m;
+    }
+
+    // Computes parametric t∈[0,1] for a user-space point under the shading, applying the
+    // extend flags. Returns false when the point is outside a non-extended shading.
+    private static bool ShadingT(ShadingInfo sh, double x, double y, out double t)
+    {
+        t = 0;
+        if (sh.ShadingType == 2)
+        {
+            // Axial: project (x,y) onto the axis (x0,y0)->(x1,y1).
+            var x0 = sh.Coords[0]; var y0 = sh.Coords[1];
+            var x1 = sh.Coords[2]; var y1 = sh.Coords[3];
+            var dx = x1 - x0; var dy = y1 - y0;
+            var len2 = (dx * dx) + (dy * dy);
+            if (len2 < 1e-9) { t = 0; return true; }
+            t = (((x - x0) * dx) + ((y - y0) * dy)) / len2;
+        }
+        else
+        {
+            // Radial: t such that the point lies on the interpolated circle. Approximate by
+            // normalised distance from centre 0 to centre 1 (handles the common concentric case).
+            var cx0 = sh.Coords[0]; var cy0 = sh.Coords[1]; var r0 = sh.Coords[2];
+            var cx1 = sh.Coords[3]; var cy1 = sh.Coords[4]; var r1 = sh.Coords[5];
+            var d = Math.Sqrt(((x - cx1) * (x - cx1)) + ((y - cy1) * (y - cy1)));
+            var denom = r1 - r0;
+            t = Math.Abs(denom) > 1e-9 ? (d - r0) / denom : (r1 > 1e-9 ? d / r1 : 0);
+            _ = cx0; _ = cy0;
+        }
+
+        if (t < 0) { if (!sh.ExtendStart) return false; t = 0; }
+        if (t > 1) { if (!sh.ExtendEnd) return false; t = 1; }
+        return true;
+    }
+
+    // Inverse of the device→user transform used by UToPixel (CTM + Y-flip + scale).
+    private bool TryInvertDeviceToUser(out double[] inv)
+    {
+        // Forward: user (x,y) → ctm → (ux,uy) → device (ux*scale, (H-uy)*scale).
+        // Compose forward affine D = [a b c d e f] mapping user→device:
+        var a = _gs.Ctm[0] * scale;
+        var b = -_gs.Ctm[1] * scale;
+        var cc = _gs.Ctm[2] * scale;
+        var dd = -_gs.Ctm[3] * scale;
+        var e = _gs.Ctm[4] * scale;
+        var f = (pageHeightPt - _gs.Ctm[5]) * scale;
+        var det = (a * dd) - (b * cc);
+        if (Math.Abs(det) < 1e-12) { inv = []; return false; }
+        var id = 1.0 / det;
+        // Inverse affine.
+        inv =
+        [
+            dd * id, -b * id,
+            -cc * id, a * id,
+            ((cc * f) - (dd * e)) * id, ((b * e) - (a * f)) * id
+        ];
+        return true;
+    }
+
+    private static (double X, double Y) ApplyInv(double[] m, double px, double py) =>
+        ((m[0] * px) + (m[2] * py) + m[4], (m[1] * px) + (m[3] * py) + m[5]);
 
     // Scan-converts all current subpaths to device pixels and fills using the given winding
     // rule. Each subpath is treated as implicitly closed (PDF fills close open subpaths).
@@ -742,7 +909,7 @@ internal sealed class PageRenderer(
                 var xStart = (int)Math.Round(xs[i].X);
                 var xEnd = (int)Math.Round(xs[i + 1].X);
                 if (xEnd > xStart)
-                    buffer.FillSpan(y, xStart, xEnd - 1, fr, fg, fb);
+                    buffer.FillSpan(y, xStart, xEnd - 1, fr, fg, fb, _gs.FillA);
             }
         }
     }
@@ -756,15 +923,59 @@ internal sealed class PageRenderer(
         // bleeds outside its intended bounds. Use the CTM's average linear scale.
         var ctmScale = CtmAverageScale();
         var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
+
+        // Dash pattern: convert the user-space on/off lengths to device pixels once.
+        var dashPx = _gs.DashLengths.Length > 0
+            ? _gs.DashLengths.Select(d => Math.Max(0.0, d * ctmScale * scale)).ToArray()
+            : null;
+        // A pattern of all zeros means "solid" — ignore it.
+        if (dashPx is not null && dashPx.All(static d => d <= 0)) dashPx = null;
+
         foreach (var sub in _subpaths)
         {
             for (var i = 0; i + 1 < sub.Count; i++)
             {
                 var (x0, y0) = UToPixel(sub[i].X, sub[i].Y);
                 var (x1, y1) = UToPixel(sub[i + 1].X, sub[i + 1].Y);
-                buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
-                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx);
+                if (dashPx is null)
+                    buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
+                        _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA);
+                else
+                    DrawDashedLine(x0, y0, x1, y1, thickPx, dashPx);
             }
+        }
+    }
+
+    // Draws a line as a dash pattern by walking its length and emitting "on" sub-segments.
+    // dashPx alternates on/off lengths starting with "on"; an odd-length array repeats to
+    // form the full cycle (ISO 32000-1 §8.4.3.6). Phase is assumed 0 per segment.
+    private void DrawDashedLine(double x0, double y0, double x1, double y1, int thickPx, double[] dashPx)
+    {
+        var dx = x1 - x0;
+        var dy = y1 - y0;
+        var len = Math.Sqrt((dx * dx) + (dy * dy));
+        if (len < 1e-6) return;
+        var ux = dx / len;
+        var uy = dy / len;
+
+        var pos = 0.0;
+        var idx = 0;
+        var on = true;
+        while (pos < len)
+        {
+            var seg = dashPx[idx % dashPx.Length];
+            if (seg <= 0) { idx++; on = !on; continue; }
+            var end = Math.Min(len, pos + seg);
+            if (on)
+            {
+                var ax = x0 + (ux * pos); var ay = y0 + (uy * pos);
+                var bx = x0 + (ux * end); var by = y0 + (uy * end);
+                buffer.DrawLine((int)ax, (int)ay, (int)bx, (int)by,
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA);
+            }
+            pos = end;
+            idx++;
+            on = !on;
         }
     }
 
@@ -978,15 +1189,14 @@ internal sealed class PageRenderer(
     {
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
         _gs.FillR = _gs.FillG = _gs.FillB = v;
-        _gs.FillA = 255;
         _gs.FillIsPattern = false;
+        _gs.FillShadingName = null;
     }
 
     private void SetStrokeGray(double gray)
     {
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
         _gs.StrokeR = _gs.StrokeG = _gs.StrokeB = v;
-        _gs.StrokeA = 255;
     }
 
     private void SetFillRgb(double r, double g, double b)
@@ -994,8 +1204,8 @@ internal sealed class PageRenderer(
         _gs.FillR = (byte)Math.Clamp((int)(r * 255), 0, 255);
         _gs.FillG = (byte)Math.Clamp((int)(g * 255), 0, 255);
         _gs.FillB = (byte)Math.Clamp((int)(b * 255), 0, 255);
-        _gs.FillA = 255;
         _gs.FillIsPattern = false;
+        _gs.FillShadingName = null;
     }
 
     private void SetStrokeRgb(double r, double g, double b)
@@ -1003,6 +1213,5 @@ internal sealed class PageRenderer(
         _gs.StrokeR = (byte)Math.Clamp((int)(r * 255), 0, 255);
         _gs.StrokeG = (byte)Math.Clamp((int)(g * 255), 0, 255);
         _gs.StrokeB = (byte)Math.Clamp((int)(b * 255), 0, 255);
-        _gs.StrokeA = 255;
     }
 }

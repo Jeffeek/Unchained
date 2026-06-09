@@ -6,8 +6,9 @@ namespace Unchained.Pdf.Content;
 /// <summary>
 /// Walks a list of <see cref="ContentOperator"/> instances and extracts positioned text
 /// spans according to the PDF text object state machine (ISO 32000-1 §9.3–9.4).
-/// CTM is assumed to be identity (axis-aligned text only). Non-axis-aligned text is
-/// not handled in this milestone.
+/// Tracks the CTM (via <c>q</c>/<c>Q</c>/<c>cm</c>) and maps each text origin through it, so
+/// translated / rotated / scaled coordinate systems position text correctly. Span widths and
+/// font sizes are reported in device space (scaled by the CTM's average linear scale).
 /// </summary>
 internal static class TextExtractor
 {
@@ -45,13 +46,35 @@ internal static class TextExtractor
         var tl = 0.0; // leading
         var inText = false;
 
+        // Current transformation matrix [a b c d e f] and its save/restore stack.
+        // Text is positioned by Trm = TextMatrix × CTM, so the CTM must be tracked to place
+        // text correctly on rotated/scaled/translated pages (ISO 32000-1 §9.4.4).
+        var ctm = new[] { 1.0, 0, 0, 1, 0, 0 };
+        var ctmStack = new Stack<double[]>();
+
         foreach (var op in operators)
         {
             switch (op.Name)
             {
-                // ── Graphics state save/restore — reset text state on Q? No: Q only
-                // restores the graphics state stack, not the text state. We track it
-                // independently.
+                // ── Graphics state save/restore — Q restores the CTM (and clip, colour…),
+                // but NOT the text state, which we track independently.
+                case "q":
+                    ctmStack.Push((double[])ctm.Clone());
+                    break;
+                case "Q":
+                    if (ctmStack.Count > 0) ctm = ctmStack.Pop();
+                    break;
+                case "cm" when op.Operands.Count >= 6:
+                {
+                    double[] m =
+                    [
+                        ReadNumber(op.Operands[0]), ReadNumber(op.Operands[1]),
+                        ReadNumber(op.Operands[2]), ReadNumber(op.Operands[3]),
+                        ReadNumber(op.Operands[4]), ReadNumber(op.Operands[5])
+                    ];
+                    ctm = MultiplyMatrix(m, ctm); // cm pre-concatenates: CTM = m × CTM
+                    break;
+                }
 
                 // ── Text object ──────────────────────────────────────────────
                 case "BT":
@@ -207,6 +230,7 @@ internal static class TextExtractor
                             th,
                             ref tmE,
                             ref tmF,
+                            ctm,
                             spans
                         );
                     }
@@ -242,6 +266,7 @@ internal static class TextExtractor
                             th,
                             ref tmE,
                             ref tmF,
+                            ctm,
                             spans
                         );
                     }
@@ -279,6 +304,7 @@ internal static class TextExtractor
                             th,
                             ref tmE,
                             ref tmF,
+                            ctm,
                             spans
                         );
                     }
@@ -298,6 +324,7 @@ internal static class TextExtractor
                             th,
                             ref tmE,
                             ref tmF,
+                            ctm,
                             spans
                         );
                     }
@@ -359,6 +386,7 @@ internal static class TextExtractor
         double th,
         ref double tmE,
         ref double tmF,
+        double[] ctm,
         ICollection<TextSpan> spans
     )
     {
@@ -366,8 +394,10 @@ internal static class TextExtractor
             return;
 
         var text = System.Text.Encoding.Latin1.GetString(bytes);
-        var startX = tmE;
-        var startY = tmF;
+        // Text origin (tmE, tmF) is in user space; map through the CTM to device space so
+        // translated / rotated / scaled coordinate systems position text correctly.
+        var startX = (tmE * ctm[0]) + (tmF * ctm[2]) + ctm[4];
+        var startY = (tmE * ctm[1]) + (tmF * ctm[3]) + ctm[5];
         var totalAdvance = 0.0;
 
         foreach (var ch in text)
@@ -382,12 +412,15 @@ internal static class TextExtractor
 
         if (text.Length > 0)
         {
+            // Scale the reported width and font size by the CTM's average linear scale so
+            // downstream consumers see device-space magnitudes.
+            var ctmScale = CtmScale(ctm);
             spans.Add(new TextSpan(
                 text,
                 startX,
                 startY,
-                totalAdvance,
-                fontSize,
+                totalAdvance * ctmScale,
+                fontSize * ctmScale,
                 fontName)
             );
         }
@@ -402,6 +435,7 @@ internal static class TextExtractor
         double th,
         ref double tmE,
         ref double tmF,
+        double[] ctm,
         ICollection<TextSpan> spans
     )
     {
@@ -419,6 +453,7 @@ internal static class TextExtractor
                         th,
                         ref tmE,
                         ref tmF,
+                        ctm,
                         spans
                     );
                 break;
@@ -450,6 +485,26 @@ internal static class TextExtractor
         PdfReal r => r.Value,
         _ => 0
     };
+
+    // Row-major [a b c d e f] affine matrix multiply: result = m1 × m2 (apply m1 first).
+    private static double[] MultiplyMatrix(double[] m1, double[] m2) =>
+    [
+        (m1[0] * m2[0]) + (m1[1] * m2[2]),
+        (m1[0] * m2[1]) + (m1[1] * m2[3]),
+        (m1[2] * m2[0]) + (m1[3] * m2[2]),
+        (m1[2] * m2[1]) + (m1[3] * m2[3]),
+        (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
+        (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
+    ];
+
+    // Average linear scale of a CTM (geometric mean of the two basis-vector magnitudes).
+    private static double CtmScale(double[] m)
+    {
+        var sx = Math.Sqrt((m[0] * m[0]) + (m[1] * m[1]));
+        var sy = Math.Sqrt((m[2] * m[2]) + (m[3] * m[3]));
+        var s = Math.Sqrt(sx * sy);
+        return s > 1e-6 ? s : 1.0;
+    }
 
     // ── Plain text reconstruction from sorted spans ───────────────────────────
 

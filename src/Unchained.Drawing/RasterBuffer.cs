@@ -78,13 +78,13 @@ internal sealed class RasterBuffer(int width, int height)
 
     // Fills the inclusive horizontal span [x0, x1] on row y with an opaque colour.
     // Used by the scanline polygon rasteriser; clipped to the buffer bounds.
-    internal void FillSpan(int y, int x0, int x1, byte r, byte g, byte b)
+    internal void FillSpan(int y, int x0, int x1, byte r, byte g, byte b, byte a = 255)
     {
         if ((uint)y >= (uint)Height) return;
         var xa = Math.Max(0, x0);
         var xb = Math.Min(Width - 1, x1);
         for (var px = xa; px <= xb; px++)
-            SetPixel(px, y, r, g, b, 255);
+            SetPixel(px, y, r, g, b, a);
     }
 
     // Bresenham line with configurable thickness.
@@ -92,7 +92,8 @@ internal sealed class RasterBuffer(int width, int height)
     internal void DrawLine(
         int x0, int y0, int x1, int y1,
         byte r, byte g, byte b,
-        int thicknessPx = 1)
+        int thicknessPx = 1,
+        byte a = 255)
     {
         var dx = Math.Abs(x1 - x0);
         var dy = Math.Abs(y1 - y0);
@@ -105,7 +106,7 @@ internal sealed class RasterBuffer(int width, int height)
         {
             for (var ty = -half; ty <= half; ty++)
             for (var tx = -half; tx <= half; tx++)
-                SetPixel(x0 + tx, y0 + ty, r, g, b, 255);
+                SetPixel(x0 + tx, y0 + ty, r, g, b, a);
 
             if (x0 == x1 && y0 == y1)
                 break;
