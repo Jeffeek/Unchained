@@ -1,0 +1,25 @@
+using System.Xml.Linq;
+
+namespace Unchained.Pptx.Export;
+
+/// <summary>
+/// XML namespace constants for the OpenDocument Format (ODF / ISO-IEC 26300), used by the ODP
+/// reader and writer. Only the subset needed for presentations is declared here.
+/// </summary>
+internal static class OdfNames
+{
+    public static readonly XNamespace Office = "urn:oasis:names:tc:opendocument:xmlns:office:1.0";
+    public static readonly XNamespace Draw = "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0";
+    public static readonly XNamespace Text = "urn:oasis:names:tc:opendocument:xmlns:text:1.0";
+    public static readonly XNamespace Style = "urn:oasis:names:tc:opendocument:xmlns:style:1.0";
+    public static readonly XNamespace Fo = "urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0";
+    public static readonly XNamespace Svg = "urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0";
+    public static readonly XNamespace Presentation = "urn:oasis:names:tc:opendocument:xmlns:presentation:1.0";
+    public static readonly XNamespace Manifest = "urn:oasis:names:tc:opendocument:xmlns:manifest:1.0";
+    public static readonly XNamespace Meta = "urn:oasis:names:tc:opendocument:xmlns:meta:1.0";
+    public static readonly XNamespace XLink = "http://www.w3.org/1999/xlink";
+    public static readonly XNamespace Dc = "http://purl.org/dc/elements/1.1/";
+
+    /// <summary>The ODP package MIME type (also the content of the <c>mimetype</c> entry).</summary>
+    public const string PresentationMimeType = "application/vnd.oasis.opendocument.presentation";
+}

@@ -70,14 +70,25 @@ internal static class PptxToHtmlWriter
         sb.AppendLine("<body>");
         sb.AppendLine("<div class=\"slide\">");
 
-        WriteBackground(sb, slide, slideW, slideH);
-        foreach (var shape in slide.Shapes)
-            WriteShape(sb, shape, options);
+        WriteSlideContent(sb, slide, slideW, slideH, options);
 
         sb.AppendLine("</div>");
         sb.AppendLine("</body>");
         sb.AppendLine("</html>");
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Writes the inner content of a slide (background + shapes) into <paramref name="sb"/>,
+    /// without the surrounding document or <c>.slide</c> wrapper. Shared by the per-slide export
+    /// and the single-file HTML5 player.
+    /// </summary>
+    internal static void WriteSlideContent(
+        StringBuilder sb, Slide slide, double slideW, double slideH, HtmlSaveOptions options)
+    {
+        WriteBackground(sb, slide, slideW, slideH);
+        foreach (var shape in slide.Shapes)
+            WriteShape(sb, shape, options);
     }
 
     private static void WriteBackground(StringBuilder sb, Slide slide, double w, double h)
