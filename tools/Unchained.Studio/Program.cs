@@ -25,6 +25,7 @@ builder.Services.AddSingleton<PresentationProcessor>();
 builder.Services.AddScoped<SessionStateService>();
 builder.Services.AddScoped<RenderingService>();
 builder.Services.AddScoped<FileExportService>();
+builder.Services.AddScoped<ThemeService>();
 
 // Pdfium reference renderer — singleton (one Pdfium library per process)
 builder.Services.AddSingleton<PdfiumReferenceRenderer>();

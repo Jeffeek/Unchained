@@ -1,0 +1,98 @@
+@using Unchained.Pptx.Engine
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:460px; max-width:560px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.FindReplace" Class="mr-2" Style="vertical-align:middle;" />
+            Find &amp; Replace
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2" Style="opacity:.7;">
+                Replaces text across all slides — shapes, grouped shapes, and table cells — preserving
+                run formatting.
+            </MudText>
+
+            <MudTextField @bind-Value="_find" Label="Find" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Immediate="true" />
+            <MudTextField @bind-Value="_replace" Label="Replace with" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Immediate="true" />
+
+            <div>
+                <MudCheckBox @bind-Value="_matchCase" Color="Color.Primary" Dense="true">
+                    Match case
+                </MudCheckBox>
+                <MudCheckBox @bind-Value="_includeNotes" Color="Color.Primary" Dense="true">
+                    Include speaker notes
+                </MudCheckBox>
+            </div>
+
+            @if (_replaced.HasValue)
+            {
+                <MudAlert Severity="@(_replaced.Value > 0 ? Severity.Success : Severity.Info)" Dense="true">
+                    @(_replaced.Value > 0
+                        ? $"Replaced {_replaced.Value} occurrence(s)."
+                        : "No occurrences found.")
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Close</MudButton>
+        <MudButton OnClick="ReplaceAll" Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@(string.IsNullOrEmpty(_find) || _busy)"
+                   StartIcon="@Icons.Material.Outlined.DoneAll">
+            Replace all
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public PresentationDocument Document { get; set; } = default!;
+
+    /// <summary>Invoked after a successful replace so the host can refresh the session/tree.</summary>
+    [Parameter] public EventCallback OnReplaced { get; set; }
+
+    private string _find = string.Empty;
+    private string _replace = string.Empty;
+    private bool _matchCase;
+    private bool _includeNotes;
+    private int? _replaced;
+    private bool _busy;
+
+    private async Task ReplaceAll()
+    {
+        if (string.IsNullOrEmpty(_find)) return;
+
+        _busy = true;
+        StateHasChanged();
+        try
+        {
+            var comparison = _matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            _replaced = Document.ReplaceText(_find, _replace, comparison, _includeNotes);
+
+            if (_replaced > 0)
+            {
+                Snackbar.Add($"Replaced {_replaced} occurrence(s).", Severity.Success);
+                await OnReplaced.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Replace failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel() => MudDialog.Close();
+}

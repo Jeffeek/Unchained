@@ -1,0 +1,102 @@
+@using Unchained.Pptx.Engine
+@using Unchained.Pptx.Shapes
+
+<MudDialog Style="min-width:560px; max-width:760px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Link" Class="mr-2" Style="vertical-align:middle;" />
+            Hyperlinks
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        @if (_links.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No shape hyperlinks found in this presentation.
+            </MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Style="opacity:.7;" Class="mb-2">
+                @_links.Count hyperlink(s) across the deck. Click a row to jump to its slide.
+            </MudText>
+            <MudSimpleTable Dense="true" Hover="true" Striped="true" Style="max-height:420px;overflow:auto;">
+                <thead>
+                    <tr>
+                        <th style="width:64px;">Slide</th>
+                        <th style="width:160px;">Shape</th>
+                        <th>Target</th>
+                        <th style="width:140px;">Tooltip</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _links)
+                    {
+                        <tr style="cursor:pointer;" @onclick="() => Navigate(row.SlideNumber)">
+                            <td>@row.SlideNumber</td>
+                            <td>@(string.IsNullOrEmpty(row.ShapeName) ? "(unnamed)" : row.ShapeName)</td>
+                            <td>
+                                <MudIcon Icon="@row.Icon" Size="Size.Small"
+                                         Style="vertical-align:middle;margin-right:4px;" />
+                                @row.Target
+                            </td>
+                            <td>@row.Tooltip</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public PresentationDocument Document { get; set; } = default!;
+
+    /// <summary>Invoked with a 1-based slide number when a row is clicked.</summary>
+    [Parameter] public EventCallback<int> OnNavigate { get; set; }
+
+    private readonly List<LinkRow> _links = [];
+
+    protected override void OnInitialized()
+    {
+        // Map each slide to its 1-based number so we can label the rows.
+        var numberBySlide = new Dictionary<object, int>();
+        for (var i = 0; i < Document.Slides.Count; i++)
+            numberBySlide[Document.Slides[i]] = i + 1;
+
+        foreach (var link in Document.GetHyperlinks())
+        {
+            var action = link.Action;
+            var (target, icon) = action.Url is { Length: > 0 } url
+                ? (url, Icons.Material.Outlined.OpenInNew)
+                : action.TargetSlideNumber is { } n
+                    ? ($"Slide {n}", Icons.Material.Outlined.Slideshow)
+                    : ("(no target)", Icons.Material.Outlined.LinkOff);
+
+            _links.Add(new LinkRow(
+                numberBySlide.TryGetValue(link.Slide, out var num) ? num : 0,
+                link.Shape.Name,
+                target,
+                action.Tooltip ?? string.Empty,
+                icon));
+        }
+    }
+
+    private async Task Navigate(int slideNumber)
+    {
+        if (slideNumber >= 1)
+            await OnNavigate.InvokeAsync(slideNumber);
+        MudDialog.Close();
+    }
+
+    private void Close() => MudDialog.Close();
+
+    private sealed record LinkRow(int SlideNumber, string ShapeName, string Target, string Tooltip, string Icon);
+}

@@ -109,9 +109,6 @@
     [Parameter] public string FileName { get; set; } = "presentation.pptx";
     [Parameter] public int CurrentSlide { get; set; } = 1;
 
-    private enum Phase { Configure, Running, Done }
-    private enum SlideScope { Current, All }
-
     private SlideScope _scope = SlideScope.All;
     private int _width = 1920;
     private bool _includeReferenceSlot = true;

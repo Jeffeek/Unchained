@@ -1,0 +1,225 @@
+@using System.IO.Compression
+@using Unchained.Pptx.Engine
+@using Unchained.Pptx.Export
+@inject FileExportService Exporter
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:480px; max-width:640px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.FileDownload" Class="mr-2" Style="vertical-align:middle;" />
+            Export Presentation
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        @if (_phase == Phase.Configure)
+        {
+            <MudStack Spacing="4">
+                <MudText Typo="Typo.body2" Style="opacity:.7;">
+                    Convert <strong>@FileName</strong> with the Unchained engine.
+                </MudText>
+
+                <MudSelect T="ExportFormat" @bind-Value="_format" Label="Format"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="ExportFormat.Pdf">PDF — fixed-layout document</MudSelectItem>
+                    <MudSelectItem Value="ExportFormat.HtmlPlayer">HTML5 player — single navigable file</MudSelectItem>
+                    <MudSelectItem Value="ExportFormat.Odp">ODP — OpenDocument Presentation</MudSelectItem>
+                    <MudSelectItem Value="ExportFormat.HtmlPerSlide">HTML — one page per slide (ZIP)</MudSelectItem>
+                </MudSelect>
+
+                <div>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">Options</MudText>
+                    <MudCheckBox @bind-Value="_includeHidden" Color="Color.Primary" Dense="true">
+                        Include hidden slides
+                    </MudCheckBox>
+
+                    @if (_format == ExportFormat.Pdf)
+                    {
+                        <MudCheckBox @bind-Value="_includeNotes" Color="Color.Primary" Dense="true">
+                            Append speaker notes
+                        </MudCheckBox>
+                        <MudCheckBox @bind-Value="_accessiblePdf" Color="Color.Primary" Dense="true">
+                            Tagged / accessible PDF (PDF/UA)
+                        </MudCheckBox>
+                    }
+                    @if (_format == ExportFormat.HtmlPlayer)
+                    {
+                        <MudCheckBox @bind-Value="_showCounter" Color="Color.Primary" Dense="true">
+                            Show slide counter
+                        </MudCheckBox>
+                    }
+                </div>
+
+                <MudText Typo="Typo.caption" Style="opacity:.55;">
+                    @FormatHint(_format)
+                </MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="3" Style="min-width:420px;">
+                <MudProgressLinear Indeterminate="@(_phase == Phase.Running)"
+                                   Value="100" Color="Color.Primary" Rounded="true" />
+                <MudText Typo="Typo.body2">@_message</MudText>
+            </MudStack>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        @if (_phase == Phase.Configure)
+        {
+            <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+            <MudButton OnClick="StartExport" Color="Color.Primary" Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Outlined.FileDownload">
+                Export
+            </MudButton>
+        }
+        else if (_phase == Phase.Done)
+        {
+            <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Close</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public PresentationProcessor Processor { get; set; } = default!;
+    [Parameter] public PresentationDocument Document { get; set; } = default!;
+    [Parameter] public string FileName { get; set; } = "presentation.pptx";
+
+    private ExportFormat _format = ExportFormat.Pdf;
+    private bool _includeHidden;
+    private bool _includeNotes;
+    private bool _accessiblePdf;
+    private bool _showCounter = true;
+
+    private Phase _phase = Phase.Configure;
+    private string _message = string.Empty;
+
+    private string BaseName => Path.GetFileNameWithoutExtension(FileName);
+
+    private static string FormatHint(ExportFormat f) => f switch
+    {
+        ExportFormat.Pdf => "Each slide becomes one PDF page at the slide's dimensions.",
+        ExportFormat.HtmlPlayer => "A single self-contained .html with keyboard/click navigation, counter, and fullscreen.",
+        ExportFormat.Odp => "Structural OpenDocument export — slides, shapes, text, and images.",
+        ExportFormat.HtmlPerSlide => "One .html file per slide, packaged into a ZIP.",
+        _ => string.Empty,
+    };
+
+    private async Task StartExport()
+    {
+        _phase = Phase.Running;
+        _message = "Exporting…";
+        StateHasChanged();
+
+        try
+        {
+            switch (_format)
+            {
+                case ExportFormat.Pdf:
+                    await ExportPdf();
+                    break;
+                case ExportFormat.HtmlPlayer:
+                    await ExportHtmlPlayer();
+                    break;
+                case ExportFormat.Odp:
+                    await ExportOdp();
+                    break;
+                case ExportFormat.HtmlPerSlide:
+                    await ExportHtmlZip();
+                    break;
+            }
+
+            _phase = Phase.Done;
+            _message = "Export complete — download started.";
+        }
+        catch (DllNotFoundException)
+        {
+            _phase = Phase.Done;
+            _message = "Rendering native (FreeType) not found. PDF export needs scripts/FetchNatives/fetch-natives.";
+            Snackbar.Add(_message, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            _phase = Phase.Done;
+            _message = $"Export failed: {ex.Message}";
+            Snackbar.Add(_message, Severity.Error);
+        }
+        StateHasChanged();
+    }
+
+    private async Task ExportPdf()
+    {
+        var options = new PdfSaveOptions
+        {
+            IncludeHiddenSlides = _includeHidden,
+            IncludeNotes = _includeNotes,
+            AccessiblePdf = _accessiblePdf,
+        };
+        using var ms = new MemoryStream();
+        await Processor.SaveAsPdfAsync(Document, ms, options);
+        await Exporter.TriggerDownloadAsync(ms.ToArray(), $"{BaseName}.pdf", "application/pdf");
+    }
+
+    private async Task ExportHtmlPlayer()
+    {
+        var options = new HtmlPlayerSaveOptions
+        {
+            IncludeHiddenSlides = _includeHidden,
+            ShowSlideCounter = _showCounter,
+            Title = BaseName,
+        };
+        var bytes = await Processor.ExportHtmlPlayerAsync(Document, options);
+        await Exporter.TriggerDownloadAsync(bytes, $"{BaseName}-player.html", "text/html");
+    }
+
+    private async Task ExportOdp()
+    {
+        var options = new OdpSaveOptions { IncludeHiddenSlides = _includeHidden };
+        var bytes = await Processor.ExportOdpAsync(Document, options);
+        await Exporter.TriggerDownloadAsync(
+            bytes, $"{BaseName}.odp", "application/vnd.oasis.opendocument.presentation");
+    }
+
+    private async Task ExportHtmlZip()
+    {
+        var options = new HtmlSaveOptions { IncludeHiddenSlides = _includeHidden, EmbedImages = true };
+        // Render to a temp directory, then zip the files for a single download.
+        var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        try
+        {
+            var files = await Processor.SaveAsHtmlAsync(Document, dir, options);
+            var entries = new List<(string Path, byte[] Data)>();
+            foreach (var path in files)
+                entries.Add((Path.GetFileName(path), await File.ReadAllBytesAsync(path)));
+
+            var zip = BuildZip(entries);
+            await Exporter.TriggerDownloadAsync(zip, $"{BaseName}-html.zip", "application/zip");
+        }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (path, data) in entries)
+            {
+                var entry = zip.CreateEntry(path, CompressionLevel.Optimal);
+                using var stream = entry.Open();
+                stream.Write(data);
+            }
+        }
+        return ms.ToArray();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+    private void Close() => MudDialog.Close();
+}
