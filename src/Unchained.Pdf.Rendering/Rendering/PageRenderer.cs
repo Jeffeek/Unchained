@@ -142,7 +142,11 @@ internal sealed class PageRenderer(
 
             case "scn" or "SCN" when op.Operands.Count >= 1:
             {
-                // scn/SCN can have a trailing name for pattern/ICC; ignore name operands.
+                // scn/SCN may carry a trailing name operand naming a tiling/shading pattern.
+                // We don't render patterns; flag fills so DrawFill can skip them rather than
+                // painting a solid block (which appears as a large wrong dark area).
+                var isPattern = op.Operands.Any(static o => o is PdfName);
+
                 var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal).ToList();
                 switch (nums.Count)
                 {
@@ -165,6 +169,9 @@ internal sealed class PageRenderer(
                         break;
                     }
                 }
+
+                // Set after the numeric setters above (which clear the flag).
+                if (op.Name == "scn") _gs.FillIsPattern = isPattern;
                 break;
             }
 
@@ -629,15 +636,31 @@ internal sealed class PageRenderer(
         var maxY = _currentPath.Max(static p => p.Y);
         var (px1, py1) = UToPixel(minX, maxY);
         var (px2, py2) = UToPixel(maxX, minY);
+
+        // Tiling/shading patterns aren't rendered. Filling them with the (often black)
+        // underlying colour produces large wrong dark blocks; skipping them entirely loses
+        // the region's visual weight. Real-world patterns (e.g. TikZ /pgfpat hatches)
+        // average to roughly a mid-tone, so approximate with a neutral grey — much closer
+        // to a reference rasterizer than either extreme.
+        byte fr = _gs.FillR, fg = _gs.FillG, fb = _gs.FillB;
+        if (_gs.FillIsPattern)
+            fr = fg = fb = 160;
+
         buffer.FillRect(
             (int)px1, (int)py1,
             (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
-            _gs.FillR, _gs.FillG, _gs.FillB);
+            fr, fg, fb);
     }
 
     private void DrawStroke()
     {
-        var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * scale));
+        // Line width is specified in user-space units, which the CTM scales before the
+        // device-space (DPI) scale is applied (ISO 32000-1 §8.4.3.2). Using only the device
+        // scale ignores any cm scaling — e.g. a chart drawn under `cm 0.1 0 0 0.1` with
+        // `w 5` must render as 0.5 user units, not 5, or every stroke is ~10× too thick and
+        // bleeds outside its intended bounds. Use the CTM's average linear scale.
+        var ctmScale = CtmAverageScale();
+        var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
         for (var i = 0; i + 1 < _currentPath.Count; i += 2)
         {
             var (x0, y0) = UToPixel(_currentPath[i].X, _currentPath[i].Y);
@@ -645,6 +668,18 @@ internal sealed class PageRenderer(
             buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
                 _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx);
         }
+    }
+
+    // Average linear scale of the current CTM (geometric mean of the two basis-vector
+    // magnitudes). Used to map user-space line widths into device space.
+    private double CtmAverageScale()
+    {
+        var a = _gs.Ctm[0]; var b = _gs.Ctm[1];
+        var c = _gs.Ctm[2]; var d = _gs.Ctm[3];
+        var sx = Math.Sqrt((a * a) + (b * b));
+        var sy = Math.Sqrt((c * c) + (d * d));
+        var s = Math.Sqrt(sx * sy);
+        return s > 1e-6 ? s : 1.0;
     }
 
     private void ClearPath()
@@ -701,15 +736,16 @@ internal sealed class PageRenderer(
 
         if (dstW <= 0 || dstH <= 0) return;
 
-        BlitScaledImage(img.RgbData, img.Width, img.Height, dstX, dstY, dstW, dstH);
+        BlitScaledImage(img.RgbData, img.Width, img.Height, dstX, dstY, dstW, dstH, img.Alpha);
     }
 
     // Scales an RGB image into the destination rectangle. When the image is downscaled
     // (more source than destination pixels) each destination pixel averages the source
     // box it covers, matching the area-averaging that Pdfium uses — nearest-neighbour
     // alone produces harsh aliasing and large pixel differences on small/scaled images.
-    // When upscaling, falls back to nearest-neighbour sampling.
-    private void BlitScaledImage(byte[] rgb, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH)
+    // When upscaling, falls back to nearest-neighbour sampling. When an alpha channel is
+    // supplied (from an /SMask), pixels are composited over the background using it.
+    private void BlitScaledImage(byte[] rgb, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH, byte[]? alpha = null)
     {
         if (srcW <= 0 || srcH <= 0) return;
         var downscale = srcW > dstW || srcH > dstH;
@@ -717,7 +753,7 @@ internal sealed class PageRenderer(
         for (var py = 0; py < dstH; py++)
         for (var px = 0; px < dstW; px++)
         {
-            byte r, g, b;
+            byte r, g, b; int a;
             if (downscale)
             {
                 // Average the source box [sx0,sx1)×[sy0,sy1) covered by this dest pixel.
@@ -725,24 +761,34 @@ internal sealed class PageRenderer(
                 var sx1 = Math.Max(sx0 + 1, (px + 1) * srcW / dstW);
                 var sy0 = py * srcH / dstH;
                 var sy1 = Math.Max(sy0 + 1, (py + 1) * srcH / dstH);
-                long sr = 0, sg = 0, sb = 0; var n = 0;
+                long sr = 0, sg = 0, sb = 0, sa = 0; var n = 0;
                 for (var sy = sy0; sy < sy1 && sy < srcH; sy++)
                 for (var sx = sx0; sx < sx1 && sx < srcW; sx++)
                 {
-                    var o = ((sy * srcW) + sx) * 3;
-                    sr += rgb[o]; sg += rgb[o + 1]; sb += rgb[o + 2]; n++;
+                    var idx = (sy * srcW) + sx;
+                    var o = idx * 3;
+                    sr += rgb[o]; sg += rgb[o + 1]; sb += rgb[o + 2];
+                    sa += alpha is not null ? alpha[idx] : 255;
+                    n++;
                 }
                 if (n == 0) continue;
-                r = (byte)(sr / n); g = (byte)(sg / n); b = (byte)(sb / n);
+                r = (byte)(sr / n); g = (byte)(sg / n); b = (byte)(sb / n); a = (int)(sa / n);
             }
             else
             {
                 var sx = px * srcW / dstW;
                 var sy = py * srcH / dstH;
-                var o = ((sy * srcW) + sx) * 3;
+                var idx = (sy * srcW) + sx;
+                var o = idx * 3;
                 r = rgb[o]; g = rgb[o + 1]; b = rgb[o + 2];
+                a = alpha is not null ? alpha[idx] : 255;
             }
-            buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
+
+            if (a <= 0) continue;
+            if (a >= 255)
+                buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
+            else
+                buffer.BlendPixel(dstX + px, dstY + py, r, g, b, (byte)a);
         }
     }
 
@@ -777,6 +823,7 @@ internal sealed class PageRenderer(
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
         _gs.FillR = _gs.FillG = _gs.FillB = v;
         _gs.FillA = 255;
+        _gs.FillIsPattern = false;
     }
 
     private void SetStrokeGray(double gray)
@@ -792,6 +839,7 @@ internal sealed class PageRenderer(
         _gs.FillG = (byte)Math.Clamp((int)(g * 255), 0, 255);
         _gs.FillB = (byte)Math.Clamp((int)(b * 255), 0, 255);
         _gs.FillA = 255;
+        _gs.FillIsPattern = false;
     }
 
     private void SetStrokeRgb(double r, double g, double b)

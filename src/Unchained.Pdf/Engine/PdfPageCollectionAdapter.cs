@@ -625,10 +625,52 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 rgb = BuildGrayPlaceholder(w, h);
             }
 
-            result[key] = new ImageXObject(w, h, rgb);
+            var alpha = ReadSoftMask(stream.Dictionary, w, h);
+            result[key] = new ImageXObject(w, h, rgb, alpha);
         }
 
         return result;
+    }
+
+    // Decodes an image's /SMask soft mask into a per-pixel alpha channel (W×H bytes,
+    // 0 = transparent, 255 = opaque), resampled to the base image's dimensions. The SMask
+    // is a DeviceGray image whose samples are the alpha values (§11.6.5.2). Returns null
+    // when there is no soft mask or it cannot be decoded.
+    private byte[]? ReadSoftMask(PdfDictionary imageDict, int baseW, int baseH)
+    {
+        var smRef = imageDict[PdfName.Get("SMask")];
+        if (smRef is PdfIndirectReference r)
+            smRef = core.ResolveIndirect(r.ObjectNumber).Value;
+        if (smRef is not PdfStream smStream)
+            return null;
+
+        try
+        {
+            var smw = (int)(smStream.Dictionary.Get<PdfInteger>(PdfName.Get("Width"))?.Value ?? 0);
+            var smh = (int)(smStream.Dictionary.Get<PdfInteger>(PdfName.Get("Height"))?.Value ?? 0);
+            if (smw <= 0 || smh <= 0)
+                return null;
+
+            var smBpc = (int)(smStream.Dictionary.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 8);
+            var smDecode = ReadDecodeArray(smStream.Dictionary);
+            // Decode as DeviceGray then take one channel per pixel as the alpha value.
+            var smRgb = DecodeImageToRgb(StreamFilters.Decode(smStream), smw, smh, "DeviceGray", smBpc, smDecode);
+
+            var alpha = new byte[baseW * baseH];
+            for (var y = 0; y < baseH; y++)
+            for (var x = 0; x < baseW; x++)
+            {
+                // Nearest-neighbour resample the mask to the base image grid.
+                var sx = smw == baseW ? x : x * smw / baseW;
+                var sy = smh == baseH ? y : y * smh / baseH;
+                alpha[(y * baseW) + x] = smRgb[(((sy * smw) + sx) * 3)];
+            }
+            return alpha;
+        }
+        catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
@@ -1029,7 +1071,9 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         }
 
         // DeviceGray 1 bpc (bi-level / CCITTFax) — unpack bit rows to RGB.
-        // PDF convention: sample 0 = minimum = white (paper), 1 = maximum = black (ink).
+        // DeviceGray with the default Decode [0 1]: sample 0 → 0.0 (black), sample 1 → 1.0
+        // (white). The CCITTFaxDecode filter already applies its /BlackIs1 flag when
+        // producing these samples, so here we only honour the image's own /Decode array.
         if (cs == "DeviceGray" && bpc == 1)
         {
             // /Decode default for 1bpc is [0.0 1.0]; [1.0 0.0] inverts black/white.
@@ -1044,7 +1088,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 if (byteIdx >= span.Length) break;
                 var bit = (span[byteIdx] >> (7 - (col & 7))) & 1;
                 if (invertBits) bit = 1 - bit;
-                var val = (byte)(bit == 0 ? 255 : 0); // 0=white paper, 1=black ink
+                var val = (byte)(bit == 0 ? 0 : 255); // 0=black, 1=white (DeviceGray)
                 var j   = ((row * w) + col) * 3;
                 rgb[j] = rgb[j + 1] = rgb[j + 2] = val;
             }
