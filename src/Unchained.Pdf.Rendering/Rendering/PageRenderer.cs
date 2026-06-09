@@ -23,10 +23,18 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null
 )
 {
-    private readonly List<(double X, double Y)> _currentPath = [];
+    // Current path as a list of subpaths, each a polyline of user-space points. A new `m`
+    // (or `re`) starts a new subpath; `l`/`c`/`v`/`y` append to the current one. This
+    // preserves multiple subpaths (needed for polygon fills with holes and for stroking
+    // disjoint figures) — the previous segment-pair model kept only the last subpath.
+    private readonly List<List<(double X, double Y)>> _subpaths = [];
+    private List<(double X, double Y)>? _curSub;
     private (double X, double Y) _pathStart;
     private (double X, double Y) _currentPoint;
     private bool _inPath;
+    // Set by W/W*; the clip is applied (intersected into the graphics state) when the
+    // current path is next cleared by a painting/no-op operator.
+    private bool _pendingClip;
 
     private readonly Stack<GraphicsState> _gsStack = new();
     // Apply the initial CTM from the renderer (encodes page rotation + coordinate origin).
@@ -75,6 +83,8 @@ internal sealed class PageRenderer(
             case "Q":
             {
                 if (_gsStack.Count > 0) _gs = _gsStack.Pop();
+                // Restore the buffer clip to match the restored graphics state.
+                SyncClip();
                 break;
             }
             case "cm" when op.Operands.Count >= 6:
@@ -193,12 +203,7 @@ internal sealed class PageRenderer(
                 break;
             case "h":
             {
-                if (_inPath)
-                {
-                    _currentPath.Add(_currentPoint);
-                    _currentPath.Add(_pathStart);
-                    _currentPoint = _pathStart;
-                }
+                PathClose();
                 break;
             }
             case "re" when op.Operands.Count >= 4:
@@ -208,24 +213,34 @@ internal sealed class PageRenderer(
             // ── Path painting ─────────────────────────────────────────────────
             case "S": DrawStroke(); ClearPath(); break;
             case "s":
-                _currentPath.Add(_currentPoint);
-                _currentPath.Add(_pathStart);
+                PathClose();
                 DrawStroke();
                 ClearPath();
                 break;
-            case "f" or "F" or "f*": DrawFill(); ClearPath(); break;
-            case "B" or "B*": DrawFill(); DrawStroke(); ClearPath(); break;
-            case "b" or "b*":
-                _currentPath.Add(_currentPoint);
-                _currentPath.Add(_pathStart);
-                DrawFill();
+            case "f" or "F": DrawFill(evenOdd: false); ClearPath(); break;
+            case "f*": DrawFill(evenOdd: true); ClearPath(); break;
+            case "B": DrawFill(evenOdd: false); DrawStroke(); ClearPath(); break;
+            case "B*": DrawFill(evenOdd: true); DrawStroke(); ClearPath(); break;
+            case "b":
+                PathClose();
+                DrawFill(evenOdd: false);
+                DrawStroke();
+                ClearPath();
+                break;
+            case "b*":
+                PathClose();
+                DrawFill(evenOdd: true);
                 DrawStroke();
                 ClearPath();
                 break;
             case "n": ClearPath(); break;
 
-            // ── Clip (consume; clipping not implemented yet) ──────────────────
-            case "W" or "W*": ClearPath(); break;
+
+            // ── Clip ──────────────────────────────────────────────────────────
+            // W/W* set the clip to the current path; it takes effect AFTER the next
+            // painting operator (ISO 32000-1 §8.5.4). We record a pending clip (the path's
+            // device-space bounding box) and apply it when the path is cleared.
+            case "W" or "W*": _pendingClip = true; break;
 
             // ── Marked content (consume) ──────────────────────────────────────
             case "BMC" or "BDC" or "EMC" or "MP" or "DP": break;
@@ -587,32 +602,35 @@ internal sealed class PageRenderer(
 
     private void PathMoveTo(double x, double y)
     {
-        _currentPath.Clear();
+        // Start a new subpath. Does NOT clear earlier subpaths (a path may contain several).
+        _curSub = [(x, y)];
+        _subpaths.Add(_curSub);
         _pathStart = _currentPoint = (x, y);
         _inPath = true;
     }
 
     private void PathLineTo(double x, double y)
     {
-        _currentPath.Add(_currentPoint);
-        _currentPath.Add((x, y));
+        if (_curSub is null) { PathMoveTo(x, y); return; }
+        _curSub.Add((x, y));
         _currentPoint = (x, y);
     }
 
     // ReSharper disable once BadListLineBreaks
     private void PathRect(double x, double y, double w, double h)
     {
+        // A rectangle is its own closed subpath (ISO 32000-1 §8.5.2.1).
         PathMoveTo(x, y);
-        PathLineTo(x + w, y);
-        PathLineTo(x + w, y + h);
-        PathLineTo(x, y + h);
-        _currentPath.Add(_currentPoint);
-        _currentPath.Add(_pathStart);
-        _currentPoint = _pathStart;
+        _curSub!.Add((x + w, y));
+        _curSub.Add((x + w, y + h));
+        _curSub.Add((x, y + h));
+        _curSub.Add((x, y)); // close
+        _currentPoint = (x, y);
     }
 
     private void PathCurveTo(double x1, double y1, double x2, double y2, double x3, double y3)
     {
+        if (_curSub is null) PathMoveTo(_currentPoint.X, _currentPoint.Y);
         var p0 = _currentPoint;
         for (var t = 1; t <= 8; t++)
         {
@@ -620,36 +638,113 @@ internal sealed class PageRenderer(
             var u  = 1 - s;
             var bx = (u * u * u * p0.X) + (3 * u * u * s * x1) + (3 * u * s * s * x2) + (s * s * s * x3);
             var by = (u * u * u * p0.Y) + (3 * u * u * s * y1) + (3 * u * s * s * y2) + (s * s * s * y3);
-            _currentPath.Add(_currentPoint);
-            _currentPath.Add((bx, by));
+            _curSub!.Add((bx, by));
             _currentPoint = (bx, by);
         }
     }
 
-    private void DrawFill()
+    private void PathClose()
     {
-        if (!IsRectanglePath()) return;
+        if (_inPath && _curSub is { Count: > 0 })
+        {
+            _curSub.Add(_pathStart);
+            _currentPoint = _pathStart;
+        }
+    }
 
-        var minX = _currentPath.Min(static p => p.X);
-        var minY = _currentPath.Min(static p => p.Y);
-        var maxX = _currentPath.Max(static p => p.X);
-        var maxY = _currentPath.Max(static p => p.Y);
-        var (px1, py1) = UToPixel(minX, maxY);
-        var (px2, py2) = UToPixel(maxX, minY);
+    // Fills the current path. evenOdd selects the even-odd rule (f*/B*/b*) vs the default
+    // nonzero winding rule (f/F/B/b). A single axis-aligned rectangle uses a fast FillRect
+    // path; everything else is scan-converted as a polygon (all subpaths together).
+    private void DrawFill(bool evenOdd)
+    {
+        if (_subpaths.Count == 0) return;
 
+        byte fr = _gs.FillR, fg = _gs.FillG, fb = _gs.FillB;
         // Tiling/shading patterns aren't rendered. Filling them with the (often black)
         // underlying colour produces large wrong dark blocks; skipping them entirely loses
         // the region's visual weight. Real-world patterns (e.g. TikZ /pgfpat hatches)
-        // average to roughly a mid-tone, so approximate with a neutral grey — much closer
-        // to a reference rasterizer than either extreme.
-        byte fr = _gs.FillR, fg = _gs.FillG, fb = _gs.FillB;
+        // average to roughly a mid-tone, so approximate with a neutral grey.
         if (_gs.FillIsPattern)
             fr = fg = fb = 160;
 
-        buffer.FillRect(
-            (int)px1, (int)py1,
-            (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
-            fr, fg, fb);
+        if (TryGetRectangle(out var rminX, out var rminY, out var rmaxX, out var rmaxY))
+        {
+            var (px1, py1) = UToPixel(rminX, rmaxY);
+            var (px2, py2) = UToPixel(rmaxX, rminY);
+            buffer.FillRect(
+                (int)px1, (int)py1,
+                (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
+                fr, fg, fb);
+            return;
+        }
+
+        FillPolygon(evenOdd, fr, fg, fb);
+    }
+
+    // Scan-converts all current subpaths to device pixels and fills using the given winding
+    // rule. Each subpath is treated as implicitly closed (PDF fills close open subpaths).
+    private void FillPolygon(bool evenOdd, byte fr, byte fg, byte fb)
+    {
+        // Flatten every subpath to device-space points and find the vertical extent.
+        var polys = new List<(double X, double Y)[]>(_subpaths.Count);
+        var minY = double.MaxValue; var maxY = double.MinValue;
+        foreach (var sub in _subpaths)
+        {
+            if (sub.Count < 2) continue;
+            var pts = new (double X, double Y)[sub.Count];
+            for (var i = 0; i < sub.Count; i++)
+            {
+                var (px, py) = UToPixel(sub[i].X, sub[i].Y);
+                pts[i] = (px, py);
+                if (py < minY) minY = py;
+                if (py > maxY) maxY = py;
+            }
+            polys.Add(pts);
+        }
+        if (polys.Count == 0) return;
+
+        var y0 = Math.Max(0, (int)Math.Floor(minY));
+        var y1 = Math.Min(buffer.Height - 1, (int)Math.Ceiling(maxY));
+
+        // For each scanline, collect edge crossings (x, winding direction), then fill the
+        // spans selected by the winding rule. Sample at pixel centres (y + 0.5).
+        var xs = new List<(double X, int Dir)>();
+        for (var y = y0; y <= y1; y++)
+        {
+            var sy = y + 0.5;
+            xs.Clear();
+            foreach (var pts in polys)
+            {
+                var n = pts.Length;
+                for (var i = 0; i < n; i++)
+                {
+                    var (ax, ay) = pts[i];
+                    var (bx, by) = pts[(i + 1) % n]; // implicit close
+                    if (ay == by) continue; // horizontal edge contributes no crossing
+                    // Half-open [min,max) so shared vertices aren't double-counted.
+                    if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
+                    {
+                        var t = (sy - ay) / (by - ay);
+                        var cx = ax + (t * (bx - ax));
+                        xs.Add((cx, by > ay ? 1 : -1));
+                    }
+                }
+            }
+            if (xs.Count < 2) continue;
+            xs.Sort(static (p, q) => p.X.CompareTo(q.X));
+
+            var wind = 0;
+            for (var i = 0; i < xs.Count - 1; i++)
+            {
+                wind += xs[i].Dir;
+                var inside = evenOdd ? ((i + 1) & 1) == 1 : wind != 0;
+                if (!inside) continue;
+                var xStart = (int)Math.Round(xs[i].X);
+                var xEnd = (int)Math.Round(xs[i + 1].X);
+                if (xEnd > xStart)
+                    buffer.FillSpan(y, xStart, xEnd - 1, fr, fg, fb);
+            }
+        }
     }
 
     private void DrawStroke()
@@ -661,12 +756,15 @@ internal sealed class PageRenderer(
         // bleeds outside its intended bounds. Use the CTM's average linear scale.
         var ctmScale = CtmAverageScale();
         var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
-        for (var i = 0; i + 1 < _currentPath.Count; i += 2)
+        foreach (var sub in _subpaths)
         {
-            var (x0, y0) = UToPixel(_currentPath[i].X, _currentPath[i].Y);
-            var (x1, y1) = UToPixel(_currentPath[i + 1].X, _currentPath[i + 1].Y);
-            buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
-                _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx);
+            for (var i = 0; i + 1 < sub.Count; i++)
+            {
+                var (x0, y0) = UToPixel(sub[i].X, sub[i].Y);
+                var (x1, y1) = UToPixel(sub[i + 1].X, sub[i + 1].Y);
+                buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx);
+            }
         }
     }
 
@@ -684,16 +782,74 @@ internal sealed class PageRenderer(
 
     private void ClearPath()
     {
-        _currentPath.Clear();
+        if (_pendingClip)
+        {
+            ApplyPendingClip();
+            _pendingClip = false;
+        }
+        _subpaths.Clear();
+        _curSub = null;
         _inPath = false;
     }
 
-    private bool IsRectanglePath()
+    // Computes the device-space bounding box of the current path and intersects it into the
+    // graphics-state clip rectangle. Called when a path with a pending W/W* is cleared.
+    private void ApplyPendingClip()
     {
-        if (_currentPath.Count < 4) return false;
-        var xs = _currentPath.Select(static p => p.X).Distinct().Count();
-        var ys = _currentPath.Select(static p => p.Y).Distinct().Count();
-        return xs == 2 && ys == 2;
+        var minX = double.MaxValue; var minY = double.MaxValue;
+        var maxX = double.MinValue; var maxY = double.MinValue;
+        var any = false;
+        foreach (var sub in _subpaths)
+        foreach (var (ux, uy) in sub)
+        {
+            var (px, py) = UToPixel(ux, uy);
+            if (px < minX) minX = px;
+            if (py < minY) minY = py;
+            if (px > maxX) maxX = px;
+            if (py > maxY) maxY = py;
+            any = true;
+        }
+        if (!any) return;
+
+        var x0 = (int)Math.Floor(minX);
+        var y0 = (int)Math.Floor(minY);
+        var x1 = (int)Math.Ceiling(maxX);
+        var y1 = (int)Math.Ceiling(maxY);
+
+        if (_gs.ClipRect is { } c)
+        {
+            x0 = Math.Max(x0, c.X0); y0 = Math.Max(y0, c.Y0);
+            x1 = Math.Min(x1, c.X1); y1 = Math.Min(y1, c.Y1);
+        }
+        _gs.ClipRect = (x0, y0, x1, y1);
+        buffer.SetClip(x0, y0, x1, y1);
+    }
+
+    // Re-applies the current graphics-state clip to the buffer (after a Q restore).
+    private void SyncClip()
+    {
+        if (_gs.ClipRect is { } c)
+            buffer.SetClip(c.X0, c.Y0, c.X1, c.Y1);
+        else
+            buffer.ClearClip();
+    }
+
+    // True when the path is a single axis-aligned rectangle (the common case: page
+    // backgrounds, table cells, rules). Returns its user-space bounds. Such paths keep the
+    // fast FillRect path and avoid the scanline rasteriser.
+    private bool TryGetRectangle(out double minX, out double minY, out double maxX, out double maxY)
+    {
+        minX = minY = maxX = maxY = 0;
+        if (_subpaths.Count != 1) return false;
+        var sub = _subpaths[0];
+        // 4 or 5 points (5th = explicit close back to start).
+        if (sub.Count is < 4 or > 5) return false;
+        var distinctX = sub.Select(static p => p.X).Distinct().Count();
+        var distinctY = sub.Select(static p => p.Y).Distinct().Count();
+        if (distinctX != 2 || distinctY != 2) return false;
+        minX = sub.Min(static p => p.X); maxX = sub.Max(static p => p.X);
+        minY = sub.Min(static p => p.Y); maxY = sub.Max(static p => p.Y);
+        return true;
     }
 
     // ── XObject / image ───────────────────────────────────────────────────────

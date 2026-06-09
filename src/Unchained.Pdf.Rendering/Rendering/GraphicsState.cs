@@ -48,6 +48,13 @@ internal sealed class GraphicsState
     // font bytes whose dictionary is keyed by resource name, not base font name.
     internal string FontResourceName { get; set; } = string.Empty;
 
+    // Current clipping rectangle in DEVICE pixels (inclusive min, exclusive max), or null
+    // for no clip. PDF clip paths can be arbitrary, but we approximate with the axis-aligned
+    // bounding box — correct for the overwhelmingly common rectangular clips and a safe
+    // conservative superset otherwise. Nested clips intersect; the value is cloned on `q`
+    // and restored on `Q` automatically.
+    internal (int X0, int Y0, int X1, int Y1)? ClipRect { get; set; }
+
     internal GraphicsState Clone() =>
         new()
         {
@@ -65,7 +72,8 @@ internal sealed class GraphicsState
             WordSpace = WordSpace,
             HorizontalScale = HorizontalScale,
             Leading = Leading,
-            TextRenderMode = TextRenderMode
+            TextRenderMode = TextRenderMode,
+            ClipRect = ClipRect
         };
 
     // Transform a PDF user-space point through the current CTM.
