@@ -72,6 +72,12 @@ internal static class TextWriter
         if (format.Direction != TextDirection.Horizontal)
             bodyPr.Add(new XAttribute("vert", DirectionToString(format.Direction)));
 
+        // WordArt warp (<a:prstTxWarp>) precedes the autofit elements per the bodyPr schema.
+        if (format.Warp is { } warp && !string.IsNullOrEmpty(warp.Preset))
+            bodyPr.Add(new XElement(DmlNames.Dml + "prstTxWarp",
+                new XAttribute("prst", warp.Preset),
+                new XElement(DmlNames.Dml + "avLst")));
+
         // Autofit
         switch (format.Autofit)
         {
@@ -256,9 +262,17 @@ internal static class TextWriter
         if (format.BaselineShiftPercent.HasValue)
             rPr.Add(new XAttribute("baseline", (int)(format.BaselineShiftPercent.Value * 1_000)));
 
+        // WordArt glyph outline (<a:ln>) precedes the fill per the rPr schema order.
+        if (format.Outline != null)
+            LineWriter.Write(rPr, format.Outline);
+
         // Fill (text colour)
         if (format.Fill != null)
             FillWriter.Write(rPr, format.Fill);
+
+        // Text effects (<a:effectLst>) follow the fill, before the font elements.
+        if (EffectWriter.Write(format.Effects) is { } runEffects)
+            rPr.Add(runEffects);
 
         if (format.LatinFont != null)
             rPr.Add(new XElement(DmlNames.LatinFont,

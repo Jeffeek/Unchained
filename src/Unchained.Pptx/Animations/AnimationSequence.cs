@@ -46,6 +46,9 @@ public sealed class AnimationSequence
             throw new ArgumentException("The effect does not belong to this sequence.", nameof(effect));
     }
 
+    /// <summary>Adds an already-constructed effect (used by the parser to preserve all timing).</summary>
+    internal void AddParsed(AnimationEffect effect) => _effects.Add(effect);
+
     /// <summary>Removes all effects from the sequence.</summary>
     public void Clear() => _effects.Clear();
 }

@@ -1,3 +1,5 @@
+using Unchained.Ooxml.Drawing;
+
 namespace Unchained.Ooxml.Charts;
 
 /// <summary>
@@ -21,4 +23,19 @@ public sealed class ChartSeries
     /// to sequential indices (1, 2, 3, …).
     /// </summary>
     public List<double> XValues { get; } = [];
+
+    /// <summary>
+    /// The fill applied to this series' bars/columns/slices/markers. <see langword="null"/>
+    /// means the chart's automatic series colour is used.
+    /// </summary>
+    public FillFormat? Fill { get; set; }
+
+    /// <summary>
+    /// Data-label settings specific to this series. <see langword="null"/> means inherit the
+    /// chart-level <see cref="ChartModel.DataLabels"/>.
+    /// </summary>
+    public ChartDataLabels? DataLabels { get; set; }
+
+    /// <summary>A trendline fitted to this series. <see langword="null"/> means no trendline.</summary>
+    public ChartTrendline? Trendline { get; set; }
 }

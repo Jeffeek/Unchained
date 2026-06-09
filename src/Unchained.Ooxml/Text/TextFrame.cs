@@ -46,6 +46,7 @@ public sealed class TextFrame
         Format.WrapText = source.Format.WrapText;
         Format.ColumnCount = source.Format.ColumnCount;
         Format.ColumnSpacing = source.Format.ColumnSpacing;
+        Format.Warp = source.Format.Warp;
 
         Paragraphs.Clear();
         foreach (var paragraph in source.Paragraphs)

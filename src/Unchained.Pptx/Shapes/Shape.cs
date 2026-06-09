@@ -76,6 +76,18 @@ public abstract class Shape
     /// <summary>The outline (border) drawn around the shape.</summary>
     public LineFormat Line { get; } = new();
 
+    /// <summary>
+    /// The visual effects applied to the shape — shadow, glow, reflection, soft edges, blur.
+    /// Always present; check <see cref="EffectFormat.IsEmpty"/> for "no effects".
+    /// </summary>
+    public EffectFormat Effects { get; } = new();
+
+    /// <summary>
+    /// The 3-D format applied to the shape (bevels, extrusion, contour, material). Always
+    /// present; check <see cref="Shape3DFormat.IsEmpty"/> for "no 3-D".
+    /// </summary>
+    public Shape3DFormat ThreeD { get; } = new();
+
     // ── Hyperlink ─────────────────────────────────────────────────────────────
 
     /// <summary>

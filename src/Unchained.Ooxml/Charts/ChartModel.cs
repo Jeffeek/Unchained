@@ -37,4 +37,16 @@ public sealed class ChartModel
 
     /// <summary>Legend visibility and placement settings.</summary>
     public ChartLegend Legend { get; } = new();
+
+    /// <summary>
+    /// The category (X) axis. Present for axis-based chart types (bar/column/line/area/scatter);
+    /// ignored for pie/doughnut. Always non-null for convenience.
+    /// </summary>
+    public ChartAxis CategoryAxis { get; } = new() { Kind = ChartAxisKind.Category };
+
+    /// <summary>The value (Y) axis. Always non-null for convenience.</summary>
+    public ChartAxis ValueAxis { get; } = new() { Kind = ChartAxisKind.Value };
+
+    /// <summary>Chart-level data-label settings (series may override).</summary>
+    public ChartDataLabels DataLabels { get; } = new();
 }

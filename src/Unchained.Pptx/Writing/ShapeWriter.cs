@@ -311,6 +311,11 @@ internal static class ShapeWriter
 
         FillWriter.Write(spPr, shape.Fill);
         LineWriter.Write(spPr, shape.Line);
+        // Effects come after fill/line per the spPr schema order.
+        if (EffectWriter.Write(shape.Effects) is { } effectLst)
+            spPr.Add(effectLst);
+        if (Shape3DWriter.Write(shape.ThreeD) is { } sp3d)
+            spPr.Add(sp3d);
         return spPr;
     }
 

@@ -49,4 +49,10 @@ public sealed class TextFrameFormat
     /// Spacing between columns in EMU. Only meaningful when <see cref="ColumnCount"/> &gt; 1.
     /// </summary>
     public Emu ColumnSpacing { get; set; } = Emu.FromPoints(36);
+
+    /// <summary>
+    /// WordArt text-warp geometry (<c>&lt;a:prstTxWarp&gt;</c>) that bends the text along a preset
+    /// path. <see langword="null"/> means no warp (straight text).
+    /// </summary>
+    public Drawing.TextWarpFormat? Warp { get; set; }
 }

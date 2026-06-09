@@ -76,12 +76,7 @@ internal sealed class ShapeParser
         if (txBody != null)
         {
             var parsed = TextParser.ParseTextBody(txBody);
-            shape.TextFrame.Format.VerticalAnchor = parsed.Format.VerticalAnchor;
-            shape.TextFrame.Format.WrapText = parsed.Format.WrapText;
-            shape.TextFrame.Format.Direction = parsed.Format.Direction;
-            shape.TextFrame.Format.Autofit = parsed.Format.Autofit;
-            foreach (var para in parsed.Paragraphs)
-                shape.TextFrame.Paragraphs.Add(para);
+            shape.TextFrame.AbsorbFrom(parsed);
         }
 
         shape.RawElement = spEl;
@@ -369,6 +364,8 @@ internal sealed class ShapeParser
         if (spPr == null) return;
         FillParser.Parse(spPr, shape.Fill);
         LineParser.Parse(spPr, shape.Line);
+        EffectParser.Parse(spPr, shape.Effects);
+        Shape3DParser.Parse(spPr, shape.ThreeD);
     }
 
     private EmbeddedImage? ResolveImage(string relationshipId, XElement shapeElement)

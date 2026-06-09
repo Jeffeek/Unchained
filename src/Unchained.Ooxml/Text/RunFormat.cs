@@ -82,4 +82,19 @@ public sealed class RunFormat
     /// <see langword="true"/> when the run should not be spell-checked.
     /// </summary>
     public InheritableBool NoSpellCheck { get; set; } = InheritableBool.Inherit;
+
+    // ── Text effects & outline (WordArt) ───────────────────────────────────────
+
+    /// <summary>
+    /// Visual effects applied to the text glyphs — shadow, glow, reflection, soft edges, blur
+    /// (the <c>&lt;a:effectLst&gt;</c> inside the run properties). Always present; check
+    /// <see cref="Drawing.EffectFormat.IsEmpty"/> for "no effects".
+    /// </summary>
+    public Drawing.EffectFormat Effects { get; } = new();
+
+    /// <summary>
+    /// The text outline (glyph stroke), the <c>&lt;a:ln&gt;</c> on the run properties.
+    /// <see langword="null"/> means no outline (inherit). Used for WordArt-style outlined text.
+    /// </summary>
+    public Drawing.LineFormat? Outline { get; set; }
 }

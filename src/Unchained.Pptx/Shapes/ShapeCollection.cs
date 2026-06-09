@@ -186,10 +186,35 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     }
 
     /// <summary>
-    /// Adds a new <see cref="ChartShape"/> of the given type at the specified position
-    /// and returns the new shape. Populate <see cref="ChartShape.Chart"/> to set the
-    /// chart data before saving.
+    /// Adds a straight line connector between two points and returns it. Convenience over
+    /// <see cref="AddConnector"/> using point coordinates instead of position+size.
     /// </summary>
+    /// <param name="startX">Horizontal position of the start point.</param>
+    /// <param name="startY">Vertical position of the start point.</param>
+    /// <param name="endX">Horizontal position of the end point.</param>
+    /// <param name="endY">Vertical position of the end point.</param>
+    public ConnectorShape AddLine(Emu startX, Emu startY, Emu endX, Emu endY)
+    {
+        // OOXML connectors store an x/y/cx/cy bounding box; flipH/flipV encode direction when the
+        // end point is left of / above the start. Normalise to a positive-extent box + flips.
+        var x = startX.Value <= endX.Value ? startX : endX;
+        var y = startY.Value <= endY.Value ? startY : endY;
+        var width = new Emu(Math.Abs(endX.Value - startX.Value));
+        var height = new Emu(Math.Abs(endY.Value - startY.Value));
+
+        var shape = new ConnectorShape
+        {
+            ConnectorType = ConnectorType.Straight,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            FlipHorizontal = endX.Value < startX.Value,
+            FlipVertical = endY.Value < startY.Value
+        };
+        Enroll(shape);
+        return shape;
+    }
     /// <param name="type">The visual type of the chart.</param>
     /// <param name="x">Horizontal position of the top-left corner.</param>
     /// <param name="y">Vertical position of the top-left corner.</param>

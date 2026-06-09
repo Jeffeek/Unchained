@@ -28,4 +28,15 @@ public sealed class AutoShape : Shape
 
     /// <summary>The text body of this shape. Always present, even when the shape contains no text.</summary>
     public TextFrame TextFrame { get; } = new();
+
+    /// <summary>
+    /// Convenience shortcut for the shape's plain text. Getting concatenates all paragraph text
+    /// (newline-separated); setting replaces the content with a single paragraph/run. Equivalent
+    /// to <c>TextFrame.PlainText</c>.
+    /// </summary>
+    public string Text
+    {
+        get => TextFrame.PlainText;
+        set => TextFrame.PlainText = value;
+    }
 }

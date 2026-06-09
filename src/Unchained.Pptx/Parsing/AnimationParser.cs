@@ -82,12 +82,9 @@ internal static class AnimationParser
                 else
                     effect.Trigger = GetTrigger(effectPar.Element(pml + "cTn"), pml);
 
-                sequence.AddEffect(
-                    effect.TargetShapeId,
-                    effect.Preset,
-                    effect.Category,
-                    effect.Trigger,
-                    effect.Timing.DelaySeconds);
+                // Add the fully-parsed effect (preserves duration, accel/decel, auto-reverse,
+                // repeat) rather than reconstructing it from a handful of fields.
+                sequence.AddParsed(effect);
                 isFirst = false;
             }
         }
@@ -138,6 +135,19 @@ internal static class AnimationParser
         };
         effect.Timing.DurationSeconds = durationSeconds;
         effect.Timing.DelaySeconds = delay;
+
+        // Acceleration / deceleration (1000ths of a percent), auto-reverse, repeat count.
+        if (ctn.GetAttrInt("accel") is { } accel)
+            effect.Timing.AccelerationPercent = accel / 100_000.0;
+        if (ctn.GetAttrInt("decel") is { } decel)
+            effect.Timing.DecelerationPercent = decel / 100_000.0;
+        if (ctn.GetAttrBool("autoRev") is true)
+            effect.Timing.AutoReverse = true;
+        var repeat = ctn.GetAttr("repeatCount");
+        if (repeat == "indefinite")
+            effect.Timing.RepeatCount = -1;
+        else if (repeat != null && int.TryParse(repeat, out var rc) && rc > 0)
+            effect.Timing.RepeatCount = rc / 1000;
 
         return effect;
     }

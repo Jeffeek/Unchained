@@ -16,6 +16,11 @@ internal static class NotesWriter
     /// </summary>
     public static XDocument? Write(NotesSlide notes)
     {
+        // Prefer the preserved original XML for lossless round-trip (keeps the notes-master
+        // reference, slide-image placeholder, and run formatting the minimal rebuild would drop).
+        if (notes.RawElement != null)
+            return new XDocument(notes.RawElement);
+
         var text = notes.NotesText;
         if (string.IsNullOrEmpty(text)) return null;
 

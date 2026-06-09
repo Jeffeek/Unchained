@@ -80,6 +80,12 @@ internal static class TextParser
             format.Autofit = TextAutofit.ResizeShape;
         else
             format.Autofit = TextAutofit.None;
+
+        // WordArt text warp (<a:prstTxWarp prst="...">).
+        var warp = bodyPr.Element(DmlNames.Dml + "prstTxWarp");
+        var warpPreset = warp?.GetAttr("prst");
+        if (!string.IsNullOrEmpty(warpPreset))
+            format.Warp = new Unchained.Ooxml.Drawing.TextWarpFormat { Preset = warpPreset };
     }
 
     private static Paragraph ParseParagraph(XElement pEl)
@@ -208,6 +214,15 @@ internal static class TextParser
             format.Fill ??= new FillFormat();
             format.Fill.SetSolid(ColorParser.Parse(solidFill));
         }
+
+        // WordArt: glyph outline (<a:ln>) and text effects (<a:effectLst>).
+        if (rPr.Element(DmlNames.Line) != null)
+        {
+            var outline = new LineFormat();
+            LineParser.Parse(rPr, outline);
+            format.Outline = outline;
+        }
+        EffectParser.Parse(rPr, format.Effects);
     }
 
     private static void ParseBullet(XElement pPr, BulletFormat bullet)

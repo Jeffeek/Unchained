@@ -157,6 +157,12 @@ internal static class OpenXmlPresentationParser
             PartUri = masterPart.Uri.ToString()
         };
 
+        // Preserve the full master XML so a custom-writer save keeps elements the typed model
+        // does not capture (txStyles, clrMap, header/footer placeholders). The writers honour
+        // RawElement when present.
+        if (masterPart.SlideMaster is { } sdkMaster)
+            master.RawElement = System.Xml.Linq.XElement.Parse(sdkMaster.OuterXml, System.Xml.Linq.LoadOptions.None);
+
         // Theme — reuse the shared ThemeParser on the theme part's XML.
         if (masterPart.ThemePart?.Theme is { } sdkTheme)
         {
@@ -194,6 +200,11 @@ internal static class OpenXmlPresentationParser
             Name = sdkLayout?.CommonSlideData?.Name?.Value ?? string.Empty,
             LayoutType = MapLayoutType(sdkLayout?.Type?.InnerText)
         };
+
+        // Preserve the full layout XML for lossless custom-writer save (placeholders the typed
+        // model does not capture).
+        if (sdkLayout is not null)
+            layout.RawElement = System.Xml.Linq.XElement.Parse(sdkLayout.OuterXml, System.Xml.Linq.LoadOptions.None);
 
         var tree = sdkLayout?.CommonSlideData?.ShapeTree;
         if (tree is not null)
@@ -368,7 +379,7 @@ internal static class OpenXmlPresentationParser
         var shape = new AutoShape();
         ReadCommon(sp.NonVisualShapeProperties?.NonVisualDrawingProperties, shape);
         ReadGeometry(sp.ShapeProperties?.Transform2D, shape);
-        ReadFillAndLine(sp.ShapeProperties, shape.Fill, shape.Line);
+        ReadFillAndLine(sp.ShapeProperties, shape);
 
         if (sp.TextBody is { } body)
         {
@@ -469,7 +480,7 @@ internal static class OpenXmlPresentationParser
         var shape = new ConnectorShape();
         ReadCommon(cxn.NonVisualConnectionShapeProperties?.NonVisualDrawingProperties, shape);
         ReadGeometry(cxn.ShapeProperties?.Transform2D, shape);
-        ReadFillAndLine(cxn.ShapeProperties, shape.Fill, shape.Line);
+        ReadFillAndLine(cxn.ShapeProperties, shape);
 
         var prst = cxn.ShapeProperties?.GetFirstChild<D.PresetGeometry>()?.Preset?.InnerText;
         shape.ConnectorType = prst switch
@@ -494,14 +505,16 @@ internal static class OpenXmlPresentationParser
     // and LineParser. Feeding the SDK element's OuterXml through the same mapping the custom
     // parser uses keeps solid/gradient/pattern/blip fills, theme/scheme colours, and line
     // width/dash/caps/arrowheads identical across both paths — no divergence.
-    private static void ReadFillAndLine(P.ShapeProperties? spPr, FillFormat fill, LineFormat line)
+    private static void ReadFillAndLine(P.ShapeProperties? spPr, Shape shape)
     {
         if (spPr is null)
             return;
 
         var element = System.Xml.Linq.XElement.Parse(spPr.OuterXml, System.Xml.Linq.LoadOptions.None);
-        FillParser.Parse(element, fill);
-        LineParser.Parse(element, line);
+        FillParser.Parse(element, shape.Fill);
+        LineParser.Parse(element, shape.Line);
+        EffectParser.Parse(element, shape.Effects);
+        Shape3DParser.Parse(element, shape.ThreeD);
     }
 
     // Reads image bytes from the SDK ImagePart, de-duplicating by image-part URI so a single
