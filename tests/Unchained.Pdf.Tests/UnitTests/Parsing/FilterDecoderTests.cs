@@ -570,6 +570,75 @@ public sealed class StreamFiltersAdditionalTests
     }
 }
 
+// ── CcittFaxDecoder: Group 4 (T.6) correctness ───────────────────────────────
+
+public sealed class CcittFaxDecoderTests
+{
+    // A 16×16 Group-4 image produced by ImageMagick (the imagemagick-ccitt.pdf fixture).
+    // Verified bit-exact against libtiff's Group-4 decoder. With BlackIs1=false the
+    // decoded samples are 1=white, 0=black; the figure is a sparse white pattern on black.
+    private static readonly byte[] EncodedG4 =
+        Convert.FromHexString("26a0bfcc39147c47231ffff1cc3918febb58fc004004");
+
+    private static PdfDictionary Parms(int columns, int rows) =>
+        new(new Dictionary<string, PdfObject>
+        {
+            ["K"] = new PdfInteger(-1),
+            ["Columns"] = new PdfInteger(columns),
+            ["Rows"] = new PdfInteger(rows),
+            ["BlackIs1"] = PdfBoolean.False
+        });
+
+    [Fact]
+    public void DecodeGroup4_ProducesExpectedBitmap()
+    {
+        var decoded = CcittFaxDecoder.Decode(EncodedG4, Parms(16, 16)).ToArray();
+
+        // Expected per-row bits, 1 = white (BlackIs1=false). Bit-exact reference output.
+        string[] expected =
+        [
+            "0000000000000000", "0000000000000000", "0000000000000000",
+            "0001000000001000", "0000000000000000", "0000000100000000",
+            "0000000100000000", "0000000100000000", "0000000100000000",
+            "0000000000000000", "0001000000010000", "0001000000110000",
+            "0000111111100000", "0000000000000000", "0000000000000000",
+            "0000000000000000"
+        ];
+
+        const int rowBytes = 2;
+        decoded.Length.ShouldBe(rowBytes * 16);
+        for (var row = 0; row < 16; row++)
+        {
+            var sb = new StringBuilder(16);
+            for (var col = 0; col < 16; col++)
+            {
+                var bit = (decoded[(row * rowBytes) + (col >> 3)] >> (7 - (col & 7))) & 1;
+                sb.Append(bit);
+            }
+            sb.ToString().ShouldBe(expected[row], $"row {row} mismatch");
+        }
+    }
+
+    [Fact]
+    public void DecodeGroup4_BlackIs1_InvertsOutput()
+    {
+        var normal = CcittFaxDecoder.Decode(EncodedG4, Parms(16, 16)).ToArray();
+
+        var inverted = CcittFaxDecoder.Decode(EncodedG4, new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["K"] = new PdfInteger(-1),
+                ["Columns"] = new PdfInteger(16),
+                ["Rows"] = new PdfInteger(16),
+                ["BlackIs1"] = PdfBoolean.True
+            })).ToArray();
+
+        inverted.Length.ShouldBe(normal.Length);
+        for (var i = 0; i < normal.Length; i++)
+            inverted[i].ShouldBe((byte)~normal[i]);
+    }
+}
+
 // ── Jbig2Decoder: minimal smoke tests ────────────────────────────────────────
 
 public sealed class Jbig2DecoderTests

@@ -130,17 +130,25 @@ internal static class ContentStreamParser
             var h   = GetInt(dict, "H",   "Height",           0);
             var bpc = GetInt(dict, "BPC", "BitsPerComponent", 8);
             var cs  = GetName(dict, "CS", "ColorSpace");
-            var filterName = GetName(dict, "F",  "Filter");
-            var filterName2 = GetName(dict, "DP", "DecodeParms");
+            var filters = GetFilters(dict);
 
             if (w <= 0 || h <= 0) return null;
 
-            // ── Extract raw image bytes ───────────────────────────────────
-            var rawBytes = ExtractInlineImageBytes(lexer, source);
+            // For unfiltered inline images the data length is deterministic, so read
+            // exactly that many bytes. Scanning for "EI" alone is unsafe: raw binary image
+            // data can contain a whitespace+E+I byte sequence by coincidence, truncating
+            // the image. With a filter the encoded length is unknown, so fall back to the
+            // EI scan (encoded data normally ends with an unambiguous marker before EI).
+            var components = ComponentsForColorSpace(cs);
+            var expectedLen = filters.Count == 0 && components > 0
+                ? (long)w * h * components * bpc / 8
+                : 0;
+
+            var rawBytes = ExtractInlineImageBytes(lexer, source, expectedLen);
             if (rawBytes.Length == 0) return null;
 
-            // ── Apply filter ──────────────────────────────────────────────
-            var decoded = ApplyInlineFilter(filterName, rawBytes);
+            // ── Apply filters in sequence ─────────────────────────────────
+            var decoded = ApplyInlineFilters(filters, rawBytes);
 
             // ── Convert to RGB ────────────────────────────────────────────
             var rgb = ConvertToRgb(decoded, w, h, cs, bpc);
@@ -180,17 +188,41 @@ internal static class ContentStreamParser
         return obj is PdfName n ? n.Value : null;
     }
 
-    // Read raw bytes from the current lexer position until EI (preceded by whitespace).
-    private static byte[] ExtractInlineImageBytes(Lexer lexer, ReadOnlyMemory<byte> source)
+    // Maps an inline-image colour space (abbreviated or full name) to its component count.
+    // Returns 0 for unknown/indexed spaces where the unfiltered length can't be derived.
+    private static int ComponentsForColorSpace(string? cs) => cs switch
+    {
+        "G" or "DeviceGray" or "CalGray" => 1,
+        "RGB" or "DeviceRGB" or "CalRGB" => 3,
+        "CMYK" or "DeviceCMYK" => 4,
+        _ => 0
+    };
+
+    // Read raw bytes for an inline image. When expectedLen > 0 (unfiltered data of known
+    // size) read exactly that many bytes, then skip the trailing whitespace and EI. This
+    // avoids truncating binary data that coincidentally contains a whitespace+E+I sequence.
+    // Otherwise (filtered data of unknown length) scan for a whitespace-delimited EI.
+    private static byte[] ExtractInlineImageBytes(Lexer lexer, ReadOnlyMemory<byte> source, long expectedLen = 0)
     {
         var span  = source.Span;
-        var start = lexer.Position;
-        var pos   = start;
+        var pos   = lexer.Position;
 
         // Skip exactly one byte of whitespace that immediately follows the ID keyword.
         if (pos < span.Length && IsWhitespace(span[pos])) pos++;
 
         var dataStart = pos;
+
+        if (expectedLen > 0 && dataStart + expectedLen <= span.Length)
+        {            var end = dataStart + (int)expectedLen;
+            var data = span[dataStart..end].ToArray();
+            // Advance past optional whitespace + EI so the stream stays in sync.
+            var p = end;
+            while (p < span.Length && IsWhitespace(span[p])) p++;
+            if (p + 1 < span.Length && span[p] == (byte)'E' && span[p + 1] == (byte)'I')
+                p += 2;
+            lexer.Seek(p);
+            return data;
+        }
 
         while (pos < span.Length - 2)
         {
@@ -228,6 +260,34 @@ internal static class ContentStreamParser
     }
 
     // Apply the inline image filter.  Abbreviated filter names per Table 92.
+    // Reads the inline-image /F (Filter) entry, which may be a single name or an array of
+    // names applied in sequence (§8.9.7). Returns an empty list when no filter is present.
+    private static List<string> GetFilters(Dictionary<string, PdfObject> dict)
+    {
+        var obj = dict.GetValueOrDefault("F") ?? dict.GetValueOrDefault("Filter");
+        var result = new List<string>();
+        switch (obj)
+        {
+            case PdfName n:
+                result.Add(n.Value);
+                break;
+            case PdfArray arr:
+                foreach (var e in arr.Elements)
+                    if (e is PdfName en) result.Add(en.Value);
+                break;
+        }
+        return result;
+    }
+
+    // Applies a sequence of inline-image filters in order.
+    private static ReadOnlyMemory<byte> ApplyInlineFilters(List<string> filters, byte[] raw)
+    {
+        ReadOnlyMemory<byte> data = raw;
+        foreach (var f in filters)
+            data = ApplyInlineFilter(f, data.ToArray());
+        return data;
+    }
+
     private static ReadOnlyMemory<byte> ApplyInlineFilter(string? filterName, byte[] raw)
     {
         var expanded = filterName switch

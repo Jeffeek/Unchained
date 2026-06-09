@@ -366,6 +366,111 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     }
 
     /// <inheritdoc />
+    public IReadOnlyDictionary<string, Models.CompositeFontInfo> GetCompositeFonts()
+    {
+        var result = new Dictionary<string, Models.CompositeFontInfo>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Font]);
+        if (fontDict is null)
+            return result;
+
+        foreach (var (key, value) in fontDict.Entries)
+        {
+            var fontEntry = ResolveDict(value);
+            if (fontEntry is null || fontEntry.GetName(PdfName.Subtype.Value) != "Type0")
+                continue;
+
+            // /Encoding may be a name (e.g. /Identity-H) or a CMap stream. We only
+            // fast-path the Identity CMaps where each 2-byte code equals the CID.
+            var encName = (fontEntry["Encoding"] as PdfName)?.Value;
+            var identityEncoding = encName is "Identity-H" or "Identity-V";
+
+            var descendants = fontEntry[PdfName.Get("DescendantFonts")];
+            if (descendants is PdfIndirectReference dr)
+                descendants = core.ResolveIndirect(dr.ObjectNumber).Value;
+            var cidFont = descendants switch
+            {
+                PdfArray { Count: > 0 } a => ResolveDict(a[0]),
+                PdfDictionary d => d,
+                _ => null
+            };
+            if (cidFont is null)
+                continue;
+
+            // /CIDToGIDMap: /Identity (or absent) => CID == GID; otherwise a stream of
+            // 2-byte big-endian GIDs indexed by CID.
+            var c2gObj = cidFont["CIDToGIDMap"];
+            if (c2gObj is PdfIndirectReference cr)
+                c2gObj = core.ResolveIndirect(cr.ObjectNumber).Value;
+            var identityCidToGid = c2gObj is null || (c2gObj as PdfName)?.Value == "Identity";
+            IReadOnlyDictionary<int, int>? cidToGid = null;
+            if (!identityCidToGid && c2gObj is PdfStream c2gStream)
+            {
+                var bytes = StreamFilters.Decode(c2gStream).Span;
+                var map = new Dictionary<int, int>();
+                for (var cid = 0; (cid * 2) + 1 < bytes.Length; cid++)
+                {
+                    var gid = (bytes[cid * 2] << 8) | bytes[(cid * 2) + 1];
+                    if (gid != 0) map[cid] = gid;
+                }
+                cidToGid = map;
+            }
+
+            var dwInt = cidFont.Get<PdfInteger>(PdfName.Get("DW"))?.Value;
+            var dwReal = cidFont.Get<PdfReal>(PdfName.Get("DW"))?.Value;
+            var dw = dwInt ?? (dwReal is { } dr2 ? dr2 : 1000.0);
+            var widths = ParseCidWidths(cidFont["W"]);
+
+            result[key] = new Models.CompositeFontInfo(
+                identityEncoding, identityCidToGid, cidToGid, dw, widths);
+        }
+
+        return result;
+    }
+
+    // Parses a CIDFont /W array (§9.7.4.3) into a CID->width map (glyph-space units).
+    // Two forms: "c [w1 w2 ...]" (CIDs c, c+1, ...) and "cFirst cLast w" (range, same width).
+    private IReadOnlyDictionary<int, double> ParseCidWidths(PdfObject? wObj)
+    {
+        var result = new Dictionary<int, double>();
+        if (wObj is PdfIndirectReference r)
+            wObj = core.ResolveIndirect(r.ObjectNumber).Value;
+        if (wObj is not PdfArray arr)
+            return result;
+
+        var i = 0;
+        while (i < arr.Count)
+        {
+            if (arr[i] is not (PdfInteger or PdfReal)) { i++; continue; }
+            var first = (int)ReadCoordinate(arr[i]);
+            if (i + 1 >= arr.Count) break;
+
+            if (arr[i + 1] is PdfArray widthList)
+            {
+                for (var k = 0; k < widthList.Count; k++)
+                    result[first + k] = ReadCoordinate(widthList[k]);
+                i += 2;
+            }
+            else if (i + 2 < arr.Count
+                     && arr[i + 1] is (PdfInteger or PdfReal)
+                     && arr[i + 2] is (PdfInteger or PdfReal))
+            {
+                var last = (int)ReadCoordinate(arr[i + 1]);
+                var w = ReadCoordinate(arr[i + 2]);
+                for (var cid = first; cid <= last && cid - first < 65536; cid++)
+                    result[cid] = w;
+                i += 3;
+            }
+            else
+            {
+                i++;
+            }
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc />
     public IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>> GetToUnicodeMaps()
     {
         var result = new Dictionary<string, IReadOnlyDictionary<uint, string>>();
@@ -520,10 +625,52 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 rgb = BuildGrayPlaceholder(w, h);
             }
 
-            result[key] = new ImageXObject(w, h, rgb);
+            var alpha = ReadSoftMask(stream.Dictionary, w, h);
+            result[key] = new ImageXObject(w, h, rgb, alpha);
         }
 
         return result;
+    }
+
+    // Decodes an image's /SMask soft mask into a per-pixel alpha channel (W×H bytes,
+    // 0 = transparent, 255 = opaque), resampled to the base image's dimensions. The SMask
+    // is a DeviceGray image whose samples are the alpha values (§11.6.5.2). Returns null
+    // when there is no soft mask or it cannot be decoded.
+    private byte[]? ReadSoftMask(PdfDictionary imageDict, int baseW, int baseH)
+    {
+        var smRef = imageDict[PdfName.Get("SMask")];
+        if (smRef is PdfIndirectReference r)
+            smRef = core.ResolveIndirect(r.ObjectNumber).Value;
+        if (smRef is not PdfStream smStream)
+            return null;
+
+        try
+        {
+            var smw = (int)(smStream.Dictionary.Get<PdfInteger>(PdfName.Get("Width"))?.Value ?? 0);
+            var smh = (int)(smStream.Dictionary.Get<PdfInteger>(PdfName.Get("Height"))?.Value ?? 0);
+            if (smw <= 0 || smh <= 0)
+                return null;
+
+            var smBpc = (int)(smStream.Dictionary.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 8);
+            var smDecode = ReadDecodeArray(smStream.Dictionary);
+            // Decode as DeviceGray then take one channel per pixel as the alpha value.
+            var smRgb = DecodeImageToRgb(StreamFilters.Decode(smStream), smw, smh, "DeviceGray", smBpc, smDecode);
+
+            var alpha = new byte[baseW * baseH];
+            for (var y = 0; y < baseH; y++)
+            for (var x = 0; x < baseW; x++)
+            {
+                // Nearest-neighbour resample the mask to the base image grid.
+                var sx = smw == baseW ? x : x * smw / baseW;
+                var sy = smh == baseH ? y : y * smh / baseH;
+                alpha[(y * baseW) + x] = smRgb[(((sy * smw) + sx) * 3)];
+            }
+            return alpha;
+        }
+        catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
@@ -610,14 +757,44 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
 
     private double? GetArrayBoxValue(string name, int index)
     {
-        if (page[PdfName.Get(name)] is not PdfArray box || box.Count < 4)
-            return null;
-        return box[index] switch
+        // /MediaBox and /CropBox are inheritable page attributes (§7.7.3.4): a page leaf
+        // may omit them and inherit from an ancestor /Pages node. Walk up /Parent until
+        // the entry is found. Also resolve indirect references on both the array and its
+        // elements.
+        var key = PdfName.Get(name);
+        PdfObject? current = page;
+        var depth = 0;
+        while (current is not null && depth++ < 64)
         {
-            PdfInteger i => i.Value,
-            PdfReal r    => r.Value,
-            _            => null
-        };
+            var dict = current switch
+            {
+                PdfDictionary d => d,
+                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+                _ => null
+            };
+            if (dict is null) break;
+
+            var boxObj = dict[key];
+            if (boxObj is PdfIndirectReference br)
+                boxObj = core.ResolveIndirect(br.ObjectNumber).Value;
+
+            if (boxObj is PdfArray box && box.Count >= 4)
+            {
+                var elem = box[index];
+                if (elem is PdfIndirectReference er)
+                    elem = core.ResolveIndirect(er.ObjectNumber).Value;
+                return elem switch
+                {
+                    PdfInteger i => i.Value,
+                    PdfReal r2   => r2.Value,
+                    _            => null
+                };
+            }
+
+            current = dict[PdfName.Get("Parent")];
+        }
+
+        return null;
     }
 
     // Kept for compatibility — still used by the inline-image coordinate path.
@@ -894,7 +1071,9 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         }
 
         // DeviceGray 1 bpc (bi-level / CCITTFax) — unpack bit rows to RGB.
-        // PDF convention: sample 0 = minimum = white (paper), 1 = maximum = black (ink).
+        // DeviceGray with the default Decode [0 1]: sample 0 → 0.0 (black), sample 1 → 1.0
+        // (white). The CCITTFaxDecode filter already applies its /BlackIs1 flag when
+        // producing these samples, so here we only honour the image's own /Decode array.
         if (cs == "DeviceGray" && bpc == 1)
         {
             // /Decode default for 1bpc is [0.0 1.0]; [1.0 0.0] inverts black/white.
@@ -909,7 +1088,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 if (byteIdx >= span.Length) break;
                 var bit = (span[byteIdx] >> (7 - (col & 7))) & 1;
                 if (invertBits) bit = 1 - bit;
-                var val = (byte)(bit == 0 ? 255 : 0); // 0=white paper, 1=black ink
+                var val = (byte)(bit == 0 ? 0 : 255); // 0=black, 1=white (DeviceGray)
                 var j   = ((row * w) + col) * 3;
                 rgb[j] = rgb[j + 1] = rgb[j + 2] = val;
             }

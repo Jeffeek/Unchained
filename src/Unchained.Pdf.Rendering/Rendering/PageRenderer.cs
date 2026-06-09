@@ -19,7 +19,8 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, byte[]?>? embeddedFontBytes = null,
     IReadOnlyDictionary<string, ImageXObject>? imageXObjects = null,
     double[]? initialCtm = null,
-    IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null
+    IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null,
+    IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null
 )
 {
     private readonly List<(double X, double Y)> _currentPath = [];
@@ -79,7 +80,11 @@ internal sealed class PageRenderer(
             case "cm" when op.Operands.Count >= 6:
             {
                 double[] m = [Num(op, 0), Num(op, 1), Num(op, 2), Num(op, 3), Num(op, 4), Num(op, 5)];
-                _gs.Ctm = GraphicsState.MultiplyMatrix(_gs.Ctm, m);
+                // The cm operator pre-concatenates: CTM_new = m × CTM_old (ISO 32000-1
+                // §8.3.4). The new matrix transforms points first, then the existing CTM.
+                // Using the reverse order corrupts translation whenever the CTM is not the
+                // identity (nested cm, or a rotated/cropped base CTM).
+                _gs.Ctm = GraphicsState.MultiplyMatrix(m, _gs.Ctm);
                 break;
             }
 
@@ -137,7 +142,11 @@ internal sealed class PageRenderer(
 
             case "scn" or "SCN" when op.Operands.Count >= 1:
             {
-                // scn/SCN can have a trailing name for pattern/ICC; ignore name operands.
+                // scn/SCN may carry a trailing name operand naming a tiling/shading pattern.
+                // We don't render patterns; flag fills so DrawFill can skip them rather than
+                // painting a solid block (which appears as a large wrong dark area).
+                var isPattern = op.Operands.Any(static o => o is PdfName);
+
                 var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal).ToList();
                 switch (nums.Count)
                 {
@@ -160,6 +169,9 @@ internal sealed class PageRenderer(
                         break;
                     }
                 }
+
+                // Set after the numeric setters above (which clear the flag).
+                if (op.Name == "scn") _gs.FillIsPattern = isPattern;
                 break;
             }
 
@@ -300,6 +312,39 @@ internal sealed class PageRenderer(
         _gs.TextMatrix = (double[])_gs.TextLineMatrix.Clone();
     }
 
+    // Vertical scale magnitude of the text matrix combined with the CTM. Used to size
+    // glyph rasterization when producers carry the visual size in the matrix rather than
+    // in FontSize. Returns 1 for the common unit-scale case.
+    private double TextMatrixVerticalScale()
+    {
+        // Combined vertical basis vector = TextMatrix · CTM applied to (0,1).
+        var tb = _gs.TextMatrix[1];
+        var td = _gs.TextMatrix[3];
+        // Map the text-space vertical direction through the CTM's linear part.
+        var cb = _gs.Ctm[1];
+        var cd = _gs.Ctm[3];
+        var ca = _gs.Ctm[0];
+        var cc = _gs.Ctm[2];
+        var vx = (tb * ca) + (td * cc);
+        var vy = (tb * cb) + (td * cd);
+        var mag = Math.Sqrt((vx * vx) + (vy * vy));
+        return mag > 1e-6 ? mag : 1.0;
+    }
+
+    // Horizontal scale magnitude of the text matrix combined with the CTM's linear part.
+    // Text advances are computed in glyph space and must be scaled by this to land in the
+    // pre-CTM position space that UToPixel consumes. Returns 1 for unit-scale matrices.
+    private double TextMatrixHorizontalScale()
+    {
+        var ta = _gs.TextMatrix[0];
+        var tc = _gs.TextMatrix[2];
+        // Horizontal text-space basis (1,0) through the text matrix linear part.
+        var hx = ta;
+        var hy = tc;
+        var mag = Math.Sqrt((hx * hx) + (hy * hy));
+        return mag > 1e-6 ? mag : 1.0;
+    }
+
     private void ShowString(ReadOnlySpan<byte> bytes)
     {
         // Text rendering mode 3 = invisible; do not draw.
@@ -316,11 +361,32 @@ internal sealed class PageRenderer(
         }
 
         var (ftFace, hbFont) = fonts.GetFonts(_gs.FontName, embeddedBytes);
-        var pixelSize = (uint)Math.Max(1, Math.Round(_gs.FontSize * scale));
+
+        // Effective glyph size in device pixels. The on-page text size is FontSize scaled
+        // by the vertical magnitude of the text matrix combined with the CTM, then by the
+        // device scale (DPI/72). Some producers set FontSize to 1 and carry the real size
+        // in the text/transformation matrix (e.g. `Tf /F 1` with `Tm 16 0 0 -16 …`), so
+        // FontSize alone is not the rasterization size. When the matrices have unit scale
+        // (the common case) this reduces exactly to FontSize * scale.
+        var textVScale = TextMatrixVerticalScale();
+        var pixelSize = (uint)Math.Max(1, Math.Round(_gs.FontSize * textVScale * scale));
         ftFace.SetPixelSizes(0, pixelSize);
 
         var hbScale = (int)(pixelSize * 64);
         hbFont.SetScale(hbScale, hbScale);
+
+        // Composite (Type0) fonts with an Identity encoding: each pair of bytes is a
+        // big-endian code that equals the CID, which maps to a glyph index directly
+        // (Identity /CIDToGIDMap) or via an explicit map. The PDF already holds the
+        // final shaped glyph sequence, so we must NOT re-shape through HarfBuzz or
+        // remap via /ToUnicode — that produces wrong glyphs and positions.
+        CompositeFontInfo? composite = null;
+        compositeFonts?.TryGetValue(_gs.FontResourceName, out composite);
+        if (composite is { IdentityEncoding: true } && embeddedBytes is { Length: > 0 })
+        {
+            ShowStringComposite(bytes, ftFace, composite);
+            return;
+        }
 
         // Map char codes to Unicode. When the font has a /ToUnicode CMap, use it to
         // decode each char code to the correct Unicode string. Otherwise fall back to
@@ -393,7 +459,7 @@ internal sealed class PageRenderer(
             var glyphId = glyphInfos[i].Codepoint;
 
             // ReSharper disable once EmptyGeneralCatchClause
-            try { ftFace.LoadGlyph(glyphId, LoadFlags.Render, LoadTarget.Normal); }
+            try { ftFace.LoadGlyph(glyphId, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
             catch { GlyphsSkipped++; continue; }
 
             GlyphsAttempted++;
@@ -415,11 +481,12 @@ internal sealed class PageRenderer(
         }
     }
 
-    // Fallback path for simple fonts whose embedded program has no Unicode cmap
-    // (e.g. subset Computer Modern Type1). Each raw single-byte char code is resolved
-    // to a glyph index through FreeType's own charmap, which honours the font's
-    // builtin/custom encoding. Glyph advances come from FreeType (FT_Get_Advance),
-    // scaled to user-space points. Word-spacing applies to byte code 32 (§9.3.3).
+    // Fallback path for simple fonts whose embedded program has no usable Unicode cmap
+    // (e.g. subset Computer Modern Type1, or symbolic subset TrueType with /FirstChar 0).
+    // Each raw single-byte char code is resolved to a glyph index through FreeType's own
+    // charmap (FT_Get_Char_Index). When that yields .notdef, the font is a glyph-indexed
+    // subset where the char code IS the glyph index, so we fall back to loading the code
+    // directly. Advances come from FreeType (FT_Get_Advance).
     private void ShowStringDirect(ReadOnlySpan<byte> bytes, SharpFont.Face ftFace, uint pixelSize)
     {
         foreach (var code in bytes)
@@ -428,9 +495,15 @@ internal sealed class PageRenderer(
             try { glyphId = ftFace.GetCharIndex(code); }
             catch { GlyphsSkipped++; continue; }
 
+            // Symbolic subset with no cmap entry: treat the char code as a direct glyph
+            // index (FreeType rejects out-of-range indices in LoadGlyph below). SharpFont's
+            // GlyphCount is unreliable on Windows x64, so we don't pre-check the range.
+            if (glyphId == 0 && code > 0)
+                glyphId = code;
+
             if (glyphId != 0)
             {
-                try { ftFace.LoadGlyph(glyphId, LoadFlags.Render, LoadTarget.Normal); }
+                try { ftFace.LoadGlyph(glyphId, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
                 catch { GlyphsSkipped++; glyphId = 0; }
             }
 
@@ -447,6 +520,45 @@ internal sealed class PageRenderer(
             catch { advancePts = pixelSize / scale * 0.5; }
 
             var advance = (advancePts + _gs.CharSpace + (code == 32 ? _gs.WordSpace : 0))
+                          * (_gs.HorizontalScale / 100.0);
+            _gs.TextMatrix[4] += advance;
+        }
+    }
+
+    // Renders a string set in a composite (Type0) font with an Identity encoding.
+    // Each pair of bytes is a big-endian 16-bit code that equals the CID; the CID maps
+    // to a glyph index (Identity /CIDToGIDMap, or an explicit map). Glyphs are loaded by
+    // index directly through FreeType — no cmap/HarfBuzz shaping. Advances come from the
+    // CIDFont /W array (glyph-space 1000-unit em), falling back to /DW.
+    private void ShowStringComposite(ReadOnlySpan<byte> bytes, SharpFont.Face ftFace, CompositeFontInfo info)
+    {
+        for (var i = 0; i + 1 < bytes.Length; i += 2)
+        {
+            var cid = (bytes[i] << 8) | bytes[i + 1];
+
+            var gid = (uint)cid;
+            if (!info.IdentityCidToGid && info.CidToGid is not null)
+                gid = info.CidToGid.TryGetValue(cid, out var mapped) ? (uint)mapped : 0;
+
+            if (gid != 0)
+            {
+                try { ftFace.LoadGlyph(gid, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
+                catch { GlyphsSkipped++; gid = 0; }
+            }
+
+            if (gid != 0)
+            {
+                GlyphsAttempted++;
+                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5]);
+                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
+            }
+
+            // Advance from /W (glyph-space units, 1000 per em) → text-space, then scaled
+            // by the text-matrix horizontal magnitude into the pen-position space that
+            // UToPixel consumes (handles producers that carry size in the matrix).
+            var wGlyph = info.Widths.TryGetValue(cid, out var w) ? w : info.DefaultWidth;
+            var hScale = TextMatrixHorizontalScale();
+            var advance = (((wGlyph / 1000.0 * _gs.FontSize) + _gs.CharSpace) * hScale)
                           * (_gs.HorizontalScale / 100.0);
             _gs.TextMatrix[4] += advance;
         }
@@ -524,15 +636,31 @@ internal sealed class PageRenderer(
         var maxY = _currentPath.Max(static p => p.Y);
         var (px1, py1) = UToPixel(minX, maxY);
         var (px2, py2) = UToPixel(maxX, minY);
+
+        // Tiling/shading patterns aren't rendered. Filling them with the (often black)
+        // underlying colour produces large wrong dark blocks; skipping them entirely loses
+        // the region's visual weight. Real-world patterns (e.g. TikZ /pgfpat hatches)
+        // average to roughly a mid-tone, so approximate with a neutral grey — much closer
+        // to a reference rasterizer than either extreme.
+        byte fr = _gs.FillR, fg = _gs.FillG, fb = _gs.FillB;
+        if (_gs.FillIsPattern)
+            fr = fg = fb = 160;
+
         buffer.FillRect(
             (int)px1, (int)py1,
             (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
-            _gs.FillR, _gs.FillG, _gs.FillB);
+            fr, fg, fb);
     }
 
     private void DrawStroke()
     {
-        var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * scale));
+        // Line width is specified in user-space units, which the CTM scales before the
+        // device-space (DPI) scale is applied (ISO 32000-1 §8.4.3.2). Using only the device
+        // scale ignores any cm scaling — e.g. a chart drawn under `cm 0.1 0 0 0.1` with
+        // `w 5` must render as 0.5 user units, not 5, or every stroke is ~10× too thick and
+        // bleeds outside its intended bounds. Use the CTM's average linear scale.
+        var ctmScale = CtmAverageScale();
+        var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
         for (var i = 0; i + 1 < _currentPath.Count; i += 2)
         {
             var (x0, y0) = UToPixel(_currentPath[i].X, _currentPath[i].Y);
@@ -540,6 +668,18 @@ internal sealed class PageRenderer(
             buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
                 _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx);
         }
+    }
+
+    // Average linear scale of the current CTM (geometric mean of the two basis-vector
+    // magnitudes). Used to map user-space line widths into device space.
+    private double CtmAverageScale()
+    {
+        var a = _gs.Ctm[0]; var b = _gs.Ctm[1];
+        var c = _gs.Ctm[2]; var d = _gs.Ctm[3];
+        var sx = Math.Sqrt((a * a) + (b * b));
+        var sy = Math.Sqrt((c * c) + (d * d));
+        var s = Math.Sqrt(sx * sy);
+        return s > 1e-6 ? s : 1.0;
     }
 
     private void ClearPath()
@@ -576,20 +716,7 @@ internal sealed class PageRenderer(
 
         if (dstW <= 0 || dstH <= 0) return;
 
-        for (var py = 0; py < dstH; py++)
-        {
-            var srcY = py * img.Height / dstH;
-            for (var px = 0; px < dstW; px++)
-            {
-                var srcX   = px * img.Width / dstW;
-                var srcOff = ((srcY * img.Width) + srcX) * 3;
-                buffer.BlitImagePixel(
-                    dstX + px, dstY + py,
-                    img.RgbData[srcOff],
-                    img.RgbData[srcOff + 1],
-                    img.RgbData[srcOff + 2]);
-            }
-        }
+        BlitScaledImage(img.RgbData, img.Width, img.Height, dstX, dstY, dstW, dstH);
     }
 
     private void PaintXObject(string resourceName)
@@ -609,21 +736,59 @@ internal sealed class PageRenderer(
 
         if (dstW <= 0 || dstH <= 0) return;
 
-        // Nearest-neighbour blit with scaling.
+        BlitScaledImage(img.RgbData, img.Width, img.Height, dstX, dstY, dstW, dstH, img.Alpha);
+    }
+
+    // Scales an RGB image into the destination rectangle. When the image is downscaled
+    // (more source than destination pixels) each destination pixel averages the source
+    // box it covers, matching the area-averaging that Pdfium uses — nearest-neighbour
+    // alone produces harsh aliasing and large pixel differences on small/scaled images.
+    // When upscaling, falls back to nearest-neighbour sampling. When an alpha channel is
+    // supplied (from an /SMask), pixels are composited over the background using it.
+    private void BlitScaledImage(byte[] rgb, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH, byte[]? alpha = null)
+    {
+        if (srcW <= 0 || srcH <= 0) return;
+        var downscale = srcW > dstW || srcH > dstH;
+
         for (var py = 0; py < dstH; py++)
+        for (var px = 0; px < dstW; px++)
         {
-            var srcY = py * img.Height / dstH;
-            for (var px = 0; px < dstW; px++)
+            byte r, g, b; int a;
+            if (downscale)
             {
-                var srcX   = px * img.Width / dstW;
-                var srcOff = ((srcY * img.Width) + srcX) * 3;
-                buffer.BlitImagePixel(
-                    dstX + px,
-                    dstY + py,
-                    img.RgbData[srcOff],
-                    img.RgbData[srcOff + 1],
-                    img.RgbData[srcOff + 2]);
+                // Average the source box [sx0,sx1)×[sy0,sy1) covered by this dest pixel.
+                var sx0 = px * srcW / dstW;
+                var sx1 = Math.Max(sx0 + 1, (px + 1) * srcW / dstW);
+                var sy0 = py * srcH / dstH;
+                var sy1 = Math.Max(sy0 + 1, (py + 1) * srcH / dstH);
+                long sr = 0, sg = 0, sb = 0, sa = 0; var n = 0;
+                for (var sy = sy0; sy < sy1 && sy < srcH; sy++)
+                for (var sx = sx0; sx < sx1 && sx < srcW; sx++)
+                {
+                    var idx = (sy * srcW) + sx;
+                    var o = idx * 3;
+                    sr += rgb[o]; sg += rgb[o + 1]; sb += rgb[o + 2];
+                    sa += alpha is not null ? alpha[idx] : 255;
+                    n++;
+                }
+                if (n == 0) continue;
+                r = (byte)(sr / n); g = (byte)(sg / n); b = (byte)(sb / n); a = (int)(sa / n);
             }
+            else
+            {
+                var sx = px * srcW / dstW;
+                var sy = py * srcH / dstH;
+                var idx = (sy * srcW) + sx;
+                var o = idx * 3;
+                r = rgb[o]; g = rgb[o + 1]; b = rgb[o + 2];
+                a = alpha is not null ? alpha[idx] : 255;
+            }
+
+            if (a <= 0) continue;
+            if (a >= 255)
+                buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
+            else
+                buffer.BlendPixel(dstX + px, dstY + py, r, g, b, (byte)a);
         }
     }
 
@@ -658,6 +823,7 @@ internal sealed class PageRenderer(
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
         _gs.FillR = _gs.FillG = _gs.FillB = v;
         _gs.FillA = 255;
+        _gs.FillIsPattern = false;
     }
 
     private void SetStrokeGray(double gray)
@@ -673,6 +839,7 @@ internal sealed class PageRenderer(
         _gs.FillG = (byte)Math.Clamp((int)(g * 255), 0, 255);
         _gs.FillB = (byte)Math.Clamp((int)(b * 255), 0, 255);
         _gs.FillA = 255;
+        _gs.FillIsPattern = false;
     }
 
     private void SetStrokeRgb(double r, double g, double b)

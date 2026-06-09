@@ -15,6 +15,11 @@ internal sealed class GraphicsState
     internal byte FillB { get; set; }
     internal byte FillA { get; set; } = 255;
 
+    // True when the current fill colour is a tiling/shading pattern (scn/SCN with a name
+    // operand). We do not render patterns yet; filling them as solid colour produces large
+    // wrong dark blocks, so pattern fills are skipped instead.
+    internal bool FillIsPattern { get; set; }
+
     // Stroke colour
     internal byte StrokeR { get; set; }
     internal byte StrokeG { get; set; }
@@ -48,6 +53,7 @@ internal sealed class GraphicsState
         {
             Ctm = (double[])Ctm.Clone(),
             FillR = FillR, FillG = FillG, FillB = FillB, FillA = FillA,
+            FillIsPattern = FillIsPattern,
             StrokeR = StrokeR, StrokeG = StrokeG, StrokeB = StrokeB, StrokeA = StrokeA,
             LineWidth = LineWidth,
             TextMatrix = (double[])TextMatrix.Clone(),

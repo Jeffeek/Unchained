@@ -121,8 +121,11 @@ public sealed class PdfRenderer : IRenderer
 
         // For rotated pages the pixel canvas dimensions are swapped.
         // Width/Height on IPdfPage already account for rotation (logical dimensions).
-        var pixW = Math.Max(1, (int)Math.Ceiling(page.Width  * scale));
-        var pixH = Math.Max(1, (int)Math.Ceiling(page.Height * scale));
+        // Use rounding consistent with common rasterizers (Pdfium): the device pixel
+        // count is the truncated point×scale product, so a 3.8pt page at 96 DPI yields
+        // 5 px, not 6. Ceiling would add a stray white row/column that mismatches.
+        var pixW = Math.Max(1, (int)(page.Width  * scale));
+        var pixH = Math.Max(1, (int)(page.Height * scale));
 
         var buffer = new RasterBuffer(pixW, pixH);
         buffer.Clear(r: 255, g: 255, b: 255);
@@ -169,10 +172,11 @@ public sealed class PdfRenderer : IRenderer
         var embeddedFontBytes = page.GetEmbeddedFontBytes();
         var imageXObjects    = page.GetImageXObjects();
         var toUnicodeMaps    = page.GetToUnicodeMaps();
+        var compositeFonts   = page.GetCompositeFonts();
 
         var renderer = new PageRenderer(
             buffer, _fonts, scale, pageHeightPt,
-            embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps);
+            embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps, compositeFonts);
         renderer.Render(page.GetContentOperators(), fontMap);
 
         LastTextErrors      = renderer.TextErrorCount;

@@ -143,12 +143,15 @@ internal static class CcittFaxDecoder
     private static int[] BuildLookup(IEnumerable<(int L, ushort V, int Run)> term, IEnumerable<(int L, ushort V, int Run)> makeup)
     {
         var table = new int[LookupSize];
+        // V is the code value already left-aligned to LookupBits (code << (13 - len)), which
+        // is exactly the base index into the 13-bit lookup table. All 2^(13-len) entries that
+        // share this prefix map to the same code.
         // Fill terminating codes (run 0..63 → stored as-is, positive)
         foreach (var (l, v, run) in term)
-            FillTable(table, l, v >> (LookupBits - l), run, l);
+            FillTable(table, l, v, run, l);
         // Fill makeup codes (stored as negative of run to distinguish from terminating)
         foreach (var (l, v, run) in makeup)
-            FillTable(table, l, v >> (LookupBits - l), -run, l);
+            FillTable(table, l, v, -run, l);
         return table;
     }
 
@@ -206,17 +209,20 @@ internal static class CcittFaxDecoder
         var output = new MemoryStream(rows > 0 ? rows * rowBytes : rowBytes * 64);
 
         var bitPos = 0;
-        // Initial reference row: all white (bit=0 when BlackIs1=false, 1 otherwise)
+        // Decode internally with the convention true = white, false = black, regardless of
+        // /BlackIs1 (which only affects the output bit mapping in WriteRow). The imaginary
+        // reference line above the first row is all white (§4.1), so refRow starts all true.
+        const bool white = true;
         var refRow = new bool[columns + 1];
         var curRow = new bool[columns + 1];
-        var whiteBit = !blackIs1; // true = white when !BlackIs1
+        Array.Fill(refRow, white, 0, columns + 1);
 
         for (;;)
         {
-            Array.Fill(curRow, whiteBit, 0, columns);
+            Array.Fill(curRow, white, 0, columns);
 
-            var a0 = -1; // "before" the first pixel
-            var a0Color = whiteBit; // color to the left of a0
+            var a0 = -1; // imaginary white pixel before column 0
+            var a0Color = white; // colour of the run starting at a0
 
             var complete = DecodeRow2D(
                 input,
@@ -224,7 +230,7 @@ internal static class CcittFaxDecoder
                 refRow,
                 curRow,
                 columns,
-                whiteBit,
+                white,
                 endOfBlock,
                 ref a0,
                 ref a0Color
@@ -257,61 +263,58 @@ internal static class CcittFaxDecoder
         ref bool a0Color
     )
     {
+        // T.6 §2: decode changing elements left-to-right. a0 is the reference changing
+        // element on the coding line (starts at -1 = imaginary white pixel before col 0);
+        // a0Color is the colour of the run starting at a0. b1/b2 are the first/second
+        // changing elements on the reference line to the right of a0 whose colour is
+        // opposite to a0Color (b1) and then same again (b2).
         while (a0 < columns)
         {
-            // Check for EOFB only when EndOfBlock is in effect (default true for Group 4).
             if (endOfBlock)
             {
                 var saved = bitPos;
                 if (TryReadEolOrEofb(input, ref bitPos))
                     return false;
-
                 bitPos = saved;
             }
 
-            // Read 2D mode code
             var mode = Read2dMode(input, ref bitPos);
             if (mode < 0)
-                break; // end of data
+                break; // end of data / unsupported code
+
+            var (b1, b2) = FindB1B2(refRow, a0, a0Color, columns);
+            var start = a0 < 0 ? 0 : a0;
 
             switch (mode)
             {
                 case Mode2D.Pass:
                 {
-                    // Move a0 to b2 (second changing pixel in ref after a0)
-                    var (_, b2) = FindB1B2(refRow, a0, a0Color, columns);
+                    // Pixels a0..b2 take a0's colour; a0 advances to b2, colour unchanged.
+                    FillRun(curRow, start, b2 - start, a0Color);
                     a0 = b2;
-
                     break;
                 }
                 case Mode2D.Horizontal:
                 {
-                    // Two 1D runs: a0a1 (current color) then a1a2 (opposite color)
+                    // Two runs: first of a0Color, second of the opposite colour. Colour of
+                    // a0 is unchanged afterwards (even number of colour changes).
                     var run1 = ReadRunLength(input, ref bitPos, a0Color == whiteBit);
-                    if (run1 < 0)
-                        return true;
-
+                    if (run1 < 0) return true;
                     var run2 = ReadRunLength(input, ref bitPos, a0Color != whiteBit);
-                    if (run2 < 0)
-                        return true;
+                    if (run2 < 0) return true;
 
-                    FillRun(curRow, a0 + 1, run1, a0Color);
-                    FillRun(curRow, a0 + 1 + run1, run2, !a0Color);
-                    a0 += run1 + run2;
-                    a0Color = a0 < columns ? curRow[a0] : whiteBit;
-
+                    FillRun(curRow, start, run1, a0Color);
+                    FillRun(curRow, start + run1, run2, !a0Color);
+                    a0 = start + run1 + run2;
                     break;
                 }
-                default: // Vertical(offset) where mode = V0..V±3
+                default: // Vertical Vn, n = mode - V0 ∈ [-3,3]
                 {
-                    var offset = mode - Mode2D.V0;
-                    var (b1, _) = FindB1B2(refRow, a0, a0Color, columns);
-                    var a1 = b1 + offset;
-                    a1 = Math.Clamp(a1, 0, columns);
-                    FillRun(curRow, a0 + 1, a1 - a0 - 1, a0Color);
+                    var a1 = Math.Clamp(b1 + (mode - Mode2D.V0), 0, columns);
+                    // Pixels a0..a1 take a0's colour; then the colour flips at a1.
+                    FillRun(curRow, start, a1 - start, a0Color);
                     a0 = a1;
-                    a0Color = a0 < columns ? !a0Color : whiteBit;
-
+                    a0Color = !a0Color;
                     break;
                 }
             }
@@ -386,99 +389,105 @@ internal static class CcittFaxDecoder
 
     private static class Mode2D
     {
-        public const int Pass = 4;       // distinct from V offsets (−3…+3) and the −1 sentinel
-        public const int Horizontal = 5;
-        public const int V0 = 0;
-        // V(+1)=1, V(-1)=-1, V(+2)=2, V(-2)=-2, V(+3)=3, V(-3)=-3; −1 = end-of-data
+        // Vertical modes are encoded as V0 + offset, offset ∈ [-3, +3]. V0 is offset to a
+        // positive base so the left-vertical modes (VL1..VL3) never collide with the
+        // EndOfData sentinel. Pass/Horizontal use distinct values outside the V range.
+        public const int V0 = 10;        // V(-3)=7 … V0=10 … V(+3)=13
+        public const int Pass = 20;
+        public const int Horizontal = 21;
+        public const int EndOfData = -1; // returned by Read2dMode at end of stream / on EOL
     }
 
-    // 2D mode codes (T.6 §4.2.1).
+    // 2D mode codes (ITU-T T.6 Table 1 / §4.2.1). Read as a prefix tree, MSB first:
+    //   1        → V0
+    //   011      → VR1        010      → VL1
+    //   001      → Horizontal
+    //   0001     → Pass
+    //   000011   → VR2        000010   → VL2
+    //   0000011  → VR3        0000010  → VL3
+    //   0000001… → extension; 000000000001 → EOL (handled by caller as end-of-data)
     private static int Read2dMode(ReadOnlySpan<byte> data, ref int bitPos)
     {
-        while (true)
+        var b = PeekBit(data, bitPos);
+        if (b < 0) return -1;
+        if (b == 1) { bitPos += 1; return Mode2D.V0; }            // 1
+
+        b = PeekBit(data, bitPos + 1);
+        if (b < 0) return -1;
+        if (b == 1)
         {
-            var b0 = PeekBit(data, bitPos);
-
-            switch (b0)
-            {
-                case < 0:
-                    return -1;
-                case 1:
-                    bitPos++;
-                    return Mode2D.V0;
-            }
-
-            var b1 = PeekBit(data, bitPos + 1);
-            if (b1 < 0)
-                return -1;
-
-            switch (b0)
-            {
-                case 0 when b1 == 1:
-                {
-                    var b2 = PeekBit(data, bitPos + 2);
-                    if (b2 < 0) return -1;
-
-                    bitPos += 3;
-
-                    return b2 == 1 ? Mode2D.Horizontal : Mode2D.V0 - 1; // 001=H, 010=V(-1)
-                }
-                case 0 when b1 == 0:
-                {
-                    var b2 = PeekBit(data, bitPos + 2);
-                    var b3 = PeekBit(data, bitPos + 3);
-                    if (b2 < 0 || b3 < 0) return -1;
-
-                    switch (b2)
-                    {
-                        case 1 when b3 == 1:
-                            bitPos += 4;
-                            return Mode2D.Pass;
-                        case 1 when b3 == 0:
-                            bitPos += 4;
-                            return Mode2D.V0 + 2;
-                        // b2==1, b3 ∈ {0,1}: both guarded cases above exhaust all possibilities.
-                    }
-
-                    // 00 0 0...
-                    var b4 = PeekBit(data, bitPos + 4);
-                    if (b4 < 0)
-                        return -1;
-
-                    // 000 0 x: 0000 1 1 = V(+3), 0000 1 0 = V(-3)
-                    // Actually: 000011 = V(+3), 000010 = V(-3), 0001 = Pass (already handled above)
-                    var b5 = PeekBit(data, bitPos + 5);
-                    if (b3 == 0 && b4 == 1 && b5 >= 0)
-                    {
-                        bitPos += 6;
-                        return b5 == 1 ? Mode2D.V0 + 3 : Mode2D.V0 - 3;
-                    }
-
-                    // Long zero run = EOL or EOFB padding — skip
-                    bitPos++;
-
-                    continue;
-                }
-            }
-
-            bitPos++;
-
-            return -1;
+            // 01x
+            var b2 = PeekBit(data, bitPos + 2);
+            if (b2 < 0) return -1;
+            bitPos += 3;
+            return b2 == 1 ? Mode2D.V0 + 1 : Mode2D.V0 - 1;       // 011=VR1, 010=VL1
         }
+
+        // 00…
+        b = PeekBit(data, bitPos + 2);
+        if (b < 0) return -1;
+        if (b == 1) { bitPos += 3; return Mode2D.Horizontal; }    // 001
+
+        // 000…
+        b = PeekBit(data, bitPos + 3);
+        if (b < 0) return -1;
+        if (b == 1) { bitPos += 4; return Mode2D.Pass; }          // 0001
+
+        // 0000…
+        b = PeekBit(data, bitPos + 4);
+        if (b < 0) return -1;
+        if (b == 1)
+        {
+            // 00001x
+            var b5 = PeekBit(data, bitPos + 5);
+            if (b5 < 0) return -1;
+            bitPos += 6;
+            return b5 == 1 ? Mode2D.V0 + 2 : Mode2D.V0 - 2;       // 000011=VR2, 000010=VL2
+        }
+
+        // 00000…
+        b = PeekBit(data, bitPos + 5);
+        if (b < 0) return -1;
+        if (b == 1)
+        {
+            // 000001x
+            var b6 = PeekBit(data, bitPos + 6);
+            if (b6 < 0) return -1;
+            bitPos += 7;
+            return b6 == 1 ? Mode2D.V0 + 3 : Mode2D.V0 - 3;       // 0000011=VR3, 0000010=VL3
+        }
+
+        // 000000… — extension code or EOL/EOFB padding; signal end of row data.
+        return -1;
     }
 
-    // Finds (b1, b2): first and second changing pixels in refRow after a0 with colour opposite to a0Color.
+    // Finds (b1, b2) per ITU-T T.6 §4.2.1.3:
+    //   b1 = first *changing element* on the reference line to the right of a0 whose colour
+    //        is opposite to a0Color. A changing element at position i is one where
+    //        refRow[i] != refRow[i-1] (with an implicit white pixel before column 0).
+    //   b2 = the next changing element on the reference line to the right of b1.
+    // Finding the first opposite-colour pixel is NOT sufficient: when refRow[a0] already
+    // differs from a0Color, the first opposite-colour pixel may not be a transition point.
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static (int b1, int b2) FindB1B2(IReadOnlyList<bool> refRow, int a0, bool a0Color, int columns)
     {
-        // b1 = first pixel in refRow after a0 with colour != a0Color
-        var b1 = a0 + 1;
-        while (b1 < columns && refRow[b1] == a0Color)
-            b1++;
-        // b2 = first pixel in refRow after b1 with colour == a0Color (same as a0)
-        var b2 = b1 + 1;
-        while (b2 < columns && refRow[b2] != a0Color)
-            b2++;
+        // Scan for the first changing element strictly right of a0.
+        var i = a0 + 1;
+        while (i < columns)
+        {
+            var prevColor = i == 0 ? true /* white before col 0 */ : refRow[i - 1];
+            var isChange = refRow[i] != prevColor;
+            if (isChange && refRow[i] != a0Color)
+                break; // b1: changing element of colour opposite to a0Color
+            i++;
+        }
+        var b1 = i;
+
+        // b2 = next changing element to the right of b1.
+        var j = b1 + 1;
+        while (j < columns && refRow[j] == refRow[j - 1])
+            j++;
+        var b2 = j;
 
         return (b1, b2);
     }
