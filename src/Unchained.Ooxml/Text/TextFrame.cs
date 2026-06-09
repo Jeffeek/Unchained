@@ -30,6 +30,23 @@ public sealed class TextFrame
     }
 
     /// <summary>
+    /// Replaces every occurrence of <paramref name="oldText"/> with <paramref name="newText"/>
+    /// across all paragraphs in this frame, preserving run formatting. Matches do not span
+    /// paragraph boundaries.
+    /// </summary>
+    /// <returns>The number of occurrences replaced.</returns>
+    public int ReplaceText(
+        string oldText,
+        string newText,
+        StringComparison comparison = StringComparison.Ordinal)
+    {
+        var count = 0;
+        foreach (var paragraph in Paragraphs)
+            count += paragraph.ReplaceText(oldText, newText, comparison);
+        return count;
+    }
+
+    /// <summary>
     /// Replaces this frame's content with that of <paramref name="source"/> — copying the
     /// format and taking over its paragraphs. Used when a frame is populated by a shared parser
     /// into a temporary frame and the result must land on a get-only <see cref="TextFrame"/>.

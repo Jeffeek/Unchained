@@ -84,6 +84,25 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     public SectionCollection Sections { get; }
 
     /// <summary>
+    /// Presentation-level slide-show settings (loop, show type, narration/animation, range, pen
+    /// colour). Persisted in the <c>presProps.xml</c> part on save.
+    /// </summary>
+    public SlideShowSettings SlideShow { get; internal set; } = new();
+
+    /// <summary>
+    /// Verbatim-preserved content (VBA macro project, digital signatures) captured at load and
+    /// re-emitted unchanged on save by the custom writer. <see langword="null"/> for documents
+    /// created via <c>CreateBlank</c>. Internal — round-trip plumbing.
+    /// </summary>
+    internal PreservedContent? Preserved { get; set; }
+
+    /// <summary>
+    /// <see langword="true"/> when this presentation carries a VBA macro project (i.e. it is a
+    /// <c>.pptm</c>). Macros are preserved across a round-trip but cannot be created or edited.
+    /// </summary>
+    public bool HasMacros => Preserved?.HasMacros == true;
+
+    /// <summary>
     /// Synchronises the live statistics on <see cref="Properties"/> from the current
     /// in-memory state. Called automatically before each save.
     /// </summary>
@@ -104,7 +123,40 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     /// </summary>
     public SlideSize SlideSize { get; set; }
 
+    // ── Find & replace ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Replaces every occurrence of <paramref name="oldText"/> with <paramref name="newText"/>
+    /// across all slides — shapes, grouped shapes, and table cells — preserving run formatting.
+    /// When <paramref name="includeNotes"/> is <see langword="true"/>, each slide's notes text is
+    /// searched as well. Matches do not span paragraph boundaries.
+    /// </summary>
+    /// <returns>The total number of occurrences replaced across the presentation.</returns>
+    public int ReplaceText(
+        string oldText,
+        string newText,
+        StringComparison comparison = StringComparison.Ordinal,
+        bool includeNotes = false)
+    {
+        var count = 0;
+        foreach (var slide in Slides)
+            count += slide.ReplaceText(oldText, newText, comparison, includeNotes);
+        return count;
+    }
+
     // ── IDisposable / IAsyncDisposable ────────────────────────────────────────
+
+    /// <summary>
+    /// Enumerates every shape click-hyperlink across all slides (recursing into groups),
+    /// each paired with its owning slide and shape so links can be inspected, retargeted, or
+    /// removed in place. This is the hyperlink-management entry point.
+    /// </summary>
+    public IEnumerable<HyperlinkReference> GetHyperlinks()
+    {
+        foreach (var slide in Slides)
+            foreach (var link in slide.GetHyperlinks())
+                yield return link;
+    }
 
     /// <inheritdoc />
     public void Dispose()

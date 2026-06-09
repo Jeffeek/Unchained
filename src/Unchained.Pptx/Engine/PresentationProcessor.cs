@@ -317,7 +317,11 @@ public sealed class PresentationProcessor : IDisposable
                 parsed.SlideSize,
                 parsed.CommentAuthors,
                 parsed.Sections,
-                parsed.Engine);
+                parsed.Engine)
+            {
+                SlideShow = parsed.SlideShow ?? new SlideShowSettings(),
+                Preserved = parsed.Preserved,
+            };
         }
         finally
         {
@@ -355,7 +359,9 @@ public sealed class PresentationProcessor : IDisposable
                     document.CommentAuthors,
                     document.Sections,
                     document.Protection,
-                    options),
+                    options,
+                    document.SlideShow,
+                    document.Preserved),
                 cancellationToken).ConfigureAwait(false);
         }
         finally

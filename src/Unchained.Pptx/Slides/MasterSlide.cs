@@ -14,7 +14,13 @@ public sealed class MasterSlide
     public string Name { get; set; } = string.Empty;
 
     /// <summary>The layouts defined for this master.</summary>
-    public SlideLayoutCollection Layouts { get; } = new();
+    public SlideLayoutCollection Layouts { get; }
+
+    /// <summary>Initialises a new master with an empty, owner-linked layout collection.</summary>
+    public MasterSlide()
+    {
+        Layouts = new SlideLayoutCollection { Owner = this };
+    }
 
     /// <summary>Shapes placed on this master (logos, backgrounds, decorative elements).</summary>
     public ShapeCollection Shapes { get; } = new();

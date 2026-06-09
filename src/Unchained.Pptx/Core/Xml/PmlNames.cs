@@ -78,6 +78,37 @@ internal static class PmlNames
     /// <summary>Relationship type for an embedded font part (<c>/ppt/fonts/*.fntdata</c>).</summary>
     public const string RelTypeFont = RelBase + "font";
 
+    /// <summary>Relationship type for the presentation-properties part (<c>presProps.xml</c>).</summary>
+    public const string RelTypePresProps = RelBase + "presProps";
+
+    /// <summary>Relationship type for the VBA macro project part (<c>vbaProject.bin</c>).</summary>
+    public const string RelTypeVbaProject =
+        "http://schemas.microsoft.com/office/2006/relationships/vbaProject";
+
+    /// <summary>Relationship type for the digital-signature origin part (package level).</summary>
+    public const string RelTypeDigitalSignatureOrigin =
+        "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin";
+
+    /// <summary>Relationship type for an individual XML digital-signature part.</summary>
+    public const string RelTypeDigitalSignature =
+        "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/signature";
+
+    /// <summary>Relationship type for a SmartArt diagram data part (<c>/ppt/diagrams/data*.xml</c>).</summary>
+    public const string RelTypeDiagramData = RelBase + "diagramData";
+
+    /// <summary>Relationship type for a SmartArt diagram layout-definition part.</summary>
+    public const string RelTypeDiagramLayout = RelBase + "diagramLayout";
+
+    /// <summary>Relationship type for a SmartArt diagram quick-style part.</summary>
+    public const string RelTypeDiagramQuickStyle = RelBase + "diagramQuickStyle";
+
+    /// <summary>Relationship type for a SmartArt diagram colors part.</summary>
+    public const string RelTypeDiagramColors = RelBase + "diagramColors";
+
+    /// <summary>Microsoft extension relationship type for the pre-rendered SmartArt drawing part.</summary>
+    public const string RelTypeDiagramDrawing =
+        "http://schemas.microsoft.com/office/2007/relationships/diagramDrawing";
+
     // ── Embedded fonts ──────────────────────────────────────────────────────────
 
     /// <summary><c>&lt;p:embeddedFontLst&gt;</c> — list of embedded fonts in presentation.xml.</summary>
@@ -153,6 +184,46 @@ internal static class PmlNames
     /// <summary>Content type for the comment authors part.</summary>
     public const string ContentTypeCommentAuthors =
         "application/vnd.openxmlformats-officedocument.presentationml.commentAuthors+xml";
+
+    /// <summary>Content type for the presentation-properties part (<c>presProps.xml</c>).</summary>
+    public const string ContentTypePresProps =
+        "application/vnd.openxmlformats-officedocument.presentationml.presProps+xml";
+
+    /// <summary>Content type for a macro-enabled presentation part (<c>.pptm</c> main part).</summary>
+    public const string ContentTypePresentationMacroEnabled =
+        "application/vnd.ms-powerpoint.presentation.macroEnabled.main+xml";
+
+    /// <summary>Content type for the VBA macro project binary (<c>vbaProject.bin</c>).</summary>
+    public const string ContentTypeVbaProject =
+        "application/vnd.ms-office.vbaProject";
+
+    /// <summary>Content type for the digital-signature origin part.</summary>
+    public const string ContentTypeDigitalSignatureOrigin =
+        "application/vnd.openxmlformats-package.digital-signature-origin";
+
+    /// <summary>Content type for an individual XML digital-signature part.</summary>
+    public const string ContentTypeDigitalSignature =
+        "application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml";
+
+    /// <summary>Content type for a SmartArt diagram data part.</summary>
+    public const string ContentTypeDiagramData =
+        "application/vnd.openxmlformats-officedocument.drawingml.diagramData+xml";
+
+    /// <summary>Content type for a SmartArt diagram layout-definition part.</summary>
+    public const string ContentTypeDiagramLayout =
+        "application/vnd.openxmlformats-officedocument.drawingml.diagramLayout+xml";
+
+    /// <summary>Content type for a SmartArt diagram quick-style part.</summary>
+    public const string ContentTypeDiagramQuickStyle =
+        "application/vnd.openxmlformats-officedocument.drawingml.diagramStyle+xml";
+
+    /// <summary>Content type for a SmartArt diagram colors part.</summary>
+    public const string ContentTypeDiagramColors =
+        "application/vnd.openxmlformats-officedocument.drawingml.diagramColors+xml";
+
+    /// <summary>Content type for the Microsoft-extension pre-rendered SmartArt drawing part.</summary>
+    public const string ContentTypeDiagramDrawing =
+        "application/vnd.ms-office.drawingml.diagramDrawing+xml";
 
     // ── PresentationML element names ──────────────────────────────────────────
 
