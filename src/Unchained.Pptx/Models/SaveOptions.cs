@@ -38,6 +38,15 @@ public sealed record SaveOptions
     /// </summary>
     public IProgress<double>? Progress { get; init; }
 
+    /// <summary>
+    /// When <see langword="true"/> and the document was loaded through the OpenXML-SDK engine,
+    /// the save re-emits modelled content onto the held SDK package so unmodelled parts pass
+    /// through unchanged (Phase 2 in-place save). Ignored when the document has no held engine
+    /// (custom load path or <c>CreateBlank</c>), which falls back to the custom writer.
+    /// Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool UseOpenXmlEngine { get; init; }
+
     /// <summary>A default <see cref="SaveOptions"/> instance with all settings at their defaults.</summary>
     public static readonly SaveOptions Default = new();
 }

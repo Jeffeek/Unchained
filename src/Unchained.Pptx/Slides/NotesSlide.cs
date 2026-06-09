@@ -1,4 +1,4 @@
-using Unchained.Pptx.Text;
+using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Slides;
 

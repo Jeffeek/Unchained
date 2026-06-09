@@ -1,7 +1,6 @@
 using Unchained.Ooxml;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Drawing;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
 

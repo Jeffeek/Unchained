@@ -23,4 +23,12 @@ public sealed class OpenOptions
     /// Ignored when <see cref="IgnoreLoadWarnings"/> is <see langword="true"/>.
     /// </summary>
     public Action<string>? WarningCallback { get; init; }
+
+    /// <summary>
+    /// When <see langword="true"/>, the presentation is read through the OpenXML-SDK-backed
+    /// engine (<c>Unchained.Ooxml.Engine</c>) instead of the legacy custom parser. This is the
+    /// Phase 2 migration path; it runs in parallel with the custom parser until it reaches full
+    /// parity. Defaults to <see langword="false"/> (custom parser).
+    /// </summary>
+    public bool UseOpenXmlEngine { get; init; }
 }

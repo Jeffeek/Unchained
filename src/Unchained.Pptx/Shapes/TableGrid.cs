@@ -56,8 +56,8 @@ public sealed class TableGrid
         return grid;
     }
 
-    /// <summary>Adds a row with the given height and returns its cells.</summary>
-    internal IReadOnlyList<TableCell> AddRow(Emu height)
+    /// <summary>Appends a row with the given height and returns its newly-created cells.</summary>
+    public IReadOnlyList<TableCell> AddRow(Emu height)
     {
         _rowHeights.Add(height);
         var row = new List<TableCell>();
@@ -67,12 +67,60 @@ public sealed class TableGrid
         return row;
     }
 
-    /// <summary>Adds a column with the given width.</summary>
-    internal void AddColumn(Emu width)
+    /// <summary>
+    /// Inserts a row of empty cells at <paramref name="rowIndex"/> with the given height
+    /// and returns the new cells.
+    /// </summary>
+    public IReadOnlyList<TableCell> InsertRow(int rowIndex, Emu height)
+    {
+        if (rowIndex < 0 || rowIndex > _rowHeights.Count)
+            throw new ArgumentOutOfRangeException(nameof(rowIndex));
+
+        _rowHeights.Insert(rowIndex, height);
+        var row = new List<TableCell>();
+        for (var i = 0; i < _columnWidths.Count; i++)
+            row.Add(new TableCell());
+        _rows.Insert(rowIndex, row);
+        return row;
+    }
+
+    /// <summary>Appends a column with the given width.</summary>
+    public void AddColumn(Emu width)
     {
         _columnWidths.Add(width);
         foreach (var row in _rows)
             row.Add(new TableCell());
+    }
+
+    /// <summary>Inserts a column of empty cells at <paramref name="columnIndex"/>.</summary>
+    public void InsertColumn(int columnIndex, Emu width)
+    {
+        if (columnIndex < 0 || columnIndex > _columnWidths.Count)
+            throw new ArgumentOutOfRangeException(nameof(columnIndex));
+
+        _columnWidths.Insert(columnIndex, width);
+        foreach (var row in _rows)
+            row.Insert(columnIndex, new TableCell());
+    }
+
+    /// <summary>Removes the row at <paramref name="rowIndex"/>.</summary>
+    public void RemoveRow(int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= _rowHeights.Count)
+            throw new ArgumentOutOfRangeException(nameof(rowIndex));
+        _rowHeights.RemoveAt(rowIndex);
+        _rows.RemoveAt(rowIndex);
+    }
+
+    /// <summary>Removes the column at <paramref name="columnIndex"/>.</summary>
+    public void RemoveColumn(int columnIndex)
+    {
+        if (columnIndex < 0 || columnIndex >= _columnWidths.Count)
+            throw new ArgumentOutOfRangeException(nameof(columnIndex));
+        _columnWidths.RemoveAt(columnIndex);
+        foreach (var row in _rows)
+            if (columnIndex < row.Count)
+                row.RemoveAt(columnIndex);
     }
 
     /// <summary>Adds a cell to an existing row (used by the parser).</summary>

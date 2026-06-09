@@ -4,11 +4,11 @@ using Unchained.Drawing.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Core;
-using Unchained.Pptx.Drawing;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Text;
+using Unchained.Ooxml.Text;
 using LoadFlags = SharpFont.LoadFlags;
 using LoadTarget = SharpFont.LoadTarget;
 

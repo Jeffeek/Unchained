@@ -3,6 +3,7 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Parsing;

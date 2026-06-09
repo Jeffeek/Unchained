@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Charts;
+using Unchained.Ooxml.Charts;
 using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;
@@ -69,7 +69,7 @@ internal static class ChartParser
 
     private static void ParsePlotArea(XElement plotArea, ChartModel model)
     {
-        // Find the first recognised chart type element
+        // Find the first recognised chart type element and parse its series.
         foreach (var child in plotArea.Elements())
         {
             var (chartType, found) = MapElementToChartType(child);
@@ -77,7 +77,42 @@ internal static class ChartParser
 
             model.Type = chartType;
             ParseSeries(child, model.Data);
-            return;
+            break;
+        }
+
+        // Axes (catAx / valAx) live as siblings of the chart-type element in the plot area.
+        foreach (var catAx in plotArea.Elements(CmlNames.CategoryAxis))
+            ParseAxis(catAx, model.CategoryAxis);
+        foreach (var valAx in plotArea.Elements(CmlNames.ValueAxis))
+            ParseAxis(valAx, model.ValueAxis);
+    }
+
+    private static void ParseAxis(XElement axEl, ChartAxis axis)
+    {
+        var delete = axEl.Element(CmlNames.Cml + "delete")?.GetAttrInt(CmlNames.AttributeValue);
+        axis.IsVisible = delete is not 1;
+
+        var scaling = axEl.Element(CmlNames.Scaling);
+        if (scaling is not null)
+        {
+            axis.Minimum = scaling.Element(CmlNames.Cml + "min")?.GetAttrDouble(CmlNames.AttributeValue);
+            axis.Maximum = scaling.Element(CmlNames.Cml + "max")?.GetAttrDouble(CmlNames.AttributeValue);
+        }
+
+        axis.MajorUnit = axEl.Element(CmlNames.Cml + "majorUnit")?.GetAttrDouble(CmlNames.AttributeValue);
+        axis.MinorUnit = axEl.Element(CmlNames.Cml + "minorUnit")?.GetAttrDouble(CmlNames.AttributeValue);
+        axis.HasMajorGridlines = axEl.Element(CmlNames.Cml + "majorGridlines") is not null;
+        axis.HasMinorGridlines = axEl.Element(CmlNames.Cml + "minorGridlines") is not null;
+        axis.Position = axEl.Element(CmlNames.Cml + "axPos")?.GetAttr(CmlNames.AttributeValue);
+        axis.NumberFormat = axEl.Element(CmlNames.Cml + "numFmt")?.GetAttr("formatCode");
+
+        // Axis title (c:title/c:tx/c:rich text runs).
+        var titleRuns = axEl.Element(CmlNames.Title)?.Element(CmlNames.Text)?.Element(CmlNames.Rich)
+            ?.Descendants(DmlNames.Dml + "t").Select(static t => t.Value);
+        if (titleRuns is not null)
+        {
+            var title = string.Concat(titleRuns);
+            if (!string.IsNullOrEmpty(title)) axis.Title = title;
         }
     }
 
@@ -193,8 +228,63 @@ internal static class ChartParser
 
             ParseValues(serEl, series);
             ParseXValues(serEl, series);
+            ParseSeriesFormatting(serEl, series);
             data.Series.Add(series);
         }
+    }
+
+    private static void ParseSeriesFormatting(XElement serEl, ChartSeries series)
+    {
+        // Per-series fill (<c:spPr> with a fill child).
+        var spPr = serEl.Element(DmlNames.Dml + "spPr");
+        if (spPr is not null && spPr.Element(DmlNames.SolidFill) is not null)
+        {
+            var fill = new Unchained.Ooxml.Drawing.FillFormat();
+            FillParser.Parse(spPr, fill);
+            series.Fill = fill;
+        }
+
+        // Data labels (<c:dLbls>).
+        var dLbls = serEl.Element(CmlNames.Cml + "dLbls");
+        if (dLbls is not null)
+            series.DataLabels = ParseDataLabels(dLbls);
+
+        // Trendline (<c:trendline>).
+        var tl = serEl.Element(CmlNames.Cml + "trendline");
+        if (tl is not null)
+            series.Trendline = ParseTrendline(tl);
+    }
+
+    private static ChartDataLabels ParseDataLabels(XElement dLbls)
+    {
+        var c = CmlNames.Cml;
+        bool Show(string name, bool dflt) =>
+            dLbls.Element(c + name)?.GetAttrInt(CmlNames.AttributeValue) is { } v ? v == 1 : dflt;
+        return new ChartDataLabels
+        {
+            IsVisible = true,
+            ShowValue = Show("showVal", true),
+            ShowCategoryName = Show("showCatName", false),
+            ShowSeriesName = Show("showSerName", false),
+            ShowPercentage = Show("showPercent", false),
+            ShowLegendKey = Show("showLegendKey", false),
+            Position = dLbls.Element(c + "dLblPos")?.GetAttr(CmlNames.AttributeValue),
+            NumberFormat = dLbls.Element(c + "numFmt")?.GetAttr("formatCode")
+        };
+    }
+
+    private static ChartTrendline ParseTrendline(XElement tl)
+    {
+        var c = CmlNames.Cml;
+        return new ChartTrendline
+        {
+            Type = tl.Element(c + "trendlineType")?.GetAttr(CmlNames.AttributeValue, "linear") ?? "linear",
+            Order = tl.Element(c + "order")?.GetAttrInt(CmlNames.AttributeValue),
+            Forward = tl.Element(c + "forward")?.GetAttrDouble(CmlNames.AttributeValue),
+            Backward = tl.Element(c + "backward")?.GetAttrDouble(CmlNames.AttributeValue),
+            DisplayEquation = tl.Element(c + "dispEq")?.GetAttrInt(CmlNames.AttributeValue) == 1,
+            DisplayRSquared = tl.Element(c + "dispRSqr")?.GetAttrInt(CmlNames.AttributeValue) == 1
+        };
     }
 
     private static string ParseSeriesName(XElement serEl)

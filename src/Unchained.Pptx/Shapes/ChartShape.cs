@@ -1,4 +1,4 @@
-using Unchained.Pptx.Charts;
+using Unchained.Ooxml.Charts;
 
 namespace Unchained.Pptx.Shapes;
 

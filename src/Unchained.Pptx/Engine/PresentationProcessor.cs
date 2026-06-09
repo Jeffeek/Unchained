@@ -3,6 +3,7 @@ using Unchained.Pptx.Core;
 using Unchained.Ooxml;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Security;
@@ -302,7 +303,9 @@ public sealed class PresentationProcessor : IDisposable
         try
         {
             var parsed = await Task.Run(
-                () => PresentationParser.Parse(bytes, options),
+                () => options?.UseOpenXmlEngine == true
+                    ? OpenXmlPresentationParser.Parse(bytes, options)
+                    : PresentationParser.Parse(bytes, options),
                 cancellationToken).ConfigureAwait(false);
 
             return new PresentationDocument(
@@ -313,7 +316,8 @@ public sealed class PresentationProcessor : IDisposable
                 parsed.Protection,
                 parsed.SlideSize,
                 parsed.CommentAuthors,
-                parsed.Sections);
+                parsed.Sections,
+                parsed.Engine);
         }
         finally
         {
@@ -331,6 +335,15 @@ public sealed class PresentationProcessor : IDisposable
         {
             // Keep statistics current before serializing
             document.SyncStatistics();
+
+            // SDK-backed in-place save when requested and a live engine is attached; otherwise
+            // the custom writer. The SDK path preserves unmodelled parts (Phase 2 / M5b).
+            if (options?.UseOpenXmlEngine == true && OpenXmlPresentationWriter.CanSave(document))
+            {
+                return await Task.Run(
+                    () => OpenXmlPresentationWriter.Save(document),
+                    cancellationToken).ConfigureAwait(false);
+            }
 
             return await Task.Run(() =>
                 PresentationWriter.Write(

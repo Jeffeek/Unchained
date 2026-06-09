@@ -158,6 +158,18 @@ internal static class AnimationWriter
             new XAttribute("nodeType", nodeType),
             new XAttribute("dur", durMs));
 
+        // Acceleration / deceleration (ease-in / ease-out) as 1000ths of a percent.
+        if (effect.Timing.AccelerationPercent > 0)
+            ctn.SetAttributeValue("accel", (int)Math.Round(effect.Timing.AccelerationPercent * 100_000));
+        if (effect.Timing.DecelerationPercent > 0)
+            ctn.SetAttributeValue("decel", (int)Math.Round(effect.Timing.DecelerationPercent * 100_000));
+        if (effect.Timing.AutoReverse)
+            ctn.SetAttributeValue("autoRev", "1");
+        if (effect.Timing.RepeatCount != 0)
+            ctn.SetAttributeValue("repeatCount",
+                effect.Timing.RepeatCount < 0 ? "indefinite"
+                    : (effect.Timing.RepeatCount * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture));
+
         ctn.Add(new XElement(Pml + "stCondLst",
             new XElement(Pml + "cond",
                 new XAttribute("delay", delayMs))));

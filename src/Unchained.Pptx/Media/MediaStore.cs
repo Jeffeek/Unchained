@@ -1,3 +1,4 @@
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 

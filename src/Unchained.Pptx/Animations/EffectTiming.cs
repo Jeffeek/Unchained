@@ -29,4 +29,16 @@ public sealed class EffectTiming
     /// Default: <see langword="false"/>.
     /// </summary>
     public bool AutoReverse { get; set; }
+
+    /// <summary>
+    /// Fraction of the duration (0.0–1.0) spent accelerating at the start (ease-in).
+    /// <c>0</c> means no acceleration. Maps to the OOXML <c>accel</c> attribute.
+    /// </summary>
+    public double AccelerationPercent { get; set; }
+
+    /// <summary>
+    /// Fraction of the duration (0.0–1.0) spent decelerating at the end (ease-out).
+    /// <c>0</c> means no deceleration. Maps to the OOXML <c>decel</c> attribute.
+    /// </summary>
+    public double DecelerationPercent { get; set; }
 }

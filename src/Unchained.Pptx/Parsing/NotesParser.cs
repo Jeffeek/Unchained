@@ -2,7 +2,7 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Text;
+using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -19,6 +19,11 @@ internal static class NotesParser
     public static void Parse(XElement notesRoot, NotesSlide notes)
     {
         var pml = PmlNames.Pml;
+
+        // Preserve the full notes XML so a save re-emits it verbatim (the notes model captures
+        // only the body text, not the notes-master reference, slide-image placeholder, or
+        // formatting). NotesWriter honours this when present.
+        notes.RawElement = notesRoot;
 
         // Find the body placeholder (type="body" idx="1") inside the shape tree
         var spTree = notesRoot.Element(pml + "cSld")?.Element(pml + "spTree");

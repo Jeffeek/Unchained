@@ -5,6 +5,7 @@ using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 

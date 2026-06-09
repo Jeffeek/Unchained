@@ -1,6 +1,7 @@
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Media;
+using Unchained.Ooxml.Media;
 using Unchained.Pptx.Slides;
 using Unchained.Drawing;
 using Unchained.Drawing.Text;
