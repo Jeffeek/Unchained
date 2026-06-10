@@ -160,12 +160,15 @@ public sealed class RenderingTests : PptxTestBase
     }
 
     [Fact]
-    public async Task RenderSlide_JpegFormat_ThrowsNotSupported()
+    public async Task RenderSlide_JpegFormat_ProducesJpegBytesAndLabel()
     {
         var doc = PptxFixtures.WithSlides(1);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Jpeg });
 
-        await Should.ThrowAsync<NotSupportedException>(async () =>
-            await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
-                new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Jpeg }));
+        image.Format.ShouldBe(RenderImageFormat.Jpeg);
+        var bytes = image.Data.Span;
+        bytes[0].ShouldBe((byte)0xFF); // JPEG SOI marker
+        bytes[1].ShouldBe((byte)0xD8);
     }
 }
