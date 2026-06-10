@@ -1295,6 +1295,185 @@ internal static class PdfFixtures
         return Encoding.Latin1.GetBytes(sb.ToString());
     }
 
+    /// <summary>
+    /// Generates a single-page PDF (100×100 pt) that clips a black-filled rectangle
+    /// using a right-triangle W path (vertices: bottom-left, bottom-right, top-right).
+    /// The triangle occupies the lower-right half of the page. The top-left corner of
+    /// the page bbox is OUTSIDE the triangle, so exact polygon clipping must leave it
+    /// white. An axis-aligned bbox approximation would have painted it black.
+    /// </summary>
+    public static byte[] WithTriangularClip()
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R /Resources <<>> >>");
+        Ln(sb, "endobj");
+
+        // Content stream:
+        //   1. Set fill colour to black (0 g)
+        //   2. Define a triangle: (0,0) → (100,0) → (100,100) then close
+        //   3. W n  — set clip to triangle (nonzero winding), then end path without painting
+        //   4. Fill the whole page with black — only pixels inside the triangle are painted
+        // In PDF user space y=0 is bottom; the page flip puts y=0 at pixel row (height-1).
+        // Triangle vertices in user space: bottom-left(0,0), bottom-right(100,0), top-right(100,100).
+        // In device space (y flipped) this is: bottom-left pixel corner, bottom-right, top-right.
+        // The top-left device pixel corner corresponds to user-space (0,100) — OUTSIDE the triangle.
+        const string content =
+            "0 g\n" +
+            "0 0 m 100 0 l 100 100 l h\n" +
+            "W n\n" +
+            "0 0 100 100 re f";
+        var cb = Encoding.Latin1.GetBytes(content);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref"); Ln(sb, "0 5"); Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer"); Ln(sb, "<< /Size 5 /Root 1 0 R >>");
+        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+
+        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+    }
+
+    /// <summary>
+    /// Generates a single-page PDF that tests a blend mode. The page is pre-filled white,
+    /// then a grey rectangle (128,128,128) is painted over it using the given ExtGState
+    /// blend mode. Returns the PDF bytes for rendering verification.
+    /// <para>
+    /// For <c>Multiply</c>: grey × white = grey → result darker than white.
+    /// For <c>Screen</c>:   white + grey - grey×white = white (near-white result).
+    /// For <c>Difference</c>: |white - grey| = grey → same grey as source.
+    /// </para>
+    /// </summary>
+    public static byte[] WithBlendMode(string blendMode)
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
+        Ln(sb, "   /Resources << /ExtGState << /GS1 5 0 R >> >> >>");
+        Ln(sb, "endobj");
+
+        // Content: mid-grey page background (0.4 ≈ 102), then lighter grey rect (0.5 ≈ 127) with blend mode.
+        // Using 0.4 backdrop and 0.5 source keeps all blend modes in a range where the result
+        // is visually distinct from both pure white and pure black, even for edge cases like
+        // ColorDodge (0.4/0.5 = 0.8 ≈ 204, not white) and ColorBurn (1-0.6/0.5 = -0.2 → 0 = black).
+        var content =
+            "0.4 g 0 0 100 100 re f\n" +          // backdrop: mid-grey ~102
+            "/GS1 gs\n" +                          // apply blend mode ExtGState
+            "0.5 g 0 0 100 100 re f";              // source: mid-grey ~127
+        var cb = Encoding.Latin1.GetBytes(content);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+
+        // ExtGState with the given blend mode.
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "5 0 obj");
+        Ln(sb, $"<< /Type /ExtGState /BM /{blendMode} >>");
+        Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref"); Ln(sb, "0 6"); Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer"); Ln(sb, "<< /Size 6 /Root 1 0 R >>");
+        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+
+        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+    }
+
+    /// <summary>
+    /// Generates a single-page PDF that uses an ExtGState /SMask (soft mask) to apply a
+    /// circular alpha gradient over a black rectangle. The mask Form XObject fills a white
+    /// circle in the centre of the page. Pixels inside the circle should be rendered as
+    /// black (mask = opaque); the corners outside the circle should remain white (mask = transparent).
+    /// </summary>
+    public static byte[] WithSoftMask()
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+
+        // Page with ExtGState resource GS1 that has /SMask referencing form object 6.
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
+        Ln(sb, "   /Resources << /ExtGState << /GS1 5 0 R >> >> >>");
+        Ln(sb, "endobj");
+
+        // Content: white background, then black rect with soft mask applied.
+        const string content =
+            "1 g 0 0 100 100 re f\n" +  // white background
+            "/GS1 gs\n" +               // activate soft mask
+            "0 g 0 0 100 100 re f";     // black fill (masked by ellipse)
+        var cb = Encoding.Latin1.GetBytes(content);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+
+        // ExtGState with /SMask: type Alpha, mask form = object 6.
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "5 0 obj");
+        Ln(sb, "<< /Type /ExtGState /SMask << /Type /Mask /S /Alpha /G 6 0 R >> >>");
+        Ln(sb, "endobj");
+
+        // Mask Form XObject: fills a centred rectangle with white (opaque mask region).
+        // Using a rectangle for simplicity — pixels inside the rect get mask=255, outside=0.
+        const string maskContent = "1 g 25 25 50 50 re f";
+        var mc = Encoding.Latin1.GetBytes(maskContent);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "6 0 obj");
+        Ln(sb, $"<< /Type /XObject /Subtype /Form /BBox [0 0 100 100] /Length {mc.Length} >>");
+        sb.Append("stream\n"); sb.Append(maskContent); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref"); Ln(sb, "0 7"); Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer"); Ln(sb, "<< /Size 7 /Root 1 0 R >>");
+        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+
+        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+    }
+
     private static byte[] ZlibCompress(byte[] data)
     {
         using var ms = new MemoryStream();

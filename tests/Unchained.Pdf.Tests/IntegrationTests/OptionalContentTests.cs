@@ -102,4 +102,41 @@ public sealed class OptionalContentTests : PdfTestBase
         await Should.ThrowAsync<InvalidOperationException>(
             () => editor.SetLayerVisibilityAsync(doc, ocgObjectNumber: 5, visible: false, TestContext.Current.CancellationToken));
     }
+
+    // ── Soft mask parsing ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetSoftMasks_WithSoftMaskFixture_ReturnsEntry()
+    {
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithSoftMask(),
+            TestContext.Current.CancellationToken);
+
+        var page = doc.Pages[1];
+        var pixW = (int)(page.Width * 72.0 / 72.0);
+        var pixH = (int)(page.Height * 72.0 / 72.0);
+        var softMasks = page.GetSoftMasks(pixW, pixH);
+
+        softMasks.ShouldNotBeEmpty("expected GS1 soft mask entry to be parsed");
+        softMasks.ContainsKey("GS1").ShouldBeTrue("soft mask should be keyed by ExtGState name GS1");
+
+        var sm = softMasks["GS1"];
+        sm.WidthPx.ShouldBe(pixW);
+        sm.HeightPx.ShouldBe(pixH);
+        sm.MaskType.ShouldBe("Alpha");
+        sm.Operators.ShouldNotBeEmpty("mask form should have content operators");
+    }
+
+    [Fact]
+    public async Task GetExtGStateAlphas_WithSoftMaskFixture_IncludesSoftMaskName()
+    {
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithSoftMask(),
+            TestContext.Current.CancellationToken);
+
+        var alphas = doc.Pages[1].GetExtGStateAlphas();
+
+        alphas.ContainsKey("GS1").ShouldBeTrue("GS1 ExtGState should be present");
+        alphas["GS1"].SoftMaskName.ShouldBe("GS1", "soft mask name should match ExtGState key");
+    }
 }

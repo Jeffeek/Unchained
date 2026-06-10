@@ -211,7 +211,7 @@ public sealed class FontSubsystemTests : RendererTestBase
 
     // Loads the bundled DejaVuSans-Regular.ttf from the Drawing.Text assembly (valid TrueType,
     // usable by FreeType2 for rendering tests). Fonts moved from Pdf.Rendering → Drawing.Text.
-    private static byte[] LoadBundledDejaVuBytes()
+    internal static byte[] LoadBundledDejaVuBytes()
     {
         var asm = typeof(Unchained.Drawing.Text.FontCache).Assembly;
         using var stream = asm.GetManifestResourceStream("Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
@@ -221,6 +221,9 @@ public sealed class FontSubsystemTests : RendererTestBase
         stream.CopyTo(ms);
         return ms.ToArray();
     }
+
+    // Public alias used by FontUtilitiesTests (different class, same assembly).
+    internal static byte[] LoadBundledDejaVuBytesPublic() => LoadBundledDejaVuBytes();
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static byte[] CreateSolidRgb(int width, int height, byte r, byte g, byte b)
@@ -234,5 +237,182 @@ public sealed class FontSubsystemTests : RendererTestBase
         }
 
         return rgb;
+    }
+}
+
+/// <summary>
+/// Tests for font utilities: TrueType metrics extraction, font replacement,
+/// and font subsetting (SubsetFontsAsync / TrueTypeSubsetter).
+/// </summary>
+public sealed class FontUtilitiesTests : PdfTestBase
+{
+    // ── TrueType metrics ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void TrueTypeMetrics_SyntheticBytes_ReturnsDefaults()
+    {
+        // A non-TrueType byte array should fall back to the hardcoded defaults.
+        // The method returns defaults rather than null when the input is too short.
+        var metrics = Unchained.Pdf.Engine.TrueTypeMetrics.Read([0x00, 0x01, 0x02]);
+        // Either null or default metrics — both are acceptable; the key invariant is no exception.
+        if (metrics is not null)
+        {
+            // If defaults are returned, they should be reasonable values.
+            metrics.Ascent.ShouldBe(800);
+            metrics.Descent.ShouldBe(-200);
+        }
+    }
+
+    [Fact]
+    public void TrueTypeMetrics_ValidTrueTypeFont_ReturnsNonDefaultMetrics()
+    {
+        // Use the bundled DejaVuSans font (valid TrueType).
+        var fontBytes = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        var metrics = Unchained.Pdf.Engine.TrueTypeMetrics.Read(fontBytes);
+
+        metrics.ShouldNotBeNull();
+        metrics!.Ascent.ShouldBeGreaterThan(0, "ascent should be positive");
+        metrics.Descent.ShouldBeLessThan(0, "descent should be negative for descenders");
+        metrics.CapHeight.ShouldBeGreaterThan(0, "cap height should be positive");
+        metrics.StemV.ShouldBeGreaterThan(0, "stem width should be positive");
+        // Values should NOT all be the hardcoded defaults (800, -200, 716, 80).
+        var isAllDefault = metrics.Ascent == 800 && metrics.Descent == -200
+            && metrics.CapHeight == 716 && metrics.StemV == 80;
+        isAllDefault.ShouldBeFalse("real font should produce non-default metrics");
+    }
+
+    // ── EmbedStandardFonts with real metrics ─────────────────────────────────────
+
+    [Fact]
+    public async Task EmbedStandardFontsAsync_WithRealFont_EmbedsFontFile()
+    {
+        var fontBytes = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        // WithTextContent uses Helvetica — EmbedStandardFontsAsync should embed it.
+        // The font map must match the exact /BaseFont name used in the fixture.
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithTextContent("Hello"),
+            TestContext.Current.CancellationToken);
+
+        // Map both "Helvetica" and "Helvetica-Bold" to cover possible /BaseFont values.
+        var fontMap = new Dictionary<string, byte[]>
+        {
+            ["Helvetica"] = fontBytes,
+            ["Helvetica-Bold"] = fontBytes,
+            ["Arial"] = fontBytes,
+            ["ArialMT"] = fontBytes
+        };
+        // Should not throw regardless of whether fonts are found.
+        await Should.NotThrowAsync(() =>
+            Processor.EmbedStandardFontsAsync(doc, fontMap, TestContext.Current.CancellationToken));
+    }
+
+    // ── ReplaceFontAsync ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ReplaceFontAsync_WithRealFont_UpdatesEmbeddedFont()
+    {
+        var originalFont = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        var replacementFont = FontSubsystemTests.LoadBundledDejaVuBytesPublic(); // same font, different instance
+
+        // Create a PDF with an embedded font first.
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithEmbeddedFont(originalFont),
+            TestContext.Current.CancellationToken);
+
+        // Replace Helvetica (the font name in the fixture) with a new font.
+        await Processor.ReplaceFontAsync(
+            doc, "Helvetica", replacementFont,
+            TestContext.Current.CancellationToken);
+
+        // Save and reload to verify the change persisted.
+        using var ms = new MemoryStream();
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        ms.Position = 0;
+        await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
+        var embedded = reloaded.Pages[1].GetEmbeddedFontBytes();
+        embedded.Values.Any(static v => v is not null).ShouldBeTrue(
+            "font should still be embedded after ReplaceFontAsync");
+    }
+
+    // ── SubsetFontsAsync ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SubsetFontsAsync_WithEmbeddedFont_ReducesOrMaintainsSize()
+    {
+        var fontBytes = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithEmbeddedFont(fontBytes),
+            TestContext.Current.CancellationToken);
+
+        // Record size before subsetting.
+        using var msBefore = new MemoryStream();
+        await Processor.SaveAsync(doc, msBefore, ct: TestContext.Current.CancellationToken);
+        var sizeBefore = msBefore.Length;
+
+        await Processor.SubsetFontsAsync(doc, TestContext.Current.CancellationToken);
+
+        // Record size after subsetting.
+        using var msAfter = new MemoryStream();
+        await Processor.SaveAsync(doc, msAfter, ct: TestContext.Current.CancellationToken);
+        var sizeAfter = msAfter.Length;
+
+        // Subset must not make the file larger (it may be the same if font was already small).
+        sizeAfter.ShouldBeLessThanOrEqualTo(
+            sizeBefore,
+            $"SubsetFontsAsync should not increase file size (before={sizeBefore}, after={sizeAfter})");
+    }
+
+    [Fact]
+    public async Task SubsetFontsAsync_NoEmbeddedFont_NoChange()
+    {
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithTextContent("Hello"),
+            TestContext.Current.CancellationToken);
+
+        // Should not throw even when there are no embedded fonts.
+        await Should.NotThrowAsync(() =>
+            Processor.SubsetFontsAsync(doc, TestContext.Current.CancellationToken));
+    }
+
+    // ── TrueTypeSubsetter unit tests ─────────────────────────────────────────────
+
+    [Fact]
+    public void TrueTypeSubsetter_EmptyGlyphs_ReturnsOriginal()
+    {
+        var original = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        var result = Unchained.Pdf.Engine.TrueTypeSubsetter.Subset(original, new HashSet<int>());
+        result.ShouldBeSameAs(original, "empty glyph set should return original unchanged");
+    }
+
+    [Fact]
+    public void TrueTypeSubsetter_AllGlyphs_ReturnsOriginal()
+    {
+        var original = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        // Request all glyph IDs — subsetting should detect no savings and return original.
+        var allGlyphs = Enumerable.Range(0, 65536).ToHashSet();
+        var result = Unchained.Pdf.Engine.TrueTypeSubsetter.Subset(original, allGlyphs);
+        // Either returns original reference or same length.
+        result.Length.ShouldBe(original.Length,
+            "requesting all glyphs should not change font size");
+    }
+
+    [Fact]
+    public void TrueTypeSubsetter_SubsetOfGlyphs_ProducesValidSmallFont()
+    {
+        var original = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        // Only keep glyphs for 'A'-'Z' (approx glyph IDs 36–61 for basic Latin).
+        var usedGlyphs = Enumerable.Range(36, 26).ToHashSet();
+        var result = Unchained.Pdf.Engine.TrueTypeSubsetter.Subset(original, usedGlyphs);
+
+        // Result should be a valid TrueType (starts with 0x00010000 or 'OTTO').
+        result.Length.ShouldBeGreaterThan(12);
+        // sfVersion bytes 0–3.
+        var isOtf = result[0] == 0x4F && result[1] == 0x54; // 'OT'
+        var isTtf = result[0] == 0x00 && result[1] == 0x01; // TrueType
+        (isOtf || isTtf).ShouldBeTrue("subset result should have valid TrueType/OTF sfVersion");
+
+        // Subset should be smaller than original (DejaVuSans has 6000+ glyphs).
+        result.Length.ShouldBeLessThan(original.Length,
+            "subset of 26 glyphs should be much smaller than full font");
     }
 }

@@ -21,9 +21,10 @@ internal sealed class PageRenderer(
     double[]? initialCtm = null,
     IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null,
     IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null,
-    IReadOnlyDictionary<string, (double Fill, double Stroke)>? extGStateAlphas = null,
+    IReadOnlyDictionary<string, (double Fill, double Stroke, string BlendMode, string? SoftMaskName)>? extGStateAlphas = null,
     IReadOnlyDictionary<string, ShadingInfo>? shadings = null,
-    IReadOnlyDictionary<string, TilingPatternInfo>? tilingPatterns = null
+    IReadOnlyDictionary<string, TilingPatternInfo>? tilingPatterns = null,
+    IReadOnlyDictionary<string, SoftMaskInfo>? softMasks = null
 )
 {
     // Current path as a list of subpaths, each a polyline of user-space points. A new `m`
@@ -38,9 +39,10 @@ internal sealed class PageRenderer(
     // Nesting depth for tiling-pattern cell rendering; bounds pattern-in-pattern recursion.
     internal int _tilingDepth;
     private static readonly Dictionary<string, string> EmptyFontMap = new();
-    // Set by W/W*; the clip is applied (intersected into the graphics state) when the
-    // current path is next cleared by a painting/no-op operator.
+    // Set by W/W*; the clip is applied when the current path is next cleared.
+    // _pendingClipEvenOdd distinguishes W* (even-odd) from W (nonzero winding).
     private bool _pendingClip;
+    private bool _pendingClipEvenOdd;
 
     private readonly Stack<GraphicsState> _gsStack = new();
     // Apply the initial CTM from the renderer (encodes page rotation + coordinate origin).
@@ -85,7 +87,13 @@ internal sealed class PageRenderer(
         switch (op.Name)
         {
             // ── Graphics state ────────────────────────────────────────────────
-            case "q": _gsStack.Push(_gs.Clone()); break;
+            case "q":
+            {
+                // Save the current clip mask into the graphics state snapshot before pushing.
+                _gs.SavedClipMask = buffer.SaveClipMask();
+                _gsStack.Push(_gs.Clone());
+                break;
+            }
             case "Q":
             {
                 if (_gsStack.Count > 0) _gs = _gsStack.Pop();
@@ -214,13 +222,27 @@ internal sealed class PageRenderer(
             case "J" or "j" or "M" or "ri" or "i": break; // consume; not rendered
             case "gs" when op.Operands.Count >= 1:
             {
-                // Apply the named /ExtGState's constant alpha (/ca fill, /CA stroke).
+                // Apply the named /ExtGState's constant alpha (/ca fill, /CA stroke),
+                // blend mode (/BM), and soft mask (/SMask).
                 var name = (op.Operands[0] as PdfName)?.Value;
                 if (name is not null && extGStateAlphas is not null
                     && extGStateAlphas.TryGetValue(name, out var a))
                 {
                     _gs.FillA = (byte)Math.Clamp((int)Math.Round(a.Fill * 255), 0, 255);
                     _gs.StrokeA = (byte)Math.Clamp((int)Math.Round(a.Stroke * 255), 0, 255);
+                    _gs.BlendMode = a.BlendMode;
+                    // Activate soft mask if present.
+                    if (a.SoftMaskName is { } smName && softMasks is not null
+                        && softMasks.TryGetValue(smName, out var smInfo))
+                    {
+                        _gs.SoftMask = RenderSoftMask(smInfo);
+                        _gs.SoftMaskWidth = smInfo.WidthPx;
+                        _gs.SoftMaskHeight = smInfo.HeightPx;
+                    }
+                    else
+                    {
+                        _gs.SoftMask = null;
+                    }
                 }
                 break;
             }
@@ -275,9 +297,10 @@ internal sealed class PageRenderer(
 
             // ── Clip ──────────────────────────────────────────────────────────
             // W/W* set the clip to the current path; it takes effect AFTER the next
-            // painting operator (ISO 32000-1 §8.5.4). We record a pending clip (the path's
-            // device-space bounding box) and apply it when the path is cleared.
-            case "W" or "W*": _pendingClip = true; break;
+            // painting operator (ISO 32000-1 §8.5.4). We record a pending clip and apply it
+            // when the path is cleared. W* uses the even-odd rule; W uses nonzero winding.
+            case "W":  _pendingClip = true; _pendingClipEvenOdd = false; break;
+            case "W*": _pendingClip = true; _pendingClipEvenOdd = true;  break;
 
             // ── Marked content (consume) ──────────────────────────────────────
             case "BMC" or "BDC" or "EMC" or "MP" or "DP": break;
@@ -532,7 +555,7 @@ internal sealed class PageRenderer(
             // Use BlitGlyphFromFace so we can read BitmapLeft/BitmapTop and the bitmap
             // itself directly from the FT_GlyphSlotRec at correct native struct offsets.
             // SharpFont's face->glyph offset is wrong on Windows x64 (NativeLong mismatch).
-            buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
+            buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
 
             // Advance in 26.6 px → convert to user-space points.
             var advance = ((glyphPositions[i].XAdvance / 64.0 / scale) + _gs.CharSpace)
@@ -571,7 +594,7 @@ internal sealed class PageRenderer(
             {
                 GlyphsAttempted++;
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
-                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
+                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
             }
 
             // Glyph advance (16.16 fixed-point pixels when scaled) → user-space points.
@@ -610,7 +633,7 @@ internal sealed class PageRenderer(
             {
                 GlyphsAttempted++;
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
-                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
+                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
             }
 
             // Advance from /W (glyph-space units, 1000 per em) → text-space, then scaled
@@ -732,10 +755,14 @@ internal sealed class PageRenderer(
         {
             var (px1, py1) = UToPixel(rminX, rmaxY);
             var (px2, py2) = UToPixel(rmaxX, rminY);
-            buffer.FillRect(
-                (int)px1, (int)py1,
-                (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
-                fr, fg, fb, _gs.FillA);
+            if (HasSoftMask)
+                FillRectSoftMasked((int)px1, (int)py1, (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
+                    fr, fg, fb, _gs.FillA, _gs.BlendMode);
+            else
+                buffer.FillRect(
+                    (int)px1, (int)py1,
+                    (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
+                    fr, fg, fb, _gs.FillA, _gs.BlendMode);
             return;
         }
 
@@ -814,10 +841,10 @@ internal sealed class PageRenderer(
         var y0 = Math.Max(0, (int)Math.Floor(minY));
         var x1 = Math.Min(buffer.Width - 1, (int)Math.Ceiling(maxX));
         var y1 = Math.Min(buffer.Height - 1, (int)Math.Ceiling(maxY));
-        if (_gs.ClipRect is { } c)
         {
-            x0 = Math.Max(x0, c.X0); y0 = Math.Max(y0, c.Y0);
-            x1 = Math.Min(x1, c.X1 - 1); y1 = Math.Min(y1, c.Y1 - 1);
+            var (cx0, cy0, cx1, cy1) = buffer.ClipBounds();
+            x0 = Math.Max(x0, cx0); y0 = Math.Max(y0, cy0);
+            x1 = Math.Min(x1, cx1 - 1); y1 = Math.Min(y1, cy1 - 1);
         }
 
         for (var py = y0; py <= y1; py++)
@@ -833,7 +860,7 @@ internal sealed class PageRenderer(
     }
     private void PaintShadingInClip(ShadingInfo sh)
     {
-        var (x0, y0, x1, y1) = _gs.ClipRect ?? (0, 0, buffer.Width, buffer.Height);
+        var (x0, y0, x1, y1) = buffer.ClipBounds();
         PaintShadingRect(sh, x0, y0, x1 - 1, y1 - 1);
     }
 
@@ -853,10 +880,10 @@ internal sealed class PageRenderer(
         if (dx1 < dx0 || dy1 < dy0) return;
 
         // Honour an active clip rectangle.
-        if (_gs.ClipRect is { } c)
         {
-            dx0 = Math.Max(dx0, c.X0); dy0 = Math.Max(dy0, c.Y0);
-            dx1 = Math.Min(dx1, c.X1 - 1); dy1 = Math.Min(dy1, c.Y1 - 1);
+            var (cx0, cy0, cx1, cy1) = buffer.ClipBounds();
+            dx0 = Math.Max(dx0, cx0); dy0 = Math.Max(dy0, cy0);
+            dx1 = Math.Min(dx1, cx1 - 1); dy1 = Math.Min(dy1, cy1 - 1);
             if (dx1 < dx0 || dy1 < dy0) return;
         }
 
@@ -874,7 +901,7 @@ internal sealed class PageRenderer(
             if (!ShadingT(sh, ux, uy, out var t)) continue;
             var (r, g, b) = sh.ColorAt(t);
             if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
-            else buffer.BlendPixel(px, py, r, g, b, _gs.FillA);
+            else buffer.BlendPixel(px, py, r, g, b, _gs.FillA, _gs.BlendMode);
         }
         _ = m;
     }
@@ -896,10 +923,10 @@ internal sealed class PageRenderer(
             var maxY = (int)Math.Ceiling(Math.Max(ay, Math.Max(by, cy)));
             minX = Math.Max(minX, 0); minY = Math.Max(minY, 0);
             maxX = Math.Min(maxX, buffer.Width - 1); maxY = Math.Min(maxY, buffer.Height - 1);
-            if (_gs.ClipRect is { } c)
             {
-                minX = Math.Max(minX, c.X0); minY = Math.Max(minY, c.Y0);
-                maxX = Math.Min(maxX, c.X1 - 1); maxY = Math.Min(maxY, c.Y1 - 1);
+                var (cx0, cy0, cx1, cy1) = buffer.ClipBounds();
+                minX = Math.Max(minX, cx0); minY = Math.Max(minY, cy0);
+                maxX = Math.Min(maxX, cx1 - 1); maxY = Math.Min(maxY, cy1 - 1);
             }
 
             var denom = ((by - cy) * (ax - cx)) + ((cx - bx) * (ay - cy));
@@ -1043,7 +1070,12 @@ internal sealed class PageRenderer(
                 var xStart = (int)Math.Round(xs[i].X);
                 var xEnd = (int)Math.Round(xs[i + 1].X);
                 if (xEnd > xStart)
-                    buffer.FillSpan(y, xStart, xEnd - 1, fr, fg, fb, _gs.FillA);
+                {
+                    if (HasSoftMask)
+                        FillSpanSoftMasked(y, xStart, xEnd - 1, fr, fg, fb, _gs.FillA, _gs.BlendMode);
+                    else
+                        buffer.FillSpan(y, xStart, xEnd - 1, fr, fg, fb, _gs.FillA, _gs.BlendMode);
+                }
             }
         }
     }
@@ -1073,7 +1105,7 @@ internal sealed class PageRenderer(
                 var (x1, y1) = UToPixel(sub[i + 1].X, sub[i + 1].Y);
                 if (dashPx is null)
                     buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
-                        _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA);
+                        _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA, _gs.BlendMode);
                 else
                     DrawDashedLine(x0, y0, x1, y1, thickPx, dashPx);
             }
@@ -1105,7 +1137,7 @@ internal sealed class PageRenderer(
                 var ax = x0 + (ux * pos); var ay = y0 + (uy * pos);
                 var bx = x0 + (ux * end); var by = y0 + (uy * end);
                 buffer.DrawLine((int)ax, (int)ay, (int)bx, (int)by,
-                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA);
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA, _gs.BlendMode);
             }
             pos = end;
             idx++;
@@ -1129,55 +1161,37 @@ internal sealed class PageRenderer(
     {
         if (_pendingClip)
         {
-            ApplyPendingClip();
+            ApplyPendingClip(_pendingClipEvenOdd);
             _pendingClip = false;
+            _pendingClipEvenOdd = false;
         }
         _subpaths.Clear();
         _curSub = null;
         _inPath = false;
     }
 
-    // Computes the device-space bounding box of the current path and intersects it into the
-    // graphics-state clip rectangle. Called when a path with a pending W/W* is cleared.
-    private void ApplyPendingClip()
+    // Rasterises the current path into the buffer's clip mask using the given winding rule.
+    // Replaces the old bbox approximation — now every pixel is tested against the true
+    // clip polygon, so diagonal edges, circles, and holes clip correctly.
+    private void ApplyPendingClip(bool evenOdd = false)
     {
-        var minX = double.MaxValue; var minY = double.MaxValue;
-        var maxX = double.MinValue; var maxY = double.MinValue;
-        var any = false;
+        // Flatten every subpath to device-space point arrays.
+        var polys = new List<(double X, double Y)[]>(_subpaths.Count);
         foreach (var sub in _subpaths)
-        foreach (var (ux, uy) in sub)
         {
-            var (px, py) = UToPixel(ux, uy);
-            if (px < minX) minX = px;
-            if (py < minY) minY = py;
-            if (px > maxX) maxX = px;
-            if (py > maxY) maxY = py;
-            any = true;
+            if (sub.Count < 2) continue;
+            var pts = new (double X, double Y)[sub.Count];
+            for (var i = 0; i < sub.Count; i++)
+                pts[i] = UToPixel(sub[i].X, sub[i].Y);
+            polys.Add(pts);
         }
-        if (!any) return;
+        if (polys.Count == 0) return;
 
-        var x0 = (int)Math.Floor(minX);
-        var y0 = (int)Math.Floor(minY);
-        var x1 = (int)Math.Ceiling(maxX);
-        var y1 = (int)Math.Ceiling(maxY);
-
-        if (_gs.ClipRect is { } c)
-        {
-            x0 = Math.Max(x0, c.X0); y0 = Math.Max(y0, c.Y0);
-            x1 = Math.Min(x1, c.X1); y1 = Math.Min(y1, c.Y1);
-        }
-        _gs.ClipRect = (x0, y0, x1, y1);
-        buffer.SetClip(x0, y0, x1, y1);
+        buffer.SetClipPolygons(polys, evenOdd);
     }
 
     // Re-applies the current graphics-state clip to the buffer (after a Q restore).
-    private void SyncClip()
-    {
-        if (_gs.ClipRect is { } c)
-            buffer.SetClip(c.X0, c.Y0, c.X1, c.Y1);
-        else
-            buffer.ClearClip();
-    }
+    private void SyncClip() => buffer.RestoreClipMask(_gs.SavedClipMask);
 
     // True when the path is a single axis-aligned rectangle (the common case: page
     // backgrounds, table cells, rules). Returns its user-space bounds. Such paths keep the
@@ -1289,7 +1303,7 @@ internal sealed class PageRenderer(
             if (a >= 255)
                 buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
             else
-                buffer.BlendPixel(dstX + px, dstY + py, r, g, b, (byte)a);
+                buffer.BlendPixel(dstX + px, dstY + py, r, g, b, (byte)a, _gs.BlendMode);
         }
     }
 
@@ -1327,6 +1341,39 @@ internal sealed class PageRenderer(
         _gs.StrokeR = r; _gs.StrokeG = g; _gs.StrokeB = b;
     }
 
+    // Modulates a source alpha by the active soft mask at device pixel (x, y).
+    // Returns the original alpha when no soft mask is active or (x,y) is out of range.
+    private byte SoftMaskAlpha(int x, int y, byte a)
+    {
+        if (_gs.SoftMask is not { } mask) return a;
+        if ((uint)x >= (uint)_gs.SoftMaskWidth || (uint)y >= (uint)_gs.SoftMaskHeight) return 0;
+        var maskA = mask[(y * _gs.SoftMaskWidth) + x];
+        return (byte)((a * maskA) / 255);
+    }
+
+    // Whether a soft mask is active — if so, fills must apply per-pixel alpha modulation.
+    private bool HasSoftMask => _gs.SoftMask is not null;
+
+    // Fills a rectangle applying the soft mask per-pixel (used when HasSoftMask is true).
+    private void FillRectSoftMasked(
+        int px, int py, int pw, int ph,
+        byte r, byte g, byte b, byte baseAlpha, string blendMode)
+    {
+        var x2 = px + pw; var y2 = py + ph;
+        for (var y = py; y < y2; y++)
+        for (var x = px; x < x2; x++)
+            buffer.SetPixel(x, y, r, g, b, SoftMaskAlpha(x, y, baseAlpha), blendMode);
+    }
+
+    // Fills a scanline span applying the soft mask per-pixel.
+    private void FillSpanSoftMasked(
+        int y, int x0, int x1,
+        byte r, byte g, byte b, byte baseAlpha, string blendMode)
+    {
+        for (var x = x0; x <= x1; x++)
+            buffer.SetPixel(x, y, r, g, b, SoftMaskAlpha(x, y, baseAlpha), blendMode);
+    }
+
     private void SetFillGray(double gray)
     {
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
@@ -1357,5 +1404,70 @@ internal sealed class PageRenderer(
         _gs.StrokeR = (byte)Math.Clamp((int)(r * 255), 0, 255);
         _gs.StrokeG = (byte)Math.Clamp((int)(g * 255), 0, 255);
         _gs.StrokeB = (byte)Math.Clamp((int)(b * 255), 0, 255);
+    }
+
+    // Renders a soft mask Form XObject into a per-pixel alpha array (device space).
+    // The mask form is rendered into a temporary black-backdrop RasterBuffer at the same
+    // device dimensions as the main page buffer. For /Alpha masks the rendered brightness
+    // is taken as opacity (black=transparent, white=opaque). For /Luminosity masks the
+    // standard luminance coefficients are applied. ISO 32000-1 §11.6.5.
+    private byte[]? RenderSoftMask(SoftMaskInfo smInfo)
+    {
+        try
+        {
+            var maskBuf = new RasterBuffer(smInfo.WidthPx, smInfo.HeightPx);
+            maskBuf.Clear(0, 0, 0);
+
+            var bbox = smInfo.BBox;
+            var m = smInfo.Matrix;
+            var formW = bbox[2] - bbox[0];
+            var formH = bbox[3] - bbox[1];
+            var sx = formW > 0 ? smInfo.WidthPx / formW : 1.0;
+            var sy = formH > 0 ? smInfo.HeightPx / formH : 1.0;
+            var s = Math.Min(sx, sy);
+
+            double[] ctm =
+            [
+                m[0] * s, m[1] * s,
+                m[2] * s, m[3] * s,
+                (m[4] - bbox[0]) * s,
+                (m[5] - bbox[1]) * s
+            ];
+
+            var formPage = smInfo.FormPage;
+            var maskRenderer = new PageRenderer(
+                maskBuf, fonts, s,
+                pageHeightPt: formH > 0 ? formH : pageHeightPt,
+                embeddedFontBytes: formPage.GetEmbeddedFontBytes(),
+                imageXObjects: formPage.GetImageXObjects(),
+                initialCtm: ctm,
+                toUnicodeMaps: formPage.GetToUnicodeMaps(),
+                compositeFonts: formPage.GetCompositeFonts(),
+                extGStateAlphas: formPage.GetExtGStateAlphas(),
+                shadings: formPage.GetShadings(),
+                tilingPatterns: formPage.GetTilingPatterns());
+
+            maskRenderer.Render(smInfo.Operators, formPage.GetFontNameMap());
+
+            var pixels = maskBuf.ToArgbBytes();
+            var alpha = new byte[smInfo.WidthPx * smInfo.HeightPx];
+            for (var y = 0; y < smInfo.HeightPx; y++)
+            for (var x = 0; x < smInfo.WidthPx; x++)
+            {
+                var o = ((y * smInfo.WidthPx) + x) * 4;
+                alpha[(y * smInfo.WidthPx) + x] = smInfo.MaskType == "Luminosity"
+                    ? (byte)(((int)pixels[o] * 77 + (int)pixels[o + 1] * 150 + (int)pixels[o + 2] * 29) >> 8)
+                    : pixels[o];
+            }
+            return alpha;
+        }
+        // ReSharper disable once EmptyGeneralCatchClause
+        catch
+        {
+            // On failure, return a fully-opaque mask so content is not incorrectly hidden.
+            var fallback = new byte[smInfo.WidthPx * smInfo.HeightPx];
+            Array.Fill(fallback, (byte)255);
+            return fallback;
+        }
     }
 }

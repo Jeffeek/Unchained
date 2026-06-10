@@ -176,10 +176,12 @@ public sealed class PdfRenderer : IRenderer
         var extGStateAlphas  = page.GetExtGStateAlphas();
         var shadings         = page.GetShadings();
         var tilingPatterns   = page.GetTilingPatterns();
+        var softMasks        = page.GetSoftMasks(pixW, pixH);
 
         var renderer = new PageRenderer(
             buffer, _fonts, scale, pageHeightPt,
-            embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps, compositeFonts, extGStateAlphas, shadings, tilingPatterns);
+            embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps, compositeFonts,
+            extGStateAlphas, shadings, tilingPatterns, softMasks);
         renderer.Render(page.GetContentOperators(), fontMap);
 
         LastTextErrors      = renderer.TextErrorCount;

@@ -131,14 +131,27 @@ public interface IPdfPage
         new Dictionary<string, CompositeFontInfo>();
 
     /// <summary>
-    /// Returns the constant alpha values declared by each <c>/ExtGState</c> resource on this
-    /// page, keyed by resource name (the operand of the <c>gs</c> operator). The tuple is
-    /// (fill alpha <c>/ca</c>, stroke alpha <c>/CA</c>), each in 0–1 (ISO 32000-1 §11.6.4.4).
-    /// Entries that declare neither are omitted. Returns an empty dictionary when the page
-    /// has no <c>/ExtGState</c> resources.
+    /// Returns the constant alpha values and blend mode declared by each <c>/ExtGState</c>
+    /// resource on this page, keyed by resource name (the operand of the <c>gs</c> operator).
+    /// The tuple is (fill alpha <c>/ca</c>, stroke alpha <c>/CA</c>, blend mode <c>/BM</c>,
+    /// soft-mask resource name <c>/SMask</c>),
+    /// alphas each in 0–1 (ISO 32000-1 §11.6.4.4); blend mode is the PDF name string
+    /// (e.g. "Normal", "Multiply") or "Normal" when absent; soft-mask name is null when absent.
+    /// Returns an empty dictionary when the page has no <c>/ExtGState</c> resources.
     /// </summary>
-    IReadOnlyDictionary<string, (double Fill, double Stroke)> GetExtGStateAlphas() =>
-        new Dictionary<string, (double, double)>();
+    IReadOnlyDictionary<string, (double Fill, double Stroke, string BlendMode, string? SoftMaskName)> GetExtGStateAlphas() =>
+        new Dictionary<string, (double, double, string, string?)>();
+
+    /// <summary>
+    /// Returns decoded soft masks for this page, keyed by a unique name derived from the
+    /// ExtGState resource that references them. Each value is a pre-rasterised per-pixel
+    /// alpha map in device space (ISO 32000-1 §11.6.5).
+    /// Returns an empty dictionary when the page has no soft-mask resources.
+    /// </summary>
+    /// <param name="widthPx">Device pixel width of the page (used to size the alpha map).</param>
+    /// <param name="heightPx">Device pixel height of the page.</param>
+    IReadOnlyDictionary<string, SoftMaskInfo> GetSoftMasks(int widthPx, int heightPx) =>
+        new Dictionary<string, SoftMaskInfo>();
 
     /// <summary>
     /// Returns decoded axial/radial shadings available on this page, keyed by resource name.
