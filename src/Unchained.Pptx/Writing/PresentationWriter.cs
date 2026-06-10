@@ -40,7 +40,9 @@ internal sealed class PresentationWriter
         CommentAuthorCollection? commentAuthors = null,
         SectionCollection? sections = null,
         ProtectionInfo? protection = null,
-        Models.SaveOptions? options = null)
+        Models.SaveOptions? options = null,
+        SlideShowSettings? slideShow = null,
+        Engine.PreservedContent? preserved = null)
     {
         var package = OpcPackage.CreateEmpty();
 
@@ -87,8 +89,19 @@ internal sealed class PresentationWriter
             WriteCommentAuthors(package, authors, contentTypes);
         }
 
-        // Write presentation.xml (includes sections and write-protection)
-        WritePresentationPart(package, slides, masters, masterUris, slideUris, slideSize, sections, protection, contentTypes);
+        // Write presentation-properties part (slide-show settings) when any are set (M-G).
+        var hasPresProps = slideShow?.HasAnySetting == true;
+        if (hasPresProps)
+            WritePresProps(package, slideShow!, contentTypes);
+
+        // Write presentation.xml (includes sections and write-protection). Use the macro-enabled
+        // content type when a VBA project is being preserved (M-G).
+        var hasMacros = preserved?.HasMacros == true;
+        WritePresentationPart(package, slides, masters, masterUris, slideUris, slideSize, sections, protection, contentTypes, hasPresProps, hasMacros);
+
+        // Re-emit verbatim-preserved content (VBA project, digital signatures) (M-G).
+        if (preserved is { IsEmpty: false })
+            WritePreservedContent(package, preserved, contentTypes);
 
         // Write core properties
         WriteCoreProperties(package, properties, contentTypes);
@@ -230,14 +243,18 @@ internal sealed class PresentationWriter
     {
         var slideUris = new Dictionary<Slide, string>();
 
+        // Pre-assign every slide's part URI first, so internal slide-jump hyperlinks can resolve
+        // their target (which may be a later slide) while writing each slide's relationships.
+        for (var i = 0; i < slides.Count; i++)
+        {
+            if (string.IsNullOrEmpty(slides[i].PartUri))
+                slides[i].PartUri = $"/ppt/slides/slide{i + 1}.xml";
+        }
+
         for (var i = 0; i < slides.Count; i++)
         {
             var slide = slides[i];
-            var slideUri = string.IsNullOrEmpty(slide.PartUri)
-                ? $"/ppt/slides/slide{i + 1}.xml"
-                : slide.PartUri;
-
-            slide.PartUri = slideUri;
+            var slideUri = slide.PartUri;
 
             // Pre-assign all relationship IDs before generating the slide XML,
             // so that shape writers can embed the correct rId values.
@@ -256,6 +273,23 @@ internal sealed class PresentationWriter
                     chartShape.PartUri = $"/ppt/charts/chart{chartPartIndex++}.xml";
                 if (string.IsNullOrEmpty(chartShape.RelationshipId))
                     chartShape.RelationshipId = $"rId{rId++}";
+            }
+
+            // Assign relationship IDs for shape click-hyperlinks (recursing through groups).
+            foreach (var shape in EnumerateAllShapes(slide.Shapes))
+            {
+                if (shape.ClickAction is { } action && NeedsRelationship(action)
+                    && string.IsNullOrEmpty(action.RelationshipId))
+                {
+                    action.RelationshipId = $"rId{rId++}";
+                }
+            }
+
+            // Assign relationship IDs for run-level hyperlinks across all text frames.
+            foreach (var link in EnumerateRunHyperlinks(slide))
+            {
+                if (RunLinkNeedsRelationship(link) && string.IsNullOrEmpty(link.RelationshipId))
+                    link.RelationshipId = $"rId{rId++}";
             }
 
             // Write slide XML (all relationship IDs now set)
@@ -294,6 +328,27 @@ internal sealed class PresentationWriter
                     RelativeUri(slideUri, chartShape.PartUri));
             }
 
+            // SmartArt diagrams (M-F): write the referenced diagram parts using the
+            // relationship IDs/URIs preserved from load, so the graphic frame's <dgm:relIds>
+            // (emitted verbatim from RawElement) continue to resolve.
+            foreach (var smartArt in slide.Shapes.OfType<SmartArtShape>())
+                WriteSmartArtParts(package, contentTypes, slideUri, smartArt);
+
+            // Shape click-hyperlinks (M-G): external URLs become External relationships;
+            // internal slide jumps target the resolved slide part URI.
+            foreach (var shape in EnumerateAllShapes(slide.Shapes))
+            {
+                if (shape.ClickAction is { } action && NeedsRelationship(action))
+                    WriteHyperlinkRelationship(package, slides, slideUri, action);
+            }
+
+            // Run-level hyperlinks (M-G).
+            foreach (var link in EnumerateRunHyperlinks(slide))
+            {
+                if (RunLinkNeedsRelationship(link))
+                    WriteRunHyperlinkRelationship(package, slides, slideUri, link);
+            }
+
             // Notes (M7)
             if (!string.IsNullOrEmpty(slide.Notes.NotesText))
             {
@@ -330,6 +385,143 @@ internal sealed class PresentationWriter
         return slideUris;
     }
 
+    // ── Hyperlinks (M-G) ─────────────────────────────────────────────────────────
+
+    /// <summary>Yields every shape in the collection, recursing into group children.</summary>
+    private static IEnumerable<Shape> EnumerateAllShapes(IEnumerable<Shape> shapes)
+    {
+        foreach (var shape in shapes)
+        {
+            yield return shape;
+            if (shape is GroupShape group)
+                foreach (var child in EnumerateAllShapes(group.Children))
+                    yield return child;
+        }
+    }
+
+    /// <summary>True when a hyperlink action has a target that requires an OPC relationship.</summary>
+    private static bool NeedsRelationship(HyperlinkAction action) =>
+        !string.IsNullOrEmpty(action.Url) || action.TargetSlideNumber.HasValue;
+
+    private static void WriteHyperlinkRelationship(
+        OpcPackage package,
+        SlideCollection slides,
+        string slideUri,
+        HyperlinkAction action)
+    {
+        if (string.IsNullOrEmpty(action.RelationshipId)) return;
+
+        if (!string.IsNullOrEmpty(action.Url))
+        {
+            package.AddRelationship(slideUri, action.RelationshipId,
+                PmlNames.RelTypeHyperlink, action.Url, isExternal: true);
+        }
+        else if (action.TargetSlideNumber is { } number
+                 && number >= 1 && number <= slides.Count)
+        {
+            var targetUri = slides[number - 1].PartUri;
+            package.AddRelationship(slideUri, action.RelationshipId,
+                PmlNames.RelTypeSlide, RelativeUri(slideUri, targetUri));
+        }
+    }
+
+    /// <summary>Yields every run-level hyperlink across a slide's text frames.</summary>
+    private static IEnumerable<Ooxml.Text.RunHyperlink> EnumerateRunHyperlinks(Slide slide)
+    {
+        foreach (var frame in Slides.ShapeTextWalker.EnumerateTextFrames(slide.Shapes))
+        foreach (var paragraph in frame.Paragraphs)
+        foreach (var run in paragraph.Runs)
+        {
+            if (run.Format.Hyperlink is { } link)
+                yield return link;
+        }
+    }
+
+    private static bool RunLinkNeedsRelationship(Ooxml.Text.RunHyperlink link) =>
+        !string.IsNullOrEmpty(link.Url) || link.TargetSlideNumber.HasValue;
+
+    private static void WriteRunHyperlinkRelationship(
+        OpcPackage package,
+        SlideCollection slides,
+        string slideUri,
+        Ooxml.Text.RunHyperlink link)
+    {
+        if (string.IsNullOrEmpty(link.RelationshipId)) return;
+
+        if (!string.IsNullOrEmpty(link.Url))
+        {
+            package.AddRelationship(slideUri, link.RelationshipId,
+                PmlNames.RelTypeHyperlink, link.Url, isExternal: true);
+        }
+        else if (link.TargetSlideNumber is { } number && number >= 1 && number <= slides.Count)
+        {
+            var targetUri = slides[number - 1].PartUri;
+            package.AddRelationship(slideUri, link.RelationshipId,
+                PmlNames.RelTypeSlide, RelativeUri(slideUri, targetUri));
+        }
+    }
+
+    // ── SmartArt diagram parts (M-F) ─────────────────────────────────────────────
+    /// <summary>
+    /// Writes the up-to-five OPC parts backing a SmartArt diagram (data, layout, quick-style,
+    /// colours, and the Microsoft pre-rendered drawing) plus the slide relationships that
+    /// reference them. Relationship IDs and part URIs are reused from load so the graphic
+    /// frame's preserved <c>&lt;dgm:relIds&gt;</c> remain valid. Any text edits on the node model
+    /// are applied back onto the data part before writing.
+    /// </summary>
+    private static void WriteSmartArtParts(
+        OpcPackage package,
+        ContentTypeMap contentTypes,
+        string slideUri,
+        SmartArtShape shape)
+    {
+        // Data part — apply node-text edits onto the preserved data document, if present.
+        var dataBytes = shape.DataPartData;
+        if (shape.DiagramDataDocument?.Root != null)
+        {
+            Parsing.SmartArtParser.ApplyTextEdits(shape.DiagramDataDocument.Root, shape.Nodes);
+            dataBytes = shape.DiagramDataDocument.ToUtf8Bytes();
+        }
+
+        WriteDiagramPart(package, contentTypes, slideUri,
+            shape.DataRelationshipId, shape.DataPartUri, dataBytes,
+            PmlNames.RelTypeDiagramData, PmlNames.ContentTypeDiagramData);
+
+        WriteDiagramPart(package, contentTypes, slideUri,
+            shape.LayoutRelationshipId, shape.LayoutPartUri, shape.LayoutPartData,
+            PmlNames.RelTypeDiagramLayout, PmlNames.ContentTypeDiagramLayout);
+
+        WriteDiagramPart(package, contentTypes, slideUri,
+            shape.QuickStyleRelationshipId, shape.QuickStylePartUri, shape.QuickStylePartData,
+            PmlNames.RelTypeDiagramQuickStyle, PmlNames.ContentTypeDiagramQuickStyle);
+
+        WriteDiagramPart(package, contentTypes, slideUri,
+            shape.ColorsRelationshipId, shape.ColorsPartUri, shape.ColorsPartData,
+            PmlNames.RelTypeDiagramColors, PmlNames.ContentTypeDiagramColors);
+
+        WriteDiagramPart(package, contentTypes, slideUri,
+            shape.DrawingRelationshipId, shape.DrawingPartUri, shape.DrawingPartData,
+            PmlNames.RelTypeDiagramDrawing, PmlNames.ContentTypeDiagramDrawing);
+    }
+
+    private static void WriteDiagramPart(
+        OpcPackage package,
+        ContentTypeMap contentTypes,
+        string slideUri,
+        string relationshipId,
+        string partUri,
+        byte[]? data,
+        string relType,
+        string contentType)
+    {
+        if (string.IsNullOrEmpty(relationshipId) || string.IsNullOrEmpty(partUri) || data == null)
+            return;
+
+        package.AddOrReplacePart(partUri, contentType, data);
+        contentTypes.Register(partUri, contentType);
+        package.AddRelationship(slideUri, relationshipId, relType, RelativeUri(slideUri, partUri));
+    }
+
     // ── Comment authors (M7) ─────────────────────────────────────────────────
 
     private const string CommentAuthorsPartUri = "/ppt/commentAuthors.xml";
@@ -356,7 +548,9 @@ internal sealed class PresentationWriter
         SlideSize slideSize,
         SectionCollection? sections,
         ProtectionInfo? protection,
-        ContentTypeMap contentTypes)
+        ContentTypeMap contentTypes,
+        bool hasPresProps = false,
+        bool hasMacros = false)
     {
         var pml = PmlNames.Pml;
         var r = PmlNames.Relationships;
@@ -411,10 +605,12 @@ internal sealed class PresentationWriter
             new XDeclaration("1.0", "UTF-8", "yes"),
             pres);
 
-        package.AddOrReplacePart(PresentationPartUri,
-            PmlNames.ContentTypePresentation,
-            presXml.ToUtf8Bytes());
-        contentTypes.Register(PresentationPartUri, PmlNames.ContentTypePresentation);
+        // A presentation that carries a VBA project must use the macro-enabled content type.
+        var presContentType = hasMacros
+            ? PmlNames.ContentTypePresentationMacroEnabled
+            : PmlNames.ContentTypePresentation;
+        package.AddOrReplacePart(PresentationPartUri, presContentType, presXml.ToUtf8Bytes());
+        contentTypes.Register(PresentationPartUri, presContentType);
 
         // Presentation relationships
         var rIdCounter = 1;
@@ -450,6 +646,115 @@ internal sealed class PresentationWriter
                 PmlNames.RelTypeCommentAuthors,
                 RelativeUri(PresentationPartUri, CommentAuthorsPartUri));
         }
+
+        // Presentation-properties relationship (M-G slide-show settings)
+        if (hasPresProps && package.TryGetPart(PresPropsPartUri) != null)
+        {
+            package.AddRelationship(PresentationPartUri,
+                $"rId{rIdCounter++}",
+                PmlNames.RelTypePresProps,
+                RelativeUri(PresentationPartUri, PresPropsPartUri));
+        }
+    }
+
+    // ── Preserved content (VBA + digital signatures, M-G) ────────────────────────
+
+    /// <summary>
+    /// Re-emits verbatim-preserved parts (VBA project, digital-signature parts) and re-links them.
+    /// Each preserved part keeps its original relationships; anchor relationships to
+    /// <c>presentation.xml</c> / the package root are added with fresh ids to avoid collisions.
+    /// </summary>
+    private static void WritePreservedContent(
+        OpcPackage package,
+        Engine.PreservedContent preserved,
+        ContentTypeMap contentTypes)
+    {
+        // Write each preserved part and its own (verbatim) relationships.
+        foreach (var part in preserved.Parts)
+        {
+            package.AddOrReplacePart(part.Uri, part.ContentType, part.Data);
+            contentTypes.Register(part.Uri, part.ContentType);
+        }
+
+        foreach (var part in preserved.Parts)
+        foreach (var rel in part.Relationships)
+        {
+            package.AddRelationship(part.Uri, rel.Id, rel.Type, rel.Target, rel.IsExternal);
+        }
+
+        // Anchor relationships connect a known source to a preserved part. Use fresh ids so they
+        // do not collide with relationships the writer already added to presentation.xml.
+        var presRelIndex = 1000;
+        foreach (var anchor in preserved.AnchorRelationships)
+        {
+            if (anchor.SourceUri is null)
+            {
+                // presentation.xml → VBA project (or similar).
+                package.AddRelationship(PresentationPartUri, $"rId{presRelIndex++}",
+                    anchor.Type, RelativeUri(PresentationPartUri, anchor.Target), anchor.IsExternal);
+            }
+            else if (anchor.SourceUri.Length == 0)
+            {
+                // Package root → signature origin.
+                package.AddPackageRelationship(anchor.Id, anchor.Type, anchor.Target.TrimStart('/'));
+            }
+        }
+    }
+
+    // ── Presentation properties (slide-show settings, M-G) ───────────────────────
+
+    private const string PresPropsPartUri = "/ppt/presProps.xml";
+
+    private static void WritePresProps(
+        OpcPackage package,
+        SlideShowSettings show,
+        ContentTypeMap contentTypes)
+    {
+        var pml = PmlNames.Pml;
+
+        var showPr = new XElement(pml + "showPr");
+
+        // Show type is a child element choice: present / browse / kiosk.
+        showPr.Add(show.ShowType switch
+        {
+            SlideShowType.Browsed => new XElement(pml + "browse"),
+            SlideShowType.Kiosk => new XElement(pml + "kiosk"),
+            _ => new XElement(pml + "present"),
+        });
+
+        // Optional slide range (1-based, inclusive).
+        if (show.RangeStart.HasValue || show.RangeEnd.HasValue)
+        {
+            var start = show.RangeStart ?? 1;
+            var end = show.RangeEnd ?? start;
+            showPr.Add(new XElement(pml + "sldRg",
+                new XAttribute("st", start),
+                new XAttribute("end", end)));
+        }
+
+        if (!string.IsNullOrEmpty(show.PenColorHex))
+        {
+            showPr.Add(new XElement(pml + "penClr",
+                new XElement(DmlNames.SolidFill,
+                    new XElement(DmlNames.SrgbColor,
+                        new XAttribute("val", show.PenColorHex)))));
+        }
+
+        // Boolean show flags are attributes on showPr. The XML stores the positive sense
+        // (showNarration / showAnimation default true), so invert our "without" booleans.
+        if (show.Loop) showPr.Add(new XAttribute("loop", "1"));
+        if (show.ShowWithoutNarration) showPr.Add(new XAttribute("showNarration", "0"));
+        if (show.ShowWithoutAnimation) showPr.Add(new XAttribute("showAnimation", "0"));
+
+        var presentationPr = new XElement(pml + "presentationPr",
+            new XAttribute(XNamespace.Xmlns + "p", pml.NamespaceName),
+            new XAttribute(XNamespace.Xmlns + "a", DmlNames.Dml.NamespaceName),
+            new XAttribute(XNamespace.Xmlns + "r", PmlNames.Relationships.NamespaceName),
+            showPr);
+
+        var doc = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), presentationPr);
+        package.AddOrReplacePart(PresPropsPartUri, PmlNames.ContentTypePresProps, doc.ToUtf8Bytes());
+        contentTypes.Register(PresPropsPartUri, PmlNames.ContentTypePresProps);
     }
 
     private static XElement WriteModifyVerifier(ProtectionInfo protection)

@@ -22,6 +22,33 @@ internal static class DmlNames
     /// <summary>DrawingML chart namespace URI (used as <c>uri</c> attribute on <c>&lt;a:graphicData&gt;</c>).</summary>
     public const string GraphicDataChartUri = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 
+    /// <summary>DrawingML diagram (SmartArt) namespace URI (used as <c>uri</c> on <c>&lt;a:graphicData&gt;</c>).</summary>
+    public const string GraphicDataDiagramUri = "http://schemas.openxmlformats.org/drawingml/2006/diagram";
+
+    /// <summary>SmartArt diagram namespace (<c>dgm:</c>).</summary>
+    public static readonly XNamespace Diagram = "http://schemas.openxmlformats.org/drawingml/2006/diagram";
+
+    /// <summary><c>&lt;dgm:relIds&gt;</c> — references the four SmartArt parts from the graphic frame.</summary>
+    public static readonly XName DiagramRelIds = Diagram + "relIds";
+
+    /// <summary><c>&lt;dgm:dataModel&gt;</c> — root of the SmartArt data part (<c>data*.xml</c>).</summary>
+    public static readonly XName DiagramDataModel = Diagram + "dataModel";
+
+    /// <summary><c>&lt;dgm:ptLst&gt;</c> — the list of data points (nodes) in the diagram.</summary>
+    public static readonly XName DiagramPointList = Diagram + "ptLst";
+
+    /// <summary><c>&lt;dgm:pt&gt;</c> — a single data point (node) in the diagram.</summary>
+    public static readonly XName DiagramPoint = Diagram + "pt";
+
+    /// <summary><c>&lt;dgm:t&gt;</c> — the text body of a diagram node (contains <c>a:p</c>/<c>a:r</c>/<c>a:t</c>).</summary>
+    public static readonly XName DiagramText = Diagram + "t";
+
+    /// <summary><c>&lt;dgm:cxnLst&gt;</c> — the list of connections between data points.</summary>
+    public static readonly XName DiagramConnectionList = Diagram + "cxnLst";
+
+    /// <summary><c>&lt;dgm:cxn&gt;</c> — a single connection between data points.</summary>
+    public static readonly XName DiagramConnection = Diagram + "cxn";
+
     // ── Transform & geometry ─────────────────────────────────────────────────
 
     /// <summary><c>&lt;a:xfrm&gt;</c> — 2-D transform (position + size + rotation).</summary>
@@ -259,6 +286,11 @@ internal static class DmlNames
     public static readonly XName Hyperlink = Dml + "hlink";
     /// <summary><c>&lt;a:folHlink&gt;</c> — Followed hyperlink colour slot.</summary>
     public static readonly XName FollowedHyperlink = Dml + "folHlink";
+
+    /// <summary><c>&lt;a:hlinkClick&gt;</c> — click hyperlink on a shape (in cNvPr) or run (in rPr).</summary>
+    public static readonly XName HyperlinkClick = Dml + "hlinkClick";
+    /// <summary><c>&lt;a:hlinkHover&gt;</c> — mouse-over hyperlink.</summary>
+    public static readonly XName HyperlinkHover = Dml + "hlinkHover";
 
     // ── Table ─────────────────────────────────────────────────────────────────
 

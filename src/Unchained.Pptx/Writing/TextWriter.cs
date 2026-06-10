@@ -286,6 +286,17 @@ internal static class TextWriter
             rPr.Add(new XElement(DmlNames.ComplexScriptFont,
                 new XAttribute(DmlNames.AttributeTypeface, format.ComplexScriptFont)));
 
+        // Click hyperlink (<a:hlinkClick>) follows the font elements per the rPr schema order.
+        // The relationship id is assigned by PresentationWriter before this runs.
+        if (format.Hyperlink is { } link)
+        {
+            var hlink = new XElement(DmlNames.HyperlinkClick,
+                new XAttribute(Core.Xml.PmlNames.Relationships + "id", link.RelationshipId));
+            if (!string.IsNullOrEmpty(link.Tooltip))
+                hlink.Add(new XAttribute("tooltip", link.Tooltip));
+            rPr.Add(hlink);
+        }
+
         return rPr;
     }
 

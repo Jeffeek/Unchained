@@ -1,8 +1,10 @@
 @inherits LayoutComponentBase
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject ThemeService ThemeSvc
+@implements IDisposable
 
-<MudThemeProvider Theme="_theme" />
+<MudThemeProvider Theme="ThemeSvc.Theme" IsDarkMode="ThemeSvc.IsDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -10,24 +12,32 @@
 <MudLayout>
     <MudAppBar Elevation="1" Dense="true">
         <MudIcon Icon="@Icons.Material.Filled.AutoStories" Class="mr-2" />
-        <MudText Typo="Typo.h6" Class="mr-4">Unchained Studio</MudText>
+        <MudText Typo="Typo.h6" Class="mr-6">Unchained Studio</MudText>
 
-        <MudChip T="string" Text="PDF" Color="@ChipColor("/")" Size="Size.Small"
-                 OnClick="@(() => Navigate("/"))" />
-        <MudChip T="string" Text="PPTX" Color="@ChipColor("/pptx")" Size="Size.Small"
-                 OnClick="@(() => Navigate("/pptx"))" />
-        <MudChip T="string" Text="DOCX" Size="Size.Small" Disabled="true" />
-        <MudChip T="string" Text="XLSX" Size="Size.Small" Disabled="true" />
+        <nav class="studio-nav">
+            <NavTab Label="Home" Icon="@Icons.Material.Outlined.Home" Path="/" Active="@IsActive("/")" OnNavigate="Navigate" />
+            <NavTab Label="PDF" Icon="@Icons.Material.Outlined.PictureAsPdf" Path="/pdf" Active="@IsActive("/pdf")" OnNavigate="Navigate" />
+            <NavTab Label="PPTX" Icon="@Icons.Material.Outlined.Slideshow" Path="/pptx" Active="@IsActive("/pptx")" OnNavigate="Navigate" />
+            <NavTab Label="DOCX" Icon="@Icons.Material.Outlined.Description" Disabled="true" />
+            <NavTab Label="XLSX" Icon="@Icons.Material.Outlined.TableChart" Disabled="true" />
+        </nav>
 
         <MudSpacer />
-        <MudText Typo="Typo.caption" Class="mr-2" Style="opacity:0.6">
-            Unchained v0.1.0
+
+        <MudTooltip Text="@(ThemeSvc.IsDarkMode ? "Switch to light mode" : "Switch to dark mode")">
+            <MudIconButton Icon="@(ThemeSvc.IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
+                           Color="Color.Inherit"
+                           OnClick="ToggleTheme" />
+        </MudTooltip>
+        <MudText Typo="Typo.caption" Class="mx-2" Style="opacity:0.7">
+            v0.1.0
         </MudText>
-        <MudIconButton Icon="@Icons.Material.Outlined.Help"
-                       Href="https://github.com/Jeffeek/Unchained"
-                       Target="_blank"
-                       Size="Size.Small"
-                       title="Documentation" />
+        <MudTooltip Text="Documentation">
+            <MudIconButton Icon="@Icons.Material.Outlined.Help"
+                           Color="Color.Inherit"
+                           Href="https://github.com/Jeffeek/Unchained"
+                           Target="_blank" />
+        </MudTooltip>
     </MudAppBar>
 
     <MudMainContent Class="studio-main">
@@ -58,28 +68,38 @@
 @code {
     private ErrorBoundary? _errorBoundary;
 
-    // Minimal, safe theme — use hex strings only, avoid Colors.* static
-    // references that may behave differently across MudBlazor versions.
-    private static readonly MudTheme _theme = new()
+    protected override void OnInitialized()
     {
-        PaletteLight = new PaletteLight
-        {
-            Primary   = "#5C6BC0",
-            Secondary = "#26A69A",
-        }
-    };
-
-    private void RecoverFromError()
-    {
-        _errorBoundary?.Recover();
+        ThemeSvc.Changed += OnThemeChanged;
+        Nav.LocationChanged += OnLocationChanged;
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await ThemeSvc.InitializeAsync();
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => InvokeAsync(StateHasChanged);
+
+    private async Task ToggleTheme() => await ThemeSvc.ToggleAsync();
+
+    private void RecoverFromError() => _errorBoundary?.Recover();
 
     private void Navigate(string path) => Nav.NavigateTo(path);
 
-    private Color ChipColor(string path)
+    private bool IsActive(string path)
     {
         var relative = "/" + Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
         if (relative == string.Empty) relative = "/";
-        return relative == path ? Color.Primary : Color.Default;
+        return relative == path;
+    }
+
+    public void Dispose()
+    {
+        ThemeSvc.Changed -= OnThemeChanged;
+        Nav.LocationChanged -= OnLocationChanged;
     }
 }

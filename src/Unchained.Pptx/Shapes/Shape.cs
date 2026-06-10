@@ -96,6 +96,24 @@ public abstract class Shape
     /// </summary>
     public HyperlinkAction? ClickAction { get; set; }
 
+    // ── Placeholder ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The placeholder role of this shape, or <see cref="PlaceholderType.None"/> when the shape is
+    /// not a placeholder. Placeholders inherit geometry and default formatting from the matching
+    /// placeholder on the slide layout / master.
+    /// </summary>
+    public PlaceholderType PlaceholderType { get; set; } = PlaceholderType.None;
+
+    /// <summary>
+    /// The placeholder index (<c>p:ph/@idx</c>) used to match a slide placeholder to its layout
+    /// definition when several placeholders share the same type. <see langword="null"/> when absent.
+    /// </summary>
+    public int? PlaceholderIndex { get; set; }
+
+    /// <summary><see langword="true"/> when this shape carries a placeholder reference.</summary>
+    public bool IsPlaceholder => PlaceholderType != PlaceholderType.None;
+
     // ── Round-trip preservation ───────────────────────────────────────────────
 
     /// <summary>

@@ -2,6 +2,7 @@ using HarfBuzzSharp;
 using Unchained.Drawing;
 using Unchained.Drawing.Text;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Media;
@@ -47,7 +48,21 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
         var root = new Transform(scaleX, scaleY, 0, 0);
 
-        // Render each shape in Z-order (insertion order = back-to-front)
+        // Composite inherited backdrop shapes from the master and layout BENEATH the slide's own
+        // shapes: logos, decorative graphics, and background art live there. Placeholders are
+        // skipped — the slide supplies its own (now with inherited geometry), and drawing the
+        // layout's empty placeholder prompts ("Click to add title") would be wrong.
+        if (slide.Layout?.Master is { } master)
+            foreach (var shape in master.Shapes)
+                if (!shape.IsPlaceholder)
+                    RenderShape(buffer, shape, root, options.Dpi);
+
+        if (slide.Layout is { } layout)
+            foreach (var shape in layout.Shapes)
+                if (!shape.IsPlaceholder)
+                    RenderShape(buffer, shape, root, options.Dpi);
+
+        // Render each slide shape in Z-order (insertion order = back-to-front)
         foreach (var shape in slide.Shapes)
             RenderShape(buffer, shape, root, options.Dpi);
 
@@ -97,6 +112,18 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
             case TableShape table when width > 0 && height > 0:
                 RenderTable(buffer, table, x, y, width, height, dpi);
+                break;
+
+            case ConnectorShape connector:
+                RenderConnector(buffer, connector, x, y, width, height);
+                break;
+
+            case ChartShape chart when width > 0 && height > 0:
+                RenderChart(buffer, chart, x, y, width, height, dpi);
+                break;
+
+            case SmartArtShape smartArt when width > 0 && height > 0:
+                RenderSmartArt(buffer, smartArt, x, y, width, height, dpi);
                 break;
         }
     }
@@ -163,19 +190,25 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
         var totalW = grid.ColumnWidths.Sum(static c => c.Value);
         var totalH = grid.RowHeights.Sum(static r => r.Value);
-        if (totalW <= 0 || totalH <= 0)
-            return;
 
-        // Column x-edges and row y-edges in pixels.
+        // Column x-edges and row y-edges in pixels. When the grid omits explicit EMU sizes
+        // (common in minimal fixtures), fall back to equal distribution so the table still
+        // fills its box instead of collapsing to nothing.
         var colEdges = new int[grid.ColumnCount + 1];
         colEdges[0] = x;
         for (var c = 0; c < grid.ColumnCount; c++)
-            colEdges[c + 1] = colEdges[c] + (int)((double)grid.ColumnWidths[c].Value / totalW * width);
+        {
+            var frac = totalW > 0 ? (double)grid.ColumnWidths[c].Value / totalW : 1.0 / grid.ColumnCount;
+            colEdges[c + 1] = colEdges[c] + (int)(frac * width);
+        }
 
         var rowEdges = new int[grid.RowCount + 1];
         rowEdges[0] = y;
         for (var r = 0; r < grid.RowCount; r++)
-            rowEdges[r + 1] = rowEdges[r] + (int)((double)grid.RowHeights[r].Value / totalH * height);
+        {
+            var frac = totalH > 0 ? (double)grid.RowHeights[r].Value / totalH : 1.0 / grid.RowCount;
+            rowEdges[r + 1] = rowEdges[r] + (int)(frac * height);
+        }
 
         for (var r = 0; r < grid.RowCount; r++)
         for (var c = 0; c < grid.ColumnCount; c++)
@@ -208,6 +241,226 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             // Cell text.
             RenderTextFrame(buffer, cell.TextFrame, cx + 2, cy + 2, cw - 4, ch - 4, dpi);
         }
+    }
+
+    // ── Connector ────────────────────────────────────────────────────────────
+    // Draws the connector as a straight line across its bounding box, honouring flips so the
+    // direction matches the source. Bent/curved routing is approximated by a straight segment.
+    private static void RenderConnector(
+        RasterBuffer buffer,
+        ConnectorShape shape,
+        int x, int y, int width, int height)
+    {
+        // A connector with no extent still has direction via its 1-D bounding box.
+        var x0 = x;
+        var y0 = y;
+        var x1 = x + width;
+        var y1 = y + height;
+        if (shape.FlipHorizontal) (x0, x1) = (x1, x0);
+        if (shape.FlipVertical) (y0, y1) = (y1, y0);
+
+        byte r = 0, g = 0, b = 0;
+        if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid is not null)
+            ExtractArgb(shape.Line.Fill.Solid.Color.Resolve(null), out _, out r, out g, out b);
+
+        var thickness = Math.Max(1, (int)Math.Round((shape.Line.WidthPoints ?? 1.0) * 1.333));
+        buffer.DrawLine(x0, y0, x1, y1, r, g, b, thickness);
+    }
+
+    // ── Chart ────────────────────────────────────────────────────────────────
+    // Renders a lightweight visual of the chart from its data model: a framed plot area, the
+    // title, and bars/columns/lines/pie slices for the first few series. Not pixel-faithful to
+    // PowerPoint, but ensures chart slides carry real content instead of rendering blank.
+    private void RenderChart(
+        RasterBuffer buffer,
+        ChartShape shape,
+        int x, int y, int width, int height,
+        double dpi)
+    {
+        // Light background + border so the chart area is always visible.
+        buffer.FillRect(x, y, width, height, 255, 255, 255, 255);
+        DrawBorder(buffer, x, y, width, height, 180, 180, 180);
+
+        var model = shape.Chart;
+        var titleH = 0;
+        if (model.HasTitle && !string.IsNullOrWhiteSpace(model.Title))
+        {
+            RenderTextFrameText(buffer, model.Title, x + 6, y + 4, width - 12, 14.0, dpi, 60, 60, 60);
+            titleH = (int)(18 * dpi / 72.0);
+        }
+
+        var plotX = x + 8;
+        var plotY = y + titleH + 6;
+        var plotW = width - 16;
+        var plotH = height - titleH - 16;
+        if (plotW <= 4 || plotH <= 4) return;
+
+        var series = model.Data.Series;
+        if (series.Count == 0) return;
+
+        var type = model.Type.ToString();
+        if (type.StartsWith("Pie", StringComparison.Ordinal) || type.StartsWith("Doughnut", StringComparison.Ordinal))
+            RenderPieChart(buffer, series[0], plotX, plotY, plotW, plotH);
+        else if (type.StartsWith("Line", StringComparison.Ordinal) || type.StartsWith("Scatter", StringComparison.Ordinal))
+            RenderLineChart(buffer, series, plotX, plotY, plotW, plotH);
+        else
+            RenderBarChart(buffer, series, plotX, plotY, plotW, plotH,
+                horizontal: type.StartsWith("Bar", StringComparison.Ordinal));
+    }
+
+    private static readonly (byte R, byte G, byte B)[] SeriesPalette =
+    [
+        (68, 114, 196), (237, 125, 49), (165, 165, 165), (255, 192, 0),
+        (91, 155, 213), (112, 173, 71), (38, 68, 120), (158, 72, 14),
+    ];
+
+    private static void RenderBarChart(
+        RasterBuffer buffer, IReadOnlyList<ChartSeries> series,
+        int x, int y, int w, int h, bool horizontal)
+    {
+        var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(0).Max();
+        if (maxVal <= 0) maxVal = 1;
+        var categories = series.Max(static s => s.Values.Count);
+        if (categories == 0) return;
+
+        // Group bars per category; series side by side.
+        var groupGap = 4;
+        var groupSpan = (horizontal ? h : w) / categories;
+        var barSpan = Math.Max(1, (groupSpan - groupGap) / Math.Max(1, series.Count));
+
+        for (var c = 0; c < categories; c++)
+        {
+            for (var s = 0; s < series.Count; s++)
+            {
+                if (c >= series[s].Values.Count) continue;
+                var val = series[s].Values[c];
+                var color = SeriesPalette[s % SeriesPalette.Length];
+
+                if (horizontal)
+                {
+                    var barLen = (int)(val / maxVal * w);
+                    var by = y + (c * groupSpan) + (s * barSpan);
+                    buffer.FillRect(x, by, barLen, barSpan - 1, color.R, color.G, color.B, 255);
+                }
+                else
+                {
+                    var barLen = (int)(val / maxVal * h);
+                    var bx = x + (c * groupSpan) + (s * barSpan);
+                    buffer.FillRect(bx, y + h - barLen, barSpan - 1, barLen, color.R, color.G, color.B, 255);
+                }
+            }
+        }
+    }
+
+    private static void RenderLineChart(
+        RasterBuffer buffer, IReadOnlyList<ChartSeries> series,
+        int x, int y, int w, int h)
+    {
+        var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(0).Max();
+        if (maxVal <= 0) maxVal = 1;
+
+        for (var s = 0; s < series.Count; s++)
+        {
+            var vals = series[s].Values;
+            if (vals.Count < 2) continue;
+            var color = SeriesPalette[s % SeriesPalette.Length];
+            var stepX = (double)w / (vals.Count - 1);
+
+            for (var i = 0; i < vals.Count - 1; i++)
+            {
+                var x0 = x + (int)(i * stepX);
+                var x1 = x + (int)((i + 1) * stepX);
+                var y0 = y + h - (int)(vals[i] / maxVal * h);
+                var y1 = y + h - (int)(vals[i + 1] / maxVal * h);
+                buffer.DrawLine(x0, y0, x1, y1, color.R, color.G, color.B, 2);
+            }
+        }
+    }
+
+    private static void RenderPieChart(
+        RasterBuffer buffer, ChartSeries series, int x, int y, int w, int h)
+    {
+        var total = series.Values.Sum();
+        if (total <= 0) return;
+
+        var cx = x + (w / 2);
+        var cy = y + (h / 2);
+        var radius = Math.Min(w, h) / 2 - 2;
+        if (radius <= 0) return;
+
+        // Sweep each pixel in the bounding circle and colour it by which slice its angle falls in.
+        var bounds = new double[series.Values.Count + 1];
+        for (var i = 0; i < series.Values.Count; i++)
+            bounds[i + 1] = bounds[i] + (series.Values[i] / total);
+
+        for (var py = -radius; py <= radius; py++)
+        for (var px = -radius; px <= radius; px++)
+        {
+            if ((px * px) + (py * py) > radius * radius) continue;
+            var angle = Math.Atan2(py, px); // -PI..PI
+            var frac = (angle + Math.PI) / (2 * Math.PI);
+            var slice = 0;
+            for (var i = 0; i < series.Values.Count; i++)
+                if (frac >= bounds[i] && frac < bounds[i + 1]) { slice = i; break; }
+            var color = SeriesPalette[slice % SeriesPalette.Length];
+            buffer.BlitImagePixel(cx + px, cy + py, color.R, color.G, color.B);
+        }
+    }
+
+    // ── SmartArt ────────────────────────────────────────────────────────────────
+    // Renders the diagram's node text as a vertical stack of labelled boxes inside the frame.
+    // The real SmartArt layout engine is out of scope; this guarantees node text is visible.
+    private void RenderSmartArt(
+        RasterBuffer buffer,
+        SmartArtShape shape,
+        int x, int y, int width, int height,
+        double dpi)
+    {
+        var nodes = FlattenSmartArt(shape.Nodes).Where(static t => !string.IsNullOrWhiteSpace(t)).ToList();
+        if (nodes.Count == 0)
+        {
+            DrawBorder(buffer, x, y, width, height, 180, 180, 180);
+            return;
+        }
+
+        var boxH = Math.Max(12, Math.Min(48, (height - 4) / nodes.Count - 4));
+        var cy = y + 2;
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var color = SeriesPalette[i % SeriesPalette.Length];
+            buffer.FillRect(x + 2, cy, width - 4, boxH, color.R, color.G, color.B, 255);
+            RenderTextFrameText(buffer, nodes[i], x + 8, cy + 2, width - 16, 11.0, dpi, 255, 255, 255);
+            cy += boxH + 4;
+            if (cy > y + height) break;
+        }
+    }
+
+    private static IEnumerable<string> FlattenSmartArt(IEnumerable<SmartArtNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node.Text;
+            foreach (var child in FlattenSmartArt(node.Children))
+                yield return child;
+        }
+    }
+
+    private static void DrawBorder(RasterBuffer buffer, int x, int y, int w, int h, byte r, byte g, byte b)
+    {
+        buffer.FillRect(x, y, w, 1, r, g, b, 255);
+        buffer.FillRect(x, y + h - 1, w, 1, r, g, b, 255);
+        buffer.FillRect(x, y, 1, h, r, g, b, 255);
+        buffer.FillRect(x + w - 1, y, 1, h, r, g, b, 255);
+    }
+
+    // Renders a single line of text at a fixed size/colour (used by chart titles + SmartArt nodes).
+    private void RenderTextFrameText(
+        RasterBuffer buffer, string text, int x, int y, int maxW, double sizePt, double dpi,
+        byte r, byte g, byte b)
+    {
+        var scale = dpi / 72.0;
+        var lineHeight = 0;
+        RenderRunText(buffer, text, "Arial", null, sizePt, scale, x, y, x + maxW, r, g, b, ref lineHeight);
     }
 
     private void RenderTextFrame(
@@ -373,7 +626,16 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         // Decode the embedded image bytes to raw RGB pixels using BCL APIs only.
         var rawPixels = TryDecodeImageToRgb(shape.Image, out var imgWidth, out var imgHeight);
         if (rawPixels is null || imgWidth <= 0 || imgHeight <= 0)
+        {
+            // Undecodable format (GIF/EMF/WMF/SVG/WDP): draw a light placeholder so the picture's
+            // presence and position are visible instead of leaving the slide blank.
+            buffer.FillRect(x, y, width, height, 235, 235, 235, 255);
+            DrawBorder(buffer, x, y, width, height, 170, 170, 170);
+            // A diagonal cross hints "image not rendered".
+            buffer.DrawLine(x, y, x + width - 1, y + height - 1, 200, 200, 200, 1);
+            buffer.DrawLine(x + width - 1, y, x, y + height - 1, 200, 200, 200, 1);
             return;
+        }
 
         // Nearest-neighbour blit with scaling to destination rect
         for (var py = 0; py < height; py++)

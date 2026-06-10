@@ -223,6 +223,18 @@ internal static class TextParser
             format.Outline = outline;
         }
         EffectParser.Parse(rPr, format.Effects);
+
+        // Click hyperlink (<a:hlinkClick>) — capture relationship id + tooltip; the URL/slide
+        // target is resolved against the slide's relationships in a second pass (SlideParser).
+        var hlink = rPr.Element(DmlNames.HyperlinkClick);
+        if (hlink != null)
+        {
+            format.Hyperlink = new RunHyperlink
+            {
+                RelationshipId = (string?)hlink.Attribute(Core.Xml.PmlNames.Relationships + "id") ?? string.Empty,
+                Tooltip = (string?)hlink.Attribute("tooltip"),
+            };
+        }
     }
 
     private static void ParseBullet(XElement pPr, BulletFormat bullet)

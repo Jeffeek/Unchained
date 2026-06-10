@@ -30,6 +30,12 @@
 
             <!-- CENTRE: slide preview -->
             <div class="panel-preview">
+                @if (_showInfo)
+                {
+                    <div class="pptx-info-strip">
+                        <PptxInfoPanel Document="state.Document" />
+                    </div>
+                }
                 <SlidePreviewPanel Document="state.Document"
                                    CurrentSlide="state.CurrentSlide"
                                    CurrentSlideChanged="s => state.CurrentSlide = s" />
@@ -44,15 +50,32 @@
         <!-- BOTTOM: operations bar -->
         <div class="operations-bar">
             <div class="ops-group">
+                <MudButton StartIcon="@Icons.Material.Outlined.FileDownload"
+                           Variant="Variant.Text" Size="Size.Small"
+                           OnClick="OpenExportDialog">Export…</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.Image"
+                           Variant="Variant.Text" Size="Size.Small"
+                           OnClick="ExportCurrentSlideImage">Slide PNG</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.FolderZip"
+                           Variant="Variant.Text" Size="Size.Small"
+                           OnClick="OpenExportZipDialog">Slides ZIP…</MudButton>
+            </div>
+            <MudDivider Vertical="true" Class="ops-divider" />
+            <div class="ops-group">
+                <MudButton StartIcon="@Icons.Material.Outlined.FindReplace"
+                           Variant="Variant.Text" Size="Size.Small"
+                           OnClick="OpenFindReplaceDialog">Find &amp; Replace…</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.Link"
+                           Variant="Variant.Text" Size="Size.Small"
+                           OnClick="OpenHyperlinkDialog">Hyperlinks…</MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.TextFields"
                            Variant="Variant.Text" Size="Size.Small"
                            OnClick="ExtractText">Extract text</MudButton>
-                <MudButton StartIcon="@Icons.Material.Outlined.Image"
-                           Variant="Variant.Text" Size="Size.Small"
-                           OnClick="ExportCurrentSlideImage">Export slide PNG</MudButton>
-                <MudButton StartIcon="@Icons.Material.Outlined.FolderZip"
-                           Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenExportZipDialog">Export ZIP…</MudButton>
+                <MudToggleIconButton @bind-Toggled="_showInfo"
+                                     Icon="@Icons.Material.Outlined.Info"
+                                     ToggledIcon="@Icons.Material.Filled.Info"
+                                     Size="Size.Small"
+                                     title="Toggle presentation info" />
             </div>
             <MudDivider Vertical="true" Class="ops-divider" />
             <div class="ops-group ops-group--right">
@@ -102,6 +125,7 @@
     private string _busyMessage = string.Empty;
     private bool _showTextPanel;
     private string? _extractedText;
+    private bool _showInfo;
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -271,6 +295,70 @@
             FullWidth = true
         };
         await Dialogs.ShowAsync<SlideExportDialog>("Export Slides", parameters, options);
+    }
+
+    private async Task OpenExportDialog()
+    {
+        if (Session.Pptx is null)
+            return;
+        var parameters = new DialogParameters
+        {
+            { nameof(PptxExportDialog.Processor), Session.Pptx.Processor },
+            { nameof(PptxExportDialog.Document), Session.Pptx.Document },
+            { nameof(PptxExportDialog.FileName), Session.Pptx.FileName }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        await Dialogs.ShowAsync<PptxExportDialog>("Export Presentation", parameters, options);
+    }
+
+    private async Task OpenFindReplaceDialog()
+    {
+        if (Session.Pptx is null)
+            return;
+        var parameters = new DialogParameters
+        {
+            { nameof(FindReplaceDialog.Document), Session.Pptx.Document },
+            { nameof(FindReplaceDialog.OnReplaced), EventCallback.Factory.Create(this, RefreshTree) }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        await Dialogs.ShowAsync<FindReplaceDialog>("Find & Replace", parameters, options);
+    }
+
+    private async Task OpenHyperlinkDialog()
+    {
+        if (Session.Pptx is null)
+            return;
+        var parameters = new DialogParameters
+        {
+            { nameof(HyperlinkBrowserDialog.Document), Session.Pptx.Document },
+            { nameof(HyperlinkBrowserDialog.OnNavigate),
+              EventCallback.Factory.Create<int>(this, NavigateToSlide) }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        await Dialogs.ShowAsync<HyperlinkBrowserDialog>("Hyperlinks", parameters, options);
+    }
+
+    private void NavigateToSlide(int slideNumber)
+    {
+        if (Session.Pptx is null)
+            return;
+        Session.Pptx.CurrentSlide = Math.Clamp(slideNumber, 1, Session.Pptx.Document.Slides.Count);
+        StateHasChanged();
     }
 
     private async Task CloseDocument()

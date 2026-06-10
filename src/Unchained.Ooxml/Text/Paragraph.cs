@@ -62,4 +62,103 @@ public sealed class Paragraph
 
     /// <summary>Bullet / list marker settings for this paragraph.</summary>
     public BulletFormat Bullet { get; } = new();
+
+    // ── Find & replace ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Replaces every occurrence of <paramref name="oldText"/> with <paramref name="newText"/>
+    /// across this paragraph's runs, preserving the formatting of the run where each match begins.
+    /// Field runs (slide number, date, etc.) act as boundaries and are never altered.
+    /// </summary>
+    /// <returns>The number of occurrences replaced.</returns>
+    public int ReplaceText(
+        string oldText,
+        string newText,
+        StringComparison comparison = StringComparison.Ordinal)
+    {
+        ArgumentNullException.ThrowIfNull(oldText);
+        ArgumentNullException.ThrowIfNull(newText);
+        if (oldText.Length == 0) return 0;
+
+        // Split runs into segments of consecutive non-field runs; matches never cross a field.
+        var count = 0;
+        var segment = new List<Run>();
+        foreach (var run in Runs)
+        {
+            if (run.Field.HasValue)
+            {
+                count += ReplaceInSegment(segment, oldText, newText, comparison);
+                segment.Clear();
+            }
+            else
+            {
+                segment.Add(run);
+            }
+        }
+        count += ReplaceInSegment(segment, oldText, newText, comparison);
+        return count;
+    }
+
+    /// <summary>
+    /// Replaces matches within a contiguous run segment. The match's replacement text is written
+    /// onto the run where the match starts (keeping that run's format); text belonging to other
+    /// runs spanned by the match is removed.
+    /// </summary>
+    private static int ReplaceInSegment(
+        List<Run> runs,
+        string oldText,
+        string newText,
+        StringComparison comparison)
+    {
+        if (runs.Count == 0) return 0;
+
+        var count = 0;
+        while (true)
+        {
+            var combined = string.Concat(runs.Select(static r => r.Text));
+            var idx = combined.IndexOf(oldText, comparison);
+            if (idx < 0) break;
+
+            var end = idx + oldText.Length;
+            int startRun = -1, startOffset = 0, endRun = -1, endOffset = 0;
+            var pos = 0;
+            for (var i = 0; i < runs.Count; i++)
+            {
+                var len = runs[i].Text.Length;
+                var runStart = pos;
+                var runEnd = pos + len;
+                if (startRun == -1 && idx < runEnd)
+                {
+                    startRun = i;
+                    startOffset = idx - runStart;
+                }
+                if (startRun != -1 && end <= runEnd)
+                {
+                    endRun = i;
+                    endOffset = end - runStart;
+                    break;
+                }
+                pos = runEnd;
+            }
+
+            if (startRun == -1) break; // defensive: should not happen
+
+            if (startRun == endRun)
+            {
+                var r = runs[startRun];
+                r.Text = string.Concat(r.Text.AsSpan(0, startOffset), newText, r.Text.AsSpan(endOffset));
+            }
+            else
+            {
+                runs[startRun].Text = string.Concat(runs[startRun].Text.AsSpan(0, startOffset), newText);
+                for (var i = startRun + 1; i < endRun; i++)
+                    runs[i].Text = string.Empty;
+                runs[endRun].Text = runs[endRun].Text[endOffset..];
+            }
+
+            count++;
+        }
+
+        return count;
+    }
 }

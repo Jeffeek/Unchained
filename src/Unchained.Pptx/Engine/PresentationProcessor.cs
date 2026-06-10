@@ -164,6 +164,75 @@ public sealed class PresentationProcessor : IDisposable
         return written;
     }
 
+    // ── HTML5 player Export (M-H) ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Exports <paramref name="document"/> as a single self-contained HTML5 player file: every
+    /// slide in one navigable document (keyboard / click navigation, slide counter, fullscreen),
+    /// written to <paramref name="path"/>.
+    /// </summary>
+    public async Task SaveAsHtmlPlayerAsync(
+        PresentationDocument document,
+        string path,
+        HtmlPlayerSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var bytes = await ExportHtmlPlayerAsync(document, options, cancellationToken).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Exports <paramref name="document"/> as a single self-contained HTML5 player and returns the
+    /// document bytes (UTF-8).
+    /// </summary>
+    public Task<byte[]> ExportHtmlPlayerAsync(
+        PresentationDocument document,
+        HtmlPlayerSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var opts = options ?? HtmlPlayerSaveOptions.Default;
+        return Task.Run(
+            () => PptxToHtmlPlayerWriter.Write(document, opts),
+            cancellationToken);
+    }
+
+    // ── ODP Export (M-H) ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Exports <paramref name="document"/> to an OpenDocument Presentation (<c>.odp</c>) file.
+    /// Structural export: slides, shapes, text, and images are mapped to ODF; advanced effects are
+    /// not translated.
+    /// </summary>
+    public async Task SaveAsOdpAsync(
+        PresentationDocument document,
+        string path,
+        OdpSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var bytes = await ExportOdpAsync(document, options, cancellationToken).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Exports <paramref name="document"/> to an <c>.odp</c> package and returns the bytes.</summary>
+    public Task<byte[]> ExportOdpAsync(
+        PresentationDocument document,
+        OdpSaveOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var opts = options ?? OdpSaveOptions.Default;
+        return Task.Run(
+            () => PptxToOdpWriter.Write(document, opts),
+            cancellationToken);
+    }
+
     // ── SVG Export (M10) ──────────────────────────────────────────────────────
 
     /// <summary>
@@ -303,9 +372,11 @@ public sealed class PresentationProcessor : IDisposable
         try
         {
             var parsed = await Task.Run(
-                () => options?.UseOpenXmlEngine == true
-                    ? OpenXmlPresentationParser.Parse(bytes, options)
-                    : PresentationParser.Parse(bytes, options),
+                () => OdpParser.IsOdp(bytes)
+                    ? OdpParser.Parse(bytes)
+                    : options?.UseOpenXmlEngine == true
+                        ? OpenXmlPresentationParser.Parse(bytes, options)
+                        : PresentationParser.Parse(bytes, options),
                 cancellationToken).ConfigureAwait(false);
 
             return new PresentationDocument(
@@ -317,7 +388,11 @@ public sealed class PresentationProcessor : IDisposable
                 parsed.SlideSize,
                 parsed.CommentAuthors,
                 parsed.Sections,
-                parsed.Engine);
+                parsed.Engine)
+            {
+                SlideShow = parsed.SlideShow ?? new SlideShowSettings(),
+                Preserved = parsed.Preserved,
+            };
         }
         finally
         {
@@ -355,7 +430,9 @@ public sealed class PresentationProcessor : IDisposable
                     document.CommentAuthors,
                     document.Sections,
                     document.Protection,
-                    options),
+                    options,
+                    document.SlideShow,
+                    document.Preserved),
                 cancellationToken).ConfigureAwait(false);
         }
         finally

@@ -142,10 +142,11 @@ internal sealed class OpcPackage : IDisposable
         string sourcePartUri,
         string relationshipId,
         string relationshipType,
-        string targetUri)
+        string targetUri,
+        bool isExternal = false)
     {
         GetPart(sourcePartUri).AddRelationship(
-            new OpcRelationship(relationshipId, relationshipType, targetUri));
+            new OpcRelationship(relationshipId, relationshipType, targetUri, isExternal));
     }
 
     // ── Serialization ───────────────────────────────────────────────────────
