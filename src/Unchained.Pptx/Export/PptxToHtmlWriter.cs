@@ -86,20 +86,32 @@ internal static class PptxToHtmlWriter
     internal static void WriteSlideContent(
         StringBuilder sb, Slide slide, double slideW, double slideH, HtmlSaveOptions options)
     {
-        WriteBackground(sb, slide, slideW, slideH);
+        var colorScheme = slide.Master?.Theme?.Colors;
+        WriteBackground(sb, slide, slideW, slideH, colorScheme);
         foreach (var shape in slide.Shapes)
-            WriteShape(sb, shape, options);
+            WriteShape(sb, shape, options, colorScheme);
     }
 
-    private static void WriteBackground(StringBuilder sb, Slide slide, double w, double h)
+    private static void WriteBackground(
+        StringBuilder sb, Slide slide, double w, double h, ColorScheme? colorScheme)
     {
-        var fill = slide.Background.Fill;
-        if (fill.Type != FillType.Solid || fill.Solid == null) return;
-        var color = ToCssColor(fill.Solid.Color.Resolve(null));
+        var fill = ResolveBackground(slide);
+        if (fill is null || fill.Type != FillType.Solid || fill.Solid == null) return;
+        var color = ToCssColor(fill.Solid.Color.Resolve(colorScheme));
         sb.AppendLine($"<div style=\"position:absolute;left:0;top:0;width:{w:F2}px;height:{h:F2}px;background:{color}\"></div>");
     }
 
-    private static void WriteShape(StringBuilder sb, Shape shape, HtmlSaveOptions options)
+    // Resolves background fill walking slide → layout → master.
+    private static FillFormat? ResolveBackground(Slide slide)
+    {
+        if (slide.Background.Fill.Type != FillType.None) return slide.Background.Fill;
+        if (slide.Layout?.Background.Fill.Type != FillType.None) return slide.Layout!.Background.Fill;
+        if (slide.Master?.Background.Fill.Type != FillType.None) return slide.Master!.Background.Fill;
+        return null;
+    }
+
+    private static void WriteShape(
+        StringBuilder sb, Shape shape, HtmlSaveOptions options, ColorScheme? colorScheme)
     {
         var x = shape.X.Value * EmuToPx;
         var y = shape.Y.Value * EmuToPx;
@@ -109,8 +121,14 @@ internal static class PptxToHtmlWriter
         var style = new StringBuilder($"left:{x:F2}px;top:{y:F2}px;width:{w:F2}px;height:{h:F2}px;");
 
         // Fill
+        var effectiveFill = shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue
+            ? null  // handled below via StyleFillColor
+            : shape.Fill;
+
         if (shape.Fill.Type == FillType.Solid && shape.Fill.Solid != null)
-            style.Append($"background:{ToCssColor(shape.Fill.Solid.Color.Resolve(null))};");
+            style.Append($"background:{ToCssColor(shape.Fill.Solid.Color.Resolve(colorScheme))};");
+        else if (shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue)
+            style.Append($"background:{ToCssColor(shape.StyleFillColor.Value.Resolve(colorScheme))};");
         else if (shape.Fill.Type == FillType.None)
             style.Append("background:transparent;");
 
@@ -118,7 +136,7 @@ internal static class PptxToHtmlWriter
         if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid != null)
         {
             var lw = shape.Line.WidthPoints ?? 1.0;
-            style.Append($"border:{lw:F1}px solid {ToCssColor(shape.Line.Fill.Solid.Color.Resolve(null))};");
+            style.Append($"border:{lw:F1}px solid {ToCssColor(shape.Line.Fill.Solid.Color.Resolve(colorScheme))};");
         }
 
         sb.AppendLine($"<div class=\"shape\" style=\"{style}\">");
@@ -126,7 +144,7 @@ internal static class PptxToHtmlWriter
         switch (shape)
         {
             case AutoShape auto when auto.TextFrame.Paragraphs.Count > 0:
-                WriteTextFrame(sb, auto);
+                WriteTextFrame(sb, auto, colorScheme);
                 break;
             case PictureShape pic when pic.Image != null && options.EmbedImages:
                 WritePicture(sb, pic);
@@ -136,8 +154,17 @@ internal static class PptxToHtmlWriter
         sb.AppendLine("</div>");
     }
 
-    private static void WriteTextFrame(StringBuilder sb, AutoShape shape)
+    private static void WriteTextFrame(StringBuilder sb, AutoShape shape, ColorScheme? colorScheme)
     {
+        // Default text color: StyleTextColor → dk1 → black.
+        string defaultColor;
+        if (shape.StyleTextColor.HasValue)
+            defaultColor = ToCssColor(shape.StyleTextColor.Value.Resolve(colorScheme));
+        else if (colorScheme is not null)
+            defaultColor = ToCssColor(colorScheme.Dark1.Resolve(colorScheme));
+        else
+            defaultColor = "#000000";
+
         sb.AppendLine("<div class=\"text-frame\">");
         foreach (var para in shape.TextFrame.Paragraphs)
         {
@@ -158,8 +185,10 @@ internal static class PptxToHtmlWriter
                 runStyle.Append($"font-size:{fs:F1}pt;");
                 if (run.Format.Bold.Value == true) runStyle.Append("font-weight:bold;");
                 if (run.Format.Italic.Value == true) runStyle.Append("font-style:italic;");
-                if (run.Format.Fill?.Solid != null)
-                    runStyle.Append($"color:{ToCssColor(run.Format.Fill.Solid.Color.Resolve(null))};");
+                var textColor = run.Format.Fill?.Solid != null
+                    ? ToCssColor(run.Format.Fill.Solid.Color.Resolve(colorScheme))
+                    : defaultColor;
+                runStyle.Append($"color:{textColor};");
 
                 sb.Append($"<span style=\"{runStyle}\">{EscapeHtml(run.Text)}</span>");
             }
@@ -179,10 +208,13 @@ internal static class PptxToHtmlWriter
 
     private static string ToCssColor(uint argb)
     {
+        var a = (argb >> 24) & 0xFF;
         var r = (argb >> 16) & 0xFF;
         var g = (argb >> 8) & 0xFF;
         var b = argb & 0xFF;
-        return $"rgb({r},{g},{b})";
+        return a < 255
+            ? $"rgba({r},{g},{b},{a / 255.0:F3})"
+            : $"rgb({r},{g},{b})";
     }
 
     private static string EscapeHtml(string text) =>

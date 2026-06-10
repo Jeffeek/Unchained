@@ -163,6 +163,7 @@ internal static class PptxToPdfWriter
             int fontObjNum, Dictionary<string, int> slideImages)
         {
             var sb = new StringBuilder();
+            var colorScheme = slide.Master?.Theme?.Colors;
 
             // White background
             AppendLine(sb, "q");
@@ -171,16 +172,15 @@ internal static class PptxToPdfWriter
             AppendLine(sb, "Q");
 
             // Slide background fill
-            WriteBackground(sb, slide, pageWidth, pageHeight);
+            WriteBackground(sb, slide, pageWidth, pageHeight, colorScheme);
 
             // Shapes (bottom-to-top Z-order = insertion order)
-            var imageIdx = 0;
             foreach (var shape in slide.Shapes)
             {
                 switch (shape)
                 {
                     case AutoShape auto:
-                        WriteAutoShape(sb, auto, pageHeight);
+                        WriteAutoShape(sb, auto, pageHeight, colorScheme);
                         break;
                     case PictureShape pic:
                         WritePictureShape(sb, pic, pageHeight, slideImages);
@@ -192,19 +192,31 @@ internal static class PptxToPdfWriter
         }
 
         private static void WriteBackground(
-            StringBuilder sb, Slide slide, double pageWidth, double pageHeight)
+            StringBuilder sb, Slide slide, double pageWidth, double pageHeight,
+            Unchained.Ooxml.Drawing.ColorScheme? colorScheme)
         {
-            var bg = slide.Background.Fill;
-            if (bg.Type != FillType.Solid || bg.Solid == null) return;
+            // Walk slide → layout → master for background fill.
+            Unchained.Ooxml.Drawing.FillFormat? fill = null;
+            if (slide.Background.Fill.Type != Unchained.Ooxml.Drawing.FillType.None)
+                fill = slide.Background.Fill;
+            else if (slide.Layout?.Background.Fill.Type != Unchained.Ooxml.Drawing.FillType.None)
+                fill = slide.Layout!.Background.Fill;
+            else if (slide.Master?.Background.Fill.Type != Unchained.Ooxml.Drawing.FillType.None)
+                fill = slide.Master!.Background.Fill;
 
-            var (r, g, b) = ToRgbF(bg.Solid.Color.Resolve(null));
+            if (fill is null || fill.Type != Unchained.Ooxml.Drawing.FillType.Solid || fill.Solid == null)
+                return;
+
+            var (r, g, b) = ToRgbF(fill.Solid.Color.Resolve(colorScheme));
             AppendLine(sb, "q");
             AppendLine(sb, $"{r:F4} {g:F4} {b:F4} rg");
             AppendLine(sb, $"0 0 {pageWidth:F4} {pageHeight:F4} re f");
             AppendLine(sb, "Q");
         }
 
-        private static void WriteAutoShape(StringBuilder sb, AutoShape shape, double pageHeight)
+        private static void WriteAutoShape(
+            StringBuilder sb, AutoShape shape, double pageHeight,
+            Unchained.Ooxml.Drawing.ColorScheme? colorScheme)
         {
             var x = shape.X.Value * EmuToPoints;
             var y = shape.Y.Value * EmuToPoints;
@@ -216,10 +228,16 @@ internal static class PptxToPdfWriter
 
             AppendLine(sb, "q");
 
-            // Fill
+            // Fill — spPr solid → style fill → noFill.
             if (shape.Fill.Type == FillType.Solid && shape.Fill.Solid != null)
             {
-                var (r, g, b) = ToRgbF(shape.Fill.Solid.Color.Resolve(null));
+                var (r, g, b) = ToRgbF(shape.Fill.Solid.Color.Resolve(colorScheme));
+                AppendLine(sb, $"{r:F4} {g:F4} {b:F4} rg");
+                AppendLine(sb, $"{x:F4} {pdfY:F4} {w:F4} {h:F4} re f");
+            }
+            else if (shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue)
+            {
+                var (r, g, b) = ToRgbF(shape.StyleFillColor.Value.Resolve(colorScheme));
                 AppendLine(sb, $"{r:F4} {g:F4} {b:F4} rg");
                 AppendLine(sb, $"{x:F4} {pdfY:F4} {w:F4} {h:F4} re f");
             }
@@ -237,7 +255,7 @@ internal static class PptxToPdfWriter
             // Stroke
             if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid != null)
             {
-                var (r, g, b) = ToRgbF(shape.Line.Fill.Solid.Color.Resolve(null));
+                var (r, g, b) = ToRgbF(shape.Line.Fill.Solid.Color.Resolve(colorScheme));
                 var lw = shape.Line.WidthPoints ?? 0.75;
                 AppendLine(sb, $"{r:F4} {g:F4} {b:F4} RG");
                 AppendLine(sb, $"{lw:F4} w");
@@ -247,7 +265,7 @@ internal static class PptxToPdfWriter
             AppendLine(sb, "Q");
 
             // Text
-            WriteTextFrame(sb, shape.TextFrame, x, y, w, h, pageHeight);
+            WriteTextFrame(sb, shape.TextFrame, x, y, w, h, pageHeight, colorScheme, shape.StyleTextColor);
         }
 
         private static void WritePictureShape(
@@ -274,16 +292,27 @@ internal static class PptxToPdfWriter
         private static void WriteTextFrame(
             StringBuilder sb, TextFrame frame,
             double shapeX, double shapeY, double shapeW, double shapeH,
-            double pageHeight)
+            double pageHeight,
+            Unchained.Ooxml.Drawing.ColorScheme? colorScheme = null,
+            Unchained.Ooxml.Drawing.ColorSpec? styleTextColor = null)
         {
             var paragraphs = frame.Paragraphs;
             if (paragraphs.Count == 0) return;
 
             // Simple top-to-bottom text layout
             const double MarginPt = 4.0;
-            var cursorY = shapeY + MarginPt; // top of text, in slide coords
+            var cursorY = shapeY + MarginPt;
             const double DefaultFontSize = 12.0;
             const double LineHeightFactor = 1.25;
+
+            // Default text color: styleTextColor → dk1 → black.
+            (double Dr, double Dg, double Db) defaultRgb;
+            if (styleTextColor.HasValue)
+                defaultRgb = ToRgbF(styleTextColor.Value.Resolve(colorScheme));
+            else if (colorScheme is not null)
+                defaultRgb = ToRgbF(colorScheme.Dark1.Resolve(colorScheme));
+            else
+                defaultRgb = (0, 0, 0);
 
             foreach (var para in paragraphs)
             {
@@ -299,17 +328,15 @@ internal static class PptxToPdfWriter
                     .Max();
 
                 var lineH = fontSize * LineHeightFactor;
-                var baselineY = cursorY + fontSize; // baseline from top
+                var baselineY = cursorY + fontSize;
 
-                // Clip to shape bounds
                 if (baselineY > shapeY + shapeH - MarginPt) break;
 
-                // PDF y = flip
                 var pdfBaselineY = pageHeight - baselineY;
 
                 AppendLine(sb, "BT");
                 AppendLine(sb, $"/F1 {fontSize:F4} Tf");
-                AppendLine(sb, $"0 0 0 rg");
+                AppendLine(sb, $"{defaultRgb.Dr:F4} {defaultRgb.Dg:F4} {defaultRgb.Db:F4} rg");
 
                 var textX = shapeX + MarginPt;
                 var textSet = false;
@@ -329,7 +356,7 @@ internal static class PptxToPdfWriter
                     // Set text color
                     if (run.Format.Fill?.Solid != null)
                     {
-                        var (r, g, b) = ToRgbF(run.Format.Fill.Solid.Color.Resolve(null));
+                        var (r, g, b) = ToRgbF(run.Format.Fill.Solid.Color.Resolve(colorScheme));
                         AppendLine(sb, $"{r:F4} {g:F4} {b:F4} rg");
                     }
 
