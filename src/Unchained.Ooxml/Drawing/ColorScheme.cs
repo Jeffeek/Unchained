@@ -87,5 +87,5 @@ public sealed class ColorScheme
     /// Resolves a theme slot to its concrete ARGB value.
     /// Returns a neutral mid-grey (0xFF808080) if the slot has not been initialised.
     /// </summary>
-    internal uint Resolve(ThemeColorSlot slot) => this[slot].Resolve(null);
+    internal uint Resolve(ThemeColorSlot slot) => this[slot].Resolve(this);
 }

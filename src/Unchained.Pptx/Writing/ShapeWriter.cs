@@ -302,8 +302,22 @@ internal static class ShapeWriter
             new XAttribute(PmlNames.AttributeId, shape.ShapeId),
             new XAttribute(PmlNames.AttributeName, shape.Name));
 
+        if (!string.IsNullOrEmpty(shape.AltTextTitle))
+            cNvPr.Add(new XAttribute("title", shape.AltTextTitle));
+
         if (!string.IsNullOrEmpty(shape.AltText))
             cNvPr.Add(new XAttribute(DmlNames.AttributeDescription, shape.AltText));
+
+        // IsDecorative: written as a16:decorative extension element.
+        if (shape.IsDecorative)
+        {
+            var a16 = XNamespace.Get("http://schemas.microsoft.com/office/drawing/2014/main");
+            cNvPr.Add(new XElement(DmlNames.Dml + "extLst",
+                new XElement(DmlNames.Dml + "ext",
+                    new XAttribute("uri", "{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"),
+                    new XElement(a16 + "decorative",
+                        new XAttribute("val", "1")))));
+        }
 
         // Click hyperlink (<a:hlinkClick>) — relationship id assigned by PresentationWriter.
         if (shape.ClickAction is { } action)

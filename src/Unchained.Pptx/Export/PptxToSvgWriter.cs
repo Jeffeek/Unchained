@@ -25,6 +25,7 @@ internal static class PptxToSvgWriter
     {
         var w = slideSize.Width.Value * EmuToPt;
         var h = slideSize.Height.Value * EmuToPt;
+        var colorScheme = slide.Master?.Theme?.Colors;
 
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
@@ -42,11 +43,11 @@ internal static class PptxToSvgWriter
 
         // Background
         sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" fill=\"white\"/>");
-        WriteBackground(sb, slide, w, h);
+        WriteBackground(sb, slide, w, h, colorScheme);
 
         // Shapes
         foreach (var shape in slide.Shapes)
-            WriteShape(sb, shape, options);
+            WriteShape(sb, shape, options, colorScheme);
 
         sb.AppendLine("</svg>");
         return Encoding.UTF8.GetBytes(sb.ToString());
@@ -67,34 +68,48 @@ internal static class PptxToSvgWriter
         return [.. result];
     }
 
-    private static void WriteBackground(StringBuilder sb, Slide slide, double w, double h)
+    private static void WriteBackground(
+        StringBuilder sb, Slide slide, double w, double h, ColorScheme? colorScheme)
     {
-        var fill = slide.Background.Fill;
-        if (fill.Type != FillType.Solid || fill.Solid == null) return;
-        var color = ToSvgColor(fill.Solid.Color.Resolve(null));
+        var fill = ResolveBackground(slide);
+        if (fill is null || fill.Type != FillType.Solid || fill.Solid == null) return;
+        var color = ToSvgColor(fill.Solid.Color.Resolve(colorScheme));
         sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" fill=\"{color}\"/>");
     }
 
-    private static void WriteShape(StringBuilder sb, Shape shape, SvgSaveOptions options)
+    // Resolves background fill walking slide → layout → master.
+    private static FillFormat? ResolveBackground(Slide slide)
+    {
+        if (slide.Background.Fill.Type != FillType.None) return slide.Background.Fill;
+        if (slide.Layout?.Background.Fill.Type != FillType.None) return slide.Layout!.Background.Fill;
+        if (slide.Master?.Background.Fill.Type != FillType.None) return slide.Master!.Background.Fill;
+        return null;
+    }
+
+    private static void WriteShape(
+        StringBuilder sb, Shape shape, SvgSaveOptions options, ColorScheme? colorScheme)
     {
         var x = shape.X.Value * EmuToPt;
         var y = shape.Y.Value * EmuToPt;
         var w = shape.Width.Value * EmuToPt;
         var h = shape.Height.Value * EmuToPt;
 
-        var fillAttr = shape.Fill.Type switch
-        {
-            FillType.Solid when shape.Fill.Solid != null =>
-                $"fill=\"{ToSvgColor(shape.Fill.Solid.Color.Resolve(null))}\"",
-            FillType.None => "fill=\"none\"",
-            _ => "fill=\"#f0f0f0\""
-        };
+        // Resolve fill — spPr solid → style fill → noFill.
+        string fillAttr;
+        if (shape.Fill.Type == FillType.Solid && shape.Fill.Solid != null)
+            fillAttr = $"fill=\"{ToSvgColor(shape.Fill.Solid.Color.Resolve(colorScheme))}\"";
+        else if (shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue)
+            fillAttr = $"fill=\"{ToSvgColor(shape.StyleFillColor.Value.Resolve(colorScheme))}\"";
+        else if (shape.Fill.Type == FillType.None)
+            fillAttr = "fill=\"none\"";
+        else
+            fillAttr = "fill=\"#f0f0f0\"";
 
         var strokeAttr = string.Empty;
         if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid != null)
         {
             var lw = shape.Line.WidthPoints ?? 1.0;
-            strokeAttr = $"stroke=\"{ToSvgColor(shape.Line.Fill.Solid.Color.Resolve(null))}\" stroke-width=\"{lw:F2}\"";
+            strokeAttr = $"stroke=\"{ToSvgColor(shape.Line.Fill.Solid.Color.Resolve(colorScheme))}\" stroke-width=\"{lw:F2}\"";
         }
 
         sb.AppendLine($"<g transform=\"translate({x:F4},{y:F4})\">");
@@ -106,7 +121,7 @@ internal static class PptxToSvgWriter
         switch (shape)
         {
             case AutoShape auto when auto.TextFrame.Paragraphs.Count > 0:
-                WriteTextFrame(sb, auto, w, h);
+                WriteTextFrame(sb, auto, w, h, colorScheme);
                 break;
             case PictureShape pic when pic.Image != null && options.EmbedImages:
                 WritePicture(sb, pic, w, h);
@@ -116,10 +131,20 @@ internal static class PptxToSvgWriter
         sb.AppendLine("</g>");
     }
 
-    private static void WriteTextFrame(StringBuilder sb, AutoShape shape, double w, double h)
+    private static void WriteTextFrame(
+        StringBuilder sb, AutoShape shape, double w, double h, ColorScheme? colorScheme)
     {
         const double PaddingPt = 4.0;
         var cursorY = PaddingPt;
+
+        // Default text color: StyleTextColor → dk1 → black.
+        string defaultColor;
+        if (shape.StyleTextColor.HasValue)
+            defaultColor = ToSvgColor(shape.StyleTextColor.Value.Resolve(colorScheme));
+        else if (colorScheme is not null)
+            defaultColor = ToSvgColor(colorScheme.Dark1.Resolve(colorScheme));
+        else
+            defaultColor = "#000000";
 
         foreach (var para in shape.TextFrame.Paragraphs)
         {
@@ -158,8 +183,8 @@ internal static class PptxToSvgWriter
                 var weight = run.Format.Bold.Value == true ? "bold" : "normal";
                 var style = run.Format.Italic.Value == true ? "italic" : "normal";
                 var fill = run.Format.Fill?.Solid != null
-                    ? ToSvgColor(run.Format.Fill.Solid.Color.Resolve(null))
-                    : "#000000";
+                    ? ToSvgColor(run.Format.Fill.Solid.Color.Resolve(colorScheme))
+                    : defaultColor;
 
                 sb.Append($"<tspan font-size=\"{fs:F1}\" font-weight=\"{weight}\" " +
                            $"font-style=\"{style}\" fill=\"{fill}\">" +
@@ -183,10 +208,13 @@ internal static class PptxToSvgWriter
 
     private static string ToSvgColor(uint argb)
     {
+        var a = (argb >> 24) & 0xFF;
         var r = (argb >> 16) & 0xFF;
         var g = (argb >> 8) & 0xFF;
         var b = argb & 0xFF;
-        return $"#{r:X2}{g:X2}{b:X2}";
+        return a < 255
+            ? $"rgba({r},{g},{b},{a / 255.0:F3})"
+            : $"#{r:X2}{g:X2}{b:X2}";
     }
 
     private static string EscapeSvg(string text) =>

@@ -535,6 +535,15 @@ internal sealed class RasterBuffer(int width, int height)
         _data[i + 3] = 255;
     }
 
+    // Reads the RGB value of a pixel (used by warp blit).
+    internal (byte R, byte G, byte B) GetPixelRgb(int x, int y)
+    {
+        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
+            return (255, 255, 255);
+        var i = ((y * Width) + x) * 4;
+        return (_data[i], _data[i + 1], _data[i + 2]);
+    }
+
     // Composites an RGB pixel over the existing background using the given alpha and blend mode.
     // Used for image soft masks (/SMask) and image blitting with transparency.
     internal void BlendPixel(int x, int y, byte r, byte g, byte b, byte a, string blendMode = "Normal") =>
