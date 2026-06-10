@@ -180,11 +180,13 @@ public sealed class PdfRenderer : IRenderer
         // GetColorSpaces() is an internal method on PdfPageAdapter — access via cast.
         var colorSpaces      = (page as Unchained.Pdf.Engine.PdfPageAdapter)?.GetColorSpaces()
                                ?? new Dictionary<string, Unchained.Pdf.Models.ColorSpaceInfo>();
+        var type3Fonts       = (page as Unchained.Pdf.Engine.PdfPageAdapter)?.GetType3Fonts()
+                               ?? new Dictionary<string, Unchained.Pdf.Models.Type3FontInfo>();
 
         var renderer = new PageRenderer(
             buffer, _fonts, scale, pageHeightPt,
             embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps, compositeFonts,
-            extGStateAlphas, shadings, tilingPatterns, softMasks, colorSpaces);
+            extGStateAlphas, shadings, tilingPatterns, softMasks, colorSpaces, type3Fonts);
         renderer.Render(page.GetContentOperators(), fontMap);
 
         LastTextErrors      = renderer.TextErrorCount;

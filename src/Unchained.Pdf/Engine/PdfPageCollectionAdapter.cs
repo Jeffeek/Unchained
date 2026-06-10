@@ -366,6 +366,98 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     }
 
     /// <inheritdoc />
+    public IReadOnlyDictionary<string, Models.Type3FontInfo> GetType3Fonts()
+    {
+        var result = new Dictionary<string, Models.Type3FontInfo>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Get("Font")]);
+        if (fontDict is null) return result;
+
+        foreach (var (resName, fontObj) in fontDict.Entries)
+        {
+            var font = fontObj is Core.PdfIndirectReference r
+                ? core.ResolveIndirect(r.ObjectNumber).Value as Core.PdfDictionary
+                : fontObj as Core.PdfDictionary;
+            if (font is null) continue;
+            if (font.GetName("Subtype") != "Type3") continue;
+
+            // /FontMatrix: glyph space → text space transform.
+            var fmArr = font[PdfName.Get("FontMatrix")] as Core.PdfArray;
+            var fm = fmArr is { Count: >= 6 }
+                ? fmArr.Elements.Take(6).Select(static e =>
+                    e is Core.PdfReal rr ? rr.Value : e is Core.PdfInteger ii ? (double)ii.Value : 0.0)
+                    .ToArray()
+                : [0.001, 0, 0, 0.001, 0, 0];
+
+            // /Encoding: maps char codes 0–255 to glyph names.
+            var encoding = new string?[256];
+            var encObj = font[PdfName.Get("Encoding")];
+            if (encObj is Core.PdfIndirectReference er)
+                encObj = core.ResolveIndirect(er.ObjectNumber).Value;
+            if (encObj is Core.PdfDictionary encDict)
+            {
+                // /Differences array: [firstCode /name1 /name2 …]
+                if (encDict[PdfName.Get("Differences")] is Core.PdfArray diff)
+                {
+                    var code = 0;
+                    foreach (var elem in diff.Elements)
+                    {
+                        if (elem is Core.PdfInteger ic) code = (int)ic.Value;
+                        else if (elem is Core.PdfName gn && code < 256) { encoding[code] = gn.Value; code++; }
+                    }
+                }
+            }
+            else if (encObj is Core.PdfName encName)
+            {
+                // Standard encoding names — use a simple ASCII fallback.
+                if (encName.Value is "StandardEncoding" or "WinAnsiEncoding" or "MacRomanEncoding")
+                    for (var c = 32; c < 127; c++) encoding[c] = ((char)c).ToString();
+            }
+
+            // /CharProcs: glyph name → stream of content operators.
+            var charProcs = new Dictionary<string, IReadOnlyList<Models.ContentOperator>>();
+            var cpDict = ResolveDict(font[PdfName.Get("CharProcs")]);
+            if (cpDict is not null)
+            {
+                foreach (var (glyphName, streamObj) in cpDict.Entries)
+                {
+                    var streamRef = streamObj is Core.PdfIndirectReference sr
+                        ? core.ResolveIndirect(sr.ObjectNumber).Value
+                        : streamObj;
+                    if (streamRef is not Core.PdfStream glyphStream) continue;
+                    try
+                    {
+                        var decoded = Parsing.Filters.StreamFilters.Decode(glyphStream);
+                        var ops = Content.ContentStreamParser.Parse(decoded);
+                        charProcs[glyphName] = ops;
+                    }
+                    // ReSharper disable once EmptyGeneralCatchClause
+                    catch { }
+                }
+            }
+
+            // /Widths and /FirstChar.
+            var firstChar = (int)((font[PdfName.Get("FirstChar")] as Core.PdfInteger)?.Value ?? 0);
+            var widthsArr = font[PdfName.Get("Widths")] as Core.PdfArray;
+            var widths = widthsArr is not null
+                ? widthsArr.Elements
+                    .Select(static e => e is Core.PdfReal wr ? wr.Value : e is Core.PdfInteger wi ? (double)wi.Value : 0.0)
+                    .ToArray()
+                : [];
+
+            result[resName] = new Models.Type3FontInfo
+            {
+                FontMatrix = fm,
+                Encoding   = encoding,
+                CharProcs  = charProcs,
+                Widths     = widths,
+                FirstChar  = firstChar
+            };
+        }
+        return result;
+    }
+
+    /// <inheritdoc />
     public IReadOnlyDictionary<string, (double Fill, double Stroke, string BlendMode, string? SoftMaskName)> GetExtGStateAlphas()
     {
         var result = new Dictionary<string, (double, double, string, string?)>();
