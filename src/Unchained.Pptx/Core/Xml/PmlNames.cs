@@ -335,6 +335,12 @@ internal static class PmlNames
     /// <summary><c>&lt;p:nvPr&gt;</c> — application-specific non-visual properties.</summary>
     public static readonly XName ApplicationNonVisualProperties = Pml + "nvPr";
 
+    /// <summary><c>&lt;p:ph&gt;</c> — placeholder reference inside <c>p:nvPr</c>.</summary>
+    public static readonly XName Placeholder = Pml + "ph";
+
+    /// <summary>The <c>showMasterSp</c> attribute on <c>p:sld</c>/<c>p:sldLayout</c> (default true).</summary>
+    public const string AttributeShowMasterShapes = "showMasterSp";
+
     // ── Common PresentationML attribute names ─────────────────────────────────
 
     /// <summary>Relationship reference attribute: <c>r:id</c></summary>

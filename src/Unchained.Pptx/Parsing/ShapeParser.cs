@@ -313,7 +313,35 @@ internal sealed class ShapeParser
         var hlink = cNvPr.Element(DmlNames.HyperlinkClick);
         if (hlink != null)
             shape.ClickAction = ReadHyperlink(hlink);
+
+        // Placeholder reference (<p:nvPr>/<p:ph>) — captures the role + index so the slide
+        // parser can inherit geometry/formatting from the matching layout placeholder.
+        var ph = nvPrContainer.Element(PmlNames.ApplicationNonVisualProperties)
+                              ?.Element(PmlNames.Placeholder);
+        if (ph != null)
+        {
+            shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr("type"));
+            var idx = ph.GetAttrInt("idx");
+            if (idx.HasValue) shape.PlaceholderIndex = idx.Value;
+        }
     }
+
+    /// <summary>Maps a <c>p:ph/@type</c> value to <see cref="PlaceholderType"/>. Absent = Content.</summary>
+    private static PlaceholderType ParsePlaceholderType(string? type) => type switch
+    {
+        null or "" => PlaceholderType.Content,
+        "title" => PlaceholderType.Title,
+        "ctrTitle" => PlaceholderType.CenteredTitle,
+        "subTitle" => PlaceholderType.Subtitle,
+        "body" => PlaceholderType.Body,
+        "obj" => PlaceholderType.Object,
+        "dt" => PlaceholderType.Date,
+        "ftr" => PlaceholderType.Footer,
+        "sldNum" => PlaceholderType.SlideNumber,
+        "hdr" => PlaceholderType.Header,
+        "chart" or "tbl" or "pic" or "media" or "clipArt" or "dgm" => PlaceholderType.Media,
+        _ => PlaceholderType.Content,
+    };
 
     /// <summary>
     /// Reads a <c>&lt;a:hlinkClick&gt;</c> (or hover) element into a <see cref="HyperlinkAction"/>

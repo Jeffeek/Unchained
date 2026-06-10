@@ -112,6 +112,12 @@ internal sealed class SlideParser
         // Resolve shape click-hyperlink targets (second pass)
         ResolveHyperlinks(part, slide);
 
+        // Inherit placeholder geometry from the layout/master (second pass). Title/body
+        // placeholders on a content slide usually have an empty spPr and take their position
+        // and size from the matching placeholder on the layout — without this they are
+        // zero-sized and never rendered.
+        ResolvePlaceholderGeometry(slide);
+
         // Notes slide (M7)
         var notesRel = part.FindRelationship(PmlNames.RelTypeNotesSlide);
         if (notesRel != null)
@@ -353,6 +359,75 @@ internal sealed class SlideParser
         else
             link.TargetPartUri = slidePart.ResolveUri(rel.TargetUri);
     }
+
+    // ── Placeholder geometry inheritance ─────────────────────────────────────────
+
+    private static void ResolvePlaceholderGeometry(Slide slide)
+    {
+        // Gather candidate placeholder definitions from the layout, then the master, so a
+        // slide placeholder with no geometry of its own can inherit it.
+        var layout = slide.Layout;
+        var layoutPlaceholders = layout?.Shapes is { } ls ? CollectPlaceholders(ls) : [];
+        var masterPlaceholders = layout?.Master?.Shapes is { } ms ? CollectPlaceholders(ms) : [];
+
+        foreach (var shape in EnumerateAllShapes(slide.Shapes))
+        {
+            if (!shape.IsPlaceholder) continue;
+            if (shape.Width.Value > 0 && shape.Height.Value > 0) continue; // already positioned
+
+            var source = MatchPlaceholder(shape, layoutPlaceholders)
+                      ?? MatchPlaceholder(shape, masterPlaceholders);
+            if (source is null) continue;
+
+            shape.X = source.X;
+            shape.Y = source.Y;
+            shape.Width = source.Width;
+            shape.Height = source.Height;
+        }
+    }
+
+    private static List<Shapes.Shape> CollectPlaceholders(IEnumerable<Shapes.Shape> shapes)
+    {
+        var result = new List<Shapes.Shape>();
+        foreach (var s in EnumerateAllShapes(shapes))
+            if (s.IsPlaceholder)
+                result.Add(s);
+        return result;
+    }
+
+    // Matches a slide placeholder to its layout/master definition: prefer an exact index match,
+    // then a type match, then (for the common single-body case) a compatible body/content/object.
+    private static Shapes.Shape? MatchPlaceholder(Shapes.Shape target, List<Shapes.Shape> candidates)
+    {
+        if (candidates.Count == 0) return null;
+
+        if (target.PlaceholderIndex is { } idx)
+        {
+            var byIdx = candidates.FirstOrDefault(c => c.PlaceholderIndex == idx
+                                                       && c.Width.Value > 0 && c.Height.Value > 0);
+            if (byIdx is not null) return byIdx;
+        }
+
+        var byType = candidates.FirstOrDefault(c => c.PlaceholderType == target.PlaceholderType
+                                                    && c.Width.Value > 0 && c.Height.Value > 0);
+        if (byType is not null) return byType;
+
+        // Title family and body/content/object family are interchangeable across slide↔layout.
+        if (IsTitle(target.PlaceholderType))
+            return candidates.FirstOrDefault(c => IsTitle(c.PlaceholderType)
+                                                  && c.Width.Value > 0 && c.Height.Value > 0);
+        if (IsBodyLike(target.PlaceholderType))
+            return candidates.FirstOrDefault(c => IsBodyLike(c.PlaceholderType)
+                                                  && c.Width.Value > 0 && c.Height.Value > 0);
+        return null;
+    }
+
+    private static bool IsTitle(Shapes.PlaceholderType t) =>
+        t is Shapes.PlaceholderType.Title or Shapes.PlaceholderType.CenteredTitle;
+
+    private static bool IsBodyLike(Shapes.PlaceholderType t) =>
+        t is Shapes.PlaceholderType.Body or Shapes.PlaceholderType.Content
+          or Shapes.PlaceholderType.Object or Shapes.PlaceholderType.Subtitle;
 
     // ── Layout resolution ─────────────────────────────────────────────────────
 
