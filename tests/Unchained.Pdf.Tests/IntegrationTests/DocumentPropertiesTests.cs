@@ -180,6 +180,54 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await Should.ThrowAsync<ArgumentOutOfRangeException>(() => Processor.SetOpenActionAsync(doc, 99, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task SetOpenAction_UriAction_WritesUriToOutput()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Processor.SetOpenActionAsync(
+            doc,
+            Unchained.Pdf.Models.PdfOpenAction.Uri("https://example.com"),
+            TestContext.Current.CancellationToken);
+
+        using var ms = new MemoryStream();
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        var text = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        text.ShouldContain("URI");
+        text.ShouldContain("example.com");
+    }
+
+    [Fact]
+    public async Task SetOpenAction_NamedAction_WritesNameToOutput()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Processor.SetOpenActionAsync(
+            doc,
+            Unchained.Pdf.Models.PdfOpenAction.Named("FirstPage"),
+            TestContext.Current.CancellationToken);
+
+        using var ms = new MemoryStream();
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        var text = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        text.ShouldContain("Named");
+        text.ShouldContain("FirstPage");
+    }
+
+    [Fact]
+    public async Task SetOpenAction_GoToAction_ViaModel_WritesGoToToOutput()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
+        await Processor.SetOpenActionAsync(
+            doc,
+            Unchained.Pdf.Models.PdfOpenAction.GoTo(2),
+            TestContext.Current.CancellationToken);
+
+        using var ms = new MemoryStream();
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        var text = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        text.ShouldContain("GoTo");
+        text.ShouldContain("OpenAction");
+    }
+
     // ── RemovePdfaCompliance ──────────────────────────────────────────────────
 
     [Fact]
