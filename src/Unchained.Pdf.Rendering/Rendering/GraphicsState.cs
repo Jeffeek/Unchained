@@ -36,6 +36,19 @@ internal sealed class GraphicsState
 
     internal double LineWidth { get; set; } = 1.0;
 
+    // Blend mode for compositing (ISO 32000-1 §11.3.5). PDF name string, e.g. "Normal",
+    // "Multiply", "Screen". Default is "Normal" (simple alpha compositing).
+    internal string BlendMode { get; set; } = "Normal";
+
+    // Per-pixel soft mask opacity (Width × Height bytes, row-major), or null when no
+    // soft mask is active. Set by the `gs` operator when an ExtGState has /SMask.
+    // Cleared by `gs` with /SMask /None. Cloned on `q`, restored on `Q`.
+    internal byte[]? SoftMask { get; set; }
+
+    // Dimensions of the SoftMask array (must match the RasterBuffer dimensions).
+    internal int SoftMaskWidth { get; set; }
+    internal int SoftMaskHeight { get; set; }
+
     // Dash pattern: on/off lengths in user-space units (empty = solid line). The dash phase
     // is not tracked separately; rendering approximates the pattern from segment start.
     internal double[] DashLengths { get; set; } = [];
@@ -62,12 +75,10 @@ internal sealed class GraphicsState
     // font bytes whose dictionary is keyed by resource name, not base font name.
     internal string FontResourceName { get; set; } = string.Empty;
 
-    // Current clipping rectangle in DEVICE pixels (inclusive min, exclusive max), or null
-    // for no clip. PDF clip paths can be arbitrary, but we approximate with the axis-aligned
-    // bounding box — correct for the overwhelmingly common rectangular clips and a safe
-    // conservative superset otherwise. Nested clips intersect; the value is cloned on `q`
-    // and restored on `Q` automatically.
-    internal (int X0, int Y0, int X1, int Y1)? ClipRect { get; set; }
+    // Snapshot of the clip mask at the time of the last `q`. Stored here so that `Q` can
+    // restore it. The actual clip lives in RasterBuffer._clipMask; this is just the saved copy.
+    // Null means "no clip was active when this state was saved".
+    internal byte[]? SavedClipMask { get; set; }
 
     internal GraphicsState Clone() =>
         new()
@@ -79,6 +90,10 @@ internal sealed class GraphicsState
             FillTilingName = FillTilingName,
             StrokeR = StrokeR, StrokeG = StrokeG, StrokeB = StrokeB, StrokeA = StrokeA,
             LineWidth = LineWidth,
+            BlendMode = BlendMode,
+            SoftMask = SoftMask is null ? null : (byte[])SoftMask.Clone(),
+            SoftMaskWidth = SoftMaskWidth,
+            SoftMaskHeight = SoftMaskHeight,
             DashLengths = DashLengths,
             TextMatrix = (double[])TextMatrix.Clone(),
             TextLineMatrix = (double[])TextLineMatrix.Clone(),
@@ -91,7 +106,7 @@ internal sealed class GraphicsState
             TextRise = TextRise,
             Leading = Leading,
             TextRenderMode = TextRenderMode,
-            ClipRect = ClipRect
+            SavedClipMask = SavedClipMask is null ? null : (byte[])SavedClipMask.Clone()
         };
 
     // Transform a PDF user-space point through the current CTM.

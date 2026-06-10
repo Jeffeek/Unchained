@@ -64,14 +64,14 @@ internal static class RasterBufferGlyphExtensions
         this RasterBuffer buffer,
         int penX, int penY,
         Face ftFace,
-        byte r, byte g, byte b)
+        byte r, byte g, byte b,
+        string blendMode = "Normal")
     {
         int w, h, pitch, pixelMode, bitmapLeft, bitmapTop;
         IntPtr bufPtr;
 
         if (NeedsDirectOffsets)
         {
-            // Windows x64: read glyph slot at the CORRECT face offset (120).
             var faceRef = GetFaceRef(ftFace);
             if (faceRef == IntPtr.Zero) return;
             var glyphSlotPtr = Marshal.ReadIntPtr(faceRef, FaceGlyphOffset);
@@ -87,7 +87,6 @@ internal static class RasterBufferGlyphExtensions
         }
         else
         {
-            // Linux / macOS (and 32-bit Windows): SharpFont offsets are correct.
             var glyph   = ftFace.Glyph;
             var bm      = glyph.Bitmap;
             w           = bm.Width;
@@ -102,7 +101,7 @@ internal static class RasterBufferGlyphExtensions
         var destX = penX + bitmapLeft;
         var destY = penY - bitmapTop;
 
-        BlitFromNativeBuffer(buffer, destX, destY, w, h, pitch, bufPtr, pixelMode, r, g, b);
+        BlitFromNativeBuffer(buffer, destX, destY, w, h, pitch, bufPtr, pixelMode, r, g, b, blendMode);
     }
 
     // Low-level blitter: given raw glyph bitmap fields, reads pixel data and blits.
@@ -112,15 +111,14 @@ internal static class RasterBufferGlyphExtensions
         int w, int h, int pitch,
         IntPtr bufPtr,
         int pixelMode,
-        byte r, byte g, byte b)
+        byte r, byte g, byte b,
+        string blendMode = "Normal")
     {
         if (w <= 0 || h <= 0 || bufPtr == IntPtr.Zero) return;
 
         var absPitch = Math.Abs(pitch);
         if (absPitch == 0) return;
 
-        // Sanity bounds: reject values that are clearly garbage (e.g. from wrong struct offsets
-        // before the NeedsDirectOffsets fix was applied, or from corrupted glyph data).
         const int maxGlyphDim = 4096;
         if (w > maxGlyphDim || h > maxGlyphDim || absPitch > maxGlyphDim * 4) return;
 
@@ -128,23 +126,19 @@ internal static class RasterBufferGlyphExtensions
         {
             case PixelModeGray:
             {
-                // 8 bpp: one alpha byte per pixel.
-                // Read via Marshal.Copy — do NOT use FTBitmap.BufferData which throws
-                // OverflowException when Pitch is negative.
                 var rowBuf = new byte[absPitch];
                 for (var row = 0; row < h; row++)
                 {
                     var srcRow = pitch >= 0 ? row : h - 1 - row;
                     Marshal.Copy(IntPtr.Add(bufPtr, srcRow * absPitch), rowBuf, 0, absPitch);
                     buffer.BlitGrayBitmap(destX, destY + row, w, 1, absPitch, rowBuf,
-                        invertRows: false, r, g, b);
+                        invertRows: false, r, g, b, blendMode);
                 }
                 break;
             }
 
             case PixelModeMono:
             {
-                // 1 bpp packed MSB-first; unpack to a Gray byte row before blitting.
                 var monoRow = new byte[absPitch];
                 var grayRow = new byte[w];
                 for (var row = 0; row < h; row++)
@@ -154,7 +148,7 @@ internal static class RasterBufferGlyphExtensions
                     for (var col = 0; col < w; col++)
                         grayRow[col] = (monoRow[col >> 3] & (0x80 >> (col & 7))) != 0 ? (byte)255 : (byte)0;
                     buffer.BlitGrayBitmap(destX, destY + row, w, 1, w, grayRow,
-                        invertRows: false, r, g, b);
+                        invertRows: false, r, g, b, blendMode);
                 }
                 break;
             }

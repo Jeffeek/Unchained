@@ -490,6 +490,10 @@ public sealed class DocumentProcessor : IDocumentProcessor
                 continue; // Already embedded.
 
             // Build /FontDescriptor with /FontFile2 (TrueType).
+            // Read actual metrics from the font file; fall back to conservative defaults.
+            var metrics = TrueTypeMetrics.Read(fontBytes) ?? new(
+                -166, -225, 1000, 931, 800, -200, 716, 80);
+
             var maxObj = existing.Max(static o => o.ObjectNumber);
             var fontFileObjNum = ++maxObj;
             var fontFileDict = new Core.PdfDictionary(new Dictionary<string, Core.PdfObject>
@@ -507,14 +511,14 @@ public sealed class DocumentProcessor : IDocumentProcessor
                 ["FontName"] = Core.PdfName.Get(baseFont),
                 ["Flags"] = new Core.PdfInteger(32),
                 ["FontBBox"] = new Core.PdfArray([
-                    new Core.PdfInteger(-166), new Core.PdfInteger(-225),
-                    new Core.PdfInteger(1000), new Core.PdfInteger(931)
+                    new Core.PdfInteger(metrics.XMin), new Core.PdfInteger(metrics.YMin),
+                    new Core.PdfInteger(metrics.XMax), new Core.PdfInteger(metrics.YMax)
                 ]),
                 ["ItalicAngle"] = new Core.PdfInteger(0),
-                ["Ascent"] = new Core.PdfInteger(800),
-                ["Descent"] = new Core.PdfInteger(-200),
-                ["CapHeight"] = new Core.PdfInteger(716),
-                ["StemV"] = new Core.PdfInteger(80),
+                ["Ascent"] = new Core.PdfInteger(metrics.Ascent),
+                ["Descent"] = new Core.PdfInteger(metrics.Descent),
+                ["CapHeight"] = new Core.PdfInteger(metrics.CapHeight),
+                ["StemV"] = new Core.PdfInteger(metrics.StemV),
                 ["FontFile2"] = new Core.PdfIndirectReference(fontFileObjNum, 0)
             };
             existing.Add(new Core.PdfIndirectObject(descObjNum, 0, new Core.PdfDictionary(descEntries)));
@@ -829,5 +833,271 @@ public sealed class DocumentProcessor : IDocumentProcessor
             string.Empty);
 
         return cleaned;
+    }
+
+    /// <inheritdoc />
+    public Task ReplaceFontAsync(
+        IPdfDocument document,
+        string fontName,
+        byte[] newFontBytes,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(fontName);
+        ArgumentNullException.ThrowIfNull(newFontBytes);
+        var adapter = CastAdapter(document);
+        return Task.Run(() => ReplaceFont(adapter, fontName, newFontBytes), ct);
+    }
+
+    private static void ReplaceFont(
+        PdfDocumentAdapter adapter,
+        string fontName,
+        byte[] newFontBytes
+    )
+    {
+        var existing = adapter.Core.CollectObjects().ToList();
+        var metrics = TrueTypeMetrics.Read(newFontBytes) ?? new(-166, -225, 1000, 931, 800, -200, 716, 80);
+        var changed = false;
+        var normalised = NormalizeBaseFont(fontName);
+        var maxObj = existing.Max(static o => o.ObjectNumber);
+
+        for (var i = 0; i < existing.Count; i++)
+        {
+            var obj = existing[i];
+            var dict = obj.Value as Core.PdfDictionary;
+            if (dict is null) continue;
+            if (dict.GetName("Type") != "Font") continue;
+
+            var baseFont = dict.GetName(Core.PdfName.BaseFont.Value);
+            if (baseFont is null) continue;
+            if (!string.Equals(NormalizeBaseFont(baseFont), normalised, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(baseFont, fontName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // Build new /FontFile2 stream.
+            var fontFileObjNum = ++maxObj;
+            var fontFileDict = new Core.PdfDictionary(new Dictionary<string, Core.PdfObject>
+            {
+                [Core.PdfName.Length.Value] = new Core.PdfInteger(newFontBytes.Length),
+                ["Length1"] = new Core.PdfInteger(newFontBytes.Length)
+            });
+            existing.Add(new Core.PdfIndirectObject(
+                fontFileObjNum, 0,
+                new Core.PdfStream(fontFileDict, newFontBytes)));
+
+            // Build new /FontDescriptor.
+            var descObjNum = ++maxObj;
+            var descEntries = new Dictionary<string, Core.PdfObject>
+            {
+                ["Type"] = Core.PdfName.Get("FontDescriptor"),
+                ["FontName"] = Core.PdfName.Get(baseFont),
+                ["Flags"] = new Core.PdfInteger(32),
+                ["FontBBox"] = new Core.PdfArray([
+                    new Core.PdfInteger(metrics.XMin), new Core.PdfInteger(metrics.YMin),
+                    new Core.PdfInteger(metrics.XMax), new Core.PdfInteger(metrics.YMax)
+                ]),
+                ["ItalicAngle"] = new Core.PdfInteger(0),
+                ["Ascent"] = new Core.PdfInteger(metrics.Ascent),
+                ["Descent"] = new Core.PdfInteger(metrics.Descent),
+                ["CapHeight"] = new Core.PdfInteger(metrics.CapHeight),
+                ["StemV"] = new Core.PdfInteger(metrics.StemV),
+                ["FontFile2"] = new Core.PdfIndirectReference(fontFileObjNum, 0)
+            };
+            existing.Add(new Core.PdfIndirectObject(
+                descObjNum, 0,
+                new Core.PdfDictionary(descEntries)));
+
+            // Update the font dictionary with the new descriptor.
+            var updatedEntries = new Dictionary<string, Core.PdfObject>(dict.Entries)
+            {
+                ["FontDescriptor"] = new Core.PdfIndirectReference(descObjNum, 0)
+            };
+            existing[i] = new Core.PdfIndirectObject(
+                obj.ObjectNumber, obj.Generation,
+                new Core.PdfDictionary(updatedEntries));
+            changed = true;
+        }
+
+        if (changed)
+            MutationHelper.SerializeAndReplace(adapter, existing);
+    }
+
+    /// <inheritdoc />
+    public Task SubsetFontsAsync(
+        IPdfDocument document,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var adapter = CastAdapter(document);
+        return Task.Run(() => SubsetFonts(adapter), ct);
+    }
+
+    private static void SubsetFonts(PdfDocumentAdapter adapter)
+    {
+        var existing = adapter.Core.CollectObjects().ToList();
+
+        // Step 1: collect used glyph IDs per FontFile object number across all pages.
+        // Key = /FontFile2 stream object number, Value = set of used glyph IDs.
+        var usedGlyphs = new Dictionary<int, HashSet<int>>();
+        CollectUsedGlyphs(adapter, existing, usedGlyphs);
+        if (usedGlyphs.Count == 0) return;
+
+        // Step 2: subset each embedded font stream.
+        var changed = false;
+        for (var i = 0; i < existing.Count; i++)
+        {
+            var obj = existing[i];
+            if (!usedGlyphs.TryGetValue(obj.ObjectNumber, out var glyphs)) continue;
+            if (obj.Value is not Core.PdfStream fontStream) continue;
+
+            var originalBytes = fontStream.Data.ToArray();
+            if (originalBytes.Length == 0) continue;
+
+            var subsetBytes = TrueTypeSubsetter.Subset(originalBytes, glyphs);
+            if (subsetBytes.Length >= originalBytes.Length) continue; // no savings
+
+            // Rebuild the font stream with updated length.
+            var newDict = new Core.PdfDictionary(new Dictionary<string, Core.PdfObject>(
+                fontStream.Dictionary.Entries)
+            {
+                [Core.PdfName.Length.Value] = new Core.PdfInteger(subsetBytes.Length),
+                ["Length1"] = new Core.PdfInteger(subsetBytes.Length)
+            });
+            existing[i] = new Core.PdfIndirectObject(
+                obj.ObjectNumber, obj.Generation,
+                new Core.PdfStream(newDict, subsetBytes));
+            changed = true;
+        }
+
+        if (changed)
+            MutationHelper.SerializeAndReplace(adapter, existing);
+    }
+
+    // Walks all pages' content streams and collects glyph IDs for each embedded font.
+    // usedGlyphs: key = FontFile2 stream object number, value = set of glyph IDs used.
+    private static void CollectUsedGlyphs(
+        PdfDocumentAdapter adapter,
+        List<Core.PdfIndirectObject> objects,
+        Dictionary<int, HashSet<int>> usedGlyphs)
+    {
+        // Build a map from FontDescriptor object number → FontFile2 object number.
+        var descToFontFile = new Dictionary<int, int>();
+        // Build a map from Font dict object number → FontFile2 object number.
+        var fontToFontFile = new Dictionary<int, int>();
+
+        foreach (var obj in objects)
+        {
+            if (obj.Value is not Core.PdfDictionary dict) continue;
+            var type = dict.GetName("Type");
+            if (type == "FontDescriptor")
+            {
+                if (dict[Core.PdfName.Get("FontFile2")] is Core.PdfIndirectReference ff2)
+                    descToFontFile[obj.ObjectNumber] = ff2.ObjectNumber;
+            }
+            else if (type == "Font")
+            {
+                // Link Font → FontDescriptor → FontFile2.
+                var fdRef = dict[Core.PdfName.Get("FontDescriptor")] as Core.PdfIndirectReference;
+                if (fdRef is null) continue;
+                if (!descToFontFile.TryGetValue(fdRef.ObjectNumber, out var ffNum)) continue;
+                fontToFontFile[obj.ObjectNumber] = ffNum;
+            }
+        }
+
+        if (fontToFontFile.Count == 0) return;
+
+        // Walk each page's content operators to collect glyph IDs.
+        for (var p = 1; p <= adapter.Core.PageCount; p++)
+        {
+            var pageDict = adapter.Core.GetPage(p);
+            var pageAdapter = new PdfPageAdapter(pageDict, p, adapter.Core);
+            var ops = pageAdapter.GetContentOperators();
+            var fontMap = pageAdapter.GetFontNameMap();        // resource name → base font name
+            var toUnicode = pageAdapter.GetToUnicodeMaps();   // resource name → cid→unicode
+            var compFonts = pageAdapter.GetCompositeFonts();  // resource name → composite info
+
+            // Walk the font resources to find object numbers for the resource names.
+            var resources = pageDict[Core.PdfName.Resources];
+            var resDict = resources is Core.PdfIndirectReference rr
+                ? adapter.Core.ResolveIndirect(rr.ObjectNumber).Value as Core.PdfDictionary
+                : resources as Core.PdfDictionary;
+            var fontResDict = resDict?[Core.PdfName.Get("Font")] as Core.PdfDictionary
+                ?? (resDict?[Core.PdfName.Get("Font")] is Core.PdfIndirectReference fr
+                    ? adapter.Core.ResolveIndirect(fr.ObjectNumber).Value as Core.PdfDictionary
+                    : null);
+            if (fontResDict is null) continue;
+
+            // Map resource name → FontFile2 object number.
+            var resNameToFontFile = new Dictionary<string, int>();
+            foreach (var (resName, fontObj) in fontResDict.Entries)
+            {
+                var fontObjNum = fontObj is Core.PdfIndirectReference fontRef
+                    ? fontRef.ObjectNumber
+                    : -1;
+                if (fontObjNum > 0 && fontToFontFile.TryGetValue(fontObjNum, out var ffNum))
+                    resNameToFontFile[resName] = ffNum;
+            }
+            if (resNameToFontFile.Count == 0) continue;
+
+            // Walk operators: Tf sets current font, Tj/TJ/'/" show strings.
+            var currentFontRes = string.Empty;
+            foreach (var op in ops)
+            {
+                switch (op.Name)
+                {
+                    case "Tf" when op.Operands.Count >= 1:
+                        currentFontRes = (op.Operands[0] as Core.PdfName)?.Value ?? string.Empty;
+                        break;
+                    case "Tj" when op.Operands.Count >= 1:
+                    {
+                        if (!resNameToFontFile.TryGetValue(currentFontRes, out var ff)) break;
+                        if (!usedGlyphs.TryGetValue(ff, out var gs)) usedGlyphs[ff] = gs = new HashSet<int>();
+                        CollectGlyphsFromString(op.Operands[0], currentFontRes, compFonts, gs);
+                        break;
+                    }
+                    case "TJ" when op.Operands.Count >= 1 && op.Operands[0] is Core.PdfArray arr:
+                    {
+                        if (!resNameToFontFile.TryGetValue(currentFontRes, out var ff)) break;
+                        if (!usedGlyphs.TryGetValue(ff, out var gs)) usedGlyphs[ff] = gs = new HashSet<int>();
+                        foreach (var elem in arr.Elements)
+                            CollectGlyphsFromString(elem, currentFontRes, compFonts, gs);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Extracts glyph IDs from a PdfString operand (simple or composite font).
+    private static void CollectGlyphsFromString(
+        Core.PdfObject obj,
+        string fontResName,
+        IReadOnlyDictionary<string, Models.CompositeFontInfo> compFonts,
+        HashSet<int> result)
+    {
+        if (obj is not Core.PdfString ps) return;
+        var bytes = ps.GetBinaryBytes();
+
+        if (compFonts.TryGetValue(fontResName, out var cfi) && cfi.IdentityEncoding)
+        {
+            // Type0/CID: 2-byte CID pairs → glyph IDs via CIDToGIDMap.
+            var span = bytes.Span;
+            for (var i = 0; i + 1 < span.Length; i += 2)
+            {
+                var cid = (span[i] << 8) | span[i + 1];
+                var gid = cfi.IdentityCidToGid ? cid
+                    : (cfi.CidToGid is not null && cid < cfi.CidToGid.Count
+                        ? (int)cfi.CidToGid[cid] : cid);
+                result.Add(gid);
+            }
+        }
+        else
+        {
+            // Simple font: each byte is a character code = approximate glyph ID.
+            foreach (var b in bytes.Span)
+                result.Add(b);
+        }
     }
 }

@@ -366,9 +366,9 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     }
 
     /// <inheritdoc />
-    public IReadOnlyDictionary<string, (double Fill, double Stroke)> GetExtGStateAlphas()
+    public IReadOnlyDictionary<string, (double Fill, double Stroke, string BlendMode, string? SoftMaskName)> GetExtGStateAlphas()
     {
-        var result = new Dictionary<string, (double, double)>();
+        var result = new Dictionary<string, (double, double, string, string?)>();
         var resources = ResolveDict(page[PdfName.Resources]);
         var extDict = ResolveDict(resources?[PdfName.Get("ExtGState")]);
         if (extDict is null) return result;
@@ -377,13 +377,78 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         {
             var gs = ResolveDict(value);
             if (gs is null) continue;
-            // /ca = fill alpha, /CA = stroke alpha; default 1 (opaque) when absent.
             var ca = ReadAlpha(gs["ca"]);
             var cA = ReadAlpha(gs["CA"]);
-            if (ca is null && cA is null) continue;
-            result[name] = (ca ?? 1.0, cA ?? 1.0);
+            var bm = (gs[PdfName.Get("BM")] as PdfName)?.Value ?? "Normal";
+            // /SMask: if it's a dict (not /None name), note its presence using the ExtGState name.
+            string? smaskName = null;
+            var smaskObj = gs[PdfName.Get("SMask")];
+            if (smaskObj is PdfDictionary) smaskName = name;
+            if (ca is null && cA is null && bm == "Normal" && smaskName is null) continue;
+            result[name] = (ca ?? 1.0, cA ?? 1.0, bm, smaskName);
         }
         return result;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, SoftMaskInfo> GetSoftMasks(int widthPx, int heightPx)
+    {
+        var result = new Dictionary<string, SoftMaskInfo>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var extDict = ResolveDict(resources?[PdfName.Get("ExtGState")]);
+        if (extDict is null) return result;
+
+        foreach (var (name, value) in extDict.Entries)
+        {
+            var gs = ResolveDict(value);
+            if (gs is null) continue;
+            var smaskObj = gs[PdfName.Get("SMask")];
+            if (smaskObj is not PdfDictionary smaskDict) continue;
+
+            var maskType = (smaskDict[PdfName.Get("S")] as PdfName)?.Value ?? "Alpha";
+            var formRef = smaskDict[PdfName.Get("G")];
+            var formStream = formRef is PdfIndirectReference fRef
+                ? core.ResolveIndirect(fRef.ObjectNumber).Value as PdfStream
+                : formRef as PdfStream;
+            if (formStream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form") continue;
+
+            var bbox = GetFormBBox(formStream);
+            var matrix = GetFormMatrix(formStream);
+            var formResources = ResolveDict(formStream.Dictionary[PdfName.Resources]);
+
+            try
+            {
+                var decodedBytes = Parsing.Filters.StreamFilters.Decode(formStream);
+                var operators = Content.ContentStreamParser.Parse(decodedBytes);
+
+                // Use a page adapter with page number 0 (not a real page — just resource access).
+                var formAdapter = new PdfPageAdapter(formStream.Dictionary, 0, core);
+
+                result[name] = new SoftMaskInfo(
+                    widthPx, heightPx, maskType,
+                    operators, formAdapter,
+                    bbox, matrix);
+            }
+            // ReSharper disable once EmptyGeneralCatchClause
+            catch { }
+        }
+        return result;
+    }
+
+    private static double[] GetFormBBox(PdfStream form)
+    {
+        if (form.Dictionary[PdfName.Get("BBox")] is not PdfArray bbox || bbox.Elements.Count < 4)
+            return [0, 0, 1, 1];
+        static double N(PdfObject o) => o is PdfReal r ? r.Value : o is PdfInteger i ? i.Value : 0;
+        return [N(bbox.Elements[0]), N(bbox.Elements[1]), N(bbox.Elements[2]), N(bbox.Elements[3])];
+    }
+
+    private static double[] GetFormMatrix(PdfStream form)
+    {
+        if (form.Dictionary[PdfName.Get("Matrix")] is not PdfArray m || m.Elements.Count < 6)
+            return [1, 0, 0, 1, 0, 0];
+        static double N(PdfObject o) => o is PdfReal r ? r.Value : o is PdfInteger i ? i.Value : 0;
+        return [N(m.Elements[0]), N(m.Elements[1]), N(m.Elements[2]), N(m.Elements[3]), N(m.Elements[4]), N(m.Elements[5])];
     }
 
     private static double? ReadAlpha(PdfObject? o) => o switch

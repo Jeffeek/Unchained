@@ -422,4 +422,35 @@ public interface IDocumentProcessor : IDisposable
         string xmlContent,
         CancellationToken ct = default
     );
+
+    /// <summary>
+    /// Replaces all occurrences of a named font in the document with new font bytes.
+    /// Every /Font dictionary whose /BaseFont name matches <paramref name="fontName"/>
+    /// (or its normalised base family, e.g. "Helvetica" matches "Helvetica-Bold") has its
+    /// embedded font file updated and its /FontDescriptor metrics recalculated from the
+    /// new font data. Use this to substitute non-embeddable fonts with licensed alternatives.
+    /// </summary>
+    /// <param name="document">The document to update.</param>
+    /// <param name="fontName">Base font name to replace (e.g. "Helvetica", "Arial").</param>
+    /// <param name="newFontBytes">Raw TrueType/OpenType font bytes for the replacement.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task ReplaceFontAsync(
+        IPdfDocument document,
+        string fontName,
+        byte[] newFontBytes,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Subsets all embedded TrueType fonts in the document to the glyphs actually used,
+    /// significantly reducing file size for large-glyph-set fonts (CJK, symbol fonts).
+    /// Glyph 0 (.notdef) and composite-glyph components are always retained.
+    /// Fonts that are not embedded, not TrueType, or already small are left unchanged.
+    /// </summary>
+    /// <param name="document">The document whose embedded fonts to subset.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task SubsetFontsAsync(
+        IPdfDocument document,
+        CancellationToken ct = default
+    );
 }
