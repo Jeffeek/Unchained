@@ -155,6 +155,36 @@ public interface IDocumentProcessor : IDisposable
     );
 
     /// <summary>
+    /// Adds the structural markers required for PDF/X (ISO 15930): an <c>/OutputIntents</c>
+    /// entry with a <c>GTS_PDFX</c> intent referencing <paramref name="outputConditionIdentifier"/>
+    /// (e.g. <c>"CGATS TR 001"</c>), a <c>GTS_PDFXVersion</c> marker, and pdfxid XMP metadata.
+    /// Does not perform colour conversion (RGB→CMYK), which needs an ICC engine.
+    /// </summary>
+    /// <param name="document">Source document (must not be encrypted).</param>
+    /// <param name="outputStream">Destination stream for the converted PDF.</param>
+    /// <param name="profile">Target PDF/X profile (default PDF/X-1a:2001).</param>
+    /// <param name="outputConditionIdentifier">Print-condition identifier for the output intent.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task ConvertToPdfXAsync(
+        IPdfDocument document,
+        Stream outputStream,
+        PdfXProfile profile = PdfXProfile.PdfX1A2001,
+        string outputConditionIdentifier = "CGATS TR 001",
+        CancellationToken ct = default
+    );
+
+    /// <summary>
+    /// Applies structural PDF/X markers and writes the result to <paramref name="filePath"/>.
+    /// </summary>
+    Task ConvertToPdfXAsync(
+        IPdfDocument document,
+        string filePath,
+        PdfXProfile profile = PdfXProfile.PdfX1A2001,
+        string outputConditionIdentifier = "CGATS TR 001",
+        CancellationToken ct = default
+    );
+
+    /// <summary>
     /// Digitally signs <paramref name="document"/> with <paramref name="certificate"/> and
     /// writes the signed PDF to <paramref name="outputStream"/>.
     /// Uses PKCS#7 detached signature (<c>adbe.pkcs7.detached</c>, ISO 32000-1 §12.8.3).

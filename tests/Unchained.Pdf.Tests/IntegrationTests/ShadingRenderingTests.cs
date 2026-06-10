@@ -92,4 +92,38 @@ public sealed class ShadingRenderingTests : RendererTestBase
         sh.ColorAt(0.0).R.ShouldBeLessThan((byte)30);    // black end
         sh.ColorAt(1.0).R.ShouldBeGreaterThan((byte)225); // white end
     }
+
+    // ── Tiling patterns ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void GetTilingPatterns_ParsesPatternCell()
+    {
+        var bytes = PdfFixtures.WithTilingPattern();
+        using var doc = Processor.LoadAsync(new MemoryStream(bytes)).GetAwaiter().GetResult();
+        var patterns = doc.Pages[1].GetTilingPatterns();
+        patterns.ContainsKey("P1").ShouldBeTrue();
+        var p = patterns["P1"];
+        p.PaintType.ShouldBe(1);
+        p.XStep.ShouldBe(10, 0.01);
+        p.Operators.ShouldContain(o => o.Name == "re"); // cell draws a rectangle
+    }
+
+    [Fact]
+    public async Task TilingPattern_RendersRedInk()
+    {
+        SkipIfNoFreeType();
+
+        await using var doc = await LoadAsync(PdfFixtures.WithTilingPattern(), ct: TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 96), ct: TestContext.Current.CancellationToken);
+        var g = DecodeGray(png);
+
+        // The red-square tiling should make the page substantially non-white (not grey-160,
+        // not white). Count dark-ish pixels across the image.
+        var h = g.GetLength(0); var w = g.GetLength(1);
+        var nonWhite = 0;
+        for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+                if (g[y, x] < 200) nonWhite++;
+        nonWhite.ShouldBeGreaterThan(w * h / 10); // pattern covers a meaningful fraction
+    }
 }

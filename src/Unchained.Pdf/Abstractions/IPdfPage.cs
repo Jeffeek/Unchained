@@ -150,4 +150,13 @@ public interface IPdfPage
     /// </summary>
     IReadOnlyDictionary<string, ShadingInfo> GetShadings() =>
         new Dictionary<string, ShadingInfo>();
+
+    /// <summary>
+    /// Returns tiling patterns (ISO 32000-1 §8.7.3.1, <c>/PatternType 1</c>) available on
+    /// this page, keyed by <c>/Pattern</c> resource name. Each carries the cell's content
+    /// operators, bounding box, step, matrix, and paint type so the renderer can rasterise
+    /// one cell and tile it. Returns an empty dictionary when the page has no tiling patterns.
+    /// </summary>
+    IReadOnlyDictionary<string, TilingPatternInfo> GetTilingPatterns() =>
+        new Dictionary<string, TilingPatternInfo>();
 }

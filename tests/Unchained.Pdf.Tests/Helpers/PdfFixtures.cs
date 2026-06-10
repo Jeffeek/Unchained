@@ -187,6 +187,108 @@ internal static class PdfFixtures
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
+    /// <summary>
+    /// Generates a single-page PDF that fills the page with a coloured tiling pattern
+    /// (PatternType 1, PaintType 1): each 10×10 cell paints a solid red square. Used to
+    /// exercise tiling-pattern rendering.
+    /// </summary>
+    public static byte[] WithTilingPattern()
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        Ln(sb, "%PDF-1.7"); Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+
+        // Page with a /Pattern resource and a /Pattern colour space.
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
+        Ln(sb, "   /Resources << /Pattern << /P1 5 0 R >> >> >>");
+        Ln(sb, "endobj");
+
+        // Content: set the pattern fill colour space, select /P1, fill the page rect.
+        var content = "/Pattern cs /P1 scn 0 0 100 100 re f";
+        var cb = Encoding.Latin1.GetBytes(content);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+
+        // Tiling pattern cell: a 10×10 solid red square.
+        var cell = "1 0 0 rg 0 0 10 10 re f";
+        var cellBytes = Encoding.Latin1.GetBytes(cell);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "5 0 obj");
+        Ln(sb, "<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1");
+        Ln(sb, "   /BBox [0 0 10 10] /XStep 10 /YStep 10 /Resources << >>");
+        Ln(sb, $"   /Length {cellBytes.Length} >>");
+        sb.Append("stream\n"); sb.Append(cell); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref"); Ln(sb, "0 6"); Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer"); Ln(sb, "<< /Size 6 /Root 1 0 R >>");
+        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+
+        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+    }
+
+    /// <summary>
+    /// A one-page document with two optional content groups (layers, ISO 32000-1 §8.11):
+    /// "Layer One" (obj 5, ON by default) and "Layer Two" (obj 6, OFF by default — listed in
+    /// the default configuration's <c>/OFF</c> array). <c>/OCProperties</c> lives in the catalog.
+    /// </summary>
+    public static byte[] WithOptionalContentGroups()
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        Ln(sb, "%PDF-1.7"); Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        // Catalog carries /OCProperties inline: both OCGs listed, Layer Two OFF by default.
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R");
+        Ln(sb, "   /OCProperties << /OCGs [5 0 R 6 0 R] /D << /ON [5 0 R] /OFF [6 0 R] >> >> >>");
+        Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
+        Ln(sb, "   /Resources << /Properties << /MC0 5 0 R /MC1 6 0 R >> >> >>");
+        Ln(sb, "endobj");
+
+        var content = "/OC /MC0 BDC 0 0 50 50 re f EMC /OC /MC1 BDC 50 50 50 50 re f EMC";
+        var cb = Encoding.Latin1.GetBytes(content);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "5 0 obj"); Ln(sb, "<< /Type /OCG /Name (Layer One) >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "6 0 obj"); Ln(sb, "<< /Type /OCG /Name (Layer Two) >>"); Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref"); Ln(sb, "0 7"); Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer"); Ln(sb, "<< /Size 7 /Root 1 0 R >>");
+        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+
+        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+    }
+
     private static byte[] BuildWithContent(string contentStream)
     {
         var sb = new StringBuilder();

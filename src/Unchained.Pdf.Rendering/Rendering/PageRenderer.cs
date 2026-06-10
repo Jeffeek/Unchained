@@ -22,7 +22,8 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null,
     IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null,
     IReadOnlyDictionary<string, (double Fill, double Stroke)>? extGStateAlphas = null,
-    IReadOnlyDictionary<string, ShadingInfo>? shadings = null
+    IReadOnlyDictionary<string, ShadingInfo>? shadings = null,
+    IReadOnlyDictionary<string, TilingPatternInfo>? tilingPatterns = null
 )
 {
     // Current path as a list of subpaths, each a polyline of user-space points. A new `m`
@@ -34,6 +35,9 @@ internal sealed class PageRenderer(
     private (double X, double Y) _pathStart;
     private (double X, double Y) _currentPoint;
     private bool _inPath;
+    // Nesting depth for tiling-pattern cell rendering; bounds pattern-in-pattern recursion.
+    internal int _tilingDepth;
+    private static readonly Dictionary<string, string> EmptyFontMap = new();
     // Set by W/W*; the clip is applied (intersected into the graphics state) when the
     // current path is next cleared by a painting/no-op operator.
     private bool _pendingClip;
@@ -186,10 +190,12 @@ internal sealed class PageRenderer(
                 if (op.Name == "scn")
                 {
                     _gs.FillIsPattern = isPattern;
-                    // If the named pattern is a known axial/radial shading, remember it so
-                    // DrawFill paints the gradient rather than the grey approximation.
+                    // If the named pattern is a known axial/radial shading or tiling pattern,
+                    // remember it so DrawFill renders it rather than the grey approximation.
                     var patName = op.Operands.OfType<PdfName>().LastOrDefault()?.Value;
                     _gs.FillShadingName = patName is not null && shadings is not null && shadings.ContainsKey(patName)
+                        ? patName : null;
+                    _gs.FillTilingName = patName is not null && tilingPatterns is not null && tilingPatterns.ContainsKey(patName)
                         ? patName : null;
                 }
                 break;
@@ -706,6 +712,14 @@ internal sealed class PageRenderer(
             return;
         }
 
+        // Tiling pattern fill: tile the pattern cell across the path's bounding box.
+        if (_gs.FillTilingName is { } tileName && tilingPatterns is not null
+            && tilingPatterns.TryGetValue(tileName, out var tileInfo))
+        {
+            PaintTilingInPathBounds(tileInfo);
+            return;
+        }
+
         byte fr = _gs.FillR, fg = _gs.FillG, fb = _gs.FillB;
         // Tiling/non-shading patterns aren't rendered. Filling them with the (often black)
         // underlying colour produces large wrong dark blocks; skipping them entirely loses
@@ -732,6 +746,14 @@ internal sealed class PageRenderer(
     // shading-pattern fill, where the path defines the painted region).
     private void PaintShadingInPathBounds(ShadingInfo sh)
     {
+        var (minX, minY, maxX, maxY) = PathDeviceBounds();
+        if (maxX < minX) return;
+        PaintShadingRect(sh, (int)Math.Floor(minX), (int)Math.Floor(minY), (int)Math.Ceiling(maxX), (int)Math.Ceiling(maxY));
+    }
+
+    // Device-space bounding box of the current path's subpaths.
+    private (double MinX, double MinY, double MaxX, double MaxY) PathDeviceBounds()
+    {
         var minX = double.MaxValue; var minY = double.MaxValue;
         var maxX = double.MinValue; var maxY = double.MinValue;
         foreach (var sub in _subpaths)
@@ -743,11 +765,72 @@ internal sealed class PageRenderer(
             if (px > maxX) maxX = px;
             if (py > maxY) maxY = py;
         }
-        if (maxX < minX) return;
-        PaintShadingRect(sh, (int)Math.Floor(minX), (int)Math.Floor(minY), (int)Math.Ceiling(maxX), (int)Math.Ceiling(maxY));
+        return (minX, minY, maxX, maxY);
     }
 
-    // Paints a shading over the current clip rectangle (used by the `sh` operator).
+    // Tiles a pattern cell across the current path's device bounding box. Renders one cell
+    // to a small buffer (recursively via a child PageRenderer), then blits it on the lattice
+    // defined by XStep/YStep under the pattern matrix. Clipped to the path bbox + active clip.
+    private void PaintTilingInPathBounds(TilingPatternInfo tp)
+    {
+        if (_tilingDepth >= 2) return; // guard against pattern-in-pattern recursion
+        var (minX, minY, maxX, maxY) = PathDeviceBounds();
+        if (maxX < minX) return;
+
+        // Pattern cell size in device pixels (pattern matrix scale × device scale).
+        var pm = tp.Matrix;
+        var sxv = Math.Sqrt((pm[0] * pm[0]) + (pm[1] * pm[1]));
+        var syv = Math.Sqrt((pm[2] * pm[2]) + (pm[3] * pm[3]));
+        var stepXpx = Math.Abs(tp.XStep) * sxv * scale;
+        var stepYpx = Math.Abs(tp.YStep) * syv * scale;
+        if (stepXpx < 0.5 || stepYpx < 0.5) return;
+
+        // Cap tile pixel size and total tile count to keep this bounded.
+        var tileW = Math.Clamp((int)Math.Ceiling(stepXpx), 1, 256);
+        var tileH = Math.Clamp((int)Math.Ceiling(stepYpx), 1, 256);
+
+        // Render one cell into its own buffer. The cell content draws in pattern space with
+        // BBox origin; we scale pattern→tile pixels and flip Y to match the cell content.
+        var tile = new RasterBuffer(tileW, tileH);
+        tile.Clear(255, 255, 255);
+        var cellScaleX = tileW / (tp.XStep == 0 ? 1 : Math.Abs(tp.XStep));
+        var cellScaleY = tileH / (tp.YStep == 0 ? 1 : Math.Abs(tp.YStep));
+        var cellScale = Math.Min(cellScaleX, cellScaleY);
+        // Initial CTM translates the BBox lower-left to the tile origin.
+        double[] cellCtm = [1, 0, 0, 1, -tp.BBox[0], -tp.BBox[1]];
+        var cell = new PageRenderer(tile, fonts, cellScale, tp.YStep == 0 ? tileH / cellScale : Math.Abs(tp.YStep),
+            embeddedFontBytes, imageXObjects, cellCtm, toUnicodeMaps, compositeFonts, extGStateAlphas, shadings, tilingPatterns)
+        { _tilingDepth = _tilingDepth + 1 };
+        // Uncoloured (PaintType 2) cells use the current fill colour.
+        if (tp.PaintType == 2)
+            cell.SetInitialFillColor(_gs.FillR, _gs.FillG, _gs.FillB);
+        cell.Render(tp.Operators, EmptyFontMap);
+
+        // Build a mask of which tile pixels are "ink" (non-white) to avoid painting the white
+        // background over existing content.
+        var tileData = tile.ToArgbBytes();
+
+        var x0 = Math.Max(0, (int)Math.Floor(minX));
+        var y0 = Math.Max(0, (int)Math.Floor(minY));
+        var x1 = Math.Min(buffer.Width - 1, (int)Math.Ceiling(maxX));
+        var y1 = Math.Min(buffer.Height - 1, (int)Math.Ceiling(maxY));
+        if (_gs.ClipRect is { } c)
+        {
+            x0 = Math.Max(x0, c.X0); y0 = Math.Max(y0, c.Y0);
+            x1 = Math.Min(x1, c.X1 - 1); y1 = Math.Min(y1, c.Y1 - 1);
+        }
+
+        for (var py = y0; py <= y1; py++)
+        for (var px = x0; px <= x1; px++)
+        {
+            var tx = ((px - x0) % tileW + tileW) % tileW;
+            var ty = ((py - y0) % tileH + tileH) % tileH;
+            var o = ((ty * tileW) + tx) * 4;
+            var r = tileData[o]; var g = tileData[o + 1]; var b = tileData[o + 2];
+            if (r >= 250 && g >= 250 && b >= 250) continue; // skip the cell's white background
+            buffer.BlitImagePixel(px, py, r, g, b);
+        }
+    }
     private void PaintShadingInClip(ShadingInfo sh)
     {
         var (x0, y0, x1, y1) = _gs.ClipRect ?? (0, 0, buffer.Width, buffer.Height);
@@ -758,6 +841,13 @@ internal sealed class PageRenderer(
     // user space (inverse CTM), compute the shading's parametric t, and write the ramp colour.
     private void PaintShadingRect(ShadingInfo sh, int dx0, int dy0, int dx1, int dy1)
     {
+        // Mesh shadings are painted as Gouraud-interpolated triangles, ignoring the rect.
+        if (sh.IsMesh)
+        {
+            PaintMesh(sh);
+            return;
+        }
+
         dx0 = Math.Max(0, dx0); dy0 = Math.Max(0, dy0);
         dx1 = Math.Min(buffer.Width - 1, dx1); dy1 = Math.Min(buffer.Height - 1, dy1);
         if (dx1 < dx0 || dy1 < dy0) return;
@@ -787,6 +877,50 @@ internal sealed class PageRenderer(
             else buffer.BlendPixel(px, py, r, g, b, _gs.FillA);
         }
         _ = m;
+    }
+
+    // Rasterises a mesh shading's triangles with barycentric Gouraud colour interpolation.
+    // Vertices are in user space; each is mapped to device space via UToPixel.
+    private void PaintMesh(ShadingInfo sh)
+    {
+        if (sh.Triangles is null) return;
+        foreach (var t in sh.Triangles)
+        {
+            var (ax, ay) = UToPixel(t.X0, t.Y0);
+            var (bx, by) = UToPixel(t.X1, t.Y1);
+            var (cx, cy) = UToPixel(t.X2, t.Y2);
+
+            var minX = (int)Math.Floor(Math.Min(ax, Math.Min(bx, cx)));
+            var maxX = (int)Math.Ceiling(Math.Max(ax, Math.Max(bx, cx)));
+            var minY = (int)Math.Floor(Math.Min(ay, Math.Min(by, cy)));
+            var maxY = (int)Math.Ceiling(Math.Max(ay, Math.Max(by, cy)));
+            minX = Math.Max(minX, 0); minY = Math.Max(minY, 0);
+            maxX = Math.Min(maxX, buffer.Width - 1); maxY = Math.Min(maxY, buffer.Height - 1);
+            if (_gs.ClipRect is { } c)
+            {
+                minX = Math.Max(minX, c.X0); minY = Math.Max(minY, c.Y0);
+                maxX = Math.Min(maxX, c.X1 - 1); maxY = Math.Min(maxY, c.Y1 - 1);
+            }
+
+            var denom = ((by - cy) * (ax - cx)) + ((cx - bx) * (ay - cy));
+            if (Math.Abs(denom) < 1e-9) continue; // degenerate triangle
+
+            for (var py = minY; py <= maxY; py++)
+            for (var px = minX; px <= maxX; px++)
+            {
+                var fx = px + 0.5; var fy = py + 0.5;
+                var w0 = (((by - cy) * (fx - cx)) + ((cx - bx) * (fy - cy))) / denom;
+                var w1 = (((cy - ay) * (fx - cx)) + ((ax - cx) * (fy - cy))) / denom;
+                var w2 = 1 - w0 - w1;
+                if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001) continue; // outside triangle
+
+                var r = (byte)Math.Clamp((w0 * t.R0) + (w1 * t.R1) + (w2 * t.R2), 0, 255);
+                var g = (byte)Math.Clamp((w0 * t.G0) + (w1 * t.G1) + (w2 * t.G2), 0, 255);
+                var b = (byte)Math.Clamp((w0 * t.B0) + (w1 * t.B1) + (w2 * t.B2), 0, 255);
+                if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
+                else buffer.BlendPixel(px, py, r, g, b, _gs.FillA);
+            }
+        }
     }
 
     // Computes parametric t∈[0,1] for a user-space point under the shading, applying the
@@ -1185,12 +1319,21 @@ internal sealed class PageRenderer(
     private static (double R, double G, double B) CmykToRgb(double c, double m, double y, double k) =>
         ((1 - c) * (1 - k), (1 - m) * (1 - k), (1 - y) * (1 - k));
 
+    // Seeds the initial fill colour — used when rendering an uncoloured (PaintType 2)
+    // tiling pattern cell, which paints in the parent's current fill colour.
+    internal void SetInitialFillColor(byte r, byte g, byte b)
+    {
+        _gs.FillR = r; _gs.FillG = g; _gs.FillB = b;
+        _gs.StrokeR = r; _gs.StrokeG = g; _gs.StrokeB = b;
+    }
+
     private void SetFillGray(double gray)
     {
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
         _gs.FillR = _gs.FillG = _gs.FillB = v;
         _gs.FillIsPattern = false;
         _gs.FillShadingName = null;
+        _gs.FillTilingName = null;
     }
 
     private void SetStrokeGray(double gray)
@@ -1206,6 +1349,7 @@ internal sealed class PageRenderer(
         _gs.FillB = (byte)Math.Clamp((int)(b * 255), 0, 255);
         _gs.FillIsPattern = false;
         _gs.FillShadingName = null;
+        _gs.FillTilingName = null;
     }
 
     private void SetStrokeRgb(double r, double g, double b)

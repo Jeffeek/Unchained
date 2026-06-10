@@ -398,13 +398,22 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     {
         var result = new Dictionary<string, ShadingInfo>();
         var resources = ResolveDict(page[PdfName.Resources]);
-        if (resources is null) return result;
+        // Collect from the page resources and from every form XObject's resources, since
+        // GetContentOperators inlines form content (so their sh/scn operators reach the
+        // renderer) and those operators reference shading/pattern names declared on the form.
+        CollectShadings(resources, result, depth: 0, new HashSet<int>());
+        return result;
+    }
+
+    private void CollectShadings(PdfDictionary? resources, Dictionary<string, ShadingInfo> result, int depth, HashSet<int> seen)
+    {
+        if (resources is null || depth > MaxFormXObjectDepth) return;
 
         // /Shading resources — painted directly by the `sh` operator.
         var shadingDict = ResolveDict(resources[PdfName.Get("Shading")]);
         if (shadingDict is not null)
             foreach (var (name, value) in shadingDict.Entries)
-                if (BuildShading(ResolveAny(value)) is { } s)
+                if (!result.ContainsKey(name) && BuildShading(ResolveAny(value)) is { } s)
                     result[name] = s;
 
         // /Pattern resources with /PatternType 2 — shading used as a fill colour.
@@ -412,6 +421,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         if (patternDict is not null)
             foreach (var (name, value) in patternDict.Entries)
             {
+                if (result.ContainsKey(name)) continue;
                 var pat = ResolveDictOrStreamDict(value);
                 if (pat is null) continue;
                 if ((int)(pat.Get<PdfInteger>(PdfName.Get("PatternType"))?.Value ?? 0) != 2) continue;
@@ -419,7 +429,73 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                     result[name] = s;
             }
 
+        // Recurse into form XObjects' own resource dictionaries.
+        var xobjDict = ResolveDict(resources[PdfName.Get("XObject")]);
+        if (xobjDict is null) return;
+        foreach (var (_, value) in xobjDict.Entries)
+        {
+            if (value is PdfIndirectReference r && !seen.Add(r.ObjectNumber)) continue;
+            var stream = value is PdfIndirectReference rr
+                ? core.ResolveIndirect(rr.ObjectNumber).Value as PdfStream
+                : value as PdfStream;
+            if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form") continue;
+            CollectShadings(ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
+        }
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, TilingPatternInfo> GetTilingPatterns()
+    {
+        var result = new Dictionary<string, TilingPatternInfo>();
+        CollectTilingPatterns(ResolveDict(page[PdfName.Resources]), result, depth: 0, new HashSet<int>());
         return result;
+    }
+
+    private void CollectTilingPatterns(PdfDictionary? resources, Dictionary<string, TilingPatternInfo> result, int depth, HashSet<int> seen)
+    {
+        if (resources is null || depth > MaxFormXObjectDepth) return;
+
+        var patternDict = ResolveDict(resources[PdfName.Get("Pattern")]);
+        if (patternDict is not null)
+            foreach (var (name, value) in patternDict.Entries)
+            {
+                if (result.ContainsKey(name)) continue;
+                var resolved = ResolveAny(value);
+                if (resolved is not PdfStream stream) continue; // tiling patterns are streams
+                var d = stream.Dictionary;
+                if ((int)(d.Get<PdfInteger>(PdfName.Get("PatternType"))?.Value ?? 0) != 1) continue;
+
+                var bbox = ReadFloatArray(d["BBox"]);
+                if (bbox is null || bbox.Length < 4) continue;
+                var paintType = (int)(d.Get<PdfInteger>(PdfName.Get("PaintType"))?.Value ?? 1);
+                var xstep = ReadFloat(d["XStep"]);
+                var ystep = ReadFloat(d["YStep"]);
+                var matrix = ReadFloatArray(d["Matrix"]) ?? [1, 0, 0, 1, 0, 0];
+
+                IReadOnlyList<ContentOperator> ops;
+                try { ops = ContentStreamParser.Parse(StreamFilters.Decode(stream)); }
+                catch { continue; }
+
+                result[name] = new TilingPatternInfo(
+                    paintType,
+                    bbox.Select(static f => (double)f).ToArray(),
+                    xstep, ystep,
+                    matrix.Select(static f => (double)f).ToArray(),
+                    ops);
+            }
+
+        // Recurse into form XObjects (same flattening rationale as shadings).
+        var xobjDict = ResolveDict(resources[PdfName.Get("XObject")]);
+        if (xobjDict is null) return;
+        foreach (var (_, value) in xobjDict.Entries)
+        {
+            if (value is PdfIndirectReference r && !seen.Add(r.ObjectNumber)) continue;
+            var stream = value is PdfIndirectReference rr
+                ? core.ResolveIndirect(rr.ObjectNumber).Value as PdfStream
+                : value as PdfStream;
+            if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form") continue;
+            CollectTilingPatterns(ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
+        }
     }
 
     // Builds a ShadingInfo (axial/radial only) from a shading dictionary, pre-sampling its
@@ -435,7 +511,18 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         if (dict is null) return null;
 
         var type = (int)(dict.Get<PdfInteger>(PdfName.Get("ShadingType"))?.Value ?? 0);
-        if (type is not (2 or 3)) return null; // only axial/radial here
+
+        // Mesh shadings (4/5/6/7) carry their geometry+colour in a data stream; decode it
+        // into Gouraud triangles for the renderer.
+        if (type is 4 or 5 or 6 or 7)
+        {
+            if (obj is not PdfStream meshStream) return null;
+            var tris = MeshShadingDecoder.Decode(meshStream, core, type);
+            return tris.Count == 0 ? null
+                : new ShadingInfo(type, [], false, false, new byte[256 * 3], tris);
+        }
+
+        if (type is not (2 or 3)) return null; // only axial/radial below
 
         var coords = ReadFloatArray(dict["Coords"]);
         if (coords is null || coords.Length < (type == 2 ? 4 : 6)) return null;

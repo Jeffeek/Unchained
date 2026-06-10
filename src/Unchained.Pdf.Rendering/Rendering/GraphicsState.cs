@@ -24,6 +24,10 @@ internal sealed class GraphicsState
     // null otherwise. Lets DrawFill paint the gradient instead of the grey approximation.
     internal string? FillShadingName { get; set; }
 
+    // When the current fill pattern is a known tiling pattern (PatternType 1), its resource
+    // name; null otherwise. Lets DrawFill tile the pattern cell instead of the grey fill.
+    internal string? FillTilingName { get; set; }
+
     // Stroke colour
     internal byte StrokeR { get; set; }
     internal byte StrokeG { get; set; }
@@ -72,6 +76,7 @@ internal sealed class GraphicsState
             FillR = FillR, FillG = FillG, FillB = FillB, FillA = FillA,
             FillIsPattern = FillIsPattern,
             FillShadingName = FillShadingName,
+            FillTilingName = FillTilingName,
             StrokeR = StrokeR, StrokeG = StrokeG, StrokeB = StrokeB, StrokeA = StrokeA,
             LineWidth = LineWidth,
             DashLengths = DashLengths,
