@@ -117,8 +117,15 @@ public sealed class SignatureTests : PdfTestBase
         using var cert = CreateSelfSignedCert("Carol");
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
 
+        // Pin the signing time so the test has no dependency on wall-clock calls.
+        // This eliminates any cross-second-boundary flakiness between the /M entry
+        // and the Pkcs9SigningTime signed attribute.
+        var pinned = new DateTimeOffset(2024, 6, 1, 12, 0, 0, TimeSpan.Zero);
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms, new SignatureOptions(Reason: "Test"), ct: TestContext.Current.CancellationToken);
+        await Processor.SignAsync(
+            doc, cert, ms,
+            new SignatureOptions(Reason: "Test", SigningTime: pinned),
+            ct: TestContext.Current.CancellationToken);
 
         var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
         signatures[0].IsSignatureValid.ShouldBeTrue("Signature must be cryptographically valid.");
