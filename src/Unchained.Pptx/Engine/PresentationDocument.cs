@@ -103,6 +103,92 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     public bool HasMacros => Preserved?.HasMacros == true;
 
     /// <summary>
+    /// <see langword="true"/> when this presentation contains at least one OOXML XML-DSig
+    /// digital signature. Signatures are preserved verbatim on round-trip but are invalidated
+    /// by any content change. Use <see cref="GetDigitalSignatures"/> to inspect their metadata.
+    /// </summary>
+    public bool HasDigitalSignatures =>
+        Preserved?.Parts.Any(static p =>
+            p.ContentType.Contains("digital-signature-xmlsignature",
+                StringComparison.OrdinalIgnoreCase)) == true;
+
+    /// <summary>
+    /// Returns metadata for every OOXML XML-DSig digital signature in the presentation.
+    /// The list is empty when <see cref="HasDigitalSignatures"/> is <see langword="false"/>.
+    /// Signatures are read-only — Unchained.Pptx preserves them on round-trip but cannot
+    /// create or re-sign.
+    /// </summary>
+    public IReadOnlyList<DigitalSignatureInfo> GetDigitalSignatures()
+    {
+        if (Preserved is null || Preserved.Parts.Count == 0)
+            return [];
+
+        var result = new List<DigitalSignatureInfo>();
+        foreach (var part in Preserved.Parts)
+        {
+            if (!part.ContentType.Contains("digital-signature-xmlsignature",
+                    StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            result.Add(ParseSignatureInfo(part));
+        }
+        return result;
+    }
+
+    private static DigitalSignatureInfo ParseSignatureInfo(PreservedPart part)
+    {
+        try
+        {
+            var xml = System.Text.Encoding.UTF8.GetString(part.Data);
+            var doc = System.Xml.Linq.XDocument.Parse(xml);
+
+            // Extract signer CN from X509Certificate element.
+            var signerName = string.Empty;
+            var cert = doc.Descendants()
+                .FirstOrDefault(static e => e.Name.LocalName == "X509Certificate");
+            if (cert is not null)
+            {
+                // ReSharper disable once EmptyGeneralCatchClause
+                try
+                {
+                    var certBytes = Convert.FromBase64String(cert.Value.Trim());
+                    var x509 = new System.Security.Cryptography.X509Certificates.X509Certificate2(certBytes);
+                    signerName = x509.GetNameInfo(
+                        System.Security.Cryptography.X509Certificates.X509NameType.SimpleName,
+                        forIssuer: false);
+                }
+                catch { /* cert parse failure — leave signerName empty */ }
+            }
+
+            // Extract signing time from xades:SigningTime.
+            DateTimeOffset? signingTime = null;
+            var signingTimeEl = doc.Descendants()
+                .FirstOrDefault(static e => e.Name.LocalName == "SigningTime");
+            if (signingTimeEl is not null &&
+                DateTimeOffset.TryParse(
+                    signingTimeEl.Value.Trim(),
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out var dt))
+            {
+                signingTime = dt;
+            }
+
+            return new DigitalSignatureInfo
+            {
+                PartUri = part.Uri,
+                SignerName = signerName,
+                SigningTime = signingTime,
+                IsReadable = true,
+            };
+        }
+        catch
+        {
+            return new DigitalSignatureInfo { PartUri = part.Uri, IsReadable = false };
+        }
+    }
+
+    /// <summary>
     /// Synchronises the live statistics on <see cref="Properties"/> from the current
     /// in-memory state. Called automatically before each save.
     /// </summary>

@@ -319,6 +319,26 @@ internal sealed class ShapeParser
 
         shape.Name = cNvPr.GetAttr(PmlNames.AttributeName, string.Empty);
         shape.AltText = cNvPr.GetAttr(DmlNames.AttributeDescription);
+        shape.AltTextTitle = cNvPr.GetAttr("title");
+
+        // IsDecorative: Microsoft extension stored in a16:creationId ext list.
+        // The standard attribute is on the cNvPr/@decor extension or extLst.
+        // Check for <a:extLst><a:ext><a16:decorative val="1"/></a:ext></a:extLst>.
+        var extLst = cNvPr.Element(DmlNames.Dml + "extLst");
+        if (extLst is not null)
+        {
+            foreach (var ext in extLst.Elements(DmlNames.Dml + "ext"))
+            {
+                // a16:decorative val="1" marks the shape as purely decorative.
+                var decorative = ext.Elements()
+                    .FirstOrDefault(static e => e.Name.LocalName == "decorative");
+                if (decorative is not null)
+                {
+                    shape.IsDecorative = decorative.GetAttrBool("val") ?? false;
+                    break;
+                }
+            }
+        }
 
         // Click hyperlink (<a:hlinkClick>) — capture the relationship id + tooltip; the target is
         // resolved against the slide's relationships in a second pass (SlideParser).
