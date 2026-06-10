@@ -294,4 +294,36 @@ public sealed class ShadingRenderingTests : RendererTestBase
             230,
             $"Top-right corner should be white (outside soft mask) but was {g[0, w - 1]}");
     }
+
+    [Fact]
+    public async Task SeparationColorSpace_RendersNonWhiteResult()
+    {
+        // Verifies that cs/CS + sc/SC with a Separation color space evaluates the tint
+        // function and produces an actual color rather than the grey-128 fallback.
+        // The fixture fills with pure cyan (CMYK 1,0,0,0) → should render blue-green, not grey.
+        SkipIfNoFreeType();
+
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithSeparationColorSpace(),
+            ct: TestContext.Current.CancellationToken);
+
+        var png = await Renderer!.RenderPageAsync(
+            doc.Pages[1],
+            new RenderOptions(Dpi: 72),
+            ct: TestContext.Current.CancellationToken);
+
+        var g = DecodeGray(png);
+        var h = g.GetLength(0); var w = g.GetLength(1);
+
+        // Centre pixel should not be white (255) and not be the grey fallback (128).
+        // CMYK(1,0,0,0) → RGB(0,255,255) → grey ≈ 181. Grey-128 fallback would be 128.
+        // Both are < 253, so any non-white result confirms the color space was applied.
+        var centre = g[h / 2, w / 2];
+        centre.ShouldBeLessThan(253,
+            $"Centre pixel should not be white after Separation fill, but was {centre}");
+
+        // Verify it's NOT the grey-128 fallback — it should be brighter (cyan maps to ~181).
+        centre.ShouldNotBe(128,
+            "Centre pixel should not be the grey-128 fallback; tint function should have been evaluated");
+    }
 }

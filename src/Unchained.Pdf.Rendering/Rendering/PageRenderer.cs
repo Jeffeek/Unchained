@@ -24,7 +24,8 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, (double Fill, double Stroke, string BlendMode, string? SoftMaskName)>? extGStateAlphas = null,
     IReadOnlyDictionary<string, ShadingInfo>? shadings = null,
     IReadOnlyDictionary<string, TilingPatternInfo>? tilingPatterns = null,
-    IReadOnlyDictionary<string, SoftMaskInfo>? softMasks = null
+    IReadOnlyDictionary<string, SoftMaskInfo>? softMasks = null,
+    IReadOnlyDictionary<string, Models.ColorSpaceInfo>? colorSpaces = null
 )
 {
     // Current path as a list of subpaths, each a polyline of user-space points. A new `m`
@@ -139,27 +140,20 @@ internal sealed class PageRenderer(
             // ── Colour — colour-space selection (cs/CS) and setting (sc/SC/scn/SCN) ──
             // We only handle DeviceGray/DeviceRGB/DeviceCMYK here; others are ignored.
             // The operators still need to be consumed so the graphics state stays in sync.
-            case "cs" or "CS":
-                // Sets colour space: operand is a name. We track nothing complex here;
-                // subsequent sc/SC calls will carry the actual channel values.
+            case "cs" when op.Operands.Count >= 1:
+                _gs.FillColorSpace = (op.Operands[0] as PdfName)?.Value ?? "DeviceGray";
                 break;
+            case "CS" when op.Operands.Count >= 1:
+                _gs.StrokeColorSpace = (op.Operands[0] as PdfName)?.Value ?? "DeviceGray";
+                break;
+            case "cs" or "CS": break; // no operand — consume
 
-            case "sc" or "SC" when op.Operands.Count == 1:
+            case "sc" or "SC" when op.Operands.Count >= 1:
             {
-                // Single operand → DeviceGray
-                var v = Num(op, 0);
-                if (op.Name == "sc") SetFillGray(v); else SetStrokeGray(v);
-                break;
-            }
-            case "sc" or "SC" when op.Operands.Count == 3:
-            {
-                var (r2, g2, b2) = (Num(op, 0), Num(op, 1), Num(op, 2));
-                if (op.Name == "sc") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
-                break;
-            }
-            case "sc" or "SC" when op.Operands.Count == 4:
-            {
-                var (r2, g2, b2) = CmykToRgb(Num(op, 0), Num(op, 1), Num(op, 2), Num(op, 3));
+                var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal)
+                                      .Select(NumObj).ToArray();
+                var csName = op.Name == "sc" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
+                var (r2, g2, b2) = ResolveColorComponents(nums, csName);
                 if (op.Name == "sc") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
                 break;
             }
@@ -172,25 +166,21 @@ internal sealed class PageRenderer(
                 var isPattern = op.Operands.Any(static o => o is PdfName);
 
                 var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal).ToList();
-                switch (nums.Count)
+                if (nums.Count > 0 && !isPattern)
                 {
-                    case 1:
+                    var csName = op.Name == "scn" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
+                    var components = nums.Select(NumObj).ToArray();
+                    var (r2, g2, b2) = ResolveColorComponents(components, csName);
+                    if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
+                }
+                else if (nums.Count > 0)
+                {
+                    // Pattern with color components — fall back to heuristic.
+                    switch (nums.Count)
                     {
-                        var v = NumObj(nums[0]);
-                        if (op.Name == "scn") SetFillGray(v); else SetStrokeGray(v);
-                        break;
-                    }
-                    case 3:
-                    {
-                        var (r2, g2, b2) = (NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]));
-                        if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
-                        break;
-                    }
-                    case 4:
-                    {
-                        var (r2, g2, b2) = CmykToRgb(NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]), NumObj(nums[3]));
-                        if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
-                        break;
+                        case 1: { var v = NumObj(nums[0]); if (op.Name == "scn") SetFillGray(v); else SetStrokeGray(v); break; }
+                        case 3: { var (r2, g2, b2) = (NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2])); if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2); break; }
+                        case 4: { var (r2, g2, b2) = CmykToRgb(NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]), NumObj(nums[3])); if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2); break; }
                     }
                 }
 
@@ -832,7 +822,8 @@ internal sealed class PageRenderer(
         // Initial CTM translates the BBox lower-left to the tile origin.
         double[] cellCtm = [1, 0, 0, 1, -tp.BBox[0], -tp.BBox[1]];
         var cell = new PageRenderer(tile, fonts, cellScale, tp.YStep == 0 ? tileH / cellScale : Math.Abs(tp.YStep),
-            embeddedFontBytes, imageXObjects, cellCtm, toUnicodeMaps, compositeFonts, extGStateAlphas, shadings, tilingPatterns)
+            embeddedFontBytes, imageXObjects, cellCtm, toUnicodeMaps, compositeFonts, extGStateAlphas, shadings, tilingPatterns,
+            softMasks: null, colorSpaces: colorSpaces)
         { _tilingDepth = _tilingDepth + 1 };
         // Uncoloured (PaintType 2) cells use the current fill colour.
         if (tp.PaintType == 2)
@@ -1464,6 +1455,47 @@ internal sealed class PageRenderer(
         catch { }
     }
 
+    // Converts color component values (0–1 range) using the named color space.
+    // Falls back gracefully for unknown or unresolvable spaces.
+    private (double R, double G, double B) ResolveColorComponents(double[] components, string csName)
+    {
+        // Device spaces — fast path, no lookup needed.
+        switch (csName)
+        {
+            case "DeviceGray":
+            {
+                var v = components.Length > 0 ? components[0] : 0;
+                return (v, v, v);
+            }
+            case "DeviceRGB":
+                return components.Length >= 3
+                    ? (components[0], components[1], components[2])
+                    : (0, 0, 0);
+            case "DeviceCMYK":
+            {
+                if (components.Length < 4) return (0, 0, 0);
+                var (r, g, b) = CmykToRgb(components[0], components[1], components[2], components[3]);
+                return (r, g, b);
+            }
+        }
+
+        // Named color space from /Resources /ColorSpace.
+        if (colorSpaces is not null && colorSpaces.TryGetValue(csName, out var info))
+        {
+            var (r2, g2, b2) = info.ToRgb(components);
+            return (r2 / 255.0, g2 / 255.0, b2 / 255.0);
+        }
+
+        // Unknown space — fall back to component-count heuristic.
+        return components.Length switch
+        {
+            1 => (components[0], components[0], components[0]),
+            >= 4 => CmykToRgb(components[0], components[1], components[2], components[3]),
+            >= 3 => (components[0], components[1], components[2]),
+            _ => (0, 0, 0)
+        };
+    }
+
     private void SetFillGray(double gray)
     {
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
@@ -1535,7 +1567,9 @@ internal sealed class PageRenderer(
                 compositeFonts: formPage.GetCompositeFonts(),
                 extGStateAlphas: formPage.GetExtGStateAlphas(),
                 shadings: formPage.GetShadings(),
-                tilingPatterns: formPage.GetTilingPatterns());
+                tilingPatterns: formPage.GetTilingPatterns(),
+                softMasks: null,
+                colorSpaces: (formPage as Unchained.Pdf.Engine.PdfPageAdapter)?.GetColorSpaces());
 
             maskRenderer.Render(smInfo.Operators, formPage.GetFontNameMap());
 

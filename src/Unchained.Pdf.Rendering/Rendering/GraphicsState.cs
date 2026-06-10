@@ -47,6 +47,12 @@ internal sealed class GraphicsState
     // Miter limit (ISO 32000-1 §8.4.3.5). Default 10.
     internal double MiterLimit { get; set; } = 10.0;
 
+    // Current fill and stroke color space names (the operand of cs/CS).
+    // Default "DeviceGray" per PDF spec when no cs/CS has been issued.
+    // Used by sc/SC/scn/SCN to resolve component values correctly.
+    internal string FillColorSpace { get; set; } = "DeviceGray";
+    internal string StrokeColorSpace { get; set; } = "DeviceGray";
+
     // Blend mode for compositing (ISO 32000-1 §11.3.5). PDF name string, e.g. "Normal",
     // "Multiply", "Screen". Default is "Normal" (simple alpha compositing).
     internal string BlendMode { get; set; } = "Normal";
@@ -119,6 +125,8 @@ internal sealed class GraphicsState
             TextRise = TextRise,
             Leading = Leading,
             TextRenderMode = TextRenderMode,
+            FillColorSpace = FillColorSpace,
+            StrokeColorSpace = StrokeColorSpace,
             SavedClipMask = SavedClipMask is null ? null : (byte[])SavedClipMask.Clone()
         };
 
