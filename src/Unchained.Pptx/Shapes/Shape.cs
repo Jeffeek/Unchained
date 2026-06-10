@@ -73,6 +73,20 @@ public abstract class Shape
     /// <summary>The fill applied to the interior of the shape.</summary>
     public FillFormat Fill { get; } = new();
 
+    /// <summary>
+    /// The fill inherited from the shape's <c>p:style/a:fillRef</c> element.
+    /// This is the theme-driven style fill that applies when <see cref="Fill"/> has
+    /// <see cref="FillType.None"/>. <see langword="null"/> when no style fill is present.
+    /// </summary>
+    public ColorSpec? StyleFillColor { get; internal set; }
+
+    /// <summary>
+    /// The default text color inherited from the shape's <c>p:style/a:fontRef</c> element.
+    /// Used as the text color fallback when runs have no explicit fill. <see langword="null"/>
+    /// when no style font ref is present.
+    /// </summary>
+    public ColorSpec? StyleTextColor { get; internal set; }
+
     /// <summary>The outline (border) drawn around the shape.</summary>
     public LineFormat Line { get; } = new();
 
@@ -97,6 +111,13 @@ public abstract class Shape
     public HyperlinkAction? ClickAction { get; set; }
 
     // ── Round-trip preservation ───────────────────────────────────────────────
+
+    /// <summary>
+    /// The placeholder index from <c>&lt;p:ph idx="N"/&gt;</c>, or -1 when the shape
+    /// is not a placeholder. Used by the rasterizer to inherit geometry from the layout
+    /// when this shape has no explicit transform (empty <c>&lt;p:spPr/&gt;</c>).
+    /// </summary>
+    internal int PlaceholderIndex { get; set; } = -1;
 
     /// <summary>
     /// Raw XML element preserved from the source file for properties that are not

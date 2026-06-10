@@ -79,6 +79,7 @@ internal sealed class ShapeParser
             shape.TextFrame.AbsorbFrom(parsed);
         }
 
+        ReadStyleFill(spEl, shape);
         shape.RawElement = spEl;
         return shape;
     }
@@ -278,6 +279,15 @@ internal sealed class ShapeParser
 
         shape.Name = cNvPr.GetAttr(PmlNames.AttributeName, string.Empty);
         shape.AltText = cNvPr.GetAttr(DmlNames.AttributeDescription);
+
+        // Read placeholder index from <p:nvPr><p:ph idx="N"/> for geometry inheritance.
+        var nvPr = nvPrContainer.Element(PmlNames.Pml + "nvPr");
+        var ph = nvPr?.Element(PmlNames.Pml + "ph");
+        if (ph is not null)
+        {
+            var idx = ph.GetAttrInt("idx");
+            shape.PlaceholderIndex = idx ?? 0; // idx absent means body/title (index 0)
+        }
     }
 
     private static void ReadTransform(XElement? spPr, Shape shape)
@@ -366,6 +376,22 @@ internal sealed class ShapeParser
         LineParser.Parse(spPr, shape.Line);
         EffectParser.Parse(spPr, shape.Effects);
         Shape3DParser.Parse(spPr, shape.ThreeD);
+    }
+
+    // Reads p:style/a:fillRef and a:fontRef to get theme-driven style fill and text colors.
+    // These apply when spPr has no explicit fill (FillType.None) or runs have no explicit color.
+    private static void ReadStyleFill(XElement shapeEl, Shape shape)
+    {
+        var styleEl = shapeEl.Element(PmlNames.Pml + "style");
+        if (styleEl is null) return;
+
+        var fillRef = styleEl.Element(DmlNames.Dml + "fillRef");
+        if (fillRef is not null)
+            shape.StyleFillColor = ColorParser.Parse(fillRef);
+
+        var fontRef = styleEl.Element(DmlNames.Dml + "fontRef");
+        if (fontRef is not null)
+            shape.StyleTextColor = ColorParser.Parse(fontRef);
     }
 
     private EmbeddedImage? ResolveImage(string relationshipId, XElement shapeElement)

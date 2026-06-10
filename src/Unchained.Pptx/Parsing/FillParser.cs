@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -97,9 +98,13 @@ internal static class FillParser
     private static void ParsePicture(XElement blipElement, FillFormat fill)
     {
         // Image data is resolved later by the SlideParser when it has the OPC package.
-        // For now, mark the fill type so writers know what to emit.
+        // Store the r:embed rId so the second pass can look up the image part.
+        var blip = blipElement.Element(DmlNames.Blip);
+        var rId = (string?)blip?.Attribute(PmlNames.RelationshipEmbed)
+                  ?? (string?)blip?.Attribute(PmlNames.RelationshipId);
+
         fill.Type = FillType.Picture;
-        fill.Picture = new PictureFill();
+        fill.Picture = new PictureFill { RelationshipId = rId };
     }
 
     private static PatternPreset ParsePatternPreset(string value) => value switch
