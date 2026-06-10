@@ -93,7 +93,10 @@ internal static class PdfSigner
         buf.AsSpan((int)off1, (int)len1).CopyTo(hashInput.AsSpan((int)len0));
 
         // ── Step 8: create PKCS#7 detached signature ──────────────────────────
-        var signatureBytes = CreatePkcs7Signature(hashInput, certificate, opts);
+        // Pass the same `now` used for /M so the Pkcs9SigningTime attribute and the
+        // /M dictionary entry are always identical — a single UtcNow call for the
+        // whole Sign operation eliminates any cross-second-boundary inconsistency.
+        var signatureBytes = CreatePkcs7Signature(hashInput, certificate, opts, now);
         if (signatureBytes.Length > SignatureReservedBytes)
         {
             throw new InvalidOperationException(
@@ -307,7 +310,7 @@ internal static class PdfSigner
 
     // ── PKCS#7 / CMS ─────────────────────────────────────────────────────────
 
-    private static byte[] CreatePkcs7Signature(byte[] content, X509Certificate2 certificate, SignatureOptions opts)
+    private static byte[] CreatePkcs7Signature(byte[] content, X509Certificate2 certificate, SignatureOptions opts, DateTimeOffset now)
     {
         var contentInfo = new ContentInfo(content);
         var cms = new SignedCms(contentInfo, detached: true);
@@ -318,9 +321,9 @@ internal static class PdfSigner
             IncludeOption = opts.CertificateIncludeOption
         };
 
-        // Signing time as an authenticated attribute
-        var signingTime = opts.SigningTime ?? DateTimeOffset.UtcNow;
-        signer.SignedAttributes.Add(new Pkcs9SigningTime(signingTime.UtcDateTime));
+        // Use the same timestamp that was written to /M so the Pkcs9SigningTime
+        // attribute is always consistent with the /M entry in the sig dictionary.
+        signer.SignedAttributes.Add(new Pkcs9SigningTime(now.UtcDateTime));
 
         cms.ComputeSignature(signer);
 
