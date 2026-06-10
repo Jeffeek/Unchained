@@ -366,6 +366,98 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     }
 
     /// <inheritdoc />
+    public IReadOnlyDictionary<string, Models.Type3FontInfo> GetType3Fonts()
+    {
+        var result = new Dictionary<string, Models.Type3FontInfo>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var fontDict = ResolveDict(resources?[PdfName.Get("Font")]);
+        if (fontDict is null) return result;
+
+        foreach (var (resName, fontObj) in fontDict.Entries)
+        {
+            var font = fontObj is Core.PdfIndirectReference r
+                ? core.ResolveIndirect(r.ObjectNumber).Value as Core.PdfDictionary
+                : fontObj as Core.PdfDictionary;
+            if (font is null) continue;
+            if (font.GetName("Subtype") != "Type3") continue;
+
+            // /FontMatrix: glyph space → text space transform.
+            var fmArr = font[PdfName.Get("FontMatrix")] as Core.PdfArray;
+            var fm = fmArr is { Count: >= 6 }
+                ? fmArr.Elements.Take(6).Select(static e =>
+                    e is Core.PdfReal rr ? rr.Value : e is Core.PdfInteger ii ? (double)ii.Value : 0.0)
+                    .ToArray()
+                : [0.001, 0, 0, 0.001, 0, 0];
+
+            // /Encoding: maps char codes 0–255 to glyph names.
+            var encoding = new string?[256];
+            var encObj = font[PdfName.Get("Encoding")];
+            if (encObj is Core.PdfIndirectReference er)
+                encObj = core.ResolveIndirect(er.ObjectNumber).Value;
+            if (encObj is Core.PdfDictionary encDict)
+            {
+                // /Differences array: [firstCode /name1 /name2 …]
+                if (encDict[PdfName.Get("Differences")] is Core.PdfArray diff)
+                {
+                    var code = 0;
+                    foreach (var elem in diff.Elements)
+                    {
+                        if (elem is Core.PdfInteger ic) code = (int)ic.Value;
+                        else if (elem is Core.PdfName gn && code < 256) { encoding[code] = gn.Value; code++; }
+                    }
+                }
+            }
+            else if (encObj is Core.PdfName encName)
+            {
+                // Standard encoding names — use a simple ASCII fallback.
+                if (encName.Value is "StandardEncoding" or "WinAnsiEncoding" or "MacRomanEncoding")
+                    for (var c = 32; c < 127; c++) encoding[c] = ((char)c).ToString();
+            }
+
+            // /CharProcs: glyph name → stream of content operators.
+            var charProcs = new Dictionary<string, IReadOnlyList<Models.ContentOperator>>();
+            var cpDict = ResolveDict(font[PdfName.Get("CharProcs")]);
+            if (cpDict is not null)
+            {
+                foreach (var (glyphName, streamObj) in cpDict.Entries)
+                {
+                    var streamRef = streamObj is Core.PdfIndirectReference sr
+                        ? core.ResolveIndirect(sr.ObjectNumber).Value
+                        : streamObj;
+                    if (streamRef is not Core.PdfStream glyphStream) continue;
+                    try
+                    {
+                        var decoded = Parsing.Filters.StreamFilters.Decode(glyphStream);
+                        var ops = Content.ContentStreamParser.Parse(decoded);
+                        charProcs[glyphName] = ops;
+                    }
+                    // ReSharper disable once EmptyGeneralCatchClause
+                    catch { }
+                }
+            }
+
+            // /Widths and /FirstChar.
+            var firstChar = (int)((font[PdfName.Get("FirstChar")] as Core.PdfInteger)?.Value ?? 0);
+            var widthsArr = font[PdfName.Get("Widths")] as Core.PdfArray;
+            var widths = widthsArr is not null
+                ? widthsArr.Elements
+                    .Select(static e => e is Core.PdfReal wr ? wr.Value : e is Core.PdfInteger wi ? (double)wi.Value : 0.0)
+                    .ToArray()
+                : [];
+
+            result[resName] = new Models.Type3FontInfo
+            {
+                FontMatrix = fm,
+                Encoding   = encoding,
+                CharProcs  = charProcs,
+                Widths     = widths,
+                FirstChar  = firstChar
+            };
+        }
+        return result;
+    }
+
+    /// <inheritdoc />
     public IReadOnlyDictionary<string, (double Fill, double Stroke, string BlendMode, string? SoftMaskName)> GetExtGStateAlphas()
     {
         var result = new Dictionary<string, (double, double, string, string?)>();
@@ -433,6 +525,162 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             catch { }
         }
         return result;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, Models.ColorSpaceInfo> GetColorSpaces()
+    {
+        var result = new Dictionary<string, Models.ColorSpaceInfo>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        if (resources is null) return result;
+
+        // Recurse into form XObjects as well (same pattern as CollectShadings).
+        CollectColorSpaces(resources, result, depth: 0, new HashSet<int>());
+        return result;
+    }
+
+    private void CollectColorSpaces(
+        PdfDictionary? resources,
+        Dictionary<string, Models.ColorSpaceInfo> result,
+        int depth,
+        HashSet<int> seen)
+    {
+        if (resources is null || depth > MaxFormXObjectDepth) return;
+
+        var csDict = ResolveDict(resources[PdfName.Get("ColorSpace")]);
+        if (csDict is not null)
+        {
+            foreach (var (name, value) in csDict.Entries)
+            {
+                if (result.ContainsKey(name)) continue;
+                var csObj = value is Core.PdfIndirectReference r
+                    ? core.ResolveIndirect(r.ObjectNumber).Value
+                    : value;
+                var info = BuildColorSpaceInfo(csObj);
+                if (info is not null) result[name] = info;
+            }
+        }
+
+        // Recurse into form XObjects.
+        var xobjDict = ResolveDict(resources[PdfName.Get("XObject")]);
+        if (xobjDict is null) return;
+        foreach (var (_, xObj) in xobjDict.Entries)
+        {
+            if (xObj is Core.PdfIndirectReference xr && !seen.Add(xr.ObjectNumber)) continue;
+            var stream = xObj is Core.PdfIndirectReference xrr
+                ? core.ResolveIndirect(xrr.ObjectNumber).Value as Core.PdfStream
+                : xObj as Core.PdfStream;
+            if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form") continue;
+            CollectColorSpaces(ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
+        }
+    }
+
+    private Models.ColorSpaceInfo? BuildColorSpaceInfo(Core.PdfObject? csObj)
+    {
+        if (csObj is Core.PdfIndirectReference r)
+            csObj = core.ResolveIndirect(r.ObjectNumber).Value;
+
+        // Direct name — only handle non-Device names as named resources.
+        if (csObj is Core.PdfName n)
+        {
+            return n.Value switch
+            {
+                "DeviceGray" or "DeviceRGB" or "DeviceCMYK" => null, // handled directly
+                "Pattern" => null,
+                _ => Models.ColorSpaceInfo.Device(n.Value)
+            };
+        }
+
+        if (csObj is not Core.PdfArray arr || arr.Count < 1) return null;
+        var kind = (arr[0] as Core.PdfName)?.Value;
+        if (kind is null) return null;
+
+        switch (kind)
+        {
+            case "DeviceGray": return Models.ColorSpaceInfo.Device("DeviceGray");
+            case "DeviceRGB":  return Models.ColorSpaceInfo.Device("DeviceRGB");
+            case "DeviceCMYK": return Models.ColorSpaceInfo.Device("DeviceCMYK");
+
+            case "ICCBased" when arr.Count >= 2:
+            {
+                var iccStream = arr[1] is Core.PdfIndirectReference iccRef
+                    ? core.ResolveIndirect(iccRef.ObjectNumber).Value as Core.PdfStream
+                    : arr[1] as Core.PdfStream;
+                // Use /Alternate if present; otherwise infer from /N channel count.
+                var altObj = iccStream?.Dictionary[PdfName.Get("Alternate")];
+                var altName = (altObj as Core.PdfName)?.Value;
+                if (altName is null)
+                {
+                    var n2 = (int)(iccStream?.Dictionary.Get<Core.PdfInteger>(PdfName.Get("N"))?.Value ?? 0);
+                    altName = n2 switch { 1 => "DeviceGray", 4 => "DeviceCMYK", _ => "DeviceRGB" };
+                }
+                return Models.ColorSpaceInfo.IccBased(altName);
+            }
+
+            case "Separation" when arr.Count >= 4:
+            {
+                var altName = ResolveBaseSpaceName(arr[2]) ?? "DeviceRGB";
+                var fn = Content.PdfFunction.Build(arr[3], core);
+                return Models.ColorSpaceInfo.Separation(fn, altName);
+            }
+
+            case "DeviceN" when arr.Count >= 4:
+            {
+                // arr[1] = names array, arr[2] = alternate space, arr[3] = tint transform
+                var altName = ResolveBaseSpaceName(arr[2]) ?? "DeviceRGB";
+                var fn = Content.PdfFunction.Build(arr[3], core);
+                return Models.ColorSpaceInfo.DeviceN(fn, altName);
+            }
+
+            case "Indexed" when arr.Count >= 4:
+            {
+                var baseName = ResolveBaseSpaceName(arr[1]) ?? "DeviceRGB";
+                var baseChannels = baseName switch
+                {
+                    "DeviceGray" => 1, "DeviceCMYK" => 4, _ => 3
+                };
+                var hiVal = (int)((arr[2] as Core.PdfInteger)?.Value ?? 0);
+                var lookupObj = arr[3];
+                if (lookupObj is Core.PdfIndirectReference lr)
+                    lookupObj = core.ResolveIndirect(lr.ObjectNumber).Value;
+                byte[] lookup = lookupObj switch
+                {
+                    Core.PdfString s => s.GetBinaryBytes().ToArray(),
+                    Core.PdfStream st => Parsing.Filters.StreamFilters.Decode(st).ToArray(),
+                    _ => []
+                };
+                return lookup.Length > 0
+                    ? Models.ColorSpaceInfo.Indexed(lookup, baseChannels, baseName)
+                    : null;
+            }
+
+            case "CalGray" when arr.Count >= 2:
+            {
+                var dict = arr[1] is Core.PdfIndirectReference dgr
+                    ? core.ResolveIndirect(dgr.ObjectNumber).Value as Core.PdfDictionary
+                    : arr[1] as Core.PdfDictionary;
+                var gamma = ReadFloat(dict?[PdfName.Get("Gamma")]);
+                return Models.ColorSpaceInfo.CalGrayInfo(gamma > 0 ? gamma : 1.0);
+            }
+
+            case "CalRGB" when arr.Count >= 2:
+            {
+                var dict = arr[1] is Core.PdfIndirectReference dcr
+                    ? core.ResolveIndirect(dcr.ObjectNumber).Value as Core.PdfDictionary
+                    : arr[1] as Core.PdfDictionary;
+                var gammaArr = dict?[PdfName.Get("Gamma")] is Core.PdfArray ga
+                    ? ga.Elements.Select(static e => (double)ReadFloat(e)).ToArray()
+                    : null;
+                var matArr = dict?[PdfName.Get("Matrix")] is Core.PdfArray ma
+                    ? ma.Elements.Select(static e => (double)ReadFloat(e)).ToArray()
+                    : null;
+                return Models.ColorSpaceInfo.CalRgb(gammaArr, matArr);
+            }
+
+            case "Lab": return Models.ColorSpaceInfo.Lab();
+
+            default: return null;
+        }
     }
 
     private static double[] GetFormBBox(PdfStream form)

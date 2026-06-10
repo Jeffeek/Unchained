@@ -493,6 +493,9 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         PdfName.Get(ParseRawName(token.Raw.Span));
 
     // Strips the surrounding parentheses from a literal string token.
+    // NOTE: PDF escape sequences (\n, \r, \ddd etc. per §7.3.4.2) are NOT decoded here.
+    // The raw bytes are preserved so that PdfWriter can round-trip them faithfully.
+    // Callers that need the decoded bytes (e.g. text rendering) call GetBinaryBytes().
     private static PdfString ParseLiteralString(PdfToken token)
     {
         var inner = token.Raw.Slice(1, token.Raw.Length - 2);

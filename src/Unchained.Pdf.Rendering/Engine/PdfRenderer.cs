@@ -177,18 +177,28 @@ public sealed class PdfRenderer : IRenderer
         var shadings         = page.GetShadings();
         var tilingPatterns   = page.GetTilingPatterns();
         var softMasks        = page.GetSoftMasks(pixW, pixH);
+        // GetColorSpaces() is an internal method on PdfPageAdapter — access via cast.
+        var colorSpaces      = (page as Unchained.Pdf.Engine.PdfPageAdapter)?.GetColorSpaces()
+                               ?? new Dictionary<string, Unchained.Pdf.Models.ColorSpaceInfo>();
+        var type3Fonts       = (page as Unchained.Pdf.Engine.PdfPageAdapter)?.GetType3Fonts()
+                               ?? new Dictionary<string, Unchained.Pdf.Models.Type3FontInfo>();
 
         var renderer = new PageRenderer(
             buffer, _fonts, scale, pageHeightPt,
             embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps, compositeFonts,
-            extGStateAlphas, shadings, tilingPatterns, softMasks);
+            extGStateAlphas, shadings, tilingPatterns, softMasks, colorSpaces, type3Fonts);
         renderer.Render(page.GetContentOperators(), fontMap);
 
         LastTextErrors      = renderer.TextErrorCount;
         LastGlyphsAttempted = renderer.GlyphsAttempted;
         LastGlyphsSkipped   = renderer.GlyphsSkipped;
 
-        return PngEncoder.Encode(buffer);
+        return options.Format switch
+        {
+            OutputFormat.Jpeg => JpegEncoder.Encode(buffer, options.JpegQuality),
+            OutputFormat.Bmp  => BmpEncoder.Encode(buffer),
+            _                 => PngEncoder.Encode(buffer)
+        };
     }
 
     /// <inheritdoc />

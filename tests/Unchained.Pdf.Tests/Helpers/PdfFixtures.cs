@@ -1474,6 +1474,63 @@ internal static class PdfFixtures
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
+    /// <summary>
+    /// Generates a single-page PDF that uses a Separation color space (/MyCyan)
+    /// with a CMYK tint transform. A full-tint (1.0) fill covers the page.
+    /// The tint transform maps tint → (1,0,0,0) in DeviceCMYK (pure cyan).
+    /// Correct rendering should produce a cyan-ish colour rather than grey fallback.
+    /// </summary>
+    public static byte[] WithSeparationColorSpace()
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+
+        // Page with a /ColorSpace resource named /MyCyan (Separation).
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
+        Ln(sb, "   /Resources << /ColorSpace << /MyCyan 5 0 R >> >> >>");
+        Ln(sb, "endobj");
+
+        // Content: set fill to MyCyan separation, full tint, fill page.
+        const string content =
+            "1 g 0 0 100 100 re f\n" +   // white background
+            "/MyCyan cs\n" +             // set fill colour space to Separation
+            "1 sc\n" +                   // full tint (1.0)
+            "0 0 100 100 re f";          // fill page
+        var cb = Encoding.Latin1.GetBytes(content);
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+
+        // Separation colour space: [/Separation /MyCyan /DeviceCMYK tintFn]
+        // Tint function: Type 2, C0=[0 0 0 0], C1=[1 0 0 0] → pure cyan at full tint.
+        offsets.Add(ByteLen(sb));
+        Ln(sb, "5 0 obj");
+        Ln(sb, "[/Separation /MyCyan /DeviceCMYK");
+        Ln(sb, " << /FunctionType 2 /Domain [0 1] /C0 [0 0 0 0] /C1 [1 0 0 0] /N 1 >>]");
+        Ln(sb, "endobj");
+
+        var xrefOffset = ByteLen(sb);
+        Ln(sb, "xref"); Ln(sb, "0 6"); Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer"); Ln(sb, "<< /Size 6 /Root 1 0 R >>");
+        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+
+        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+    }
+
     private static byte[] ZlibCompress(byte[] data)
     {
         using var ms = new MemoryStream();

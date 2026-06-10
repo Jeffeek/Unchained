@@ -24,7 +24,9 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, (double Fill, double Stroke, string BlendMode, string? SoftMaskName)>? extGStateAlphas = null,
     IReadOnlyDictionary<string, ShadingInfo>? shadings = null,
     IReadOnlyDictionary<string, TilingPatternInfo>? tilingPatterns = null,
-    IReadOnlyDictionary<string, SoftMaskInfo>? softMasks = null
+    IReadOnlyDictionary<string, SoftMaskInfo>? softMasks = null,
+    IReadOnlyDictionary<string, Models.ColorSpaceInfo>? colorSpaces = null,
+    IReadOnlyDictionary<string, Models.Type3FontInfo>? type3Fonts = null
 )
 {
     // Current path as a list of subpaths, each a polyline of user-space points. A new `m`
@@ -139,27 +141,20 @@ internal sealed class PageRenderer(
             // ── Colour — colour-space selection (cs/CS) and setting (sc/SC/scn/SCN) ──
             // We only handle DeviceGray/DeviceRGB/DeviceCMYK here; others are ignored.
             // The operators still need to be consumed so the graphics state stays in sync.
-            case "cs" or "CS":
-                // Sets colour space: operand is a name. We track nothing complex here;
-                // subsequent sc/SC calls will carry the actual channel values.
+            case "cs" when op.Operands.Count >= 1:
+                _gs.FillColorSpace = (op.Operands[0] as PdfName)?.Value ?? "DeviceGray";
                 break;
+            case "CS" when op.Operands.Count >= 1:
+                _gs.StrokeColorSpace = (op.Operands[0] as PdfName)?.Value ?? "DeviceGray";
+                break;
+            case "cs" or "CS": break; // no operand — consume
 
-            case "sc" or "SC" when op.Operands.Count == 1:
+            case "sc" or "SC" when op.Operands.Count >= 1:
             {
-                // Single operand → DeviceGray
-                var v = Num(op, 0);
-                if (op.Name == "sc") SetFillGray(v); else SetStrokeGray(v);
-                break;
-            }
-            case "sc" or "SC" when op.Operands.Count == 3:
-            {
-                var (r2, g2, b2) = (Num(op, 0), Num(op, 1), Num(op, 2));
-                if (op.Name == "sc") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
-                break;
-            }
-            case "sc" or "SC" when op.Operands.Count == 4:
-            {
-                var (r2, g2, b2) = CmykToRgb(Num(op, 0), Num(op, 1), Num(op, 2), Num(op, 3));
+                var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal)
+                                      .Select(NumObj).ToArray();
+                var csName = op.Name == "sc" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
+                var (r2, g2, b2) = ResolveColorComponents(nums, csName);
                 if (op.Name == "sc") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
                 break;
             }
@@ -172,25 +167,21 @@ internal sealed class PageRenderer(
                 var isPattern = op.Operands.Any(static o => o is PdfName);
 
                 var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal).ToList();
-                switch (nums.Count)
+                if (nums.Count > 0 && !isPattern)
                 {
-                    case 1:
+                    var csName = op.Name == "scn" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
+                    var components = nums.Select(NumObj).ToArray();
+                    var (r2, g2, b2) = ResolveColorComponents(components, csName);
+                    if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
+                }
+                else if (nums.Count > 0)
+                {
+                    // Pattern with color components — fall back to heuristic.
+                    switch (nums.Count)
                     {
-                        var v = NumObj(nums[0]);
-                        if (op.Name == "scn") SetFillGray(v); else SetStrokeGray(v);
-                        break;
-                    }
-                    case 3:
-                    {
-                        var (r2, g2, b2) = (NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]));
-                        if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
-                        break;
-                    }
-                    case 4:
-                    {
-                        var (r2, g2, b2) = CmykToRgb(NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]), NumObj(nums[3]));
-                        if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2);
-                        break;
+                        case 1: { var v = NumObj(nums[0]); if (op.Name == "scn") SetFillGray(v); else SetStrokeGray(v); break; }
+                        case 3: { var (r2, g2, b2) = (NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2])); if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2); break; }
+                        case 4: { var (r2, g2, b2) = CmykToRgb(NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]), NumObj(nums[3])); if (op.Name == "scn") SetFillRgb(r2, g2, b2); else SetStrokeRgb(r2, g2, b2); break; }
                     }
                 }
 
@@ -219,6 +210,9 @@ internal sealed class PageRenderer(
                     : [];
                 break;
             }
+            case "J" when op.Operands.Count >= 1: _gs.LineCap  = (int)Num(op, 0); break;
+            case "j" when op.Operands.Count >= 1: _gs.LineJoin = (int)Num(op, 0); break;
+            case "M" when op.Operands.Count >= 1: _gs.MiterLimit = Num(op, 0);    break;
             case "J" or "j" or "M" or "ri" or "i": break; // consume; not rendered
             case "gs" when op.Operands.Count >= 1:
             {
@@ -433,6 +427,13 @@ internal sealed class PageRenderer(
         if (_gs.TextRenderMode == 3) return;
         if (_gs.FontSize <= 0 || _gs.FontName.Length == 0 || bytes.IsEmpty) return;
 
+        // Type3 font: glyphs are content streams, not binary font files.
+        if (type3Fonts is not null && type3Fonts.TryGetValue(_gs.FontResourceName, out var t3))
+        {
+            ShowStringType3(bytes, t3);
+            return;
+        }
+
         // Look up embedded font bytes by resource name first (the dict is keyed by
         // resource name like "F1", not by base font name like "Helvetica").
         byte[]? embeddedBytes = null;
@@ -500,7 +501,9 @@ internal sealed class PageRenderer(
                 }
                 else
                 {
-                    sb.Append('�'); // replacement char for unmapped codes
+                    // Code not in ToUnicode — fall back to Latin-1 char so HarfBuzz shapes it;
+                    // U+FFFD causes some fonts to return non-.notdef, suppressing ShowStringDirect.
+                    sb.Append((char)code1);
                     span = span[1..];
                 }
             }
@@ -546,18 +549,22 @@ internal sealed class PageRenderer(
 
             GlyphsAttempted++;
 
-            // HarfBuzz XOffset/YOffset are in 26.6 pixel units; convert to user-space points.
-            // Text rise (Ts) shifts the baseline up in text space.
             var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
             var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale) + _gs.TextRise;
             var (px, py) = UToPixel(originX, originY);
 
-            // Use BlitGlyphFromFace so we can read BitmapLeft/BitmapTop and the bitmap
-            // itself directly from the FT_GlyphSlotRec at correct native struct offsets.
-            // SharpFont's face->glyph offset is wrong on Windows x64 (NativeLong mismatch).
-            buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
+            // Mode 0 (fill) and 2/4/6 (fill variants): blit the bitmap.
+            if (_gs.TextRenderMode is 0 or 2 or 4 or 6)
+                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
 
-            // Advance in 26.6 px → convert to user-space points.
+            // Mode 1/2/5/6 (stroke variants): stroke the glyph outline.
+            if (_gs.TextRenderMode is 1 or 2 or 5 or 6)
+                StrokeGlyphOutline(ftFace, (int)px, (int)py, pixelSize);
+
+            // Mode 4/5/6/7 (clip variants): add glyph outline to clip mask.
+            if (_gs.TextRenderMode is 4 or 5 or 6 or 7)
+                ClipGlyphOutline(ftFace, (int)px, (int)py);
+
             var advance = ((glyphPositions[i].XAdvance / 64.0 / scale) + _gs.CharSpace)
                           * (_gs.HorizontalScale / 100.0);
             _gs.TextMatrix[4] += advance;
@@ -594,7 +601,10 @@ internal sealed class PageRenderer(
             {
                 GlyphsAttempted++;
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
-                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
+                if (_gs.TextRenderMode != 1)
+                    buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
+                if (_gs.TextRenderMode is 1 or 2)
+                    StrokeGlyphOutline(ftFace, (int)px, (int)py, pixelSize);
             }
 
             // Glyph advance (16.16 fixed-point pixels when scaled) → user-space points.
@@ -633,7 +643,15 @@ internal sealed class PageRenderer(
             {
                 GlyphsAttempted++;
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
-                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
+                if (_gs.TextRenderMode is 0 or 2 or 4 or 6)
+                    buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
+                if (_gs.TextRenderMode is 1 or 2 or 5 or 6)
+                {
+                    var ps = (uint)Math.Max(1, Math.Round(_gs.FontSize * TextMatrixVerticalScale() * scale));
+                    StrokeGlyphOutline(ftFace, (int)px, (int)py, ps);
+                }
+                if (_gs.TextRenderMode is 4 or 5 or 6 or 7)
+                    ClipGlyphOutline(ftFace, (int)px, (int)py);
             }
 
             // Advance from /W (glyph-space units, 1000 per em) → text-space, then scaled
@@ -826,7 +844,8 @@ internal sealed class PageRenderer(
         // Initial CTM translates the BBox lower-left to the tile origin.
         double[] cellCtm = [1, 0, 0, 1, -tp.BBox[0], -tp.BBox[1]];
         var cell = new PageRenderer(tile, fonts, cellScale, tp.YStep == 0 ? tileH / cellScale : Math.Abs(tp.YStep),
-            embeddedFontBytes, imageXObjects, cellCtm, toUnicodeMaps, compositeFonts, extGStateAlphas, shadings, tilingPatterns)
+            embeddedFontBytes, imageXObjects, cellCtm, toUnicodeMaps, compositeFonts, extGStateAlphas, shadings, tilingPatterns,
+            softMasks: null, colorSpaces: colorSpaces, type3Fonts: type3Fonts)
         { _tilingDepth = _tilingDepth + 1 };
         // Uncoloured (PaintType 2) cells use the current fill colour.
         if (tp.PaintType == 2)
@@ -1109,6 +1128,119 @@ internal sealed class PageRenderer(
                 else
                     DrawDashedLine(x0, y0, x1, y1, thickPx, dashPx);
             }
+
+            // Line joins at interior vertices (where two segments meet).
+            // Only meaningful when stroke is thick enough to show gaps.
+            if (_gs.LineJoin != 0 && thickPx > 1 && sub.Count >= 3)
+            {
+                var half = thickPx / 2;
+                for (var i = 1; i + 1 < sub.Count; i++)
+                {
+                    var (px, py) = UToPixel(sub[i].X, sub[i].Y);
+                    DrawLineJoin(
+                        UToPixel(sub[i - 1].X, sub[i - 1].Y),
+                        (px, py),
+                        UToPixel(sub[i + 1].X, sub[i + 1].Y),
+                        thickPx, half);
+                }
+            }
+
+            // Line caps on open subpaths (cap = 1 round, 2 projecting square).
+            if (_gs.LineCap != 0 && sub.Count >= 2)
+            {
+                var capR = Math.Max(1, thickPx / 2);
+                var (ax, ay) = UToPixel(sub[0].X, sub[0].Y);
+                var (bx, by) = UToPixel(sub[^1].X, sub[^1].Y);
+                if (_gs.LineCap == 1)
+                {
+                    buffer.FillCircle((int)ax, (int)ay, capR, _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                    buffer.FillCircle((int)bx, (int)by, capR, _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                }
+                else
+                {
+                    buffer.FillRect((int)ax - capR, (int)ay - capR, thickPx, thickPx, _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                    buffer.FillRect((int)bx - capR, (int)by - capR, thickPx, thickPx, _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                }
+            }
+        }
+    }
+
+    // Renders the line join at vertex B where segment A→B meets segment B→C.
+    // The join fills the gap between the two stroke bands at the corner.
+    private void DrawLineJoin(
+        (double X, double Y) a, (double X, double Y) b, (double X, double Y) c,
+        int thickPx, int half)
+    {
+        // Direction vectors of incoming (A→B) and outgoing (B→C) segments.
+        var dxIn  = b.X - a.X; var dyIn  = b.Y - a.Y;
+        var dxOut = c.X - b.X; var dyOut = c.Y - b.Y;
+        var lenIn  = Math.Sqrt((dxIn  * dxIn)  + (dyIn  * dyIn));
+        var lenOut = Math.Sqrt((dxOut * dxOut) + (dyOut * dyOut));
+        if (lenIn < 1e-6 || lenOut < 1e-6) return;
+
+        // Unit normals (perpendicular to each segment, pointing "outward").
+        var nxIn  = -dyIn  / lenIn;  var nyIn  =  dxIn  / lenIn;
+        var nxOut = -dyOut / lenOut; var nyOut =  dxOut / lenOut;
+
+        var bx = (int)b.X; var by = (int)b.Y;
+
+        switch (_gs.LineJoin)
+        {
+            case 1: // Round — fill circle at join vertex
+                buffer.FillCircle(bx, by, half,
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                break;
+
+            case 2: // Bevel — fill triangle between the two outer corners and the vertex
+            {
+                var ox1 = (int)(bx + (nxIn  * half));
+                var oy1 = (int)(by + (nyIn  * half));
+                var ox2 = (int)(bx + (nxOut * half));
+                var oy2 = (int)(by + (nyOut * half));
+                buffer.FillTriangle(bx, by, ox1, oy1, ox2, oy2,
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                // Also fill the inner side.
+                var ix1 = (int)(bx - (nxIn  * half));
+                var iy1 = (int)(by - (nyIn  * half));
+                var ix2 = (int)(bx - (nxOut * half));
+                var iy2 = (int)(by - (nyOut * half));
+                buffer.FillTriangle(bx, by, ix1, iy1, ix2, iy2,
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                break;
+            }
+
+            default: // Miter (0) — extend outer edges to intersection point
+            {
+                // Compute where the outer edges of the two strokes would intersect.
+                // Edge 1: point = b + nIn*half, direction = (dxIn/lenIn, dyIn/lenIn)
+                // Edge 2: point = b + nOut*half, direction = (dxOut/lenOut, dyOut/lenOut)
+                // Fall back to bevel if the angle is too shallow (miter limit exceeded).
+                var sinHalf = (nxIn * dyOut / lenOut) - (nyIn * dxOut / lenOut);
+                if (Math.Abs(sinHalf) < 1e-6) break; // parallel segments
+
+                var miterLen = half / Math.Abs(sinHalf);
+                if (miterLen > half * _gs.MiterLimit) goto case 2; // exceed limit → bevel
+
+                var mx = bx + (nxIn + nxOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf));
+                var my = by + (nyIn + nyOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf));
+
+                var ox1 = (int)(bx + (nxIn  * half));
+                var oy1 = (int)(by + (nyIn  * half));
+                var ox2 = (int)(bx + (nxOut * half));
+                var oy2 = (int)(by + (nyOut * half));
+                buffer.FillTriangle((int)mx, (int)my, ox1, oy1, ox2, oy2,
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                // Inner side.
+                var ix1 = (int)(bx - (nxIn  * half));
+                var iy1 = (int)(by - (nyIn  * half));
+                var ix2 = (int)(bx - (nxOut * half));
+                var iy2 = (int)(by - (nyOut * half));
+                var imx = bx - (nxIn + nxOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf));
+                var imy = by - (nyIn + nyOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf));
+                buffer.FillTriangle((int)imx, (int)imy, ix1, iy1, ix2, iy2,
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                break;
+            }
         }
     }
 
@@ -1341,6 +1473,49 @@ internal sealed class PageRenderer(
         _gs.StrokeR = r; _gs.StrokeG = g; _gs.StrokeB = b;
     }
 
+    // Adds the glyph outline as a clip path contribution (text rendering modes 4–7).
+    // Each glyph contour is accumulated into the buffer's clip mask via intersection (AND),
+    // so subsequent drawing is clipped to the text shape.
+    // ISO 32000-1 §9.3.6 — the clip accumulates across all glyphs in the text object.
+    private void ClipGlyphOutline(SharpFont.Face ftFace, int penX, int penY)
+    {
+        // ReSharper disable once EmptyGeneralCatchClause
+        try
+        {
+            // Load the glyph outline (no rendering — we only need the vector data).
+            var outline = ftFace.Glyph.Outline;
+            if (outline.Points == null || outline.Points.Length == 0) return;
+
+            var pts      = outline.Points;
+            var contours = outline.Contours;
+            if (contours == null || contours.Length == 0) return;
+
+            // Build polygon list from the FreeType contours.
+            var polys = new List<(double X, double Y)[]>();
+            var start = 0;
+            foreach (var endIdx in contours)
+            {
+                var count = endIdx - start + 1;
+                if (count < 3) { start = endIdx + 1; continue; }
+                var poly = new (double X, double Y)[count];
+                for (var j = 0; j < count; j++)
+                {
+                    poly[j] = (penX + (pts[start + j].X / 64.0),
+                               penY - (pts[start + j].Y / 64.0));
+                }
+                polys.Add(poly);
+                start = endIdx + 1;
+            }
+            if (polys.Count == 0) return;
+
+            // Intersect the glyph outline into the buffer's clip mask.
+            // Even-odd rule matches the PDF spec for glyph outlines.
+            buffer.SetClipPolygons(polys, evenOdd: true);
+        }
+        // ReSharper disable once EmptyGeneralCatchClause
+        catch { }
+    }
+
     // Modulates a source alpha by the active soft mask at device pixel (x, y).
     // Returns the original alpha when no soft mask is active or (x,y) is out of range.
     private byte SoftMaskAlpha(int x, int y, byte a)
@@ -1372,6 +1547,180 @@ internal sealed class PageRenderer(
     {
         for (var x = x0; x <= x1; x++)
             buffer.SetPixel(x, y, r, g, b, SoftMaskAlpha(x, y, baseAlpha), blendMode);
+    }
+
+    // Strokes the outline of the last-loaded glyph in FreeType using the current stroke
+    // colour. Used for text rendering modes 1 (stroke only) and 2 (fill + stroke).
+    // FreeType outline points are in 26.6 fixed-point pixel units relative to the glyph
+    // origin. We convert them to device pixels by dividing by 64 and adding the pen position.
+    private void StrokeGlyphOutline(SharpFont.Face ftFace, int penX, int penY, uint pixelSize)
+    {
+        // ReSharper disable once EmptyGeneralCatchClause
+        try
+        {
+            var outline = ftFace.Glyph.Outline;
+            if (outline.Points == null || outline.Points.Length == 0) return;
+
+            var pts      = outline.Points;
+            var tags     = outline.Tags;
+            var contours = outline.Contours;
+            if (contours == null || contours.Length == 0) return;
+
+            // Stroke width for text: use LineWidth scaled by the text size.
+            var ctmScale = CtmAverageScale();
+            var thickPx  = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
+
+            var start = 0;
+            foreach (var endIdx in contours)
+            {
+                // Walk each contour as a polyline of on-curve points, approximating
+                // off-curve (conic/cubic) control points with line segments.
+                var prevX = 0.0; var prevY = 0.0;
+                var first = true;
+                for (var j = start; j <= endIdx; j++)
+                {
+                    // FreeType outline X is in 26.6 pixels → divide by 64, add pen.
+                    var ptX = penX + (pts[j].X / 64.0);
+                    // FreeType Y is upward (baseline = 0), buffer Y is downward; bitmapTop
+                    // is already applied via penY = py from UToPixel. Y flips here:
+                    var ptY = penY - (pts[j].Y / 64.0);
+
+                    if (!first)
+                        buffer.DrawLine(
+                            (int)prevX, (int)prevY, (int)ptX, (int)ptY,
+                            _gs.StrokeR, _gs.StrokeG, _gs.StrokeB,
+                            thickPx, _gs.StrokeA, _gs.BlendMode);
+
+                    prevX = ptX; prevY = ptY;
+                    first = false;
+                }
+
+                // Close the contour back to the first point.
+                if (!first && endIdx >= start)
+                {
+                    var firstX = penX + (pts[start].X / 64.0);
+                    var firstY = penY - (pts[start].Y / 64.0);
+                    buffer.DrawLine(
+                        (int)prevX, (int)prevY, (int)firstX, (int)firstY,
+                        _gs.StrokeR, _gs.StrokeG, _gs.StrokeB,
+                        thickPx, _gs.StrokeA, _gs.BlendMode);
+                }
+
+                start = endIdx + 1;
+            }
+        }
+        // ReSharper disable once EmptyGeneralCatchClause
+        catch { }
+    }
+
+    // Converts color component values (0–1 range) using the named color space.
+    // Falls back gracefully for unknown or unresolvable spaces.
+    private (double R, double G, double B) ResolveColorComponents(double[] components, string csName)
+    {
+        // Device spaces — fast path, no lookup needed.
+        switch (csName)
+        {
+            case "DeviceGray":
+            {
+                var v = components.Length > 0 ? components[0] : 0;
+                return (v, v, v);
+            }
+            case "DeviceRGB":
+                return components.Length >= 3
+                    ? (components[0], components[1], components[2])
+                    : (0, 0, 0);
+            case "DeviceCMYK":
+            {
+                if (components.Length < 4) return (0, 0, 0);
+                var (r, g, b) = CmykToRgb(components[0], components[1], components[2], components[3]);
+                return (r, g, b);
+            }
+        }
+
+        // Named color space from /Resources /ColorSpace.
+        if (colorSpaces is not null && colorSpaces.TryGetValue(csName, out var info))
+        {
+            var (r2, g2, b2) = info.ToRgb(components);
+            return (r2 / 255.0, g2 / 255.0, b2 / 255.0);
+        }
+
+        // Unknown space — fall back to component-count heuristic.
+        return components.Length switch
+        {
+            1 => (components[0], components[0], components[0]),
+            >= 4 => CmykToRgb(components[0], components[1], components[2], components[3]),
+            >= 3 => (components[0], components[1], components[2]),
+            _ => (0, 0, 0)
+        };
+    }
+
+    // Renders a string set in a Type3 font. Each glyph is a mini content stream
+    // (PDF operators) stored in the font's /CharProcs dictionary. The stream is
+    // rendered into the main buffer by creating a child PageRenderer with a CTM
+    // composed from: FontMatrix × current text+CTM, translated to the glyph origin.
+    // ISO 32000-1 §9.6.5.
+    private void ShowStringType3(ReadOnlySpan<byte> bytes, Models.Type3FontInfo t3)
+    {
+        var fm = t3.FontMatrix; // [a b c d e f] glyph→text space
+        foreach (var code in bytes)
+        {
+            var glyphName = t3.Encoding.Length > code ? t3.Encoding[code] : null;
+            if (glyphName is null || !t3.CharProcs.TryGetValue(glyphName, out var ops))
+            {
+                // No glyph — advance by width if available.
+                AdvanceType3(t3, code);
+                continue;
+            }
+
+            // Build the glyph CTM: FontMatrix × TextMatrix × CTM, then translate to
+            // the current text-space origin (TextMatrix[4], TextMatrix[5]).
+            // PDF §9.4.4: glyph origin in text space = current text matrix position.
+            var tm = _gs.TextMatrix;
+            // Compose: glyphCtm = FontMatrix × TextMatrix × CTM
+            // First concatenate FontMatrix into the current CTM chain.
+            // T = TextMatrix, C = CTM, F = FontMatrix
+            // Device = F × T × C (right-to-left: C applied first)
+            // Combined = F × T, then apply C.
+            var ftm = GraphicsState.MultiplyMatrix(fm, tm);    // F × T
+            var ctm = GraphicsState.MultiplyMatrix(ftm, _gs.Ctm); // F × T × C
+
+            // Scale the glyph: FontSize is applied via the text matrix magnitude.
+            var textScale = _gs.FontSize * TextMatrixVerticalScale();
+
+            // Build the initial CTM for the child renderer:
+            // scale glyph space by FontSize × device scale, apply page flip.
+            double[] glyphCtm =
+            [
+                ctm[0] * textScale, ctm[1] * textScale,
+                ctm[2] * textScale, ctm[3] * textScale,
+                ctm[4], ctm[5]
+            ];
+
+            // Render the glyph's content stream into the main buffer.
+            var glyphRenderer = new PageRenderer(
+                buffer, fonts, scale, pageHeightPt,
+                embeddedFontBytes, imageXObjects,
+                initialCtm: glyphCtm,
+                toUnicodeMaps, compositeFonts,
+                extGStateAlphas, shadings, tilingPatterns,
+                softMasks: null, colorSpaces, type3Fonts);
+
+            glyphRenderer.Render(ops, EmptyFontMap);
+
+            AdvanceType3(t3, code);
+        }
+    }
+
+    private void AdvanceType3(Models.Type3FontInfo t3, byte code)
+    {
+        // Advance width from /Widths array (glyph-space units).
+        var idx = code - t3.FirstChar;
+        var wGlyph = idx >= 0 && idx < t3.Widths.Length ? t3.Widths[idx] : 0.0;
+        // Convert glyph space → text space via FontMatrix[0] (x scale), then apply FontSize.
+        var fm = t3.FontMatrix;
+        var advance = (wGlyph * fm[0] * _gs.FontSize + _gs.CharSpace)
+                      * (_gs.HorizontalScale / 100.0);
+        _gs.TextMatrix[4] += advance;
     }
 
     private void SetFillGray(double gray)
@@ -1445,7 +1794,9 @@ internal sealed class PageRenderer(
                 compositeFonts: formPage.GetCompositeFonts(),
                 extGStateAlphas: formPage.GetExtGStateAlphas(),
                 shadings: formPage.GetShadings(),
-                tilingPatterns: formPage.GetTilingPatterns());
+                tilingPatterns: formPage.GetTilingPatterns(),
+                softMasks: null,
+                colorSpaces: (formPage as Unchained.Pdf.Engine.PdfPageAdapter)?.GetColorSpaces());
 
             maskRenderer.Render(smInfo.Operators, formPage.GetFontNameMap());
 

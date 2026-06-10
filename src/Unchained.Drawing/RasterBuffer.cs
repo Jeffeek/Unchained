@@ -572,4 +572,43 @@ internal sealed class RasterBuffer(int width, int height)
     }
 
     internal byte[] ToArgbBytes() => _data;
+
+    // Fills a filled circle at (cx,cy) with radius r — used for round line caps and joins.
+    internal void FillCircle(int cx, int cy, int r, byte red, byte grn, byte blu, byte a = 255, string blendMode = "Normal")
+    {
+        var r2 = r * r;
+        for (var dy = -r; dy <= r; dy++)
+        for (var dx = -r; dx <= r; dx++)
+            if ((dx * dx) + (dy * dy) <= r2)
+                SetPixel(cx + dx, cy + dy, red, grn, blu, a, blendMode);
+    }
+
+    // Fills the triangle (x0,y0)-(x1,y1)-(x2,y2) — used for bevel and miter joins.
+    // Uses the same scanline algorithm as the polygon rasteriser.
+    internal void FillTriangle(
+        int x0, int y0, int x1, int y1, int x2, int y2,
+        byte r, byte g, byte b, byte a = 255, string blendMode = "Normal")
+    {
+        var pts = new (double X, double Y)[] { (x0, y0), (x1, y1), (x2, y2) };
+        var minY = Math.Max(0, (int)Math.Floor((double)Math.Min(y0, Math.Min(y1, y2))));
+        var maxY = Math.Min(Height - 1, (int)Math.Ceiling((double)Math.Max(y0, Math.Max(y1, y2))));
+        for (var y = minY; y <= maxY; y++)
+        {
+            var sy = y + 0.5;
+            var crosses = new List<double>();
+            for (var i = 0; i < 3; i++)
+            {
+                var (ax, ay) = pts[i]; var (bx, by) = pts[(i + 1) % 3];
+                if (ay == by) continue;
+                if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
+                    crosses.Add(ax + ((sy - ay) / (by - ay)) * (bx - ax));
+            }
+            if (crosses.Count < 2) continue;
+            crosses.Sort();
+            var xa = Math.Max(0, (int)Math.Round(crosses[0]));
+            var xb = Math.Min(Width - 1, (int)Math.Round(crosses[^1]));
+            for (var px = xa; px <= xb; px++)
+                SetPixel(px, y, r, g, b, a, blendMode);
+        }
+    }
 }

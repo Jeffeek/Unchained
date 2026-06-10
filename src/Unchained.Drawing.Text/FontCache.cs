@@ -106,16 +106,33 @@ internal sealed class FontCache : IDisposable
     /// </summary>
     internal (FtFace FtFace, Font HbFont) GetFonts(string fontName, byte[]? embeddedBytes = null)
     {
-        if (_fonts.TryGetValue(fontName, out var cached)) return (cached.FtFace, cached.HbFont);
+        // Use a cache key that includes a hash of the embedded bytes when present.
+        // This prevents collisions when two different resource names share the same
+        // /BaseFont name (common with CFF subsets — e.g. "ABCDEF+Helvetica").
+        var cacheKey = embeddedBytes is { Length: > 0 }
+            ? $"{fontName}:{embeddedBytes.Length}"
+            : fontName;
+
+        if (_fonts.TryGetValue(cacheKey, out var cached)) return (cached.FtFace, cached.HbFont);
 
         var bytes = embeddedBytes is { Length: > 0 }
             ? embeddedBytes
             : LoadSubstituteFont(fontName);
 
-        var (ftFace, hbFont, pin) = CreatePair(bytes);
-        _fonts[fontName] = (ftFace, hbFont, pin);
+        // CreatePair may throw if the font bytes are malformed (truncated CFF, corrupt
+        // TrueType, etc.). Fall back to the substitute font so glyph rendering continues.
+        (FtFace FtFace, Font HbFont, GCHandle Pin) pair;
+        try
+        {
+            pair = CreatePair(bytes);
+        }
+        catch
+        {
+            pair = CreatePair(LoadSubstituteFont(fontName));
+        }
 
-        return (ftFace, hbFont);
+        _fonts[cacheKey] = pair;
+        return (pair.FtFace, pair.HbFont);
     }
 
     internal FtFace GetFace(string fontName, byte[]? embeddedBytes = null) =>

@@ -5,13 +5,15 @@ namespace Unchained.Pdf.Models;
 /// Output resolution in dots per inch. Higher values produce larger, sharper images.
 /// Default: 150 (suitable for screen display). Use 300 for print-quality output.
 /// </param>
-/// <param name="Format">
-/// Output file format. Only <see cref="OutputFormat.Png"/> is supported currently;
-/// JPEG requires libjpeg-turbo integration.
+/// <param name="Format">Output file format. Default is <see cref="OutputFormat.Png"/>.</param>
+/// <param name="JpegQuality">
+/// JPEG encoding quality from 1 (worst) to 100 (best). Only used when
+/// <see cref="Format"/> is <see cref="OutputFormat.Jpeg"/>. Default is 85.
 /// </param>
 public sealed record RenderOptions(
     int Dpi = 150,
-    OutputFormat Format = OutputFormat.Png
+    OutputFormat Format = OutputFormat.Png,
+    int JpegQuality = 85
 )
 {
     /// <summary>Default rendering options: 150 DPI, PNG.</summary>
@@ -26,5 +28,14 @@ public sealed record RenderOptions(
 public enum OutputFormat
 {
     /// <summary>Portable Network Graphics — lossless, pure-managed encoder.</summary>
-    Png
+    Png,
+
+    /// <summary>
+    /// JPEG — lossy compression; smaller files. Use <see cref="RenderOptions.JpegQuality"/>
+    /// to control the quality/size trade-off (1–100, default 85).
+    /// </summary>
+    Jpeg,
+
+    /// <summary>Windows Bitmap — uncompressed 24-bit, larger files.</summary>
+    Bmp
 }
