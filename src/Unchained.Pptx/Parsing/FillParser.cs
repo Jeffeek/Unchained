@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Core.Xml;
@@ -69,7 +70,7 @@ internal static class FillParser
 
         foreach (var gs in stopList.Elements(DmlNames.GradientStop))
         {
-            var pos = gs.GetAttrInt(DmlNames.AttributePosition, 0) / 100_000.0;
+            var pos = gs.GetAttrInt(DmlNames.AttributePosition, 0) / (double)OoxmlScaling.PercentScale;
             var color = ColorParser.Parse(gs);
             gf.Stops.Add(new GradientStop(pos, color));
         }

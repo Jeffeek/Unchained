@@ -1,6 +1,7 @@
 using System.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Text;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
@@ -16,7 +17,7 @@ namespace Unchained.Pptx.Export;
 internal static class PptxToHtmlWriter
 {
     // EMU → CSS pixels at 96 DPI: 1 px = 914400/96 = 9525 EMU
-    private const double EmuToPx = 1.0 / 9525.0;
+    private const double EmuToPx = EmuConversions.EmuToCssPx;
 
     /// <summary>
     /// Returns a dictionary mapping slide file names to their HTML content bytes.
@@ -181,7 +182,7 @@ internal static class PptxToHtmlWriter
             {
                 if (string.IsNullOrEmpty(run.Text)) continue;
                 var runStyle = new StringBuilder();
-                var fs = run.Format.FontSizePoints ?? 12.0;
+                var fs = run.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt;
                 runStyle.Append($"font-size:{fs:F1}pt;");
                 if (run.Format.Bold.Value == true) runStyle.Append("font-weight:bold;");
                 if (run.Format.Italic.Value == true) runStyle.Append("font-style:italic;");

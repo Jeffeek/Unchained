@@ -3,7 +3,6 @@ using Unchained.Pptx.Themes;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
-using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Parsing;
 

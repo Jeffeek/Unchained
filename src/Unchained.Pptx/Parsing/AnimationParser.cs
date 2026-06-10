@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Core.Xml;
@@ -138,9 +139,9 @@ internal static class AnimationParser
 
         // Acceleration / deceleration (1000ths of a percent), auto-reverse, repeat count.
         if (ctn.GetAttrInt("accel") is { } accel)
-            effect.Timing.AccelerationPercent = accel / 100_000.0;
+            effect.Timing.AccelerationPercent = accel / (double)OoxmlScaling.PercentScale;
         if (ctn.GetAttrInt("decel") is { } decel)
-            effect.Timing.DecelerationPercent = decel / 100_000.0;
+            effect.Timing.DecelerationPercent = decel / (double)OoxmlScaling.PercentScale;
         if (ctn.GetAttrBool("autoRev") is true)
             effect.Timing.AutoReverse = true;
         var repeat = ctn.GetAttr("repeatCount");

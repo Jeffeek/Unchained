@@ -2,12 +2,12 @@ using System.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Media;
+using Unchained.Ooxml.Text;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Export;
 
@@ -20,7 +20,7 @@ namespace Unchained.Pptx.Export;
 internal static class PptxToPdfWriter
 {
     // EMU → points: 1 pt = 12700 EMU
-    private const double EmuToPoints = 1.0 / 12700.0;
+    private const double EmuToPoints = EmuConversions.EmuToPoints;
 
     /// <summary>
     /// Generates a PDF from <paramref name="document"/> and returns the raw bytes.
@@ -299,7 +299,7 @@ internal static class PptxToPdfWriter
             foreach (var para in frame.Paragraphs)
             foreach (var run in para.Runs)
             {
-                var typeface = run.Format.LatinFont ?? "Arial";
+                var typeface = run.Format.LatinFont ?? TextConstants.FallbackLatinFont;
                 var style = ResolveStyle(run.Format);
                 keys.Add($"{typeface}|{style}");
             }
@@ -558,10 +558,10 @@ internal static class PptxToPdfWriter
             var paragraphs = frame.Paragraphs;
             if (paragraphs.Count == 0) return;
 
-            const double MarginPt = 4.0;
+            const double MarginPt = TextConstants.MinTextInset;
             var cursorY = shapeY + MarginPt;
-            const double DefaultFontSize = 12.0;
-            const double LineHeightFactor = 1.25;
+            const double DefaultFontSize = TextConstants.DefaultFontSizePt;
+            const double LineHeightFactor = TextConstants.DefaultLineHeightFactor;
 
             // Default text color
             (double Dr, double Dg, double Db) defaultRgb;
@@ -648,7 +648,7 @@ internal static class PptxToPdfWriter
             int fallbackFontNum,
             Dictionary<string, string> fontKeys)
         {
-            var typeface = format.LatinFont ?? "Arial";
+            var typeface = format.LatinFont ?? TextConstants.FallbackLatinFont;
             var style = ResolveStyle(format);
             var key = $"{typeface}|{style}";
             return fontKeys.TryGetValue(key, out var resourceName) && fontObjNums.ContainsKey(key)

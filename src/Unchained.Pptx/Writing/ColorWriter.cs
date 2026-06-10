@@ -1,6 +1,6 @@
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
-using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Writing;
@@ -23,11 +23,11 @@ internal static class ColorWriter
 
             if (color.LuminanceModifier != 1.0)
                 schemeEl.Add(new XElement(DmlNames.LuminanceModifier,
-                    new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceModifier * 100_000))));
+                    new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceModifier * OoxmlScaling.PercentScale))));
 
             if (color.LuminanceOffset != 0.0)
                 schemeEl.Add(new XElement(DmlNames.LuminanceOffset,
-                    new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceOffset * 100_000))));
+                    new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceOffset * OoxmlScaling.PercentScale))));
 
             return schemeEl;
         }
@@ -41,7 +41,7 @@ internal static class ColorWriter
 
         if (alpha < 255)
             srgbEl.Add(new XElement(DmlNames.Alpha,
-                new XAttribute(DmlNames.AttributeValue, (int)Math.Round(alpha / 255.0 * 100_000))));
+                new XAttribute(DmlNames.AttributeValue, (int)Math.Round(alpha / 255.0 * OoxmlScaling.PercentScale))));
 
         return srgbEl;
     }

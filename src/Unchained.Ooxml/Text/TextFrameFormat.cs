@@ -23,16 +23,16 @@ public sealed class TextFrameFormat
     public TextAutofit Autofit { get; set; } = TextAutofit.None;
 
     /// <summary>Left internal margin in EMU.</summary>
-    public Emu MarginLeft { get; set; } = Emu.FromPoints(7.2);
+    public Emu MarginLeft { get; set; } = Emu.FromPoints(TextConstants.DefaultMarginHorizontalPt);
 
     /// <summary>Right internal margin in EMU.</summary>
-    public Emu MarginRight { get; set; } = Emu.FromPoints(7.2);
+    public Emu MarginRight { get; set; } = Emu.FromPoints(TextConstants.DefaultMarginHorizontalPt);
 
     /// <summary>Top internal margin in EMU.</summary>
-    public Emu MarginTop { get; set; } = Emu.FromPoints(3.6);
+    public Emu MarginTop { get; set; } = Emu.FromPoints(TextConstants.DefaultMarginVerticalPt);
 
     /// <summary>Bottom internal margin in EMU.</summary>
-    public Emu MarginBottom { get; set; } = Emu.FromPoints(3.6);
+    public Emu MarginBottom { get; set; } = Emu.FromPoints(TextConstants.DefaultMarginVerticalPt);
 
     /// <summary>
     /// <see langword="true"/> when text wraps at the frame boundary (the default);

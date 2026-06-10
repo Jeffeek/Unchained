@@ -1,6 +1,6 @@
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
-using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Parsing;
@@ -76,7 +76,7 @@ internal static class ColorParser
         if (raw == null)
             return 255;
 
-        return (byte)Math.Clamp((int)Math.Round(raw.Value / 100_000.0 * 255), 0, 255);
+        return (byte)Math.Clamp((int)Math.Round(raw.Value / (double)OoxmlScaling.PercentScale * 255), 0, 255);
     }
 
     private static double ReadTransformValue(XElement parent, XName childName)
@@ -85,7 +85,7 @@ internal static class ColorParser
         if (child == null) return childName == DmlNames.LuminanceModifier ? 1.0 : 0.0;
         var raw = child.GetAttrInt(DmlNames.AttributeValue);
         if (raw == null) return childName == DmlNames.LuminanceModifier ? 1.0 : 0.0;
-        return raw.Value / 100_000.0;
+        return raw.Value / (double)OoxmlScaling.PercentScale;
     }
 
     private static bool TryParseHex(string hex, out uint value)

@@ -1,3 +1,5 @@
+using Unchained.Ooxml;
+
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
@@ -117,7 +119,7 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
         }
         else
         {
-            baseArgb = scheme?.Resolve(_themeSlot) ?? 0xFF808080;
+            baseArgb = scheme?.Resolve(_themeSlot) ?? OoxmlScaling.UnresolvedThemeColorArgb;
         }
 
         if (_luminanceModifier == 1.0 && _luminanceOffset == 0.0)

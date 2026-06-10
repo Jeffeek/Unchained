@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Xunit;
 
@@ -76,6 +77,6 @@ public sealed class ColorSpecTests
     {
         var color = ColorSpec.FromTheme(ThemeColorSlot.Accent1);
         var resolved = color.Resolve(null);
-        resolved.ShouldBe(0xFF808080u);
+        resolved.ShouldBe(OoxmlScaling.UnresolvedThemeColorArgb);
     }
 }

@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Core.Xml;
 
@@ -160,9 +161,9 @@ internal static class AnimationWriter
 
         // Acceleration / deceleration (ease-in / ease-out) as 1000ths of a percent.
         if (effect.Timing.AccelerationPercent > 0)
-            ctn.SetAttributeValue("accel", (int)Math.Round(effect.Timing.AccelerationPercent * 100_000));
+            ctn.SetAttributeValue("accel", (int)Math.Round(effect.Timing.AccelerationPercent * OoxmlScaling.PercentScale));
         if (effect.Timing.DecelerationPercent > 0)
-            ctn.SetAttributeValue("decel", (int)Math.Round(effect.Timing.DecelerationPercent * 100_000));
+            ctn.SetAttributeValue("decel", (int)Math.Round(effect.Timing.DecelerationPercent * OoxmlScaling.PercentScale));
         if (effect.Timing.AutoReverse)
             ctn.SetAttributeValue("autoRev", "1");
         if (effect.Timing.RepeatCount != 0)

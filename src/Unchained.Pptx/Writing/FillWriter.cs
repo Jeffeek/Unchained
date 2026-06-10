@@ -1,5 +1,6 @@
 using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
 
@@ -60,7 +61,7 @@ internal static class FillWriter
         foreach (var stop in gradient.Stops)
         {
             var gs = new XElement(DmlNames.GradientStop,
-                new XAttribute(DmlNames.AttributePosition, (int)(stop.Position * 100_000)));
+                new XAttribute(DmlNames.AttributePosition, (int)(stop.Position * OoxmlScaling.PercentScale)));
             gs.Add(ColorWriter.Write(stop.Color));
             gsLst.Add(gs);
         }

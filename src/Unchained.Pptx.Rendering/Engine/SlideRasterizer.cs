@@ -356,7 +356,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         ColorScheme? colorScheme)
     {
         var bevel = threeD.TopBevel!;
-        var bevelPx = Math.Max(1, Math.Min(8, (int)(bevel.Width.ToPoints() * dpi / 72.0)));
+        var bevelPx = Math.Max(1, Math.Min(8, (int)(bevel.Width.ToPoints() * dpi / RenderingConstants.PointsPerInch)));
 
         // Highlight: top and left edges (lighter).
         for (var i = 0; i < bevelPx; i++)
@@ -389,7 +389,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         if (baseA == 0) return;
 
         // Convert EMU offsets to pixels.
-        var scale = dpi / 914400.0; // EMU → inches → px
+        var scale = dpi / EmuConversions.EmuPerInch; // EMU → inches → px
         var dist = shadow.Distance.Value * scale;
         var angleRad = shadow.DirectionDegrees * Math.PI / 180.0;
         var offX = (int)(dist * Math.Cos(angleRad));
@@ -599,12 +599,12 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         if (model.HasTitle && !string.IsNullOrWhiteSpace(model.Title))
         {
             RenderTextFrameText(buffer, model.Title, x + 6, y + 4, width - 12, 14.0, dpi, 60, 60, 60);
-            titleH = (int)(18 * dpi / 72.0);
+            titleH = (int)(18 * dpi / RenderingConstants.PointsPerInch);
         }
 
         // Reserve margins for axes: left for value labels, bottom for category labels.
-        const int axisLeft = 40;
-        const int axisBottom = 18;
+        const int axisLeft = RenderingConstants.ChartAxisMarginLeft;
+        const int axisBottom = RenderingConstants.ChartAxisMarginBottom;
         var plotX = x + axisLeft;
         var plotY = y + titleH + 6;
         var plotW = width - axisLeft - 8;
@@ -1119,9 +1119,9 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         RasterBuffer buffer, string text, int x, int y, int maxW, double sizePt, double dpi,
         byte r, byte g, byte b)
     {
-        var scale = dpi / 72.0;
+        var scale = dpi / RenderingConstants.PointsPerInch;
         var lineHeight = 0;
-        RenderRunText(buffer, text, "Arial", null, sizePt, scale, x, y, x + maxW, r, g, b, ref lineHeight);
+        RenderRunText(buffer, text, TextConstants.FallbackLatinFont, null, sizePt, scale, x, y, x + maxW, r, g, b, ref lineHeight);
     }
 
     private void RenderTextFrame(
@@ -1137,7 +1137,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         if (textFrame.Paragraphs.Count == 0)
             return;
 
-        var scale = dpi / 72.0;
+        var scale = dpi / RenderingConstants.PointsPerInch;
         var marginLeft = (int)(textFrame.Format.MarginLeft.ToPoints() * scale / dpi * 96);
         var marginTop = (int)(textFrame.Format.MarginTop.ToPoints() * scale / dpi * 96);
         var marginBottom = (int)(textFrame.Format.MarginBottom.ToPoints() * scale / dpi * 96);
@@ -1188,7 +1188,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             Unchained.Pptx.Shapes.PlaceholderType.CenteredTitle => 36.0,
             Unchained.Pptx.Shapes.PlaceholderType.Subtitle => 24.0,
             Unchained.Pptx.Shapes.PlaceholderType.Body => 18.0,
-            _ => 12.0
+            _ => TextConstants.DefaultFontSizePt
         };
 
         // Default text color priority: styleTextColor → theme dk1 → black.
@@ -1313,8 +1313,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         if (fontScheme is null) return fontName;
         return fontName switch
         {
-            "+mj-lt" => fontScheme.MajorFont.LatinFont is { Length: > 0 } mj ? mj : fontName,
-            "+mn-lt" => fontScheme.MinorFont.LatinFont is { Length: > 0 } mn ? mn : fontName,
+            OoxmlScaling.ThemeMajorLatinFont => fontScheme.MajorFont.LatinFont is { Length: > 0 } mj ? mj : fontName,
+            OoxmlScaling.ThemeMinorLatinFont => fontScheme.MinorFont.LatinFont is { Length: > 0 } mn ? mn : fontName,
             _ => fontName
         };
     }
@@ -1539,8 +1539,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     private static string SelectFontName(Run run)
     {
         if (run.Format.Bold == InheritableBool.True)
-            return "Arial Bold";
-        return "Arial";
+            return TextConstants.FallbackLatinFontBold;
+        return TextConstants.FallbackLatinFont;
     }
 
     private byte[]? ResolveEmbeddedFont(Run run, string fontName, out string cacheKey)
