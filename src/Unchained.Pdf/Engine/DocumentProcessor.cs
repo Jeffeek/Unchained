@@ -626,12 +626,23 @@ public sealed class DocumentProcessor : IDocumentProcessor
     )
     {
         ArgumentNullException.ThrowIfNull(document);
-
         if (pageNumber < 1)
             throw new ArgumentOutOfRangeException(nameof(pageNumber));
-
         var adapter = CastAdapter(document);
         return Task.Run(() => SetOpenAction(adapter, pageNumber), ct);
+    }
+
+    /// <inheritdoc />
+    public Task SetOpenActionAsync(
+        IPdfDocument document,
+        Models.PdfOpenAction action,
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(action);
+        var adapter = CastAdapter(document);
+        return Task.Run(() => SetOpenActionFromModel(adapter, action), ct);
     }
 
     private static void SetOpenAction(PdfDocumentAdapter adapter, int pageNumber)
@@ -671,6 +682,68 @@ public sealed class DocumentProcessor : IDocumentProcessor
 
         MutationHelper.SerializeAndReplace(adapter, existing);
     }
+
+    private static void SetOpenActionFromModel(PdfDocumentAdapter adapter, Models.PdfOpenAction action)
+    {
+        var existing = adapter.Core.CollectObjects().ToList();
+        var catalogRef = adapter.Core.Trailer[Core.PdfName.Root] as Core.PdfIndirectReference
+            ?? throw new Core.PdfException("Trailer missing /Root.");
+        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
+        if (catalogIdx < 0) throw new Core.PdfException("Catalog object not found.");
+        var catalogDict = existing[catalogIdx].Value as Core.PdfDictionary
+            ?? throw new Core.PdfException("Catalog is not a dictionary.");
+
+        Core.PdfObject openAction = action switch
+        {
+            Models.PdfOpenAction.GoToAction g => BuildGoToAction(adapter.Core, g.PageNumber),
+            Models.PdfOpenAction.UriAction u  => BuildUriAction(u.UriString),
+            Models.PdfOpenAction.NamedAction n => BuildNamedAction(n.ActionName),
+            _ => throw new ArgumentException($"Unknown PdfOpenAction type: {action.GetType().Name}")
+        };
+
+        var newEntries = new Dictionary<string, Core.PdfObject>(catalogDict.Entries)
+        {
+            [Core.PdfName.OpenAction.Value] = openAction
+        };
+        existing[catalogIdx] = new Core.PdfIndirectObject(
+            catalogRef.ObjectNumber, 0, new Core.PdfDictionary(newEntries));
+        MutationHelper.SerializeAndReplace(adapter, existing);
+    }
+
+    private static Core.PdfDictionary BuildGoToAction(PdfDocumentCore core, int pageNumber)
+    {
+        if (pageNumber > core.PageCount)
+            throw new ArgumentOutOfRangeException(nameof(pageNumber),
+                $"Page number {pageNumber} exceeds document page count {core.PageCount}.");
+        var pageRef = FindPageRef(core, pageNumber);
+        var dest = new Core.PdfArray([
+            pageRef,
+            Core.PdfName.Get("XYZ"),
+            Core.PdfNull.Instance, Core.PdfNull.Instance, Core.PdfNull.Instance
+        ]);
+        return new Core.PdfDictionary(new Dictionary<string, Core.PdfObject>
+        {
+            ["Type"] = Core.PdfName.Get("Action"),
+            ["S"]    = Core.PdfName.Get("GoTo"),
+            ["D"]    = dest
+        });
+    }
+
+    private static Core.PdfDictionary BuildUriAction(string uri) =>
+        new(new Dictionary<string, Core.PdfObject>
+        {
+            ["Type"] = Core.PdfName.Get("Action"),
+            ["S"]    = Core.PdfName.Get("URI"),
+            ["URI"]  = Core.PdfString.FromLatin1(uri)
+        });
+
+    private static Core.PdfDictionary BuildNamedAction(string name) =>
+        new(new Dictionary<string, Core.PdfObject>
+        {
+            ["Type"] = Core.PdfName.Get("Action"),
+            ["S"]    = Core.PdfName.Get("Named"),
+            ["N"]    = Core.PdfName.Get(name)
+        });
 
     private static Core.PdfIndirectReference FindPageRef(PdfDocumentCore core, int pageNumber)
     {

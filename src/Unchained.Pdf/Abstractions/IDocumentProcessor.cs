@@ -344,6 +344,21 @@ public interface IDocumentProcessor : IDisposable
     );
 
     /// <summary>
+    /// Sets the document's open action to the given action when opened.
+    /// Supports GoTo (page navigation), URI (open URL), and Named (viewer command) actions.
+    /// Use <see cref="Models.PdfOpenAction.GoTo"/>, <see cref="Models.PdfOpenAction.Uri"/>,
+    /// or <see cref="Models.PdfOpenAction.Named"/> to construct the action.
+    /// </summary>
+    /// <param name="document">The document to update.</param>
+    /// <param name="action">The open action to set.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    Task SetOpenActionAsync(
+        IPdfDocument document,
+        Models.PdfOpenAction action,
+        CancellationToken ct = default
+    );
+
+    /// <summary>
     /// Strips PDF/A conformance metadata from <paramref name="document"/>:
     /// removes <c>/OutputIntents</c> from the catalog and deletes the
     /// <c>pdfaid:part</c> and <c>pdfaid:conformance</c> properties from the XMP stream.
