@@ -188,7 +188,12 @@ public sealed class PdfRenderer : IRenderer
         LastGlyphsAttempted = renderer.GlyphsAttempted;
         LastGlyphsSkipped   = renderer.GlyphsSkipped;
 
-        return PngEncoder.Encode(buffer);
+        return options.Format switch
+        {
+            OutputFormat.Jpeg => JpegEncoder.Encode(buffer, options.JpegQuality),
+            OutputFormat.Bmp  => BmpEncoder.Encode(buffer),
+            _                 => PngEncoder.Encode(buffer)
+        };
     }
 
     /// <inheritdoc />

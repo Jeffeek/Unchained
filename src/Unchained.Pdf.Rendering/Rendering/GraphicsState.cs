@@ -36,6 +36,17 @@ internal sealed class GraphicsState
 
     internal double LineWidth { get; set; } = 1.0;
 
+    // Line cap style (ISO 32000-1 §8.4.3.3):
+    // 0 = Butt (no projection), 1 = Round, 2 = Projecting square.
+    internal int LineCap { get; set; }
+
+    // Line join style (ISO 32000-1 §8.4.3.4):
+    // 0 = Miter, 1 = Round, 2 = Bevel.
+    internal int LineJoin { get; set; }
+
+    // Miter limit (ISO 32000-1 §8.4.3.5). Default 10.
+    internal double MiterLimit { get; set; } = 10.0;
+
     // Blend mode for compositing (ISO 32000-1 §11.3.5). PDF name string, e.g. "Normal",
     // "Multiply", "Screen". Default is "Normal" (simple alpha compositing).
     internal string BlendMode { get; set; } = "Normal";
@@ -90,7 +101,9 @@ internal sealed class GraphicsState
             FillTilingName = FillTilingName,
             StrokeR = StrokeR, StrokeG = StrokeG, StrokeB = StrokeB, StrokeA = StrokeA,
             LineWidth = LineWidth,
-            BlendMode = BlendMode,
+            LineCap = LineCap,
+            LineJoin = LineJoin,
+            MiterLimit = MiterLimit,
             SoftMask = SoftMask is null ? null : (byte[])SoftMask.Clone(),
             SoftMaskWidth = SoftMaskWidth,
             SoftMaskHeight = SoftMaskHeight,

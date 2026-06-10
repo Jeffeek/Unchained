@@ -219,6 +219,9 @@ internal sealed class PageRenderer(
                     : [];
                 break;
             }
+            case "J" when op.Operands.Count >= 1: _gs.LineCap  = (int)Num(op, 0); break;
+            case "j" when op.Operands.Count >= 1: _gs.LineJoin = (int)Num(op, 0); break;
+            case "M" when op.Operands.Count >= 1: _gs.MiterLimit = Num(op, 0);    break;
             case "J" or "j" or "M" or "ri" or "i": break; // consume; not rendered
             case "gs" when op.Operands.Count >= 1:
             {
@@ -546,18 +549,18 @@ internal sealed class PageRenderer(
 
             GlyphsAttempted++;
 
-            // HarfBuzz XOffset/YOffset are in 26.6 pixel units; convert to user-space points.
-            // Text rise (Ts) shifts the baseline up in text space.
             var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
             var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale) + _gs.TextRise;
             var (px, py) = UToPixel(originX, originY);
 
-            // Use BlitGlyphFromFace so we can read BitmapLeft/BitmapTop and the bitmap
-            // itself directly from the FT_GlyphSlotRec at correct native struct offsets.
-            // SharpFont's face->glyph offset is wrong on Windows x64 (NativeLong mismatch).
-            buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
+            // Mode 0 (fill) and 2 (fill+stroke): blit the bitmap.
+            if (_gs.TextRenderMode != 1)
+                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
 
-            // Advance in 26.6 px → convert to user-space points.
+            // Mode 1 (stroke) and 2 (fill+stroke): stroke the glyph outline.
+            if (_gs.TextRenderMode is 1 or 2)
+                StrokeGlyphOutline(ftFace, (int)px, (int)py, pixelSize);
+
             var advance = ((glyphPositions[i].XAdvance / 64.0 / scale) + _gs.CharSpace)
                           * (_gs.HorizontalScale / 100.0);
             _gs.TextMatrix[4] += advance;
@@ -594,7 +597,10 @@ internal sealed class PageRenderer(
             {
                 GlyphsAttempted++;
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
-                buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
+                if (_gs.TextRenderMode != 1)
+                    buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB, _gs.BlendMode);
+                if (_gs.TextRenderMode is 1 or 2)
+                    StrokeGlyphOutline(ftFace, (int)px, (int)py, pixelSize);
             }
 
             // Glyph advance (16.16 fixed-point pixels when scaled) → user-space points.
@@ -1109,6 +1115,26 @@ internal sealed class PageRenderer(
                 else
                     DrawDashedLine(x0, y0, x1, y1, thickPx, dashPx);
             }
+
+            // Line caps on open subpaths (cap = 1 round, 2 projecting square).
+            // Butt cap (0) clips exactly at endpoints — the default DrawLine already does this.
+            if (_gs.LineCap != 0 && sub.Count >= 2)
+            {
+                var capR = Math.Max(1, thickPx / 2);
+                var (ax, ay) = UToPixel(sub[0].X, sub[0].Y);
+                var (bx, by) = UToPixel(sub[^1].X, sub[^1].Y);
+                if (_gs.LineCap == 1)
+                {
+                    // Round cap: filled circle at each open endpoint.
+                    buffer.FillCircle((int)ax, (int)ay, capR, _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                    buffer.FillCircle((int)bx, (int)by, capR, _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                }
+                else // LineCap == 2: projecting square — extend half-width beyond endpoint
+                {
+                    buffer.FillRect((int)ax - capR, (int)ay - capR, thickPx, thickPx, _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                    buffer.FillRect((int)bx - capR, (int)by - capR, thickPx, thickPx, _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
+                }
+            }
         }
     }
 
@@ -1372,6 +1398,70 @@ internal sealed class PageRenderer(
     {
         for (var x = x0; x <= x1; x++)
             buffer.SetPixel(x, y, r, g, b, SoftMaskAlpha(x, y, baseAlpha), blendMode);
+    }
+
+    // Strokes the outline of the last-loaded glyph in FreeType using the current stroke
+    // colour. Used for text rendering modes 1 (stroke only) and 2 (fill + stroke).
+    // FreeType outline points are in 26.6 fixed-point pixel units relative to the glyph
+    // origin. We convert them to device pixels by dividing by 64 and adding the pen position.
+    private void StrokeGlyphOutline(SharpFont.Face ftFace, int penX, int penY, uint pixelSize)
+    {
+        // ReSharper disable once EmptyGeneralCatchClause
+        try
+        {
+            var outline = ftFace.Glyph.Outline;
+            if (outline.Points == null || outline.Points.Length == 0) return;
+
+            var pts      = outline.Points;
+            var tags     = outline.Tags;
+            var contours = outline.Contours;
+            if (contours == null || contours.Length == 0) return;
+
+            // Stroke width for text: use LineWidth scaled by the text size.
+            var ctmScale = CtmAverageScale();
+            var thickPx  = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
+
+            var start = 0;
+            foreach (var endIdx in contours)
+            {
+                // Walk each contour as a polyline of on-curve points, approximating
+                // off-curve (conic/cubic) control points with line segments.
+                var prevX = 0.0; var prevY = 0.0;
+                var first = true;
+                for (var j = start; j <= endIdx; j++)
+                {
+                    // FreeType outline X is in 26.6 pixels → divide by 64, add pen.
+                    var ptX = penX + (pts[j].X / 64.0);
+                    // FreeType Y is upward (baseline = 0), buffer Y is downward; bitmapTop
+                    // is already applied via penY = py from UToPixel. Y flips here:
+                    var ptY = penY - (pts[j].Y / 64.0);
+
+                    if (!first)
+                        buffer.DrawLine(
+                            (int)prevX, (int)prevY, (int)ptX, (int)ptY,
+                            _gs.StrokeR, _gs.StrokeG, _gs.StrokeB,
+                            thickPx, _gs.StrokeA, _gs.BlendMode);
+
+                    prevX = ptX; prevY = ptY;
+                    first = false;
+                }
+
+                // Close the contour back to the first point.
+                if (!first && endIdx >= start)
+                {
+                    var firstX = penX + (pts[start].X / 64.0);
+                    var firstY = penY - (pts[start].Y / 64.0);
+                    buffer.DrawLine(
+                        (int)prevX, (int)prevY, (int)firstX, (int)firstY,
+                        _gs.StrokeR, _gs.StrokeG, _gs.StrokeB,
+                        thickPx, _gs.StrokeA, _gs.BlendMode);
+                }
+
+                start = endIdx + 1;
+            }
+        }
+        // ReSharper disable once EmptyGeneralCatchClause
+        catch { }
     }
 
     private void SetFillGray(double gray)

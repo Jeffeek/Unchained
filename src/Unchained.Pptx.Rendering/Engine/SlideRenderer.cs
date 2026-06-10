@@ -89,7 +89,7 @@ public static class SlideRenderer
         using var fontCache = new FontCache();
         var rasterizer = new SlideRasterizer(fontCache, media);
         var buffer = rasterizer.Rasterize(slide, slideSize, options);
-        var encoded = Encode(buffer, options.Format);
+        var encoded = Encode(buffer, options);
 
         return new PptxImage(
             options.WidthPx,
@@ -99,12 +99,11 @@ public static class SlideRenderer
         );
     }
 
-    private static byte[] Encode(RasterBuffer buffer, RenderImageFormat format) => format switch
+    private static byte[] Encode(RasterBuffer buffer, RenderOptions options) => options.Format switch
     {
-        RenderImageFormat.Png => PngEncoder.Encode(buffer),
-        RenderImageFormat.Bmp => BmpEncoder.Encode(buffer),
-        RenderImageFormat.Jpeg => throw new NotSupportedException(
-            "JPEG encoding is not yet implemented. Use RenderImageFormat.Png or RenderImageFormat.Bmp."),
-        _ => throw new NotSupportedException($"Unsupported render image format: {format}.")
+        RenderImageFormat.Png  => PngEncoder.Encode(buffer),
+        RenderImageFormat.Bmp  => BmpEncoder.Encode(buffer),
+        RenderImageFormat.Jpeg => JpegEncoder.Encode(buffer, options.JpegQuality),
+        _ => throw new NotSupportedException($"Unsupported render image format: {options.Format}.")
     };
 }

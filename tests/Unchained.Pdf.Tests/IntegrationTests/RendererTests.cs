@@ -121,4 +121,58 @@ public sealed class RendererTests : RendererTestBase
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(100);
     }
+
+    // ── Output formats ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RenderPage_JpegFormat_ProducesJpegBytes()
+    {
+        SkipIfNoFreeType();
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        var jpeg = await Renderer!.RenderPageAsync(
+            doc.Pages[1],
+            new RenderOptions(Dpi: 72, Format: OutputFormat.Jpeg),
+            ct: TestContext.Current.CancellationToken);
+
+        // JPEG starts with FF D8 FF
+        jpeg.Length.ShouldBeGreaterThan(3);
+        jpeg[0].ShouldBe((byte)0xFF);
+        jpeg[1].ShouldBe((byte)0xD8);
+        jpeg[2].ShouldBe((byte)0xFF);
+    }
+
+    [Fact]
+    public async Task RenderPage_BmpFormat_ProducesBmpBytes()
+    {
+        SkipIfNoFreeType();
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        var bmp = await Renderer!.RenderPageAsync(
+            doc.Pages[1],
+            new RenderOptions(Dpi: 72, Format: OutputFormat.Bmp),
+            ct: TestContext.Current.CancellationToken);
+
+        // BMP starts with 'BM'
+        bmp.Length.ShouldBeGreaterThan(2);
+        bmp[0].ShouldBe((byte)'B');
+        bmp[1].ShouldBe((byte)'M');
+    }
+
+    [Fact]
+    public async Task RenderPage_JpegQuality_LowerQualityProducesSmallerFile()
+    {
+        SkipIfNoFreeType();
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(), ct: TestContext.Current.CancellationToken);
+
+        var highQ = await Renderer!.RenderPageAsync(
+            doc.Pages[1],
+            new RenderOptions(Dpi: 72, Format: OutputFormat.Jpeg, JpegQuality: 95),
+            ct: TestContext.Current.CancellationToken);
+        var lowQ = await Renderer.RenderPageAsync(
+            doc.Pages[1],
+            new RenderOptions(Dpi: 72, Format: OutputFormat.Jpeg, JpegQuality: 10),
+            ct: TestContext.Current.CancellationToken);
+
+        lowQ.Length.ShouldBeLessThan(highQ.Length,
+            "Lower JPEG quality should produce a smaller file");
+    }
 }

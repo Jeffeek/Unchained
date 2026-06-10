@@ -216,11 +216,13 @@ public sealed class SignatureTests : PdfTestBase
     {
         using var cert = CreateSelfSignedCert("Eve Adams");
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        var pinned = new DateTimeOffset(2024, 6, 1, 12, 0, 0, TimeSpan.Zero);
         var opts = new SignatureOptions(
             Reason: "Final approval",
             Location: "Paris",
             ContactInfo: "eve@example.com",
-            FieldName: "AuthorSig");
+            FieldName: "AuthorSig",
+            SigningTime: pinned);
 
         using var ms = new MemoryStream();
         await Processor.SignAsync(doc, cert, ms, opts, ct: TestContext.Current.CancellationToken);

@@ -563,4 +563,14 @@ internal sealed class RasterBuffer(int width, int height)
     }
 
     internal byte[] ToArgbBytes() => _data;
+
+    // Fills a filled circle at (cx,cy) with radius r — used for round line caps and joins.
+    internal void FillCircle(int cx, int cy, int r, byte red, byte grn, byte blu, byte a = 255, string blendMode = "Normal")
+    {
+        var r2 = r * r;
+        for (var dy = -r; dy <= r; dy++)
+        for (var dx = -r; dx <= r; dx++)
+            if ((dx * dx) + (dy * dy) <= r2)
+                SetPixel(cx + dx, cy + dy, red, grn, blu, a, blendMode);
+    }
 }
