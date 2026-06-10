@@ -129,4 +129,34 @@ public interface IPdfPage
     /// </summary>
     IReadOnlyDictionary<string, CompositeFontInfo> GetCompositeFonts() =>
         new Dictionary<string, CompositeFontInfo>();
+
+    /// <summary>
+    /// Returns the constant alpha values declared by each <c>/ExtGState</c> resource on this
+    /// page, keyed by resource name (the operand of the <c>gs</c> operator). The tuple is
+    /// (fill alpha <c>/ca</c>, stroke alpha <c>/CA</c>), each in 0–1 (ISO 32000-1 §11.6.4.4).
+    /// Entries that declare neither are omitted. Returns an empty dictionary when the page
+    /// has no <c>/ExtGState</c> resources.
+    /// </summary>
+    IReadOnlyDictionary<string, (double Fill, double Stroke)> GetExtGStateAlphas() =>
+        new Dictionary<string, (double, double)>();
+
+    /// <summary>
+    /// Returns decoded axial/radial shadings available on this page, keyed by resource name.
+    /// Includes both <c>/Shading</c> resources (painted by the <c>sh</c> operator) and
+    /// shading-pattern resources (<c>/Pattern</c> entries with <c>/PatternType 2</c>, used as
+    /// a fill colour). Each value carries the geometry plus a pre-sampled colour ramp so the
+    /// renderer needs no PDF-function evaluation. Returns an empty dictionary when the page
+    /// has no axial/radial shadings.
+    /// </summary>
+    IReadOnlyDictionary<string, ShadingInfo> GetShadings() =>
+        new Dictionary<string, ShadingInfo>();
+
+    /// <summary>
+    /// Returns tiling patterns (ISO 32000-1 §8.7.3.1, <c>/PatternType 1</c>) available on
+    /// this page, keyed by <c>/Pattern</c> resource name. Each carries the cell's content
+    /// operators, bounding box, step, matrix, and paint type so the renderer can rasterise
+    /// one cell and tile it. Returns an empty dictionary when the page has no tiling patterns.
+    /// </summary>
+    IReadOnlyDictionary<string, TilingPatternInfo> GetTilingPatterns() =>
+        new Dictionary<string, TilingPatternInfo>();
 }

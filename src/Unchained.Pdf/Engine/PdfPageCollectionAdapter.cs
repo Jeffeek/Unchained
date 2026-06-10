@@ -366,6 +366,221 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     }
 
     /// <inheritdoc />
+    public IReadOnlyDictionary<string, (double Fill, double Stroke)> GetExtGStateAlphas()
+    {
+        var result = new Dictionary<string, (double, double)>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        var extDict = ResolveDict(resources?[PdfName.Get("ExtGState")]);
+        if (extDict is null) return result;
+
+        foreach (var (name, value) in extDict.Entries)
+        {
+            var gs = ResolveDict(value);
+            if (gs is null) continue;
+            // /ca = fill alpha, /CA = stroke alpha; default 1 (opaque) when absent.
+            var ca = ReadAlpha(gs["ca"]);
+            var cA = ReadAlpha(gs["CA"]);
+            if (ca is null && cA is null) continue;
+            result[name] = (ca ?? 1.0, cA ?? 1.0);
+        }
+        return result;
+    }
+
+    private static double? ReadAlpha(PdfObject? o) => o switch
+    {
+        PdfReal r => Math.Clamp(r.Value, 0, 1),
+        PdfInteger i => Math.Clamp((double)i.Value, 0, 1),
+        _ => null
+    };
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, ShadingInfo> GetShadings()
+    {
+        var result = new Dictionary<string, ShadingInfo>();
+        var resources = ResolveDict(page[PdfName.Resources]);
+        // Collect from the page resources and from every form XObject's resources, since
+        // GetContentOperators inlines form content (so their sh/scn operators reach the
+        // renderer) and those operators reference shading/pattern names declared on the form.
+        CollectShadings(resources, result, depth: 0, new HashSet<int>());
+        return result;
+    }
+
+    private void CollectShadings(PdfDictionary? resources, Dictionary<string, ShadingInfo> result, int depth, HashSet<int> seen)
+    {
+        if (resources is null || depth > MaxFormXObjectDepth) return;
+
+        // /Shading resources — painted directly by the `sh` operator.
+        var shadingDict = ResolveDict(resources[PdfName.Get("Shading")]);
+        if (shadingDict is not null)
+            foreach (var (name, value) in shadingDict.Entries)
+                if (!result.ContainsKey(name) && BuildShading(ResolveAny(value)) is { } s)
+                    result[name] = s;
+
+        // /Pattern resources with /PatternType 2 — shading used as a fill colour.
+        var patternDict = ResolveDict(resources[PdfName.Get("Pattern")]);
+        if (patternDict is not null)
+            foreach (var (name, value) in patternDict.Entries)
+            {
+                if (result.ContainsKey(name)) continue;
+                var pat = ResolveDictOrStreamDict(value);
+                if (pat is null) continue;
+                if ((int)(pat.Get<PdfInteger>(PdfName.Get("PatternType"))?.Value ?? 0) != 2) continue;
+                if (BuildShading(ResolveAny(pat["Shading"])) is { } s)
+                    result[name] = s;
+            }
+
+        // Recurse into form XObjects' own resource dictionaries.
+        var xobjDict = ResolveDict(resources[PdfName.Get("XObject")]);
+        if (xobjDict is null) return;
+        foreach (var (_, value) in xobjDict.Entries)
+        {
+            if (value is PdfIndirectReference r && !seen.Add(r.ObjectNumber)) continue;
+            var stream = value is PdfIndirectReference rr
+                ? core.ResolveIndirect(rr.ObjectNumber).Value as PdfStream
+                : value as PdfStream;
+            if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form") continue;
+            CollectShadings(ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
+        }
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, TilingPatternInfo> GetTilingPatterns()
+    {
+        var result = new Dictionary<string, TilingPatternInfo>();
+        CollectTilingPatterns(ResolveDict(page[PdfName.Resources]), result, depth: 0, new HashSet<int>());
+        return result;
+    }
+
+    private void CollectTilingPatterns(PdfDictionary? resources, Dictionary<string, TilingPatternInfo> result, int depth, HashSet<int> seen)
+    {
+        if (resources is null || depth > MaxFormXObjectDepth) return;
+
+        var patternDict = ResolveDict(resources[PdfName.Get("Pattern")]);
+        if (patternDict is not null)
+            foreach (var (name, value) in patternDict.Entries)
+            {
+                if (result.ContainsKey(name)) continue;
+                var resolved = ResolveAny(value);
+                if (resolved is not PdfStream stream) continue; // tiling patterns are streams
+                var d = stream.Dictionary;
+                if ((int)(d.Get<PdfInteger>(PdfName.Get("PatternType"))?.Value ?? 0) != 1) continue;
+
+                var bbox = ReadFloatArray(d["BBox"]);
+                if (bbox is null || bbox.Length < 4) continue;
+                var paintType = (int)(d.Get<PdfInteger>(PdfName.Get("PaintType"))?.Value ?? 1);
+                var xstep = ReadFloat(d["XStep"]);
+                var ystep = ReadFloat(d["YStep"]);
+                var matrix = ReadFloatArray(d["Matrix"]) ?? [1, 0, 0, 1, 0, 0];
+
+                IReadOnlyList<ContentOperator> ops;
+                try { ops = ContentStreamParser.Parse(StreamFilters.Decode(stream)); }
+                catch { continue; }
+
+                result[name] = new TilingPatternInfo(
+                    paintType,
+                    bbox.Select(static f => (double)f).ToArray(),
+                    xstep, ystep,
+                    matrix.Select(static f => (double)f).ToArray(),
+                    ops);
+            }
+
+        // Recurse into form XObjects (same flattening rationale as shadings).
+        var xobjDict = ResolveDict(resources[PdfName.Get("XObject")]);
+        if (xobjDict is null) return;
+        foreach (var (_, value) in xobjDict.Entries)
+        {
+            if (value is PdfIndirectReference r && !seen.Add(r.ObjectNumber)) continue;
+            var stream = value is PdfIndirectReference rr
+                ? core.ResolveIndirect(rr.ObjectNumber).Value as PdfStream
+                : value as PdfStream;
+            if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form") continue;
+            CollectTilingPatterns(ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
+        }
+    }
+
+    // Builds a ShadingInfo (axial/radial only) from a shading dictionary, pre-sampling its
+    // colour function into a 256-entry RGB ramp. Returns null for unsupported shading types.
+    private ShadingInfo? BuildShading(PdfObject? obj)
+    {
+        var dict = obj switch
+        {
+            PdfStream s => s.Dictionary,
+            PdfDictionary d => d,
+            _ => null
+        };
+        if (dict is null) return null;
+
+        var type = (int)(dict.Get<PdfInteger>(PdfName.Get("ShadingType"))?.Value ?? 0);
+
+        // Mesh shadings (4/5/6/7) carry their geometry+colour in a data stream; decode it
+        // into Gouraud triangles for the renderer.
+        if (type is 4 or 5 or 6 or 7)
+        {
+            if (obj is not PdfStream meshStream) return null;
+            var tris = MeshShadingDecoder.Decode(meshStream, core, type);
+            return tris.Count == 0 ? null
+                : new ShadingInfo(type, [], false, false, new byte[256 * 3], tris);
+        }
+
+        if (type is not (2 or 3)) return null; // only axial/radial below
+
+        var coords = ReadFloatArray(dict["Coords"]);
+        if (coords is null || coords.Length < (type == 2 ? 4 : 6)) return null;
+
+        var domain = ReadFloatArray(dict["Domain"]) ?? [0, 1];
+        var (extStart, extEnd) = ReadExtend(dict["Extend"]);
+        var cs = ReadColorSpace(dict) ?? "DeviceRGB";
+
+        var fn = PdfFunction.Build(dict["Function"], core);
+
+        // Pre-sample 256 colours from domain start → end.
+        var ramp = new byte[256 * 3];
+        for (var i = 0; i < 256; i++)
+        {
+            var t = domain[0] + (i / 255.0 * (domain[1] - domain[0]));
+            var comps = fn?.Eval(t) ?? [0.5, 0.5, 0.5];
+            var (r, g, b) = ComponentsToRgb(comps, cs);
+            ramp[i * 3] = r; ramp[(i * 3) + 1] = g; ramp[(i * 3) + 2] = b;
+        }
+
+        return new ShadingInfo(type, coords.Select(static f => (double)f).ToArray(), extStart, extEnd, ramp);
+    }
+
+    private static (byte R, byte G, byte B) ComponentsToRgb(double[] c, string cs)
+    {
+        byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
+        return (cs, c.Length) switch
+        {
+            ("DeviceCMYK", >= 4) => (
+                B255((1 - c[0]) * (1 - c[3])),
+                B255((1 - c[1]) * (1 - c[3])),
+                B255((1 - c[2]) * (1 - c[3]))),
+            (_, >= 3) => (B255(c[0]), B255(c[1]), B255(c[2])),
+            (_, 1) => (B255(c[0]), B255(c[0]), B255(c[0])),
+            _ => (128, 128, 128)
+        };
+    }
+
+    private static (bool Start, bool End) ReadExtend(PdfObject? obj) =>
+        obj is PdfArray { Count: >= 2 } a
+            ? ((a[0] as PdfBoolean)?.Value ?? false, (a[1] as PdfBoolean)?.Value ?? false)
+            : (false, false);
+
+    private static float[]? ReadFloatArray(PdfObject? obj) => obj is PdfArray a
+        ? a.Elements.Select(ReadFloat).ToArray()
+        : null;
+
+    private PdfObject? ResolveAny(PdfObject? obj) =>
+        obj is PdfIndirectReference r ? core.ResolveIndirect(r.ObjectNumber).Value : obj;
+
+    private PdfDictionary? ResolveDictOrStreamDict(PdfObject? obj) => ResolveAny(obj) switch
+    {
+        PdfStream s => s.Dictionary,
+        PdfDictionary d => d,
+        _ => null
+    };
+
+    /// <inheritdoc />
     public IReadOnlyDictionary<string, Models.CompositeFontInfo> GetCompositeFonts()
     {
         var result = new Dictionary<string, Models.CompositeFontInfo>();

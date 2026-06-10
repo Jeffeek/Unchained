@@ -128,6 +128,40 @@ public sealed class DocumentProcessor : IDocumentProcessor
     }
 
     /// <inheritdoc />
+    public async Task ConvertToPdfXAsync(
+        IPdfDocument document,
+        Stream outputStream,
+        PdfXProfile profile = PdfXProfile.PdfX1A2001,
+        string outputConditionIdentifier = "CGATS TR 001",
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(outputStream);
+
+        var adapter = CastAdapter(document);
+        var converted = await Task.Run(() => PdfXConverter.Convert(adapter.Core, profile, outputConditionIdentifier), ct).ConfigureAwait(false);
+        await outputStream.WriteAsync(converted, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task ConvertToPdfXAsync(
+        IPdfDocument document,
+        string filePath,
+        PdfXProfile profile = PdfXProfile.PdfX1A2001,
+        string outputConditionIdentifier = "CGATS TR 001",
+        CancellationToken ct = default
+    )
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        var adapter = CastAdapter(document);
+        var converted = await Task.Run(() => PdfXConverter.Convert(adapter.Core, profile, outputConditionIdentifier), ct).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(filePath, converted, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task SignAsync(
         IPdfDocument document,
         X509Certificate2 certificate,

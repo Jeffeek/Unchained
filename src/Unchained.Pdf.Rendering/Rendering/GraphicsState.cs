@@ -20,6 +20,14 @@ internal sealed class GraphicsState
     // wrong dark blocks, so pattern fills are skipped instead.
     internal bool FillIsPattern { get; set; }
 
+    // When the current fill pattern is a known axial/radial shading, its resource name;
+    // null otherwise. Lets DrawFill paint the gradient instead of the grey approximation.
+    internal string? FillShadingName { get; set; }
+
+    // When the current fill pattern is a known tiling pattern (PatternType 1), its resource
+    // name; null otherwise. Lets DrawFill tile the pattern cell instead of the grey fill.
+    internal string? FillTilingName { get; set; }
+
     // Stroke colour
     internal byte StrokeR { get; set; }
     internal byte StrokeG { get; set; }
@@ -27,6 +35,10 @@ internal sealed class GraphicsState
     internal byte StrokeA { get; set; } = 255;
 
     internal double LineWidth { get; set; } = 1.0;
+
+    // Dash pattern: on/off lengths in user-space units (empty = solid line). The dash phase
+    // is not tracked separately; rendering approximates the pattern from segment start.
+    internal double[] DashLengths { get; set; } = [];
 
     // Text state (reset to identity on BT)
     internal double[] TextMatrix { get; set; } = [1, 0, 0, 1, 0, 0];
@@ -36,6 +48,8 @@ internal sealed class GraphicsState
     internal double CharSpace { get; set; }
     internal double WordSpace { get; set; }
     internal double HorizontalScale { get; set; } = 100;
+    // Text rise (Ts): vertical shift of the text baseline in unscaled text-space units.
+    internal double TextRise { get; set; }
     internal double Leading { get; set; }
 
     // Text rendering mode (Tr):
@@ -61,8 +75,11 @@ internal sealed class GraphicsState
             Ctm = (double[])Ctm.Clone(),
             FillR = FillR, FillG = FillG, FillB = FillB, FillA = FillA,
             FillIsPattern = FillIsPattern,
+            FillShadingName = FillShadingName,
+            FillTilingName = FillTilingName,
             StrokeR = StrokeR, StrokeG = StrokeG, StrokeB = StrokeB, StrokeA = StrokeA,
             LineWidth = LineWidth,
+            DashLengths = DashLengths,
             TextMatrix = (double[])TextMatrix.Clone(),
             TextLineMatrix = (double[])TextLineMatrix.Clone(),
             FontName = FontName,
@@ -71,6 +88,7 @@ internal sealed class GraphicsState
             CharSpace = CharSpace,
             WordSpace = WordSpace,
             HorizontalScale = HorizontalScale,
+            TextRise = TextRise,
             Leading = Leading,
             TextRenderMode = TextRenderMode,
             ClipRect = ClipRect

@@ -331,6 +331,55 @@ public sealed class FormFillerTests : PdfTestBase
         reloaded.GetFormFields().ShouldBeEmpty();
     }
 
+    // ── Non-text field filling (Btn / Ch) ─────────────────────────────────────
+
+    [Fact]
+    public async Task Fill_BtnField_TruthyValue_SetsOnStateName()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.WithBtnAcroForm("Accept"), ct: TestContext.Current.CancellationToken);
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Accept"] = "true" }, ct: TestContext.Current.CancellationToken);
+
+        // No /AP on the fixture, so the "on" state defaults to "Yes" (a name, not a string).
+        var field = doc.GetFormFields()[0];
+        field.FieldType.ShouldBe("Btn");
+        field.Value.ShouldBe("Yes");
+    }
+
+    [Fact]
+    public async Task Fill_BtnField_FalsyValue_SetsOff()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.WithBtnAcroForm("Accept"), ct: TestContext.Current.CancellationToken);
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Accept"] = "true" }, ct: TestContext.Current.CancellationToken);
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Accept"] = "off" }, ct: TestContext.Current.CancellationToken);
+        doc.GetFormFields()[0].Value.ShouldBe("Off");
+    }
+
+    [Fact]
+    public async Task Fill_BtnField_ExplicitStateName_Preserved()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.WithBtnAcroForm("Choice"), ct: TestContext.Current.CancellationToken);
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Choice"] = "Option2" }, ct: TestContext.Current.CancellationToken);
+        doc.GetFormFields()[0].Value.ShouldBe("Option2");
+    }
+
+    [Fact]
+    public async Task Fill_BtnField_SurvivesSaveReload()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.WithBtnAcroForm("Accept"), ct: TestContext.Current.CancellationToken);
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Accept"] = "yes" }, ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.GetFormFields()[0].Value.ShouldBe("Yes");
+    }
+
+    [Fact]
+    public async Task Fill_TxField_StillWritesStringValue()
+    {
+        // Regression guard: text fields must keep string-valued /V.
+        await using var doc = await LoadAsync(PdfFixtures.WithAcroForm("Name"), ct: TestContext.Current.CancellationToken);
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Name"] = "Carol" }, ct: TestContext.Current.CancellationToken);
+        doc.GetFormFields()[0].Value.ShouldBe("Carol");
+    }
+
     // ── Minimal stub to trigger wrong-type error paths ────────────────────────
 
     private sealed class FakeDocument : Abstractions.IPdfDocument
