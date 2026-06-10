@@ -121,6 +121,9 @@ internal sealed class ShapeParser
         if (uri == DmlNames.GraphicDataChartUri)
             return ParseChart(frameEl, graphicData!);
 
+        if (uri == DmlNames.GraphicDataDiagramUri)
+            return ParseSmartArt(frameEl, graphicData!);
+
         // Unknown graphic type — return generic AutoShape stub
         var stub = new AutoShape { ShapeType = AutoShapeType.Rectangle };
         stub.RawElement = frameEl;
@@ -215,6 +218,32 @@ internal sealed class ShapeParser
         return shape;
     }
 
+    // ── SmartArt (diagram) ──────────────────────────────────────────────────────
+
+    private SmartArtShape ParseSmartArt(XElement frameEl, XElement graphicData)
+    {
+        var shape = new SmartArtShape();
+        ReadNonVisualProperties(frameEl.Element(PmlNames.NonVisualGraphicFrameProperties), shape);
+        ReadFrameTransform(frameEl, shape);
+
+        // <dgm:relIds r:dm=".." r:lo=".." r:qs=".." r:cs=".."/> references the four diagram parts.
+        var relIds = graphicData.Element(DmlNames.DiagramRelIds)
+                  ?? graphicData.Elements().FirstOrDefault(static e => e.Name.LocalName == "relIds");
+        if (relIds != null)
+        {
+            var r = PmlNames.Relationships;
+            shape.DataRelationshipId = (string?)relIds.Attribute(r + "dm") ?? string.Empty;
+            shape.LayoutRelationshipId = (string?)relIds.Attribute(r + "lo") ?? string.Empty;
+            shape.QuickStyleRelationshipId = (string?)relIds.Attribute(r + "qs") ?? string.Empty;
+            shape.ColorsRelationshipId = (string?)relIds.Attribute(r + "cs") ?? string.Empty;
+        }
+
+        // Part bytes + node model are resolved in a second pass (SlideParser) where the
+        // slide's relationships and the package are available.
+        shape.RawElement = frameEl;
+        return shape;
+    }
+
     // ── Group ─────────────────────────────────────────────────────────────────
 
     private GroupShape ParseGroup(XElement grpEl)
@@ -280,14 +309,53 @@ internal sealed class ShapeParser
         shape.Name = cNvPr.GetAttr(PmlNames.AttributeName, string.Empty);
         shape.AltText = cNvPr.GetAttr(DmlNames.AttributeDescription);
 
-        // Read placeholder index from <p:nvPr><p:ph idx="N"/> for geometry inheritance.
-        var nvPr = nvPrContainer.Element(PmlNames.Pml + "nvPr");
-        var ph = nvPr?.Element(PmlNames.Pml + "ph");
-        if (ph is not null)
+        // Click hyperlink (<a:hlinkClick>) — capture the relationship id + tooltip; the target is
+        // resolved against the slide's relationships in a second pass (SlideParser).
+        var hlink = cNvPr.Element(DmlNames.HyperlinkClick);
+        if (hlink != null)
+            shape.ClickAction = ReadHyperlink(hlink);
+
+        // Placeholder reference (<p:nvPr>/<p:ph>) — captures the role + index so the slide
+        // parser can inherit geometry/formatting from the matching layout placeholder.
+        var ph = nvPrContainer.Element(PmlNames.ApplicationNonVisualProperties)
+                              ?.Element(PmlNames.Placeholder);
+        if (ph != null)
         {
+            shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr("type"));
             var idx = ph.GetAttrInt("idx");
-            shape.PlaceholderIndex = idx ?? 0; // idx absent means body/title (index 0)
+            if (idx.HasValue) shape.PlaceholderIndex = idx.Value;
         }
+    }
+
+    /// <summary>Maps a <c>p:ph/@type</c> value to <see cref="PlaceholderType"/>. Absent = Content.</summary>
+    private static PlaceholderType ParsePlaceholderType(string? type) => type switch
+    {
+        null or "" => PlaceholderType.Content,
+        "title" => PlaceholderType.Title,
+        "ctrTitle" => PlaceholderType.CenteredTitle,
+        "subTitle" => PlaceholderType.Subtitle,
+        "body" => PlaceholderType.Body,
+        "obj" => PlaceholderType.Object,
+        "dt" => PlaceholderType.Date,
+        "ftr" => PlaceholderType.Footer,
+        "sldNum" => PlaceholderType.SlideNumber,
+        "hdr" => PlaceholderType.Header,
+        "chart" or "tbl" or "pic" or "media" or "clipArt" or "dgm" => PlaceholderType.Media,
+        _ => PlaceholderType.Content,
+    };
+
+    /// <summary>
+    /// Reads a <c>&lt;a:hlinkClick&gt;</c> (or hover) element into a <see cref="HyperlinkAction"/>
+    /// with its relationship id and tooltip captured. URL/slide resolution happens later.
+    /// </summary>
+    internal static HyperlinkAction ReadHyperlink(XElement hlinkEl)
+    {
+        var action = new HyperlinkAction
+        {
+            RelationshipId = (string?)hlinkEl.Attribute(PmlNames.Relationships + "id") ?? string.Empty,
+            Tooltip = (string?)hlinkEl.Attribute("tooltip")
+        };
+        return action;
     }
 
     private static void ReadTransform(XElement? spPr, Shape shape)

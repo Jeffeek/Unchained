@@ -32,15 +32,11 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         public int PxH(long emu) => (int)(ScaleY * emu);
     }
 
-    // Series palette — 6 saturated colours that cycle across series in a chart.
+    // Series palette — 8 saturated colours that cycle across series in a chart.
     private static readonly (byte R, byte G, byte B)[] SeriesPalette =
     [
-        (68, 114, 196),   // accent1-ish blue
-        (237, 125, 49),   // accent2-ish orange
-        (112, 173, 71),   // accent6-ish green
-        (255, 192, 0),    // accent4-ish yellow
-        (91, 155, 213),   // accent5-ish light-blue
-        (165, 165, 165),  // neutral grey
+        (68, 114, 196), (237, 125, 49), (165, 165, 165), (255, 192, 0),
+        (91, 155, 213), (112, 173, 71), (38, 68, 120), (158, 72, 14),
     ];
 
     internal RasterBuffer Rasterize(Slide slide, SlideSize slideSize, RenderOptions options)
@@ -63,6 +59,20 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         // Key = placeholder idx, value = layout shape with that idx.
         var layoutPlaceholders = BuildLayoutPlaceholderMap(slide);
 
+        // Composite inherited backdrop shapes from the master and layout BENEATH the slide's own
+        // shapes: logos, decorative graphics, and background art live there. Placeholders are
+        // skipped — the slide supplies its own (now with inherited geometry), and drawing the
+        // layout's empty placeholder prompts ("Click to add title") would be wrong.
+        if (slide.Layout?.Master is { } master)
+            foreach (var shape in master.Shapes)
+                if (!shape.IsPlaceholder)
+                    RenderShape(buffer, shape, root, options.Dpi, colorScheme, layoutPlaceholders);
+
+        if (slide.Layout is { } layout)
+            foreach (var shape in layout.Shapes)
+                if (!shape.IsPlaceholder)
+                    RenderShape(buffer, shape, root, options.Dpi, colorScheme, layoutPlaceholders);
+
         // Render each shape in Z-order (insertion order = back-to-front).
         foreach (var shape in slide.Shapes)
             RenderShape(buffer, shape, root, options.Dpi, colorScheme, layoutPlaceholders);
@@ -75,29 +85,26 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     private static Dictionary<int, Shape> BuildLayoutPlaceholderMap(Slide slide)
     {
         var map = new Dictionary<int, Shape>();
-        // Master shapes first (lowest priority).
         if (slide.Layout?.Master is not null)
         {
             foreach (var s in slide.Layout.Master.Shapes)
             {
-                if (s.PlaceholderIndex >= 0 && !map.ContainsKey(s.PlaceholderIndex))
-                    map[s.PlaceholderIndex] = s;
+                if (s.PlaceholderIndex.HasValue && !map.ContainsKey(s.PlaceholderIndex.Value))
+                    map[s.PlaceholderIndex.Value] = s;
             }
         }
-        // Layout shapes (higher priority — override master).
         if (slide.Layout is not null)
         {
             foreach (var s in slide.Layout.Shapes)
             {
-                if (s.PlaceholderIndex >= 0)
-                    map[s.PlaceholderIndex] = s;
+                if (s.PlaceholderIndex.HasValue)
+                    map[s.PlaceholderIndex.Value] = s;
             }
         }
         return map;
     }
 
     // Resolves the effective background fill by walking slide → layout → master.
-    // Returns the first fill that is not FillType.None.
     private static FillFormat? ResolveBackground(Slide slide)
     {
         if (slide.Background.Fill.Type != FillType.None)
@@ -109,10 +116,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         return null;
     }
 
-    private static void PaintBackground(
-        RasterBuffer buffer,
-        Slide slide,
-        ColorScheme? colorScheme)
+    private static void PaintBackground(RasterBuffer buffer, Slide slide, ColorScheme? colorScheme)
     {
         var fill = ResolveBackground(slide);
 
@@ -133,15 +137,14 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             }
             case FillType.Gradient when fill.Gradient is not null && fill.Gradient.Stops.Count >= 2:
             {
-                // Simple two-stop linear gradient top-to-bottom as background approximation.
                 var first = fill.Gradient.Stops[0].Color.Resolve(colorScheme);
                 var last = fill.Gradient.Stops[^1].Color.Resolve(colorScheme);
                 ExtractArgb(first, out _, out var r1, out var g1, out var b1);
                 ExtractArgb(last, out _, out var r2, out var g2, out var b2);
-                var height = buffer.Height;
-                for (var row = 0; row < height; row++)
+                var h = buffer.Height;
+                for (var row = 0; row < h; row++)
                 {
-                    var t = (double)row / Math.Max(1, height - 1);
+                    var t = (double)row / Math.Max(1, h - 1);
                     var r = (byte)(r1 + ((r2 - r1) * t));
                     var g = (byte)(g1 + ((g2 - g1) * t));
                     var bv = (byte)(b1 + ((b2 - b1) * t));
@@ -160,39 +163,38 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         Shape shape,
         Transform transform,
         double dpi,
-        ColorScheme? colorScheme,
+        ColorScheme? colorScheme = null,
         Dictionary<int, Shape>? layoutPlaceholders = null)
     {
         // Resolve geometry: if this shape is a zero-size placeholder, inherit from layout.
-        var effectiveShape = shape;
         if (shape.Width.Value <= 0 || shape.Height.Value <= 0)
         {
             if (shape is GroupShape)
             {
-                // A group with no explicit extent still renders its children using the
-                // parent transform directly — children carry their own absolute positions.
                 RenderGroup(buffer, (GroupShape)shape, transform, dpi, colorScheme, layoutPlaceholders);
                 return;
             }
 
-            if (shape.PlaceholderIndex >= 0 &&
+            if (shape.PlaceholderIndex.HasValue &&
                 layoutPlaceholders is not null &&
-                layoutPlaceholders.TryGetValue(shape.PlaceholderIndex, out var layoutShape) &&
+                layoutPlaceholders.TryGetValue(shape.PlaceholderIndex.Value, out var layoutShape) &&
                 layoutShape.Width.Value > 0 && layoutShape.Height.Value > 0)
             {
-                // Clone geometry from layout placeholder onto a temporary wrapper.
-                effectiveShape = CreateGeometryProxy(shape, layoutShape);
+                shape.X = layoutShape.X;
+                shape.Y = layoutShape.Y;
+                shape.Width = layoutShape.Width;
+                shape.Height = layoutShape.Height;
             }
             else
             {
-                return; // truly zero-size and no layout fallback — skip
+                return;
             }
         }
 
-        var x = transform.PxX(effectiveShape.X.Value);
-        var y = transform.PxY(effectiveShape.Y.Value);
-        var width = transform.PxW(effectiveShape.Width.Value);
-        var height = transform.PxH(effectiveShape.Height.Value);
+        var x = transform.PxX(shape.X.Value);
+        var y = transform.PxY(shape.Y.Value);
+        var width = transform.PxW(shape.Width.Value);
+        var height = transform.PxH(shape.Height.Value);
 
         switch (shape)
         {
@@ -212,38 +214,26 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 RenderTable(buffer, table, x, y, width, height, dpi, colorScheme);
                 break;
 
-            case ChartShape chartShape when width > 0 && height > 0:
-                RenderChart(buffer, chartShape, x, y, width, height, dpi, colorScheme);
+            case ConnectorShape connector:
+                RenderConnector(buffer, connector, x, y, width, height, colorScheme);
+                break;
+
+            case ChartShape chart when width > 0 && height > 0:
+                RenderChart(buffer, chart, x, y, width, height, dpi, colorScheme);
+                break;
+
+            case SmartArtShape smartArt when width > 0 && height > 0:
+                RenderSmartArt(buffer, smartArt, x, y, width, height, dpi);
                 break;
         }
     }
 
-    // Creates a temporary proxy that uses the layout placeholder's geometry
-    // but the slide shape's content (text, fill, etc.).
-    private static Shape CreateGeometryProxy(Shape slideShape, Shape layoutShape)
-    {
-        // We return the slideShape with overridden coordinates.
-        // Since Shape is abstract and we don't want to clone, we use a simple trick:
-        // temporarily mutate the shape's geometry. But shapes are mutable, so we
-        // instead return a lightweight record that just carries the right values.
-        // The simplest approach: set the geometry on the slide shape itself (it's mutable).
-        // This is safe because each shape is only rendered once per frame.
-        slideShape.X = layoutShape.X;
-        slideShape.Y = layoutShape.Y;
-        slideShape.Width = layoutShape.Width;
-        slideShape.Height = layoutShape.Height;
-        return slideShape;
-    }
-
-    // Renders a group by composing a child-space→slide transform onto the parent transform,
-    // then recursing into the children. When the group has no explicit child coordinate space
-    // (chOff/chExt absent or degenerate), children use the parent transform directly.
     private void RenderGroup(
         RasterBuffer buffer,
         GroupShape group,
         Transform parent,
         double dpi,
-        ColorScheme? colorScheme,
+        ColorScheme? colorScheme = null,
         Dictionary<int, Shape>? layoutPlaceholders = null)
     {
         var childTransform = parent;
@@ -280,7 +270,6 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             styleTextColor: shape.StyleTextColor);
     }
 
-    // Renders a table: per-cell fill + text, plus light grid lines.
     private void RenderTable(
         RasterBuffer buffer,
         TableShape table,
@@ -294,18 +283,25 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
         var totalW = grid.ColumnWidths.Sum(static c => c.Value);
         var totalH = grid.RowHeights.Sum(static r => r.Value);
-        if (totalW <= 0 || totalH <= 0)
-            return;
 
+        // Column x-edges and row y-edges in pixels. When the grid omits explicit EMU sizes
+        // (common in minimal fixtures), fall back to equal distribution so the table still
+        // fills its box instead of collapsing to nothing.
         var colEdges = new int[grid.ColumnCount + 1];
         colEdges[0] = x;
         for (var c = 0; c < grid.ColumnCount; c++)
-            colEdges[c + 1] = colEdges[c] + (int)((double)grid.ColumnWidths[c].Value / totalW * width);
+        {
+            var frac = totalW > 0 ? (double)grid.ColumnWidths[c].Value / totalW : 1.0 / grid.ColumnCount;
+            colEdges[c + 1] = colEdges[c] + (int)(frac * width);
+        }
 
         var rowEdges = new int[grid.RowCount + 1];
         rowEdges[0] = y;
         for (var r = 0; r < grid.RowCount; r++)
-            rowEdges[r + 1] = rowEdges[r] + (int)((double)grid.RowHeights[r].Value / totalH * height);
+        {
+            var frac = totalH > 0 ? (double)grid.RowHeights[r].Value / totalH : 1.0 / grid.RowCount;
+            rowEdges[r + 1] = rowEdges[r] + (int)(frac * height);
+        }
 
         for (var r = 0; r < grid.RowCount; r++)
         for (var c = 0; c < grid.ColumnCount; c++)
@@ -333,6 +329,194 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         }
     }
 
+    // ── Connector ────────────────────────────────────────────────────────────
+    private static void RenderConnector(
+        RasterBuffer buffer,
+        ConnectorShape shape,
+        int x, int y, int width, int height,
+        ColorScheme? colorScheme)
+    {
+        var x0 = x;
+        var y0 = y;
+        var x1 = x + width;
+        var y1 = y + height;
+        if (shape.FlipHorizontal) (x0, x1) = (x1, x0);
+        if (shape.FlipVertical) (y0, y1) = (y1, y0);
+
+        byte r = 0, g = 0, b = 0;
+        if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid is not null)
+            ExtractArgb(shape.Line.Fill.Solid.Color.Resolve(colorScheme), out _, out r, out g, out b);
+
+        var thickness = Math.Max(1, (int)Math.Round((shape.Line.WidthPoints ?? 1.0) * 1.333));
+        buffer.DrawLine(x0, y0, x1, y1, r, g, b, thickness);
+    }
+
+    // ── Chart ─────────────────────────────────────────────────────────────────
+    private void RenderChart(
+        RasterBuffer buffer,
+        ChartShape shape,
+        int x, int y, int width, int height,
+        double dpi,
+        ColorScheme? colorScheme)
+    {
+        buffer.FillRect(x, y, width, height, 255, 255, 255, 255);
+        DrawBorder(buffer, x, y, width, height, 180, 180, 180);
+
+        var model = shape.Chart;
+        if (model.Data.Series.Count == 0) return;
+
+        var titleH = 0;
+        if (model.HasTitle && !string.IsNullOrWhiteSpace(model.Title))
+        {
+            RenderTextFrameText(buffer, model.Title, x + 6, y + 4, width - 12, 14.0, dpi, 60, 60, 60);
+            titleH = (int)(18 * dpi / 72.0);
+        }
+
+        var plotX = x + 8;
+        var plotY = y + titleH + 6;
+        var plotW = width - 16;
+        var plotH = height - titleH - 16;
+        if (plotW <= 4 || plotH <= 4) return;
+
+        var series = model.Data.Series;
+        var type = model.Type.ToString();
+        if (type.StartsWith("Pie", StringComparison.Ordinal) || type.StartsWith("Doughnut", StringComparison.Ordinal))
+            RenderPieChart(buffer, series[0], plotX, plotY, plotW, plotH);
+        else if (type.StartsWith("Line", StringComparison.Ordinal) || type.StartsWith("Scatter", StringComparison.Ordinal))
+            RenderLineChart(buffer, series, plotX, plotY, plotW, plotH);
+        else
+            RenderBarChart(buffer, series, plotX, plotY, plotW, plotH,
+                horizontal: type.StartsWith("Bar", StringComparison.Ordinal));
+    }
+
+    private static void RenderBarChart(
+        RasterBuffer buffer, IReadOnlyList<ChartSeries> series,
+        int x, int y, int w, int h, bool horizontal)
+    {
+        var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(0).Max();
+        if (maxVal <= 0) maxVal = 1;
+        var categories = series.Max(static s => s.Values.Count);
+        if (categories == 0) return;
+
+        var groupGap = 4;
+        var groupSpan = (horizontal ? h : w) / categories;
+        var barSpan = Math.Max(1, (groupSpan - groupGap) / Math.Max(1, series.Count));
+
+        for (var c = 0; c < categories; c++)
+        {
+            for (var s = 0; s < series.Count; s++)
+            {
+                if (c >= series[s].Values.Count) continue;
+                var val = series[s].Values[c];
+                var color = SeriesPalette[s % SeriesPalette.Length];
+
+                if (horizontal)
+                {
+                    var barLen = (int)(val / maxVal * w);
+                    var by = y + (c * groupSpan) + (s * barSpan);
+                    buffer.FillRect(x, by, barLen, barSpan - 1, color.R, color.G, color.B, 255);
+                }
+                else
+                {
+                    var barLen = (int)(val / maxVal * h);
+                    var bx = x + (c * groupSpan) + (s * barSpan);
+                    buffer.FillRect(bx, y + h - barLen, barSpan - 1, barLen, color.R, color.G, color.B, 255);
+                }
+            }
+        }
+    }
+
+    private static void RenderLineChart(
+        RasterBuffer buffer, IReadOnlyList<ChartSeries> series,
+        int x, int y, int w, int h)
+    {
+        var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(0).Max();
+        if (maxVal <= 0) maxVal = 1;
+
+        for (var s = 0; s < series.Count; s++)
+        {
+            var vals = series[s].Values;
+            if (vals.Count < 2) continue;
+            var color = SeriesPalette[s % SeriesPalette.Length];
+            var stepX = (double)w / (vals.Count - 1);
+
+            for (var i = 0; i < vals.Count - 1; i++)
+            {
+                var x0 = x + (int)(i * stepX);
+                var x1 = x + (int)((i + 1) * stepX);
+                var y0 = y + h - (int)(vals[i] / maxVal * h);
+                var y1 = y + h - (int)(vals[i + 1] / maxVal * h);
+                buffer.DrawLine(x0, y0, x1, y1, color.R, color.G, color.B, 2);
+            }
+        }
+    }
+
+    private static void RenderPieChart(
+        RasterBuffer buffer, ChartSeries series, int x, int y, int w, int h)
+    {
+        var total = series.Values.Sum();
+        if (total <= 0) return;
+
+        var cx = x + (w / 2);
+        var cy = y + (h / 2);
+        var radius = Math.Min(w, h) / 2 - 2;
+        if (radius <= 0) return;
+
+        var bounds = new double[series.Values.Count + 1];
+        for (var i = 0; i < series.Values.Count; i++)
+            bounds[i + 1] = bounds[i] + (series.Values[i] / total);
+
+        for (var py = -radius; py <= radius; py++)
+        for (var px = -radius; px <= radius; px++)
+        {
+            if ((px * px) + (py * py) > radius * radius) continue;
+            var angle = Math.Atan2(py, px);
+            var frac = (angle + Math.PI) / (2 * Math.PI);
+            var slice = 0;
+            for (var i = 0; i < series.Values.Count; i++)
+                if (frac >= bounds[i] && frac < bounds[i + 1]) { slice = i; break; }
+            var color = SeriesPalette[slice % SeriesPalette.Length];
+            buffer.BlitImagePixel(cx + px, cy + py, color.R, color.G, color.B);
+        }
+    }
+
+    // ── SmartArt ──────────────────────────────────────────────────────────────
+    private void RenderSmartArt(
+        RasterBuffer buffer,
+        SmartArtShape shape,
+        int x, int y, int width, int height,
+        double dpi)
+    {
+        var nodes = FlattenSmartArt(shape.Nodes).Where(static t => !string.IsNullOrWhiteSpace(t)).ToList();
+        if (nodes.Count == 0)
+        {
+            DrawBorder(buffer, x, y, width, height, 180, 180, 180);
+            return;
+        }
+
+        var boxH = Math.Max(12, Math.Min(48, (height - 4) / nodes.Count - 4));
+        var cy = y + 2;
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var color = SeriesPalette[i % SeriesPalette.Length];
+            buffer.FillRect(x + 2, cy, width - 4, boxH, color.R, color.G, color.B, 255);
+            RenderTextFrameText(buffer, nodes[i], x + 8, cy + 2, width - 16, 11.0, dpi, 255, 255, 255);
+            cy += boxH + 4;
+            if (cy > y + height) break;
+        }
+    }
+
+    private static IEnumerable<string> FlattenSmartArt(IEnumerable<SmartArtNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node.Text;
+            foreach (var child in FlattenSmartArt(node.Children))
+                yield return child;
+        }
+    }
+
+    // ── Fill helper ───────────────────────────────────────────────────────────
     // Paints a FillFormat into a pixel rect, handling Solid, Gradient, and Picture fills.
     // When fill is None, falls back to the shape's StyleFillColor (from p:style/a:fillRef).
     private static void PaintFill(
@@ -415,12 +599,67 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         }
     }
 
+    // ── Picture ───────────────────────────────────────────────────────────────
+    private static void RenderPicture(
+        RasterBuffer buffer,
+        PictureShape shape,
+        int x, int y, int width, int height)
+    {
+        if (shape.Image is null)
+            return;
+
+        var imageBytes = shape.Image.Data;
+        if (imageBytes.IsEmpty)
+            return;
+
+        var rawPixels = TryDecodeImageToRgb(shape.Image, out var imgWidth, out var imgHeight);
+        if (rawPixels is null || imgWidth <= 0 || imgHeight <= 0)
+        {
+            // Undecodable format (GIF/EMF/WMF/SVG/WDP): draw a light placeholder.
+            buffer.FillRect(x, y, width, height, 235, 235, 235, 255);
+            DrawBorder(buffer, x, y, width, height, 170, 170, 170);
+            buffer.DrawLine(x, y, x + width - 1, y + height - 1, 200, 200, 200, 1);
+            buffer.DrawLine(x + width - 1, y, x, y + height - 1, 200, 200, 200, 1);
+            return;
+        }
+
+        // Nearest-neighbour blit with scaling to destination rect.
+        for (var py = 0; py < height; py++)
+        {
+            var srcY = py * imgHeight / height;
+            for (var px = 0; px < width; px++)
+            {
+                var srcX = px * imgWidth / width;
+                var srcOffset = ((srcY * imgWidth) + srcX) * 3;
+                buffer.BlitImagePixel(
+                    x + px,
+                    y + py,
+                    rawPixels[srcOffset],
+                    rawPixels[srcOffset + 1],
+                    rawPixels[srcOffset + 2]
+                );
+            }
+        }
+    }
+
+    // ── Text ──────────────────────────────────────────────────────────────────
+
+    // Renders a single line of text at a fixed size/colour (used by chart titles + SmartArt nodes).
+    private void RenderTextFrameText(
+        RasterBuffer buffer, string text, int x, int y, int maxW, double sizePt, double dpi,
+        byte r, byte g, byte b)
+    {
+        var scale = dpi / 72.0;
+        var lineHeight = 0;
+        RenderRunText(buffer, text, "Arial", null, sizePt, scale, x, y, x + maxW, r, g, b, ref lineHeight);
+    }
+
     private void RenderTextFrame(
         RasterBuffer buffer,
         TextFrame textFrame,
         int shapeX, int shapeY, int shapeWidth, int shapeHeight,
         double dpi,
-        ColorScheme? colorScheme,
+        ColorScheme? colorScheme = null,
         ColorSpec? styleTextColor = null)
     {
         if (textFrame.Paragraphs.Count == 0)
@@ -451,7 +690,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 continue;
             }
 
-            // Collect all (word, fontName, fontSizePt, r, g, b) tokens for word-wrap.
+            // Collect all word tokens for word-wrap.
             var tokens = new List<(string Word, string FontName, byte[]? EmbBytes, double SizePt, byte R, byte G, byte B)>();
             foreach (var run in paragraph.Runs)
             {
@@ -472,13 +711,10 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 var fontName = run.Format.LatinFont ?? SelectFontName(run);
                 var embeddedBytes = ResolveEmbeddedFont(run, fontName, out var cacheKey);
 
-                // Split run text into words (preserving spaces as part of the preceding token).
-                var words = SplitIntoWords(run.Text);
-                foreach (var word in words)
+                foreach (var word in SplitIntoWords(run.Text))
                     tokens.Add((word, cacheKey, embeddedBytes, fontSizePt, textR, textG, textB));
             }
 
-            // Word-wrap: measure each token, break line when it would overflow maxX.
             var lineX = shapeX + 4;
             var lineHeight = 0;
 
@@ -487,7 +723,6 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 var pixelSize = (uint)Math.Max(1, Math.Round(sizePt * scale));
                 var wordWidth = MeasureTextWidth(word, fontName, embBytes, pixelSize);
 
-                // If word doesn't fit and we're not at line start, wrap.
                 if (lineX + wordWidth > maxX && lineX > shapeX + 4)
                 {
                     cursorY += lineHeight + 2;
@@ -496,7 +731,6 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                     if (cursorY > maxY) break;
                 }
 
-                // Skip leading spaces at line start.
                 var renderWord = lineX == shapeX + 4 ? word.TrimStart() : word;
                 if (string.IsNullOrEmpty(renderWord)) continue;
 
@@ -511,8 +745,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         }
     }
 
-    // Splits text into words, keeping trailing spaces attached to each word so
-    // they contribute to the measured width and allow correct wrap decisions.
+    // Splits text into words, keeping trailing spaces attached to each word.
     private static List<string> SplitIntoWords(string text)
     {
         var result = new List<string>();
@@ -520,9 +753,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         while (i < text.Length)
         {
             var start = i;
-            // Consume non-space chars.
             while (i < text.Length && text[i] != ' ') i++;
-            // Consume trailing spaces.
             while (i < text.Length && text[i] == ' ') i++;
             if (i > start)
                 result.Add(text[start..i]);
@@ -530,7 +761,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         return result;
     }
 
-    // Measures the pixel width a text string would occupy using HarfBuzz advances.
+    // Measures the pixel width of text using HarfBuzz advances.
     private int MeasureTextWidth(string text, string fontName, byte[]? embeddedBytes, uint pixelSize)
     {
         if (string.IsNullOrEmpty(text)) return 0;
@@ -550,7 +781,6 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         }
         catch
         {
-            // Fallback: approximate 0.6 * pixelSize per character.
             return (int)(text.Length * pixelSize * 0.6);
         }
     }
@@ -622,484 +852,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         return cursorX;
     }
 
-    private static void RenderPicture(
-        RasterBuffer buffer,
-        PictureShape shape,
-        int x, int y, int width, int height)
-    {
-        if (shape.Image is null)
-            return;
-        BlitImage(buffer, shape.Image, x, y, width, height);
-    }
-
-    // ── Chart rendering ───────────────────────────────────────────────────────
-
-    private void RenderChart(
-        RasterBuffer buffer,
-        ChartShape chartShape,
-        int x, int y, int width, int height,
-        double dpi,
-        ColorScheme? colorScheme)
-    {
-        var chart = chartShape.Chart;
-        if (chart.Data.Series.Count == 0)
-            return;
-
-        // Draw a light grey chart area background.
-        buffer.FillRect(x, y, width, height, 248, 248, 248, 255);
-        // Thin border.
-        buffer.FillRect(x, y, width, 1, 180, 180, 180, 255);
-        buffer.FillRect(x, y, 1, height, 180, 180, 180, 255);
-        buffer.FillRect(x, y + height - 1, width, 1, 180, 180, 180, 255);
-        buffer.FillRect(x + width - 1, y, 1, height, 180, 180, 180, 255);
-
-        // Reserve margins for axes and title.
-        var titleH = chart.HasTitle && !string.IsNullOrEmpty(chart.Title) ? (int)(dpi / 72.0 * 11) + 4 : 0;
-        var legendH = chart.Legend.IsVisible ? (int)(dpi / 72.0 * 10) + 4 : 0;
-        const int marginLeft = 36;
-        const int marginRight = 8;
-        const int marginBottom = 20;
-        const int marginTop = 4;
-
-        var plotX = x + marginLeft;
-        var plotY = y + marginTop + titleH;
-        var plotW = width - marginLeft - marginRight;
-        var plotH = height - marginTop - titleH - marginBottom - legendH;
-
-        if (plotW <= 0 || plotH <= 0)
-            return;
-
-        // Draw title.
-        if (titleH > 0)
-            RenderChartLabel(buffer, chart.Title, x + (width / 2), y + marginTop, dpi, colorScheme,
-                centered: true);
-
-        switch (chart.Type)
-        {
-            case ChartType.ColumnClustered:
-            case ChartType.ColumnStacked:
-            case ChartType.ColumnFullStacked:
-                RenderColumnChart(buffer, chart, plotX, plotY, plotW, plotH, dpi, colorScheme);
-                break;
-
-            case ChartType.BarClustered:
-            case ChartType.BarStacked:
-            case ChartType.BarFullStacked:
-                RenderBarChart(buffer, chart, plotX, plotY, plotW, plotH, dpi, colorScheme);
-                break;
-
-            case ChartType.Line:
-            case ChartType.LineWithMarkers:
-            case ChartType.LineStacked:
-            case ChartType.LineFullStacked:
-            case ChartType.LineWithMarkersStacked:
-            case ChartType.LineWithMarkersFullStacked:
-                RenderLineChart(buffer, chart, plotX, plotY, plotW, plotH, dpi, colorScheme);
-                break;
-
-            case ChartType.Pie:
-            case ChartType.PieExploded:
-                RenderPieChart(buffer, chart, plotX, plotY, plotW, plotH, colorScheme);
-                break;
-
-            case ChartType.Doughnut:
-                RenderPieChart(buffer, chart, plotX, plotY, plotW, plotH, colorScheme,
-                    innerRadiusFraction: 0.5);
-                break;
-
-            default:
-                // Unsupported chart type: render a placeholder.
-                RenderChartPlaceholder(buffer, chart.Type.ToString(), plotX, plotY, plotW, plotH,
-                    dpi, colorScheme);
-                break;
-        }
-
-        // Draw axis lines.
-        buffer.FillRect(plotX, plotY, 1, plotH, 160, 160, 160, 255);
-        buffer.FillRect(plotX, plotY + plotH - 1, plotW, 1, 160, 160, 160, 255);
-
-        // Draw legend if visible.
-        if (legendH > 0)
-            RenderChartLegend(buffer, chart, x, y + height - legendH, width, legendH, dpi, colorScheme);
-    }
-
-    private void RenderColumnChart(
-        RasterBuffer buffer,
-        ChartModel chart,
-        int plotX, int plotY, int plotW, int plotH,
-        double dpi,
-        ColorScheme? colorScheme)
-    {
-        var data = chart.Data;
-        var catCount = Math.Max(1, data.Categories.Count > 0
-            ? data.Categories.Count
-            : data.Series.Max(static s => s.Values.Count));
-        var seriesCount = data.Series.Count;
-        if (seriesCount == 0) return;
-
-        // Find value range.
-        var maxVal = data.Series.SelectMany(static s => s.Values).DefaultIfEmpty(1.0).Max();
-        var minVal = Math.Min(0.0, data.Series.SelectMany(static s => s.Values).DefaultIfEmpty(0.0).Min());
-        var range = maxVal - minVal;
-        if (range <= 0) range = 1;
-
-        // Horizontal grid lines (3 lines at 25/50/75% of range).
-        for (var gi = 1; gi <= 3; gi++)
-        {
-            var gy = plotY + plotH - (int)((double)gi / 4 * plotH);
-            buffer.FillRect(plotX, gy, plotW, 1, 220, 220, 220, 255);
-        }
-
-        var groupW = plotW / catCount;
-        var barW = Math.Max(1, groupW / (seriesCount + 1));
-
-        for (var si = 0; si < seriesCount; si++)
-        {
-            var series = data.Series[si];
-            var (sr, sg, sb) = ResolveSeriesColor(series, si, colorScheme);
-
-            for (var ci = 0; ci < catCount; ci++)
-            {
-                var value = ci < series.Values.Count ? series.Values[ci] : 0.0;
-                var barH = (int)(Math.Abs(value) / range * plotH);
-                if (barH <= 0) continue;
-
-                var barX = plotX + (ci * groupW) + (si * barW) + (barW / 2);
-                var barY = value >= 0
-                    ? plotY + plotH - (int)((value - minVal) / range * plotH)
-                    : plotY + plotH - (int)(-minVal / range * plotH);
-
-                buffer.FillRect(barX, barY, barW - 1, barH, sr, sg, sb, 220);
-            }
-        }
-
-        // Category labels.
-        for (var ci = 0; ci < Math.Min(catCount, data.Categories.Count); ci++)
-        {
-            var lx = plotX + (ci * groupW) + (groupW / 2);
-            var ly = plotY + plotH + 3;
-            var label = TruncateLabel(data.Categories[ci], 6);
-            RenderChartLabel(buffer, label, lx, ly, dpi, colorScheme, centered: true);
-        }
-    }
-
-    private void RenderBarChart(
-        RasterBuffer buffer,
-        ChartModel chart,
-        int plotX, int plotY, int plotW, int plotH,
-        double dpi,
-        ColorScheme? colorScheme)
-    {
-        var data = chart.Data;
-        var catCount = Math.Max(1, data.Categories.Count > 0
-            ? data.Categories.Count
-            : data.Series.Max(static s => s.Values.Count));
-        var seriesCount = data.Series.Count;
-        if (seriesCount == 0) return;
-
-        var maxVal = data.Series.SelectMany(static s => s.Values).DefaultIfEmpty(1.0).Max();
-        var minVal = Math.Min(0.0, data.Series.SelectMany(static s => s.Values).DefaultIfEmpty(0.0).Min());
-        var range = maxVal - minVal;
-        if (range <= 0) range = 1;
-
-        // Vertical grid lines.
-        for (var gi = 1; gi <= 3; gi++)
-        {
-            var gx = plotX + (int)((double)gi / 4 * plotW);
-            buffer.FillRect(gx, plotY, 1, plotH, 220, 220, 220, 255);
-        }
-
-        var groupH = plotH / catCount;
-        var barH = Math.Max(1, groupH / (seriesCount + 1));
-
-        for (var si = 0; si < seriesCount; si++)
-        {
-            var series = data.Series[si];
-            var (sr, sg, sb) = ResolveSeriesColor(series, si, colorScheme);
-
-            for (var ci = 0; ci < catCount; ci++)
-            {
-                var value = ci < series.Values.Count ? series.Values[ci] : 0.0;
-                var barW = (int)(Math.Abs(value) / range * plotW);
-                if (barW <= 0) continue;
-
-                var barY = plotY + (ci * groupH) + (si * barH) + (barH / 2);
-                var barX = value >= 0
-                    ? plotX + (int)(-minVal / range * plotW)
-                    : plotX + (int)((value - minVal) / range * plotW);
-
-                buffer.FillRect(barX, barY, barW, barH - 1, sr, sg, sb, 220);
-            }
-        }
-
-        // Category labels.
-        for (var ci = 0; ci < Math.Min(catCount, data.Categories.Count); ci++)
-        {
-            var ly = plotY + (ci * groupH) + (groupH / 2);
-            var label = TruncateLabel(data.Categories[ci], 6);
-            RenderChartLabel(buffer, label, plotX - 2, ly, dpi, colorScheme, centered: false);
-        }
-    }
-
-    private void RenderLineChart(
-        RasterBuffer buffer,
-        ChartModel chart,
-        int plotX, int plotY, int plotW, int plotH,
-        double dpi,
-        ColorScheme? colorScheme)
-    {
-        var data = chart.Data;
-        var catCount = Math.Max(2, data.Categories.Count > 0
-            ? data.Categories.Count
-            : data.Series.Max(static s => s.Values.Count));
-        var seriesCount = data.Series.Count;
-        if (seriesCount == 0) return;
-
-        var maxVal = data.Series.SelectMany(static s => s.Values).DefaultIfEmpty(1.0).Max();
-        var minVal = Math.Min(0.0, data.Series.SelectMany(static s => s.Values).DefaultIfEmpty(0.0).Min());
-        var range = maxVal - minVal;
-        if (range <= 0) range = 1;
-
-        // Horizontal grid lines.
-        for (var gi = 1; gi <= 3; gi++)
-        {
-            var gy = plotY + plotH - (int)((double)gi / 4 * plotH);
-            buffer.FillRect(plotX, gy, plotW, 1, 220, 220, 220, 255);
-        }
-
-        for (var si = 0; si < seriesCount; si++)
-        {
-            var series = data.Series[si];
-            var (sr, sg, sb) = ResolveSeriesColor(series, si, colorScheme);
-            var pointCount = series.Values.Count;
-            if (pointCount < 1) continue;
-
-            int? prevPx = null, prevPy = null;
-            for (var ci = 0; ci < pointCount; ci++)
-            {
-                var value = series.Values[ci];
-                var px = plotX + (int)((double)ci / (catCount - 1) * plotW);
-                var py = plotY + plotH - (int)((value - minVal) / range * plotH);
-                py = Math.Clamp(py, plotY, plotY + plotH);
-
-                // Draw a 2px dot at the point.
-                buffer.FillRect(px - 1, py - 1, 3, 3, sr, sg, sb, 255);
-
-                // Connect to previous point with a line (Bresenham).
-                if (prevPx.HasValue)
-                    DrawLine(buffer, prevPx.Value, prevPy!.Value, px, py, sr, sg, sb);
-
-                prevPx = px;
-                prevPy = py;
-            }
-        }
-    }
-
-    private static void RenderPieChart(
-        RasterBuffer buffer,
-        ChartModel chart,
-        int plotX, int plotY, int plotW, int plotH,
-        ColorScheme? colorScheme,
-        double innerRadiusFraction = 0.0)
-    {
-        if (chart.Data.Series.Count == 0) return;
-
-        var values = chart.Data.Series[0].Values;
-        if (values.Count == 0) return;
-
-        var total = values.Sum();
-        if (total <= 0) return;
-
-        var cx = plotX + (plotW / 2);
-        var cy = plotY + (plotH / 2);
-        var radius = Math.Min(plotW, plotH) / 2 - 4;
-        if (radius <= 0) return;
-        var innerRadius = (int)(radius * innerRadiusFraction);
-
-        var angle = -Math.PI / 2; // start at top
-
-        for (var si = 0; si < values.Count; si++)
-        {
-            var sweep = values[si] / total * 2 * Math.PI;
-            var (sr, sg, sb) = PieSliceColor(si, colorScheme);
-
-            // Rasterize the sector by scanning every pixel in the bounding box.
-            var endAngle = angle + sweep;
-            for (var py = cy - radius; py <= cy + radius; py++)
-            for (var px = cx - radius; px <= cx + radius; px++)
-            {
-                var dx = px - cx;
-                var dy = py - cy;
-                var dist = Math.Sqrt((dx * dx) + (dy * dy));
-                if (dist > radius || dist < innerRadius) continue;
-
-                var pixAngle = Math.Atan2(dy, dx);
-                if (!AngleInRange(pixAngle, angle, endAngle)) continue;
-
-                buffer.BlitImagePixel(px, py, sr, sg, sb);
-            }
-
-            // Draw a thin divider line.
-            var ex = cx + (int)(radius * Math.Cos(angle));
-            var ey = cy + (int)(radius * Math.Sin(angle));
-            DrawLine(buffer, cx, cy, ex, ey, 255, 255, 255);
-
-            angle = endAngle;
-        }
-    }
-
-    private void RenderChartPlaceholder(
-        RasterBuffer buffer,
-        string typeLabel,
-        int plotX, int plotY, int plotW, int plotH,
-        double dpi,
-        ColorScheme? colorScheme)
-    {
-        // Draw diagonal hatching to indicate an unsupported chart type.
-        for (var d = 0; d < plotW + plotH; d += 12)
-        {
-            var x1 = plotX + d;
-            var y1 = plotY;
-            var x2 = plotX;
-            var y2 = plotY + d;
-            DrawLine(buffer,
-                Math.Min(x1, plotX + plotW - 1), Math.Max(y1, plotY),
-                Math.Max(x2, plotX), Math.Min(y2, plotY + plotH - 1),
-                220, 220, 220);
-        }
-        RenderChartLabel(buffer, typeLabel, plotX + (plotW / 2), plotY + (plotH / 2),
-            dpi, colorScheme, centered: true);
-    }
-
-    private void RenderChartLegend(
-        RasterBuffer buffer,
-        ChartModel chart,
-        int x, int y, int width, int height,
-        double dpi,
-        ColorScheme? colorScheme)
-    {
-        const int swatchSize = 8;
-        const int spacing = 4;
-        var cursorX = x + spacing;
-
-        for (var si = 0; si < chart.Data.Series.Count; si++)
-        {
-            var series = chart.Data.Series[si];
-            var (sr, sg, sb) = ResolveSeriesColor(series, si, colorScheme);
-
-            // Color swatch.
-            buffer.FillRect(cursorX, y + (height / 2) - (swatchSize / 2),
-                swatchSize, swatchSize, sr, sg, sb, 255);
-            cursorX += swatchSize + 2;
-
-            // Series name.
-            var label = TruncateLabel(series.Name, 12);
-            var labelW = label.Length * (int)(dpi / 72.0 * 6);
-            RenderChartLabel(buffer, label, cursorX, y + (height / 2), dpi, colorScheme,
-                centered: false);
-            cursorX += labelW + spacing * 2;
-
-            if (cursorX > x + width - 20)
-                break;
-        }
-    }
-
-    // Renders a small text label at pixel (px, py). Not a full text layout — just a
-    // best-effort glyphed label for axes and legend.
-    private void RenderChartLabel(
-        RasterBuffer buffer,
-        string text,
-        int px, int py,
-        double dpi,
-        ColorScheme? colorScheme,
-        bool centered)
-    {
-        if (string.IsNullOrEmpty(text)) return;
-
-        var labelArgb = colorScheme is not null
-            ? colorScheme.Dark1.Resolve(colorScheme)
-            : 0xFF404040u;
-        ExtractArgb(labelArgb, out _, out var lr, out var lg, out var lb);
-
-        // Clamp label color to ensure visibility.
-        if (lr + lg + lb > 600) { lr = 80; lg = 80; lb = 80; }
-
-        var lineHeight = 0;
-        var startX = centered ? px - (text.Length * (int)(dpi / 72.0 * 3)) : px;
-        RenderRunText(buffer, text, "Arial", null, 8.0, dpi / 72.0,
-            startX, py, px + 200, lr, lg, lb, ref lineHeight);
-    }
-
-    // ── Helpers ────────────────────────────────────────────────────────────────
-
-    private static (byte R, byte G, byte B) ResolveSeriesColor(
-        ChartSeries series,
-        int seriesIndex,
-        ColorScheme? colorScheme)
-    {
-        if (series.Fill?.Type == FillType.Solid && series.Fill.Solid is not null)
-        {
-            var argb = series.Fill.Solid.Color.Resolve(colorScheme);
-            ExtractArgb(argb, out _, out var r, out var g, out var b);
-            return (r, g, b);
-        }
-        return SeriesPalette[seriesIndex % SeriesPalette.Length];
-    }
-
-    private static (byte R, byte G, byte B) PieSliceColor(int index, ColorScheme? colorScheme)
-    {
-        // Use accent colors from the theme when available; otherwise use the palette.
-        if (colorScheme is not null)
-        {
-            var slot = index switch
-            {
-                0 => ThemeColorSlot.Accent1,
-                1 => ThemeColorSlot.Accent2,
-                2 => ThemeColorSlot.Accent3,
-                3 => ThemeColorSlot.Accent4,
-                4 => ThemeColorSlot.Accent5,
-                _ => ThemeColorSlot.Accent6
-            };
-            var argb = colorScheme[slot].Resolve(colorScheme);
-            ExtractArgb(argb, out _, out var r, out var g, out var b);
-            return (r, g, b);
-        }
-        return SeriesPalette[index % SeriesPalette.Length];
-    }
-
-    // Checks whether angle is within [start, end), handling wrap-around.
-    private static bool AngleInRange(double angle, double start, double end)
-    {
-        // Normalise to [-π, π].
-        while (angle < start) angle += 2 * Math.PI;
-        while (angle > end + (2 * Math.PI)) angle -= 2 * Math.PI;
-        return angle >= start && angle <= end;
-    }
-
-    // Bresenham integer line draw — single-pixel width.
-    private static void DrawLine(
-        RasterBuffer buffer,
-        int x0, int y0, int x1, int y1,
-        byte r, byte g, byte b)
-    {
-        var dx = Math.Abs(x1 - x0);
-        var dy = Math.Abs(y1 - y0);
-        var sx = x0 < x1 ? 1 : -1;
-        var sy = y0 < y1 ? 1 : -1;
-        var err = dx - dy;
-
-        while (true)
-        {
-            buffer.BlitImagePixel(x0, y0, r, g, b);
-            if (x0 == x1 && y0 == y1) break;
-            var e2 = 2 * err;
-            if (e2 > -dy) { err -= dy; x0 += sx; }
-            if (e2 < dx) { err += dx; y0 += sy; }
-        }
-    }
-
-    private static string TruncateLabel(string s, int maxChars) =>
-        s.Length <= maxChars ? s : s[..maxChars];
+    // ── Image decoding ────────────────────────────────────────────────────────
 
     private static byte[]? TryDecodeImageToRgb(EmbeddedImage image, out int width, out int height)
     {
@@ -1126,11 +879,20 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     private static bool IsJpeg(ReadOnlySpan<byte> bytes) =>
         bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
 
+    // ── Shared helpers ────────────────────────────────────────────────────────
+
+    private static void DrawBorder(RasterBuffer buffer, int x, int y, int w, int h, byte r, byte g, byte b)
+    {
+        buffer.FillRect(x, y, w, 1, r, g, b, 255);
+        buffer.FillRect(x, y + h - 1, w, 1, r, g, b, 255);
+        buffer.FillRect(x, y, 1, h, r, g, b, 255);
+        buffer.FillRect(x + w - 1, y, 1, h, r, g, b, 255);
+    }
+
     private static string SelectFontName(Run run)
     {
         if (run.Format.Bold == InheritableBool.True)
             return "Arial Bold";
-
         return "Arial";
     }
 

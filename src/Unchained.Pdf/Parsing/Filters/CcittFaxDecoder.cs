@@ -5,7 +5,7 @@ namespace Unchained.Pdf.Parsing.Filters;
 
 /// <summary>
 /// Decodes CCITT facsimile-compressed data (CCITTFaxDecode filter, ISO 32000-1 §7.4.6).
-/// Supports Group 3 1D (K=0) and Group 4 (K=-1, T.6 pure 2D).
+/// Supports Group 3 1D (K=0), Group 3 mixed 1D/2D (K&gt;0, T.4), and Group 4 (K=-1, T.6 pure 2D).
 /// Output: packed-bit rows, MSB first, 1 bit per pixel.
 /// </summary>
 internal static class CcittFaxDecoder
@@ -190,7 +190,12 @@ internal static class CcittFaxDecoder
                 blackIs1,
                 encodedByteAlign,
                 endOfBlock),
-            _ => throw new NotSupportedException("CCITTFaxDecode: K>0 (Group 3 mixed 2D) is not yet implemented.")
+            _ => DecodeGroup3_2D(data,
+                columns,
+                rows,
+                blackIs1,
+                encodedByteAlign,
+                endOfBlock)
         };
     }
 
@@ -383,6 +388,109 @@ internal static class CcittFaxDecoder
         }
 
         return output.ToArray();
+    }
+
+    // ── Group 3 mixed 1D/2D (K > 0, T.4) ─────────────────────────────────────
+
+    // T.4 two-dimensional coding (§4.2). Each line is preceded by an EOL code and a single
+    // "tag" bit: 1 → the line is 1D (MH) coded, 0 → the line is 2D (MR) coded relative to the
+    // line above. K bounds how many 2D lines may follow a 1D line, but a conforming decoder
+    // simply honours each line's tag bit, so K itself need not be tracked for decoding.
+    private static ReadOnlyMemory<byte> DecodeGroup3_2D(
+        ReadOnlyMemory<byte> data,
+        int columns,
+        int rows,
+        bool blackIs1,
+        bool encodedByteAlign,
+        bool endOfBlock
+    )
+    {
+        var input = data.Span;
+        var rowBytes = (columns + 7) >> 3;
+        var output = new MemoryStream(rows > 0 ? rows * rowBytes : rowBytes * 64);
+
+        var bitPos = 0;
+        // Decode internally with white = true regardless of /BlackIs1 (WriteRow maps to output).
+        const bool white = true;
+        var refRow = new bool[columns + 1];
+        var curRow = new bool[columns + 1];
+        Array.Fill(refRow, white, 0, columns + 1);
+
+        for (var rowIdx = 0; rows == 0 || rowIdx < rows; rowIdx++)
+        {
+            // Each coded line starts with an EOL (000000000001). Some encoders omit the very
+            // first EOL or pad with fill bits before it — SkipEol tolerates a missing EOL.
+            SkipEol(input, ref bitPos);
+
+            // The tag bit selects 1D (1) or 2D (0) coding for this line.
+            var tag = PeekBit(input, bitPos);
+            if (tag < 0)
+                break; // end of data
+            bitPos++;
+
+            if (encodedByteAlign)
+                bitPos = (bitPos + 7) & ~7;
+
+            Array.Fill(curRow, white, 0, columns);
+
+            bool decoded;
+            if (tag == 1)
+            {
+                decoded = DecodeRow1D(input, ref bitPos, curRow, columns, white);
+            }
+            else
+            {
+                var a0 = -1;
+                var a0Color = white;
+                decoded = DecodeRow2D(
+                    input,
+                    ref bitPos,
+                    refRow,
+                    curRow,
+                    columns,
+                    white,
+                    endOfBlock: false, // EOL framing is handled here, not inside the row decoder
+                    ref a0,
+                    ref a0Color);
+            }
+
+            if (!decoded)
+                break;
+
+            WriteRow(output, curRow, columns, blackIs1);
+            Array.Copy(curRow, refRow, columns + 1);
+        }
+
+        return output.ToArray();
+    }
+
+    // Decodes a single 1D (Modified Huffman) coded line into curRow. Returns false at end of
+    // data before any run was read. Shared by Group 3 2D's 1D-tagged lines.
+    private static bool DecodeRow1D(
+        ReadOnlySpan<byte> input,
+        ref int bitPos,
+        IList<bool> curRow,
+        int columns,
+        bool whiteBit
+    )
+    {
+        var pos = 0;
+        var isWhite = true;
+        var readAny = false;
+
+        while (pos < columns)
+        {
+            var run = ReadRunLength(input, ref bitPos, isWhite);
+            if (run < 0)
+                return readAny; // end of data
+            readAny = true;
+
+            FillRun(curRow, pos, run, isWhite == whiteBit);
+            pos += run;
+            isWhite = !isWhite;
+        }
+
+        return true;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

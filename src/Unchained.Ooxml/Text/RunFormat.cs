@@ -97,4 +97,12 @@ public sealed class RunFormat
     /// <see langword="null"/> means no outline (inherit). Used for WordArt-style outlined text.
     /// </summary>
     public Drawing.LineFormat? Outline { get; set; }
+
+    // ── Hyperlink ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The click hyperlink applied to this run (<c>&lt;a:hlinkClick&gt;</c> in the run properties),
+    /// or <see langword="null"/> when the run is not a link.
+    /// </summary>
+    public RunHyperlink? Hyperlink { get; set; }
 }

@@ -46,10 +46,34 @@ public sealed class FormFiller : IFormFiller
                 continue;
 
             var fieldDict = (PdfDictionary)fieldObj.Value;
-            var entries = new Dictionary<string, PdfObject>(fieldDict.Entries)
+            var ft = FieldType(fieldDict, adapter.Core);
+            var entries = new Dictionary<string, PdfObject>(fieldDict.Entries);
+
+            switch (ft)
             {
-                ["V"] = PdfString.FromLatin1(newValue)
-            };
+                case "Btn":
+                    // Checkboxes / radio buttons: the value is an appearance-state NAME
+                    // (e.g. the "on" state from /AP /N, or "Off"). Set both /V and /AS so
+                    // viewers show the correct state. ISO 32000-1 §12.7.4.2.3.
+                    {
+                        var stateName = ResolveButtonState(fieldDict, newValue, adapter.Core);
+                        entries["V"] = PdfName.Get(stateName);
+                        entries["AS"] = PdfName.Get(stateName);
+                    }
+                    break;
+
+                case "Ch":
+                    // Choice fields (combo/list): /V is a text string (or array for multi-
+                    // select; single value handled here). §12.7.4.4.
+                    entries["V"] = PdfString.FromLatin1(newValue);
+                    break;
+
+                default:
+                    // Tx (text) and anything else: plain text string value.
+                    entries["V"] = PdfString.FromLatin1(newValue);
+                    break;
+            }
+
             swaps[fieldObj.ObjectNumber] = new PdfIndirectObject(fieldObj.ObjectNumber, fieldObj.Generation, new PdfDictionary(entries));
         }
 
@@ -227,4 +251,55 @@ public sealed class FormFiller : IFormFiller
         PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
         _ => null
     };
+
+    // Resolves a field's type, following /Parent for fields that inherit /FT (§12.7.3.1).
+    private static string? FieldType(PdfDictionary field, PdfDocumentCore core)
+    {
+        var current = field;
+        for (var depth = 0; current is not null && depth < 32; depth++)
+        {
+            if (current.GetName("FT") is { } ft) return ft;
+            current = ResolveDict(current["Parent"], core);
+        }
+        return null;
+    }
+
+    // Maps a user-supplied button value to an appearance-state name.
+    // Truthy strings (true/on/yes/1/checked/x) select the field's "on" state — the first
+    // /AP /N key that is not "Off"; falsy strings select "Off". Any other value is treated
+    // as an explicit state name (e.g. a specific radio export value).
+    private static string ResolveButtonState(PdfDictionary field, string value, PdfDocumentCore core)
+    {
+        var v = value.Trim();
+        var isTruthy = v is "true" or "on" or "yes" or "1" or "checked" or "x" or "X" or "On" or "Yes";
+        var isFalsy = v.Length == 0 || v is "false" or "off" or "no" or "0" or "unchecked" or "Off" or "No";
+
+        if (isFalsy && !isTruthy)
+            return "Off";
+
+        if (isTruthy)
+            return OnStateName(field, core) ?? "Yes";
+
+        // Explicit state name supplied by the caller.
+        return v;
+    }
+
+    // Finds the "on" appearance-state name from the field's (or its widget kid's) /AP /N
+    // dictionary — the first key that is not "Off".
+    private static string? OnStateName(PdfDictionary field, PdfDocumentCore core)
+    {
+        var ap = ResolveDict(field["AP"], core);
+        // For a parent field, the appearance lives on the widget kid.
+        if (ap is null && field.Get<PdfArray>(PdfName.Kids) is { Count: > 0 } kids
+            && kids[0] is PdfIndirectReference kr
+            && core.ResolveIndirect(kr.ObjectNumber).Value is PdfDictionary kidDict)
+            ap = ResolveDict(kidDict["AP"], core);
+
+        var normal = ap is not null ? ResolveDict(ap["N"], core) : null;
+        if (normal is null) return null;
+        foreach (var (key, _) in normal.Entries)
+            if (!string.Equals(key, "Off", StringComparison.Ordinal))
+                return key;
+        return null;
+    }
 }

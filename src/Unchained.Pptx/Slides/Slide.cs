@@ -163,4 +163,51 @@ public sealed class Slide
     /// </summary>
     public Shape? FindShapeByAltText(string altText) =>
         Shapes.FirstOrDefault(s => s.AltText != null && s.AltText.Equals(altText, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Replaces every occurrence of <paramref name="oldText"/> with <paramref name="newText"/>
+    /// in all text on this slide — shapes, grouped shapes, and table cells — preserving run
+    /// formatting. When <paramref name="includeNotes"/> is <see langword="true"/>, the slide's
+    /// notes text is searched as well. Matches do not span paragraph boundaries.
+    /// </summary>
+    /// <returns>The total number of occurrences replaced.</returns>
+    public int ReplaceText(
+        string oldText,
+        string newText,
+        StringComparison comparison = StringComparison.Ordinal,
+        bool includeNotes = false)
+    {
+        var count = 0;
+        foreach (var frame in ShapeTextWalker.EnumerateTextFrames(Shapes))
+            count += frame.ReplaceText(oldText, newText, comparison);
+
+        if (includeNotes && Notes.NotesTextFrame is { } notesFrame)
+            count += notesFrame.ReplaceText(oldText, newText, comparison);
+
+        return count;
+    }
+
+    /// <summary>
+    /// Enumerates every shape click-hyperlink on this slide (recursing into group shapes),
+    /// each paired with its owning shape so links can be inspected, retargeted, or removed.
+    /// </summary>
+    public IEnumerable<Engine.HyperlinkReference> GetHyperlinks()
+    {
+        foreach (var shape in EnumerateShapes(Shapes))
+        {
+            if (shape.ClickAction is { } action)
+                yield return new Engine.HyperlinkReference(this, shape, action);
+        }
+
+        static IEnumerable<Shape> EnumerateShapes(IEnumerable<Shape> shapes)
+        {
+            foreach (var shape in shapes)
+            {
+                yield return shape;
+                if (shape is GroupShape group)
+                    foreach (var child in EnumerateShapes(group.Children))
+                        yield return child;
+            }
+        }
+    }
 }

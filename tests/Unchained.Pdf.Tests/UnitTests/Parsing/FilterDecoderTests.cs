@@ -637,6 +637,65 @@ public sealed class CcittFaxDecoderTests
         for (var i = 0; i < normal.Length; i++)
             inverted[i].ShouldBe((byte)~normal[i]);
     }
+
+    // A 16×16 Group-3 2D (T.4, K>0) image of the same figure, produced by libtiff with
+    // T4Options bit-0 (2D) set and Photometric=0 (white runs first, matching the PDF/G4
+    // convention). Each line is framed by an EOL + a 1D/2D tag bit. Verified bit-exact
+    // against libtiff's own decoder. BlackIs1=false → 1=white.
+    private static readonly byte[] EncodedG3_2D =
+        Convert.FromHexString(
+            "001d4002800ea00118466a003a80047d4007ea6002e003f530010c0070bd5800bb800ec5b0010c0075000a");
+
+    private static PdfDictionary Parms2D(int columns, int rows, bool blackIs1 = false) =>
+        new(new Dictionary<string, PdfObject>
+        {
+            ["K"] = new PdfInteger(4), // any K>0 selects Group 3 mixed 1D/2D
+            ["Columns"] = new PdfInteger(columns),
+            ["Rows"] = new PdfInteger(rows),
+            ["BlackIs1"] = blackIs1 ? PdfBoolean.True : PdfBoolean.False
+        });
+
+    [Fact]
+    public void DecodeGroup3_2D_ProducesExpectedBitmap()
+    {
+        var decoded = CcittFaxDecoder.Decode(EncodedG3_2D, Parms2D(16, 16)).ToArray();
+
+        // Same figure as the Group-4 fixture. 1 = white (BlackIs1=false).
+        string[] expected =
+        [
+            "1111111111111111", "1111111111111111", "1111111111111111",
+            "1110111111110111", "1111111111111111", "1111111011111111",
+            "1111111011111111", "1111111011111111", "1111111011111111",
+            "1111111111111111", "1110111111101111", "1110111111100111",
+            "1111000000001111", "1111111111111111", "1111111111111111",
+            "1111111111111111"
+        ];
+
+        const int rowBytes = 2;
+        decoded.Length.ShouldBe(rowBytes * 16);
+        for (var row = 0; row < 16; row++)
+        {
+            var sb = new StringBuilder(16);
+            for (var col = 0; col < 16; col++)
+            {
+                var bit = (decoded[(row * rowBytes) + (col >> 3)] >> (7 - (col & 7))) & 1;
+                sb.Append(bit);
+            }
+
+            sb.ToString().ShouldBe(expected[row], $"row {row} mismatch");
+        }
+    }
+
+    [Fact]
+    public void DecodeGroup3_2D_BlackIs1_InvertsOutput()
+    {
+        var normal = CcittFaxDecoder.Decode(EncodedG3_2D, Parms2D(16, 16)).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG3_2D, Parms2D(16, 16, blackIs1: true)).ToArray();
+
+        inverted.Length.ShouldBe(normal.Length);
+        for (var i = 0; i < normal.Length; i++)
+            inverted[i].ShouldBe((byte)~normal[i]);
+    }
 }
 
 // ── Jbig2Decoder: minimal smoke tests ────────────────────────────────────────

@@ -24,6 +24,7 @@ internal static class ShapeWriter
         ConnectorShape connector => WriteConnector(connector),
         GroupShape group => WriteGroup(group),
         ChartShape chart => WriteChart(chart),
+        SmartArtShape smartArt => WriteSmartArt(smartArt),
         _ => shape.RawElement // preserve unknown shape types verbatim
     };
 
@@ -282,6 +283,17 @@ internal static class ShapeWriter
         return frameEl;
     }
 
+    // ── SmartArt (diagram) ───────────────────────────────────────────────────────
+
+    private static XElement? WriteSmartArt(SmartArtShape shape)
+    {
+        // SmartArt is only ever loaded (no programmatic authoring API yet). The preserved
+        // graphic-frame element already carries the correct <dgm:relIds> references, so emit it
+        // verbatim. The referenced diagram parts are written by PresentationWriter using the
+        // same relationship IDs.
+        return shape.RawElement;
+    }
+
     // ── Shared helpers ─────────────────────────────────────────────────────────
 
     private static XElement WriteCommonNonVisualProperties(Shape shape)
@@ -293,7 +305,29 @@ internal static class ShapeWriter
         if (!string.IsNullOrEmpty(shape.AltText))
             cNvPr.Add(new XAttribute(DmlNames.AttributeDescription, shape.AltText));
 
+        // Click hyperlink (<a:hlinkClick>) — relationship id assigned by PresentationWriter.
+        if (shape.ClickAction is { } action)
+            cNvPr.Add(WriteHyperlink(DmlNames.HyperlinkClick, action));
+
         return cNvPr;
+    }
+
+    /// <summary>
+    /// Builds an <c>&lt;a:hlinkClick&gt;</c>/<c>&lt;a:hlinkHover&gt;</c> element. External and
+    /// slide-jump links carry the assigned <c>r:id</c>; action-only links may carry none.
+    /// </summary>
+    private static XElement WriteHyperlink(System.Xml.Linq.XName name, HyperlinkAction action)
+    {
+        var el = new XElement(name);
+
+        // r:id is empty string for links with no backing relationship (e.g. unresolved); OOXML
+        // permits r:id="" to mean "no external target".
+        el.Add(new XAttribute(PmlNames.Relationships + "id", action.RelationshipId));
+
+        if (!string.IsNullOrEmpty(action.Tooltip))
+            el.Add(new XAttribute("tooltip", action.Tooltip));
+
+        return el;
     }
 
     private static XElement WriteShapeProperties(Shape shape)

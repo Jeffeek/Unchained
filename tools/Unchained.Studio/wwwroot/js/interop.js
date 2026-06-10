@@ -76,4 +76,16 @@ window.unchainedStudio = {
             document.body.removeChild(ta);
         }
     },
+
+    // ── Local storage (settings persistence) ─────────────────────────────────
+
+    getLocalStorage(key) {
+        try { return window.localStorage.getItem(key); }
+        catch { return null; }
+    },
+
+    setLocalStorage(key, value) {
+        try { window.localStorage.setItem(key, value); }
+        catch { /* storage unavailable (private mode, quota) — ignore */ }
+    },
 };

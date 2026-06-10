@@ -330,6 +330,33 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         return result;
     }
 
+    public IReadOnlyList<OptionalContentGroup> GetLayers()
+    {
+        var result = new List<OptionalContentGroup>();
+        var ocProps = ResolveDict(Core.Catalog[PdfName.Get("OCProperties")]);
+        if (ocProps is null) return result;
+
+        // Collect the set of OCGs that are OFF in the default (/D) configuration.
+        var off = new HashSet<int>();
+        var defaultCfg = ResolveDict(ocProps[PdfName.Get("D")]);
+        if (defaultCfg?[PdfName.Get("OFF")] is PdfArray offArr)
+            foreach (var e in offArr.Elements)
+                if (e is PdfIndirectReference offRef) off.Add(offRef.ObjectNumber);
+
+        if (ocProps[PdfName.Get("OCGs")] is not PdfArray ocgs) return result;
+        foreach (var e in ocgs.Elements)
+        {
+            if (e is not PdfIndirectReference r) continue;
+            var ocg = Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary;
+            if (ocg is null) continue;
+            var name = ocg[PdfName.Get("Name")] is PdfString s
+                ? Encoding.Latin1.GetString(s.Bytes.Span)
+                : string.Empty;
+            result.Add(new OptionalContentGroup(name, r.ObjectNumber, !off.Contains(r.ObjectNumber)));
+        }
+        return result;
+    }
+
     private void CollectNameTree(PdfDictionary node, ICollection<NamedDestination> result)
     {
         // Leaf node: /Names array of (string, dest) pairs

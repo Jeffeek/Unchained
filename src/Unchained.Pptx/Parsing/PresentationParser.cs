@@ -8,6 +8,7 @@ using Unchained.Pptx.Media;
 using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 using System.Xml.Linq;
 
@@ -130,6 +131,8 @@ internal sealed class PresentationParser
         // Parse sections (M7)
         SectionParser.Parse(root, sections);
 
+        // Parse slide-show settings from the presProps part (M-G)
+        var slideShow = ParsePresProps(presentationPart, package);
         // Parse embedded fonts (<p:embeddedFontLst>) so the renderer can use the real typefaces
         ParseEmbeddedFonts(root, presentationPart, package, mediaStore);
 
@@ -157,6 +160,12 @@ internal sealed class PresentationParser
         properties.SlideCount = slides.Count;
         properties.HiddenSlideCount = slides.Count(static s => s.IsHidden);
 
+        // Resolve internal slide-jump hyperlinks (part URI captured at parse time → slide number).
+        ResolveSlideJumpHyperlinks(slides);
+
+        // Capture verbatim-preserved content (VBA project, digital signatures) for round-trip.
+        var preserved = CapturePreservedContent(package, presentationPart);
+
         return new ParsedPresentation(
             package,
             slides,
@@ -166,10 +175,205 @@ internal sealed class PresentationParser
             protection,
             slideSize,
             commentAuthors,
-            sections);
+            sections)
+        {
+            SlideShow = slideShow,
+            Preserved = preserved,
+        };
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Captures parts that Unchained does not model but must round-trip verbatim: the VBA macro
+    /// project (referenced from <c>presentation.xml</c>) and the digital-signature parts
+    /// (referenced from the package root). Their relationships are captured too so the writer can
+    /// re-link them.
+    /// </summary>
+    private static Engine.PreservedContent CapturePreservedContent(
+        OpcPackage package,
+        OpcPart presentationPart)
+    {
+        var preserved = new Engine.PreservedContent();
+
+        // VBA project — a presentation-level relationship to /ppt/vbaProject.bin.
+        foreach (var rel in presentationPart.Relationships)
+        {
+            if (!rel.RelationshipType.Equals(PmlNames.RelTypeVbaProject, StringComparison.Ordinal))
+                continue;
+
+            var uri = presentationPart.ResolveUri(rel.TargetUri);
+            var part = package.TryGetPart(uri);
+            if (part == null) continue;
+
+            preserved.HasMacros = true;
+            preserved.Parts.Add(new Engine.PreservedPart
+            {
+                Uri = uri,
+                ContentType = part.ContentType,
+                Data = part.Data,
+            });
+            preserved.AnchorRelationships.Add(new Engine.PreservedRelationship
+            {
+                SourceUri = null, // anchored to presentation.xml; writer supplies the source
+                Id = rel.Id,
+                Type = rel.RelationshipType,
+                Target = uri,
+                IsExternal = rel.IsExternal,
+            });
+        }
+
+        // Digital signatures — a package-level origin relationship plus the signature parts it
+        // links to. Captured verbatim; any edit to the deck invalidates them in PowerPoint, but a
+        // pure round-trip keeps the bytes intact.
+        foreach (var originRel in package.PackageRelationships)
+        {
+            if (!originRel.RelationshipType.Equals(
+                    PmlNames.RelTypeDigitalSignatureOrigin, StringComparison.Ordinal))
+                continue;
+
+            var originUri = "/" + originRel.TargetUri.TrimStart('/');
+            var originPart = package.TryGetPart(originUri);
+            if (originPart == null) continue;
+
+            CapturePartTree(package, originPart, originUri, preserved);
+            preserved.AnchorRelationships.Add(new Engine.PreservedRelationship
+            {
+                SourceUri = string.Empty, // package-level anchor
+                Id = originRel.Id,
+                Type = originRel.RelationshipType,
+                Target = originUri,
+                IsExternal = originRel.IsExternal,
+            });
+        }
+
+        return preserved;
+    }
+
+    /// <summary>
+    /// Captures <paramref name="part"/> and, recursively, every internal part it relates to,
+    /// keeping each part's relationships verbatim. Used for the signature origin → signature parts.
+    /// </summary>
+    private static void CapturePartTree(
+        OpcPackage package,
+        OpcPart part,
+        string partUri,
+        Engine.PreservedContent preserved)
+    {
+        if (preserved.Parts.Any(p => p.Uri.Equals(partUri, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        var captured = new Engine.PreservedPart
+        {
+            Uri = partUri,
+            ContentType = part.ContentType,
+            Data = part.Data,
+        };
+
+        foreach (var rel in part.Relationships)
+        {
+            captured.Relationships.Add(new Engine.PreservedRelationship
+            {
+                SourceUri = partUri,
+                Id = rel.Id,
+                Type = rel.RelationshipType,
+                Target = rel.TargetUri,
+                IsExternal = rel.IsExternal,
+            });
+
+            if (rel.IsExternal) continue;
+            var childUri = part.ResolveUri(rel.TargetUri);
+            var childPart = package.TryGetPart(childUri);
+            if (childPart != null)
+                CapturePartTree(package, childPart, childUri, preserved);
+        }
+
+        preserved.Parts.Add(captured);
+    }
+
+    private static Slides.SlideShowSettings? ParsePresProps(OpcPart presentationPart, OpcPackage package)
+    {
+        var rel = presentationPart.Relationships.FirstOrDefault(static r =>
+            r.RelationshipType.Equals(PmlNames.RelTypePresProps, StringComparison.Ordinal));
+        if (rel == null) return null;
+
+        var uri = presentationPart.ResolveUri(rel.TargetUri);
+        var part = package.TryGetPart(uri);
+        if (part == null) return null;
+
+        var doc = OoXmlHelper.ParseXml(part.Data);
+        var showPr = doc.Root?.Element(PmlNames.Pml + "showPr");
+        if (showPr == null) return null;
+
+        var pml = PmlNames.Pml;
+        var settings = new Slides.SlideShowSettings();
+
+        if (showPr.Element(pml + "browse") != null)
+            settings.ShowType = Slides.SlideShowType.Browsed;
+        else if (showPr.Element(pml + "kiosk") != null)
+            settings.ShowType = Slides.SlideShowType.Kiosk;
+        else
+            settings.ShowType = Slides.SlideShowType.Presenter;
+
+        settings.Loop = showPr.GetAttrBool("loop") ?? false;
+        // XML stores positive sense; absence means "show". Our model stores the inverse.
+        settings.ShowWithoutNarration = showPr.GetAttrBool("showNarration") == false;
+        settings.ShowWithoutAnimation = showPr.GetAttrBool("showAnimation") == false;
+
+        var sldRg = showPr.Element(pml + "sldRg");
+        if (sldRg != null)
+        {
+            settings.RangeStart = sldRg.GetAttrInt("st");
+            settings.RangeEnd = sldRg.GetAttrInt("end");
+        }
+
+        var penClr = showPr.Element(pml + "penClr");
+        var srgb = penClr?.Element(DmlNames.SolidFill)?.Element(DmlNames.SrgbColor);
+        settings.PenColorHex = (string?)srgb?.Attribute("val");
+
+        return settings;
+    }
+
+    private static void ResolveSlideJumpHyperlinks(SlideCollection slides)
+    {
+        // Map each slide's part URI to its 1-based number.
+        var numberByUri = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < slides.Count; i++)
+        {
+            if (!string.IsNullOrEmpty(slides[i].PartUri))
+                numberByUri[slides[i].PartUri] = i + 1;
+        }
+
+        foreach (var slide in slides)
+        foreach (var shape in EnumerateAllShapes(slide.Shapes))
+        {
+            var action = shape.ClickAction;
+            if (action?.TargetSlidePartUri is { } uri && numberByUri.TryGetValue(uri, out var number))
+                action.TargetSlideNumber = number;
+        }
+
+        // Run-level slide-jump links.
+        foreach (var slide in slides)
+        foreach (var frame in Slides.ShapeTextWalker.EnumerateTextFrames(slide.Shapes))
+        foreach (var paragraph in frame.Paragraphs)
+        foreach (var run in paragraph.Runs)
+        {
+            var link = run.Format.Hyperlink;
+            if (link?.TargetPartUri is { } uri && numberByUri.TryGetValue(uri, out var number))
+                link.TargetSlideNumber = number;
+        }
+    }
+
+    private static IEnumerable<Shapes.Shape> EnumerateAllShapes(IEnumerable<Shapes.Shape> shapes)
+    {
+        foreach (var shape in shapes)
+        {
+            yield return shape;
+            if (shape is Shapes.GroupShape group)
+                foreach (var child in EnumerateAllShapes(group.Children))
+                    yield return child;
+        }
+    }
 
     private static void ParseEmbeddedFonts(
         XElement root,
@@ -340,4 +544,10 @@ internal sealed class ParsedPresentation(
     /// package alive for an in-place SDK-backed save.
     /// </summary>
     public Ooxml.Engine.OoxmlEngine? Engine { get; init; }
+
+    /// <summary>Slide-show settings parsed from the <c>presProps.xml</c> part, if present.</summary>
+    public Slides.SlideShowSettings? SlideShow { get; init; }
+
+    /// <summary>Verbatim-preserved content (VBA project, digital signatures) for round-trip.</summary>
+    public Engine.PreservedContent? Preserved { get; init; }
 }

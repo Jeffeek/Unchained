@@ -20,13 +20,27 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, ImageXObject>? imageXObjects = null,
     double[]? initialCtm = null,
     IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null,
-    IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null
+    IReadOnlyDictionary<string, CompositeFontInfo>? compositeFonts = null,
+    IReadOnlyDictionary<string, (double Fill, double Stroke)>? extGStateAlphas = null,
+    IReadOnlyDictionary<string, ShadingInfo>? shadings = null,
+    IReadOnlyDictionary<string, TilingPatternInfo>? tilingPatterns = null
 )
 {
-    private readonly List<(double X, double Y)> _currentPath = [];
+    // Current path as a list of subpaths, each a polyline of user-space points. A new `m`
+    // (or `re`) starts a new subpath; `l`/`c`/`v`/`y` append to the current one. This
+    // preserves multiple subpaths (needed for polygon fills with holes and for stroking
+    // disjoint figures) — the previous segment-pair model kept only the last subpath.
+    private readonly List<List<(double X, double Y)>> _subpaths = [];
+    private List<(double X, double Y)>? _curSub;
     private (double X, double Y) _pathStart;
     private (double X, double Y) _currentPoint;
     private bool _inPath;
+    // Nesting depth for tiling-pattern cell rendering; bounds pattern-in-pattern recursion.
+    internal int _tilingDepth;
+    private static readonly Dictionary<string, string> EmptyFontMap = new();
+    // Set by W/W*; the clip is applied (intersected into the graphics state) when the
+    // current path is next cleared by a painting/no-op operator.
+    private bool _pendingClip;
 
     private readonly Stack<GraphicsState> _gsStack = new();
     // Apply the initial CTM from the renderer (encodes page rotation + coordinate origin).
@@ -75,6 +89,8 @@ internal sealed class PageRenderer(
             case "Q":
             {
                 if (_gsStack.Count > 0) _gs = _gsStack.Pop();
+                // Restore the buffer clip to match the restored graphics state.
+                SyncClip();
                 break;
             }
             case "cm" when op.Operands.Count >= 6:
@@ -171,13 +187,44 @@ internal sealed class PageRenderer(
                 }
 
                 // Set after the numeric setters above (which clear the flag).
-                if (op.Name == "scn") _gs.FillIsPattern = isPattern;
+                if (op.Name == "scn")
+                {
+                    _gs.FillIsPattern = isPattern;
+                    // If the named pattern is a known axial/radial shading or tiling pattern,
+                    // remember it so DrawFill renders it rather than the grey approximation.
+                    var patName = op.Operands.OfType<PdfName>().LastOrDefault()?.Value;
+                    _gs.FillShadingName = patName is not null && shadings is not null && shadings.ContainsKey(patName)
+                        ? patName : null;
+                    _gs.FillTilingName = patName is not null && tilingPatterns is not null && tilingPatterns.ContainsKey(patName)
+                        ? patName : null;
+                }
                 break;
             }
 
             // ── Misc graphics state ───────────────────────────────────────────
             case "w" when op.Operands.Count >= 1: _gs.LineWidth = Num(op, 0); break;
-            case "J" or "j" or "M" or "d" or "ri" or "i" or "gs": break; // consume; not rendered
+            case "d" when op.Operands.Count >= 1:
+            {
+                // d [dashArray] dashPhase — store the on/off lengths (phase ignored).
+                _gs.DashLengths = op.Operands[0] is PdfArray da
+                    ? da.Elements.Select(NumObj).Where(static v => v >= 0).ToArray()
+                    : [];
+                break;
+            }
+            case "J" or "j" or "M" or "ri" or "i": break; // consume; not rendered
+            case "gs" when op.Operands.Count >= 1:
+            {
+                // Apply the named /ExtGState's constant alpha (/ca fill, /CA stroke).
+                var name = (op.Operands[0] as PdfName)?.Value;
+                if (name is not null && extGStateAlphas is not null
+                    && extGStateAlphas.TryGetValue(name, out var a))
+                {
+                    _gs.FillA = (byte)Math.Clamp((int)Math.Round(a.Fill * 255), 0, 255);
+                    _gs.StrokeA = (byte)Math.Clamp((int)Math.Round(a.Stroke * 255), 0, 255);
+                }
+                break;
+            }
+            case "gs": break;
 
             // ── Path construction ─────────────────────────────────────────────
             case "m" when op.Operands.Count >= 2: PathMoveTo(Num(op, 0), Num(op, 1)); break;
@@ -193,12 +240,7 @@ internal sealed class PageRenderer(
                 break;
             case "h":
             {
-                if (_inPath)
-                {
-                    _currentPath.Add(_currentPoint);
-                    _currentPath.Add(_pathStart);
-                    _currentPoint = _pathStart;
-                }
+                PathClose();
                 break;
             }
             case "re" when op.Operands.Count >= 4:
@@ -208,24 +250,34 @@ internal sealed class PageRenderer(
             // ── Path painting ─────────────────────────────────────────────────
             case "S": DrawStroke(); ClearPath(); break;
             case "s":
-                _currentPath.Add(_currentPoint);
-                _currentPath.Add(_pathStart);
+                PathClose();
                 DrawStroke();
                 ClearPath();
                 break;
-            case "f" or "F" or "f*": DrawFill(); ClearPath(); break;
-            case "B" or "B*": DrawFill(); DrawStroke(); ClearPath(); break;
-            case "b" or "b*":
-                _currentPath.Add(_currentPoint);
-                _currentPath.Add(_pathStart);
-                DrawFill();
+            case "f" or "F": DrawFill(evenOdd: false); ClearPath(); break;
+            case "f*": DrawFill(evenOdd: true); ClearPath(); break;
+            case "B": DrawFill(evenOdd: false); DrawStroke(); ClearPath(); break;
+            case "B*": DrawFill(evenOdd: true); DrawStroke(); ClearPath(); break;
+            case "b":
+                PathClose();
+                DrawFill(evenOdd: false);
+                DrawStroke();
+                ClearPath();
+                break;
+            case "b*":
+                PathClose();
+                DrawFill(evenOdd: true);
                 DrawStroke();
                 ClearPath();
                 break;
             case "n": ClearPath(); break;
 
-            // ── Clip (consume; clipping not implemented yet) ──────────────────
-            case "W" or "W*": ClearPath(); break;
+
+            // ── Clip ──────────────────────────────────────────────────────────
+            // W/W* set the clip to the current path; it takes effect AFTER the next
+            // painting operator (ISO 32000-1 §8.5.4). We record a pending clip (the path's
+            // device-space bounding box) and apply it when the path is cleared.
+            case "W" or "W*": _pendingClip = true; break;
 
             // ── Marked content (consume) ──────────────────────────────────────
             case "BMC" or "BDC" or "EMC" or "MP" or "DP": break;
@@ -251,7 +303,7 @@ internal sealed class PageRenderer(
             case "Tz" when op.Operands.Count >= 1: _gs.HorizontalScale = Num(op, 0); break;
             case "TL" when op.Operands.Count >= 1: _gs.Leading = Num(op, 0); break;
             case "Tr" when op.Operands.Count >= 1: _gs.TextRenderMode = (int)Num(op, 0); break;
-            case "Ts": break; // text rise — not yet applied
+            case "Ts" when op.Operands.Count >= 1: _gs.TextRise = Num(op, 0); break;
 
             // ── Text positioning ──────────────────────────────────────────────
             case "Tm" when op.Operands.Count >= 6:
@@ -296,7 +348,14 @@ internal sealed class PageRenderer(
                 break;
             case "BI": break; // parser produced no image (unsupported format)
 
-            // ── Shading / form XObjects (stubs; no rendering) ─────────────────
+            // ── Shading (sh) — paints an axial/radial gradient over the current clip ──
+            case "sh" when op.Operands.Count >= 1:
+            {
+                var name = (op.Operands[0] as PdfName)?.Value;
+                if (name is not null && shadings is not null && shadings.TryGetValue(name, out var sh))
+                    PaintShadingInClip(sh);
+                break;
+            }
             case "sh": break;
         }
     }
@@ -465,8 +524,9 @@ internal sealed class PageRenderer(
             GlyphsAttempted++;
 
             // HarfBuzz XOffset/YOffset are in 26.6 pixel units; convert to user-space points.
+            // Text rise (Ts) shifts the baseline up in text space.
             var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
-            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale);
+            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale) + _gs.TextRise;
             var (px, py) = UToPixel(originX, originY);
 
             // Use BlitGlyphFromFace so we can read BitmapLeft/BitmapTop and the bitmap
@@ -510,7 +570,7 @@ internal sealed class PageRenderer(
             if (glyphId != 0)
             {
                 GlyphsAttempted++;
-                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5]);
+                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
                 buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
             }
 
@@ -549,7 +609,7 @@ internal sealed class PageRenderer(
             if (gid != 0)
             {
                 GlyphsAttempted++;
-                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5]);
+                var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
                 buffer.BlitGlyphFromFace((int)px, (int)py, ftFace, _gs.FillR, _gs.FillG, _gs.FillB);
             }
 
@@ -587,32 +647,35 @@ internal sealed class PageRenderer(
 
     private void PathMoveTo(double x, double y)
     {
-        _currentPath.Clear();
+        // Start a new subpath. Does NOT clear earlier subpaths (a path may contain several).
+        _curSub = [(x, y)];
+        _subpaths.Add(_curSub);
         _pathStart = _currentPoint = (x, y);
         _inPath = true;
     }
 
     private void PathLineTo(double x, double y)
     {
-        _currentPath.Add(_currentPoint);
-        _currentPath.Add((x, y));
+        if (_curSub is null) { PathMoveTo(x, y); return; }
+        _curSub.Add((x, y));
         _currentPoint = (x, y);
     }
 
     // ReSharper disable once BadListLineBreaks
     private void PathRect(double x, double y, double w, double h)
     {
+        // A rectangle is its own closed subpath (ISO 32000-1 §8.5.2.1).
         PathMoveTo(x, y);
-        PathLineTo(x + w, y);
-        PathLineTo(x + w, y + h);
-        PathLineTo(x, y + h);
-        _currentPath.Add(_currentPoint);
-        _currentPath.Add(_pathStart);
-        _currentPoint = _pathStart;
+        _curSub!.Add((x + w, y));
+        _curSub.Add((x + w, y + h));
+        _curSub.Add((x, y + h));
+        _curSub.Add((x, y)); // close
+        _currentPoint = (x, y);
     }
 
     private void PathCurveTo(double x1, double y1, double x2, double y2, double x3, double y3)
     {
+        if (_curSub is null) PathMoveTo(_currentPoint.X, _currentPoint.Y);
         var p0 = _currentPoint;
         for (var t = 1; t <= 8; t++)
         {
@@ -620,36 +683,369 @@ internal sealed class PageRenderer(
             var u  = 1 - s;
             var bx = (u * u * u * p0.X) + (3 * u * u * s * x1) + (3 * u * s * s * x2) + (s * s * s * x3);
             var by = (u * u * u * p0.Y) + (3 * u * u * s * y1) + (3 * u * s * s * y2) + (s * s * s * y3);
-            _currentPath.Add(_currentPoint);
-            _currentPath.Add((bx, by));
+            _curSub!.Add((bx, by));
             _currentPoint = (bx, by);
         }
     }
 
-    private void DrawFill()
+    private void PathClose()
     {
-        if (!IsRectanglePath()) return;
+        if (_inPath && _curSub is { Count: > 0 })
+        {
+            _curSub.Add(_pathStart);
+            _currentPoint = _pathStart;
+        }
+    }
 
-        var minX = _currentPath.Min(static p => p.X);
-        var minY = _currentPath.Min(static p => p.Y);
-        var maxX = _currentPath.Max(static p => p.X);
-        var maxY = _currentPath.Max(static p => p.Y);
-        var (px1, py1) = UToPixel(minX, maxY);
-        var (px2, py2) = UToPixel(maxX, minY);
+    // Fills the current path. evenOdd selects the even-odd rule (f*/B*/b*) vs the default
+    // nonzero winding rule (f/F/B/b). A single axis-aligned rectangle uses a fast FillRect
+    // path; everything else is scan-converted as a polygon (all subpaths together).
+    private void DrawFill(bool evenOdd)
+    {
+        if (_subpaths.Count == 0) return;
 
-        // Tiling/shading patterns aren't rendered. Filling them with the (often black)
+        // Shading pattern fill: paint the gradient clipped to the path's bounding box.
+        if (_gs.FillShadingName is { } shName && shadings is not null
+            && shadings.TryGetValue(shName, out var shInfo))
+        {
+            PaintShadingInPathBounds(shInfo);
+            return;
+        }
+
+        // Tiling pattern fill: tile the pattern cell across the path's bounding box.
+        if (_gs.FillTilingName is { } tileName && tilingPatterns is not null
+            && tilingPatterns.TryGetValue(tileName, out var tileInfo))
+        {
+            PaintTilingInPathBounds(tileInfo);
+            return;
+        }
+
+        byte fr = _gs.FillR, fg = _gs.FillG, fb = _gs.FillB;
+        // Tiling/non-shading patterns aren't rendered. Filling them with the (often black)
         // underlying colour produces large wrong dark blocks; skipping them entirely loses
         // the region's visual weight. Real-world patterns (e.g. TikZ /pgfpat hatches)
-        // average to roughly a mid-tone, so approximate with a neutral grey — much closer
-        // to a reference rasterizer than either extreme.
-        byte fr = _gs.FillR, fg = _gs.FillG, fb = _gs.FillB;
+        // average to roughly a mid-tone, so approximate with a neutral grey.
         if (_gs.FillIsPattern)
             fr = fg = fb = 160;
 
-        buffer.FillRect(
-            (int)px1, (int)py1,
-            (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
-            fr, fg, fb);
+        if (TryGetRectangle(out var rminX, out var rminY, out var rmaxX, out var rmaxY))
+        {
+            var (px1, py1) = UToPixel(rminX, rmaxY);
+            var (px2, py2) = UToPixel(rmaxX, rminY);
+            buffer.FillRect(
+                (int)px1, (int)py1,
+                (int)(px2 - px1 + 1), (int)(py2 - py1 + 1),
+                fr, fg, fb, _gs.FillA);
+            return;
+        }
+
+        FillPolygon(evenOdd, fr, fg, fb);
+    }
+
+    // Paints a shading clipped to the current path's device bounding box (used for a
+    // shading-pattern fill, where the path defines the painted region).
+    private void PaintShadingInPathBounds(ShadingInfo sh)
+    {
+        var (minX, minY, maxX, maxY) = PathDeviceBounds();
+        if (maxX < minX) return;
+        PaintShadingRect(sh, (int)Math.Floor(minX), (int)Math.Floor(minY), (int)Math.Ceiling(maxX), (int)Math.Ceiling(maxY));
+    }
+
+    // Device-space bounding box of the current path's subpaths.
+    private (double MinX, double MinY, double MaxX, double MaxY) PathDeviceBounds()
+    {
+        var minX = double.MaxValue; var minY = double.MaxValue;
+        var maxX = double.MinValue; var maxY = double.MinValue;
+        foreach (var sub in _subpaths)
+        foreach (var (ux, uy) in sub)
+        {
+            var (px, py) = UToPixel(ux, uy);
+            if (px < minX) minX = px;
+            if (py < minY) minY = py;
+            if (px > maxX) maxX = px;
+            if (py > maxY) maxY = py;
+        }
+        return (minX, minY, maxX, maxY);
+    }
+
+    // Tiles a pattern cell across the current path's device bounding box. Renders one cell
+    // to a small buffer (recursively via a child PageRenderer), then blits it on the lattice
+    // defined by XStep/YStep under the pattern matrix. Clipped to the path bbox + active clip.
+    private void PaintTilingInPathBounds(TilingPatternInfo tp)
+    {
+        if (_tilingDepth >= 2) return; // guard against pattern-in-pattern recursion
+        var (minX, minY, maxX, maxY) = PathDeviceBounds();
+        if (maxX < minX) return;
+
+        // Pattern cell size in device pixels (pattern matrix scale × device scale).
+        var pm = tp.Matrix;
+        var sxv = Math.Sqrt((pm[0] * pm[0]) + (pm[1] * pm[1]));
+        var syv = Math.Sqrt((pm[2] * pm[2]) + (pm[3] * pm[3]));
+        var stepXpx = Math.Abs(tp.XStep) * sxv * scale;
+        var stepYpx = Math.Abs(tp.YStep) * syv * scale;
+        if (stepXpx < 0.5 || stepYpx < 0.5) return;
+
+        // Cap tile pixel size and total tile count to keep this bounded.
+        var tileW = Math.Clamp((int)Math.Ceiling(stepXpx), 1, 256);
+        var tileH = Math.Clamp((int)Math.Ceiling(stepYpx), 1, 256);
+
+        // Render one cell into its own buffer. The cell content draws in pattern space with
+        // BBox origin; we scale pattern→tile pixels and flip Y to match the cell content.
+        var tile = new RasterBuffer(tileW, tileH);
+        tile.Clear(255, 255, 255);
+        var cellScaleX = tileW / (tp.XStep == 0 ? 1 : Math.Abs(tp.XStep));
+        var cellScaleY = tileH / (tp.YStep == 0 ? 1 : Math.Abs(tp.YStep));
+        var cellScale = Math.Min(cellScaleX, cellScaleY);
+        // Initial CTM translates the BBox lower-left to the tile origin.
+        double[] cellCtm = [1, 0, 0, 1, -tp.BBox[0], -tp.BBox[1]];
+        var cell = new PageRenderer(tile, fonts, cellScale, tp.YStep == 0 ? tileH / cellScale : Math.Abs(tp.YStep),
+            embeddedFontBytes, imageXObjects, cellCtm, toUnicodeMaps, compositeFonts, extGStateAlphas, shadings, tilingPatterns)
+        { _tilingDepth = _tilingDepth + 1 };
+        // Uncoloured (PaintType 2) cells use the current fill colour.
+        if (tp.PaintType == 2)
+            cell.SetInitialFillColor(_gs.FillR, _gs.FillG, _gs.FillB);
+        cell.Render(tp.Operators, EmptyFontMap);
+
+        // Build a mask of which tile pixels are "ink" (non-white) to avoid painting the white
+        // background over existing content.
+        var tileData = tile.ToArgbBytes();
+
+        var x0 = Math.Max(0, (int)Math.Floor(minX));
+        var y0 = Math.Max(0, (int)Math.Floor(minY));
+        var x1 = Math.Min(buffer.Width - 1, (int)Math.Ceiling(maxX));
+        var y1 = Math.Min(buffer.Height - 1, (int)Math.Ceiling(maxY));
+        if (_gs.ClipRect is { } c)
+        {
+            x0 = Math.Max(x0, c.X0); y0 = Math.Max(y0, c.Y0);
+            x1 = Math.Min(x1, c.X1 - 1); y1 = Math.Min(y1, c.Y1 - 1);
+        }
+
+        for (var py = y0; py <= y1; py++)
+        for (var px = x0; px <= x1; px++)
+        {
+            var tx = ((px - x0) % tileW + tileW) % tileW;
+            var ty = ((py - y0) % tileH + tileH) % tileH;
+            var o = ((ty * tileW) + tx) * 4;
+            var r = tileData[o]; var g = tileData[o + 1]; var b = tileData[o + 2];
+            if (r >= 250 && g >= 250 && b >= 250) continue; // skip the cell's white background
+            buffer.BlitImagePixel(px, py, r, g, b);
+        }
+    }
+    private void PaintShadingInClip(ShadingInfo sh)
+    {
+        var (x0, y0, x1, y1) = _gs.ClipRect ?? (0, 0, buffer.Width, buffer.Height);
+        PaintShadingRect(sh, x0, y0, x1 - 1, y1 - 1);
+    }
+
+    // Core gradient rasteriser: for each device pixel in [dx0..dx1]×[dy0..dy1], map back to
+    // user space (inverse CTM), compute the shading's parametric t, and write the ramp colour.
+    private void PaintShadingRect(ShadingInfo sh, int dx0, int dy0, int dx1, int dy1)
+    {
+        // Mesh shadings are painted as Gouraud-interpolated triangles, ignoring the rect.
+        if (sh.IsMesh)
+        {
+            PaintMesh(sh);
+            return;
+        }
+
+        dx0 = Math.Max(0, dx0); dy0 = Math.Max(0, dy0);
+        dx1 = Math.Min(buffer.Width - 1, dx1); dy1 = Math.Min(buffer.Height - 1, dy1);
+        if (dx1 < dx0 || dy1 < dy0) return;
+
+        // Honour an active clip rectangle.
+        if (_gs.ClipRect is { } c)
+        {
+            dx0 = Math.Max(dx0, c.X0); dy0 = Math.Max(dy0, c.Y0);
+            dx1 = Math.Min(dx1, c.X1 - 1); dy1 = Math.Min(dy1, c.Y1 - 1);
+            if (dx1 < dx0 || dy1 < dy0) return;
+        }
+
+        // Invert the device→user mapping. Device px = ux*scale, py = (H - uy)*scale, where
+        // (ux,uy) = CTM·(x,y). Compose M = CTM then the device flip; invert the whole thing.
+        var m = _gs.Ctm;
+        // Build device-from-userPathPoint via UToPixel for two basis points to derive inverse.
+        // Simpler: map each device pixel centre to user space directly.
+        if (!TryInvertDeviceToUser(out var inv)) return;
+
+        for (var py = dy0; py <= dy1; py++)
+        for (var px = dx0; px <= dx1; px++)
+        {
+            var (ux, uy) = ApplyInv(inv, px + 0.5, py + 0.5);
+            if (!ShadingT(sh, ux, uy, out var t)) continue;
+            var (r, g, b) = sh.ColorAt(t);
+            if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
+            else buffer.BlendPixel(px, py, r, g, b, _gs.FillA);
+        }
+        _ = m;
+    }
+
+    // Rasterises a mesh shading's triangles with barycentric Gouraud colour interpolation.
+    // Vertices are in user space; each is mapped to device space via UToPixel.
+    private void PaintMesh(ShadingInfo sh)
+    {
+        if (sh.Triangles is null) return;
+        foreach (var t in sh.Triangles)
+        {
+            var (ax, ay) = UToPixel(t.X0, t.Y0);
+            var (bx, by) = UToPixel(t.X1, t.Y1);
+            var (cx, cy) = UToPixel(t.X2, t.Y2);
+
+            var minX = (int)Math.Floor(Math.Min(ax, Math.Min(bx, cx)));
+            var maxX = (int)Math.Ceiling(Math.Max(ax, Math.Max(bx, cx)));
+            var minY = (int)Math.Floor(Math.Min(ay, Math.Min(by, cy)));
+            var maxY = (int)Math.Ceiling(Math.Max(ay, Math.Max(by, cy)));
+            minX = Math.Max(minX, 0); minY = Math.Max(minY, 0);
+            maxX = Math.Min(maxX, buffer.Width - 1); maxY = Math.Min(maxY, buffer.Height - 1);
+            if (_gs.ClipRect is { } c)
+            {
+                minX = Math.Max(minX, c.X0); minY = Math.Max(minY, c.Y0);
+                maxX = Math.Min(maxX, c.X1 - 1); maxY = Math.Min(maxY, c.Y1 - 1);
+            }
+
+            var denom = ((by - cy) * (ax - cx)) + ((cx - bx) * (ay - cy));
+            if (Math.Abs(denom) < 1e-9) continue; // degenerate triangle
+
+            for (var py = minY; py <= maxY; py++)
+            for (var px = minX; px <= maxX; px++)
+            {
+                var fx = px + 0.5; var fy = py + 0.5;
+                var w0 = (((by - cy) * (fx - cx)) + ((cx - bx) * (fy - cy))) / denom;
+                var w1 = (((cy - ay) * (fx - cx)) + ((ax - cx) * (fy - cy))) / denom;
+                var w2 = 1 - w0 - w1;
+                if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001) continue; // outside triangle
+
+                var r = (byte)Math.Clamp((w0 * t.R0) + (w1 * t.R1) + (w2 * t.R2), 0, 255);
+                var g = (byte)Math.Clamp((w0 * t.G0) + (w1 * t.G1) + (w2 * t.G2), 0, 255);
+                var b = (byte)Math.Clamp((w0 * t.B0) + (w1 * t.B1) + (w2 * t.B2), 0, 255);
+                if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
+                else buffer.BlendPixel(px, py, r, g, b, _gs.FillA);
+            }
+        }
+    }
+
+    // Computes parametric t∈[0,1] for a user-space point under the shading, applying the
+    // extend flags. Returns false when the point is outside a non-extended shading.
+    private static bool ShadingT(ShadingInfo sh, double x, double y, out double t)
+    {
+        t = 0;
+        if (sh.ShadingType == 2)
+        {
+            // Axial: project (x,y) onto the axis (x0,y0)->(x1,y1).
+            var x0 = sh.Coords[0]; var y0 = sh.Coords[1];
+            var x1 = sh.Coords[2]; var y1 = sh.Coords[3];
+            var dx = x1 - x0; var dy = y1 - y0;
+            var len2 = (dx * dx) + (dy * dy);
+            if (len2 < 1e-9) { t = 0; return true; }
+            t = (((x - x0) * dx) + ((y - y0) * dy)) / len2;
+        }
+        else
+        {
+            // Radial: t such that the point lies on the interpolated circle. Approximate by
+            // normalised distance from centre 0 to centre 1 (handles the common concentric case).
+            var cx0 = sh.Coords[0]; var cy0 = sh.Coords[1]; var r0 = sh.Coords[2];
+            var cx1 = sh.Coords[3]; var cy1 = sh.Coords[4]; var r1 = sh.Coords[5];
+            var d = Math.Sqrt(((x - cx1) * (x - cx1)) + ((y - cy1) * (y - cy1)));
+            var denom = r1 - r0;
+            t = Math.Abs(denom) > 1e-9 ? (d - r0) / denom : (r1 > 1e-9 ? d / r1 : 0);
+            _ = cx0; _ = cy0;
+        }
+
+        if (t < 0) { if (!sh.ExtendStart) return false; t = 0; }
+        if (t > 1) { if (!sh.ExtendEnd) return false; t = 1; }
+        return true;
+    }
+
+    // Inverse of the device→user transform used by UToPixel (CTM + Y-flip + scale).
+    private bool TryInvertDeviceToUser(out double[] inv)
+    {
+        // Forward: user (x,y) → ctm → (ux,uy) → device (ux*scale, (H-uy)*scale).
+        // Compose forward affine D = [a b c d e f] mapping user→device:
+        var a = _gs.Ctm[0] * scale;
+        var b = -_gs.Ctm[1] * scale;
+        var cc = _gs.Ctm[2] * scale;
+        var dd = -_gs.Ctm[3] * scale;
+        var e = _gs.Ctm[4] * scale;
+        var f = (pageHeightPt - _gs.Ctm[5]) * scale;
+        var det = (a * dd) - (b * cc);
+        if (Math.Abs(det) < 1e-12) { inv = []; return false; }
+        var id = 1.0 / det;
+        // Inverse affine.
+        inv =
+        [
+            dd * id, -b * id,
+            -cc * id, a * id,
+            ((cc * f) - (dd * e)) * id, ((b * e) - (a * f)) * id
+        ];
+        return true;
+    }
+
+    private static (double X, double Y) ApplyInv(double[] m, double px, double py) =>
+        ((m[0] * px) + (m[2] * py) + m[4], (m[1] * px) + (m[3] * py) + m[5]);
+
+    // Scan-converts all current subpaths to device pixels and fills using the given winding
+    // rule. Each subpath is treated as implicitly closed (PDF fills close open subpaths).
+    private void FillPolygon(bool evenOdd, byte fr, byte fg, byte fb)
+    {
+        // Flatten every subpath to device-space points and find the vertical extent.
+        var polys = new List<(double X, double Y)[]>(_subpaths.Count);
+        var minY = double.MaxValue; var maxY = double.MinValue;
+        foreach (var sub in _subpaths)
+        {
+            if (sub.Count < 2) continue;
+            var pts = new (double X, double Y)[sub.Count];
+            for (var i = 0; i < sub.Count; i++)
+            {
+                var (px, py) = UToPixel(sub[i].X, sub[i].Y);
+                pts[i] = (px, py);
+                if (py < minY) minY = py;
+                if (py > maxY) maxY = py;
+            }
+            polys.Add(pts);
+        }
+        if (polys.Count == 0) return;
+
+        var y0 = Math.Max(0, (int)Math.Floor(minY));
+        var y1 = Math.Min(buffer.Height - 1, (int)Math.Ceiling(maxY));
+
+        // For each scanline, collect edge crossings (x, winding direction), then fill the
+        // spans selected by the winding rule. Sample at pixel centres (y + 0.5).
+        var xs = new List<(double X, int Dir)>();
+        for (var y = y0; y <= y1; y++)
+        {
+            var sy = y + 0.5;
+            xs.Clear();
+            foreach (var pts in polys)
+            {
+                var n = pts.Length;
+                for (var i = 0; i < n; i++)
+                {
+                    var (ax, ay) = pts[i];
+                    var (bx, by) = pts[(i + 1) % n]; // implicit close
+                    if (ay == by) continue; // horizontal edge contributes no crossing
+                    // Half-open [min,max) so shared vertices aren't double-counted.
+                    if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
+                    {
+                        var t = (sy - ay) / (by - ay);
+                        var cx = ax + (t * (bx - ax));
+                        xs.Add((cx, by > ay ? 1 : -1));
+                    }
+                }
+            }
+            if (xs.Count < 2) continue;
+            xs.Sort(static (p, q) => p.X.CompareTo(q.X));
+
+            var wind = 0;
+            for (var i = 0; i < xs.Count - 1; i++)
+            {
+                wind += xs[i].Dir;
+                var inside = evenOdd ? ((i + 1) & 1) == 1 : wind != 0;
+                if (!inside) continue;
+                var xStart = (int)Math.Round(xs[i].X);
+                var xEnd = (int)Math.Round(xs[i + 1].X);
+                if (xEnd > xStart)
+                    buffer.FillSpan(y, xStart, xEnd - 1, fr, fg, fb, _gs.FillA);
+            }
+        }
     }
 
     private void DrawStroke()
@@ -661,12 +1057,59 @@ internal sealed class PageRenderer(
         // bleeds outside its intended bounds. Use the CTM's average linear scale.
         var ctmScale = CtmAverageScale();
         var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
-        for (var i = 0; i + 1 < _currentPath.Count; i += 2)
+
+        // Dash pattern: convert the user-space on/off lengths to device pixels once.
+        var dashPx = _gs.DashLengths.Length > 0
+            ? _gs.DashLengths.Select(d => Math.Max(0.0, d * ctmScale * scale)).ToArray()
+            : null;
+        // A pattern of all zeros means "solid" — ignore it.
+        if (dashPx is not null && dashPx.All(static d => d <= 0)) dashPx = null;
+
+        foreach (var sub in _subpaths)
         {
-            var (x0, y0) = UToPixel(_currentPath[i].X, _currentPath[i].Y);
-            var (x1, y1) = UToPixel(_currentPath[i + 1].X, _currentPath[i + 1].Y);
-            buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
-                _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx);
+            for (var i = 0; i + 1 < sub.Count; i++)
+            {
+                var (x0, y0) = UToPixel(sub[i].X, sub[i].Y);
+                var (x1, y1) = UToPixel(sub[i + 1].X, sub[i + 1].Y);
+                if (dashPx is null)
+                    buffer.DrawLine((int)x0, (int)y0, (int)x1, (int)y1,
+                        _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA);
+                else
+                    DrawDashedLine(x0, y0, x1, y1, thickPx, dashPx);
+            }
+        }
+    }
+
+    // Draws a line as a dash pattern by walking its length and emitting "on" sub-segments.
+    // dashPx alternates on/off lengths starting with "on"; an odd-length array repeats to
+    // form the full cycle (ISO 32000-1 §8.4.3.6). Phase is assumed 0 per segment.
+    private void DrawDashedLine(double x0, double y0, double x1, double y1, int thickPx, double[] dashPx)
+    {
+        var dx = x1 - x0;
+        var dy = y1 - y0;
+        var len = Math.Sqrt((dx * dx) + (dy * dy));
+        if (len < 1e-6) return;
+        var ux = dx / len;
+        var uy = dy / len;
+
+        var pos = 0.0;
+        var idx = 0;
+        var on = true;
+        while (pos < len)
+        {
+            var seg = dashPx[idx % dashPx.Length];
+            if (seg <= 0) { idx++; on = !on; continue; }
+            var end = Math.Min(len, pos + seg);
+            if (on)
+            {
+                var ax = x0 + (ux * pos); var ay = y0 + (uy * pos);
+                var bx = x0 + (ux * end); var by = y0 + (uy * end);
+                buffer.DrawLine((int)ax, (int)ay, (int)bx, (int)by,
+                    _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA);
+            }
+            pos = end;
+            idx++;
+            on = !on;
         }
     }
 
@@ -684,16 +1127,74 @@ internal sealed class PageRenderer(
 
     private void ClearPath()
     {
-        _currentPath.Clear();
+        if (_pendingClip)
+        {
+            ApplyPendingClip();
+            _pendingClip = false;
+        }
+        _subpaths.Clear();
+        _curSub = null;
         _inPath = false;
     }
 
-    private bool IsRectanglePath()
+    // Computes the device-space bounding box of the current path and intersects it into the
+    // graphics-state clip rectangle. Called when a path with a pending W/W* is cleared.
+    private void ApplyPendingClip()
     {
-        if (_currentPath.Count < 4) return false;
-        var xs = _currentPath.Select(static p => p.X).Distinct().Count();
-        var ys = _currentPath.Select(static p => p.Y).Distinct().Count();
-        return xs == 2 && ys == 2;
+        var minX = double.MaxValue; var minY = double.MaxValue;
+        var maxX = double.MinValue; var maxY = double.MinValue;
+        var any = false;
+        foreach (var sub in _subpaths)
+        foreach (var (ux, uy) in sub)
+        {
+            var (px, py) = UToPixel(ux, uy);
+            if (px < minX) minX = px;
+            if (py < minY) minY = py;
+            if (px > maxX) maxX = px;
+            if (py > maxY) maxY = py;
+            any = true;
+        }
+        if (!any) return;
+
+        var x0 = (int)Math.Floor(minX);
+        var y0 = (int)Math.Floor(minY);
+        var x1 = (int)Math.Ceiling(maxX);
+        var y1 = (int)Math.Ceiling(maxY);
+
+        if (_gs.ClipRect is { } c)
+        {
+            x0 = Math.Max(x0, c.X0); y0 = Math.Max(y0, c.Y0);
+            x1 = Math.Min(x1, c.X1); y1 = Math.Min(y1, c.Y1);
+        }
+        _gs.ClipRect = (x0, y0, x1, y1);
+        buffer.SetClip(x0, y0, x1, y1);
+    }
+
+    // Re-applies the current graphics-state clip to the buffer (after a Q restore).
+    private void SyncClip()
+    {
+        if (_gs.ClipRect is { } c)
+            buffer.SetClip(c.X0, c.Y0, c.X1, c.Y1);
+        else
+            buffer.ClearClip();
+    }
+
+    // True when the path is a single axis-aligned rectangle (the common case: page
+    // backgrounds, table cells, rules). Returns its user-space bounds. Such paths keep the
+    // fast FillRect path and avoid the scanline rasteriser.
+    private bool TryGetRectangle(out double minX, out double minY, out double maxX, out double maxY)
+    {
+        minX = minY = maxX = maxY = 0;
+        if (_subpaths.Count != 1) return false;
+        var sub = _subpaths[0];
+        // 4 or 5 points (5th = explicit close back to start).
+        if (sub.Count is < 4 or > 5) return false;
+        var distinctX = sub.Select(static p => p.X).Distinct().Count();
+        var distinctY = sub.Select(static p => p.Y).Distinct().Count();
+        if (distinctX != 2 || distinctY != 2) return false;
+        minX = sub.Min(static p => p.X); maxX = sub.Max(static p => p.X);
+        minY = sub.Min(static p => p.Y); maxY = sub.Max(static p => p.Y);
+        return true;
     }
 
     // ── XObject / image ───────────────────────────────────────────────────────
@@ -818,19 +1319,27 @@ internal sealed class PageRenderer(
     private static (double R, double G, double B) CmykToRgb(double c, double m, double y, double k) =>
         ((1 - c) * (1 - k), (1 - m) * (1 - k), (1 - y) * (1 - k));
 
+    // Seeds the initial fill colour — used when rendering an uncoloured (PaintType 2)
+    // tiling pattern cell, which paints in the parent's current fill colour.
+    internal void SetInitialFillColor(byte r, byte g, byte b)
+    {
+        _gs.FillR = r; _gs.FillG = g; _gs.FillB = b;
+        _gs.StrokeR = r; _gs.StrokeG = g; _gs.StrokeB = b;
+    }
+
     private void SetFillGray(double gray)
     {
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
         _gs.FillR = _gs.FillG = _gs.FillB = v;
-        _gs.FillA = 255;
         _gs.FillIsPattern = false;
+        _gs.FillShadingName = null;
+        _gs.FillTilingName = null;
     }
 
     private void SetStrokeGray(double gray)
     {
         var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
         _gs.StrokeR = _gs.StrokeG = _gs.StrokeB = v;
-        _gs.StrokeA = 255;
     }
 
     private void SetFillRgb(double r, double g, double b)
@@ -838,8 +1347,9 @@ internal sealed class PageRenderer(
         _gs.FillR = (byte)Math.Clamp((int)(r * 255), 0, 255);
         _gs.FillG = (byte)Math.Clamp((int)(g * 255), 0, 255);
         _gs.FillB = (byte)Math.Clamp((int)(b * 255), 0, 255);
-        _gs.FillA = 255;
         _gs.FillIsPattern = false;
+        _gs.FillShadingName = null;
+        _gs.FillTilingName = null;
     }
 
     private void SetStrokeRgb(double r, double g, double b)
@@ -847,6 +1357,5 @@ internal sealed class PageRenderer(
         _gs.StrokeR = (byte)Math.Clamp((int)(r * 255), 0, 255);
         _gs.StrokeG = (byte)Math.Clamp((int)(g * 255), 0, 255);
         _gs.StrokeB = (byte)Math.Clamp((int)(b * 255), 0, 255);
-        _gs.StrokeA = 255;
     }
 }

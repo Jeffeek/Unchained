@@ -110,14 +110,25 @@ public abstract class Shape
     /// </summary>
     public HyperlinkAction? ClickAction { get; set; }
 
-    // ── Round-trip preservation ───────────────────────────────────────────────
+    // ── Placeholder ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// The placeholder index from <c>&lt;p:ph idx="N"/&gt;</c>, or -1 when the shape
-    /// is not a placeholder. Used by the rasterizer to inherit geometry from the layout
-    /// when this shape has no explicit transform (empty <c>&lt;p:spPr/&gt;</c>).
+    /// The placeholder role of this shape, or <see cref="PlaceholderType.None"/> when the shape is
+    /// not a placeholder. Placeholders inherit geometry and default formatting from the matching
+    /// placeholder on the slide layout / master.
     /// </summary>
-    internal int PlaceholderIndex { get; set; } = -1;
+    public PlaceholderType PlaceholderType { get; set; } = PlaceholderType.None;
+
+    /// <summary>
+    /// The placeholder index (<c>p:ph/@idx</c>) used to match a slide placeholder to its layout
+    /// definition when several placeholders share the same type. <see langword="null"/> when absent.
+    /// </summary>
+    public int? PlaceholderIndex { get; set; }
+
+    /// <summary><see langword="true"/> when this shape carries a placeholder reference.</summary>
+    public bool IsPlaceholder => PlaceholderType != PlaceholderType.None;
+
+    // ── Round-trip preservation ───────────────────────────────────────────────
 
     /// <summary>
     /// Raw XML element preserved from the source file for properties that are not

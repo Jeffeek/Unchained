@@ -452,6 +452,18 @@ internal static class OpenXmlPresentationParser
             return chart;
         }
 
+        // SmartArt diagram — represent the shape type so counts/sequences stay consistent with
+        // the custom parser. Full part/node resolution lives on the custom parse path.
+        if (uri == DmlNames.GraphicDataDiagramUri)
+        {
+            var smartArt = new SmartArtShape();
+            ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, smartArt);
+            ReadFrameGeometry(gf.Transform, smartArt);
+            // Preserve the frame XML (incl. <dgm:relIds>) so the SDK save path can re-emit it.
+            smartArt.RawElement = System.Xml.Linq.XElement.Parse(gf.OuterXml, System.Xml.Linq.LoadOptions.None);
+            return smartArt;
+        }
+
         // Unknown graphic type — represent as a generic autoshape so counts stay consistent.
         var stub = new AutoShape { ShapeType = AutoShapeType.Rectangle };
         ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, stub);

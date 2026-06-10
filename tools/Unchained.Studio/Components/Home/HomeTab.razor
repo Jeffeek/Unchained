@@ -1,0 +1,106 @@
+@page "/"
+@inject NavigationManager Nav
+
+<div class="home-page">
+    <!-- Hero -->
+    <section class="home-hero">
+        <div class="home-hero-glow"></div>
+        <MudIcon Icon="@Icons.Material.Filled.AutoStories" Class="home-hero-icon" />
+        <MudText Typo="Typo.h3" Class="home-hero-title">Unchained Studio</MudText>
+        <MudText Typo="Typo.h6" Class="home-hero-subtitle">
+            A pure-managed document engine for PDF &amp; Office formats — no native dependencies for the core.
+        </MudText>
+        <div class="home-hero-badges">
+            <span class="home-badge">.NET 8 / 9 / 10</span>
+            <span class="home-badge">100% C#</span>
+            <span class="home-badge">MIT-friendly stack</span>
+        </div>
+    </section>
+
+    <!-- Format cards -->
+    <section class="home-cards">
+        @foreach (var f in _formats)
+        {
+            <div class="@($"home-card {(f.Enabled ? "" : "home-card--soon")}")"
+                 @onclick="@(() => OpenFormat(f))">
+                <div class="home-card-head">
+                    <MudIcon Icon="@f.Icon" Class="home-card-icon" Style="@($"color:{f.Accent};")" />
+                    <div>
+                        <MudText Typo="Typo.h6">@f.Name</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity:.65;">@f.Tagline</MudText>
+                    </div>
+                    @if (!f.Enabled)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="Coming soon" Class="ml-auto" />
+                    }
+                </div>
+                <ul class="home-card-features">
+                    @foreach (var feat in f.Features)
+                    {
+                        <li><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" /> @feat</li>
+                    }
+                </ul>
+                @if (f.Enabled)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               EndIcon="@Icons.Material.Outlined.ArrowForward"
+                               OnClick="@(() => OpenFormat(f))">
+                        Open @f.Name
+                    </MudButton>
+                }
+            </div>
+        }
+    </section>
+
+    <!-- Capability strip -->
+    <section class="home-caps">
+        <MudText Typo="Typo.overline" Class="home-caps-title">What the engine can do</MudText>
+        <div class="home-caps-grid">
+            @foreach (var cap in _capabilities)
+            {
+                <div class="home-cap">
+                    <MudIcon Icon="@cap.Icon" Size="Size.Small" Class="home-cap-icon" />
+                    <div>
+                        <div class="home-cap-name">@cap.Name</div>
+                        <div class="home-cap-desc">@cap.Desc</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+@code {
+    private sealed record FormatCard(
+        string Name, string Tagline, string Icon, string Accent, bool Enabled, string Route, string[] Features);
+
+    private sealed record Capability(string Name, string Desc, string Icon);
+
+    private readonly List<FormatCard> _formats =
+    [
+        new("PDF", "Read, render, edit, convert", Icons.Material.Outlined.PictureAsPdf, "#E53935", true, "/pdf",
+            ["PDF 1.x–2.x, encrypted, linearized, tagged", "Render & extract text", "Optimize, repair, validate PDF/A & PDF/UA", "Batch visual comparison"]),
+        new("PPTX", "PowerPoint presentations", Icons.Material.Outlined.Slideshow, "#FB8C00", true, "/pptx",
+            ["Slides, shapes, charts, tables, SmartArt", "Render slides to PNG", "Find & replace, hyperlinks", "Export to PDF, HTML5 player, ODP"]),
+        new("DOCX", "Word documents", Icons.Material.Outlined.Description, "#1E88E5", false, "/docx",
+            ["Built on the shared OOXML core", "Paragraphs, runs, tables, styles", "Round-trip fidelity"]),
+        new("XLSX", "Excel workbooks", Icons.Material.Outlined.TableChart, "#43A047", false, "/xlsx",
+            ["Built on the shared OOXML core", "Sheets, cells, formulas", "Round-trip fidelity"]),
+    ];
+
+    private readonly List<Capability> _capabilities =
+    [
+        new("Render", "FreeType2 + HarfBuzz text shaping", Icons.Material.Outlined.Image),
+        new("Convert", "PDF · HTML5 · SVG · ODP export", Icons.Material.Outlined.SwapHoriz),
+        new("Edit", "Find/replace, hyperlinks, merge/split", Icons.Material.Outlined.Edit),
+        new("Secure", "AES-256 encryption, signatures", Icons.Material.Outlined.Lock),
+        new("Validate", "PDF/A & PDF/UA conformance", Icons.Material.Outlined.VerifiedUser),
+        new("Inspect", "Full document object model", Icons.Material.Outlined.AccountTree),
+    ];
+
+    private void OpenFormat(FormatCard f)
+    {
+        if (f.Enabled)
+            Nav.NavigateTo(f.Route);
+    }
+}

@@ -13,6 +13,19 @@ internal sealed class RasterBuffer(int width, int height)
     internal int Width { get; } = width;
     internal int Height { get; } = height;
 
+    // Optional clip rectangle (inclusive min, exclusive max) in device pixels. When set,
+    // SetPixel and BlitImagePixel reject writes outside it. Null = no clip.
+    private (int X0, int Y0, int X1, int Y1)? _clip;
+
+    internal void SetClip(int x0, int y0, int x1, int y1) => _clip = (x0, y0, x1, y1);
+    internal void ClearClip() => _clip = null;
+
+    private bool InClip(int x, int y)
+    {
+        if (_clip is not { } c) return true;
+        return x >= c.X0 && x < c.X1 && y >= c.Y0 && y < c.Y1;
+    }
+
     internal void Clear(byte r = 255, byte g = 255, byte b = 255)
     {
         for (var i = 0; i < _data.Length; i += 4)
@@ -28,6 +41,8 @@ internal sealed class RasterBuffer(int width, int height)
     internal void SetPixel(int x, int y, byte r, byte g, byte b, byte a)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
+            return;
+        if (!InClip(x, y))
             return;
 
         var i = ((y * Width) + x) * 4;
@@ -61,12 +76,24 @@ internal sealed class RasterBuffer(int width, int height)
             SetPixel(px, py, r, g, b, a);
     }
 
+    // Fills the inclusive horizontal span [x0, x1] on row y with an opaque colour.
+    // Used by the scanline polygon rasteriser; clipped to the buffer bounds.
+    internal void FillSpan(int y, int x0, int x1, byte r, byte g, byte b, byte a = 255)
+    {
+        if ((uint)y >= (uint)Height) return;
+        var xa = Math.Max(0, x0);
+        var xb = Math.Min(Width - 1, x1);
+        for (var px = xa; px <= xb; px++)
+            SetPixel(px, y, r, g, b, a);
+    }
+
     // Bresenham line with configurable thickness.
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
     internal void DrawLine(
         int x0, int y0, int x1, int y1,
         byte r, byte g, byte b,
-        int thicknessPx = 1)
+        int thicknessPx = 1,
+        byte a = 255)
     {
         var dx = Math.Abs(x1 - x0);
         var dy = Math.Abs(y1 - y0);
@@ -79,7 +106,7 @@ internal sealed class RasterBuffer(int width, int height)
         {
             for (var ty = -half; ty <= half; ty++)
             for (var tx = -half; tx <= half; tx++)
-                SetPixel(x0 + tx, y0 + ty, r, g, b, 255);
+                SetPixel(x0 + tx, y0 + ty, r, g, b, a);
 
             if (x0 == x1 && y0 == y1)
                 break;
@@ -159,6 +186,8 @@ internal sealed class RasterBuffer(int width, int height)
     internal void BlitImagePixel(int x, int y, byte r, byte g, byte b)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
+            return;
+        if (!InClip(x, y))
             return;
 
         var i = ((y * Width) + x) * 4;

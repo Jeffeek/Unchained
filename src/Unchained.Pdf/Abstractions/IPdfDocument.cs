@@ -130,4 +130,11 @@ public interface IPdfDocument : IDisposable, IAsyncDisposable
     /// (or the legacy <c>/Dests</c> dict). Returns an empty list when none exist.
     /// </summary>
     IReadOnlyList<NamedDestination> GetNamedDestinations();
+
+    /// <summary>
+    /// Returns the document's optional content groups ("layers", <c>/OCProperties</c>),
+    /// each with its name and default visibility. Returns an empty list when the document has
+    /// no layers. Default interface implementation returns empty for non-Unchained documents.
+    /// </summary>
+    IReadOnlyList<OptionalContentGroup> GetLayers() => [];
 }
