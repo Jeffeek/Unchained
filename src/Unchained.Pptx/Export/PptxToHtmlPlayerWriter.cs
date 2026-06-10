@@ -1,4 +1,5 @@
 using System.Text;
+using Unchained.Ooxml;
 using Unchained.Pptx.Engine;
 
 namespace Unchained.Pptx.Export;
@@ -11,7 +12,7 @@ namespace Unchained.Pptx.Export;
 /// </summary>
 internal static class PptxToHtmlPlayerWriter
 {
-    private const double EmuToPx = 1.0 / 9525.0;
+    private const double EmuToPx = EmuConversions.EmuToCssPx;
 
     public static byte[] Write(PresentationDocument document, HtmlPlayerSaveOptions options)
     {

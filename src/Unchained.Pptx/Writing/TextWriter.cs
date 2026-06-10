@@ -54,13 +54,13 @@ internal static class TextWriter
 
         bodyPr.Add(new XAttribute("anchor", AnchorToString(format.VerticalAnchor)));
 
-        if (format.MarginLeft != Emu.FromPoints(7.2))
+        if (format.MarginLeft != Emu.FromPoints(TextConstants.DefaultMarginHorizontalPt))
             bodyPr.Add(new XAttribute("marL", format.MarginLeft.Value));
-        if (format.MarginRight != Emu.FromPoints(7.2))
+        if (format.MarginRight != Emu.FromPoints(TextConstants.DefaultMarginHorizontalPt))
             bodyPr.Add(new XAttribute("marR", format.MarginRight.Value));
-        if (format.MarginTop != Emu.FromPoints(3.6))
+        if (format.MarginTop != Emu.FromPoints(TextConstants.DefaultMarginVerticalPt))
             bodyPr.Add(new XAttribute("marT", format.MarginTop.Value));
-        if (format.MarginBottom != Emu.FromPoints(3.6))
+        if (format.MarginBottom != Emu.FromPoints(TextConstants.DefaultMarginVerticalPt))
             bodyPr.Add(new XAttribute("marB", format.MarginBottom.Value));
 
         if (format.ColumnCount > 1)

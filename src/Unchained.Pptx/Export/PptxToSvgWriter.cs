@@ -1,6 +1,7 @@
 using System.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Text;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
@@ -16,7 +17,7 @@ namespace Unchained.Pptx.Export;
 internal static class PptxToSvgWriter
 {
     // EMU → SVG user units (points): 1 pt = 12700 EMU
-    private const double EmuToPt = 1.0 / 12700.0;
+    private const double EmuToPt = EmuConversions.EmuToPoints;
 
     /// <summary>
     /// Returns the SVG bytes for a single slide.
@@ -150,12 +151,12 @@ internal static class PptxToSvgWriter
         {
             if (para.Runs.Count == 0)
             {
-                cursorY += 14.0 * 1.25;
+                cursorY += 14.0 * TextConstants.DefaultLineHeightFactor;
                 continue;
             }
 
-            var maxSize = para.Runs.Max(r => r.Format.FontSizePoints ?? 12.0);
-            var lineHeight = maxSize * 1.25;
+            var maxSize = para.Runs.Max(r => r.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt);
+            var lineHeight = maxSize * TextConstants.DefaultLineHeightFactor;
             cursorY += maxSize; // advance to baseline
 
             if (cursorY > h - PaddingPt) break;
@@ -179,7 +180,7 @@ internal static class PptxToSvgWriter
             foreach (var run in para.Runs)
             {
                 if (string.IsNullOrEmpty(run.Text)) continue;
-                var fs = run.Format.FontSizePoints ?? 12.0;
+                var fs = run.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt;
                 var weight = run.Format.Bold.Value == true ? "bold" : "normal";
                 var style = run.Format.Italic.Value == true ? "italic" : "normal";
                 var fill = run.Format.Fill?.Solid != null

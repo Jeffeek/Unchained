@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
@@ -21,7 +22,7 @@ internal static class LineWriter
 
         if (line.WidthPoints.HasValue)
             ln.Add(new XAttribute(DmlNames.AttributeLineWidth,
-                (int)(line.WidthPoints.Value * 12_700)));
+                (int)(line.WidthPoints.Value * EmuConversions.EmuPerPoint)));
 
         // Fill
         FillWriter.Write(ln, line.Fill);

@@ -1,5 +1,5 @@
-using Unchained.Ooxml;
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
@@ -23,7 +23,7 @@ internal static class LineParser
         // Width in EMU → convert to points (1 pt = 12700 EMU)
         var widthEmu = ln.GetAttrInt(DmlNames.AttributeLineWidth);
         if (widthEmu.HasValue)
-            line.WidthPoints = widthEmu.Value / 12_700.0;
+            line.WidthPoints = widthEmu.Value / (double)EmuConversions.EmuPerPoint;
 
         // Dash style
         var dash = ln.Element(DmlNames.PresetDash);
@@ -60,7 +60,7 @@ internal static class LineParser
     {
         var widthEmu = lineEl.GetAttrInt(DmlNames.AttributeLineWidth);
         if (widthEmu.HasValue)
-            line.WidthPoints = widthEmu.Value / 12_700.0;
+            line.WidthPoints = widthEmu.Value / (double)EmuConversions.EmuPerPoint;
 
         var dash = lineEl.Element(DmlNames.PresetDash);
         if (dash != null)
