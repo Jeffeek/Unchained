@@ -501,7 +501,9 @@ internal sealed class PageRenderer(
                 }
                 else
                 {
-                    sb.Append('�'); // replacement char for unmapped codes
+                    // Code not in ToUnicode — fall back to Latin-1 char so HarfBuzz shapes it;
+                    // U+FFFD causes some fonts to return non-.notdef, suppressing ShowStringDirect.
+                    sb.Append((char)code1);
                     span = span[1..];
                 }
             }
