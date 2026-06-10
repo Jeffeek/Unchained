@@ -192,7 +192,18 @@ internal sealed class ShapeParser
 
         var tcPr = tcEl.Element(DmlNames.TableCellProperties);
         if (tcPr != null)
+        {
             FillParser.Parse(tcPr, cell.Fill);
+            // Cell border lines: lnL, lnR, lnT, lnB
+            var lnL = tcPr.Element(DmlNames.Dml + "lnL");
+            if (lnL != null) LineParser.ParseElement(lnL, cell.LeftBorder);
+            var lnR = tcPr.Element(DmlNames.Dml + "lnR");
+            if (lnR != null) LineParser.ParseElement(lnR, cell.RightBorder);
+            var lnT = tcPr.Element(DmlNames.Dml + "lnT");
+            if (lnT != null) LineParser.ParseElement(lnT, cell.TopBorder);
+            var lnB = tcPr.Element(DmlNames.Dml + "lnB");
+            if (lnB != null) LineParser.ParseElement(lnB, cell.BottomBorder);
+        }
 
         return cell;
     }

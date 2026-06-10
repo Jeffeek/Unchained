@@ -52,6 +52,23 @@ internal static class LineParser
         }
     }
 
+    /// <summary>
+    /// Reads line properties directly from <paramref name="lineEl"/> (e.g. an <c>&lt;a:lnL&gt;</c>
+    /// table cell border element) and populates <paramref name="line"/>.
+    /// </summary>
+    public static void ParseElement(XElement lineEl, LineFormat line)
+    {
+        var widthEmu = lineEl.GetAttrInt(DmlNames.AttributeLineWidth);
+        if (widthEmu.HasValue)
+            line.WidthPoints = widthEmu.Value / 12_700.0;
+
+        var dash = lineEl.Element(DmlNames.PresetDash);
+        if (dash != null)
+            line.DashStyle = ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, "solid"));
+
+        FillParser.Parse(lineEl, line.Fill);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static LineDashStyle ParseDashStyle(string value) => value switch
