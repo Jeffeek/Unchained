@@ -225,7 +225,7 @@ internal static class OpenXmlPresentationParser
         {
             Shape? shape = child switch
             {
-                P.Shape sp => ReadAutoShape(sp),
+                P.Shape sp => ReadAutoShape(sp, null, null, null),
                 P.GraphicFrame gf => gf.Graphic?.GraphicData?.Uri?.Value == DmlNames.GraphicDataTableUri
                     ? ReadGraphicFrame(gf, null)
                     : null,
@@ -362,7 +362,7 @@ internal static class OpenXmlPresentationParser
         {
             Shape? shape = child switch
             {
-                P.Shape sp => ReadAutoShape(sp),
+                P.Shape sp => ReadAutoShape(sp, slidePart, mediaStore, imageCache),
                 P.Picture pic => ReadPicture(pic, slidePart, mediaStore, imageCache),
                 P.GraphicFrame gf => ReadGraphicFrame(gf, slidePart),
                 P.GroupShape grp => ReadGroup(grp, slidePart, mediaStore, imageCache),
@@ -374,12 +374,31 @@ internal static class OpenXmlPresentationParser
         }
     }
 
-    private static AutoShape ReadAutoShape(P.Shape sp)
+    private static AutoShape ReadAutoShape(
+        P.Shape sp,
+        SlidePart? slidePart,
+        MediaStore? mediaStore,
+        Dictionary<string, EmbeddedImage>? imageCache)
     {
         var shape = new AutoShape();
         ReadCommon(sp.NonVisualShapeProperties?.NonVisualDrawingProperties, shape);
         ReadGeometry(sp.ShapeProperties?.Transform2D, shape);
         ReadFillAndLine(sp.ShapeProperties, shape);
+
+        // Resolve spPr blipFill image (AutoShape with picture fill, e.g. group background images)
+        if (slidePart is not null && mediaStore is not null && imageCache is not null)
+        {
+            var blipFill = sp.ShapeProperties?.GetFirstChild<D.BlipFill>();
+            var embedId = blipFill?.Blip?.Embed?.Value;
+            if (!string.IsNullOrEmpty(embedId) && slidePart.GetPartById(embedId) is ImagePart imagePart)
+            {
+                shape.Fill.Type = Unchained.Ooxml.Drawing.FillType.Picture;
+                shape.Fill.Picture = new Unchained.Ooxml.Drawing.PictureFill
+                {
+                    Image = LoadImage(imagePart, mediaStore, imageCache)
+                };
+            }
+        }
 
         if (sp.TextBody is { } body)
         {

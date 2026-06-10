@@ -79,6 +79,7 @@ internal sealed class ShapeParser
             shape.TextFrame.AbsorbFrom(parsed);
         }
 
+        ReadStyleFill(spEl, shape);
         shape.RawElement = spEl;
         return shape;
     }
@@ -443,6 +444,22 @@ internal sealed class ShapeParser
         LineParser.Parse(spPr, shape.Line);
         EffectParser.Parse(spPr, shape.Effects);
         Shape3DParser.Parse(spPr, shape.ThreeD);
+    }
+
+    // Reads p:style/a:fillRef and a:fontRef to get theme-driven style fill and text colors.
+    // These apply when spPr has no explicit fill (FillType.None) or runs have no explicit color.
+    private static void ReadStyleFill(XElement shapeEl, Shape shape)
+    {
+        var styleEl = shapeEl.Element(PmlNames.Pml + "style");
+        if (styleEl is null) return;
+
+        var fillRef = styleEl.Element(DmlNames.Dml + "fillRef");
+        if (fillRef is not null)
+            shape.StyleFillColor = ColorParser.Parse(fillRef);
+
+        var fontRef = styleEl.Element(DmlNames.Dml + "fontRef");
+        if (fontRef is not null)
+            shape.StyleTextColor = ColorParser.Parse(fontRef);
     }
 
     private EmbeddedImage? ResolveImage(string relationshipId, XElement shapeElement)

@@ -73,6 +73,20 @@ public abstract class Shape
     /// <summary>The fill applied to the interior of the shape.</summary>
     public FillFormat Fill { get; } = new();
 
+    /// <summary>
+    /// The fill inherited from the shape's <c>p:style/a:fillRef</c> element.
+    /// This is the theme-driven style fill that applies when <see cref="Fill"/> has
+    /// <see cref="FillType.None"/>. <see langword="null"/> when no style fill is present.
+    /// </summary>
+    public ColorSpec? StyleFillColor { get; internal set; }
+
+    /// <summary>
+    /// The default text color inherited from the shape's <c>p:style/a:fontRef</c> element.
+    /// Used as the text color fallback when runs have no explicit fill. <see langword="null"/>
+    /// when no style font ref is present.
+    /// </summary>
+    public ColorSpec? StyleTextColor { get; internal set; }
+
     /// <summary>The outline (border) drawn around the shape.</summary>
     public LineFormat Line { get; } = new();
 

@@ -153,21 +153,41 @@ internal sealed class SlideParser
 
     private void ResolveImages(OpcPart slidePart, Slide slide)
     {
-        // Walk all PictureShape instances and resolve their images from relationships.
-        foreach (var shape in slide.Shapes.OfType<Shapes.PictureShape>())
+        // Walk all shapes and resolve picture fills and PictureShape images.
+        ResolveImagesInCollection(slidePart, slide.Shapes);
+    }
+
+    private void ResolveImagesInCollection(OpcPart slidePart, ShapeCollection shapes)
+    {
+        foreach (var shape in shapes)
         {
-            if (shape.Image != null) continue;
-            var rawEl = shape.RawElement;
-            if (rawEl == null) continue;
+            // Resolve PictureShape blipFill (p:pic/p:blipFill/a:blip r:embed)
+            if (shape is Shapes.PictureShape pictureShape && pictureShape.Image == null)
+            {
+                var rawEl = pictureShape.RawElement;
+                if (rawEl != null)
+                {
+                    var blipFill = rawEl.Element(PmlNames.BlipFill);
+                    var blip = blipFill?.Element(DmlNames.Blip);
+                    var rId = (string?)blip?.Attribute(PmlNames.RelationshipEmbed)
+                              ?? (string?)blip?.Attribute(PmlNames.RelationshipId);
+                    if (rId != null)
+                        pictureShape.Image = ResolveImageRelationship(slidePart, rId);
+                }
+            }
 
-            var blipFill = rawEl.Element(PmlNames.BlipFill);
-            var blip = blipFill?.Element(DmlNames.Blip);
-            // The blip references its image via r:embed (not r:id). Fall back to r:id defensively.
-            var rId = (string?)blip?.Attribute(PmlNames.RelationshipEmbed)
-                      ?? (string?)blip?.Attribute(PmlNames.RelationshipId);
-            if (rId == null) continue;
+            // Resolve spPr blipFill on any shape type (e.g. AutoShape background images)
+            if (shape.Fill.Type == Unchained.Ooxml.Drawing.FillType.Picture &&
+                shape.Fill.Picture?.Image == null &&
+                shape.Fill.Picture?.RelationshipId != null)
+            {
+                shape.Fill.Picture.Image =
+                    ResolveImageRelationship(slidePart, shape.Fill.Picture.RelationshipId);
+            }
 
-            shape.Image = ResolveImageRelationship(slidePart, rId);
+            // Recurse into groups
+            if (shape is Shapes.GroupShape group)
+                ResolveImagesInCollection(slidePart, group.Children);
         }
     }
 
