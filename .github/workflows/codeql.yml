@@ -1,33 +1,30 @@
 name: CodeQL Security Analysis
 
 on:
-  workflow_call:        # Called from ci.yml after build/test passes
+  workflow_call:        # Called from ci.yml after quick-gate passes
   workflow_dispatch:    # Manual trigger
   schedule:
-    # Weekly Monday 00:00 UTC
-    - cron: '0 0 * * 1'
+    - cron: '0 0 * * 1'  # Weekly — Monday 00:00 UTC
 
 permissions:
   security-events: write
   actions: read
   contents: read
 
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+  NUGET_XMLDOC_MODE: skip
+
 jobs:
   analyze:
-    name: Analyze C# Code
+    name: Analyze (csharp)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
-        with:
-          egress-policy: audit
-
-      - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          fetch-depth: 0
-          persist-credentials: false
+      - name: Harden & Checkout
+        uses: ./.github/actions/harden-checkout
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
@@ -38,19 +35,17 @@ jobs:
           config: |
             paths:
               - src
-              - eng
             paths-ignore:
               - tests
-              - samples
               - "**/bin/**"
               - "**/obj/**"
 
-      - name: Setup .NET (no build — CodeQL does the build)
+      - name: Setup .NET (restore only — CodeQL performs the build)
         uses: ./.github/actions/dotnet-setup
         with:
           build: 'false'
 
-      - name: Build for analysis
+      - name: Build for CodeQL analysis
         run: dotnet build -c Release --no-restore
 
       - name: Perform CodeQL Analysis

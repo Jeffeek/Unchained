@@ -16,6 +16,9 @@
     <!-- SharpFont targets net45; enable fallback so the transitive DLL reference resolves. -->
     <AssetTargetFallback>$(AssetTargetFallback);net45</AssetTargetFallback>
     <PackageTags>pptx;powerpoint;presentation;rendering;dotnet;csharp;document-processing</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageId>Unchained.Pptx.Rendering</PackageId>
+    <IsUserFacingPackage>true</IsUserFacingPackage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,7 +27,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Unchained.Pptx\Unchained.Pptx.csproj" />
-    <ProjectReference Include="..\Unchained.Drawing\Unchained.Drawing.csproj" />
     <ProjectReference Include="..\Unchained.Drawing.Text\Unchained.Drawing.Text.csproj" />
   </ItemGroup>
 

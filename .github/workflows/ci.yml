@@ -1,4 +1,4 @@
-name: CI - Build and Test
+name: CI
 
 on:
   workflow_dispatch:
@@ -18,75 +18,37 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  DOTNET_NOLOGO: "1"
-  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
-  NUGET_XMLDOC_MODE: skip
-
 jobs:
-  build:
-    name: Build & Test (${{ matrix.rid }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { runner: ubuntu-latest,    rid: linux-x64   }
-          - { runner: ubuntu-24.04-arm, rid: linux-arm64 }
-          - { runner: windows-latest,   rid: win-x64     }
-          - { runner: windows-11-arm,   rid: win-arm64   }
-          - { runner: macos-15-intel,   rid: osx-x64     }
-          - { runner: macos-15,         rid: osx-arm64   }
+  # ---------------------------------------------------------------
+  # 1. Quick gate — fast linux-x64 smoke test.
+  #    Full matrix and CodeQL only run if this passes.
+  # ---------------------------------------------------------------
+  quick-gate:
+    name: Quick Test (linux-x64)
+    uses: ./.github/workflows/_build-test.yml
+    with:
+      runner: ubuntu-latest
+      rid: linux-x64
+      coverage: false
 
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
-        with:
-          egress-policy: audit
+  # ---------------------------------------------------------------
+  # 2. Full matrix — all platforms, with coverage upload.
+  # ---------------------------------------------------------------
+  full-matrix:
+    name: Build & Test (all platforms)
+    needs: quick-gate
+    uses: ./.github/workflows/_build-test-all.yml
+    with:
+      coverage: true
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Fetch native FreeType2 library
-        shell: bash
-        run: bash scripts/FetchNatives/fetch-natives.sh --rid ${{ matrix.rid }}
-
-      - name: Setup .NET (restore + build)
-        uses: ./.github/actions/dotnet-setup
-
-      - name: Test with coverage
-        timeout-minutes: 30
-        run: >
-          dotnet test
-          -c Release --no-build
-          --collect:"XPlat Code Coverage"
-          --logger "trx;LogFileName=test-results.trx"
-          --results-directory artifacts/test-results
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: test-results-${{ matrix.rid }}
-          path: artifacts/test-results
-          if-no-files-found: warn
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./artifacts/test-results
-          flags: ${{ matrix.rid }}
-          fail_ci_if_error: false
-          verbose: false
-
-  codeql-analysis:
+  # ---------------------------------------------------------------
+  # 3. CodeQL — runs in parallel with the full matrix.
+  # ---------------------------------------------------------------
+  codeql:
     name: CodeQL Security Analysis
-    needs: build
+    needs: quick-gate
     permissions:
       security-events: write
       actions: read

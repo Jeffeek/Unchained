@@ -1,6 +1,6 @@
-# Unchained.Pdf.Runtimes
+# Unchained.Drawing.Runtimes
 
-Native FreeType2 runtime binaries for `Unchained.Pdf.Rendering`. This package contains no managed code — it is a pure native binary carrier that bundles the FreeType2 shared library for all supported platforms.
+Native FreeType2 runtime binaries for the Unchained rendering stack. This package contains no managed code — it is a pure native binary carrier that bundles the FreeType2 shared library for all supported platforms.
 
 **License:** MIT (package) / FTL (FreeType2 binaries)
 
@@ -8,11 +8,12 @@ Native FreeType2 runtime binaries for `Unchained.Pdf.Rendering`. This package co
 
 ## You do not need to install this package directly
 
-`Unchained.Pdf.Runtimes` is an automatic transitive dependency of `Unchained.Pdf.Rendering`. The .NET SDK selects and deploys the correct platform binary automatically.
+`Unchained.Drawing.Runtimes` is an automatic transitive dependency of any Unchained rendering package. The .NET SDK selects and deploys the correct platform binary automatically.
 
 ```xml
-<!-- Install this — Runtimes is pulled in automatically -->
+<!-- Install either of these — Runtimes is pulled in automatically -->
 <PackageReference Include="Unchained.Pdf.Rendering" Version="0.1.0" />
+<PackageReference Include="Unchained.Pptx.Rendering" Version="0.1.0" />
 ```
 
 ---
@@ -48,7 +49,7 @@ If the bundled copy is absent, the resolver falls back to the system-installed F
 
 ## FreeType2
 
-[FreeType2](https://freetype.org) is a freely available, high-quality font rendering library used by `Unchained.Pdf.Rendering` to rasterize TrueType, OpenType, Type 1, and CFF outlines into pixel bitmaps.
+[FreeType2](https://freetype.org) is a freely available, high-quality font rendering library used by the Unchained rendering packages to rasterize TrueType, OpenType, Type 1, and CFF outlines into pixel bitmaps.
 
 FreeType2 is licensed under the [FreeType License (FTL)](https://freetype.org/license.html), a BSD-style permissive license that allows free use in commercial and open-source products.
 

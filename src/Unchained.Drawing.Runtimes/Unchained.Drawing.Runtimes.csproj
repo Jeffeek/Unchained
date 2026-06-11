@@ -23,6 +23,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <PackageTags>drawing;freetype;native;runtimes;dotnet;document-processing</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageId>Unchained.Drawing.Runtimes</PackageId>
+    <IsUserFacingPackage>true</IsUserFacingPackage>
   </PropertyGroup>
 
   <!-- ── Windows x64 ──────────────────────────────────────────────────────── -->
@@ -72,6 +75,32 @@
                  Link="runtimes\linux-arm64\native\libfreetype.so.6"
                  Pack="true"
                  PackagePath="runtimes/linux-arm64/native/libfreetype.so.6"
+                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <!-- ── Linux musl x64 (Alpine) ─────────────────────────────────────────── -->
+  <Choose>
+    <When Condition="Exists('runtimes\linux-musl-x64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <Content Include="runtimes\linux-musl-x64\native\libfreetype.so.6"
+                 Link="runtimes\linux-musl-x64\native\libfreetype.so.6"
+                 Pack="true"
+                 PackagePath="runtimes/linux-musl-x64/native/libfreetype.so.6"
+                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <!-- ── Linux musl arm64 (Alpine) ────────────────────────────────────────── -->
+  <Choose>
+    <When Condition="Exists('runtimes\linux-musl-arm64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <Content Include="runtimes\linux-musl-arm64\native\libfreetype.so.6"
+                 Link="runtimes\linux-musl-arm64\native\libfreetype.so.6"
+                 Pack="true"
+                 PackagePath="runtimes/linux-musl-arm64/native/libfreetype.so.6"
                  CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>

@@ -15,7 +15,7 @@ PDF page rasterization for .NET — render any PDF page to a PNG image with hard
 
 This single package reference pulls everything needed:
 - `Unchained.Pdf` — the core PDF engine
-- `Unchained.Pdf.Runtimes` — the native FreeType2 binary for your platform
+- `Unchained.Drawing.Runtimes` — the native FreeType2 binary for your platform
 - `HarfBuzzSharp` — text shaping native assets for your platform
 
 No additional setup required on any supported platform.

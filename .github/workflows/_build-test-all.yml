@@ -1,0 +1,41 @@
+name: Build and Test — All Platforms (reusable)
+
+# Reusable workflow that fans out _build-test.yml over the full platform matrix.
+# Single source of truth for the supported runner/RID list.
+# Called by ci.yml (full-matrix) and release.yml (verify).
+on:
+  workflow_call:
+    inputs:
+      coverage:
+        description: 'Collect code coverage and upload to Codecov.'
+        type: boolean
+        default: false
+      upload-natives:
+        description: 'Upload fetched native binaries as workflow artifacts (used by release.yml).'
+        type: boolean
+        default: false
+      fail-fast:
+        description: 'Stop all matrix jobs as soon as one fails.'
+        type: boolean
+        default: false
+
+jobs:
+  build-test:
+    name: Build & Test (${{ matrix.rid }})
+    strategy:
+      fail-fast: ${{ inputs.fail-fast }}
+      matrix:
+        include:
+          - { runner: ubuntu-latest,    rid: linux-x64   }
+          - { runner: ubuntu-24.04-arm, rid: linux-arm64 }
+          - { runner: windows-latest,   rid: win-x64     }
+          - { runner: windows-11-arm,   rid: win-arm64   }
+          - { runner: macos-15-intel,   rid: osx-x64     }
+          - { runner: macos-15,         rid: osx-arm64   }
+    uses: ./.github/workflows/_build-test.yml
+    with:
+      runner: ${{ matrix.runner }}
+      rid: ${{ matrix.rid }}
+      coverage: ${{ inputs.coverage }}
+      upload-natives: ${{ inputs.upload-natives }}
+    secrets: inherit

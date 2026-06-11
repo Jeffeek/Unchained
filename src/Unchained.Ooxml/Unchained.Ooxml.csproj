@@ -3,6 +3,9 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <PackageTags>ooxml;opc;drawingml;dotnet;csharp;document-processing</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageId>Unchained.Ooxml</PackageId>
+    <IsUserFacingPackage>false</IsUserFacingPackage>
   </PropertyGroup>
 
   <!-- OOXML engine: the MIT-licensed Open XML SDK (.NET Foundation) provides the

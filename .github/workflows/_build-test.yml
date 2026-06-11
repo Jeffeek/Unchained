@@ -1,0 +1,90 @@
+name: Build and Test (reusable)
+
+# Reusable workflow — called by ci.yml and release.yml.
+# Never triggered directly; use workflow_dispatch on the callers instead.
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: 'GitHub-hosted runner label (e.g. ubuntu-latest, windows-latest).'
+        type: string
+        required: true
+      rid:
+        description: '.NET runtime identifier (e.g. linux-x64, win-x64, osx-arm64).'
+        type: string
+        required: true
+      coverage:
+        description: 'Collect code coverage and upload to Codecov.'
+        type: boolean
+        default: false
+      upload-natives:
+        description: 'Upload the fetched native binary as a workflow artifact (used by release.yml).'
+        type: boolean
+        default: false
+    secrets:
+      codecov-token:
+        description: 'Codecov upload token. Required when coverage: true.'
+        required: false
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+  NUGET_XMLDOC_MODE: skip
+
+jobs:
+  build-test:
+    name: Build & Test (${{ inputs.rid }})
+    runs-on: ${{ inputs.runner }}
+
+    steps:
+      - name: Harden & Checkout
+        uses: ./.github/actions/harden-checkout
+
+      - name: Fetch native FreeType2 library
+        shell: bash
+        run: bash scripts/FetchNatives/fetch-natives.sh --rid ${{ inputs.rid }}
+
+      - name: Upload native binary artifact
+        if: ${{ inputs.upload-natives }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: natives-${{ inputs.rid }}
+          path: src/Unchained.Drawing.Runtimes/runtimes/${{ inputs.rid }}/native/
+          if-no-files-found: error
+
+      - name: Setup .NET (restore + build)
+        uses: ./.github/actions/dotnet-setup
+
+      - name: Test
+        if: ${{ !inputs.coverage }}
+        timeout-minutes: 30
+        run: dotnet test -c Release --no-build
+
+      - name: Test with coverage
+        if: ${{ inputs.coverage }}
+        timeout-minutes: 30
+        run: >
+          dotnet test
+          -c Release --no-build
+          --collect:"XPlat Code Coverage"
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory artifacts/test-results
+
+      - name: Upload test results
+        if: ${{ always() && inputs.coverage }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-results-${{ inputs.rid }}
+          path: artifacts/test-results
+          if-no-files-found: warn
+
+      - name: Upload coverage to Codecov
+        if: ${{ inputs.coverage }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.codecov-token }}
+          directory: ./artifacts/test-results
+          flags: ${{ inputs.rid }}
+          fail_ci_if_error: false
+          verbose: false
