@@ -25,11 +25,11 @@ public sealed class SessionStateService(
 
         try
         {
-            var newState = await PdfSessionState.CreateAsync(pdfProcessor, bytes, fileName, ct);
+            var newState = await PdfSessionState.CreateAsync(pdfProcessor, bytes, fileName, ct).ConfigureAwait(false);
             newState.RenderCache = renderingService;
             var old = System.Threading.Interlocked.Exchange(ref _pdf, newState);
             if (old is not null)
-                await old.DisposeAsync();
+                await old.DisposeAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -48,11 +48,11 @@ public sealed class SessionStateService(
 
         try
         {
-            var newState = await PdfSessionState.CreateEncryptedAsync(pdfProcessor, bytes, password, fileName, ct);
+            var newState = await PdfSessionState.CreateEncryptedAsync(pdfProcessor, bytes, password, fileName, ct).ConfigureAwait(false);
             newState.RenderCache = renderingService;
             var old = System.Threading.Interlocked.Exchange(ref _pdf, newState);
             if (old is not null)
-                await old.DisposeAsync();
+                await old.DisposeAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -64,7 +64,7 @@ public sealed class SessionStateService(
     {
         var old = System.Threading.Interlocked.Exchange(ref _pdf, null);
         if (old is not null)
-            await old.DisposeAsync();
+            await old.DisposeAsync().ConfigureAwait(false);
     }
 
     public async Task LoadPptxAsync(
@@ -77,10 +77,10 @@ public sealed class SessionStateService(
 
         try
         {
-            var newState = await PptxSessionState.CreateAsync(pptxProcessor, bytes, fileName, ct);
+            var newState = await PptxSessionState.CreateAsync(pptxProcessor, bytes, fileName, ct).ConfigureAwait(false);
             var old = System.Threading.Interlocked.Exchange(ref _pptx, newState);
             if (old is not null)
-                await old.DisposeAsync();
+                await old.DisposeAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -92,12 +92,12 @@ public sealed class SessionStateService(
     {
         var old = System.Threading.Interlocked.Exchange(ref _pptx, null);
         if (old is not null)
-            await old.DisposeAsync();
+            await old.DisposeAsync().ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
     {
-        await ClosePdfAsync();
-        await ClosePptxAsync();
+        await ClosePdfAsync().ConfigureAwait(false);
+        await ClosePptxAsync().ConfigureAwait(false);
     }
 }

@@ -49,7 +49,7 @@ public sealed class PdfiumReferenceRenderer
         CancellationToken ct = default)
     {
         if (!EnsureInit()) return null;
-        return await Task.Run(() => RenderPage(pdfBytes, pageNumber, dpi), ct);
+        return await Task.Run(() => RenderPage(pdfBytes, pageNumber, dpi), ct).ConfigureAwait(false);
     }
 
     // ── Core render path ──────────────────────────────────────────────────────

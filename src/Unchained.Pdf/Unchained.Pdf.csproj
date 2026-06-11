@@ -17,9 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="JpegLibrary" />
-    <PackageReference Include="JBig2Decoder.NETStandard" />
-    <PackageReference Include="CoreJ2K" />
+    <ProjectReference Include="..\Unchained.Drawing\Unchained.Drawing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Markdig" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
   </ItemGroup>

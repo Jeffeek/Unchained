@@ -44,7 +44,7 @@ public sealed class PptxSessionState : IAsyncDisposable
         string fileName,
         CancellationToken ct = default)
     {
-        var document = await processor.LoadAsync(bytes, cancellationToken: ct);
+        var document = await processor.LoadAsync(bytes, cancellationToken: ct).ConfigureAwait(false);
         return new PptxSessionState(processor, document, bytes, fileName);
     }
 
@@ -55,19 +55,19 @@ public sealed class PptxSessionState : IAsyncDisposable
     public async Task RefreshAsync(CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(Document, ms, cancellationToken: ct);
+        await Processor.SaveAsync(Document, ms, cancellationToken: ct).ConfigureAwait(false);
         var newBytes = ms.ToArray();
 
         var oldDocument = Document;
 
-        Document = await Processor.LoadAsync(newBytes, cancellationToken: ct);
+        Document = await Processor.LoadAsync(newBytes, cancellationToken: ct).ConfigureAwait(false);
         CurrentBytes = newBytes;
         Tree = PptxTreeBuilder.Build(Document, FileName);
 
-        await oldDocument.DisposeAsync();
+        await oldDocument.DisposeAsync().ConfigureAwait(false);
 
         Refreshed?.Invoke();
     }
 
-    public async ValueTask DisposeAsync() => await Document.DisposeAsync();
+    public async ValueTask DisposeAsync() => await Document.DisposeAsync().ConfigureAwait(false);
 }

@@ -15,6 +15,6 @@ public sealed class FileExportService(IJSRuntime js)
             ct,
             Convert.ToBase64String(data),
             fileName,
-            mimeType);
+            mimeType).ConfigureAwait(false);
     }
 }

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace Unchained.Pptx.Rendering.Engine;
+namespace Unchained.Drawing;
 
 /// <summary>
 /// A minimal SVG rasterizer that decodes the most common SVG elements

@@ -1,11 +1,10 @@
-using Unchained.Pdf.Core;
+using System.IO;
 
-namespace Unchained.Pdf.Parsing.Filters;
+namespace Unchained.Drawing;
 
 /// <summary>
-/// Decodes PDF /ASCIIHexDecode streams (ISO 32000-1 §7.4.2).
-/// Input is a sequence of hex digit pairs ('0'–'9', 'A'–'F', 'a'–'f'),
-/// optionally separated by whitespace, terminated by '>'.
+/// Decodes ASCII hex-encoded data.
+/// Used by PDF /ASCIIHexDecode (ISO 32000-1 §7.4.2).
 /// </summary>
 internal static class AsciiHexDecoder
 {
@@ -13,30 +12,28 @@ internal static class AsciiHexDecoder
     {
         var span = data.Span;
         var output = new List<byte>(data.Length / 2);
-        var nibble = -1; // -1 = waiting for first nibble of a pair
+        var nibble = -1;
 
         foreach (var b in span)
         {
-            if (b == (byte)'>') break; // end-of-data marker
+            if (b == (byte)'>') break;
 
             int value;
             switch (b)
             {
                 case >= (byte)'0' and <= (byte)'9':
                     value = b - '0';
-                break;
+                    break;
                 case >= (byte)'A' and <= (byte)'F':
                     value = b - 'A' + 10;
-                break;
+                    break;
                 case >= (byte)'a' and <= (byte)'f':
                     value = b - 'a' + 10;
-                break;
+                    break;
                 default:
                 {
-                    if (IsWhitespace(b))
-                        continue;
-
-                    throw new PdfException($"ASCIIHexDecode: unexpected byte 0x{b:X2}.");
+                    if (IsWhitespace(b)) continue;
+                    throw new InvalidDataException($"ASCIIHexDecode: unexpected byte 0x{b:X2}.");
                 }
             }
 
@@ -49,7 +46,6 @@ internal static class AsciiHexDecoder
             }
         }
 
-        // A trailing single nibble is padded with 0 on the right (spec §7.4.2)
         if (nibble >= 0)
             output.Add((byte)(nibble << 4));
 

@@ -2,6 +2,7 @@ using System.Buffers;
 using System.IO.Compression;
 using System.Text;
 using Shouldly;
+using Unchained.Drawing;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Parsing.Filters;
@@ -50,7 +51,7 @@ public sealed class LzwDecoderTests
     {
         // Clear, 'A'(65), EOD
         var data = BuildLzwStream(Clear, 65, Eod);
-        var result = await Task.Run(() => LzwDecoder.Decode(data, null));
+        var result = await Task.Run(() => LzwDecoder.Decode(data));
         result.Length.ShouldBe(1);
         result.Span[0].ShouldBe((byte)'A');
     }
@@ -62,7 +63,7 @@ public sealed class LzwDecoderTests
         // ReSharper disable BadListLineBreaks
         var data = BuildLzwStream(Clear, 72, 101, 108, 108, 111, Eod);
         // ReSharper restore BadListLineBreaks
-        var result = await Task.Run(() => LzwDecoder.Decode(data, null));
+        var result = await Task.Run(() => LzwDecoder.Decode(data));
         Encoding.ASCII.GetString(result.Span).ShouldBe("Hello");
     }
 
@@ -70,31 +71,23 @@ public sealed class LzwDecoderTests
     public async Task Decode_EmptyStreamAfterClearAndEod_ReturnsEmpty()
     {
         var data = BuildLzwStream(Clear, Eod);
-        var result = await Task.Run(() => LzwDecoder.Decode(data, null));
+        var result = await Task.Run(() => LzwDecoder.Decode(data));
         result.Length.ShouldBe(0);
     }
 
     [Fact]
     public async Task Decode_EarlyChangeZero_StillDecodes()
     {
-        var parms = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["EarlyChange"] = new PdfInteger(0)
-        });
         var data = BuildLzwStream(Clear, 65, Eod);
-        var result = await Task.Run(() => LzwDecoder.Decode(data, parms));
+        var result = await Task.Run(() => LzwDecoder.Decode(data, earlyChange: 0));
         result.Span[0].ShouldBe((byte)'A');
     }
 
     [Fact]
     public async Task Decode_EarlyChangeOne_ExplicitParm_SameAsDefault()
     {
-        var parms = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["EarlyChange"] = new PdfInteger(1)
-        });
         var data = BuildLzwStream(Clear, 66, Eod);
-        var result = await Task.Run(() => LzwDecoder.Decode(data, parms));
+        var result = await Task.Run(() => LzwDecoder.Decode(data, earlyChange: 1));
         result.Span[0].ShouldBe((byte)'B');
     }
 
@@ -106,7 +99,7 @@ public sealed class LzwDecoderTests
         // ReSharper disable BadListLineBreaks
         var data = BuildLzwStream(Clear, 65, 66, 65, 66, 65, Eod);
         // ReSharper restore BadListLineBreaks
-        var result = await Task.Run(() => LzwDecoder.Decode(data, null));
+        var result = await Task.Run(() => LzwDecoder.Decode(data));
         Encoding.ASCII.GetString(result.Span).ShouldBe("ABABA");
     }
 
@@ -114,7 +107,7 @@ public sealed class LzwDecoderTests
     public async Task Decode_NullDecodeParms_UsesDefaults()
     {
         var data = BuildLzwStream(Clear, 88, Eod);
-        var result = await Task.Run(() => LzwDecoder.Decode(data, null));
+        var result = await Task.Run(() => LzwDecoder.Decode(data));
         result.Span[0].ShouldBe((byte)'X');
     }
 
@@ -123,7 +116,7 @@ public sealed class LzwDecoderTests
     {
         // A stream that ends mid-code returns -1 from ReadBits → treated as EOD.
         var data = new ReadOnlyMemory<byte>([Clear >> 1]); // 1 byte: only 8 of 9 bits
-        var result = await Task.Run(() => LzwDecoder.Decode(data, null));
+        var result = await Task.Run(() => LzwDecoder.Decode(data));
         result.Length.ShouldBe(0);
     }
 
@@ -132,8 +125,8 @@ public sealed class LzwDecoderTests
     {
         // After Clear, nextCode=258. Sending code 259 (not yet in table) is illegal.
         var data = BuildLzwStream(Clear, 259, Eod);
-        await Should.ThrowAsync<PdfException>(() =>
-            Task.Run(() => LzwDecoder.Decode(data, null)));
+        await Should.ThrowAsync<InvalidDataException>(() =>
+            Task.Run(() => LzwDecoder.Decode(data)));
     }
 }
 
@@ -182,7 +175,7 @@ public sealed class RunLengthDecoderAdditionalTests
     {
         // length=5 → try to copy 6 bytes, but only 2 follow
         var input = new byte[] { 5, (byte)'A', (byte)'B' };
-        await Should.ThrowAsync<PdfException>(() =>
+        await Should.ThrowAsync<InvalidDataException>(() =>
             Task.Run(() => RunLengthDecoder.Decode(input)));
     }
 
@@ -191,7 +184,7 @@ public sealed class RunLengthDecoderAdditionalTests
     {
         // length=200 → repeat run, but no data byte follows
         var input = new byte[] { 200 };
-        await Should.ThrowAsync<PdfException>(() =>
+        await Should.ThrowAsync<InvalidDataException>(() =>
             Task.Run(() => RunLengthDecoder.Decode(input)));
     }
 
@@ -253,7 +246,7 @@ public sealed class AsciiHexDecoderAdditionalTests
     [Fact]
     public async Task Decode_InvalidCharacter_ThrowsPdfException() =>
         // 'G' is not valid hex
-        await Should.ThrowAsync<PdfException>(static () => Task.Run(static () => AsciiHexDecoder.Decode("GG>"u8.ToArray())));
+        await Should.ThrowAsync<InvalidDataException>(static () => Task.Run(static () => AsciiHexDecoder.Decode("GG>"u8.ToArray())));
 
     [Fact]
     public async Task Decode_MaxByteValue_FF_Works()
@@ -325,18 +318,18 @@ public sealed class Ascii85DecoderAdditionalTests
     [Fact]
     public async Task Decode_ZInsideGroup_ThrowsPdfException() =>
         // 'z' appearing when groupLen != 0 is illegal
-        await Should.ThrowAsync<PdfException>(static () =>
+        await Should.ThrowAsync<InvalidDataException>(static () =>
             Task.Run(static () => Ascii85Decoder.Decode("!z~>"u8.ToArray())));
 
     [Fact]
     public async Task Decode_TildeNotFollowedByGreaterThan_ThrowsPdfException() =>
-        await Should.ThrowAsync<PdfException>(static () =>
+        await Should.ThrowAsync<InvalidDataException>(static () =>
             Task.Run(static () => Ascii85Decoder.Decode("~~"u8.ToArray())));
 
     [Fact]
     public async Task Decode_OutOfRangeCharacter_ThrowsPdfException() =>
         // 'v' (0x76=118) is above 'u' (0x75=117)
-        await Should.ThrowAsync<PdfException>(static () =>
+        await Should.ThrowAsync<InvalidDataException>(static () =>
             Task.Run(static () => Ascii85Decoder.Decode("vvvvv~>"u8.ToArray())));
 
     [Fact]
@@ -592,7 +585,7 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup4_ProducesExpectedBitmap()
     {
-        var decoded = CcittFaxDecoder.Decode(EncodedG4, Parms(16, 16)).ToArray();
+        var decoded = CcittFaxDecoder.Decode(EncodedG4, k: -1, columns: 16, rows: 16).ToArray();
 
         // Expected per-row bits, 1 = white (BlackIs1=false). Bit-exact reference output.
         string[] expected =
@@ -622,16 +615,9 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup4_BlackIs1_InvertsOutput()
     {
-        var normal = CcittFaxDecoder.Decode(EncodedG4, Parms(16, 16)).ToArray();
+        var normal = CcittFaxDecoder.Decode(EncodedG4, k: -1, columns: 16, rows: 16).ToArray();
 
-        var inverted = CcittFaxDecoder.Decode(EncodedG4, new PdfDictionary(
-            new Dictionary<string, PdfObject>
-            {
-                ["K"] = new PdfInteger(-1),
-                ["Columns"] = new PdfInteger(16),
-                ["Rows"] = new PdfInteger(16),
-                ["BlackIs1"] = PdfBoolean.True
-            })).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG4, k: -1, columns: 16, rows: 16, blackIs1: true).ToArray();
 
         inverted.Length.ShouldBe(normal.Length);
         for (var i = 0; i < normal.Length; i++)
@@ -658,7 +644,7 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup3_2D_ProducesExpectedBitmap()
     {
-        var decoded = CcittFaxDecoder.Decode(EncodedG3_2D, Parms2D(16, 16)).ToArray();
+        var decoded = CcittFaxDecoder.Decode(EncodedG3_2D, k: 4, columns: 16, rows: 16).ToArray();
 
         // Same figure as the Group-4 fixture. 1 = white (BlackIs1=false).
         string[] expected =
@@ -689,8 +675,8 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup3_2D_BlackIs1_InvertsOutput()
     {
-        var normal = CcittFaxDecoder.Decode(EncodedG3_2D, Parms2D(16, 16)).ToArray();
-        var inverted = CcittFaxDecoder.Decode(EncodedG3_2D, Parms2D(16, 16, blackIs1: true)).ToArray();
+        var normal = CcittFaxDecoder.Decode(EncodedG3_2D, k: 4, columns: 16, rows: 16).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG3_2D, k: 4, columns: 16, rows: 16, blackIs1: true).ToArray();
 
         inverted.Length.ShouldBe(normal.Length);
         for (var i = 0; i < normal.Length; i++)

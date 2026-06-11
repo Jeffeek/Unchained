@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using Shouldly;
+using Unchained.Drawing;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 using Xunit;
@@ -31,7 +32,7 @@ public sealed class FlateDecoderTests
     public void Decode_CorruptData_ThrowsPdfException()
     {
         var garbage = new byte[] { 0x00, 0x01, 0x02, 0x03 };
-        Should.Throw<PdfException>(() => FlateDecoder.Decode(garbage));
+        Should.Throw<InvalidDataException>(() => FlateDecoder.Decode(garbage));
     }
 
     [Fact]

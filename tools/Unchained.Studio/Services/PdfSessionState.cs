@@ -47,7 +47,7 @@ public sealed class PdfSessionState : IAsyncDisposable
         CancellationToken ct = default)
     {
         using var stream = new MemoryStream(bytes);
-        var document = await processor.LoadAsync(stream, ct);
+        var document = await processor.LoadAsync(stream, ct).ConfigureAwait(false);
         return new PdfSessionState(processor, document, bytes, fileName);
     }
 
@@ -59,7 +59,7 @@ public sealed class PdfSessionState : IAsyncDisposable
         CancellationToken ct = default)
     {
         using var stream = new MemoryStream(bytes);
-        var document = await processor.LoadAsync(stream, password, ct);
+        var document = await processor.LoadAsync(stream, password, ct).ConfigureAwait(false);
         return new PdfSessionState(processor, document, bytes, fileName);
     }
 
@@ -70,7 +70,7 @@ public sealed class PdfSessionState : IAsyncDisposable
     public async Task RefreshAsync(CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(Document, ms, ct: ct);
+        await Processor.SaveAsync(Document, ms, ct: ct).ConfigureAwait(false);
         var newBytes = ms.ToArray();
 
         var oldDocument = Document;
@@ -79,15 +79,15 @@ public sealed class PdfSessionState : IAsyncDisposable
         RenderCache?.InvalidateDocument(oldDocument);
 
         using var reloadStream = new MemoryStream(newBytes);
-        Document = await Processor.LoadAsync(reloadStream, ct);
+        Document = await Processor.LoadAsync(reloadStream, ct).ConfigureAwait(false);
         CurrentBytes = newBytes;
         Tree = PdfTreeBuilder.Build(Document, FileName);
 
         // Dispose the old document only after the new one is ready
-        await oldDocument.DisposeAsync();
+        await oldDocument.DisposeAsync().ConfigureAwait(false);
 
         Refreshed?.Invoke();
     }
 
-    public async ValueTask DisposeAsync() => await Document.DisposeAsync();
+    public async ValueTask DisposeAsync() => await Document.DisposeAsync().ConfigureAwait(false);
 }

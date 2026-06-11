@@ -1,24 +1,17 @@
 using CoreJ2K;
 using CoreJ2K.Configuration;
 
-namespace Unchained.Pdf.Parsing.Filters;
+namespace Unchained.Drawing;
 
 /// <summary>
-/// Decodes JPEG 2000-compressed data (JPXDecode filter, ISO 32000-1 §7.4.9)
-/// using CoreJ2K — a pure-managed, BSD-3-Clause C# JPEG 2000 decoder.
-/// <para>
-/// Returns a flat <c>width × height × 3</c> RGB byte array for 1- and 3-component images.
+/// Decodes JPEG 2000-compressed data using CoreJ2K, producing a flat RGB byte array.
+/// Used by PDF /JPXDecode (ISO 32000-1 §7.4.9).
 /// Grayscale (1-component) images are expanded to R=G=B=Y.
-/// </para>
 /// </summary>
 internal static class JpxDecoder
 {
     private static readonly J2KDecoderConfiguration DefaultConfig = new();
 
-    /// <summary>
-    /// Decodes JPEG 2000 bytes and returns a flat RGB byte array
-    /// (<c>width × height × 3</c> bytes, row-major).
-    /// </summary>
     /// <exception cref="NotSupportedException">
     /// Image has an unsupported number of components (not 1 or 3).
     /// </exception>

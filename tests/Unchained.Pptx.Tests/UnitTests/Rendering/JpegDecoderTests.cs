@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Drawing;
 using Unchained.Pptx.Rendering.Engine;
 using Xunit;
 
