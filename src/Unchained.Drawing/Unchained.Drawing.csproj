@@ -12,4 +12,10 @@
     <IsUserFacingPackage>false</IsUserFacingPackage>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="JpegLibrary" />
+    <PackageReference Include="JBig2Decoder.NETStandard" />
+    <PackageReference Include="CoreJ2K" />
+  </ItemGroup>
+
 </Project>

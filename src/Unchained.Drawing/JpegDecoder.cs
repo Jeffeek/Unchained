@@ -1,4 +1,4 @@
-namespace Unchained.Pptx.Rendering.Engine;
+namespace Unchained.Drawing;
 
 /// <summary>
 /// Minimal baseline (sequential DCT, Huffman) JPEG decoder using only BCL APIs, producing

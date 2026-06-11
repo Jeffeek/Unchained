@@ -27,7 +27,7 @@ public sealed class ThemeService(IJSRuntime js)
     {
         try
         {
-            var stored = await js.InvokeAsync<string?>("unchainedStudio.getLocalStorage", StorageKey);
+            var stored = await js.InvokeAsync<string?>("unchainedStudio.getLocalStorage", StorageKey).ConfigureAwait(false);
             if (stored is "true" or "false")
             {
                 IsDarkMode = stored == "true";
@@ -48,7 +48,7 @@ public sealed class ThemeService(IJSRuntime js)
         try
         {
             await js.InvokeVoidAsync(
-                "unchainedStudio.setLocalStorage", StorageKey, IsDarkMode ? "true" : "false");
+                "unchainedStudio.setLocalStorage", StorageKey, IsDarkMode ? "true" : "false").ConfigureAwait(false);
         }
         catch
         {

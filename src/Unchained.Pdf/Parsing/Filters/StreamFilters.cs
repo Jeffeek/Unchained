@@ -1,3 +1,4 @@
+using Unchained.Drawing;
 using Unchained.Pdf.Core;
 
 namespace Unchained.Pdf.Parsing.Filters;
@@ -48,7 +49,14 @@ internal static class StreamFilters
         for (var i = 0; i < names.Count; i++)
         {
             var p = i < parms.Count ? parms[i] : null;
-            data = ApplyFilter(names[i].Value, data, p);
+            try
+            {
+                data = ApplyFilter(names[i].Value, data, p);
+            }
+            catch (Exception ex) when (ex is not (PdfException or NotSupportedException or NotImplementedException))
+            {
+                throw new PdfException($"Filter /{names[i].Value} failed: {ex.Message}", ex);
+            }
         }
 
         return data;
@@ -57,16 +65,26 @@ internal static class StreamFilters
     private static ReadOnlyMemory<byte> ApplyFilter(string name, ReadOnlyMemory<byte> data, PdfDictionary? parms) =>
         name switch
         {
-            "FlateDecode" or "Fl" => FlateDecoder.Decode(data),
+            "FlateDecode"    or "Fl"  => FlateDecoder.Decode(data),
             "ASCIIHexDecode" or "AHx" => AsciiHexDecoder.Decode(data),
-            "ASCII85Decode" or "A85" => Ascii85Decoder.Decode(data),
+            "ASCII85Decode"  or "A85" => Ascii85Decoder.Decode(data),
             "RunLengthDecode" or "RL" => RunLengthDecoder.Decode(data),
-            "LZWDecode" or "LZW" => LzwDecoder.Decode(data, parms),
-            "CCITTFaxDecode" or "CCF" => CcittFaxDecoder.Decode(data, parms),
-            "JBIG2Decode" => Jbig2Decoder.Decode(data, parms),
-            "DCTDecode" or "DCT" => JpegDecoder.Decode(data),
-            "JPXDecode" => JpxDecoder.Decode(data),
-            "Crypt" => data, // identity pass-through
+            "LZWDecode"      or "LZW" => LzwDecoder.Decode(data,
+                earlyChange: (int)(parms?.Get<PdfInteger>("EarlyChange")?.Value ?? 1L)),
+            "CCITTFaxDecode" or "CCF" => CcittFaxDecoder.Decode(data,
+                k:               (int)(parms?.Get<PdfInteger>("K")?.Value ?? 0L),
+                columns:         (int)(parms?.Get<PdfInteger>("Columns")?.Value ?? 1728L),
+                rows:            (int)(parms?.Get<PdfInteger>("Rows")?.Value ?? 0L),
+                blackIs1:        parms?.Get<PdfBoolean>("BlackIs1")?.Value ?? false,
+                endOfBlock:      parms?.Get<PdfBoolean>("EndOfBlock")?.Value ?? true,
+                encodedByteAlign:parms?.Get<PdfBoolean>("EncodedByteAlign")?.Value ?? false),
+            "JBIG2Decode" => Jbig2Decoder.Decode(data,
+                globals: parms?[PdfName.Get("JBIG2Globals")] is PdfStream gs
+                    ? Decode(gs)
+                    : (ReadOnlyMemory<byte>?)null),
+            "DCTDecode" or "DCT" => DctDecoder.Decode(data),
+            "JPXDecode"          => JpxDecoder.Decode(data),
+            "Crypt"              => data, // identity pass-through
             _ => throw new PdfException($"Unknown stream filter: /{name}.")
         };
 }

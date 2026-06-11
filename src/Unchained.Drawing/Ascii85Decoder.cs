@@ -1,12 +1,10 @@
-using Unchained.Pdf.Core;
+using System.IO;
 
-namespace Unchained.Pdf.Parsing.Filters;
+namespace Unchained.Drawing;
 
 /// <summary>
-/// Decodes PDF /ASCII85Decode streams (ISO 32000-1 §7.4.3).
-/// Every 5 ASCII characters in the range '!'(33)–'u'(117) encode 4 output bytes
-/// using base-85 arithmetic. 'z' is a shorthand for five '!' characters (four zero bytes).
-/// The encoded data ends with '~>'.
+/// Decodes ASCII85-encoded data (base-85 encoding).
+/// Used by PDF /ASCII85Decode (ISO 32000-1 §7.4.3) and PostScript.
 /// </summary>
 internal static class Ascii85Decoder
 {
@@ -27,22 +25,20 @@ internal static class Ascii85Decoder
                 if (i + 1 < span.Length && span[i + 1] == (byte)'>')
                     break;
 
-                throw new PdfException("ASCII85Decode: unexpected '~' not followed by '>'.");
+                throw new InvalidDataException("ASCII85Decode: unexpected '~' not followed by '>'.");
             }
 
-            // Whitespace: skip (§7.4.3 allows whitespace between characters)
             if (IsWhitespace(b)) continue;
 
             switch (b)
             {
-                // 'z' shorthand: four zero bytes
                 case (byte)'z' when groupLen != 0:
-                    throw new PdfException("ASCII85Decode: 'z' inside a group.");
+                    throw new InvalidDataException("ASCII85Decode: 'z' inside a group.");
                 case (byte)'z':
                     output.AddRange([0, 0, 0, 0]);
                     continue;
                 case < (byte)'!' or > (byte)'u':
-                    throw new PdfException($"ASCII85Decode: character 0x{b:X2} is out of range.");
+                    throw new InvalidDataException($"ASCII85Decode: character 0x{b:X2} is out of range.");
             }
 
             group[groupLen++] = b;
@@ -54,7 +50,6 @@ internal static class Ascii85Decoder
             groupLen = 0;
         }
 
-        // Final partial group — pad with 'u' (84+33) and trim output bytes
         if (groupLen <= 0)
             return output.ToArray();
 
@@ -74,7 +69,6 @@ internal static class Ascii85Decoder
             ((uint)(group[3] - '!') * 85u) +
             (uint)(group[4] - '!');
 
-        // Emit (count - 1) bytes; a full group always emits 4.
         var emit = count - 1;
         for (var shift = 24; shift >= 24 - ((emit - 1) * 8); shift -= 8)
             output.Add((byte)(value >> shift));

@@ -22,10 +22,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Unchained.Pptx.Tests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Unchained.Pptx\Unchained.Pptx.csproj" />
     <ProjectReference Include="..\Unchained.Drawing.Text\Unchained.Drawing.Text.csproj" />
   </ItemGroup>

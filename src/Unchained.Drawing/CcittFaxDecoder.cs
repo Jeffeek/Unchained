@@ -1,11 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using Unchained.Pdf.Core;
 
-namespace Unchained.Pdf.Parsing.Filters;
+namespace Unchained.Drawing;
 
 /// <summary>
-/// Decodes CCITT facsimile-compressed data (CCITTFaxDecode filter, ISO 32000-1 §7.4.6).
-/// Supports Group 3 1D (K=0), Group 3 mixed 1D/2D (K&gt;0, T.4), and Group 4 (K=-1, T.6 pure 2D).
+/// Decodes CCITT facsimile-compressed data (Group 3 1D/2D and Group 4).
+/// Used by PDF /CCITTFaxDecode (ISO 32000-1 §7.4.6) and TIFF compression types 2, 3, 4.
 /// Output: packed-bit rows, MSB first, 1 bit per pixel.
 /// </summary>
 internal static class CcittFaxDecoder
@@ -133,23 +132,14 @@ internal static class CcittFaxDecoder
     private const int LookupBits = 13;
     private const int LookupSize = 1 << LookupBits; // 8192
 
-    // Lookup entry: run count (≥0 = terminating; <0 = makeup needing another code to follow).
-    // code_length in high byte: (len << 16) | run  — stored as int32.
-    // Invalid entry = 0 (len=0, run=0 is impossible for a valid code).
     private static readonly int[] WhiteLookup = BuildLookup(WhiteTermRaw, WhiteMakeupRaw);
     private static readonly int[] BlackLookup = BuildLookup(BlackTermRaw, BlackMakeupRaw);
 
-    // Encode: (codeLen << 16) | (run & 0xFFFF)
     private static int[] BuildLookup(IEnumerable<(int L, ushort V, int Run)> term, IEnumerable<(int L, ushort V, int Run)> makeup)
     {
         var table = new int[LookupSize];
-        // V is the code value already left-aligned to LookupBits (code << (13 - len)), which
-        // is exactly the base index into the 13-bit lookup table. All 2^(13-len) entries that
-        // share this prefix map to the same code.
-        // Fill terminating codes (run 0..63 → stored as-is, positive)
         foreach (var (l, v, run) in term)
             FillTable(table, l, v, run, l);
-        // Fill makeup codes (stored as negative of run to distinguish from terminating)
         foreach (var (l, v, run) in makeup)
             FillTable(table, l, v, -run, l);
         return table;
@@ -168,36 +158,33 @@ internal static class CcittFaxDecoder
     // ── Decoder entry point ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Decodes CCITT-compressed data using the parameters in <paramref name="parms"/>.
-    /// Output is a packed-bit bitmap: 1 bit per pixel, MSB = leftmost pixel, rows packed
-    /// to byte boundaries. Respects <c>BlackIs1</c> to determine the background colour.
+    /// Decodes CCITT-compressed data.
+    /// Output is a packed-bit bitmap: 1 bit per pixel, MSB = leftmost pixel, rows packed to byte boundaries.
     /// </summary>
-    internal static ReadOnlyMemory<byte> Decode(ReadOnlyMemory<byte> data, PdfDictionary? parms)
-    {
-        var k = (int)(parms?.Get<PdfInteger>("K")?.Value ?? 0L);
-        var columns = (int)(parms?.Get<PdfInteger>("Columns")?.Value ?? 1728L);
-        var rows = (int)(parms?.Get<PdfInteger>("Rows")?.Value ?? 0L);
-        var blackIs1 = parms?.Get<PdfBoolean>("BlackIs1")?.Value ?? false;
-        var endOfBlock = parms?.Get<PdfBoolean>("EndOfBlock")?.Value ?? true;
-        var encodedByteAlign = parms?.Get<PdfBoolean>("EncodedByteAlign")?.Value ?? false;
-
-        return k switch
+    /// <param name="data">The compressed input bytes.</param>
+    /// <param name="k">
+    /// Encoding scheme: 0 = Group 3 1D (default); negative = Group 4 (T.6 pure 2D);
+    /// positive = Group 3 mixed 1D/2D (T.4).
+    /// </param>
+    /// <param name="columns">Image width in pixels (default 1728).</param>
+    /// <param name="rows">Expected row count; 0 = decode until data exhausted.</param>
+    /// <param name="blackIs1">When true, bit 1 = black; when false (default), bit 1 = white.</param>
+    /// <param name="endOfBlock">When true (default), stop on EOFB/RTC markers.</param>
+    /// <param name="encodedByteAlign">When true, each row is aligned to a byte boundary.</param>
+    internal static ReadOnlyMemory<byte> Decode(
+        ReadOnlyMemory<byte> data,
+        int k = 0,
+        int columns = 1728,
+        int rows = 0,
+        bool blackIs1 = false,
+        bool endOfBlock = true,
+        bool encodedByteAlign = false) =>
+        k switch
         {
             < 0 => DecodeGroup4(data, columns, rows, blackIs1, endOfBlock),
-            0 => DecodeGroup3_1D(data,
-                columns,
-                rows,
-                blackIs1,
-                encodedByteAlign,
-                endOfBlock),
-            _ => DecodeGroup3_2D(data,
-                columns,
-                rows,
-                blackIs1,
-                encodedByteAlign,
-                endOfBlock)
+            0   => DecodeGroup3_1D(data, columns, rows, blackIs1, encodedByteAlign, endOfBlock),
+            _   => DecodeGroup3_2D(data, columns, rows, blackIs1, encodedByteAlign, endOfBlock)
         };
-    }
 
     // ── Group 4 (K = -1, T.6 pure 2D) ───────────────────────────────────────
 
@@ -214,9 +201,6 @@ internal static class CcittFaxDecoder
         var output = new MemoryStream(rows > 0 ? rows * rowBytes : rowBytes * 64);
 
         var bitPos = 0;
-        // Decode internally with the convention true = white, false = black, regardless of
-        // /BlackIs1 (which only affects the output bit mapping in WriteRow). The imaginary
-        // reference line above the first row is all white (§4.1), so refRow starts all true.
         const bool white = true;
         var refRow = new bool[columns + 1];
         var curRow = new bool[columns + 1];
@@ -226,26 +210,15 @@ internal static class CcittFaxDecoder
         {
             Array.Fill(curRow, white, 0, columns);
 
-            var a0 = -1; // imaginary white pixel before column 0
-            var a0Color = white; // colour of the run starting at a0
+            var a0 = -1;
+            var a0Color = white;
 
             var complete = DecodeRow2D(
-                input,
-                ref bitPos,
-                refRow,
-                curRow,
-                columns,
-                white,
-                endOfBlock,
-                ref a0,
-                ref a0Color
-            );
+                input, ref bitPos, refRow, curRow, columns, white, endOfBlock, ref a0, ref a0Color);
             if (!complete)
-                break; // EOFB reached
+                break;
 
             WriteRow(output, curRow, columns, blackIs1);
-
-            // Current row becomes new reference row
             Array.Copy(curRow, refRow, columns + 1);
 
             if (rows > 0 && output.Length >= (long)rows * rowBytes)
@@ -255,7 +228,6 @@ internal static class CcittFaxDecoder
         return output.ToArray();
     }
 
-    // Returns false when EOFB (two consecutive EOL codes) is encountered and endOfBlock is true.
     private static bool DecodeRow2D(
         ReadOnlySpan<byte> input,
         ref int bitPos,
@@ -268,11 +240,6 @@ internal static class CcittFaxDecoder
         ref bool a0Color
     )
     {
-        // T.6 §2: decode changing elements left-to-right. a0 is the reference changing
-        // element on the coding line (starts at -1 = imaginary white pixel before col 0);
-        // a0Color is the colour of the run starting at a0. b1/b2 are the first/second
-        // changing elements on the reference line to the right of a0 whose colour is
-        // opposite to a0Color (b1) and then same again (b2).
         while (a0 < columns)
         {
             if (endOfBlock)
@@ -285,7 +252,7 @@ internal static class CcittFaxDecoder
 
             var mode = Read2dMode(input, ref bitPos);
             if (mode < 0)
-                break; // end of data / unsupported code
+                break;
 
             var (b1, b2) = FindB1B2(refRow, a0, a0Color, columns);
             var start = a0 < 0 ? 0 : a0;
@@ -294,15 +261,12 @@ internal static class CcittFaxDecoder
             {
                 case Mode2D.Pass:
                 {
-                    // Pixels a0..b2 take a0's colour; a0 advances to b2, colour unchanged.
                     FillRun(curRow, start, b2 - start, a0Color);
                     a0 = b2;
                     break;
                 }
                 case Mode2D.Horizontal:
                 {
-                    // Two runs: first of a0Color, second of the opposite colour. Colour of
-                    // a0 is unchanged afterwards (even number of colour changes).
                     var run1 = ReadRunLength(input, ref bitPos, a0Color == whiteBit);
                     if (run1 < 0) return true;
                     var run2 = ReadRunLength(input, ref bitPos, a0Color != whiteBit);
@@ -313,10 +277,9 @@ internal static class CcittFaxDecoder
                     a0 = start + run1 + run2;
                     break;
                 }
-                default: // Vertical Vn, n = mode - V0 ∈ [-3,3]
+                default:
                 {
                     var a1 = Math.Clamp(b1 + (mode - Mode2D.V0), 0, columns);
-                    // Pixels a0..a1 take a0's colour; then the colour flips at a1.
                     FillRun(curRow, start, a1 - start, a0Color);
                     a0 = a1;
                     a0Color = !a0Color;
@@ -348,10 +311,9 @@ internal static class CcittFaxDecoder
 
         for (var rowIdx = 0; rows == 0 || rowIdx < rows; rowIdx++)
         {
-            // Skip EOL (12 bits: 0000 0000 0001)
             SkipEol(input, ref bitPos);
             if (encodedByteAlign)
-                bitPos = (bitPos + 7) & ~7; // align to next byte boundary
+                bitPos = (bitPos + 7) & ~7;
 
             var row = new bool[columns + 1];
             Array.Fill(row, whiteBit, 0, columns);
@@ -369,20 +331,18 @@ internal static class CcittFaxDecoder
                 }
 
                 FillRun(row, pos, run, isWhite == whiteBit);
-
                 pos += run;
                 isWhite = !isWhite;
             }
 
-            // Check for EOFB (two consecutive EOL codes indicate end of data)
             var saved = bitPos;
             SkipEol(input, ref bitPos);
             var saved2 = bitPos;
             SkipEol(input, ref bitPos);
-            if (saved2 == bitPos) // no second EOL → not EOFB, rewind
+            if (saved2 == bitPos)
                 bitPos = saved;
             else if (endOfBlock)
-                break; // EOFB found
+                break;
 
             WriteRow(output, row, columns, blackIs1);
         }
@@ -392,10 +352,6 @@ internal static class CcittFaxDecoder
 
     // ── Group 3 mixed 1D/2D (K > 0, T.4) ─────────────────────────────────────
 
-    // T.4 two-dimensional coding (§4.2). Each line is preceded by an EOL code and a single
-    // "tag" bit: 1 → the line is 1D (MH) coded, 0 → the line is 2D (MR) coded relative to the
-    // line above. K bounds how many 2D lines may follow a 1D line, but a conforming decoder
-    // simply honours each line's tag bit, so K itself need not be tracked for decoding.
     private static ReadOnlyMemory<byte> DecodeGroup3_2D(
         ReadOnlyMemory<byte> data,
         int columns,
@@ -410,7 +366,6 @@ internal static class CcittFaxDecoder
         var output = new MemoryStream(rows > 0 ? rows * rowBytes : rowBytes * 64);
 
         var bitPos = 0;
-        // Decode internally with white = true regardless of /BlackIs1 (WriteRow maps to output).
         const bool white = true;
         var refRow = new bool[columns + 1];
         var curRow = new bool[columns + 1];
@@ -418,14 +373,11 @@ internal static class CcittFaxDecoder
 
         for (var rowIdx = 0; rows == 0 || rowIdx < rows; rowIdx++)
         {
-            // Each coded line starts with an EOL (000000000001). Some encoders omit the very
-            // first EOL or pad with fill bits before it — SkipEol tolerates a missing EOL.
             SkipEol(input, ref bitPos);
 
-            // The tag bit selects 1D (1) or 2D (0) coding for this line.
             var tag = PeekBit(input, bitPos);
             if (tag < 0)
-                break; // end of data
+                break;
             bitPos++;
 
             if (encodedByteAlign)
@@ -443,15 +395,7 @@ internal static class CcittFaxDecoder
                 var a0 = -1;
                 var a0Color = white;
                 decoded = DecodeRow2D(
-                    input,
-                    ref bitPos,
-                    refRow,
-                    curRow,
-                    columns,
-                    white,
-                    endOfBlock: false, // EOL framing is handled here, not inside the row decoder
-                    ref a0,
-                    ref a0Color);
+                    input, ref bitPos, refRow, curRow, columns, white, endOfBlock: false, ref a0, ref a0Color);
             }
 
             if (!decoded)
@@ -464,8 +408,6 @@ internal static class CcittFaxDecoder
         return output.ToArray();
     }
 
-    // Decodes a single 1D (Modified Huffman) coded line into curRow. Returns false at end of
-    // data before any run was read. Shared by Group 3 2D's 1D-tagged lines.
     private static bool DecodeRow1D(
         ReadOnlySpan<byte> input,
         ref int bitPos,
@@ -482,7 +424,7 @@ internal static class CcittFaxDecoder
         {
             var run = ReadRunLength(input, ref bitPos, isWhite);
             if (run < 0)
-                return readAny; // end of data
+                return readAny;
             readAny = true;
 
             FillRun(curRow, pos, run, isWhite == whiteBit);
@@ -497,101 +439,73 @@ internal static class CcittFaxDecoder
 
     private static class Mode2D
     {
-        // Vertical modes are encoded as V0 + offset, offset ∈ [-3, +3]. V0 is offset to a
-        // positive base so the left-vertical modes (VL1..VL3) never collide with the
-        // EndOfData sentinel. Pass/Horizontal use distinct values outside the V range.
-        public const int V0 = 10;        // V(-3)=7 … V0=10 … V(+3)=13
+        public const int V0 = 10;
         public const int Pass = 20;
         public const int Horizontal = 21;
-        public const int EndOfData = -1; // returned by Read2dMode at end of stream / on EOL
+        public const int EndOfData = -1;
     }
 
-    // 2D mode codes (ITU-T T.6 Table 1 / §4.2.1). Read as a prefix tree, MSB first:
-    //   1        → V0
-    //   011      → VR1        010      → VL1
-    //   001      → Horizontal
-    //   0001     → Pass
-    //   000011   → VR2        000010   → VL2
-    //   0000011  → VR3        0000010  → VL3
-    //   0000001… → extension; 000000000001 → EOL (handled by caller as end-of-data)
     private static int Read2dMode(ReadOnlySpan<byte> data, ref int bitPos)
     {
         var b = PeekBit(data, bitPos);
         if (b < 0) return -1;
-        if (b == 1) { bitPos += 1; return Mode2D.V0; }            // 1
+        if (b == 1) { bitPos += 1; return Mode2D.V0; }
 
         b = PeekBit(data, bitPos + 1);
         if (b < 0) return -1;
         if (b == 1)
         {
-            // 01x
             var b2 = PeekBit(data, bitPos + 2);
             if (b2 < 0) return -1;
             bitPos += 3;
-            return b2 == 1 ? Mode2D.V0 + 1 : Mode2D.V0 - 1;       // 011=VR1, 010=VL1
+            return b2 == 1 ? Mode2D.V0 + 1 : Mode2D.V0 - 1;
         }
 
-        // 00…
         b = PeekBit(data, bitPos + 2);
         if (b < 0) return -1;
-        if (b == 1) { bitPos += 3; return Mode2D.Horizontal; }    // 001
+        if (b == 1) { bitPos += 3; return Mode2D.Horizontal; }
 
-        // 000…
         b = PeekBit(data, bitPos + 3);
         if (b < 0) return -1;
-        if (b == 1) { bitPos += 4; return Mode2D.Pass; }          // 0001
+        if (b == 1) { bitPos += 4; return Mode2D.Pass; }
 
-        // 0000…
         b = PeekBit(data, bitPos + 4);
         if (b < 0) return -1;
         if (b == 1)
         {
-            // 00001x
             var b5 = PeekBit(data, bitPos + 5);
             if (b5 < 0) return -1;
             bitPos += 6;
-            return b5 == 1 ? Mode2D.V0 + 2 : Mode2D.V0 - 2;       // 000011=VR2, 000010=VL2
+            return b5 == 1 ? Mode2D.V0 + 2 : Mode2D.V0 - 2;
         }
 
-        // 00000…
         b = PeekBit(data, bitPos + 5);
         if (b < 0) return -1;
         if (b == 1)
         {
-            // 000001x
             var b6 = PeekBit(data, bitPos + 6);
             if (b6 < 0) return -1;
             bitPos += 7;
-            return b6 == 1 ? Mode2D.V0 + 3 : Mode2D.V0 - 3;       // 0000011=VR3, 0000010=VL3
+            return b6 == 1 ? Mode2D.V0 + 3 : Mode2D.V0 - 3;
         }
 
-        // 000000… — extension code or EOL/EOFB padding; signal end of row data.
         return -1;
     }
 
-    // Finds (b1, b2) per ITU-T T.6 §4.2.1.3:
-    //   b1 = first *changing element* on the reference line to the right of a0 whose colour
-    //        is opposite to a0Color. A changing element at position i is one where
-    //        refRow[i] != refRow[i-1] (with an implicit white pixel before column 0).
-    //   b2 = the next changing element on the reference line to the right of b1.
-    // Finding the first opposite-colour pixel is NOT sufficient: when refRow[a0] already
-    // differs from a0Color, the first opposite-colour pixel may not be a transition point.
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static (int b1, int b2) FindB1B2(IReadOnlyList<bool> refRow, int a0, bool a0Color, int columns)
     {
-        // Scan for the first changing element strictly right of a0.
         var i = a0 + 1;
         while (i < columns)
         {
-            var prevColor = i == 0 ? true /* white before col 0 */ : refRow[i - 1];
+            var prevColor = i == 0 ? true : refRow[i - 1];
             var isChange = refRow[i] != prevColor;
             if (isChange && refRow[i] != a0Color)
-                break; // b1: changing element of colour opposite to a0Color
+                break;
             i++;
         }
         var b1 = i;
 
-        // b2 = next changing element to the right of b1.
         var j = b1 + 1;
         while (j < columns && refRow[j] == refRow[j - 1])
             j++;
@@ -600,9 +514,6 @@ internal static class CcittFaxDecoder
         return (b1, b2);
     }
 
-    // Reads a complete run length (makeup + terminating codes).
-    // isWhiteRun=true → white lookup; false → black lookup.
-    // Returns total run length, or -1 on end of data.
     private static int ReadRunLength(ReadOnlySpan<byte> data, ref int bitPos, bool isWhiteRun)
     {
         var lookup = isWhiteRun ? WhiteLookup : BlackLookup;
@@ -616,20 +527,19 @@ internal static class CcittFaxDecoder
 
             var entry = lookup[bits];
             if (entry == 0)
-                return total; // unknown code — treat as end of run
+                return total;
 
             var len = entry >> 16;
-            var run = (short)(entry & 0xFFFF); // sign-extended: negative = makeup
+            var run = (short)(entry & 0xFFFF);
             bitPos += len;
 
             if (run >= 0)
-                return total + run; // terminating code
+                return total + run;
 
-            total += -run; // makeup code: accumulate and read next
+            total += -run;
         }
     }
 
-    // Reads up to 13 bits MSB first from position bitPos. Returns -1 at end of data.
     private static int Peek13(ReadOnlySpan<byte> data, int bitPos)
     {
         var result = 0;
@@ -644,9 +554,7 @@ internal static class CcittFaxDecoder
             result = (result << 1) | ((data[byteIdx] >> (7 - ((bitPos + i) & 7))) & 1);
         }
 
-        // Pad with zeros if fewer than 13 bits available (valid for shorter codes)
         result <<= LookupBits - count;
-
         return result;
     }
 
@@ -656,10 +564,8 @@ internal static class CcittFaxDecoder
         return byteIdx >= data.Length ? -1 : (data[byteIdx] >> (7 - (bitPos & 7))) & 1;
     }
 
-    // Checks for EOFB (two EOL codes = 24 zero bits + 1, twice) without consuming bits.
     private static bool TryReadEolOrEofb(ReadOnlySpan<byte> data, ref int bitPos)
     {
-        // EOL = 12 bits: 0000 0000 0001
         var p = bitPos;
         for (var i = 0; i < 11; i++)
         {
@@ -670,7 +576,6 @@ internal static class CcittFaxDecoder
         if (PeekBit(data, p++) != 1)
             return false;
 
-        // Second EOL?
         for (var i = 0; i < 11; i++)
         {
             if (PeekBit(data, p++) != 0)
@@ -681,13 +586,11 @@ internal static class CcittFaxDecoder
             return false;
 
         bitPos = p + 1;
-
         return true;
     }
 
     private static void SkipEol(ReadOnlySpan<byte> data, ref int bitPos)
     {
-        // Advance past 12-bit EOL (00000000001)
         for (var i = 0; i < 11; i++)
         {
             if (PeekBit(data, bitPos) == 0)
@@ -715,8 +618,6 @@ internal static class CcittFaxDecoder
 
         for (var i = 0; i < columns; i++)
         {
-            // blackIs1=false: true=white=1, false=black=0 in output
-            // blackIs1=true:  true=black=1, false=white=0 in output
             var isSet = blackIs1 ? !row[i] : row[i];
             if (isSet) buf[i >> 3] |= (byte)(0x80 >> (i & 7));
         }

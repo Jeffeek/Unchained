@@ -40,7 +40,7 @@ public sealed class RenderingService(PdfRenderer renderer)
                 return null;
 
             var options = new RenderOptions(Dpi: dpi);
-            var bytes = await renderer.RenderPageAsync(page, options, ct);
+            var bytes = await renderer.RenderPageAsync(page, options, ct).ConfigureAwait(false);
 
             // Evict if the cache grew too large before writing the new entry
             if (_cache.Count >= MaxEntries)

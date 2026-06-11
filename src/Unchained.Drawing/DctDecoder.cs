@@ -2,18 +2,20 @@ using System.Buffers;
 using System.Runtime.InteropServices;
 using JpegLibrary;
 
-namespace Unchained.Pdf.Parsing.Filters;
+namespace Unchained.Drawing;
 
 /// <summary>
-/// Decodes JPEG-compressed data (DCTDecode filter, ISO 32000-1 §7.4.8)
-/// using JpegLibrary — a pure-managed, zero-native-dependency C# JPEG decoder.
+/// Decodes DCT (JPEG)-compressed data using JpegLibrary, producing a flat RGB byte array.
+/// Used by PDF /DCTDecode (ISO 32000-1 §7.4.8).
+/// Handles baseline, extended sequential, and progressive JPEG; grayscale and YCbCr.
+/// For a simpler BCL-only decoder see <see cref="JpegDecoder"/>.
 /// </summary>
-internal static class JpegDecoder
+internal static class DctDecoder
 {
     /// <summary>
     /// Decompresses JPEG bytes and returns a flat RGB byte array
     /// (<c>width × height × 3</c> bytes, row-major, no padding).
-    /// Grayscale JPEGs are expanded to 3-channel RGB (R=G=B=Y).
+    /// Grayscale JPEGs are expanded to 3-channel (R=G=B=Y).
     /// </summary>
     /// <exception cref="NotSupportedException">
     /// JPEG uses an unsupported color space (e.g. CMYK / 4-component).
@@ -31,8 +33,6 @@ internal static class JpegDecoder
         var width = decoder.Width;
         var height = decoder.Height;
 
-        // JpegLibrary upsamples chroma internally, so all components arrive at full resolution.
-        // We collect them as three separate byte planes then convert to interleaved RGB.
         var planes = new byte[nc][];
         for (var i = 0; i < nc; i++)
             planes[i] = new byte[width * height];
@@ -82,12 +82,7 @@ internal static class JpegDecoder
         int componentCount
     ) : JpegBlockOutputWriter
     {
-        public override void WriteBlock(
-            ref short blockRef,
-            int componentIndex,
-            int x,
-            int y
-        )
+        public override void WriteBlock(ref short blockRef, int componentIndex, int x, int y)
         {
             if (componentIndex >= componentCount) return;
 
