@@ -15,7 +15,7 @@
 |---|---|---|
 | [`Unchained.Pdf`](src/Unchained.Pdf/README.md) | PDF — load, save, extract text, fill forms, sign, encrypt, PDF/A | [![NuGet](https://img.shields.io/nuget/v/Unchained.Pdf.svg)](https://www.nuget.org/packages/Unchained.Pdf) |
 | [`Unchained.Pdf.Rendering`](src/Unchained.Pdf.Rendering/README.md) | PDF page rasterization to PNG (FreeType2 + HarfBuzz shaping) | [![NuGet](https://img.shields.io/nuget/v/Unchained.Pdf.Rendering.svg)](https://www.nuget.org/packages/Unchained.Pdf.Rendering) |
-| [`Unchained.Pdf.Runtimes`](src/Unchained.Pdf.Runtimes/README.md) | Native FreeType2 binaries — installed automatically with Rendering | [![NuGet](https://img.shields.io/nuget/v/Unchained.Pdf.Runtimes.svg)](https://www.nuget.org/packages/Unchained.Pdf.Runtimes) |
+| [`Unchained.Drawing.Runtimes`](src/Unchained.Drawing.Runtimes/README.md) | Native FreeType2 binaries — installed automatically with any Rendering package | [![NuGet](https://img.shields.io/nuget/v/Unchained.Drawing.Runtimes.svg)](https://www.nuget.org/packages/Unchained.Drawing.Runtimes) |
 
 ### Planned
 

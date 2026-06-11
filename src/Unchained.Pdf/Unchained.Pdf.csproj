@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageId>Unchained.Pdf</PackageId>
+    <IsUserFacingPackage>true</IsUserFacingPackage>
   </PropertyGroup>
 
   <ItemGroup>

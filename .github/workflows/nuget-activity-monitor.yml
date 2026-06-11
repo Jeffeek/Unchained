@@ -1,8 +1,11 @@
 name: NuGet Package Activity Monitor
 
-# Monitors the last NuGet publish date for each tracked package and opens
+# Monitors the last NuGet publish date for each user-facing package and opens
 # an issue if the package is approaching 365 days of inactivity (the threshold
 # at which NuGet.org may automatically unlist it).
+#
+# The package list is derived automatically from <IsUserFacingPackage>true</IsUserFacingPackage>
+# in src/**/*.csproj — no manual list to maintain.
 
 on:
   schedule:
@@ -15,19 +18,14 @@ permissions:
   contents: read
 
 jobs:
-  check-package-activity:
-    name: Check ${{ matrix.package }} Activity
+  # ---------------------------------------------------------------
+  # 1. Discover user-facing packages from csproj metadata.
+  # ---------------------------------------------------------------
+  discover:
+    name: Discover user-facing packages
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package:
-          # PACKAGE_LIST_START
-          - 'Unchained.Pdf'
-          - 'Unchained.Pdf.Rendering'
-          - 'Unchained.Pdf.Runtimes'
-          # PACKAGE_LIST_END
-      fail-fast: false
-
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -37,7 +35,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          fetch-depth: 1
           persist-credentials: false
+
+      - name: Build package list from csproj
+        id: list
+        run: |
+          set -euo pipefail
+          # Find all src .csproj files that opt in to user-facing monitoring,
+          # then extract their <PackageId> value.
+          packages=$(
+            grep -rl '<IsUserFacingPackage>true</IsUserFacingPackage>' src/ \
+            | xargs grep -h '<PackageId>' \
+            | sed 's|.*<PackageId>\(.*\)</PackageId>.*|\1|' \
+            | sort \
+            | jq -Rsc '[split("\n")[] | select(length > 0)]'
+          )
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          echo "Discovered: $packages"
+
+  # ---------------------------------------------------------------
+  # 2. Check activity for each discovered package.
+  # ---------------------------------------------------------------
+  check:
+    name: Check ${{ matrix.package }} Activity
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.discover.outputs.packages) }}
+      fail-fast: false
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
 
       - name: Get latest NuGet package version and publish date
         id: nuget_info

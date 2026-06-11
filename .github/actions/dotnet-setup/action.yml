@@ -7,8 +7,11 @@ inputs:
   solution-file:
     description: 'Solution file to restore and build'
     default: 'Unchained.slnx'
+  restore:
+    description: 'Set to false to skip NuGet restore (e.g. when only the SDK is needed for a push/pack step)'
+    default: 'true'
   build:
-    description: 'Set to false to skip the Release build step (e.g. when CodeQL performs its own build)'
+    description: 'Set to false to skip the Release build step (e.g. when CodeQL performs its own build). Requires restore: true.'
     default: 'true'
 
 outputs:
@@ -27,6 +30,7 @@ runs:
           10.0.x
 
     - name: Cache NuGet packages
+      if: ${{ inputs.restore == 'true' }}
       uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
       with:
         path: ~/.nuget/packages
@@ -35,10 +39,11 @@ runs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
+      if: ${{ inputs.restore == 'true' }}
       shell: bash
       run: dotnet restore ${{ inputs.solution-file }}
 
     - name: Build (Release)
-      if: ${{ inputs.build == 'true' }}
+      if: ${{ inputs.restore == 'true' && inputs.build == 'true' }}
       shell: bash
       run: dotnet build ${{ inputs.solution-file }} -c Release --no-restore

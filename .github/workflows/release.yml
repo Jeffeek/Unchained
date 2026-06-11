@@ -22,6 +22,7 @@ env:
   DOTNET_NOLOGO: "1"
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+  NUGET_XMLDOC_MODE: skip
 
 jobs:
   # ---------------------------------------------------------------
@@ -62,50 +63,16 @@ jobs:
           echo "Version: $VERSION"
 
   # ---------------------------------------------------------------
-  # 2. Build + test on every RID
+  # 2. Build + test on every RID and upload native binaries.
   # ---------------------------------------------------------------
   verify:
     needs: version
-    runs-on: ${{ matrix.runner }}
-    strategy:
+    uses: ./.github/workflows/_build-test-all.yml
+    with:
+      coverage: false
+      upload-natives: true
       fail-fast: true
-      matrix:
-        include:
-          - { runner: ubuntu-latest,    rid: linux-x64   }
-          - { runner: ubuntu-24.04-arm, rid: linux-arm64 }
-          - { runner: windows-latest,   rid: win-x64     }
-          - { runner: windows-11-arm,   rid: win-arm64   }
-          - { runner: macos-15-intel,   rid: osx-x64     }
-          - { runner: macos-15,         rid: osx-arm64   }
-
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
-        with:
-          egress-policy: audit
-
-      - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Fetch native FreeType2 library
-        shell: bash
-        run: bash scripts/FetchNatives/fetch-natives.sh --rid ${{ matrix.rid }}
-
-      - name: Upload native binary artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: natives-${{ matrix.rid }}
-          path: src/Unchained.Pdf.Runtimes/runtimes/${{ matrix.rid }}/native/
-          if-no-files-found: error
-
-      - name: Setup .NET (restore + build)
-        uses: ./.github/actions/dotnet-setup
-
-      - name: Test
-        run: dotnet test tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj -c Release --no-build
+    secrets: inherit
 
   # ---------------------------------------------------------------
   # 3. Pack with binaries.
@@ -124,7 +91,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - name: Download native binaries from all RIDs
@@ -139,35 +105,25 @@ jobs:
           set -euo pipefail
           for dir in artifacts/natives/natives-*; do
             rid="${dir##*/natives-}"
-            dest="src/Unchained.Pdf.Runtimes/runtimes/${rid}/native"
+            dest="src/Unchained.Drawing.Runtimes/runtimes/${rid}/native"
             mkdir -p "${dest}"
             cp -f "${dir}"/* "${dest}/"
             ls -la "${dest}/"
           done
 
-      - name: Setup .NET (no build yet)
+      - name: Setup .NET (restore, no build)
         uses: ./.github/actions/dotnet-setup
         with:
           build: 'false'
 
       - name: Pack all packages
-        # PACK_COMMANDS_START
         shell: bash
         timeout-minutes: 20
         run: |
           set -euo pipefail
-          VERSION="${{ needs.version.outputs.version }}"
-          OUT="./artifacts/nupkg"
-
-          dotnet pack src/Unchained.Pdf/Unchained.Pdf.csproj \
-            -c Release --output "$OUT" -p:PackageVersion="$VERSION"
-
-          dotnet pack src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj \
-            -c Release --output "$OUT" -p:PackageVersion="$VERSION"
-
-          dotnet pack src/Unchained.Pdf.Runtimes/Unchained.Pdf.Runtimes.csproj \
-            -c Release --output "$OUT" -p:PackageVersion="$VERSION"
-        # PACK_COMMANDS_END
+          dotnet pack Unchained.slnx \
+            -c Release --output "./artifacts/nupkg" \
+            -p:PackageVersion="${{ needs.version.outputs.version }}"
 
       - name: Inspect pack contents
         shell: bash
@@ -175,9 +131,7 @@ jobs:
           set -euo pipefail
           for nupkg in artifacts/nupkg/*.nupkg; do
             echo "=== $nupkg ==="
-            # List files in the archive
             unzip -l "$nupkg" | grep -E "lib/|runtimes/" || true
-            # Extract and print the nuspec to show dependencies and metadata
             unzip -p "$nupkg" "*.nuspec" 2>/dev/null | grep -E "<dependency|<id>|<version>" || true
           done
 
@@ -188,7 +142,7 @@ jobs:
           path: ./artifacts/nupkg
 
   # ---------------------------------------------------------------
-  # 5. GitHub Release + nuget.org push (gated on every check).
+  # 4. GitHub Release + nuget.org push (gated on every check).
   # ---------------------------------------------------------------
   publish:
     name: Publish to NuGet.org
@@ -208,12 +162,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          fetch-depth: 1
           persist-credentials: false
 
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+      - name: Setup .NET (SDK only)
+        uses: ./.github/actions/dotnet-setup
         with:
-          dotnet-version: 10.0.x
+          restore: 'false'
+          build: 'false'
 
       - name: Download nupkg
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

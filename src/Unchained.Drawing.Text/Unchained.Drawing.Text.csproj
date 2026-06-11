@@ -1,3 +1,4 @@
+<!--EXTERNAL_PROPERTIES: AssetTargetFallback-->
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -9,6 +10,9 @@
     <!-- SharpFont 4.0.1 targets net45; enable fallback so the DLL resolves. -->
     <AssetTargetFallback>$(AssetTargetFallback);net45</AssetTargetFallback>
     <PackageTags>drawing;text;freetype;harfbuzz;fonts;dotnet;csharp;document-processing</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageId>Unchained.Drawing.Text</PackageId>
+    <IsUserFacingPackage>false</IsUserFacingPackage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -49,6 +53,24 @@
       <ItemGroup>
         <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6"
               Link="runtimes\linux-arm64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-x64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-x64\native\libfreetype.so.6"
+              Link="runtimes\linux-musl-x64\native\libfreetype.so.6"
+              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-arm64\native\libfreetype.so.6')">
+      <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-arm64\native\libfreetype.so.6"
+              Link="runtimes\linux-musl-arm64\native\libfreetype.so.6"
               CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>

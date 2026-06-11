@@ -7,6 +7,9 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>drawing;graphics;rasterization;dotnet;csharp;document-processing</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageId>Unchained.Drawing</PackageId>
+    <IsUserFacingPackage>false</IsUserFacingPackage>
   </PropertyGroup>
 
 </Project>

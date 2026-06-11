@@ -7,6 +7,9 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>pptx;powerpoint;presentation;ooxml;dotnet;csharp;document-processing</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageId>Unchained.Pptx</PackageId>
+    <IsUserFacingPackage>true</IsUserFacingPackage>
   </PropertyGroup>
 
   <ItemGroup>
