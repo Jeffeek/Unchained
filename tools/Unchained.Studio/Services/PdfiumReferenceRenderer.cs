@@ -2,6 +2,8 @@ using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using PDFiumCore;
+using Unchained.Drawing.Constants;
+using Unchained.Drawing.Extensions;
 
 namespace Unchained.Studio.Services;
 
@@ -138,10 +140,10 @@ public sealed class PdfiumReferenceRenderer
     private static byte[] EncodeRgbPng(byte[] rgb, int width, int height)
     {
         using var ms = new MemoryStream((width * height * 3) + 256);
-        ms.Write(PngSignature);
+        ms.Write(PngConstants.Signature);
         WriteIhdr(ms, width, height);
         WriteIdat(ms, rgb, width, height);
-        WriteChunk(ms, "IEND"u8, ReadOnlySpan<byte>.Empty);
+        WriteChunk(ms, PngConstants.IEND.ToUtf8Span(), ReadOnlySpan<byte>.Empty);
         return ms.ToArray();
     }
 
@@ -151,7 +153,7 @@ public sealed class PdfiumReferenceRenderer
         BinaryPrimitives.WriteInt32BigEndian(d,      w);
         BinaryPrimitives.WriteInt32BigEndian(d[4..], h);
         d[8] = 8; d[9] = 2; // bit depth=8, colour type=RGB
-        WriteChunk(s, "IHDR"u8, d);
+        WriteChunk(s, PngConstants.IHDR.ToUtf8Span(), d);
     }
 
     private static void WriteIdat(Stream s, byte[] rgb, int w, int h)
@@ -165,7 +167,7 @@ public sealed class PdfiumReferenceRenderer
         using var compressed = new MemoryStream();
         using (var zlib = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
             zlib.Write(raw);
-        WriteChunk(s, "IDAT"u8, compressed.ToArray());
+        WriteChunk(s, PngConstants.IDAT.ToUtf8Span(), compressed.ToArray());
     }
 
     private static void WriteChunk(Stream s, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
@@ -183,23 +185,7 @@ public sealed class PdfiumReferenceRenderer
 
     private static uint UpdateCrc(uint crc, ReadOnlySpan<byte> data)
     {
-        foreach (var b in data) crc = Crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
+        foreach (var b in data) crc = PngConstants.CtcTable[(crc ^ b) & JpegMarkers.MarkerPrefix] ^ (crc >> 8);
         return crc;
-    }
-
-    private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
-
-    private static readonly uint[] Crc32Table = BuildCrcTable();
-
-    private static uint[] BuildCrcTable()
-    {
-        var t = new uint[256];
-        for (var n = 0u; n < 256u; n++)
-        {
-            var c = n;
-            for (var k = 0; k < 8; k++) c = (c & 1) != 0 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
-            t[n] = c;
-        }
-        return t;
     }
 }

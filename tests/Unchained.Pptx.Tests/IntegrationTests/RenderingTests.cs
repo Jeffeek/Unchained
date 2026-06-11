@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Drawing.Constants;
 using Unchained.Ooxml;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Rendering;
@@ -168,7 +169,7 @@ public sealed class RenderingTests : PptxTestBase
 
         image.Format.ShouldBe(RenderImageFormat.Jpeg);
         var bytes = image.Data.Span;
-        bytes[0].ShouldBe((byte)0xFF); // JPEG SOI marker
-        bytes[1].ShouldBe((byte)0xD8);
+        bytes[0].ShouldBe(JpegMarkers.MarkerPrefix); // JPEG SOI marker
+        bytes[1].ShouldBe(JpegMarkers.Soi);
     }
 }

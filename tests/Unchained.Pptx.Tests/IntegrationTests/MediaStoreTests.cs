@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Drawing.Constants;
 using Unchained.Ooxml;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
@@ -8,7 +9,7 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 public sealed class MediaStoreTests : PptxTestBase
 {
     private static byte[] FakePng(byte seed = 0) =>
-        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, seed];
+        [.. PngConstants.Signature, seed];
 
     // ── AddImage ──────────────────────────────────────────────────────────────
 

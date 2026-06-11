@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Drawing.Constants;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
@@ -136,9 +137,9 @@ public sealed class RendererTests : RendererTestBase
 
         // JPEG starts with FF D8 FF
         jpeg.Length.ShouldBeGreaterThan(3);
-        jpeg[0].ShouldBe((byte)0xFF);
-        jpeg[1].ShouldBe((byte)0xD8);
-        jpeg[2].ShouldBe((byte)0xFF);
+        jpeg[0].ShouldBe(JpegMarkers.MarkerPrefix);
+        jpeg[1].ShouldBe(JpegMarkers.Soi);
+        jpeg[2].ShouldBe(JpegMarkers.MarkerPrefix);
     }
 
     [Fact]

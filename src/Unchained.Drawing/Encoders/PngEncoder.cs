@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using Unchained.Drawing.Constants;
+using Unchained.Drawing.Extensions;
 
 namespace Unchained.Drawing.Encoders;
 
@@ -12,7 +13,6 @@ namespace Unchained.Drawing.Encoders;
 internal static class PngEncoder
 {
     private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
-    private static readonly uint[] Crc32Table = BuildCrcTable();
 
     internal static byte[] Encode(RasterBuffer buffer)
     {
@@ -20,7 +20,7 @@ internal static class PngEncoder
         ms.Write(PngSignature);
         WriteIHDR(ms, buffer.Width, buffer.Height);
         WriteIDAT(ms, buffer);
-        WriteChunk(ms, "IEND"u8, ReadOnlySpan<byte>.Empty);
+        WriteChunk(ms, PngConstants.IEND.ToUtf8Span(), ReadOnlySpan<byte>.Empty);
 
         return ms.ToArray();
     }
@@ -31,12 +31,13 @@ internal static class PngEncoder
         Span<byte> data = stackalloc byte[13];
         BinaryPrimitives.WriteInt32BigEndian(data[..], width);
         BinaryPrimitives.WriteInt32BigEndian(data[4..], height);
+        // ReSharper disable once GrammarMistakeInComment
         data[8] = 8;   // bit depth
         data[9] = 6;   // colour type: RGBA
         data[10] = 0;  // compression method
         data[11] = 0;  // filter method
         data[12] = 0;  // interlace: none
-        WriteChunk(stream, "IHDR"u8, data);
+        WriteChunk(stream, PngConstants.IHDR.ToUtf8Span(), data);
     }
 
     // ReSharper disable once InconsistentNaming
@@ -60,7 +61,7 @@ internal static class PngEncoder
         using (var zlib = new ZLibStream(compressedMs, CompressionLevel.Optimal, leaveOpen: true))
             zlib.Write(raw);
 
-        WriteChunk(stream, "IDAT"u8, compressedMs.ToArray());
+        WriteChunk(stream, PngConstants.IDAT.ToUtf8Span(), compressedMs.ToArray());
     }
 
     private static void WriteChunk(Stream stream, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
@@ -83,22 +84,8 @@ internal static class PngEncoder
     private static uint UpdateCrc(uint crc, ReadOnlySpan<byte> data)
     {
         foreach (var b in data)
-            crc = Crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
+            crc = PngConstants.CtcTable[(crc ^ b) & JpegMarkers.MarkerPrefix] ^ (crc >> 8);
 
         return crc;
-    }
-
-    private static uint[] BuildCrcTable()
-    {
-        var table = new uint[256];
-        for (var n = 0u; n < 256u; n++)
-        {
-            var c = n;
-            for (var k = 0; k < 8; k++)
-                c = (c & 1) != 0 ? PngConstants.Crc32Polynomial ^ (c >> 1) : c >> 1;
-            table[n] = c;
-        }
-
-        return table;
     }
 }

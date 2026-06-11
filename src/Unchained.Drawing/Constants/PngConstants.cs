@@ -14,4 +14,27 @@ internal static class PngConstants
 
     /// <summary>CRC-32 initial value and final XOR mask (all bits set).</summary>
     internal const uint Crc32Init = 0xFFFFFFFFu;
+
+    internal static uint[] CtcTable = BuildCrcTable();
+
+    private static uint[] BuildCrcTable()
+    {
+        var t = new uint[256];
+        for (var n = 0u; n < 256; n++)
+        {
+            var c = n;
+            for (var k = 0; k < 8; k++)
+                c = (c & 1) != 0 ? Crc32Polynomial ^ (c >> 1) : c >> 1;
+
+            t[n] = c;
+        }
+
+        return t;
+    }
+
+    internal const string IHDR = "IHDR";
+    internal const string IDAT = "IDAT";
+    internal const string PLTE = "PLTE";
+    internal const string tRNS = "tRNS";
+    internal const string IEND = "IEND";
 }

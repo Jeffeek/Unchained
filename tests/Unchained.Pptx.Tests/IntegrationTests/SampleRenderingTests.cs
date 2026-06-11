@@ -1,5 +1,6 @@
-using System.IO.Compression;
 using Shouldly;
+using System.IO.Compression;
+using Unchained.Drawing.Constants;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Rendering;
 using Unchained.Pptx.Rendering.Engine;
@@ -151,18 +152,18 @@ public sealed class SampleRenderingTests : PptxTestBase
             var len = (png[pos] << 24) | (png[pos + 1] << 16) | (png[pos + 2] << 8) | png[pos + 3];
             var type = System.Text.Encoding.ASCII.GetString(png, pos + 4, 4);
             var dataStart = pos + 8;
-            if (type == "IHDR")
+            if (type == PngConstants.IHDR)
             {
                 width = (png[dataStart] << 24) | (png[dataStart + 1] << 16) | (png[dataStart + 2] << 8) | png[dataStart + 3];
                 height = (png[dataStart + 4] << 24) | (png[dataStart + 5] << 16) | (png[dataStart + 6] << 8) | png[dataStart + 7];
                 bitDepth = png[dataStart + 8];
                 colorType = png[dataStart + 9];
             }
-            else if (type == "IDAT")
+            else if (type == PngConstants.IDAT)
             {
                 idat.Write(png, dataStart, len);
             }
-            else if (type == "IEND")
+            else if (type == PngConstants.IEND)
             {
                 break;
             }

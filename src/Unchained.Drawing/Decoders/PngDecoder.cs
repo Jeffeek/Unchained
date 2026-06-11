@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
+using Unchained.Drawing.Constants;
 
 namespace Unchained.Drawing.Decoders;
 
@@ -11,19 +12,16 @@ namespace Unchained.Drawing.Decoders;
 /// </summary>
 internal static class PngDecoder
 {
-    private static readonly byte[] Signature = [137, 80, 78, 71, 13, 10, 26, 10];
-
     internal static byte[]? TryDecodeToRgb(ReadOnlySpan<byte> png, out int width, out int height)
     {
         width = 0;
         height = 0;
 
-        if (png.Length < 8 || !png[..8].SequenceEqual(Signature))
+        if (png.Length < 8 || !png[..8].SequenceEqual(PngConstants.Signature))
             return null;
 
         int w = 0, h = 0, bitDepth = 0, colorType = 0, interlace = 0;
         byte[]? palette = null;
-        byte[]? transparency = null;
         using var idat = new MemoryStream();
 
         var pos = 8;
@@ -37,7 +35,7 @@ internal static class PngDecoder
 
             switch (type)
             {
-                case "IHDR":
+                case PngConstants.IHDR:
                 {
                     w = BinaryPrimitives.ReadInt32BigEndian(png.Slice(dataStart, 4));
                     h = BinaryPrimitives.ReadInt32BigEndian(png.Slice(dataStart + 4, 4));
@@ -46,21 +44,31 @@ internal static class PngDecoder
                     interlace = png[dataStart + 12];
                     break;
                 }
-                case "PLTE":
+                case PngConstants.PLTE:
+                {
                     palette = png.Slice(dataStart, len).ToArray();
                     break;
-                case "tRNS":
-                    transparency = png.Slice(dataStart, len).ToArray();
+                }
+                case PngConstants.tRNS:
+                {
+                    png.Slice(dataStart, len).ToArray();
                     break;
-                case "IDAT":
+                }
+                case PngConstants.IDAT:
+                {
                     idat.Write(png.Slice(dataStart, len));
                     break;
-                case "IEND":
+                }
+                case PngConstants.IEND:
+                {
                     pos = png.Length; // stop
                     break;
+                }
             }
 
-            if (pos >= png.Length) break;
+            if (pos >= png.Length)
+                break;
+
             pos = dataStart + len + 4; // skip data + CRC
         }
 
@@ -77,9 +85,7 @@ internal static class PngDecoder
             6 => 4, // truecolor + alpha
             _ => 0
         };
-        if (channels == 0)
-            return null;
-        if (colorType == 3 && palette is null)
+        if (channels == 0 || (colorType == 3 && palette is null))
             return null;
 
         byte[] raw;
@@ -107,11 +113,18 @@ internal static class PngDecoder
 
         width = w;
         height = h;
+
         return rgb;
     }
 
     // Reverses PNG scanline filters (None/Sub/Up/Average/Paeth) into raw channel bytes.
-    private static byte[] Unfilter(byte[] raw, int width, int height, int channels, int stride)
+    private static byte[] Unfilter(
+        byte[] raw,
+        int width,
+        int height,
+        int channels,
+        int stride
+    )
     {
         var output = new byte[width * height * channels];
         var prevRow = new byte[stride];
@@ -126,8 +139,8 @@ internal static class PngDecoder
 
             for (var x = 0; x < stride; x++)
             {
-                var a = x >= channels ? curRow[x - channels] : (byte)0; // left
-                var b = prevRow[x];                                     // up
+                var a = x >= channels ? curRow[x - channels] : (byte)0;  // left
+                var b = prevRow[x];                                      // up
                 var c = x >= channels ? prevRow[x - channels] : (byte)0; // up-left
                 var value = curRow[x];
 
@@ -150,12 +163,13 @@ internal static class PngDecoder
     }
 
     private static byte[]? ToRgb(
-        byte[] data,
+        IReadOnlyList<byte> data,
         int width,
         int height,
         int channels,
         int colorType,
-        byte[]? palette)
+        byte[]? palette
+    )
     {
         var rgb = new byte[width * height * 3];
         var pixelCount = width * height;
@@ -168,22 +182,28 @@ internal static class PngDecoder
             {
                 case 0: // grayscale
                 case 4: // grayscale + alpha (channel 0 = gray)
+                {
                     r = g = b = data[src];
                     break;
+                }
                 case 2: // truecolor
                 case 6: // truecolor + alpha
+                {
                     r = data[src];
                     g = data[src + 1];
                     b = data[src + 2];
                     break;
+                }
                 case 3: // indexed
                 {
                     var idx = data[src] * 3;
                     if (palette is null || idx + 2 >= palette.Length)
                         return null;
+
                     r = palette[idx];
                     g = palette[idx + 1];
                     b = palette[idx + 2];
+
                     break;
                 }
                 default:
@@ -205,7 +225,9 @@ internal static class PngDecoder
         var pa = Math.Abs(p - a);
         var pb = Math.Abs(p - b);
         var pc = Math.Abs(p - c);
-        if (pa <= pb && pa <= pc) return a;
+        if (pa <= pb && pa <= pc)
+            return a;
+
         return pb <= pc ? b : c;
     }
 }

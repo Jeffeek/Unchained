@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Drawing.Constants;
 using Unchained.Drawing.Decoders;
 using Unchained.Pptx.Rendering.Engine;
 using Xunit;
@@ -22,7 +23,7 @@ public sealed class JpegDecoderTests
 
     [Fact]
     public void TruncatedJpeg_ReturnsNullNotThrow() =>
-        JpegDecoder.TryDecodeToRgb([0xFF, 0xD8, 0xFF, 0xE0, 0x00], out _, out _).ShouldBeNull();
+        JpegDecoder.TryDecodeToRgb([JpegMarkers.MarkerPrefix, JpegMarkers.Soi, JpegMarkers.MarkerPrefix, JpegMarkers.App0Jfif, JpegMarkers.ByteStuff], out _, out _).ShouldBeNull();
 
     [Fact]
     public void BaselineJpeg_DecodesToFullRgbBuffer()

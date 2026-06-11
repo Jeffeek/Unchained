@@ -1,4 +1,6 @@
 using System.IO.Compression;
+using Unchained.Drawing.Constants;
+using Unchained.Drawing.Extensions;
 
 namespace Unchained.Pdf.Models;
 
@@ -9,17 +11,20 @@ namespace Unchained.Pdf.Models;
 /// </summary>
 internal static class PngWriter
 {
-    private static readonly byte[] Signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-
     // Encodes width×height pixels. rgb is W*H*3 (R,G,B). When alpha (W*H) is supplied the
     // output is RGBA (colour type 6); otherwise RGB (colour type 2).
-    internal static byte[] Encode(int width, int height, byte[] rgb, byte[]? alpha)
+    internal static byte[] Encode(
+        int width,
+        int height,
+        byte[] rgb,
+        byte[]? alpha
+    )
     {
         var hasAlpha = alpha is not null;
         var channels = hasAlpha ? 4 : 3;
         var colorType = (byte)(hasAlpha ? 6 : 2);
 
-        // Build raw scanlines: each row prefixed with filter byte 0 (None).
+        // Build raw scan lines: each row prefixed with filter byte 0 (None).
         var stride = width * channels;
         var raw = new byte[height * (1 + stride)];
         for (var y = 0; y < height; y++)
@@ -40,13 +45,15 @@ internal static class PngWriter
         using var comp = new MemoryStream();
         using (var z = new ZLibStream(comp, CompressionLevel.Optimal, leaveOpen: true))
             z.Write(raw, 0, raw.Length);
+
         var idat = comp.ToArray();
 
         using var ms = new MemoryStream();
-        ms.Write(Signature, 0, Signature.Length);
-        WriteChunk(ms, "IHDR"u8, Ihdr(width, height, colorType));
-        WriteChunk(ms, "IDAT"u8, idat);
-        WriteChunk(ms, "IEND"u8, []);
+        ms.Write(PngConstants.Signature, 0, PngConstants.Signature.Length);
+        WriteChunk(ms, PngConstants.IHDR.ToUtf8Span(), Ihdr(width, height, colorType));
+        WriteChunk(ms, PngConstants.IDAT.ToUtf8Span(), idat);
+        WriteChunk(ms, PngConstants.IEND.ToUtf8Span(), []);
+
         return ms.ToArray();
     }
 
@@ -58,6 +65,7 @@ internal static class PngWriter
         b[8] = 8;          // bit depth
         b[9] = colorType;  // 2 = RGB, 6 = RGBA
         // b[10..12] = 0: deflate, adaptive filtering, no interlace
+
         return b;
     }
 
@@ -73,31 +81,22 @@ internal static class PngWriter
         s.Write(crc, 0, 4);
     }
 
-    private static void WriteU32(byte[] b, int o, uint v)
+    private static void WriteU32(IList<byte> b, int o, uint v)
     {
-        b[o] = (byte)(v >> 24); b[o + 1] = (byte)(v >> 16); b[o + 2] = (byte)(v >> 8); b[o + 3] = (byte)v;
+        b[o] = (byte)(v >> 24);
+        b[o + 1] = (byte)(v >> 16);
+        b[o + 2] = (byte)(v >> 8);
+        b[o + 3] = (byte)v;
     }
 
-    private static uint Crc32(ReadOnlySpan<byte> type, byte[] data)
+    private static uint Crc32(ReadOnlySpan<byte> type, IEnumerable<byte> data)
     {
-        var c = 0xFFFFFFFFu;
-        foreach (var x in type) c = (c >> 8) ^ Table[(c ^ x) & 0xFF];
-        foreach (var x in data) c = (c >> 8) ^ Table[(c ^ x) & 0xFF];
-        return c ^ 0xFFFFFFFFu;
-    }
+        var c = PngConstants.Crc32Init;
+        foreach (var x in type)
+            c = (c >> 8) ^ PngConstants.CtcTable[(c ^ x) & 0xFF];
 
-    private static readonly uint[] Table = BuildTable();
+        c = data.Aggregate(c, static (current, x) => (current >> 8) ^ PngConstants.CtcTable[(current ^ x) & 0xFF]);
 
-    private static uint[] BuildTable()
-    {
-        var t = new uint[256];
-        for (var n = 0u; n < 256; n++)
-        {
-            var c = n;
-            for (var k = 0; k < 8; k++)
-                c = (c & 1) != 0 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
-            t[n] = c;
-        }
-        return t;
+        return c ^ PngConstants.Crc32Init;
     }
 }

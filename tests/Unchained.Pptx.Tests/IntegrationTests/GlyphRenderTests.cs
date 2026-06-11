@@ -1,5 +1,6 @@
-using System.IO.Compression;
 using Shouldly;
+using System.IO.Compression;
+using Unchained.Drawing.Constants;
 using Unchained.Drawing.Encoders;
 using Unchained.Ooxml;
 using Unchained.Pptx.Rendering;
@@ -129,10 +130,10 @@ public sealed class GlyphRenderTests : PptxTestBase
             var len = (png[pos] << 24) | (png[pos + 1] << 16) | (png[pos + 2] << 8) | png[pos + 3];
             var type = System.Text.Encoding.ASCII.GetString(png, pos + 4, 4);
             var dataStart = pos + 8;
-            if (type == "IDAT")
+            if (type == PngConstants.IDAT)
                 output.Write(png, dataStart, len);
             pos = dataStart + len + 4; // data + CRC
-            if (type == "IEND") break;
+            if (type == PngConstants.IEND) break;
         }
         return output.ToArray();
     }

@@ -1,5 +1,6 @@
 using Shouldly;
 using Unchained.Drawing;
+using Unchained.Drawing.Constants;
 using Unchained.Drawing.Decoders;
 using Unchained.Drawing.Encoders;
 using Unchained.Pptx.Rendering.Engine;
@@ -38,7 +39,7 @@ public sealed class PngDecoderTests
 
     [Fact]
     public void NonPngBytes_ReturnsNull() =>
-        PngDecoder.TryDecodeToRgb([0xFF, 0xD8, 0xFF, 0xE0], out _, out _).ShouldBeNull();
+        PngDecoder.TryDecodeToRgb([JpegMarkers.MarkerPrefix, JpegMarkers.Soi, JpegMarkers.MarkerPrefix, JpegMarkers.App0Jfif], out _, out _).ShouldBeNull();
 
     [Fact]
     public void EmptyInput_ReturnsNull() =>

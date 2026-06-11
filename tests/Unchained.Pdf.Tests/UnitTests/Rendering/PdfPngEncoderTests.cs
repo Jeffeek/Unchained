@@ -1,6 +1,8 @@
 using Shouldly;
 using Unchained.Drawing;
+using Unchained.Drawing.Constants;
 using Unchained.Drawing.Encoders;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 
@@ -62,7 +64,7 @@ public sealed class PngEncoderTests
         iendStart.ShouldBeGreaterThanOrEqualTo(0);
 
         var iendType = new[] { png[iendStart + 4], png[iendStart + 5], png[iendStart + 6], png[iendStart + 7] };
-        iendType.ShouldBe("IEND"u8.ToArray());
+        iendType.ShouldBe(PngConstants.IEND.ToUtf8Span().ToArray());
     }
 
     [Fact]
