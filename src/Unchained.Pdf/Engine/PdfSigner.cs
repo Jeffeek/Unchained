@@ -27,13 +27,20 @@ internal static class PdfSigner
     // Hex representation: 2 chars per byte, plus < and >
     private const int ContentsHexLen = (SignatureReservedBytes * 2) + 2; // <hex> total
 
+    // Placeholder values written to /ByteRange before the true byte offsets are known;
+    // replaced with actual values after the document is serialized.
+    private const long ByteRangeSentinel0 = 1111111111L;
+    private const long ByteRangeSentinel1 = 2222222222L;
+    private const long ByteRangeSentinel2 = 3333333333L;
+    private const long ByteRangeSentinel3 = 4444444444L;
+
     // Sentinel integers for the /ByteRange array placeholder.
     // Four different 10-digit numbers give a unique, easily searchable byte sequence.
     private static readonly PdfArray ByteRangePlaceholder = new([
-        new PdfInteger(1111111111),
-        new PdfInteger(2222222222),
-        new PdfInteger(3333333333),
-        new PdfInteger(4444444444)
+        new PdfInteger(ByteRangeSentinel0),
+        new PdfInteger(ByteRangeSentinel1),
+        new PdfInteger(ByteRangeSentinel2),
+        new PdfInteger(ByteRangeSentinel3)
     ]);
 
     // PdfWriter format: [1111111111 2222222222 3333333333 4444444444]
@@ -282,7 +289,7 @@ internal static class PdfSigner
         var replacementBytes = Encoding.ASCII.GetBytes(replacement);
 
         // Sentinel bytes to search for
-        const string sentinel = "[1111111111 2222222222 3333333333 4444444444]";
+        var sentinel = $"[{ByteRangeSentinel0} {ByteRangeSentinel1} {ByteRangeSentinel2} {ByteRangeSentinel3}]";
         var sentinelBytes = Encoding.ASCII.GetBytes(sentinel);
 
         var idx = buf.AsSpan().IndexOf(sentinelBytes);

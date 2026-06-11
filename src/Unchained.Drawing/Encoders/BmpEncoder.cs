@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Encoders;
 
 /// <summary>
 /// Encodes a <see cref="RasterBuffer"/> to an uncompressed 24-bit BMP using only BCL APIs.

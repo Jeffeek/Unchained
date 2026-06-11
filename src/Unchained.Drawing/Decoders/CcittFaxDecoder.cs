@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Decodes CCITT facsimile-compressed data (Group 3 1D/2D and Group 4).
@@ -129,6 +129,13 @@ internal static class CcittFaxDecoder
 
     // ── Lookup tables (built once, indexed by top 13 bits of bit stream) ────
 
+    /// <summary>ITU-T T.4 standard fax page width in pixels; default /Columns value.</summary>
+    private const int DefaultColumns    = 1728;
+    /// <summary>MSB mask for writing 1 bpp packed bits left-to-right into a byte.</summary>
+    private const byte MonoBitMsb       = 0x80;
+    /// <summary>Low 16 bits of a packed lookup entry hold the run length.</summary>
+    private const int RunLengthLowMask  = 0xFFFF;
+
     private const int LookupBits = 13;
     private const int LookupSize = 1 << LookupBits; // 8192
 
@@ -150,7 +157,7 @@ internal static class CcittFaxDecoder
     {
         var extra = LookupBits - codeLen;
         var count = 1 << extra;
-        var encoded = (len << 16) | (run & 0xFFFF);
+        var encoded = (len << 16) | (run & RunLengthLowMask);
         for (var i = 0; i < count; i++)
             table[baseIdx + i] = encoded;
     }
@@ -174,7 +181,7 @@ internal static class CcittFaxDecoder
     internal static ReadOnlyMemory<byte> Decode(
         ReadOnlyMemory<byte> data,
         int k = 0,
-        int columns = 1728,
+        int columns = DefaultColumns,
         int rows = 0,
         bool blackIs1 = false,
         bool endOfBlock = true,
@@ -530,7 +537,7 @@ internal static class CcittFaxDecoder
                 return total;
 
             var len = entry >> 16;
-            var run = (short)(entry & 0xFFFF);
+            var run = (short)(entry & RunLengthLowMask);
             bitPos += len;
 
             if (run >= 0)
@@ -619,7 +626,7 @@ internal static class CcittFaxDecoder
         for (var i = 0; i < columns; i++)
         {
             var isSet = blackIs1 ? !row[i] : row[i];
-            if (isSet) buf[i >> 3] |= (byte)(0x80 >> (i & 7));
+            if (isSet) buf[i >> 3] |= (byte)(MonoBitMsb >> (i & 7));
         }
 
         output.Write(buf);

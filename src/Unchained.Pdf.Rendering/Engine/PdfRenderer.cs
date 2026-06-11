@@ -3,6 +3,7 @@ using Unchained.Pdf.Models;
 using Unchained.Pdf.Rendering.Rendering;
 using Unchained.Drawing;
 using Unchained.Drawing.Text;
+using Unchained.Drawing.Encoders;
 
 namespace Unchained.Pdf.Rendering.Engine;
 

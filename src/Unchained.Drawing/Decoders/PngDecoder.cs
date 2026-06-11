@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Minimal PNG decoder using only BCL APIs (<see cref="ZLibStream"/> for inflate).

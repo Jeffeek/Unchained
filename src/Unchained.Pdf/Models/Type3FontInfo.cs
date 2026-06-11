@@ -1,4 +1,5 @@
 using Unchained.Pdf.Core;
+using Unchained.Pdf.Engine;
 
 namespace Unchained.Pdf.Models;
 
@@ -14,7 +15,7 @@ internal sealed class Type3FontInfo
     /// Font matrix [a b c d e f] that maps glyph space (1000 units = 1 glyph unit)
     /// to text space. Typically [0.001 0 0 0.001 0 0].
     /// </summary>
-    internal double[] FontMatrix { get; init; } = [0.001, 0, 0, 0.001, 0, 0];
+    internal double[] FontMatrix { get; init; } = [FontConstants.Type3DefaultMatrixScale, 0, 0, FontConstants.Type3DefaultMatrixScale, 0, 0];
 
     /// <summary>
     /// Maps each char code (0–255) to a glyph name (e.g. "A", "space", "uni0041").

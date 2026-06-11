@@ -1,8 +1,9 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
 using JpegLibrary;
+using Unchained.Drawing.Constants;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Decodes DCT (JPEG)-compressed data using JpegLibrary, producing a flat RGB byte array.
@@ -64,9 +65,9 @@ internal static class DctDecoder
                 var cb = cbPlane[i] - 128;
                 var cr = crPlane[i] - 128;
 
-                rgb[i * 3] = Clamp(yy + (int)(1.402f * cr));
-                rgb[(i * 3) + 1] = Clamp(yy - (int)(0.344136f * cb) - (int)(0.714136f * cr));
-                rgb[(i * 3) + 2] = Clamp(yy + (int)(1.772f * cb));
+                rgb[i * 3] = Clamp(yy + (int)((float)YCbCrConstants.CrToR * cr));
+                rgb[(i * 3) + 1] = Clamp(yy - (int)((float)YCbCrConstants.CbToGCb * cb) - (int)((float)YCbCrConstants.CrToGCr * cr));
+                rgb[(i * 3) + 2] = Clamp(yy + (int)((float)YCbCrConstants.CbToB * cb));
             }
         }
 

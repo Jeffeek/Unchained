@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Encoders;
 
 /// <summary>
 /// Encodes a <see cref="RasterBuffer"/> to a baseline JFIF JPEG using only BCL APIs.

@@ -10,6 +10,13 @@ namespace Unchained.Pdf.Engine;
 internal static class TrueTypeMetrics
 {
     /// <summary>
+    /// Helvetica/Arial fallback metrics used when FreeType cannot extract real metrics,
+    /// expressed in 1000-unit glyph space.
+    /// </summary>
+    internal static readonly FontMetrics HelveticaFallback =
+        new(-166, -225, FontConstants.NormalizedUnitsPerEm, 931, 800, -200, 716, 80);
+
+    /// <summary>
     /// Parses metrics from a TrueType/OpenType font byte array.
     /// Returns null when the font cannot be parsed (not TrueType, truncated, etc.).
     /// </summary>
@@ -54,14 +61,14 @@ internal static class TrueTypeMetrics
         // head table: units per em (at offset 18).
         var unitsPerEm = headOff is { } ho && ho + 54 <= b.Length
             ? ReadU16(b, ho + 18)
-            : 1000;
-        if (unitsPerEm == 0) unitsPerEm = 1000;
-        var scale = 1000.0 / unitsPerEm;
+            : FontConstants.NormalizedUnitsPerEm;
+        if (unitsPerEm == 0) unitsPerEm = FontConstants.NormalizedUnitsPerEm;
+        var scale = FontConstants.NormalizedUnitsPerEmDouble / unitsPerEm;
 
         // head table: font bounding box (at offsets 36–43, signed shorts).
         var xMin = headOff is { } ho2 && ho2 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho2 + 36), scale) : -166;
         var yMin = headOff is { } ho3 && ho3 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho3 + 38), scale) : -225;
-        var xMax = headOff is { } ho4 && ho4 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho4 + 40), scale) : 1000;
+        var xMax = headOff is { } ho4 && ho4 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho4 + 40), scale) : FontConstants.NormalizedUnitsPerEm;
         var yMax = headOff is { } ho5 && ho5 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho5 + 42), scale) : 931;
 
         // OS/2 table (preferred source for typographic metrics):
@@ -75,14 +82,14 @@ internal static class TrueTypeMetrics
             var os2Version = ReadU16(b, oo);
             capHeight = os2Version >= 2 && oo + 90 <= b.Length
                 ? (int)Scale(ReadS16(b, oo + 88), scale)
-                : (int)(ascent * 0.72); // reasonable approximation for cap height
+                : (int)(ascent * FontConstants.CapHeightAscentRatio);
         }
         else if (hheaOff is { } hh && hh + 36 <= b.Length)
         {
             // Fallback to hhea ascender/descender.
             ascent    = (int)Scale(ReadS16(b, hh + 4), scale);
             descent   = (int)Scale(ReadS16(b, hh + 6), scale);
-            capHeight = (int)(ascent * 0.72);
+            capHeight = (int)(ascent * FontConstants.CapHeightAscentRatio);
         }
         else
         {
@@ -102,8 +109,7 @@ internal static class TrueTypeMetrics
         return new FontMetrics(xMin, yMin, xMax, yMax, ascent, descent, capHeight, stemV);
     }
 
-    private static FontMetrics Default() =>
-        new(-166, -225, 1000, 931, 800, -200, 716, 80);
+    private static FontMetrics Default() => HelveticaFallback;
 
     private static string ReadTag(byte[] b, int o) =>
         new([.. new[] { b[o], b[o + 1], b[o + 2], b[o + 3] }.Select(static c => (char)c)]);

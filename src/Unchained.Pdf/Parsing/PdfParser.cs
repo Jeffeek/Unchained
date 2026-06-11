@@ -235,7 +235,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     private long FindStartXref()
     {
         var span = source.Span;
-        var searchStart = Math.Max(0, span.Length - 1024);
+        var searchStart = Math.Max(0, span.Length - PdfConstants.XrefScanWindowBytes);
         for (var i = span.Length - 9; i >= searchStart; i--)
         {
             if (!span.Slice(i, 9).SequenceEqual("startxref"u8))
@@ -296,7 +296,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     private int ScanForwardForXref(long startOffset)
     {
         var span = source.Span;
-        var limit = (int)Math.Min(startOffset + 1024, span.Length - 4);
+        var limit = (int)Math.Min(startOffset + PdfConstants.XrefScanWindowBytes, span.Length - 4);
 
         for (var i = (int)startOffset; i < limit; i++)
         {

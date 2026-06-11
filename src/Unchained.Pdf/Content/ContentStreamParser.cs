@@ -1,4 +1,5 @@
 using System.Text;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing;
@@ -208,7 +209,7 @@ internal static class ContentStreamParser
         var pos   = lexer.Position;
 
         // Skip exactly one byte of whitespace that immediately follows the ID keyword.
-        if (pos < span.Length && IsWhitespace(span[pos])) pos++;
+        if (pos < span.Length && span[pos].IsWhitespace()) pos++;
 
         var dataStart = pos;
 
@@ -217,7 +218,7 @@ internal static class ContentStreamParser
             var data = span[dataStart..end].ToArray();
             // Advance past optional whitespace + EI so the stream stays in sync.
             var p = end;
-            while (p < span.Length && IsWhitespace(span[p])) p++;
+            while (p < span.Length && span[p].IsWhitespace()) p++;
             if (p + 1 < span.Length && span[p] == (byte)'E' && span[p + 1] == (byte)'I')
                 p += 2;
             lexer.Seek(p);
@@ -226,7 +227,7 @@ internal static class ContentStreamParser
 
         while (pos < span.Length - 2)
         {
-            if (IsWhitespace(span[pos]) &&
+            if (span[pos].IsWhitespace() &&
                 span[pos + 1] == (byte)'E' &&
                 span[pos + 2] == (byte)'I')
             {
@@ -247,7 +248,7 @@ internal static class ContentStreamParser
         var pos  = lexer.Position;
         while (pos < span.Length - 2)
         {
-            if (IsWhitespace(span[pos]) &&
+            if (span[pos].IsWhitespace() &&
                 span[pos + 1] == (byte)'E' &&
                 span[pos + 2] == (byte)'I')
             {
@@ -379,7 +380,4 @@ internal static class ContentStreamParser
 
         return null; // unsupported format
     }
-
-    private static bool IsWhitespace(byte b) =>
-        b is 0x00 or 0x09 or 0x0A or 0x0C or 0x0D or 0x20;
 }

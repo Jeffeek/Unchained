@@ -387,7 +387,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 ? fmArr.Elements.Take(6).Select(static e =>
                     e is Core.PdfReal rr ? rr.Value : e is Core.PdfInteger ii ? (double)ii.Value : 0.0)
                     .ToArray()
-                : [0.001, 0, 0, 0.001, 0, 0];
+                : [FontConstants.Type3DefaultMatrixScale, 0, 0, FontConstants.Type3DefaultMatrixScale, 0, 0];
 
             // /Encoding: maps char codes 0–255 to glyph names.
             var encoding = new string?[256];
@@ -985,7 +985,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             {
                 var last = (int)ReadCoordinate(arr[i + 1]);
                 var w = ReadCoordinate(arr[i + 2]);
-                for (var cid = first; cid <= last && cid - first < 65536; cid++)
+                for (var cid = first; cid <= last && cid - first < FontConstants.MaxCidRangeSize; cid++)
                     result[cid] = w;
                 i += 3;
             }

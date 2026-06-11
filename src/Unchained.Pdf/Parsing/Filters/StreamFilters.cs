@@ -1,4 +1,4 @@
-using Unchained.Drawing;
+using Unchained.Drawing.Decoders;
 using Unchained.Pdf.Core;
 
 namespace Unchained.Pdf.Parsing.Filters;

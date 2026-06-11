@@ -1,3 +1,4 @@
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 
 namespace Unchained.Pdf.Parsing;
@@ -93,7 +94,7 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
         while (!AtEnd)
         {
             var b = Current();
-            if (IsWhitespace(b))
+            if (b.IsWhitespace())
                 Advance();
             else if (b == (byte)'%')
             {
@@ -110,7 +111,7 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     {
         var start = Position;
         Advance(); // consume '/'
-        while (!AtEnd && !IsDelimiter(Current()) && !IsWhitespace(Current()))
+        while (!AtEnd && !IsDelimiter(Current()) && !Current().IsWhitespace())
             Advance();
         return new PdfToken(PdfTokenKind.Name, Slice(start, Position), start);
     }
@@ -173,7 +174,7 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     private PdfToken ReadKeyword()
     {
         var start = Position;
-        while (!AtEnd && !IsWhitespace(Current()) && !IsDelimiter(Current()))
+        while (!AtEnd && !Current().IsWhitespace() && !IsDelimiter(Current()))
             Advance();
 
         var raw = Slice(start, Position);
@@ -201,8 +202,6 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
         source.Slice(start, end - start);
 
     // §7.2.2 — whitespace characters: NUL, TAB, LF, FF, CR, SPACE
-    private static bool IsWhitespace(byte b) =>
-        b is 0x00 or 0x09 or 0x0A or 0x0C or 0x0D or 0x20;
 
     private static bool IsDigit(byte b) => b is >= (byte)'0' and <= (byte)'9';
 

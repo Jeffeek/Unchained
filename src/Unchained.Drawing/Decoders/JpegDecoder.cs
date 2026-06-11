@@ -1,4 +1,6 @@
-namespace Unchained.Drawing;
+using Unchained.Drawing.Constants;
+
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Minimal baseline (sequential DCT, Huffman) JPEG decoder using only BCL APIs, producing
@@ -448,9 +450,9 @@ internal static class JpegDecoder
                 var cbv = cb.Pixels![(cby * cbStride) + cbx] - 128;
                 var crv = cr.Pixels![(cry * crStride) + crx] - 128;
 
-                var r = yy + (1.402 * crv);
-                var g = yy - (0.344136 * cbv) - (0.714136 * crv);
-                var b = yy + (1.772 * cbv);
+                var r = yy + (YCbCrConstants.CrToR * crv);
+                var g = yy - (YCbCrConstants.CbToGCb * cbv) - (YCbCrConstants.CrToGCr * crv);
+                var b = yy + (YCbCrConstants.CbToB * cbv);
 
                 var d = ((y * _width) + x) * 3;
                 rgb[d] = Clamp(r);

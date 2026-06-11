@@ -16,6 +16,9 @@ namespace Unchained.Pdf.Engine;
 // ReSharper disable once MemberCanBeInternal
 public sealed class TableGenerator : ITableGenerator
 {
+    private const float BorderLineAlpha = 0.85f; // alpha for table border lines
+    private const float CellFillAlpha   = 0.95f; // alpha for table cell background fill
+
     /// <inheritdoc />
     public Task<IPdfDocument> GenerateAsync(
         TableData data,
@@ -276,7 +279,7 @@ public sealed class TableGenerator : ITableGenerator
         }
 
         // Header background (light gray).
-        csw.Float(0.85f);
+        csw.Float(BorderLineAlpha);
         csw.Op("g"u8);
         csw.Float(margin);
         csw.Float(curY - layout.HeaderRowHeight);
@@ -322,7 +325,7 @@ public sealed class TableGenerator : ITableGenerator
 
             if (style.AlternatingRowColor && rowIdx % 2 == 0)
             {
-                csw.Float(0.95f);
+                csw.Float(CellFillAlpha);
                 csw.Op("g"u8);
                 csw.Float(margin);
                 csw.Float(rowBottomY);

@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Decodes zlib/DEFLATE-compressed data (RFC 1950 zlib wrapper).

@@ -1,9 +1,8 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Unchained.Drawing;
 using SharpFont;
 
-namespace Unchained.Drawing.Text;
+namespace Unchained.Drawing.Text.Extensions;
 
 /// <summary>
 /// Extends <see cref="RasterBuffer"/> with glyph blitting from FreeType2 bitmaps.

@@ -1,7 +1,8 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
+using Unchained.Drawing.Constants;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Encoders;
 
 /// <summary>
 /// Encodes a <see cref="RasterBuffer"/> to PNG bytes using only BCL APIs
@@ -70,9 +71,9 @@ internal static class PngEncoder
         stream.Write(type);
         if (data.Length > 0) stream.Write(data);
 
-        var crc = UpdateCrc(0xffffffff, type);
+        var crc = UpdateCrc(PngConstants.Crc32Init, type);
         crc = UpdateCrc(crc, data);
-        crc ^= 0xffffffff;
+        crc ^= PngConstants.Crc32Init;
 
         Span<byte> crcBuf = stackalloc byte[4];
         BinaryPrimitives.WriteUInt32BigEndian(crcBuf, crc);
@@ -94,7 +95,7 @@ internal static class PngEncoder
         {
             var c = n;
             for (var k = 0; k < 8; k++)
-                c = (c & 1) != 0 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
+                c = (c & 1) != 0 ? PngConstants.Crc32Polynomial ^ (c >> 1) : c >> 1;
             table[n] = c;
         }
 

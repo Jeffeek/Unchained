@@ -12,6 +12,8 @@ using Unchained.Pptx.Slides;
 using Unchained.Ooxml.Text;
 using LoadFlags = SharpFont.LoadFlags;
 using LoadTarget = SharpFont.LoadTarget;
+using Unchained.Drawing.Decoders;
+using Unchained.Drawing.Text.Extensions;
 
 namespace Unchained.Pptx.Rendering.Engine;
 

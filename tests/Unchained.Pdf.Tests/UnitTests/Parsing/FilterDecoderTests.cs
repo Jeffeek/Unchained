@@ -2,7 +2,7 @@ using System.Buffers;
 using System.IO.Compression;
 using System.Text;
 using Shouldly;
-using Unchained.Drawing;
+using Unchained.Drawing.Decoders;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Parsing.Filters;

@@ -24,72 +24,56 @@
   <Choose>
     <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-x64\native\freetype6.dll')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-x64\native\freetype6.dll"
-              Link="runtimes\win-x64\native\freetype6.dll"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-x64\native\freetype6.dll" Link="runtimes\win-x64\native\freetype6.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>
   <Choose>
     <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-arm64\native\freetype6.dll')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-arm64\native\freetype6.dll"
-              Link="runtimes\win-arm64\native\freetype6.dll"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-arm64\native\freetype6.dll" Link="runtimes\win-arm64\native\freetype6.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>
   <Choose>
     <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-x64\native\libfreetype.so.6')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-x64\native\libfreetype.so.6"
-              Link="runtimes\linux-x64\native\libfreetype.so.6"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-x64\native\libfreetype.so.6" Link="runtimes\linux-x64\native\libfreetype.so.6" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>
   <Choose>
     <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6"
-              Link="runtimes\linux-arm64\native\libfreetype.so.6"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6" Link="runtimes\linux-arm64\native\libfreetype.so.6" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>
   <Choose>
     <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-x64\native\libfreetype.so.6')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-x64\native\libfreetype.so.6"
-              Link="runtimes\linux-musl-x64\native\libfreetype.so.6"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-x64\native\libfreetype.so.6" Link="runtimes\linux-musl-x64\native\libfreetype.so.6" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>
   <Choose>
     <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-arm64\native\libfreetype.so.6')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-arm64\native\libfreetype.so.6"
-              Link="runtimes\linux-musl-arm64\native\libfreetype.so.6"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-arm64\native\libfreetype.so.6" Link="runtimes\linux-musl-arm64\native\libfreetype.so.6" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>
   <Choose>
     <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib"
-              Link="runtimes\osx-x64\native\libfreetype.6.dylib"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib" Link="runtimes\osx-x64\native\libfreetype.6.dylib" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>
   <Choose>
     <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib"
-              Link="runtimes\osx-arm64\native\libfreetype.6.dylib"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib" Link="runtimes\osx-arm64\native\libfreetype.6.dylib" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>

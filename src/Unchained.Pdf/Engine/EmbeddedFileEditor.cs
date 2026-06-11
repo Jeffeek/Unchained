@@ -192,7 +192,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
             ["Type"] = PdfName.Get("Filespec"),
             ["F"] = PdfString.FromLatin1(file.FileName),
             ["UF"] = new PdfString(
-                new byte[] { 0xFE, 0xFF }
+                new byte[] { PdfConstants.Utf16BeBomByte0, PdfConstants.Utf16BeBomByte1 }
                     .Concat(Encoding.BigEndianUnicode.GetBytes(file.FileName))
                     .ToArray()),
             ["EF"] = new PdfDictionary(new Dictionary<string, PdfObject>

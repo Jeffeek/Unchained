@@ -1,6 +1,7 @@
 using System.IO;
+using Unchained.Drawing.Extensions;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Decodes ASCII hex-encoded data.
@@ -32,7 +33,7 @@ internal static class AsciiHexDecoder
                     break;
                 default:
                 {
-                    if (IsWhitespace(b)) continue;
+                    if (b.IsWhitespace()) continue;
                     throw new InvalidDataException($"ASCIIHexDecode: unexpected byte 0x{b:X2}.");
                 }
             }
@@ -52,6 +53,4 @@ internal static class AsciiHexDecoder
         return output.ToArray();
     }
 
-    private static bool IsWhitespace(byte b) =>
-        b is 0x00 or 0x09 or 0x0A or 0x0C or 0x0D or 0x20;
 }

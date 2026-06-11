@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using Shouldly;
-using Unchained.Drawing;
+using Unchained.Drawing.Decoders;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 using Xunit;

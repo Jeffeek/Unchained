@@ -223,7 +223,7 @@ public sealed class Redactor : IRedactor
         var bytes = s.GetBinaryBytes().Span;
         var printable = true;
         foreach (var b in bytes)
-            if (b < 0x20 || b > 0x7E) { printable = false; break; }
+            if (b < PdfConstants.PrintableAsciiMin || b > PdfConstants.PrintableAsciiMax) { printable = false; break; }
 
         if (printable)
         {

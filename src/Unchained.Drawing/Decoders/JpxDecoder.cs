@@ -1,7 +1,7 @@
 using CoreJ2K;
 using CoreJ2K.Configuration;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Decodes JPEG 2000-compressed data using CoreJ2K, producing a flat RGB byte array.

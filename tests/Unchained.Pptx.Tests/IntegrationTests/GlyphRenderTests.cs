@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Shouldly;
+using Unchained.Drawing.Encoders;
 using Unchained.Ooxml;
 using Unchained.Pptx.Rendering;
 using Unchained.Pptx.Rendering.Engine;
@@ -51,7 +52,8 @@ public sealed class GlyphRenderTests : PptxTestBase
         // Build a solid magenta 8×8 PNG, embed it as a picture filling part of the slide.
         var src = new Unchained.Drawing.RasterBuffer(8, 8);
         src.Clear(255, 0, 255); // magenta — not a default text/background colour
-        var pngBytes = Unchained.Drawing.PngEncoder.Encode(src);
+
+        var pngBytes = PngEncoder.Encode(src);
 
         var doc = PptxFixtures.WithSlides(1);
         var image = doc.Media.AddImage(pngBytes, "image/png");

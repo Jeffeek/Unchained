@@ -107,7 +107,7 @@ internal sealed class PdfDocumentCore : IDisposable
             throw new PdfException("Repair failed: no PDF objects found in the byte stream.");
 
         // Add free head entry (object 0).
-        entries[0] = new CrossReferenceEntry(0, 65535, CrossReferenceEntryType.Free);
+        entries[0] = new CrossReferenceEntry(0, PdfConstants.XrefFreeGenerationNumber, CrossReferenceEntryType.Free);
 
         // Build synthetic xref using the scanned offsets.
         var syntheticXref = new CrossReferenceTable(entries, trailerOffset: 0);
@@ -199,7 +199,7 @@ internal sealed class PdfDocumentCore : IDisposable
         {
             // Scan up to the first 1024 bytes per spec.
             var span = _source.Span;
-            var limit = Math.Min(span.Length, 1024);
+            var limit = Math.Min(span.Length, PdfConstants.XrefScanWindowBytes);
             var target = "/Linearized"u8;
             for (var i = 0; i <= limit - target.Length; i++)
             {

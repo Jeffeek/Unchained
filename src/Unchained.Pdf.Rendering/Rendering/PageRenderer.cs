@@ -4,6 +4,7 @@ using Unchained.Drawing;
 using Unchained.Drawing.Text;
 using LoadFlags = SharpFont.LoadFlags;
 using LoadTarget = SharpFont.LoadTarget;
+using Unchained.Drawing.Text.Extensions;
 
 namespace Unchained.Pdf.Rendering.Rendering;
 

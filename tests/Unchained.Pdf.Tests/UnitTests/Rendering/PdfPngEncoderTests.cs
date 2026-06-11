@@ -1,5 +1,6 @@
 using Shouldly;
 using Unchained.Drawing;
+using Unchained.Drawing.Encoders;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 

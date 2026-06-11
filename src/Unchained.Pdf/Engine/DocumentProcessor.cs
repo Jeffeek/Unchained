@@ -491,8 +491,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
 
             // Build /FontDescriptor with /FontFile2 (TrueType).
             // Read actual metrics from the font file; fall back to conservative defaults.
-            var metrics = TrueTypeMetrics.Read(fontBytes) ?? new(
-                -166, -225, 1000, 931, 800, -200, 716, 80);
+            var metrics = TrueTypeMetrics.Read(fontBytes) ?? TrueTypeMetrics.HelveticaFallback;
 
             var maxObj = existing.Max(static o => o.ObjectNumber);
             var fontFileObjNum = ++maxObj;
@@ -930,7 +929,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
     )
     {
         var existing = adapter.Core.CollectObjects().ToList();
-        var metrics = TrueTypeMetrics.Read(newFontBytes) ?? new(-166, -225, 1000, 931, 800, -200, 716, 80);
+        var metrics = TrueTypeMetrics.Read(newFontBytes) ?? TrueTypeMetrics.HelveticaFallback;
         var changed = false;
         var normalised = NormalizeBaseFont(fontName);
         var maxObj = existing.Max(static o => o.ObjectNumber);

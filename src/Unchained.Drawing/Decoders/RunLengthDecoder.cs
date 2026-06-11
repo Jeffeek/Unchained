@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Decodes PackBits / PDF run-length encoded data.

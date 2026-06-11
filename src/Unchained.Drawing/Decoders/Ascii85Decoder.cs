@@ -1,6 +1,7 @@
 using System.IO;
+using Unchained.Drawing.Extensions;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Decodes ASCII85-encoded data (base-85 encoding).
@@ -28,7 +29,7 @@ internal static class Ascii85Decoder
                 throw new InvalidDataException("ASCII85Decode: unexpected '~' not followed by '>'.");
             }
 
-            if (IsWhitespace(b)) continue;
+            if (b.IsWhitespace()) continue;
 
             switch (b)
             {
@@ -74,6 +75,4 @@ internal static class Ascii85Decoder
             output.Add((byte)(value >> shift));
     }
 
-    private static bool IsWhitespace(byte b) =>
-        b is 0x00 or 0x09 or 0x0A or 0x0C or 0x0D or 0x20;
 }

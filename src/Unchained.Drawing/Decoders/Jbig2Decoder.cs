@@ -1,6 +1,6 @@
 using JBig2Decoder.NETStandard;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
 /// Decodes JBIG2-compressed data using JBig2Decoder.NETStandard.

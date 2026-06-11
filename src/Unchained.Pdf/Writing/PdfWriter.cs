@@ -236,7 +236,7 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
 
     // §7.3.5 — bytes that must be escaped with '#xx' in a name token.
     private static bool NeedsNameEscape(byte b) =>
-        b is <= 0x20 or >= 0x7F or (byte)'(' or (byte)')' or (byte)'<' or (byte)'>' or
+        b is <= PdfConstants.PrintableAsciiMin or >= 0x7F or (byte)'(' or (byte)')' or (byte)'<' or (byte)'>' or
             (byte)'[' or (byte)']' or (byte)'{' or (byte)'}' or
             (byte)'/' or (byte)'%' or (byte)'#';
 

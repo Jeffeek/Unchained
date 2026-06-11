@@ -5,6 +5,7 @@ using Unchained.Ooxml.Media;
 using Unchained.Pptx.Slides;
 using Unchained.Drawing;
 using Unchained.Drawing.Text;
+using Unchained.Drawing.Encoders;
 
 namespace Unchained.Pptx.Rendering.Engine;
 
