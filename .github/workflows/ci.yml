@@ -40,8 +40,7 @@ jobs:
     uses: ./.github/workflows/_build-test-all.yml
     with:
       coverage: true
-    secrets:
-      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+    secrets: inherit
 
   # ---------------------------------------------------------------
   # 3. CodeQL — runs in parallel with the full matrix.

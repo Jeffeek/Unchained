@@ -18,6 +18,10 @@ on:
         description: 'Stop all matrix jobs as soon as one fails.'
         type: boolean
         default: false
+    secrets:
+      codecov-token:
+        description: 'Codecov upload token. Required when coverage: true.'
+        required: false
 
 jobs:
   build-test:
