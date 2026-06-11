@@ -23,7 +23,6 @@
   </Folder>
   <Folder Name="/Solution items/.github/workflows/">
     <File Path=".github/actions/dotnet-setup/action.yml" />
-    <File Path=".github/actions/harden-checkout/action.yml" />
     <File Path=".github/workflows/_build-test.yml" />
     <File Path=".github/workflows/_build-test-all.yml" />
     <File Path=".github/workflows/ci.yml" />
