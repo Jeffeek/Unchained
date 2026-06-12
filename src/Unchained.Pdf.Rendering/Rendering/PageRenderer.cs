@@ -1,5 +1,4 @@
 using System.Text;
-using SharpFont;
 using Unchained.Drawing;
 using Unchained.Drawing.Text;
 using Unchained.Drawing.Text.Extensions;
@@ -8,8 +7,6 @@ using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Buffer = HarfBuzzSharp.Buffer;
 using Encoding = System.Text.Encoding;
-using LoadFlags = SharpFont.LoadFlags;
-using LoadTarget = SharpFont.LoadTarget;
 
 namespace Unchained.Pdf.Rendering.Rendering;
 
@@ -525,7 +522,7 @@ internal sealed class PageRenderer(
         // (the common case) this reduces exactly to FontSize * scale.
         var textVScale = TextMatrixVerticalScale();
         var pixelSize = (uint)Math.Max(1, Math.Round(_gs.FontSize * textVScale * scale));
-        ftFace.SetPixelSizes(0, pixelSize);
+        ftFace.SetPixelSize(pixelSize);
 
         var hbScale = (int)(pixelSize * 64);
         hbFont.SetScale(hbScale, hbScale);
@@ -614,9 +611,7 @@ internal sealed class PageRenderer(
         {
             var glyphId = glyphInfos[i].Codepoint;
 
-            // ReSharper disable once EmptyGeneralCatchClause
-            try { ftFace.LoadGlyph(glyphId, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
-            catch
+            if (!ftFace.TryLoadGlyph(glyphId))
             {
                 GlyphsSkipped++;
                 continue;
@@ -660,32 +655,21 @@ internal sealed class PageRenderer(
     // charmap (FT_Get_Char_Index). When that yields .notdef, the font is a glyph-indexed
     // subset where the char code IS the glyph index, so we fall back to loading the code
     // directly. Advances come from FreeType (FT_Get_Advance).
-    private void ShowStringDirect(ReadOnlySpan<byte> bytes, Face ftFace, uint pixelSize)
+    private void ShowStringDirect(ReadOnlySpan<byte> bytes, GlyphFace ftFace, uint pixelSize)
     {
         foreach (var code in bytes)
         {
-            uint glyphId;
-            try { glyphId = ftFace.GetCharIndex(code); }
-            catch
-            {
-                GlyphsSkipped++;
-                continue;
-            }
+            var glyphId = ftFace.GetCharIndex(code);
 
             // Symbolic subset with no cmap entry: treat the char code as a direct glyph
-            // index (FreeType rejects out-of-range indices in LoadGlyph below). SharpFont's
-            // GlyphCount is unreliable on Windows x64, so we don't pre-check the range.
+            // index (FreeType rejects out-of-range indices in LoadGlyph below).
             if (glyphId == 0 && code > 0)
                 glyphId = code;
 
-            if (glyphId != 0)
+            if (glyphId != 0 && !ftFace.TryLoadGlyph(glyphId))
             {
-                try { ftFace.LoadGlyph(glyphId, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
-                catch
-                {
-                    GlyphsSkipped++;
-                    glyphId = 0;
-                }
+                GlyphsSkipped++;
+                glyphId = 0;
             }
 
             if (glyphId != 0)
@@ -707,10 +691,9 @@ internal sealed class PageRenderer(
                     StrokeGlyphOutline(ftFace, (int)px, (int)py);
             }
 
-            // Glyph advance (16.16 fixed-point pixels when scaled) → user-space points.
-            double advancePts;
-            try { advancePts = ftFace.GetAdvance(glyphId, LoadFlags.Default).ToDouble() / scale; }
-            catch { advancePts = pixelSize / scale * 0.5; }
+            // Glyph advance (FT_Get_Advance returns 16.16 fixed-point pixels) → user-space points.
+            var rawAdvance = glyphId != 0 ? ftFace.GetAdvance(glyphId) : 0;
+            var advancePts = rawAdvance != 0 ? rawAdvance / 65536.0 / scale : pixelSize / scale * 0.5;
 
             var advance = (advancePts + _gs.CharSpace + (code == 32 ? _gs.WordSpace : 0))
                           * (_gs.HorizontalScale / 100.0);
@@ -723,7 +706,7 @@ internal sealed class PageRenderer(
     // to a glyph index (Identity /CIDToGIDMap, or an explicit map). Glyphs are loaded by
     // index directly through FreeType — no cmap/HarfBuzz shaping. Advances come from the
     // CIDFont /W array (glyph-space 1000-unit em), falling back to /DW.
-    private void ShowStringComposite(ReadOnlySpan<byte> bytes, Face ftFace, CompositeFontInfo info)
+    private void ShowStringComposite(ReadOnlySpan<byte> bytes, GlyphFace ftFace, CompositeFontInfo info)
     {
         for (var i = 0; i + 1 < bytes.Length; i += 2)
         {
@@ -733,14 +716,10 @@ internal sealed class PageRenderer(
             if (info is { IdentityCidToGid: false, CidToGid: not null })
                 gid = info.CidToGid.TryGetValue(cid, out var mapped) ? (uint)mapped : 0;
 
-            if (gid != 0)
+            if (gid != 0 && !ftFace.TryLoadGlyph(gid))
             {
-                try { ftFace.LoadGlyph(gid, LoadFlags.Render | LoadFlags.NoHinting, LoadTarget.Normal); }
-                catch
-                {
-                    GlyphsSkipped++;
-                    gid = 0;
-                }
+                GlyphsSkipped++;
+                gid = 0;
             }
 
             if (gid != 0)
@@ -1937,50 +1916,30 @@ internal sealed class PageRenderer(
     // Each glyph contour is accumulated into the buffer's clip mask via intersection (AND),
     // so subsequent drawing is clipped to the text shape.
     // ISO 32000-1 §9.3.6 — the clip accumulates across all glyphs in the text object.
-    private void ClipGlyphOutline(Face ftFace, int penX, int penY)
+    private void ClipGlyphOutline(GlyphFace ftFace, int penX, int penY)
     {
-        // ReSharper disable once EmptyGeneralCatchClause
-        try
+        // Use the outline of the already-loaded glyph (FT_LOAD_RENDER keeps it for vector fonts).
+        var contours = ftFace.GetGlyphContours();
+        if (contours.Count == 0) return;
+
+        // Build polygon list, mapping font pixels (Y up) to device pixels (Y down).
+        var polys = new List<(double X, double Y)[]>();
+        foreach (var contour in contours)
         {
-            // Load the glyph outline (no rendering — we only need the vector data).
-            var outline = ftFace.Glyph.Outline;
-            if (outline.Points == null || outline.Points.Length == 0) return;
+            if (contour.Length < 3) continue;
 
-            var pts = outline.Points;
-            var contours = outline.Contours;
-            if (contours == null || contours.Length == 0) return;
+            var poly = new (double X, double Y)[contour.Length];
+            for (var j = 0; j < contour.Length; j++)
+                poly[j] = (penX + contour[j].X, penY - contour[j].Y);
 
-            // Build polygon list from the FreeType contours.
-            var polys = new List<(double X, double Y)[]>();
-            var start = 0;
-            foreach (var endIdx in contours)
-            {
-                var count = endIdx - start + 1;
-                if (count < 3)
-                {
-                    start = endIdx + 1;
-                    continue;
-                }
-
-                var poly = new (double X, double Y)[count];
-                for (var j = 0; j < count; j++)
-                {
-                    poly[j] = (penX + (pts[start + j].X / 64.0),
-                        penY - (pts[start + j].Y / 64.0));
-                }
-
-                polys.Add(poly);
-                start = endIdx + 1;
-            }
-
-            if (polys.Count == 0) return;
-
-            // Intersect the glyph outline into the buffer's clip mask.
-            // Even-odd rule matches the PDF spec for glyph outlines.
-            buffer.SetClipPolygons(polys, true);
+            polys.Add(poly);
         }
-        // ReSharper disable once EmptyGeneralCatchClause
-        catch { }
+
+        if (polys.Count == 0) return;
+
+        // Intersect the glyph outline into the buffer's clip mask.
+        // Even-odd rule matches the PDF spec for glyph outlines.
+        buffer.SetClipPolygons(polys, true);
     }
 
     // Modulates a source alpha by the active soft mask at device pixel (x, y).
@@ -2048,74 +2007,41 @@ internal sealed class PageRenderer(
 
     // Strokes the outline of the last-loaded glyph in FreeType using the current stroke
     // colour. Used for text rendering modes 1 (stroke only) and 2 (fill + stroke).
-    // FreeType outline points are in 26.6 fixed-point pixel units relative to the glyph
-    // origin. We convert them to device pixels by dividing by 64 and adding the pen position.
+    // Glyph contour points are in font pixels relative to the glyph origin (Y up); we
+    // flip Y and add the pen position to map them to device pixels.
     private void StrokeGlyphOutline(
-        Face ftFace,
+        GlyphFace ftFace,
         int penX,
         int penY
     )
     {
-        // ReSharper disable once EmptyGeneralCatchClause
-        try
+        var contours = ftFace.GetGlyphContours();
+        if (contours.Count == 0) return;
+
+        // Stroke width for text: use LineWidth scaled by the text size.
+        var ctmScale = CtmAverageScale();
+        var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
+
+        foreach (var contour in contours)
         {
-            var outline = ftFace.Glyph.Outline;
-            if (outline.Points == null || outline.Points.Length == 0) return;
-
-            var pts = outline.Points;
-            var contours = outline.Contours;
-            if (contours == null || contours.Length == 0) return;
-
-            // Stroke width for text: use LineWidth scaled by the text size.
-            var ctmScale = CtmAverageScale();
-            var thickPx = Math.Max(1, (int)Math.Round(_gs.LineWidth * ctmScale * scale));
-
-            var start = 0;
-            foreach (var endIdx in contours)
+            // Walk each contour as a polyline of on-curve points, approximating
+            // off-curve (conic/cubic) control points with line segments.
+            var prevX = 0.0;
+            var prevY = 0.0;
+            var first = true;
+            foreach (var (cx, cy) in contour)
             {
-                // Walk each contour as a polyline of on-curve points, approximating
-                // off-curve (conic/cubic) control points with line segments.
-                var prevX = 0.0;
-                var prevY = 0.0;
-                var first = true;
-                for (var j = start; j <= endIdx; j++)
+                var ptX = penX + cx;
+                // Font Y is upward (baseline = 0), buffer Y is downward.
+                var ptY = penY - cy;
+
+                if (!first)
                 {
-                    // FreeType outline X is in 26.6 pixels → divide by 64, add pen.
-                    var ptX = penX + (pts[j].X / 64.0);
-                    // FreeType Y is upward (baseline = 0), buffer Y is downward; bitmapTop
-                    // is already applied via penY = py from UToPixel. Y flips here:
-                    var ptY = penY - (pts[j].Y / 64.0);
-
-                    if (!first)
-                    {
-                        buffer.DrawLine(
-                            (int)prevX,
-                            (int)prevY,
-                            (int)ptX,
-                            (int)ptY,
-                            _gs.StrokeR,
-                            _gs.StrokeG,
-                            _gs.StrokeB,
-                            thickPx,
-                            _gs.StrokeA,
-                            _gs.BlendMode);
-                    }
-
-                    prevX = ptX;
-                    prevY = ptY;
-                    first = false;
-                }
-
-                // Close the contour back to the first point.
-                if (!first && endIdx >= start)
-                {
-                    var firstX = penX + (pts[start].X / 64.0);
-                    var firstY = penY - (pts[start].Y / 64.0);
                     buffer.DrawLine(
                         (int)prevX,
                         (int)prevY,
-                        (int)firstX,
-                        (int)firstY,
+                        (int)ptX,
+                        (int)ptY,
                         _gs.StrokeR,
                         _gs.StrokeG,
                         _gs.StrokeB,
@@ -2124,11 +2050,29 @@ internal sealed class PageRenderer(
                         _gs.BlendMode);
                 }
 
-                start = endIdx + 1;
+                prevX = ptX;
+                prevY = ptY;
+                first = false;
+            }
+
+            // Close the contour back to the first point.
+            if (!first && contour.Length > 0)
+            {
+                var firstX = penX + contour[0].X;
+                var firstY = penY - contour[0].Y;
+                buffer.DrawLine(
+                    (int)prevX,
+                    (int)prevY,
+                    (int)firstX,
+                    (int)firstY,
+                    _gs.StrokeR,
+                    _gs.StrokeG,
+                    _gs.StrokeB,
+                    thickPx,
+                    _gs.StrokeA,
+                    _gs.BlendMode);
             }
         }
-        // ReSharper disable once EmptyGeneralCatchClause
-        catch { }
     }
 
     // Converts color component values (0–1 range) using the named color space.

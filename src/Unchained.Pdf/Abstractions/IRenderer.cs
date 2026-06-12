@@ -9,8 +9,9 @@ namespace Unchained.Pdf.Abstractions;
 ///         Dispose when rendering is complete to release native resources.
 ///     </para>
 ///     <para>
-///         Requires the FreeType2 native library (<c>freetype6.dll</c> on Windows,
-///         <c>libfreetype.so.6</c> on Linux, <c>libfreetype.6.dylib</c> on macOS).
+///         Requires the FreeType2 native library, which the rendering package supplies
+///         automatically per platform (via FreeTypeSharp, with linux-arm64 from
+///         Unchained.Drawing.Runtimes); a system-installed FreeType2 also works.
 ///     </para>
 /// </summary>
 public interface IRenderer : IDisposable

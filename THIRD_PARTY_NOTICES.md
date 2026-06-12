@@ -18,11 +18,15 @@ attribution to appear in your product documentation.
 
 ---
 
-## SharpFont
+## FreeTypeSharp
 
 **License:** MIT — https://opensource.org/licenses/MIT  
-**Copyright:** Copyright (c) 2012–2016 Robert Rouhani  
-**Source:** https://github.com/Robmaister/SharpFont
+**Copyright:** Copyright (c) Ryan Cheung and FreeTypeSharp contributors  
+**Source:** https://github.com/ryancheung/FreeTypeSharp
+
+FreeTypeSharp provides the managed FreeType2 bindings and bundles the native FreeType2
+binaries for Windows, macOS, and linux-x64. The linux-arm64 binary is supplied separately
+by `Unchained.Drawing.Runtimes`.
 
 ---
 

@@ -15,6 +15,15 @@
     <PackageVersion Include="Markdig" Version="1.2.0" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.8" />
   </ItemGroup>
+  <!-- ── Unchained.Drawing.Text — glyph rasterization (FreeType2) ──────────── -->
+  <ItemGroup Label="Unchained.Drawing.Text">
+    <!-- FreeTypeSharp (MIT) — maintained FreeType2 binding with correct struct
+         marshaling on every platform (including Windows x64) and bundled native
+         binaries for win-x64/arm64/x86, linux-x64, and macOS. linux-arm64 is supplied
+         by Unchained.Drawing.Runtimes (FreeTypeSharp does not bundle it). Replaces the
+         abandoned net45-only SharpFont DLL. -->
+    <PackageVersion Include="FreeTypeSharp" Version="3.1.0" />
+  </ItemGroup>
   <!-- ── Unchained.Pdf.Rendering — text shaping (HarfBuzz) ─────────────────── -->
   <ItemGroup Label="Unchained.Pdf.Rendering">
     <PackageVersion Include="HarfBuzzSharp" Version="8.3.1.5" />

@@ -14,8 +14,6 @@ using Unchained.Pptx.Rendering.Models;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 using Buffer = HarfBuzzSharp.Buffer;
-using LoadFlags = SharpFont.LoadFlags;
-using LoadTarget = SharpFont.LoadTarget;
 
 namespace Unchained.Pptx.Rendering.Engine;
 
@@ -2142,7 +2140,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         try
         {
             var (ftFace, hbFont) = fonts.GetFonts(fontName, embeddedBytes);
-            ftFace.SetPixelSizes(0, pixelSize);
+            ftFace.SetPixelSize(pixelSize);
             var hbScale = (int)(pixelSize * 64);
             hbFont.SetScale(hbScale, hbScale);
 
@@ -2182,7 +2180,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         {
             var (ftFace, hbFont) = fonts.GetFonts(fontName, embeddedBytes);
             var pixelSize = (uint)Math.Max(1, Math.Round(fontSizePt * scale));
-            ftFace.SetPixelSizes(0, pixelSize);
+            ftFace.SetPixelSize(pixelSize);
 
             if (lineHeight < (int)pixelSize)
                 lineHeight = (int)pixelSize;
@@ -2202,15 +2200,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             {
                 var glyphId = glyphInfos[i].Codepoint;
 
-                // ReSharper disable once EmptyGeneralCatchClause
-                try
-                {
-                    ftFace.LoadGlyph(glyphId, LoadFlags.Render, LoadTarget.Normal);
-                }
-                catch
-                {
+                if (!ftFace.TryLoadGlyph(glyphId))
                     continue;
-                }
 
                 var penX = cursorX + (glyphPositions[i].XOffset / 64);
                 var penY = startY + (int)pixelSize + (glyphPositions[i].YOffset / 64);

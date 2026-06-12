@@ -11,7 +11,7 @@ namespace Unchained.Pptx.Rendering.Engine;
 
 /// <summary>
 ///     Rasterizes PPTX slides to <see cref="PptxImage" /> instances using
-///     FreeType2 (via SharpFont) and HarfBuzz for text shaping.
+///     FreeType2 (via FreeTypeSharp) and HarfBuzz for text shaping.
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public static class SlideRenderer

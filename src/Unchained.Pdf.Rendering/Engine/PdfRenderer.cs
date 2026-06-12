@@ -9,11 +9,12 @@ using Unchained.Pdf.Rendering.Rendering;
 namespace Unchained.Pdf.Rendering.Engine;
 
 /// <summary>
-///     Default <see cref="IRenderer" /> implementation backed by FreeType2 (via SharpFont).
+///     Default <see cref="IRenderer" /> implementation backed by FreeType2 (via FreeTypeSharp).
 ///     <para>
-///         Requires the FreeType2 native library to be present at runtime:
-///         <c>freetype6.dll</c> on Windows, <c>libfreetype.so.6</c> on Linux,
-///         <c>libfreetype.6.dylib</c> on macOS. On Windows the DLL is bundled with the package.
+///         The FreeType2 native library ships with FreeTypeSharp for Windows, macOS, and
+///         linux-x64; linux-arm64 is supplied by <c>Unchained.Drawing.Runtimes</c>. The
+///         binding resolves the platform binary automatically and falls back to a
+///         system-installed FreeType2 when no bundled copy is present.
 ///     </para>
 ///     <para>
 ///         Reference the <c>Unchained.Pdf.Rendering</c> package to use this class;
@@ -42,8 +43,9 @@ public sealed class PdfRenderer : IRenderer
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             throw new InvalidOperationException(
-                "Could not initialise FreeType2. Ensure 'freetype6.dll' (Windows) or " +
-                "'libfreetype.so.6' (Linux) is present in the application output directory. " +
+                "Could not initialise FreeType2. The native FreeType library should be " +
+                "supplied automatically by FreeTypeSharp (Windows/macOS/linux-x64) or " +
+                "Unchained.Drawing.Runtimes (linux-arm64); a system-installed FreeType2 also works. " +
                 $"Inner: {ex.Message}",
                 ex);
         }

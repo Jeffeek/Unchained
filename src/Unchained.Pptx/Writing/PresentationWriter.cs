@@ -78,6 +78,9 @@ internal sealed class PresentationWriter
                 slide.RelationshipId = $"rId{i + 1}";
         }
 
+        // Write media assets first so shapes can reference relationship IDs
+        WriteMedia(package, mediaStore);
+
         // Write masters + their themes + layouts
         WriteMasters(package, masters, contentTypes);
 
@@ -142,14 +145,11 @@ internal sealed class PresentationWriter
 
     // ── Media ─────────────────────────────────────────────────────────────────
 
-#pragma warning disable IDE0051
-    private static Dictionary<string, string> WriteMedia(
-#pragma warning restore IDE0051
+    private static void WriteMedia(
         OpcPackage package,
         MediaStore mediaStore
     )
     {
-        var relIdMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var index = 1;
 
         foreach (var image in mediaStore.Images)
@@ -159,8 +159,6 @@ internal sealed class PresentationWriter
             image.PartUri = uri;
             package.AddOrReplacePart(uri, image.ContentType, image.Data.ToArray());
         }
-
-        return relIdMap;
     }
 
     // ── Masters ───────────────────────────────────────────────────────────────

@@ -1,24 +1,23 @@
 #!/usr/bin/env bash
-# Fetch native binaries required by each Unchained runtime package.
+# Fetch native binaries required by Unchained.Drawing.Runtimes.
 #
 # Usage:
 #   bash scripts/FetchNatives/fetch-natives.sh [--rid <rid>]
 #
 #   If --rid is omitted the script auto-detects the current host RID.
 #
-# Supported RIDs:
-#   win-x64 / win-arm64       (downloaded from GitHub; works on any host)
-#   linux-x64 / linux-arm64   (copied from system libfreetype via apt)
-#   linux-musl-x64 / linux-musl-arm64  (copied from Alpine libfreetype via apk)
-#   osx-x64 / osx-arm64       (copied from Homebrew freetype)
+# The FreeType2 native library is supplied by the FreeTypeSharp NuGet package for
+# Windows (x64/arm64/x86), macOS, and linux-x64. The ONLY platform FreeTypeSharp does
+# not bundle is linux-arm64, so that is the only binary this script fetches.
 #
-# To add a new library: add a fetch_<library> function below.
-# To add a new package: add a fetch_<package>_runtimes function that calls the
-#   relevant library fetchers with the package's runtimes/ directory.
+# The file is named libfreetype.so (no version suffix) to match FreeTypeSharp's
+# DllImport resolver, which probes runtimes/linux-arm64/native/libfreetype.so.
+#
+# For any RID other than linux-arm64 the script is a no-op (FreeTypeSharp already
+# provides it; on linux-arm64 a system-installed FreeType2 also works as a fallback).
 #
 # Examples:
 #   bash scripts/FetchNatives/fetch-natives.sh
-#   bash scripts/FetchNatives/fetch-natives.sh --rid win-x64
 #   bash scripts/FetchNatives/fetch-natives.sh --rid linux-arm64
 
 set -euo pipefail
@@ -61,132 +60,34 @@ detect_host_rid() {
     echo "${os}-${arch}"
 }
 
-download() {
-    local url="$1" dest="$2"
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$url" -o "$dest"
-    else
-        wget -q -O "$dest" "$url"
-    fi
-}
-
-verify_output() {
-    local rid="$1" native_dir="$2"
-    local count
-    count=$(find "${native_dir}" -not -name ".gitkeep" -type f 2>/dev/null | wc -l | tr -d ' ')
-    if [[ "${count}" -eq 0 ]]; then
-        echo "[${rid}] ERROR: no binary produced under ${native_dir}" >&2
-        exit 1
-    fi
-}
-
-# ── Library: FreeType2 ────────────────────────────────────────────────────────
+# ── Library: FreeType2 (linux-arm64 only) ──────────────────────────────────────
 #
-# fetch_freetype <rid> <runtimes_dir>
-#   Downloads / copies libfreetype into <runtimes_dir>/<rid>/native/.
+# FreeTypeSharp bundles every other platform. Only linux-arm64 must be supplied by
+# Unchained.Drawing.Runtimes, named libfreetype.so to match FreeTypeSharp's resolver.
 
-# Pinned commit — ubawurinna/freetype-windows-binaries (MIT).
-# Update this SHA when upgrading FreeType.
-_FT_WIN_SHA="2fd97db170b19a9dda26131a784707611b9a4da1"
-_FT_WIN_BASE="https://github.com/ubawurinna/freetype-windows-binaries/raw/${_FT_WIN_SHA}"
-
-_ft_windows() {
-    local rid="$1" runtimes="$2"
-    local arch="${rid#win-}"
-    local dest="${runtimes}/${rid}/native"
-    mkdir -p "$dest"
-    local url="${_FT_WIN_BASE}/release%20dll/${arch}/freetype.dll"
-    echo "[${rid}] downloading ${url}"
-    download "$url" "${dest}/freetype6.dll"
-    echo "[${rid}] -> ${dest}/freetype6.dll"
-}
-
-_ft_linux() {
-    local rid="$1" runtimes="$2"
-    local dest="${runtimes}/${rid}/native"
-    mkdir -p "$dest"
+_ft_linux_arm64() {
+    local runtimes="$1"
+    local dest="${runtimes}/linux-arm64/native"
     if [[ "$(uname -s)" != "Linux" ]]; then
-        echo "[${rid}] ERROR: Linux libraries require a Linux host." >&2; exit 1
+        echo "[linux-arm64] ERROR: Linux libraries require a Linux host." >&2; exit 1
     fi
-    local src=""
-    if [[ "${rid}" == linux-musl-* ]]; then
-        command -v apk >/dev/null 2>&1 && apk add --no-cache freetype 2>/dev/null || true
-        for cand in /usr/lib/libfreetype.so.6 /lib/libfreetype.so.6; do
-            [[ -f "$cand" ]] && src="$cand" && break
-        done
-    else
-        local triplet
-        case "${rid}" in
-            linux-x64)   triplet="x86_64-linux-gnu"  ;;
-            linux-arm64) triplet="aarch64-linux-gnu" ;;
-        esac
-        command -v apt-get >/dev/null 2>&1 && \
-            apt-get install -y --no-install-recommends libfreetype6 2>/dev/null || true
-        for cand in \
-                "/usr/lib/${triplet}/libfreetype.so.6" \
-                "/usr/lib64/libfreetype.so.6" \
-                "/usr/lib/libfreetype.so.6"; do
-            [[ -f "$cand" ]] && src="$cand" && break
-        done
-    fi
-    [[ -z "$src" ]] && { echo "[${rid}] ERROR: libfreetype.so.6 not found." >&2; exit 1; }
-    cp -f "$src" "${dest}/libfreetype.so.6"
-    echo "[${rid}] -> ${dest}/libfreetype.so.6  (from ${src})"
-}
-
-_ft_osx() {
-    local rid="$1" runtimes="$2"
-    local dest="${runtimes}/${rid}/native"
     mkdir -p "$dest"
-    if [[ "$(uname -s)" != "Darwin" ]]; then
-        echo "[${rid}] ERROR: macOS libraries require a macOS host." >&2; exit 1
-    fi
-    command -v brew >/dev/null 2>&1 || { echo "[${rid}] ERROR: Homebrew not found." >&2; exit 1; }
-    local prefix
-    prefix="$(brew --prefix freetype 2>/dev/null || true)"
-    if [[ -z "$prefix" || ! -f "${prefix}/lib/libfreetype.6.dylib" ]]; then
-        echo "[${rid}] freetype not installed — running: brew install freetype" >&2
-        brew install freetype
-        prefix="$(brew --prefix freetype)"
-    fi
-    cp -f "${prefix}/lib/libfreetype.6.dylib" "${dest}/libfreetype.6.dylib"
-    echo "[${rid}] -> ${dest}/libfreetype.6.dylib  (from ${prefix}/lib/)"
+
+    command -v apt-get >/dev/null 2>&1 && \
+        apt-get install -y --no-install-recommends libfreetype6 2>/dev/null || true
+    local src=""
+    for cand in \
+            "/usr/lib/aarch64-linux-gnu/libfreetype.so.6" \
+            "/usr/lib64/libfreetype.so.6" \
+            "/usr/lib/libfreetype.so.6"; do
+        [[ -f "$cand" ]] && src="$cand" && break
+    done
+    [[ -z "$src" ]] && { echo "[linux-arm64] ERROR: libfreetype.so.6 not found." >&2; exit 1; }
+
+    # FreeTypeSharp's resolver looks for libfreetype.so (no version suffix).
+    cp -f "$src" "${dest}/libfreetype.so"
+    echo "[linux-arm64] -> ${dest}/libfreetype.so  (from ${src})"
 }
-
-fetch_freetype() {
-    local rid="$1" runtimes="$2"
-    case "$rid" in
-        win-x64|win-arm64)               _ft_windows "$rid" "$runtimes" ;;
-        linux-x64|linux-arm64)           _ft_linux   "$rid" "$runtimes" ;;
-        linux-musl-x64|linux-musl-arm64) _ft_linux   "$rid" "$runtimes" ;;
-        osx-x64|osx-arm64)              _ft_osx     "$rid" "$runtimes" ;;
-        *) echo "Unknown RID: '${rid}'" >&2; exit 1 ;;
-    esac
-}
-
-# ── Package fetch functions ───────────────────────────────────────────────────
-#
-# Each function fetches everything a specific runtime package needs.
-# Add new library fetcher calls here when a package gains a new dependency.
-
-fetch_drawing_runtimes() {
-    local rid="$1"
-    local runtimes="${repo_root}/src/Unchained.Drawing.Runtimes/runtimes"
-    fetch_freetype "$rid" "$runtimes"
-    verify_output  "$rid" "${runtimes}/${rid}/native"
-}
-
-# fetch_pdf_runtimes() {
-#     local rid="$1"
-#     local runtimes="${repo_root}/src/Unchained.Pdf.Runtimes/runtimes"
-#     # Add library fetchers here if Pdf.Runtimes ever needs its own binaries.
-# }
-
-# fetch_pptx_runtimes() {
-#     local rid="$1"
-#     local runtimes="${repo_root}/src/Unchained.Pptx.Runtimes/runtimes"
-#     # Add library fetchers here if Pptx.Runtimes ever needs its own binaries.
-# }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -195,7 +96,11 @@ if [[ -z "$RID" ]]; then
     echo "Auto-detected RID: ${RID}"
 fi
 
-fetch_drawing_runtimes "$RID"
+if [[ "$RID" == "linux-arm64" ]]; then
+    _ft_linux_arm64 "${repo_root}/src/Unchained.Drawing.Runtimes/runtimes"
+else
+    echo "[${RID}] FreeType2 is provided by the FreeTypeSharp package — nothing to fetch."
+fi
 
 echo
 echo "Done."
