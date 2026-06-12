@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Core;
@@ -194,7 +195,7 @@ internal static class PdfEncryption
         }
     }
 
-    private static (byte[] U, byte[] UE) ComputeUUE_V5(byte[] pw, byte[] fileKey)
+    private static (byte[] U, byte[] UE) ComputeUUE_V5(ReadOnlySpan<byte> pw, ReadOnlySpan<byte> fileKey)
     {
         var vs = RandomNumberGenerator.GetBytes(8); // user validation salt
         var ks = RandomNumberGenerator.GetBytes(8); // user key salt
@@ -212,7 +213,7 @@ internal static class PdfEncryption
         return (uBytes, ueBytes);
     }
 
-    private static (byte[] O, byte[] OE) ComputeOOE_V5(byte[] ownerPw, byte[] uBytes, byte[] fileKey)
+    private static (byte[] O, byte[] OE) ComputeOOE_V5(ReadOnlySpan<byte> ownerPw, byte[] uBytes, byte[] fileKey)
     {
         var vs = RandomNumberGenerator.GetBytes(8);
         var ks = RandomNumberGenerator.GetBytes(8);
@@ -370,7 +371,7 @@ internal static class PdfEncryption
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
 
-        return aes.DecryptCbc(ciphertext, iv, PaddingMode.PKCS7);
+        return aes.DecryptCbc(ciphertext, iv);
     }
 
     /// <summary>AES-CBC encrypt with the given key and IV. Returns IV + ciphertext (PKCS#7 padded).</summary>
@@ -382,12 +383,12 @@ internal static class PdfEncryption
         aes.IV = iv;
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
-        var cipher = aes.EncryptCbc(data, iv, PaddingMode.PKCS7);
+        var cipher = aes.EncryptCbc(data, iv);
 
         return [.. iv, .. cipher];
     }
 
-    private static byte[] AesEncryptBlock(byte[] key, byte[] iv, byte[] data)
+    private static byte[] AesEncryptBlock(byte[] key, byte[] iv, ReadOnlySpan<byte> data)
     {
         using var aes = Aes.Create();
         aes.Key = key;
@@ -397,7 +398,7 @@ internal static class PdfEncryption
         // Pad to 16-byte block
         var len = (data.Length + 15) / 16 * 16;
         var padded = new byte[len];
-        data.CopyTo(padded, 0);
+        data.CopyTo(padded);
 
         return aes.EncryptCbc(padded, iv, PaddingMode.None);
     }
@@ -442,9 +443,9 @@ internal static class PdfEncryption
 
     // ── Misc helpers ──────────────────────────────────────────────────────────
 
-    private static byte[] NormalizePasswordV5(string password)
+    private static ReadOnlySpan<byte> NormalizePasswordV5(string password)
     {
-        var bytes = Encoding.UTF8.GetBytes(password);
+        var bytes = password.ToUtf8Span();
 
         return bytes.Length <= 127 ? bytes : bytes[..127];
     }

@@ -11,9 +11,9 @@ namespace Unchained.PerformanceTests.Benchmarks;
 ///     produced by <see cref="MinimalPdfFactory" /> — no external library dependency.
 /// </summary>
 [
-    MemoryDiagnoser(true),
+    MemoryDiagnoser(),
     ThreadingDiagnoser,
-    GcServer(false),
+    GcServer(),
     HideColumns("StdDev", "RatioSD", "Median")
 ]
 // ReSharper disable once ClassCanBeSealed.Global
@@ -27,7 +27,7 @@ public class PdfBaselineBenchmark
     [GlobalSetup]
     public void Setup()
     {
-        _singlePageBytes = MinimalPdfFactory.Build(1);
+        _singlePageBytes = MinimalPdfFactory.Build();
         _tenPageBytes = MinimalPdfFactory.Build(10);
 
         _singlePagePath = Path.Combine(Path.GetTempPath(), $"unchained_bench_{Guid.NewGuid():N}.pdf");

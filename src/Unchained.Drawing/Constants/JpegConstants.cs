@@ -1,7 +1,7 @@
 namespace Unchained.Drawing.Constants;
 
 /// <summary>JPEG segment marker bytes (ITU-T T.81 / ISO 10918-1).</summary>
-internal static class JpegMarkers
+internal static class JpegConstants
 {
     /// <summary>Prefix byte that precedes every JPEG marker.</summary>
     internal const byte MarkerPrefix = 0xFF;
@@ -62,7 +62,7 @@ internal static class JpegMarkers
     internal const byte SamplingFactor1X1 = 0x11;
 
     // JPEG zig-zag scan order
-    internal static readonly int[] ZigZag =
+    internal static readonly IReadOnlyList<int> ZigZag =
     [
         0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5,
         12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28,

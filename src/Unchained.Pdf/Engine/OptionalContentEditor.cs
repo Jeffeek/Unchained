@@ -16,7 +16,7 @@ public sealed class OptionalContentEditor : IOptionalContentEditor
     public Task<IReadOnlyList<OptionalContentGroup>> GetLayersAsync(
         IPdfDocument document,
         CancellationToken ct = default
-    ) => Task.Run(() => document.GetLayers(), ct);
+    ) => Task.Run(document.GetLayers, ct);
 
     /// <inheritdoc />
     public Task SetLayerVisibilityAsync(
@@ -46,12 +46,17 @@ public sealed class OptionalContentEditor : IOptionalContentEditor
         var ocgRef = new PdfIndirectReference(ocgObjectNumber, 0);
 
         var alreadyOff = offList.Any(e => e is PdfIndirectReference r && r.ObjectNumber == ocgObjectNumber);
-        if (visible && alreadyOff)
-            offList.RemoveAll(e => e is PdfIndirectReference r && r.ObjectNumber == ocgObjectNumber);
-        else if (!visible && !alreadyOff)
-            offList.Add(ocgRef);
-        else
-            return; // no change
+        switch (visible)
+        {
+            case true when alreadyOff:
+                offList.RemoveAll(e => e is PdfIndirectReference r && r.ObjectNumber == ocgObjectNumber);
+            break;
+            case false when !alreadyOff:
+                offList.Add(ocgRef);
+            break;
+            default:
+                return; // no change
+        }
 
         var newDefault = new Dictionary<string, PdfObject>(defaultCfg.Entries)
         {

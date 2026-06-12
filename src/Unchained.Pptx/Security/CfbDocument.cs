@@ -38,8 +38,10 @@ internal static class CfbDocument
     {
         if (data.Length < SectorSize) ThrowInvalid("File too small");
         for (var i = 0; i < Magic.Length; i++)
+        {
             if (data[i] != Magic[i])
                 ThrowInvalid("Missing CFB magic bytes");
+        }
 
         var sectorSize = 1 << BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(30));
         var miniSectorSize = 1 << BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(32));

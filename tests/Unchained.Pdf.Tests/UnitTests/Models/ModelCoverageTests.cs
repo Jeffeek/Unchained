@@ -90,9 +90,9 @@ public sealed class PdfAValidationResultTests
             Profile = PdfAProfile.PdfA1B,
             Violations =
             [
-                new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error),
+                new PdfAViolation("6.3.3", "Font not embedded"),
                 new PdfAViolation("6.1.1", "Optional metadata", PdfAViolationSeverity.Warning),
-                new PdfAViolation("6.2.1", "Color space issue", PdfAViolationSeverity.Error)
+                new PdfAViolation("6.2.1", "Color space issue")
             ]
         };
         result.Errors.Count.ShouldBe(2);
@@ -122,7 +122,7 @@ public sealed class PdfAValidationResultTests
             Profile = PdfAProfile.PdfA2B,
             Violations =
             [
-                new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error),
+                new PdfAViolation("6.3.3", "Font not embedded"),
                 new PdfAViolation("6.1.1", "Optional metadata", PdfAViolationSeverity.Warning)
             ]
         };
@@ -186,7 +186,7 @@ public sealed class PdfAViolationTests
     public async Task PageNumber_Stored()
     {
         await Task.CompletedTask;
-        var v = new PdfAViolation("6.3.3", "Font issue", PdfAViolationSeverity.Error, PageNumber: 3);
+        var v = new PdfAViolation("6.3.3", "Font issue", PageNumber: 3);
         v.PageNumber.ShouldBe(3);
         v.ObjectNumber.ShouldBeNull();
     }
@@ -216,7 +216,7 @@ public sealed class PdfAViolationTests
     public async Task RecordEquality_DifferentSeverity_NotEqual()
     {
         await Task.CompletedTask;
-        var a = new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error);
+        var a = new PdfAViolation("6.3.3", "Font not embedded");
         var b = new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Warning);
         a.ShouldNotBe(b);
     }
@@ -424,8 +424,8 @@ public sealed class EncryptionOptionsTests
     public async Task RecordEquality_SameValues_Equal()
     {
         await Task.CompletedTask;
-        var a = new EncryptionOptions("pw", "own", PdfEncryptionAlgorithm.Aes256, PdfPermissions.All);
-        var b = new EncryptionOptions("pw", "own", PdfEncryptionAlgorithm.Aes256, PdfPermissions.All);
+        var a = new EncryptionOptions("pw", "own");
+        var b = new EncryptionOptions("pw", "own");
         a.ShouldBe(b);
     }
 }

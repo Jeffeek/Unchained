@@ -63,7 +63,7 @@ public sealed class PngDecoderTests
 
     [Fact]
     public void NonPngBytes_ReturnsNull() =>
-        PngDecoder.TryDecodeToRgb([JpegMarkers.MarkerPrefix, JpegMarkers.Soi, JpegMarkers.MarkerPrefix, JpegMarkers.App0Jfif], out _, out _)
+        PngDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.App0Jfif], out _, out _)
             .ShouldBeNull();
 
     [Fact]

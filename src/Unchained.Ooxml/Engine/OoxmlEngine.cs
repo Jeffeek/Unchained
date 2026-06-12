@@ -36,7 +36,9 @@ public sealed class OoxmlEngine : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
+
         _disposed = true;
         Package.Dispose();
         _stream.Dispose();
@@ -138,9 +140,8 @@ public sealed class OoxmlEngine : IDisposable
             FileMode.Open,
             FileAccess.Read);
 
-        foreach (var part in package.GetParts())
+        foreach (var ct in package.GetParts().Select(static part => part.ContentType))
         {
-            var ct = part.ContentType;
             if (ct.Contains("presentationml.presentation.main", StringComparison.OrdinalIgnoreCase)
                 || ct.Contains("presentationml.slideshow.main", StringComparison.OrdinalIgnoreCase))
                 return OoxmlFormat.Presentation;

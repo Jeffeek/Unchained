@@ -35,13 +35,16 @@ internal sealed class FontCache : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
+
         _disposed = true;
         foreach (var (ftFace, hbFont, pin) in _fonts.Values)
         {
             hbFont.Dispose();
             ftFace.Dispose();
-            if (pin.IsAllocated) pin.Free();
+            if (pin.IsAllocated)
+                pin.Free();
         }
 
         _fonts.Clear();
@@ -268,15 +271,14 @@ internal sealed class FontCache : IDisposable
             // Guard against garbage values from SharpFont struct offset mismatch on Windows x64.
             var nonZero = -1;
             const int maxGlyphDim = 4096;
-            if (bm.Buffer != IntPtr.Zero && bm.Width > 0 && bm.Rows > 0
-                && bm.Width <= maxGlyphDim && bm.Rows <= maxGlyphDim)
+            if (bm.Buffer != IntPtr.Zero && bm is { Width: > 0 and <= maxGlyphDim, Rows: > 0 and <= maxGlyphDim })
             {
                 var absPitch = Math.Abs(bm.Pitch);
-                if (absPitch > 0 && absPitch <= maxGlyphDim * 4)
+                if (absPitch is > 0 and <= maxGlyphDim * 4)
                 {
                     var rawBytes = new byte[absPitch * bm.Rows];
                     Marshal.Copy(bm.Buffer, rawBytes, 0, rawBytes.Length);
-                    nonZero = rawBytes.Count(b => b > 0);
+                    nonZero = rawBytes.Count(static b => b > 0);
                 }
             }
 

@@ -86,7 +86,7 @@ public sealed class PdfATests : PdfTestBase
         await using var reloaded = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         var xmp = reloaded.GetXmpMetadata();
         xmp.ShouldNotBeNull("Converted document must have XMP metadata.");
-        xmp.ShouldContain("pdfaid", Case.Insensitive);
+        xmp.ShouldContain("pdfaid");
     }
 
     [Fact]

@@ -186,8 +186,11 @@ public sealed class Redactor : IRedactor
     private static bool InAnyRegion(List<RedactionRegion> regions, double x, double y)
     {
         foreach (var r in regions)
+        {
             if (r.Contains(x, y))
                 return true;
+        }
+
         return false;
     }
 
@@ -247,11 +250,13 @@ public sealed class Redactor : IRedactor
         var bytes = s.GetBinaryBytes().Span;
         var printable = true;
         foreach (var b in bytes)
+        {
             if (b < PdfConstants.PrintableAsciiMin || b > PdfConstants.PrintableAsciiMax)
             {
                 printable = false;
                 break;
             }
+        }
 
         if (printable)
         {

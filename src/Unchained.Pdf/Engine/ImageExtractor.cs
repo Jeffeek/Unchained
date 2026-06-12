@@ -14,7 +14,7 @@ public sealed class ImageExtractor : IImageExtractor
     public Task<IReadOnlyList<ExtractedImage>> ExtractImagesAsync(
         IPdfDocument document,
         CancellationToken ct = default
-    ) => Task.Run(() =>
+    ) => Task.Run<IReadOnlyList<ExtractedImage>>(() =>
         {
             var result = new List<ExtractedImage>();
             for (var p = 1; p <= document.PageCount; p++)
@@ -23,7 +23,7 @@ public sealed class ImageExtractor : IImageExtractor
                 ExtractPage(document, p, result);
             }
 
-            return (IReadOnlyList<ExtractedImage>)result;
+            return result;
         },
         ct);
 
@@ -32,7 +32,7 @@ public sealed class ImageExtractor : IImageExtractor
         IPdfDocument document,
         int pageNumber,
         CancellationToken ct = default
-    ) => Task.Run(() =>
+    ) => Task.Run<IReadOnlyList<ExtractedImage>>(() =>
         {
             if (pageNumber < 1 || pageNumber > document.PageCount)
             {
@@ -43,11 +43,11 @@ public sealed class ImageExtractor : IImageExtractor
 
             var result = new List<ExtractedImage>();
             ExtractPage(document, pageNumber, result);
-            return (IReadOnlyList<ExtractedImage>)result;
+            return result;
         },
         ct);
 
-    private static void ExtractPage(IPdfDocument document, int pageNumber, List<ExtractedImage> sink)
+    private static void ExtractPage(IPdfDocument document, int pageNumber, ICollection<ExtractedImage> sink)
     {
         var page = document.Pages[pageNumber];
         // Sort by resource name for deterministic ordering.
@@ -55,6 +55,7 @@ public sealed class ImageExtractor : IImageExtractor
         {
             if (img.Width <= 0 || img.Height <= 0 || img.RgbData.Length < img.Width * img.Height * 3)
                 continue;
+
             sink.Add(new ExtractedImage(pageNumber,
                 name,
                 img.Width,

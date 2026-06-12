@@ -21,9 +21,14 @@ internal sealed class ContentTypeMap
     /// </summary>
     public static ContentTypeMap CreateWithDefaults()
     {
-        var map = new ContentTypeMap();
-        map._extensionDefaults["rels"] = "application/vnd.openxmlformats-package.relationships+xml";
-        map._extensionDefaults["xml"] = "application/xml";
+        var map = new ContentTypeMap
+        {
+            _extensionDefaults =
+            {
+                ["rels"] = "application/vnd.openxmlformats-package.relationships+xml",
+                ["xml"] = "application/xml"
+            }
+        };
         return map;
     }
 
@@ -61,17 +66,10 @@ internal sealed class ContentTypeMap
     ///     Returns the content type for a given part URI, or <see langword="null" /> if
     ///     neither an explicit override nor an extension default is registered.
     /// </summary>
-    public string? GetContentType(string partUri)
-    {
-        if (_partOverrides.TryGetValue(partUri, out var exact))
-            return exact;
-
-        var extension = Path.GetExtension(partUri)?.TrimStart('.');
-        if (extension != null && _extensionDefaults.TryGetValue(extension, out var byExtension))
-            return byExtension;
-
-        return null;
-    }
+    public string? GetContentType(string partUri) =>
+        _partOverrides.TryGetValue(partUri, out var exact)
+            ? exact
+            : _extensionDefaults.GetValueOrDefault(Path.GetExtension(partUri).TrimStart('.'));
 
     /// <summary>Registers an explicit content type override for the given part URI.</summary>
     public void Register(string partUri, string contentType) =>

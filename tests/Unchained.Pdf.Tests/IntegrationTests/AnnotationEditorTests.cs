@@ -25,7 +25,7 @@ public sealed class AnnotationEditorTests : PdfTestBase
     [Fact]
     public async Task GetAnnotations_PageWithAnnotation_ReturnsOne()
     {
-        await using var doc = await LoadAsync(PdfFixtures.WithAnnotation("Note"), TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.WithAnnotation(), TestContext.Current.CancellationToken);
         doc.Pages[1].GetAnnotations().Count.ShouldBe(1);
     }
 

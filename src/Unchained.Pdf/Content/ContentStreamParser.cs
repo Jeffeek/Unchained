@@ -109,7 +109,7 @@ internal static class ContentStreamParser
     // name/value pairs from the image parameter dictionary.
     // Returns a PdfInlineImage (RGB, 3 bytes/pixel) or null on failure.
     private static PdfInlineImage? DecodeInlineImage(
-        List<PdfObject> operands,
+        IReadOnlyList<PdfObject> operands,
         Lexer lexer,
         ReadOnlyMemory<byte> source
     )
@@ -136,6 +136,7 @@ internal static class ContentStreamParser
 
             // For unfiltered inline images the data length is deterministic, so read
             // exactly that many bytes. Scanning for "EI" alone is unsafe: raw binary image
+            // ReSharper disable once GrammarMistakeInComment
             // data can contain a whitespace+E+I byte sequence by coincidence, truncating
             // the image. With a filter the encoded length is unknown, so fall back to the
             // EI scan (encoded data normally ends with an unambiguous marker before EI).
@@ -152,12 +153,14 @@ internal static class ContentStreamParser
 
             // ── Convert to RGB ────────────────────────────────────────────
             var rgb = ConvertToRgb(decoded, w, h, cs, bpc);
-            if (rgb is null) return null;
-            // Inline images fill the unit square [0,0]→[1,1] in the current CTM,
-            // exactly like Do XObjects. The cm matrix placed before BI maps the
-            // unit square to the desired position and size; pixel dimensions here
-            // would cause wrong placement when a cm transform is present.
-            return new PdfInlineImage(w, h, rgb, 1, 1);
+            return rgb is null
+                ? null
+                :
+                // Inline images fill the unit square [0,0]→[1,1] in the current CTM,
+                // exactly like Do XObjects. The cm matrix placed before BI maps the
+                // unit square to the desired position and size; pixel dimensions here
+                // would cause wrong placement when a cm transform is present.
+                new PdfInlineImage(w, h, rgb, 1, 1);
         }
         catch
         {
@@ -168,7 +171,7 @@ internal static class ContentStreamParser
     }
 
     private static int GetInt(
-        Dictionary<string, PdfObject> dict,
+        IReadOnlyDictionary<string, PdfObject> dict,
         string abbr,
         string full,
         int fallback
@@ -184,7 +187,7 @@ internal static class ContentStreamParser
     }
 
     private static string? GetName(
-        Dictionary<string, PdfObject> dict,
+        IReadOnlyDictionary<string, PdfObject> dict,
         string abbr,
         string full
     )
@@ -271,7 +274,7 @@ internal static class ContentStreamParser
     // Apply the inline image filter.  Abbreviated filter names per Table 92.
     // Reads the inline-image /F (Filter) entry, which may be a single name or an array of
     // names applied in sequence (§8.9.7). Returns an empty list when no filter is present.
-    private static List<string> GetFilters(Dictionary<string, PdfObject> dict)
+    private static List<string> GetFilters(IReadOnlyDictionary<string, PdfObject> dict)
     {
         var obj = dict.GetValueOrDefault("F") ?? dict.GetValueOrDefault("Filter");
         var result = new List<string>();
@@ -282,8 +285,11 @@ internal static class ContentStreamParser
             break;
             case PdfArray arr:
                 foreach (var e in arr.Elements)
+                {
                     if (e is PdfName en)
                         result.Add(en.Value);
+                }
+
             break;
         }
 
@@ -291,13 +297,8 @@ internal static class ContentStreamParser
     }
 
     // Applies a sequence of inline-image filters in order.
-    private static ReadOnlyMemory<byte> ApplyInlineFilters(List<string> filters, byte[] raw)
-    {
-        ReadOnlyMemory<byte> data = raw;
-        foreach (var f in filters)
-            data = ApplyInlineFilter(f, data.ToArray());
-        return data;
-    }
+    private static ReadOnlyMemory<byte> ApplyInlineFilters(IEnumerable<string> filters, byte[] raw) =>
+        filters.Aggregate<string?, ReadOnlyMemory<byte>>(raw, static (current, f) => ApplyInlineFilter(f, current.ToArray()));
 
     private static ReadOnlyMemory<byte> ApplyInlineFilter(string? filterName, byte[] raw)
     {
@@ -343,59 +344,61 @@ internal static class ContentStreamParser
     {
         var pixelCount = w * h;
 
-        if (cs is null or "DeviceRGB" or "RGB" && bpc == 8 && data.Length == pixelCount * 3)
-            return data.ToArray();
-
-        if (cs is null or "DeviceGray" or "G" && bpc == 8 && data.Length == pixelCount)
+        switch (cs)
         {
-            var src = data.Span;
-            var rgb = new byte[pixelCount * 3];
-            for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
-                rgb[j] = rgb[j + 1] = rgb[j + 2] = src[i];
-            return rgb;
-        }
-
-        if (cs is "DeviceCMYK" or "CMYK" && bpc == 8 && data.Length == pixelCount * 4)
-        {
-            var src = data.Span;
-            var rgb = new byte[pixelCount * 3];
-            for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
+            case null or "DeviceRGB" or "RGB" when bpc == 8 && data.Length == pixelCount * 3:
+                return data.ToArray();
+            case null or "DeviceGray" or "G" when bpc == 8 && data.Length == pixelCount:
             {
-                var c = src[i * 4] / 255.0;
-                var m = src[(i * 4) + 1] / 255.0;
-                var y = src[(i * 4) + 2] / 255.0;
-                var k = src[(i * 4) + 3] / 255.0;
-                rgb[j] = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
-                rgb[j + 1] = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
-                rgb[j + 2] = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
+                var src = data.Span;
+                var rgb = new byte[pixelCount * 3];
+                for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
+                    rgb[j] = rgb[j + 1] = rgb[j + 2] = src[i];
+                return rgb;
             }
-
-            return rgb;
-        }
-
-        // DeviceGray 1 bpc — bit-packed rows.
-        // PDF §8.9.5.1: for 1-bpc images the sample value 0 = white (minimum),
-        // 1 = black (maximum), i.e. 0 = paper, 1 = ink (CCITT fax convention).
-        if (cs is null or "DeviceGray" or "G" && bpc == 1)
-        {
-            var src = data.Span;
-            var rgb = new byte[pixelCount * 3];
-            var rowBytes = (w + 7) / 8;
-            for (var row = 0; row < h; row++)
-            for (var col = 0; col < w; col++)
+            case "DeviceCMYK" or "CMYK" when bpc == 8 && data.Length == pixelCount * 4:
             {
-                var byteIdx = (row * rowBytes) + (col >> 3);
-                if (byteIdx >= src.Length) break;
-                var bit = (src[byteIdx] >> (7 - (col & 7))) & 1;
-                // bit=0 → white (paper), bit=1 → black (ink)
-                var v = (byte)(bit == 0 ? 255 : 0);
-                var j = ((row * w) + col) * 3;
-                rgb[j] = rgb[j + 1] = rgb[j + 2] = v;
+                var src = data.Span;
+                var rgb = new byte[pixelCount * 3];
+                for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
+                {
+                    var c = src[i * 4] / 255.0;
+                    var m = src[(i * 4) + 1] / 255.0;
+                    var y = src[(i * 4) + 2] / 255.0;
+                    var k = src[(i * 4) + 3] / 255.0;
+                    rgb[j] = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
+                    rgb[j + 1] = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
+                    rgb[j + 2] = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
+                }
+
+                return rgb;
             }
+            // DeviceGray 1 bpc — bit-packed rows.
+            // PDF §8.9.5.1: for 1-bpc images the sample value 0 = white (minimum),
+            // 1 = black (maximum), i.e. 0 = paper, 1 = ink (CCITT fax convention).
+            case null or "DeviceGray" or "G" when bpc == 1:
+            {
+                var src = data.Span;
+                var rgb = new byte[pixelCount * 3];
+                var rowBytes = (w + 7) / 8;
+                for (var row = 0; row < h; row++)
+                for (var col = 0; col < w; col++)
+                {
+                    var byteIdx = (row * rowBytes) + (col >> 3);
+                    if (byteIdx >= src.Length)
+                        break;
 
-            return rgb;
+                    var bit = (src[byteIdx] >> (7 - (col & 7))) & 1;
+                    // bit=0 → white (paper), bit=1 → black (ink)
+                    var v = (byte)(bit == 0 ? 255 : 0);
+                    var j = ((row * w) + col) * 3;
+                    rgb[j] = rgb[j + 1] = rgb[j + 2] = v;
+                }
+
+                return rgb;
+            }
+            default:
+                return null; // unsupported format
         }
-
-        return null; // unsupported format
     }
 }

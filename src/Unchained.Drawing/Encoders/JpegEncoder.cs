@@ -95,8 +95,8 @@ internal static class JpegEncoder
         using var ms = new MemoryStream();
 
         // ── SOI ─────────────────────────────────────────────────────────────
-        ms.WriteByte(JpegMarkers.MarkerPrefix);
-        ms.WriteByte(JpegMarkers.Soi);
+        ms.WriteByte(JpegConstants.MarkerPrefix);
+        ms.WriteByte(JpegConstants.Soi);
 
         // ── APP0 JFIF ────────────────────────────────────────────────────────
         WriteApp0(ms);
@@ -175,8 +175,8 @@ internal static class JpegEncoder
         bw.Flush();
 
         // ── EOI ─────────────────────────────────────────────────────────────
-        ms.WriteByte(JpegMarkers.MarkerPrefix);
-        ms.WriteByte(JpegMarkers.Eoi);
+        ms.WriteByte(JpegConstants.MarkerPrefix);
+        ms.WriteByte(JpegConstants.Eoi);
 
         return ms.ToArray();
     }
@@ -200,7 +200,7 @@ internal static class JpegEncoder
         // Quantise in zig-zag order
         var quant = new int[64];
         for (var i = 0; i < 64; i++)
-            quant[i] = (int)Math.Round(dct[JpegMarkers.ZigZag[i]] / qt[i]);
+            quant[i] = (int)Math.Round(dct[JpegConstants.ZigZag[i]] / qt[i]);
 
         // DC coefficient (differential)
         var dc = quant[0] - dcPrev;
@@ -219,7 +219,7 @@ internal static class JpegEncoder
 
             while (zeros >= 16)
             {
-                bw.WriteBits(acCodes[JpegMarkers.ZrlAcCode], acLens[JpegMarkers.ZrlAcCode]); // ZRL
+                bw.WriteBits(acCodes[JpegConstants.ZrlAcCode], acLens[JpegConstants.ZrlAcCode]); // ZRL
                 zeros -= 16;
             }
 
@@ -332,8 +332,8 @@ internal static class JpegEncoder
     // ── JPEG segment writers ──────────────────────────────────────────────────
     private static void WriteApp0(Stream s)
     {
-        s.WriteByte(JpegMarkers.MarkerPrefix);
-        s.WriteByte(JpegMarkers.App0Jfif);
+        s.WriteByte(JpegConstants.MarkerPrefix);
+        s.WriteByte(JpegConstants.App0Jfif);
 
         var seg = new byte[] { 0, 16, 0x4A, 0x46, 0x49, 0x46, 0x00, 1, 1, 0, 0, 1, 0, 1, 0, 0 };
         s.Write(seg);
@@ -341,19 +341,19 @@ internal static class JpegEncoder
 
     private static void WriteDqt(Stream s, IReadOnlyList<int> qt, int id)
     {
-        s.WriteByte(JpegMarkers.MarkerPrefix);
-        s.WriteByte(JpegMarkers.Dqt);
+        s.WriteByte(JpegConstants.MarkerPrefix);
+        s.WriteByte(JpegConstants.Dqt);
         WriteU16(s, 67);             // length = 2 + 1 + 64
         s.WriteByte((byte)(0 | id)); // precision 0 = 8-bit
 
         for (var i = 0; i < 64; i++)
-            s.WriteByte((byte)qt[JpegMarkers.ZigZag[i]]);
+            s.WriteByte((byte)qt[JpegConstants.ZigZag[i]]);
     }
 
     private static void WriteSof0(Stream s, int w, int h)
     {
-        s.WriteByte(JpegMarkers.MarkerPrefix);
-        s.WriteByte(JpegMarkers.Sof0);
+        s.WriteByte(JpegConstants.MarkerPrefix);
+        s.WriteByte(JpegConstants.Sof0);
         WriteU16(s, 17); // 2+1+2+2+1+3×3
         s.WriteByte(8);  // precision
         WriteU16(s, h);
@@ -361,13 +361,13 @@ internal static class JpegEncoder
         s.WriteByte(3); // components: Y, Cb, Cr
         // Component: id, sampling, qt id
         s.WriteByte(1);
-        s.WriteByte(JpegMarkers.SamplingFactor1X1);
+        s.WriteByte(JpegConstants.SamplingFactor1X1);
         s.WriteByte(0); // Y
         s.WriteByte(2);
-        s.WriteByte(JpegMarkers.SamplingFactor1X1);
+        s.WriteByte(JpegConstants.SamplingFactor1X1);
         s.WriteByte(1); // Cb
         s.WriteByte(3);
-        s.WriteByte(JpegMarkers.SamplingFactor1X1);
+        s.WriteByte(JpegConstants.SamplingFactor1X1);
         s.WriteByte(1); // Cr
     }
 
@@ -379,8 +379,8 @@ internal static class JpegEncoder
         int id
     )
     {
-        s.WriteByte(JpegMarkers.MarkerPrefix);
-        s.WriteByte(JpegMarkers.Dht);
+        s.WriteByte(JpegConstants.MarkerPrefix);
+        s.WriteByte(JpegConstants.Dht);
         WriteU16(s, (ushort)(3 + bits.Length + vals.Length));
         s.WriteByte((byte)((acDc << 4) | id));
         s.Write(bits);
@@ -389,16 +389,16 @@ internal static class JpegEncoder
 
     private static void WriteSos(Stream s)
     {
-        s.WriteByte(JpegMarkers.MarkerPrefix);
-        s.WriteByte(JpegMarkers.Sos);
+        s.WriteByte(JpegConstants.MarkerPrefix);
+        s.WriteByte(JpegConstants.Sos);
         WriteU16(s, 12);
         s.WriteByte(3);
         s.WriteByte(1);
-        s.WriteByte(JpegMarkers.ByteStuff); // Y  → DC0, AC0
+        s.WriteByte(JpegConstants.ByteStuff); // Y  → DC0, AC0
         s.WriteByte(2);
-        s.WriteByte(JpegMarkers.SamplingFactor1X1); // Cb → DC1, AC1
+        s.WriteByte(JpegConstants.SamplingFactor1X1); // Cb → DC1, AC1
         s.WriteByte(3);
-        s.WriteByte(JpegMarkers.SamplingFactor1X1); // Cr → DC1, AC1
+        s.WriteByte(JpegConstants.SamplingFactor1X1); // Cr → DC1, AC1
         s.WriteByte(0);
         s.WriteByte(63);
         s.WriteByte(0);
@@ -425,8 +425,8 @@ internal static class JpegEncoder
                 _bits -= 8;
                 var b = (byte)(_buf >> _bits);
                 stream.WriteByte(b);
-                if (b == JpegMarkers.MarkerPrefix)
-                    stream.WriteByte(JpegMarkers.ByteStuff); // byte stuffing
+                if (b == JpegConstants.MarkerPrefix)
+                    stream.WriteByte(JpegConstants.ByteStuff); // byte stuffing
             }
         }
 
@@ -438,8 +438,8 @@ internal static class JpegEncoder
             var b = (byte)((_buf << (8 - _bits)) | (uint)((1 << (8 - _bits)) - 1));
             stream.WriteByte(b);
 
-            if (b == JpegMarkers.MarkerPrefix)
-                stream.WriteByte(JpegMarkers.ByteStuff);
+            if (b == JpegConstants.MarkerPrefix)
+                stream.WriteByte(JpegConstants.ByteStuff);
         }
     }
 }

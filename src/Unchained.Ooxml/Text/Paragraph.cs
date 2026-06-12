@@ -103,7 +103,7 @@ public sealed class Paragraph
     ///     runs spanned by the match is removed.
     /// </summary>
     private static int ReplaceInSegment(
-        List<Run> runs,
+        IReadOnlyList<Run> runs,
         string oldText,
         string newText,
         StringComparison comparison

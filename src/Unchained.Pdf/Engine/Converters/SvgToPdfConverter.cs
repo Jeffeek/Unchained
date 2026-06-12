@@ -87,12 +87,14 @@ internal static class SvgToPdfConverter
 
         if (options.Tagged && taggedItems is not null)
             // ReSharper disable once BadListLineBreaks
+        {
             acc.AddPage(options.PageWidthPt,
                 options.PageHeightPt,
                 buf.WrittenMemory.Span,
                 fontMap,
                 taggedItems,
                 options.Language);
+        }
         else
             acc.AddPage(options.PageWidthPt, options.PageHeightPt, buf.WrittenMemory.Span, fontMap);
 

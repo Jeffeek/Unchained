@@ -600,11 +600,13 @@ internal sealed class PageRenderer(
         // with a real Unicode cmap produce non-zero glyphs and keep the HarfBuzz path.
         var allNotdef = glyphInfos.Length > 0;
         for (var i = 0; i < glyphInfos.Length; i++)
+        {
             if (glyphInfos[i].Codepoint != 0)
             {
                 allNotdef = false;
                 break;
             }
+        }
 
         if (allNotdef)
         {
@@ -632,6 +634,7 @@ internal sealed class PageRenderer(
 
             // Mode 0 (fill) and 2/4/6 (fill variants): blit the bitmap.
             if (_gs.TextRenderMode is 0 or 2 or 4 or 6)
+            {
                 buffer.BlitGlyphFromFace((int)px,
                     (int)py,
                     ftFace,
@@ -639,6 +642,7 @@ internal sealed class PageRenderer(
                     _gs.FillG,
                     _gs.FillB,
                     _gs.BlendMode);
+            }
 
             // Mode 1/2/5/6 (stroke variants): stroke the glyph outline.
             if (_gs.TextRenderMode is 1 or 2 or 5 or 6)
@@ -693,6 +697,7 @@ internal sealed class PageRenderer(
                 GlyphsAttempted++;
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
                 if (_gs.TextRenderMode != 1)
+                {
                     buffer.BlitGlyphFromFace((int)px,
                         (int)py,
                         ftFace,
@@ -700,6 +705,8 @@ internal sealed class PageRenderer(
                         _gs.FillG,
                         _gs.FillB,
                         _gs.BlendMode);
+                }
+
                 if (_gs.TextRenderMode is 1 or 2)
                     StrokeGlyphOutline(ftFace, (int)px, (int)py, pixelSize);
             }
@@ -745,6 +752,7 @@ internal sealed class PageRenderer(
                 GlyphsAttempted++;
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
                 if (_gs.TextRenderMode is 0 or 2 or 4 or 6)
+                {
                     buffer.BlitGlyphFromFace((int)px,
                         (int)py,
                         ftFace,
@@ -752,6 +760,8 @@ internal sealed class PageRenderer(
                         _gs.FillG,
                         _gs.FillB,
                         _gs.BlendMode);
+                }
+
                 if (_gs.TextRenderMode is 1 or 2 or 5 or 6)
                 {
                     var ps = (uint)Math.Max(1, Math.Round(_gs.FontSize * TextMatrixVerticalScale() * scale));
@@ -1094,6 +1104,7 @@ internal sealed class PageRenderer(
             var (r, g, b) = sh.ColorAt(t);
             if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
             else
+            {
                 buffer.BlendPixel(px,
                     py,
                     r,
@@ -1101,6 +1112,7 @@ internal sealed class PageRenderer(
                     b,
                     _gs.FillA,
                     _gs.BlendMode);
+            }
         }
 
         _ = m;
@@ -1151,12 +1163,14 @@ internal sealed class PageRenderer(
                 var b = (byte)Math.Clamp((w0 * t.B0) + (w1 * t.B1) + (w2 * t.B2), 0, 255);
                 if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
                 else
+                {
                     buffer.BlendPixel(px,
                         py,
                         r,
                         g,
                         b,
                         _gs.FillA);
+                }
             }
         }
     }
@@ -1325,6 +1339,7 @@ internal sealed class PageRenderer(
                 if (xEnd > xStart)
                 {
                     if (HasSoftMask)
+                    {
                         FillSpanSoftMasked(y,
                             xStart,
                             xEnd - 1,
@@ -1333,7 +1348,9 @@ internal sealed class PageRenderer(
                             fb,
                             _gs.FillA,
                             _gs.BlendMode);
+                    }
                     else
+                    {
                         buffer.FillSpan(y,
                             xStart,
                             xEnd - 1,
@@ -1342,6 +1359,7 @@ internal sealed class PageRenderer(
                             fb,
                             _gs.FillA,
                             _gs.BlendMode);
+                    }
                 }
             }
         }
@@ -1384,12 +1402,14 @@ internal sealed class PageRenderer(
                         _gs.BlendMode);
                 }
                 else
+                {
                     DrawDashedLine(x0,
                         y0,
                         x1,
                         y1,
                         thickPx,
                         dashPx);
+                }
             }
 
             // Line joins at interior vertices (where two segments meet).
@@ -1847,6 +1867,7 @@ internal sealed class PageRenderer(
             if (a >= 255)
                 buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
             else
+            {
                 buffer.BlendPixel(dstX + px,
                     dstY + py,
                     r,
@@ -1854,6 +1875,7 @@ internal sealed class PageRenderer(
                     b,
                     (byte)a,
                     _gs.BlendMode);
+            }
         }
     }
 
@@ -1977,6 +1999,7 @@ internal sealed class PageRenderer(
         var y2 = py + ph;
         for (var y = py; y < y2; y++)
         for (var x = px; x < x2; x++)
+        {
             buffer.SetPixel(x,
                 y,
                 r,
@@ -1984,6 +2007,7 @@ internal sealed class PageRenderer(
                 b,
                 SoftMaskAlpha(x, y, baseAlpha),
                 blendMode);
+        }
     }
 
     // Fills a scanline span applying the soft mask per-pixel.
@@ -1999,6 +2023,7 @@ internal sealed class PageRenderer(
     )
     {
         for (var x = x0; x <= x1; x++)
+        {
             buffer.SetPixel(x,
                 y,
                 r,
@@ -2006,6 +2031,7 @@ internal sealed class PageRenderer(
                 b,
                 SoftMaskAlpha(x, y, baseAlpha),
                 blendMode);
+        }
     }
 
     // Strokes the outline of the last-loaded glyph in FreeType using the current stroke

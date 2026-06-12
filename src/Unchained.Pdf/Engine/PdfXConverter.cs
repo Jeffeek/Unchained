@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Text;
 using System.Xml.Linq;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -57,7 +58,7 @@ internal static class PdfXConverter
             ["Subtype"] = PdfName.Get("XML"),
             ["Length"] = new PdfInteger(xmpBytes.Length)
         });
-        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes)));
+        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
         catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
 
         // ── 3. Info dict needs GTS_PDFXVersion + a Title (PDF/X requires both) ──
@@ -66,8 +67,7 @@ internal static class PdfXConverter
         var infoEntries = new Dictionary<string, PdfObject>();
         if (infoRef is not null)
         {
-            var existingInfo = core.ResolveIndirect(infoRef.ObjectNumber).Value as PdfDictionary;
-            if (existingInfo is not null)
+            if (core.ResolveIndirect(infoRef.ObjectNumber).Value is PdfDictionary existingInfo)
                 infoEntries = new Dictionary<string, PdfObject>(existingInfo.Entries);
         }
 
@@ -119,7 +119,7 @@ internal static class PdfXConverter
         _ => "PDF/X-1a:2001"
     };
 
-    private static byte[] BuildPdfXXmp(PdfXProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
+    private static ReadOnlySpan<byte> BuildPdfXXmp(PdfXProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
     {
         var existing = ReadExistingXmp(catalogEntries, core);
         var xmpDoc = (existing is not null ? TryParse(existing) : null) ?? CreateMinimalXmp();
@@ -127,6 +127,7 @@ internal static class PdfXConverter
         XNamespace rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
         XNamespace pdfxid = "http://www.npes.org/pdfx/ns/id/";
         var rdfRoot = xmpDoc.Descendants(rdf + "RDF").FirstOrDefault();
+
         if (rdfRoot is not null)
         {
             var desc = rdfRoot.Elements(rdf + "Description").FirstOrDefault(d => d.Attribute(rdf + "about") is not null)
@@ -138,7 +139,7 @@ internal static class PdfXConverter
             SetOrAdd(desc, pdfxid + "GTS_PDFXVersion", VersionString(profile));
         }
 
-        return Encoding.UTF8.GetBytes(xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces));
+        return xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces).ToUtf8Span();
     }
 
     private static string? ReadExistingXmp(IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
@@ -150,9 +151,17 @@ internal static class PdfXConverter
             PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
             _ => null
         };
-        if (stream is null) return null;
-        try { return Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span); }
-        catch { return null; }
+        if (stream is null)
+            return null;
+
+        try
+        {
+            return StreamFilters.Decode(stream).Span.FromUtf8Span();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static XDocument? TryParse(string xml)

@@ -27,19 +27,21 @@ internal sealed class OpcPackage : IDisposable
     private OpcPackage() { }
 
     /// <summary>Returns all parts in the package.</summary>
-    public IReadOnlyCollection<OpcPart> Parts => _parts.Values;
+    public IEnumerable<OpcPart> Parts => _parts.Values;
 
     // ── Relationship access ─────────────────────────────────────────────────
 
     /// <summary>Returns the package-level relationships (stored in <c>/_rels/.rels</c>).</summary>
-    public IReadOnlyList<OpcRelationship> PackageRelationships => _packageRelationships;
+    public IEnumerable<OpcRelationship> PackageRelationships => _packageRelationships;
 
     // ── IDisposable ─────────────────────────────────────────────────────────
 
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
+
         _disposed = true;
         _parts.Clear();
     }
@@ -85,16 +87,16 @@ internal sealed class OpcPackage : IDisposable
     public OpcPart? TryGetPart(string partUri)
     {
         ArgumentNullException.ThrowIfNull(partUri);
+
         var normalised = NormaliseUri(partUri);
-        return _parts.TryGetValue(normalised, out var part) ? part : null;
+        return _parts.GetValueOrDefault(normalised);
     }
 
     /// <summary>Returns the part at the given URI.</summary>
     /// <exception cref="OoXmlException">Thrown when no part with that URI exists.</exception>
     public OpcPart GetPart(string partUri)
     {
-        var part = TryGetPart(partUri)
-                   ?? throw new OoXmlException($"OPC part not found: '{partUri}'.");
+        var part = TryGetPart(partUri) ?? throw new OoXmlException($"OPC part not found: '{partUri}'.");
         return part;
     }
 
@@ -190,11 +192,11 @@ internal sealed class OpcPackage : IDisposable
             var entryName = part.Uri.TrimStart('/');
             WriteEntry(archive, entryName, part.Data);
 
-            if (part.Relationships.Count > 0)
-            {
-                var relsPath = BuildRelationshipsPath(part.Uri);
-                WriteEntry(archive, relsPath.TrimStart('/'), SerializeRelationships(part.Relationships));
-            }
+            if (part.Relationships.Count <= 0)
+                continue;
+
+            var relsPath = BuildRelationshipsPath(part.Uri);
+            WriteEntry(archive, relsPath.TrimStart('/'), SerializeRelationships(part.Relationships));
         }
     }
 
@@ -259,25 +261,20 @@ internal sealed class OpcPackage : IDisposable
         stream.Write(data, 0, data.Length);
     }
 
-    private static IReadOnlyList<OpcRelationship> ParseRelationships(byte[] bytes)
+    private static IEnumerable<OpcRelationship> ParseRelationships(byte[] bytes)
     {
         var doc = XDocument.Load(new MemoryStream(bytes));
         var ns = XNamespace.Get("http://schemas.openxmlformats.org/package/2006/relationships");
-        var list = new List<OpcRelationship>();
 
-        foreach (var el in doc.Root?.Elements(ns + "Relationship") ?? [])
-        {
-            var id = (string?)el.Attribute("Id") ?? string.Empty;
-            var type = (string?)el.Attribute("Type") ?? string.Empty;
-            var target = (string?)el.Attribute("Target") ?? string.Empty;
-            var mode = (string?)el.Attribute("TargetMode");
-            list.Add(new OpcRelationship(id, type, target, mode == "External"));
-        }
-
-        return list;
+        return (from el in doc.Root?.Elements(ns + "Relationship") ?? []
+                let id = (string?)el.Attribute("Id") ?? string.Empty
+                let type = (string?)el.Attribute("Type") ?? string.Empty
+                let target = (string?)el.Attribute("Target") ?? string.Empty
+                let mode = (string?)el.Attribute("TargetMode")
+                select new OpcRelationship(id, type, target, mode == "External")).ToList();
     }
 
-    private static byte[] SerializeRelationships(IReadOnlyList<OpcRelationship> relationships)
+    private static byte[] SerializeRelationships(IEnumerable<OpcRelationship> relationships)
     {
         var ns = XNamespace.Get("http://schemas.openxmlformats.org/package/2006/relationships");
         var root = new XElement(ns + "Relationships");
@@ -297,6 +294,7 @@ internal sealed class OpcPackage : IDisposable
 
         using var ms = new MemoryStream();
         new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).Save(ms);
+
         return ms.ToArray();
     }
 }

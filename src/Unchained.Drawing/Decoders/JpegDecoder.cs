@@ -50,7 +50,7 @@ internal static class JpegDecoder
             width = 0;
             height = 0;
 
-            if (_data.Length < 2 || _data[0] != JpegMarkers.MarkerPrefix || _data[1] != JpegMarkers.Soi) // SOI
+            if (_data.Length < 2 || _data[0] != JpegConstants.MarkerPrefix || _data[1] != JpegConstants.Soi) // SOI
                 return null;
 
             _pos = 2;
@@ -59,14 +59,14 @@ internal static class JpegDecoder
 
             while (_pos + 1 < _data.Length)
             {
-                if (_data[_pos] != JpegMarkers.MarkerPrefix)
+                if (_data[_pos] != JpegConstants.MarkerPrefix)
                 {
                     _pos++;
                     continue;
                 }
 
                 // Skip fill bytes (JpegMarkers.MarkerPrefix JpegMarkers.MarkerPrefix ...).
-                while (_pos + 1 < _data.Length && _data[_pos + 1] == JpegMarkers.MarkerPrefix)
+                while (_pos + 1 < _data.Length && _data[_pos + 1] == JpegConstants.MarkerPrefix)
                     _pos++;
 
                 var marker = _data[_pos + 1];
@@ -74,39 +74,39 @@ internal static class JpegDecoder
 
                 switch (marker)
                 {
-                    case JpegMarkers.ByteStuff:                              // stuffed byte outside scan — skip
-                    case >= JpegMarkers.RstFirst and <= JpegMarkers.RstLast: // RSTn (no payload)
+                    case JpegConstants.ByteStuff:                              // stuffed byte outside scan — skip
+                    case >= JpegConstants.RstFirst and <= JpegConstants.RstLast: // RSTn (no payload)
                     {
                         break;
                     }
-                    case JpegMarkers.Eoi:
-                    case JpegMarkers.Sof2: // SOF2 progressive — unsupported
+                    case JpegConstants.Eoi:
+                    case JpegConstants.Sof2: // SOF2 progressive — unsupported
                     {
                         return null;
                     }
-                    case JpegMarkers.Sof0: // SOF0 baseline
-                    case JpegMarkers.Sof1: // SOF1 extended sequential (same layout, Huffman) — treat as baseline
+                    case JpegConstants.Sof0: // SOF0 baseline
+                    case JpegConstants.Sof1: // SOF1 extended sequential (same layout, Huffman) — treat as baseline
                     {
                         baseline = true;
                         ReadStartOfFrame();
                         break;
                     }
-                    case JpegMarkers.Dht:
+                    case JpegConstants.Dht:
                     {
                         ReadHuffmanTables();
                         break;
                     }
-                    case JpegMarkers.Dqt:
+                    case JpegConstants.Dqt:
                     {
                         ReadQuantTables();
                         break;
                     }
-                    case JpegMarkers.Dri:
+                    case JpegConstants.Dri:
                     {
                         ReadRestartInterval();
                         break;
                     }
-                    case JpegMarkers.Sos:
+                    case JpegConstants.Sos:
                     {
                         if (!baseline)
                             return null;
@@ -172,7 +172,7 @@ internal static class JpegDecoder
                 {
                     Id = id,
                     HSamp = sampling >> 4,
-                    VSamp = sampling & JpegMarkers.NibbleMask,
+                    VSamp = sampling & JpegConstants.NibbleMask,
                     QuantId = qt
                 };
             }
@@ -188,7 +188,7 @@ internal static class JpegDecoder
             {
                 var pqTq = _data[_pos++];
                 var precision = pqTq >> 4;
-                var id = pqTq & JpegMarkers.NibbleMask;
+                var id = pqTq & JpegConstants.NibbleMask;
                 var table = new int[64];
                 for (var i = 0; i < 64; i++)
                     table[i] = precision == 0 ? _data[_pos++] : ReadU16();
@@ -207,7 +207,7 @@ internal static class JpegDecoder
             {
                 var tcTh = _data[_pos++];
                 var cls = tcTh >> 4; // 0 = DC, 1 = AC
-                var id = tcTh & JpegMarkers.NibbleMask;
+                var id = tcTh & JpegConstants.NibbleMask;
                 var counts = new byte[16];
                 var total = 0;
                 for (var i = 0; i < 16; i++)
@@ -250,7 +250,7 @@ internal static class JpegDecoder
                     return null;
                 }
 
-                scanComps[i] = (ci, tdTa >> 4, tdTa & JpegMarkers.NibbleMask);
+                scanComps[i] = (ci, tdTa >> 4, tdTa & JpegConstants.NibbleMask);
             }
 
             // The 3 spectral-selection bytes (Ss/Se/Ah-Al) are within the segment length.
@@ -314,9 +314,9 @@ internal static class JpegDecoder
             // Skip to RSTn marker.
             while (_pos + 1 < _data.Length)
             {
-                if (_data[_pos] == JpegMarkers.MarkerPrefix &&
-                    _data[_pos + 1] >= JpegMarkers.RstFirst &&
-                    _data[_pos + 1] <= JpegMarkers.RstLast)
+                if (_data[_pos] == JpegConstants.MarkerPrefix &&
+                    _data[_pos + 1] >= JpegConstants.RstFirst &&
+                    _data[_pos + 1] <= JpegConstants.RstLast)
                 {
                     _pos += 2;
                     break;
@@ -354,7 +354,7 @@ internal static class JpegDecoder
                     return null;
 
                 var r = rs >> 4;
-                var s = rs & JpegMarkers.NibbleMask;
+                var s = rs & JpegConstants.NibbleMask;
                 if (s == 0)
                 {
                     if (r != 15)
@@ -369,7 +369,7 @@ internal static class JpegDecoder
                     break;
 
                 var value = Extend(ReceiveBits(s), s);
-                coefficients[JpegMarkers.ZigZag[k]] = value * quant[JpegMarkers.ZigZag[k]];
+                coefficients[JpegConstants.ZigZag[k]] = value * quant[JpegConstants.ZigZag[k]];
                 k++;
             }
 
@@ -386,16 +386,16 @@ internal static class JpegDecoder
                     return 0;
 
                 var b = _data[_pos++];
-                if (b == JpegMarkers.MarkerPrefix)
+                if (b == JpegConstants.MarkerPrefix)
                 {
                     var next = _pos < _data.Length ? _data[_pos] : 0;
 
                     switch (next)
                     {
-                        case JpegMarkers.ByteStuff:
+                        case JpegConstants.ByteStuff:
                             _pos++; // stuffed byte
                         break;
-                        case >= JpegMarkers.RstFirst and <= JpegMarkers.RstLast:
+                        case >= JpegConstants.RstFirst and <= JpegConstants.RstLast:
                             /* restart, handled elsewhere */
                         break;
                     }

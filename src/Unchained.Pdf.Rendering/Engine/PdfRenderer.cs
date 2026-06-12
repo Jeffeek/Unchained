@@ -141,7 +141,7 @@ public sealed class PdfRenderer : IRenderer
         var pixH = Math.Max(1, (int)(page.Height * scale));
 
         var buffer = new RasterBuffer(pixW, pixH);
-        buffer.Clear(255, 255, 255);
+        buffer.Clear();
 
         // UToPixel in PageRenderer does:  px = ctm_x * scale,  py = (pageHeightPt - ctm_y) * scale
         // We choose pageHeightPt and the initial CTM so that content rendered in the

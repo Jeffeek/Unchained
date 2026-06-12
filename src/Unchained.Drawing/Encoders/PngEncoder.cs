@@ -84,7 +84,7 @@ internal static class PngEncoder
     private static uint UpdateCrc(uint crc, ReadOnlySpan<byte> data)
     {
         foreach (var b in data)
-            crc = PngConstants.CtcTable[(crc ^ b) & JpegMarkers.MarkerPrefix] ^ (crc >> 8);
+            crc = PngConstants.CtcTable[(crc ^ b) & JpegConstants.MarkerPrefix] ^ (crc >> 8);
 
         return crc;
     }

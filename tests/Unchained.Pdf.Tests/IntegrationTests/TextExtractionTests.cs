@@ -20,7 +20,7 @@ public sealed class TextExtractionTests : PdfTestBase
     [Fact]
     public async Task GetTextSpans_PageWithTextContent_ReturnsSpans()
     {
-        var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent("Hello Unchained"));
+        var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent());
         var spans = page.GetTextSpans();
         spans.ShouldNotBeEmpty();
     }
@@ -29,7 +29,7 @@ public sealed class TextExtractionTests : PdfTestBase
     public async Task GetTextSpans_PageWithTextContent_ContainsExpectedText()
     {
         const string text = "Hello Unchained";
-        var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent(text));
+        var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent());
         var spans = page.GetTextSpans();
         var allText = string.Concat(spans.Select(static s => s.Text));
         allText.ShouldContain("Hello");
@@ -82,7 +82,7 @@ public sealed class TextExtractionTests : PdfTestBase
     [Fact]
     public async Task ExtractText_PageWithTextContent_ReturnsNonEmptyString()
     {
-        var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent("Hello Unchained"));
+        var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent());
         var text = page.ExtractText();
         text.ShouldNotBeNullOrWhiteSpace();
     }
@@ -91,7 +91,7 @@ public sealed class TextExtractionTests : PdfTestBase
     public async Task ExtractText_PageWithTextContent_ContainsOriginalWords()
     {
         const string original = "Hello Unchained";
-        var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent(original));
+        var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent());
         var text = page.ExtractText();
         text.ShouldContain("Hello");
         text.ShouldContain("Unchained");

@@ -387,7 +387,7 @@ internal static class TextExtractor
         double th,
         ref double tmE,
         ref double tmF,
-        double[] ctm,
+        IReadOnlyList<double> ctm,
         ICollection<TextSpan> spans
     )
     {
@@ -411,20 +411,20 @@ internal static class TextExtractor
 
         tmE += totalAdvance;
 
-        if (text.Length > 0)
-        {
-            // Scale the reported width and font size by the CTM's average linear scale so
-            // downstream consumers see device-space magnitudes.
-            var ctmScale = CtmScale(ctm);
-            spans.Add(new TextSpan(
-                text,
-                startX,
-                startY,
-                totalAdvance * ctmScale,
-                fontSize * ctmScale,
-                fontName)
-            );
-        }
+        if (text.Length <= 0)
+            return;
+
+        // Scale the reported width and font size by the CTM's average linear scale so
+        // downstream consumers see device-space magnitudes.
+        var ctmScale = CtmScale(ctm);
+        spans.Add(new TextSpan(
+            text,
+            startX,
+            startY,
+            totalAdvance * ctmScale,
+            fontSize * ctmScale,
+            fontName)
+        );
     }
 
     private static void ShowArray(
@@ -436,7 +436,7 @@ internal static class TextExtractor
         double th,
         ref double tmE,
         ref double tmF,
-        double[] ctm,
+        IReadOnlyList<double> ctm,
         ICollection<TextSpan> spans
     )
     {
@@ -488,7 +488,7 @@ internal static class TextExtractor
     };
 
     // Row-major [a b c d e f] affine matrix multiply: result = m1 × m2 (apply m1 first).
-    private static double[] MultiplyMatrix(double[] m1, double[] m2) =>
+    private static double[] MultiplyMatrix(IReadOnlyList<double> m1, IReadOnlyList<double> m2) =>
     [
         (m1[0] * m2[0]) + (m1[1] * m2[2]),
         (m1[0] * m2[1]) + (m1[1] * m2[3]),
@@ -499,7 +499,7 @@ internal static class TextExtractor
     ];
 
     // Average linear scale of a CTM (geometric mean of the two basis-vector magnitudes).
-    private static double CtmScale(double[] m)
+    private static double CtmScale(IReadOnlyList<double> m)
     {
         var sx = Math.Sqrt((m[0] * m[0]) + (m[1] * m[1]));
         var sy = Math.Sqrt((m[2] * m[2]) + (m[3] * m[3]));

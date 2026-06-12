@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -170,7 +171,7 @@ internal static class PdfUAValidator
 
         try
         {
-            var xmp = Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
+            var xmp = StreamFilters.Decode(stream).Span.FromUtf8Span();
             return xmp.Contains("dc:title", StringComparison.OrdinalIgnoreCase) ||
                    xmp.Contains("dc:Title", StringComparison.Ordinal);
         }
@@ -454,9 +455,11 @@ internal static class PdfUAValidator
             }
 
             if (pageHasContent && !pageHasMarkedContent)
+            {
                 v.Add(E("7.11",
                     $"Page {page} contains drawing operators but no marked-content sequences (BDC/BMC). All content must be tagged.",
                     pageNumber: page));
+            }
         }
     }
 
@@ -494,17 +497,21 @@ internal static class PdfUAValidator
                     var hasContents = dict[PdfName.Get("Contents")] is not null;
                     var hasTu = dict[PdfName.Get("TU")] is not null;
                     if (!hasContents && !hasTu)
+                    {
                         v.Add(W("7.13",
                             $"/{subtype} annotation on page {page} has no /Contents or /TU — screen readers cannot describe it.",
                             pageNumber: page));
+                    }
                 }
 
                 // Tab order: pages with annotations must have /Tabs /S (structure order).
                 var tabs = pageDict.GetName("Tabs");
                 if (tabs is null)
+                {
                     v.Add(W("7.13",
                         $"Page {page} has annotations but no /Tabs entry. Set /Tabs /S for structure-based tab order.",
                         pageNumber: page));
+                }
             }
         }
     }
@@ -515,8 +522,10 @@ internal static class PdfUAValidator
     {
         // /AA (additional actions) on the document catalog must not have scripts (§7.14.2).
         if (core.Catalog[PdfName.Get("AA")] is not null)
+        {
             v.Add(W("7.14",
                 "Catalog contains /AA (additional actions). Verify no JavaScript actions are present — they are not permitted in PDF/UA."));
+        }
 
         // OpenAction: if present, may not be a named action of type /Named (§7.14.1).
         var openAction = core.Catalog[PdfName.OpenAction];
@@ -548,7 +557,7 @@ internal static class PdfUAValidator
         string xmp;
         try
         {
-            xmp = Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
+            xmp = StreamFilters.Decode(stream).Span.FromUtf8Span();
         }
         catch
         {

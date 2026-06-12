@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Shouldly;
 using Unchained.Ooxml;
+using Unchained.Pptx.Engine;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
@@ -19,7 +20,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
     public async Task ExportHtmlPlayer_ProducesSingleDocument()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var bytes = await Processor.ExportHtmlPlayerAsync(doc);
+        var bytes = await PresentationProcessor.ExportHtmlPlayerAsync(doc);
         var html = Html(bytes);
 
         html.ShouldContain("<!DOCTYPE html>");
@@ -32,7 +33,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
     public async Task ExportHtmlPlayer_IncludesNavigationAndCounter()
     {
         var doc = PptxFixtures.WithSlides(2);
-        var html = Html(await Processor.ExportHtmlPlayerAsync(doc));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
 
         html.ShouldContain("id=\"next\"");
         html.ShouldContain("id=\"prev\"");
@@ -47,7 +48,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         doc.Slides[0].Shapes.AddTextBox(Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(1), "PlayerHello");
 
-        var html = Html(await Processor.ExportHtmlPlayerAsync(doc));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
         html.ShouldContain("PlayerHello");
     }
 
@@ -57,10 +58,10 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(3);
         doc.Slides[1].IsHidden = true;
 
-        var html = Html(await Processor.ExportHtmlPlayerAsync(doc));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
         Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(2);
 
-        var withHidden = Html(await Processor.ExportHtmlPlayerAsync(
+        var withHidden = Html(await PresentationProcessor.ExportHtmlPlayerAsync(
             doc,
             new HtmlPlayerSaveOptions { IncludeHiddenSlides = true }));
         Regex.Matches(withHidden, "class=\"slide-page\"").Count.ShouldBe(3);
@@ -70,7 +71,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
     public async Task ExportHtmlPlayer_CounterHiddenWhenDisabled()
     {
         var doc = PptxFixtures.WithSlides(2);
-        var html = Html(await Processor.ExportHtmlPlayerAsync(
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(
             doc,
             new HtmlPlayerSaveOptions { ShowSlideCounter = false }));
         html.ShouldNotContain("id=\"counter\"");

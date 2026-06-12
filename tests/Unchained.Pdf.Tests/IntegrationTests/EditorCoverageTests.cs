@@ -451,7 +451,7 @@ public sealed class TableLayoutCoverageTests
     [Fact]
     public void Compute_WithData_RowsPerPage_AtLeastOne()
     {
-        var data = PdfFixtures.SimpleTableData(5, 3);
+        var data = PdfFixtures.SimpleTableData(5);
         var layout = TableLayout.Compute(3, DefaultStyle, true, data);
         layout.RowsPerPage.ShouldBeGreaterThanOrEqualTo(1);
     }
@@ -460,7 +460,7 @@ public sealed class TableLayoutCoverageTests
     public void Compute_NullData_EqualColumnWidths()
     {
         // When data is null columns are equal — exercises the non-proportional branch.
-        var layout = TableLayout.Compute(4, DefaultStyle, false, null);
+        var layout = TableLayout.Compute(4, DefaultStyle, false);
         const float expected = (TableLayout.PageWidth - (2 * TableLayout.Margin)) / 4;
         foreach (var w in layout.ColumnWidths)
             w.ShouldBe(expected, 0.01f);

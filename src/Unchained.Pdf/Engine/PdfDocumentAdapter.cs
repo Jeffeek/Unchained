@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -194,7 +195,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         if (stream is null) return null;
 
         var decoded = StreamFilters.Decode(stream);
-        return Encoding.UTF8.GetString(decoded.Span);
+        return decoded.Span.FromUtf8Span();
     }
 
     // ── Named destinations ────────────────────────────────────────────────────
@@ -242,16 +243,20 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         if (defaultCfg?[PdfName.Get("OFF")] is PdfArray offArr)
         {
             foreach (var e in offArr.Elements)
+            {
                 if (e is PdfIndirectReference offRef)
                     off.Add(offRef.ObjectNumber);
+            }
         }
 
-        if (ocProps[PdfName.Get("OCGs")] is not PdfArray ocgs) return result;
+        if (ocProps[PdfName.Get("OCGs")] is not PdfArray ocgs)
+            return result;
+
         foreach (var e in ocgs.Elements)
         {
             if (e is not PdfIndirectReference r) continue;
-            var ocg = Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary;
-            if (ocg is null) continue;
+            if (Core.ResolveIndirect(r.ObjectNumber).Value is not PdfDictionary ocg) continue;
+
             var name = ocg[PdfName.Get("Name")] is PdfString s
                 ? Encoding.Latin1.GetString(s.Bytes.Span)
                 : string.Empty;

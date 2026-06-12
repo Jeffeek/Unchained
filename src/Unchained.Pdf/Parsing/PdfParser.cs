@@ -502,7 +502,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     private static PdfString ParseLiteralString(PdfToken token)
     {
         var inner = token.Raw.Slice(1, token.Raw.Length - 2);
-        return new PdfString(inner, false);
+        return new PdfString(inner);
     }
 
     // Strips the surrounding angle brackets from a hex string token.

@@ -45,7 +45,7 @@ internal static class OpenXmlPresentationParser
         // Opened editable and kept open: ownership passes to ParsedPresentation -> the document,
         // so a later SDK-backed save (M5) can mutate this same package in place (parts that the
         // model does not touch pass through unchanged). Disposed here only if parsing fails.
-        var engine = OoxmlEngine.Open(data, true);
+        var engine = OoxmlEngine.Open(data);
         try
         {
             return ParseWithEngine(engine, options);

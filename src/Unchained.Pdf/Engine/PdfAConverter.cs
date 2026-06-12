@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -50,7 +51,7 @@ internal static class PdfAConverter
             ["Subtype"] = PdfName.Get("XML"),
             ["Length"] = new PdfInteger(xmpBytes.Length)
         });
-        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes)));
+        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
         catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
 
         // ── 2. Remove /AA from catalog (prohibited additional actions) ─────────
@@ -77,7 +78,7 @@ internal static class PdfAConverter
 
     // ── XMP ───────────────────────────────────────────────────────────────────
 
-    private static byte[] BuildPdfAXmp(PdfAProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
+    private static ReadOnlySpan<byte> BuildPdfAXmp(PdfAProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
     {
         // Try to preserve existing XMP
         var existing = ReadExistingXmp(catalogEntries, core);
@@ -87,7 +88,7 @@ internal static class PdfAConverter
 
         SetPdfaidProperties(xmpDoc, profile);
 
-        return Encoding.UTF8.GetBytes(xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces));
+        return xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces).ToUtf8Span();
     }
 
     private static string? ReadExistingXmp(IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
@@ -105,7 +106,7 @@ internal static class PdfAConverter
 
         try
         {
-            return Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
+            return StreamFilters.Decode(stream).Span.FromUtf8Span();
         }
         catch
         {

@@ -18,8 +18,8 @@ namespace Unchained.PerformanceTests.Benchmarks;
 ///     to Unchained: pure-managed .NET, targets the same ISO 32000 parsing + text-extraction use cases.
 /// </remarks>
 [
-    MemoryDiagnoser(true),
-    GcServer(false),
+    MemoryDiagnoser(),
+    GcServer(),
     HideColumns("StdDev", "RatioSD", "Median"),
     BenchmarkCategory("Comparison")
 ]
@@ -34,7 +34,7 @@ public class ComparisonBenchmark
     [GlobalSetup]
     public void Setup()
     {
-        _pdf1Page = MinimalPdfFactory.Build(1);
+        _pdf1Page = MinimalPdfFactory.Build();
         _pdf10Pages = MinimalPdfFactory.Build(10);
         _pdfWithText = MinimalPdfFactory.BuildWithText(1, "Unchained benchmark: the quick brown fox jumps over the lazy dog.");
         _processor = new DocumentProcessor();

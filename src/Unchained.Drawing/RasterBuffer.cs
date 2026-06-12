@@ -860,6 +860,7 @@ internal sealed class RasterBuffer(int width, int height)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
             return (255, 255, 255);
+
         var i = ((y * Width) + x) * 4;
         return (_data[i], _data[i + 1], _data[i + 2]);
     }
@@ -890,7 +891,9 @@ internal sealed class RasterBuffer(int width, int height)
     /// </summary>
     internal (int X0, int Y0, int X1, int Y1) ClipBounds()
     {
-        if (_clipMask is null) return (0, 0, Width, Height);
+        if (_clipMask is null)
+            return (0, 0, Width, Height);
+
         var x0 = Width;
         var y0 = Height;
         var x1 = 0;
@@ -898,7 +901,9 @@ internal sealed class RasterBuffer(int width, int height)
         for (var y = 0; y < Height; y++)
         for (var x = 0; x < Width; x++)
         {
-            if (_clipMask[(y * Width) + x] == 0) continue;
+            if (_clipMask[(y * Width) + x] == 0)
+                continue;
+
             if (x < x0) x0 = x;
             if (y < y0) y0 = y;
             if (x > x1) x1 = x;
@@ -967,12 +972,16 @@ internal sealed class RasterBuffer(int width, int height)
             {
                 var (ax, ay) = pts[i];
                 var (bx, by) = pts[(i + 1) % 3];
-                if (ay == by) continue;
+                if (Math.Abs(ay - by) < 0.05)
+                    continue;
+
                 if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
                     crosses.Add(ax + ((sy - ay) / (by - ay) * (bx - ax)));
             }
 
-            if (crosses.Count < 2) continue;
+            if (crosses.Count < 2)
+                continue;
+
             crosses.Sort();
             var xa = Math.Max(0, (int)Math.Round(crosses[0]));
             var xb = Math.Min(Width - 1, (int)Math.Round(crosses[^1]));

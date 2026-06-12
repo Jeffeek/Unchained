@@ -32,7 +32,7 @@ public sealed class OoxmlEngineRoundTripTests
         var before = CountParts(bytes);
 
         byte[] saved;
-        using (var engine = OoxmlEngine.Open(bytes, true))
+        using (var engine = OoxmlEngine.Open(bytes))
             saved = engine.Save();
 
         CountParts(saved).ShouldBe(before, $"{fileName}: part count preserved on SDK round-trip");

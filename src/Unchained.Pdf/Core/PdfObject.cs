@@ -118,14 +118,18 @@ public sealed class PdfString(ReadOnlyMemory<byte> bytes, bool isHex = false) : 
     /// </summary>
     internal ReadOnlyMemory<byte> GetBinaryBytes()
     {
-        if (!IsHex) return Bytes;
+        if (!IsHex)
+            return Bytes;
+
         var span = Bytes.Span;
         var result = new byte[(span.Length + 1) / 2];
         var j = 0;
         var hi = -1;
         foreach (var c in span)
         {
-            if (c is (byte)' ' or (byte)'\t' or (byte)'\n' or (byte)'\r') continue;
+            if (c is (byte)' ' or (byte)'\t' or (byte)'\n' or (byte)'\r')
+                continue;
+
             var n = c switch
             {
                 >= (byte)'0' and <= (byte)'9' => c - '0',
@@ -133,7 +137,9 @@ public sealed class PdfString(ReadOnlyMemory<byte> bytes, bool isHex = false) : 
                 >= (byte)'A' and <= (byte)'F' => c - 'A' + 10,
                 _ => -1
             };
-            if (n < 0) continue;
+            if (n < 0)
+                continue;
+
             if (hi < 0)
                 hi = n;
             else

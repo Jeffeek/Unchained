@@ -28,8 +28,8 @@ public sealed class PageLabelsTests : PdfTestBase
 
         var ranges = new List<PageLabelRange>
         {
-            new(0, PageLabelStyle.RomanLower, null, 1),
-            new(2, PageLabelStyle.Decimal, null, 1)
+            new(0, PageLabelStyle.RomanLower),
+            new(2)
         };
         await editor.SetPageLabelsAsync(doc, ranges, TestContext.Current.CancellationToken);
 
@@ -48,7 +48,7 @@ public sealed class PageLabelsTests : PdfTestBase
 
         await editor.SetPageLabelsAsync(
             doc,
-            [new PageLabelRange(0, PageLabelStyle.Decimal, "A-", 1)],
+            [new PageLabelRange(0, PageLabelStyle.Decimal, "A-")],
             TestContext.Current.CancellationToken);
 
         var result = editor.GetPageLabels(doc);
@@ -63,7 +63,7 @@ public sealed class PageLabelsTests : PdfTestBase
 
         await editor.SetPageLabelsAsync(
             doc,
-            [new PageLabelRange(0, PageLabelStyle.Decimal)],
+            [new PageLabelRange(0)],
             TestContext.Current.CancellationToken);
 
         await editor.RemovePageLabelsAsync(doc, TestContext.Current.CancellationToken);
@@ -79,7 +79,7 @@ public sealed class PageLabelsTests : PdfTestBase
         await Should.ThrowAsync<ArgumentException>(() =>
             editor.SetPageLabelsAsync(
                 doc,
-                [new PageLabelRange(1, PageLabelStyle.Decimal)],
+                [new PageLabelRange(1)],
                 TestContext.Current.CancellationToken));
     }
 

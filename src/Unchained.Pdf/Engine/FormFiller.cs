@@ -258,7 +258,9 @@ public sealed class FormFiller : IFormFiller
         var current = field;
         for (var depth = 0; current is not null && depth < 32; depth++)
         {
-            if (current.GetName("FT") is { } ft) return ft;
+            if (current.GetName("FT") is { } ft)
+                return ft;
+
             current = ResolveDict(current["Parent"], core);
         }
 
@@ -297,7 +299,9 @@ public sealed class FormFiller : IFormFiller
             ap = ResolveDict(kidDict["AP"], core);
 
         var normal = ap is not null ? ResolveDict(ap["N"], core) : null;
-        if (normal is null) return null;
+        if (normal is null)
+            return null;
+
         foreach (var (key, _) in normal.Entries)
         {
             if (!string.Equals(key, "Off", StringComparison.Ordinal))

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Unchained.Drawing.Extensions;
 
 namespace Unchained.Drawing.Decoders;
 
@@ -28,7 +29,7 @@ internal static class SvgDecoder
         height = targetHeight;
         try
         {
-            var xml = Encoding.UTF8.GetString(svgBytes);
+            var xml = svgBytes.FromUtf8Span();
             var doc = XDocument.Parse(xml);
             var root = doc.Root;
             if (root is null) return null;

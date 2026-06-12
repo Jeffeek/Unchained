@@ -1,6 +1,7 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -424,6 +425,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(document);
         if (pageNumber < 1)
             throw new ArgumentOutOfRangeException(nameof(pageNumber));
+
         var adapter = CastAdapter(document);
         return Task.Run(() => SetOpenAction(adapter, pageNumber), ct);
     }
@@ -437,6 +439,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(action);
+
         var adapter = CastAdapter(document);
         return Task.Run(() => SetOpenActionFromModel(adapter, action), ct);
     }
@@ -453,6 +456,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
     public Task RemovePdfUaComplianceAsync(IPdfDocument document, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(document);
+
         var adapter = CastAdapter(document);
         return Task.Run(() => RemovePdfUaCompliance(adapter), ct);
     }
@@ -468,6 +472,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(fontName);
         ArgumentNullException.ThrowIfNull(newFontBytes);
+
         var adapter = CastAdapter(document);
         return Task.Run(() => ReplaceFont(adapter, fontName, newFontBytes), ct);
     }
@@ -693,8 +698,10 @@ public sealed class DocumentProcessor : IDocumentProcessor
     private static void SetOpenAction(PdfDocumentAdapter adapter, int pageNumber)
     {
         if (pageNumber > adapter.Core.PageCount)
+        {
             throw new ArgumentOutOfRangeException(nameof(pageNumber),
                 $"Page number {pageNumber} exceeds document page count {adapter.Core.PageCount}.");
+        }
 
         var existing = adapter.Core.CollectObjects().ToList();
         var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
@@ -732,12 +739,12 @@ public sealed class DocumentProcessor : IDocumentProcessor
     private static void SetOpenActionFromModel(PdfDocumentAdapter adapter, PdfOpenAction action)
     {
         var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference
-                         ?? throw new PdfException("Trailer missing /Root.");
+        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
         var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0) throw new PdfException("Catalog object not found.");
-        var catalogDict = existing[catalogIdx].Value as PdfDictionary
-                          ?? throw new PdfException("Catalog is not a dictionary.");
+        if (catalogIdx < 0)
+            throw new PdfException("Catalog object not found.");
+
+        var catalogDict = existing[catalogIdx].Value as PdfDictionary ?? throw new PdfException("Catalog is not a dictionary.");
 
         PdfObject openAction = action switch
         {
@@ -833,15 +840,15 @@ public sealed class DocumentProcessor : IDocumentProcessor
             };
             if (metaStream is not null)
             {
-                var xmp = Encoding.UTF8.GetString(StreamFilters.Decode(metaStream).Span);
+                var xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
                 var cleaned = StripXmpNamespace(xmp, "pdfaid");
-                var cleanedBytes = Encoding.UTF8.GetBytes(cleaned);
+                var cleanedBytes = cleaned.ToUtf8Span();
                 var newStreamDict = new PdfDictionary(
                     new Dictionary<string, PdfObject>(metaStream.Dictionary.Entries)
                     {
                         ["Length"] = new PdfInteger(cleanedBytes.Length)
                     });
-                var newStream = new PdfStream(newStreamDict, cleanedBytes);
+                var newStream = new PdfStream(newStreamDict, cleanedBytes.ToArray());
 
                 if (metaObj is PdfIndirectReference metaRef)
                 {
@@ -886,16 +893,15 @@ public sealed class DocumentProcessor : IDocumentProcessor
             };
             if (metaStream is not null)
             {
-                var xmp = Encoding.UTF8.GetString(
-                    StreamFilters.Decode(metaStream).Span);
+                var xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
                 var cleaned = StripXmpNamespace(xmp, "pdfuaid");
-                var cleanedBytes = Encoding.UTF8.GetBytes(cleaned);
+                var cleanedBytes = cleaned.ToUtf8Span();
                 var newStreamDict = new PdfDictionary(
                     new Dictionary<string, PdfObject>(metaStream.Dictionary.Entries)
                     {
                         ["Length"] = new PdfInteger(cleanedBytes.Length)
                     });
-                var newStream = new PdfStream(newStreamDict, cleanedBytes);
+                var newStream = new PdfStream(newStreamDict, cleanedBytes.ToArray());
 
                 if (metaObj is PdfIndirectReference metaRef)
                 {
@@ -1066,7 +1072,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
     private static void CollectUsedGlyphs(
         PdfDocumentAdapter adapter,
         List<PdfIndirectObject> objects,
-        Dictionary<int, HashSet<int>> usedGlyphs
+        IDictionary<int, HashSet<int>> usedGlyphs
     )
     {
         // Build a map from FontDescriptor object number → FontFile2 object number.
@@ -1076,20 +1082,29 @@ public sealed class DocumentProcessor : IDocumentProcessor
 
         foreach (var obj in objects)
         {
-            if (obj.Value is not PdfDictionary dict) continue;
+            if (obj.Value is not PdfDictionary dict)
+                continue;
+
             var type = dict.GetName("Type");
-            if (type == "FontDescriptor")
+            switch (type)
             {
-                if (dict[PdfName.Get("FontFile2")] is PdfIndirectReference ff2)
-                    descToFontFile[obj.ObjectNumber] = ff2.ObjectNumber;
-            }
-            else if (type == "Font")
-            {
-                // Link Font → FontDescriptor → FontFile2.
-                var fdRef = dict[PdfName.Get("FontDescriptor")] as PdfIndirectReference;
-                if (fdRef is null) continue;
-                if (!descToFontFile.TryGetValue(fdRef.ObjectNumber, out var ffNum)) continue;
-                fontToFontFile[obj.ObjectNumber] = ffNum;
+                case "FontDescriptor":
+                {
+                    if (dict[PdfName.Get("FontFile2")] is PdfIndirectReference ff2)
+                        descToFontFile[obj.ObjectNumber] = ff2.ObjectNumber;
+                    break;
+                }
+                case "Font":
+                {
+                    // Link Font → FontDescriptor → FontFile2.
+                    if (dict[PdfName.Get("FontDescriptor")] is not PdfIndirectReference fdRef)
+                        continue;
+                    if (!descToFontFile.TryGetValue(fdRef.ObjectNumber, out var ffNum))
+                        continue;
+
+                    fontToFontFile[obj.ObjectNumber] = ffNum;
+                    break;
+                }
             }
         }
 
@@ -1101,8 +1116,6 @@ public sealed class DocumentProcessor : IDocumentProcessor
             var pageDict = adapter.Core.GetPage(p);
             var pageAdapter = new PdfPageAdapter(pageDict, p, adapter.Core);
             var ops = pageAdapter.GetContentOperators();
-            var fontMap = pageAdapter.GetFontNameMap();      // resource name → base font name
-            var toUnicode = pageAdapter.GetToUnicodeMaps();  // resource name → cid→unicode
             var compFonts = pageAdapter.GetCompositeFonts(); // resource name → composite info
 
             // Walk the font resources to find object numbers for the resource names.
@@ -1129,6 +1142,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
 
             if (resNameToFontFile.Count == 0) continue;
 
+            // ReSharper disable once GrammarMistakeInComment
             // Walk operators: Tf sets current font, Tj/TJ/'/" show strings.
             var currentFontRes = string.Empty;
             foreach (var op in ops)
@@ -1140,15 +1154,23 @@ public sealed class DocumentProcessor : IDocumentProcessor
                     break;
                     case "Tj" when op.Operands.Count >= 1:
                     {
-                        if (!resNameToFontFile.TryGetValue(currentFontRes, out var ff)) break;
-                        if (!usedGlyphs.TryGetValue(ff, out var gs)) usedGlyphs[ff] = gs = new HashSet<int>();
+                        if (!resNameToFontFile.TryGetValue(currentFontRes, out var ff))
+                            break;
+
+                        if (!usedGlyphs.TryGetValue(ff, out var gs))
+                            usedGlyphs[ff] = gs = [];
+
                         CollectGlyphsFromString(op.Operands[0], currentFontRes, compFonts, gs);
                         break;
                     }
-                    case "TJ" when op.Operands.Count >= 1 && op.Operands[0] is PdfArray arr:
+                    case "TJ" when op.Operands is [PdfArray arr, ..]:
                     {
-                        if (!resNameToFontFile.TryGetValue(currentFontRes, out var ff)) break;
-                        if (!usedGlyphs.TryGetValue(ff, out var gs)) usedGlyphs[ff] = gs = new HashSet<int>();
+                        if (!resNameToFontFile.TryGetValue(currentFontRes, out var ff))
+                            break;
+
+                        if (!usedGlyphs.TryGetValue(ff, out var gs))
+                            usedGlyphs[ff] = gs = [];
+
                         foreach (var elem in arr.Elements)
                             CollectGlyphsFromString(elem, currentFontRes, compFonts, gs);
                         break;
@@ -1163,10 +1185,12 @@ public sealed class DocumentProcessor : IDocumentProcessor
         PdfObject obj,
         string fontResName,
         IReadOnlyDictionary<string, CompositeFontInfo> compFonts,
-        HashSet<int> result
+        ISet<int> result
     )
     {
-        if (obj is not PdfString ps) return;
+        if (obj is not PdfString ps)
+            return;
+
         var bytes = ps.GetBinaryBytes();
 
         if (compFonts.TryGetValue(fontResName, out var cfi) && cfi.IdentityEncoding)

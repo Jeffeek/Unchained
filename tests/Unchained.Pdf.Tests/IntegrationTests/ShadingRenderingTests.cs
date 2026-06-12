@@ -125,8 +125,11 @@ public sealed class ShadingRenderingTests : RendererTestBase
         var nonWhite = 0;
         for (var y = 0; y < h; y++)
         for (var x = 0; x < w; x++)
+        {
             if (g[y, x] < 200)
                 nonWhite++;
+        }
+
         nonWhite.ShouldBeGreaterThan(w * h / 10); // pattern covers a meaningful fraction
     }
 

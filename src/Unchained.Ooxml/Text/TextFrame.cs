@@ -39,13 +39,7 @@ public sealed class TextFrame
         string oldText,
         string newText,
         StringComparison comparison = StringComparison.Ordinal
-    )
-    {
-        var count = 0;
-        foreach (var paragraph in Paragraphs)
-            count += paragraph.ReplaceText(oldText, newText, comparison);
-        return count;
-    }
+    ) => Paragraphs.Sum(paragraph => paragraph.ReplaceText(oldText, newText, comparison));
 
     /// <summary>
     ///     Replaces this frame's content with that of <paramref name="source" /> — copying the

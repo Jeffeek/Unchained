@@ -1,6 +1,7 @@
 using System.Text;
 using Unchained.Drawing;
 using Unchained.Drawing.Decoders;
+using Unchained.Drawing.Extensions;
 using Unchained.Drawing.Text;
 using Unchained.Drawing.Text.Extensions;
 using Unchained.Ooxml;
@@ -58,6 +59,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             foreach (var shape in master.Shapes)
             {
                 if (!shape.IsPlaceholder)
+                {
                     RenderShape(buffer,
                         shape,
                         root,
@@ -65,6 +67,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                         colorScheme,
                         layoutPlaceholders,
                         fontScheme);
+                }
             }
         }
 
@@ -73,6 +76,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             foreach (var shape in layout.Shapes)
             {
                 if (!shape.IsPlaceholder)
+                {
                     RenderShape(buffer,
                         shape,
                         root,
@@ -80,11 +84,13 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                         colorScheme,
                         layoutPlaceholders,
                         fontScheme);
+                }
             }
         }
 
         // Render each shape in Z-order (insertion order = back-to-front).
         foreach (var shape in slide.Shapes)
+        {
             RenderShape(buffer,
                 shape,
                 root,
@@ -92,6 +98,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 colorScheme,
                 layoutPlaceholders,
                 fontScheme);
+        }
 
         return buffer;
     }
@@ -333,6 +340,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         }
 
         foreach (var child in group.Children)
+        {
             RenderShape(buffer,
                 child,
                 childTransform,
@@ -340,6 +348,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 colorScheme,
                 layoutPlaceholders,
                 fontScheme);
+        }
     }
 
     private void RenderAutoShape(
@@ -356,6 +365,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     {
         // Drop shadow — rendered before the fill so it sits underneath the shape.
         if (shape.Effects.OuterShadow is not null)
+        {
             RenderDropShadow(buffer,
                 shape.Effects.OuterShadow,
                 x,
@@ -364,6 +374,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 height,
                 dpi,
                 colorScheme);
+        }
 
         PaintFill(buffer,
             shape.Fill,
@@ -376,6 +387,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
         // 3-D bevel — edge highlights/shadows after fill, before text.
         if (!shape.ThreeD.IsEmpty && shape.ThreeD.TopBevel is not null)
+        {
             RenderBevel(buffer,
                 shape.ThreeD,
                 x,
@@ -384,6 +396,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 height,
                 dpi,
                 colorScheme);
+        }
 
         // WordArt warp: render text to offscreen buffer then blit with curve displacement.
         if (shape.TextFrame.Format.Warp is not null && width > 0 && height > 0)
@@ -942,12 +955,14 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var series = model.Data.Series;
         var type = model.Type.ToString();
         if (type.StartsWith("Pie", StringComparison.Ordinal) || type.StartsWith("Doughnut", StringComparison.Ordinal))
+        {
             RenderPieChart(buffer,
                 series[0],
                 plotX,
                 plotY,
                 plotW,
                 plotH);
+        }
         else if (type.StartsWith("Line", StringComparison.Ordinal) || type.StartsWith("Scatter", StringComparison.Ordinal))
         {
             var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(1).Max();
@@ -995,12 +1010,14 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
         // Legend
         if (model.Legend.IsVisible && series.Count > 0)
+        {
             RenderChartLegend(buffer,
                 series,
                 x,
                 y + height - 14,
                 width,
                 dpi);
+        }
     }
 
     // Draws axis lines, grid lines, value tick labels, and category labels.
@@ -1301,11 +1318,13 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             var frac = (angle + Math.PI) / (2 * Math.PI);
             var slice = 0;
             for (var i = 0; i < series.Values.Count; i++)
+            {
                 if (frac >= bounds[i] && frac < bounds[i + 1])
                 {
                     slice = i;
                     break;
                 }
+            }
 
             var color = SeriesPalette[slice % SeriesPalette.Length];
             buffer.BlitImagePixel(cx + px, cy + py, color.R, color.G, color.B);
@@ -1343,6 +1362,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var flatTexts = FlattenSmartArt(roots).Where(static t => !string.IsNullOrWhiteSpace(t)).ToList();
 
         if (hasChildren)
+        {
             RenderSmartArtHierarchy(buffer,
                 roots,
                 x,
@@ -1350,7 +1370,9 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 width,
                 height,
                 dpi);
+        }
         else if (roots.Count == 4 && width >= height)
+        {
             RenderSmartArtMatrix(buffer,
                 flatTexts,
                 x,
@@ -1358,7 +1380,9 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 width,
                 height,
                 dpi);
+        }
         else if (roots.Count >= 3 && roots.Count <= 6 && !hasChildren)
+        {
             RenderSmartArtCycle(buffer,
                 flatTexts,
                 x,
@@ -1366,7 +1390,9 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 width,
                 height,
                 dpi);
+        }
         else if (roots.Count >= 3 && height > width)
+        {
             RenderSmartArtPyramid(buffer,
                 flatTexts,
                 x,
@@ -1374,7 +1400,9 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 width,
                 height,
                 dpi);
+        }
         else
+        {
             RenderSmartArtLinear(buffer,
                 flatTexts,
                 x,
@@ -1382,6 +1410,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 width,
                 height,
                 dpi);
+        }
     }
 
     // Linear list: stacked colored boxes top-to-bottom.
@@ -1694,6 +1723,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 var argb = styleFillColor.Value.Resolve(colorScheme);
                 ExtractArgb(argb, out var a, out var r, out var g, out var b);
                 if (a > 0)
+                {
                     buffer.FillRect(x,
                         y,
                         width,
@@ -1702,6 +1732,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                         g,
                         b,
                         a);
+                }
+
                 break;
             }
         }
@@ -2131,7 +2163,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             hbFont.SetScale(hbScale, hbScale);
 
             using var hbBuffer = new Buffer();
-            hbBuffer.AddUtf8(Encoding.UTF8.GetBytes(text));
+            hbBuffer.AddUtf8(text.ToUtf8Span());
             hbBuffer.GuessSegmentProperties();
             hbFont.Shape(hbBuffer);
 
@@ -2175,7 +2207,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             hbFont.SetScale(hbScale, hbScale);
 
             using var hbBuffer = new Buffer();
-            hbBuffer.AddUtf8(Encoding.UTF8.GetBytes(text));
+            hbBuffer.AddUtf8(text.ToUtf8Span());
             hbBuffer.GuessSegmentProperties();
             hbFont.Shape(hbBuffer);
 
@@ -2264,7 +2296,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var start = (bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) ? 3 : 0;
         // Look for <svg or <?xml within the first 512 bytes.
         var searchLen = Math.Min(bytes.Length - start, 512);
-        var text = Encoding.UTF8.GetString(bytes.Slice(start, searchLen));
+        var text = bytes.Slice(start, searchLen).FromUtf8Span();
         return text.Contains("<svg", StringComparison.OrdinalIgnoreCase) ||
                (text.Contains("<?xml", StringComparison.OrdinalIgnoreCase) &&
                 text.Contains("svg", StringComparison.OrdinalIgnoreCase));
@@ -2355,6 +2387,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             g,
             b);
         if (h > thickness)
+        {
             buffer.FillRect(x,
                 y,
                 thickness,
@@ -2362,6 +2395,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 r,
                 g,
                 b);
+        }
     }
 
     private static string SelectFontName(Run run)

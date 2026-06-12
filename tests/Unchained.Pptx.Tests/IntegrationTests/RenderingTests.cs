@@ -182,7 +182,7 @@ public sealed class RenderingTests : PptxTestBase
 
         image.Format.ShouldBe(RenderImageFormat.Jpeg);
         var bytes = image.Data.Span;
-        bytes[0].ShouldBe(JpegMarkers.MarkerPrefix); // JPEG SOI marker
-        bytes[1].ShouldBe(JpegMarkers.Soi);
+        bytes[0].ShouldBe(JpegConstants.MarkerPrefix); // JPEG SOI marker
+        bytes[1].ShouldBe(JpegConstants.Soi);
     }
 }

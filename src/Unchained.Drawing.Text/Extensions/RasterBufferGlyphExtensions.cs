@@ -75,9 +75,12 @@ internal static class RasterBufferGlyphExtensions
         if (NeedsDirectOffsets)
         {
             var faceRef = GetFaceRef(ftFace);
-            if (faceRef == IntPtr.Zero) return;
+            if (faceRef == IntPtr.Zero)
+                return;
+
             var glyphSlotPtr = Marshal.ReadIntPtr(faceRef, FaceGlyphOffset);
-            if (glyphSlotPtr == IntPtr.Zero) return;
+            if (glyphSlotPtr == IntPtr.Zero)
+                return;
 
             h = Marshal.ReadInt32(glyphSlotPtr, SlotBitmapRows);
             w = Marshal.ReadInt32(glyphSlotPtr, SlotBitmapWidth);

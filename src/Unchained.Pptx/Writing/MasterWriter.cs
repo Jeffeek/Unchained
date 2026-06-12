@@ -51,11 +51,8 @@ internal static class MasterWriter
                     new XAttribute(DmlNames.AttributeWidth, 0),
                     new XAttribute(DmlNames.AttributeHeight, 0)))));
 
-        foreach (var shape in master.Shapes)
-        {
-            var el = ShapeWriter.Write(shape);
-            if (el != null) spTree.Add(el);
-        }
+        foreach (var el in master.Shapes.Select(static shape => ShapeWriter.Write(shape)).OfType<XElement>())
+            spTree.Add(el);
 
         cSld.Add(spTree);
         sldMaster.Add(cSld);

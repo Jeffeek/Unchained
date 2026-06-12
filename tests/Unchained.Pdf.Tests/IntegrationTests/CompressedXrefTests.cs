@@ -22,7 +22,7 @@ public sealed class CompressedXrefTests : IDisposable
     [Fact]
     public async Task Load_CompressedXref_SinglePage_ParsesCorrectly()
     {
-        var bytes = PdfFixtures.WithCompressedXref(1);
+        var bytes = PdfFixtures.WithCompressedXref();
         await using var doc = await _processor.LoadAsync(new MemoryStream(bytes), TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
@@ -43,7 +43,7 @@ public sealed class CompressedXrefTests : IDisposable
     [Fact]
     public async Task Load_CompressedXref_Pages_DimensionsCorrect()
     {
-        var bytes = PdfFixtures.WithCompressedXref(1);
+        var bytes = PdfFixtures.WithCompressedXref();
         await using var doc = await _processor.LoadAsync(new MemoryStream(bytes), TestContext.Current.CancellationToken);
         doc.Pages[1].Width.ShouldBe(595.0, 0.1);
         doc.Pages[1].Height.ShouldBe(842.0, 0.1);

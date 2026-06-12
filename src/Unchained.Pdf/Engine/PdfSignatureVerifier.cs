@@ -166,12 +166,10 @@ internal static class PdfSignatureVerifier
     private static string ExtractCN(X509Certificate2 cert)
     {
         var dn = cert.SubjectName.Name;
-        foreach (var part in dn.Split(','))
-        {
-            var trimmed = part.Trim();
-            if (trimmed.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
-                return trimmed[3..].Trim();
-        }
+        foreach (var trimmed in dn.Split(',')
+                     .Select(static part => part.Trim())
+                     .Where(static trimmed => trimmed.StartsWith("CN=", StringComparison.OrdinalIgnoreCase)))
+            return trimmed[3..].Trim();
 
         return cert.GetNameInfo(X509NameType.SimpleName, false);
     }

@@ -223,15 +223,15 @@ internal static class TrueTypeSubsetter
             var entry = 12 + (i * 16);
             WriteTag(result, entry, tag);
             WriteU32(result,
-            entry + 4,
-            ComputeCheckSum(result,
-                tag,
-                orig,
-                tables,
-                newOffsets,
-                newLengths,
-                newGlyf,
-                newLoca));
+                entry + 4,
+                ComputeCheckSum(result,
+                    tag,
+                    orig,
+                    tables,
+                    newOffsets,
+                    newLengths,
+                    newGlyf,
+                    newLoca));
             WriteU32(result, entry + 8, (uint)newOffsets[tag]);
             WriteU32(result, entry + 12, (uint)newLengths[tag]);
         }

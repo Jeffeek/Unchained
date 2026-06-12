@@ -92,7 +92,7 @@ internal static class MeshShadingDecoder
         int bpf,
         int bpc,
         int bpComp,
-        double[] decode,
+        IReadOnlyList<double> decode,
         int nComp,
         PdfFunction? fn,
         List<ShadingTriangle> tris
@@ -112,7 +112,9 @@ internal static class MeshShadingDecoder
             {
                 case 0:
                     // Start of a new triangle: read two more vertices.
-                    if (!r.HasBits(2 * (bpf + (2 * bpc) + (nComp * bpComp)))) return;
+                    if (!r.HasBits(2 * (bpf + (2 * bpc) + (nComp * bpComp))))
+                        return;
+
                     r.Read(bpf);
                     var v1 = ReadVertex(r,
                         bpc,
@@ -166,14 +168,16 @@ internal static class MeshShadingDecoder
         BitCursor r,
         int bpc,
         int bpComp,
-        double[] decode,
+        IReadOnlyList<double> decode,
         int nComp,
         PdfFunction? fn,
         int vpr,
-        List<ShadingTriangle> tris
+        ICollection<ShadingTriangle> tris
     )
     {
-        if (vpr < 2) return;
+        if (vpr < 2)
+            return;
+
         var rows = new List<Vertex[]>();
         while (true)
         {
@@ -195,7 +199,9 @@ internal static class MeshShadingDecoder
                     fn);
             }
 
-            if (!ok) break;
+            if (!ok)
+                break;
+
             rows.Add(row);
         }
 
@@ -217,11 +223,11 @@ internal static class MeshShadingDecoder
         int bpf,
         int bpc,
         int bpComp,
-        double[] decode,
+        IReadOnlyList<double> decode,
         int nComp,
         PdfFunction? fn,
         int controlPoints,
-        List<ShadingTriangle> tris
+        ICollection<ShadingTriangle> tris
     )
     {
         // Track the previous patch's corners/colours for flag-based edge sharing (we read
@@ -235,14 +241,18 @@ internal static class MeshShadingDecoder
             var pts = new (double X, double Y)[newPoints];
             for (var i = 0; i < newPoints; i++)
             {
-                if (!r.HasBits(2 * bpc)) return;
+                if (!r.HasBits(2 * bpc))
+                    return;
+
                 pts[i] = ReadPoint(r, bpc, decode);
             }
 
             var cols = new (byte R, byte G, byte B)[newColors];
             for (var i = 0; i < newColors; i++)
             {
-                if (!r.HasBits(nComp * bpComp)) return;
+                if (!r.HasBits(nComp * bpComp))
+                    return;
+
                 cols[i] = ReadColor(r, bpComp, decode, nComp, fn);
             }
 
@@ -270,7 +280,7 @@ internal static class MeshShadingDecoder
         BitCursor r,
         int bpc,
         int bpComp,
-        double[] decode,
+        IReadOnlyList<double> decode,
         int nComp,
         PdfFunction? fn
     )
@@ -280,20 +290,21 @@ internal static class MeshShadingDecoder
         return new Vertex(x, y, cr, cg, cb);
     }
 
-    private static (double X, double Y) ReadPoint(BitCursor r, int bpc, double[] decode)
+    private static (double X, double Y) ReadPoint(BitCursor r, int bpc, IReadOnlyList<double> decode)
     {
         var max = (1UL << bpc) - 1;
         var xr = r.Read(bpc) / (double)max;
         var yr = r.Read(bpc) / (double)max;
         var x = decode[0] + (xr * (decode[1] - decode[0]));
         var y = decode[2] + (yr * (decode[3] - decode[2]));
+
         return (x, y);
     }
 
     private static (byte R, byte G, byte B) ReadColor(
         BitCursor r,
         int bpComp,
-        double[] decode,
+        IReadOnlyList<double> decode,
         int nComp,
         PdfFunction? fn
     )
@@ -313,16 +324,17 @@ internal static class MeshShadingDecoder
         return ComponentsToRgb(comps);
     }
 
-    private static (byte R, byte G, byte B) ComponentsToRgb(double[] c)
+    private static (byte R, byte G, byte B) ComponentsToRgb(IReadOnlyList<double> c)
     {
-        byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
-        return c.Length switch
+        return c.Count switch
         {
             >= 4 => (B255((1 - c[0]) * (1 - c[3])), B255((1 - c[1]) * (1 - c[3])), B255((1 - c[2]) * (1 - c[3]))),
             3 => (B255(c[0]), B255(c[1]), B255(c[2])),
             1 => (B255(c[0]), B255(c[0]), B255(c[0])),
             _ => (128, 128, 128)
         };
+
+        static byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
     }
 
     private static ShadingTriangle Tri(Vertex a, Vertex b, Vertex c) =>
@@ -343,7 +355,7 @@ internal static class MeshShadingDecoder
             c.B);
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj is PdfArray a
-        ? a.Elements.Select(e => e switch { PdfInteger i => i.Value, PdfReal r => r.Value, _ => 0.0 }).ToArray()
+        ? a.Elements.Select(static e => e switch { PdfInteger i => i.Value, PdfReal r => r.Value, _ => 0.0 }).ToArray()
         : null;
 
     // ── Vertex / point / colour readers ─────────────────────────────────────────

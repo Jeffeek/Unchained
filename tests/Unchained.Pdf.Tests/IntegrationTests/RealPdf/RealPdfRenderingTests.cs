@@ -102,7 +102,7 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithImages);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(150), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(), TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(5_000,
             "Expected a substantial PNG for a page containing images.");
     }

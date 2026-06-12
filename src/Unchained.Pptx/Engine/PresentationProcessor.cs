@@ -210,13 +210,14 @@ public sealed class PresentationProcessor : IDisposable
     ///     Exports <paramref name="document" /> as a single self-contained HTML5 player and returns the
     ///     document bytes (UTF-8).
     /// </summary>
-    public Task<byte[]> ExportHtmlPlayerAsync(
+    public static Task<byte[]> ExportHtmlPlayerAsync(
         PresentationDocument document,
         HtmlPlayerSaveOptions? options = null,
         CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
+
         var opts = options ?? HtmlPlayerSaveOptions.Default;
         return Task.Run(
             () => PptxToHtmlPlayerWriter.Write(document, opts),

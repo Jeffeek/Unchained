@@ -73,11 +73,8 @@ public sealed class PageOrganizer : IPageOrganizer
         var adapter = MutationHelper.Cast(nameof(document), document);
         var pageCount = adapter.Core.PageCount;
         var targets = new HashSet<int>(pageNumbers);
-        foreach (var n in targets)
-        {
-            if (n < 1 || n > pageCount)
-                throw new ArgumentOutOfRangeException(nameof(pageNumbers), n, $"Page number must be between 1 and {pageCount}.");
-        }
+        foreach (var n in targets.Where(n => n < 1 || n > pageCount))
+            throw new ArgumentOutOfRangeException(nameof(pageNumbers), n, $"Page number must be between 1 and {pageCount}.");
 
         var leaves = CollectLeaves(adapter.Core);
         var ordered = new List<(int ObjNum, PdfDictionary Dict)>(leaves.Count);
@@ -110,11 +107,9 @@ public sealed class PageOrganizer : IPageOrganizer
         var adapter = MutationHelper.Cast(nameof(document), document);
         var pageCount = adapter.Core.PageCount;
         var remove = new HashSet<int>(pageNumbers);
-        foreach (var n in remove)
-        {
-            if (n < 1 || n > pageCount)
-                throw new ArgumentOutOfRangeException(nameof(pageNumbers), n, $"Page number must be between 1 and {pageCount}.");
-        }
+
+        foreach (var n in remove.Where(n => n < 1 || n > pageCount))
+            throw new ArgumentOutOfRangeException(nameof(pageNumbers), n, $"Page number must be between 1 and {pageCount}.");
 
         if (remove.Count >= pageCount)
             throw new ArgumentException("Cannot delete all pages; at least one page must remain.", nameof(pageNumbers));
@@ -130,8 +125,7 @@ public sealed class PageOrganizer : IPageOrganizer
     {
         var adapter = MutationHelper.Cast(nameof(document), document);
         var pageCount = adapter.Core.PageCount;
-        if (newOrder.Count != pageCount || newOrder.Distinct().Count() != pageCount
-                                        || newOrder.Any(n => n < 1 || n > pageCount))
+        if (newOrder.Count != pageCount || newOrder.Distinct().Count() != pageCount || newOrder.Any(n => n < 1 || n > pageCount))
         {
             throw new ArgumentException(
                 $"newOrder must be a permutation of 1..{pageCount}.",
@@ -165,7 +159,7 @@ public sealed class PageOrganizer : IPageOrganizer
         var srcObjects = srcAdapter.Core.CollectObjects();
         var srcLeafOrder = OrderedLeafObjectNumbers(srcAdapter.Core);
         var remapped = srcObjects
-            .Where(o => !IsStructural(o))
+            .Where(static o => !IsStructural(o))
             .Select(o => CopyStreamData((PdfIndirectObject)PdfObjectRemapper.Remap(o, destMax)))
             .ToList();
 
@@ -188,7 +182,7 @@ public sealed class PageOrganizer : IPageOrganizer
 
         // Carry the remapped, non-leaf source objects into the destination object set.
         var extraSourceObjects = remapped
-            .Where(o => !srcInserted.Any(s => s.ObjNum == o.ObjectNumber))
+            .Where(o => srcInserted.All(s => s.ObjNum != o.ObjectNumber))
             .ToList();
 
         RebuildFlatTree(adapter, ordered, extraSourceObjects);
@@ -202,6 +196,7 @@ public sealed class PageOrganizer : IPageOrganizer
         var pageCount = adapter.Core.PageCount;
         if (ranges.Count == 0)
             throw new ArgumentException("At least one page range is required.", nameof(ranges));
+
         foreach (var (start, end) in ranges)
         {
             if (start < 1 || end > pageCount || start > end)
@@ -219,9 +214,9 @@ public sealed class PageOrganizer : IPageOrganizer
     }
 
     // Builds a new self-contained document from the given 1-based page numbers, in order.
-    private static IPdfDocument BuildSubsetDocument(PdfDocumentCore core, IReadOnlyList<int> pages)
+    private static IPdfDocument BuildSubsetDocument(PdfDocumentCore core, IEnumerable<int> pages)
     {
-        var allObjects = core.CollectObjects().Where(o => !IsStructural(o)).ToList();
+        var allObjects = core.CollectObjects().Where(static o => !IsStructural(o)).ToList();
         var baked = BakeLeaves(core);                   // objNum → baked leaf dict
         var leafOrder = OrderedLeafObjectNumbers(core); // page order → objNum
         var keptLeafNums = pages.Select(p => leafOrder[p - 1]).ToList();
@@ -247,12 +242,14 @@ public sealed class PageOrganizer : IPageOrganizer
         var catalogNum = maxNum + 2;
         var pagesRef = new PdfIndirectReference(pagesRootNum, 0);
 
-        var orderedRefs = keptLeafNums.Select(n => (PdfObject)new PdfIndirectReference(n, 0)).ToArray();
+        var orderedRefs = keptLeafNums.Select(static PdfObject (n) => new PdfIndirectReference(n, 0)).ToArray();
 
         // Re-point each kept leaf's /Parent at the new root.
         for (var i = 0; i < objects.Count; i++)
         {
-            if (!keptLeafNums.Contains(objects[i].ObjectNumber)) continue;
+            if (!keptLeafNums.Contains(objects[i].ObjectNumber))
+                continue;
+
             var d = (PdfDictionary)objects[i].Value;
             objects[i] = new PdfIndirectObject(objects[i].ObjectNumber,
                 objects[i].Generation,
@@ -292,7 +289,7 @@ public sealed class PageOrganizer : IPageOrganizer
     // flat root. extraObjects are additional objects to include (e.g. remapped source pages).
     private static void RebuildFlatTree(
         PdfDocumentAdapter adapter,
-        IReadOnlyList<(int ObjNum, PdfDictionary Dict)> ordered,
+        IReadOnlyCollection<(int ObjNum, PdfDictionary Dict)> ordered,
         IReadOnlyList<PdfIndirectObject>? extraObjects = null
     )
     {
@@ -302,24 +299,21 @@ public sealed class PageOrganizer : IPageOrganizer
                           ?? throw new PdfException("Trailer missing /Root.")).ObjectNumber;
         var pageTreeNums = PageTreeNodeNumbers(adapter.Core);
 
-        var orderedNums = new HashSet<int>(ordered.Select(p => p.ObjNum));
+        var orderedNums = new HashSet<int>(ordered.Select(static p => p.ObjNum));
         var combinedMax = existing.Max(static o => o.ObjectNumber);
         if (extraObjects is { Count: > 0 })
             combinedMax = Math.Max(combinedMax, extraObjects.Max(static o => o.ObjectNumber));
         var pagesRootNum = combinedMax + 1;
         var pagesRef = new PdfIndirectReference(pagesRootNum, 0);
 
-        var objects = new List<PdfIndirectObject>();
+        var objects = (from o in existing
+                       where !pageTreeNums.Contains(o.ObjectNumber)
+                       where !orderedNums.Contains(o.ObjectNumber)
+                       where o.ObjectNumber != catalogNum
+                       select o).ToList();
 
         // Keep all existing objects that are not page-tree nodes, not the ordered leaves
         // (re-emitted below), and not the catalog (re-emitted below).
-        foreach (var o in existing)
-        {
-            if (pageTreeNums.Contains(o.ObjectNumber)) continue;
-            if (orderedNums.Contains(o.ObjectNumber)) continue;
-            if (o.ObjectNumber == catalogNum) continue;
-            objects.Add(o);
-        }
 
         if (extraObjects is not null)
             objects.AddRange(extraObjects.Where(o => !orderedNums.Contains(o.ObjectNumber)));
@@ -334,7 +328,7 @@ public sealed class PageOrganizer : IPageOrganizer
             new PdfDictionary(new Dictionary<string, PdfObject>
             {
                 [PdfName.Type.Value] = PdfName.Pages,
-                [PdfName.Kids.Value] = new PdfArray(ordered.Select(p => (PdfObject)new PdfIndirectReference(p.ObjNum, 0)).ToArray()),
+                [PdfName.Kids.Value] = new PdfArray(ordered.Select(static PdfObject (p) => new PdfIndirectReference(p.ObjNum, 0)).ToArray()),
                 [PdfName.Count.Value] = new PdfInteger(ordered.Count)
             })));
 
@@ -368,20 +362,20 @@ public sealed class PageOrganizer : IPageOrganizer
         var result = new List<int>();
         var pagesRef = core.Catalog[PdfName.Pages] as PdfIndirectReference
                        ?? throw new PdfException("Catalog missing /Pages reference.");
-        WalkTree(core, pagesRef, result, new HashSet<int>());
+        WalkTree(core, pagesRef, result, (HashSet<int>)[]);
         return result;
     }
 
     private static void WalkTree(
         PdfDocumentCore core,
         PdfIndirectReference nodeRef,
-        List<int> leaves,
-        HashSet<int> seen
+        ICollection<int> leaves,
+        ISet<int> seen
     )
     {
         if (!seen.Add(nodeRef.ObjectNumber)) return; // cycle guard
-        var node = core.ResolveIndirect(nodeRef.ObjectNumber).Value as PdfDictionary;
-        if (node is null) return;
+        if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node) return;
+
         var type = node.GetName(PdfName.Type.Value);
         if (type == "Page")
         {
@@ -390,6 +384,7 @@ public sealed class PageOrganizer : IPageOrganizer
         }
 
         if (node.Get<PdfArray>(PdfName.Kids) is not { } kids) return;
+
         foreach (var kid in kids.Elements)
         {
             if (kid is PdfIndirectReference kr)
@@ -404,7 +399,7 @@ public sealed class PageOrganizer : IPageOrganizer
         var result = new Dictionary<int, PdfDictionary>();
         var pagesRef = core.Catalog[PdfName.Pages] as PdfIndirectReference
                        ?? throw new PdfException("Catalog missing /Pages reference.");
-        BakeWalk(core, pagesRef, new Dictionary<string, PdfObject>(), result, new HashSet<int>());
+        BakeWalk(core, pagesRef, new Dictionary<string, PdfObject>(), result, (HashSet<int>)[]);
         return result;
     }
 
@@ -412,8 +407,8 @@ public sealed class PageOrganizer : IPageOrganizer
         PdfDocumentCore core,
         PdfIndirectReference nodeRef,
         IReadOnlyDictionary<string, PdfObject> inherited,
-        Dictionary<int, PdfDictionary> output,
-        HashSet<int> seen
+        IDictionary<int, PdfDictionary> output,
+        ISet<int> seen
     )
     {
         if (!seen.Add(nodeRef.ObjectNumber)) return;
@@ -441,6 +436,7 @@ public sealed class PageOrganizer : IPageOrganizer
         }
 
         if (node.Get<PdfArray>(PdfName.Kids) is not { } kids) return;
+
         foreach (var kid in kids.Elements)
         {
             if (kid is PdfIndirectReference kr)
@@ -454,22 +450,28 @@ public sealed class PageOrganizer : IPageOrganizer
         var result = new HashSet<int>();
         var pagesRef = core.Catalog[PdfName.Pages] as PdfIndirectReference
                        ?? throw new PdfException("Catalog missing /Pages reference.");
-        CollectPagesNodes(core, pagesRef, result, new HashSet<int>());
+        CollectPagesNodes(core, pagesRef, result, (HashSet<int>)[]);
         return result;
     }
 
     private static void CollectPagesNodes(
         PdfDocumentCore core,
         PdfIndirectReference nodeRef,
-        HashSet<int> nodes,
-        HashSet<int> seen
+        ISet<int> nodes,
+        ISet<int> seen
     )
     {
-        if (!seen.Add(nodeRef.ObjectNumber)) return;
-        if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node) return;
-        if (node.GetName(PdfName.Type.Value) == "Page") return;
+        if (!seen.Add(nodeRef.ObjectNumber))
+            return;
+        if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node)
+            return;
+        if (node.GetName(PdfName.Type.Value) == "Page")
+            return;
+
         nodes.Add(nodeRef.ObjectNumber);
-        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids) return;
+        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
+            return;
+
         foreach (var kid in kids.Elements)
         {
             if (kid is PdfIndirectReference kr)

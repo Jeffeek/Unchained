@@ -53,7 +53,9 @@ internal sealed class PdfFunction
     /// </summary>
     internal static PdfFunction? Build(PdfObject? obj, PdfDocumentCore core, int depth = 0)
     {
-        if (depth > 16) return null;
+        if (depth > 16)
+            return null;
+
         if (obj is PdfIndirectReference r)
             obj = core.ResolveIndirect(r.ObjectNumber).Value;
 
@@ -107,6 +109,7 @@ internal sealed class PdfFunction
                 var c0 = ReadDoubles(dict["C0"]);
                 var c1 = ReadDoubles(dict["C1"]);
                 if (c0 is not null && c1 is not null)
+                {
                     return new PdfFunction(2,
                         domain,
                         c0,
@@ -115,6 +118,8 @@ internal sealed class PdfFunction
                         [],
                         [],
                         []);
+                }
+
                 return null;
             }
         }
@@ -167,7 +172,7 @@ internal sealed class PdfFunction
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj switch
     {
-        PdfArray a => a.Elements.Select(e => e switch
+        PdfArray a => a.Elements.Select(static e => e switch
         {
             PdfInteger i => i.Value,
             PdfReal r => r.Value,

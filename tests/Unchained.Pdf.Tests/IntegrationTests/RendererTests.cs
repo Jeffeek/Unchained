@@ -44,7 +44,7 @@ public sealed class RendererTests : RendererTestBase
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         var page = doc.Pages[1];
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(150), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(), TestContext.Current.CancellationToken);
         // Expected pixel width ≈ pageWidthPt * 150 / 72. The renderer truncates the
         // point×scale product to match common rasterizers (e.g. Pdfium); allow ±1 px so
         // the test honours the "approximates" contract regardless of the rounding mode.
@@ -59,7 +59,7 @@ public sealed class RendererTests : RendererTestBase
         SkipIfNoFreeType();
 
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
-        var png150 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(150), TestContext.Current.CancellationToken);
+        var png150 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(), TestContext.Current.CancellationToken);
         var png300 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(300), TestContext.Current.CancellationToken);
         var w150 = PdfTestConstants.PngWidth(png150);
         var w300 = PdfTestConstants.PngWidth(png300);
@@ -137,9 +137,9 @@ public sealed class RendererTests : RendererTestBase
 
         // JPEG starts with FF D8 FF
         jpeg.Length.ShouldBeGreaterThan(3);
-        jpeg[0].ShouldBe(JpegMarkers.MarkerPrefix);
-        jpeg[1].ShouldBe(JpegMarkers.Soi);
-        jpeg[2].ShouldBe(JpegMarkers.MarkerPrefix);
+        jpeg[0].ShouldBe(JpegConstants.MarkerPrefix);
+        jpeg[1].ShouldBe(JpegConstants.Soi);
+        jpeg[2].ShouldBe(JpegConstants.MarkerPrefix);
     }
 
     [Fact]

@@ -138,6 +138,8 @@
                 case ExportFormat.HtmlPerSlide:
                     await ExportHtmlZip();
                 break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             _phase = Phase.Done;
@@ -180,8 +182,8 @@
             ShowSlideCounter = _showCounter,
             Title = BaseName
         };
-        var bytes = await Processor.ExportHtmlPlayerAsync(Document, options);
-        await Exporter.TriggerDownloadAsync(bytes, $"{BaseName}-player.html", "text/html");
+        var bytes = await PresentationProcessor.ExportHtmlPlayerAsync(Document, options);
+        await Exporter.TriggerDownloadAsync(bytes.ToArray(), $"{BaseName}-player.html", "text/html");
     }
 
     private async Task ExportOdp()
