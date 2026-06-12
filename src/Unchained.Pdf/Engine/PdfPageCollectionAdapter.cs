@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Text;
+using Unchained.Drawing;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Content;
 using Unchained.Pdf.Core;
@@ -1137,16 +1139,19 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     {
         return (cs, c.Count) switch
         {
-            ("DeviceCMYK", >= 4) => (
-                B255((1 - c[0]) * (1 - c[3])),
-                B255((1 - c[1]) * (1 - c[3])),
-                B255((1 - c[2]) * (1 - c[3]))),
+            ("DeviceCMYK", >= 4) => CmykToBytes(c[0], c[1], c[2], c[3]),
             (_, >= 3) => (B255(c[0]), B255(c[1]), B255(c[2])),
             (_, 1) => (B255(c[0]), B255(c[0]), B255(c[0])),
             _ => (128, 128, 128)
         };
 
-        static byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
+        static byte B255(double v) => ColorMath.ToByteRounded(v);
+
+        static (byte R, byte G, byte B) CmykToBytes(double c, double m, double y, double k)
+        {
+            var (r, g, b) = ColorMath.CmykToRgb(c, m, y, k);
+            return (B255(r), B255(g), B255(b));
+        }
     }
 
     private static (bool Start, bool End) ReadExtend(PdfObject? obj) =>
@@ -1684,9 +1689,10 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                         var m = lut[off + 1] / 255.0;
                         var y = lut[off + 2] / 255.0;
                         var k = lut[off + 3] / 255.0;
-                        rr = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
-                        gg = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
-                        bb = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
+                        var (cr, cg, cb) = ColorMath.CmykToRgb(c, m, y, k);
+                        rr = (byte)Math.Clamp(cr * 255, 0, 255);
+                        gg = (byte)Math.Clamp(cg * 255, 0, 255);
+                        bb = (byte)Math.Clamp(cb * 255, 0, 255);
                         break;
                     }
                 }
@@ -1826,9 +1832,10 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                     var m = ApplyDecode(span[(i * 4) + 1], decode, 1) / 255.0;
                     var y = ApplyDecode(span[(i * 4) + 2], decode, 2) / 255.0;
                     var k = ApplyDecode(span[(i * 4) + 3], decode, 3) / 255.0;
-                    rgb[j] = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
-                    rgb[j + 1] = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
-                    rgb[j + 2] = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
+                    var (cr, cg, cb) = ColorMath.CmykToRgb(c, m, y, k);
+                    rgb[j] = (byte)Math.Clamp(cr * 255, 0, 255);
+                    rgb[j + 1] = (byte)Math.Clamp(cg * 255, 0, 255);
+                    rgb[j + 2] = (byte)Math.Clamp(cb * 255, 0, 255);
                 }
 
                 return rgb;
@@ -1851,7 +1858,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                     var byteIdx = (row * rowBytes) + (col >> 3);
                     if (byteIdx >= span.Length) break;
 
-                    var bit = (span[byteIdx] >> (7 - (col & 7))) & 1;
+                    var bit = span[byteIdx].BitMsbFirst(col);
                     if (invertBits) bit = 1 - bit;
                     var val = (byte)(bit == 0 ? 0 : 255); // 0=black, 1=white (DeviceGray)
                     var j = ((row * w) + col) * 3;

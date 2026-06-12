@@ -172,19 +172,9 @@ internal sealed class PdfFunction
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj switch
     {
-        PdfArray a => a.Elements.Select(static e => e switch
-        {
-            PdfInteger i => i.Value,
-            PdfReal r => r.Value,
-            _ => 0.0
-        }).ToArray(),
+        PdfArray a => a.Elements.Select(static e => e.ToDouble()).ToArray(),
         _ => null
     };
 
-    private static double? ReadDouble(PdfObject? obj) => obj switch
-    {
-        PdfInteger i => i.Value,
-        PdfReal r => r.Value,
-        _ => null
-    };
+    private static double? ReadDouble(PdfObject? obj) => obj.ToDoubleOrNull();
 }

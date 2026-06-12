@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -263,7 +264,7 @@ public sealed class Redactor : IRedactor
         else
         {
             sb.Append('<');
-            foreach (var b in bytes) sb.Append(b.ToString("X2", CultureInfo.InvariantCulture));
+            foreach (var b in bytes) sb.Append(b.ToHex2());
             sb.Append('>');
         }
     }
@@ -292,10 +293,5 @@ public sealed class Redactor : IRedactor
     private static (double X, double Y) Apply(IReadOnlyList<double> m, double x, double y) =>
         ((m[0] * x) + (m[2] * y) + m[4], (m[1] * x) + (m[3] * y) + m[5]);
 
-    private static double Num(PdfObject o) => o switch
-    {
-        PdfInteger i => i.Value,
-        PdfReal r => r.Value,
-        _ => 0
-    };
+    private static double Num(PdfObject o) => o.ToDouble();
 }

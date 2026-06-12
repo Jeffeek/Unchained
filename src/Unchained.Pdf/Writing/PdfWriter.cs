@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Globalization;
 using System.Text;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 
 namespace Unchained.Pdf.Writing;
@@ -131,7 +132,7 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
         {
             WriteBytes("<"u8);
             foreach (var b in str.Bytes.Span)
-                WriteAscii(b.ToString("X2"));
+                WriteAscii(b.ToHex2());
             WriteBytes(">"u8);
         }
         else

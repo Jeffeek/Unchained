@@ -480,12 +480,7 @@ internal static class TextExtractor
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
-    private static double ReadNumber(PdfObject obj) => obj switch
-    {
-        PdfInteger i => i.Value,
-        PdfReal r => r.Value,
-        _ => 0
-    };
+    private static double ReadNumber(PdfObject obj) => obj.ToDouble();
 
     // Row-major [a b c d e f] affine matrix multiply: result = m1 × m2 (apply m1 first).
     private static double[] MultiplyMatrix(IReadOnlyList<double> m1, IReadOnlyList<double> m2) =>

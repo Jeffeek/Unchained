@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
@@ -40,12 +42,12 @@ internal static class TrueTypeMetrics
         }
     }
 
-    private static FontMetrics Parse(IReadOnlyList<byte> b)
+    private static FontMetrics Parse(byte[] b)
     {
         // TrueType/OpenType offset table starts at byte 0.
         // Bytes 0–3: sfVersion (0x00010000 for TrueType, 'OTTO' for CFF).
         // Bytes 4–5: numTables.
-        if (b.Count < 12) return Default();
+        if (b.Length < 12) return Default();
 
         var numTables = ReadU16(b, 4);
         // Table directory entries start at offset 12; each is 16 bytes.
@@ -54,7 +56,7 @@ internal static class TrueTypeMetrics
         for (var i = 0; i < numTables; i++)
         {
             var entry = 12 + (i * 16);
-            if (entry + 16 > b.Count) break;
+            if (entry + 16 > b.Length) break;
 
             var tag = ReadTag(b, entry);
             var offset = (int)ReadU32(b, entry + 8);
@@ -67,32 +69,32 @@ internal static class TrueTypeMetrics
         }
 
         // head table: units per em (at offset 18).
-        var unitsPerEm = headOff is { } ho && ho + 54 <= b.Count
+        var unitsPerEm = headOff is { } ho && ho + 54 <= b.Length
             ? ReadU16(b, ho + 18)
             : FontConstants.NormalizedUnitsPerEm;
         if (unitsPerEm == 0) unitsPerEm = FontConstants.NormalizedUnitsPerEm;
         var scale = FontConstants.NormalizedUnitsPerEmDouble / unitsPerEm;
 
         // head table: font bounding box (at offsets 36–43, signed shorts).
-        var xMin = headOff is { } ho2 && ho2 + 44 <= b.Count ? (int)Scale(ReadS16(b, ho2 + 36), scale) : -166;
-        var yMin = headOff is { } ho3 && ho3 + 44 <= b.Count ? (int)Scale(ReadS16(b, ho3 + 38), scale) : -225;
-        var xMax = headOff is { } ho4 && ho4 + 44 <= b.Count ? (int)Scale(ReadS16(b, ho4 + 40), scale) : FontConstants.NormalizedUnitsPerEm;
-        var yMax = headOff is { } ho5 && ho5 + 44 <= b.Count ? (int)Scale(ReadS16(b, ho5 + 42), scale) : 931;
+        var xMin = headOff is { } ho2 && ho2 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho2 + 36), scale) : -166;
+        var yMin = headOff is { } ho3 && ho3 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho3 + 38), scale) : -225;
+        var xMax = headOff is { } ho4 && ho4 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho4 + 40), scale) : FontConstants.NormalizedUnitsPerEm;
+        var yMax = headOff is { } ho5 && ho5 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho5 + 42), scale) : 931;
 
         // OS/2 table (preferred source for typographic metrics):
         // sTypoAscender at offset 68, sTypoDescender at 70, sCapHeight at 88 (v2+).
         int ascent, descent, capHeight;
-        if (os2Off is { } oo && oo + 90 <= b.Count)
+        if (os2Off is { } oo && oo + 90 <= b.Length)
         {
             ascent = (int)Scale(ReadS16(b, oo + 68), scale);
             descent = (int)Scale(ReadS16(b, oo + 70), scale);
             // sCapHeight is at OS/2 v2+ (offset 88); version at offset 0.
             var os2Version = ReadU16(b, oo);
-            capHeight = os2Version >= 2 && oo + 90 <= b.Count
+            capHeight = os2Version >= 2 && oo + 90 <= b.Length
                 ? (int)Scale(ReadS16(b, oo + 88), scale)
                 : (int)(ascent * FontConstants.CapHeightAscentRatio);
         }
-        else if (hheaOff is { } hh && hh + 36 <= b.Count)
+        else if (hheaOff is { } hh && hh + 36 <= b.Length)
         {
             // Fallback to hhea ascender/descender.
             ascent = (int)Scale(ReadS16(b, hh + 4), scale);
@@ -107,7 +109,7 @@ internal static class TrueTypeMetrics
         var stemV = 80;
 
         // ReSharper disable once InvertIf
-        if (os2Off is { } oo2 && oo2 + 10 <= b.Count)
+        if (os2Off is { } oo2 && oo2 + 10 <= b.Length)
         {
             var weightClass = ReadU16(b, oo2 + 4);
             if (weightClass > 0)
@@ -126,17 +128,17 @@ internal static class TrueTypeMetrics
 
     private static FontMetrics Default() => HelveticaFallback;
 
-    private static string ReadTag(IReadOnlyList<byte> b, int o) =>
+    private static string ReadTag(byte[] b, int o) =>
         new([.. new[] { b[o], b[o + 1], b[o + 2], b[o + 3] }.Select(static c => (char)c)]);
 
-    private static ushort ReadU16(IReadOnlyList<byte> b, int o) =>
-        (ushort)((b[o] << 8) | b[o + 1]);
+    private static ushort ReadU16(byte[] b, int o) =>
+        BinaryPrimitives.ReadUInt16BigEndian(b.AsSpan(o));
 
-    private static uint ReadU32(IReadOnlyList<byte> b, int o) =>
-        ((uint)b[o] << 24) | ((uint)b[o + 1] << 16) | ((uint)b[o + 2] << 8) | b[o + 3];
+    private static uint ReadU32(byte[] b, int o) =>
+        BinaryPrimitives.ReadUInt32BigEndian(b.AsSpan(o));
 
-    private static short ReadS16(IReadOnlyList<byte> b, int o) =>
-        (short)((b[o] << 8) | b[o + 1]);
+    private static short ReadS16(byte[] b, int o) =>
+        BinaryPrimitives.ReadInt16BigEndian(b.AsSpan(o));
 
     private static double Scale(int value, double scale) =>
         Math.Round(value * scale);

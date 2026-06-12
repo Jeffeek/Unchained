@@ -1,4 +1,5 @@
 using System.Text;
+using Unchained.Drawing;
 using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
@@ -366,9 +367,10 @@ internal static class ContentStreamParser
                     var m = src[(i * 4) + 1] / 255.0;
                     var y = src[(i * 4) + 2] / 255.0;
                     var k = src[(i * 4) + 3] / 255.0;
-                    rgb[j] = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
-                    rgb[j + 1] = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
-                    rgb[j + 2] = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
+                    var (cr, cg, cb) = ColorMath.CmykToRgb(c, m, y, k);
+                    rgb[j] = (byte)Math.Clamp(cr * 255, 0, 255);
+                    rgb[j + 1] = (byte)Math.Clamp(cg * 255, 0, 255);
+                    rgb[j + 2] = (byte)Math.Clamp(cb * 255, 0, 255);
                 }
 
                 return rgb;
@@ -388,7 +390,7 @@ internal static class ContentStreamParser
                     if (byteIdx >= src.Length)
                         break;
 
-                    var bit = (src[byteIdx] >> (7 - (col & 7))) & 1;
+                    var bit = src[byteIdx].BitMsbFirst(col);
                     // bit=0 → white (paper), bit=1 → black (ink)
                     var v = (byte)(bit == 0 ? 255 : 0);
                     var j = ((row * w) + col) * 3;

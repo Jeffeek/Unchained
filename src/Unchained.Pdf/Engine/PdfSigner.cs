@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -313,7 +314,7 @@ internal static class PdfSigner
         // contentsStart + 1 = first hex char
         var pos = contentsStart + 1;
 
-        foreach (var hex in signatureBytes.Select(static t => t.ToString("X2")))
+        foreach (var hex in signatureBytes.Select(static t => t.ToHex2()))
         {
             buf[pos++] = (byte)hex[0];
             buf[pos++] = (byte)hex[1];

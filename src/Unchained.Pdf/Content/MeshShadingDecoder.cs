@@ -1,3 +1,5 @@
+using Unchained.Drawing;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -328,13 +330,19 @@ internal static class MeshShadingDecoder
     {
         return c.Count switch
         {
-            >= 4 => (B255((1 - c[0]) * (1 - c[3])), B255((1 - c[1]) * (1 - c[3])), B255((1 - c[2]) * (1 - c[3]))),
+            >= 4 => CmykToBytes(c[0], c[1], c[2], c[3]),
             3 => (B255(c[0]), B255(c[1]), B255(c[2])),
             1 => (B255(c[0]), B255(c[0]), B255(c[0])),
             _ => (128, 128, 128)
         };
 
-        static byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
+        static byte B255(double v) => ColorMath.ToByteRounded(v);
+
+        static (byte R, byte G, byte B) CmykToBytes(double c, double m, double y, double k)
+        {
+            var (r, g, b) = ColorMath.CmykToRgb(c, m, y, k);
+            return (B255(r), B255(g), B255(b));
+        }
     }
 
     private static ShadingTriangle Tri(Vertex a, Vertex b, Vertex c) =>
@@ -355,7 +363,7 @@ internal static class MeshShadingDecoder
             c.B);
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj is PdfArray a
-        ? a.Elements.Select(static e => e switch { PdfInteger i => i.Value, PdfReal r => r.Value, _ => 0.0 }).ToArray()
+        ? a.Elements.Select(static e => e.ToDouble()).ToArray()
         : null;
 
     // ── Vertex / point / colour readers ─────────────────────────────────────────
@@ -380,7 +388,7 @@ internal static class MeshShadingDecoder
             for (var i = 0; i < count; i++)
             {
                 var byteIdx = _bit >> 3;
-                var bit = byteIdx < _data.Length ? (_data[byteIdx] >> (7 - (_bit & 7))) & 1 : 0;
+                var bit = byteIdx < _data.Length ? _data[byteIdx].BitMsbFirst(_bit) : 0;
                 v = (v << 1) | (uint)bit;
                 _bit++;
             }

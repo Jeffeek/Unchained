@@ -1,3 +1,4 @@
+using Unchained.Drawing;
 using Unchained.Pdf.Content;
 
 namespace Unchained.Pdf.Models;
@@ -76,7 +77,7 @@ internal sealed class ColorSpaceInfo
     /// </summary>
     public (byte R, byte G, byte B) ToRgb(double[] components, PdfFunction? overrideFn = null)
     {
-        static byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
+        static byte B255(double v) => ColorMath.ToByteRounded(v);
 
         switch (Kind)
         {
@@ -105,7 +106,8 @@ internal sealed class ColorSpaceInfo
                 var m = components[1];
                 var y = components[2];
                 var k = components[3];
-                return (B255((1 - c) * (1 - k)), B255((1 - m) * (1 - k)), B255((1 - y) * (1 - k)));
+                var (r, g, b) = ColorMath.CmykToRgb(c, m, y, k);
+                return (B255(r), B255(g), B255(b));
             }
 
             case "ICCBased":

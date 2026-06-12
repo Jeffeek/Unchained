@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
@@ -268,8 +270,8 @@ internal static class TrueTypeSubsetter
     private static uint ComputeCheckSum(
         string tag,
         IReadOnlyDictionary<string, (uint CheckSum, int Offset, int Length)> tables,
-        IReadOnlyList<byte> newGlyf,
-        IReadOnlyList<byte> newLoca
+        byte[] newGlyf,
+        byte[] newLoca
     ) =>
         tag switch
         {
@@ -279,11 +281,11 @@ internal static class TrueTypeSubsetter
             _ => tables[tag].CheckSum
         };
 
-    private static uint TableCheckSum(IReadOnlyList<byte> data)
+    private static uint TableCheckSum(byte[] data)
     {
         uint sum = 0;
         var i = 0;
-        while (i + 3 < data.Count)
+        while (i + 3 < data.Length)
         {
             sum += ((uint)data[i] << 24) | ((uint)data[i + 1] << 16) |
                    ((uint)data[i + 2] << 8) | data[i + 3];
@@ -291,11 +293,11 @@ internal static class TrueTypeSubsetter
         }
 
         // Handle trailing bytes.
-        if (i >= data.Count)
+        if (i >= data.Length)
             return sum;
 
         uint last = 0;
-        for (var j = 0; j < data.Count - i; j++)
+        for (var j = 0; j < data.Length - i; j++)
             last |= (uint)data[i + j] << (24 - (j * 8));
         sum += last;
 
@@ -303,7 +305,7 @@ internal static class TrueTypeSubsetter
     }
 
     private static (int Start, int Length) GetGlyphRange(
-        IReadOnlyList<byte> b,
+        byte[] b,
         int locaOff,
         int glyfOff,
         short indexToLocFormat,
@@ -324,7 +326,7 @@ internal static class TrueTypeSubsetter
 
         var len = Math.Max(0, end - start);
         // Sanity check against buffer bounds.
-        if (start < 0 || start + len > b.Count)
+        if (start < 0 || start + len > b.Length)
             return (glyfOff, 0);
 
         return (start, len);
@@ -332,41 +334,30 @@ internal static class TrueTypeSubsetter
 
     // ── Primitive read/write helpers ────────────────────────────────────────────
 
-    private static string ReadTag(IReadOnlyList<byte> b, int o) =>
+    private static string ReadTag(byte[] b, int o) =>
         new([.. new[] { b[o], b[o + 1], b[o + 2], b[o + 3] }.Select(static c => (char)c)]);
 
-    private static void WriteTag(IList<byte> b, int o, string tag)
+    private static void WriteTag(byte[] b, int o, string tag)
     {
         for (var i = 0; i < 4 && i < tag.Length; i++)
             b[o + i] = (byte)tag[i];
     }
 
-    private static ushort ReadU16(IReadOnlyList<byte> b, int o) =>
-        (ushort)((b[o] << 8) | b[o + 1]);
+    private static ushort ReadU16(byte[] b, int o) =>
+        BinaryPrimitives.ReadUInt16BigEndian(b.AsSpan(o));
 
-    private static short ReadS16(IReadOnlyList<byte> b, int o) =>
-        (short)((b[o] << 8) | b[o + 1]);
+    private static short ReadS16(byte[] b, int o) =>
+        BinaryPrimitives.ReadInt16BigEndian(b.AsSpan(o));
 
-    private static uint ReadU32(IReadOnlyList<byte> b, int o) =>
-        ((uint)b[o] << 24) | ((uint)b[o + 1] << 16) | ((uint)b[o + 2] << 8) | b[o + 3];
+    private static uint ReadU32(byte[] b, int o) =>
+        BinaryPrimitives.ReadUInt32BigEndian(b.AsSpan(o));
 
-    private static void WriteU16(IList<byte> b, int o, ushort v)
-    {
-        b[o] = (byte)(v >> 8);
-        b[o + 1] = (byte)v;
-    }
+    private static void WriteU16(byte[] b, int o, ushort v) =>
+        BinaryPrimitives.WriteUInt16BigEndian(b.AsSpan(o), v);
 
-    private static void WriteS16(IList<byte> b, int o, short v)
-    {
-        b[o] = (byte)(v >> 8);
-        b[o + 1] = (byte)v;
-    }
+    private static void WriteS16(byte[] b, int o, short v) =>
+        BinaryPrimitives.WriteInt16BigEndian(b.AsSpan(o), v);
 
-    private static void WriteU32(IList<byte> b, int o, uint v)
-    {
-        b[o] = (byte)(v >> 24);
-        b[o + 1] = (byte)(v >> 16);
-        b[o + 2] = (byte)(v >> 8);
-        b[o + 3] = (byte)v;
-    }
+    private static void WriteU32(byte[] b, int o, uint v) =>
+        BinaryPrimitives.WriteUInt32BigEndian(b.AsSpan(o), v);
 }

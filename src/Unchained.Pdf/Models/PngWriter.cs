@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.IO.Compression;
 using Unchained.Drawing.Constants;
 using Unchained.Drawing.Extensions;
@@ -5,9 +6,10 @@ using Unchained.Drawing.Extensions;
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-///     Minimal, dependency-free PNG encoder for 8-bit RGB / RGBA raster data. Lives in the core
-///     package (which has no reference to Unchained.Drawing) so extracted images can be exported
-///     without pulling in the rendering stack. Uses BCL <see cref="ZLibStream" /> for IDAT.
+///     Minimal PNG encoder for 8-bit RGB / RGBA raster data, emitting colour type 2 (RGB) or
+///     type 6 (RGBA) directly from raw component arrays. Used by <c>ExtractedImage.ToPng()</c>
+///     so extracted images serialize without building a full <c>RasterBuffer</c>. Uses BCL
+///     <see cref="ZLibStream" /> for IDAT.
 /// </summary>
 internal static class PngWriter
 {
@@ -81,13 +83,8 @@ internal static class PngWriter
         s.Write(crc, 0, 4);
     }
 
-    private static void WriteU32(IList<byte> b, int o, uint v)
-    {
-        b[o] = (byte)(v >> 24);
-        b[o + 1] = (byte)(v >> 16);
-        b[o + 2] = (byte)(v >> 8);
-        b[o + 3] = (byte)v;
-    }
+    private static void WriteU32(byte[] b, int o, uint v) =>
+        BinaryPrimitives.WriteUInt32BigEndian(b.AsSpan(o), v);
 
     private static uint Crc32(ReadOnlySpan<byte> type, IEnumerable<byte> data)
     {

@@ -1877,19 +1877,9 @@ internal sealed class PageRenderer(
         return (ux * scale, (pageHeightPt - uy) * scale);
     }
 
-    private static double Num(ContentOperator op, int i) => op.Operands[i] switch
-    {
-        PdfInteger n => n.Value,
-        PdfReal r => r.Value,
-        _ => 0
-    };
+    private static double Num(ContentOperator op, int i) => op.Operands[i].ToDouble();
 
-    private static double NumObj(PdfObject obj) => obj switch
-    {
-        PdfInteger n => n.Value,
-        PdfReal r => r.Value,
-        _ => 0
-    };
+    private static double NumObj(PdfObject obj) => obj.ToDouble();
 
     // Maps a PDF colour component in [0,1] to an 8-bit channel value. Truncates (matches the
     // historic renderer behaviour) rather than rounding — do not change without re-baselining
@@ -1904,7 +1894,7 @@ internal sealed class PageRenderer(
         double y,
         double k
     ) =>
-        ((1 - c) * (1 - k), (1 - m) * (1 - k), (1 - y) * (1 - k));
+        ColorMath.CmykToRgb(c, m, y, k);
 
     // Seeds the initial fill colour — used when rendering an uncoloured (PaintType 2)
     // tiling pattern cell, which paints in the parent's current fill colour.
