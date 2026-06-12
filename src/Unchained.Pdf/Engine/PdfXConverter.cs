@@ -30,7 +30,7 @@ internal static class PdfXConverter
         if (catalogIdx < 0)
             throw new InvalidOperationException("Cannot locate catalog object.");
 
-        var catalogDict = (objects[catalogIdx].Value as PdfDictionary) ?? throw new InvalidOperationException("Catalog is not a dictionary.");
+        var catalogDict = objects[catalogIdx].Value as PdfDictionary ?? throw new InvalidOperationException("Catalog is not a dictionary.");
         var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries);
 
         // ── 1. /OutputIntents with a GTS_PDFX intent ──────────────────────────

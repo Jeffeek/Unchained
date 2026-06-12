@@ -256,16 +256,16 @@ public sealed class Redactor : IRedactor
     // m1 × m2 (apply m1 first, then m2).
     private static double[] Mul(double[] m1, double[] m2) =>
     [
-        (m1[0] * m2[0]) + (m1[1] * m2[2]),
-        (m1[0] * m2[1]) + (m1[1] * m2[3]),
-        (m1[2] * m2[0]) + (m1[3] * m2[2]),
-        (m1[2] * m2[1]) + (m1[3] * m2[3]),
-        (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
-        (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
+        m1[0] * m2[0] + m1[1] * m2[2],
+        m1[0] * m2[1] + m1[1] * m2[3],
+        m1[2] * m2[0] + m1[3] * m2[2],
+        m1[2] * m2[1] + m1[3] * m2[3],
+        m1[4] * m2[0] + m1[5] * m2[2] + m2[4],
+        m1[4] * m2[1] + m1[5] * m2[3] + m2[5]
     ];
 
     private static (double X, double Y) Apply(double[] m, double x, double y) =>
-        ((m[0] * x) + (m[2] * y) + m[4], (m[1] * x) + (m[3] * y) + m[5]);
+        (m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]);
 
     private static double Num(PdfObject o) => o switch
     {

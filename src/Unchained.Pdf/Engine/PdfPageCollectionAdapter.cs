@@ -267,7 +267,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         get
         {
             var val = GetInheritedInteger(PdfName.Get("Rotate"), 0);
-            return ((val % 360) + 360) % 360; // normalise to 0/90/180/270
+            return (val % 360 + 360) % 360; // normalise to 0/90/180/270
         }
     }
 
@@ -850,10 +850,10 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         var ramp = new byte[256 * 3];
         for (var i = 0; i < 256; i++)
         {
-            var t = domain[0] + (i / 255.0 * (domain[1] - domain[0]));
+            var t = domain[0] + i / 255.0 * (domain[1] - domain[0]);
             var comps = fn?.Eval(t) ?? [0.5, 0.5, 0.5];
             var (r, g, b) = ComponentsToRgb(comps, cs);
-            ramp[i * 3] = r; ramp[(i * 3) + 1] = g; ramp[(i * 3) + 2] = b;
+            ramp[i * 3] = r; ramp[i * 3 + 1] = g; ramp[i * 3 + 2] = b;
         }
 
         return new ShadingInfo(type, coords.Select(static f => (double)f).ToArray(), extStart, extEnd, ramp);
@@ -936,9 +936,9 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             {
                 var bytes = StreamFilters.Decode(c2gStream).Span;
                 var map = new Dictionary<int, int>();
-                for (var cid = 0; (cid * 2) + 1 < bytes.Length; cid++)
+                for (var cid = 0; cid * 2 + 1 < bytes.Length; cid++)
                 {
-                    var gid = (bytes[cid * 2] << 8) | bytes[(cid * 2) + 1];
+                    var gid = (bytes[cid * 2] << 8) | bytes[cid * 2 + 1];
                     if (gid != 0) map[cid] = gid;
                 }
                 cidToGid = map;
@@ -1191,7 +1191,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 // Nearest-neighbour resample the mask to the base image grid.
                 var sx = smw == baseW ? x : x * smw / baseW;
                 var sy = smh == baseH ? y : y * smh / baseH;
-                alpha[(y * baseW) + x] = smRgb[(((sy * smw) + sx) * 3)];
+                alpha[y * baseW + x] = smRgb[(sy * smw + sx) * 3];
             }
             return alpha;
         }
@@ -1484,7 +1484,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 bb = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
             }
 
-            var j = ((row * w) + col) * 3;
+            var j = (row * w + col) * 3;
             rgb[j] = rr; rgb[j + 1] = gg; rgb[j + 2] = bb;
         }
 
@@ -1498,13 +1498,13 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         {
             case 8:
             {
-                var idx = (row * rowBytes) + col;
+                var idx = row * rowBytes + col;
                 return idx < data.Length ? data[idx] : 0;
             }
             case 1 or 2 or 4:
             {
                 var bitPos = col * bpc;
-                var byteIdx = (row * rowBytes) + (bitPos >> 3);
+                var byteIdx = row * rowBytes + (bitPos >> 3);
                 if (byteIdx >= data.Length) return 0;
                 var shift = 8 - bpc - (bitPos & 7);
                 var mask = (1 << bpc) - 1;
@@ -1525,7 +1525,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         var dmin = decode[idx];
         var dmax = decode[idx + 1];
         if (Math.Abs(dmax - dmin - 1f) < 1e-4f && Math.Abs(dmin) < 1e-4f) return sample; // identity
-        var component = dmin + (sample / 255f) * (dmax - dmin);
+        var component = dmin + sample / 255f * (dmax - dmin);
         return (byte)Math.Clamp(component * 255f, 0, 255);
     }
 
@@ -1591,9 +1591,9 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 var m = ApplyDecode(span[i * 4 + 1], decode, 1) / 255.0;
                 var y = ApplyDecode(span[i * 4 + 2], decode, 2) / 255.0;
                 var k = ApplyDecode(span[i * 4 + 3], decode, 3) / 255.0;
-                rgb[j]     = (byte)Math.Clamp(((1 - c) * (1 - k)) * 255, 0, 255);
-                rgb[j + 1] = (byte)Math.Clamp(((1 - m) * (1 - k)) * 255, 0, 255);
-                rgb[j + 2] = (byte)Math.Clamp(((1 - y) * (1 - k)) * 255, 0, 255);
+                rgb[j]     = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
+                rgb[j + 1] = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
+                rgb[j + 2] = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
             }
             return rgb;
         }
@@ -1612,12 +1612,12 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             for (var row = 0; row < h; row++)
             for (var col = 0; col < w; col++)
             {
-                var byteIdx = (row * rowBytes) + (col >> 3);
+                var byteIdx = row * rowBytes + (col >> 3);
                 if (byteIdx >= span.Length) break;
                 var bit = (span[byteIdx] >> (7 - (col & 7))) & 1;
                 if (invertBits) bit = 1 - bit;
                 var val = (byte)(bit == 0 ? 0 : 255); // 0=black, 1=white (DeviceGray)
-                var j   = ((row * w) + col) * 3;
+                var j   = (row * w + col) * 3;
                 rgb[j] = rgb[j + 1] = rgb[j + 2] = val;
             }
             return rgb;

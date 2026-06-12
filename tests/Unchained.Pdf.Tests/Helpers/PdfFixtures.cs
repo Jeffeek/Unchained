@@ -924,7 +924,7 @@ internal static class PdfFixtures
             var (name, value) = fields[i];
             offsets.Add(ByteLen(sb));
             AppendWithLineEnding(sb, $"{4 + i} 0 obj");
-            AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(name)}) /V ({EscapeString(value)}) /Rect [50 {700 - (i * 30)} 300 {720 - (i * 30)}] /P 3 0 R >>");
+            AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(name)}) /V ({EscapeString(value)}) /Rect [50 {700 - i * 30} 300 {720 - i * 30}] /P 3 0 R >>");
             AppendWithLineEnding(sb, "endobj");
         }
 

@@ -27,7 +27,7 @@ internal sealed class RasterBuffer(int width, int height)
         _clipMask = new byte[Width * Height];
         for (var py = y0; py < y1; py++)
         for (var px = x0; px < x1; px++)
-            _clipMask[(py * Width) + px] = 255;
+            _clipMask[py * Width + px] = 255;
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ internal sealed class RasterBuffer(int width, int height)
     private bool InClip(int x, int y)
     {
         if (_clipMask is null) return true;
-        return _clipMask[(y * Width) + x] != 0;
+        return _clipMask[y * Width + x] != 0;
     }
 
     // Scanline-rasterises a set of polygons into a fresh Width×Height mask.
@@ -103,7 +103,7 @@ internal sealed class RasterBuffer(int width, int height)
                     if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
                     {
                         var t = (sy - ay) / (by - ay);
-                        xs.Add((ax + (t * (bx - ax)), by > ay ? 1 : -1));
+                        xs.Add((ax + t * (bx - ax), by > ay ? 1 : -1));
                     }
                 }
             }
@@ -119,7 +119,7 @@ internal sealed class RasterBuffer(int width, int height)
                 var xStart = Math.Max(0, (int)Math.Round(xs[i].X));
                 var xEnd = Math.Min(Width - 1, (int)Math.Round(xs[i + 1].X) - 1);
                 for (var px = xStart; px <= xEnd; px++)
-                    mask[(y * Width) + px] = 255;
+                    mask[y * Width + px] = 255;
             }
         }
         return mask;
@@ -144,7 +144,7 @@ internal sealed class RasterBuffer(int width, int height)
         if (!InClip(x, y))
             return;
 
-        var i = ((y * Width) + x) * 4;
+        var i = (y * Width + x) * 4;
         if (blendMode == "Normal" || blendMode == "Compatible")
         {
             if (a == 255)
@@ -154,9 +154,9 @@ internal sealed class RasterBuffer(int width, int height)
             else
             {
                 var inv = 255 - a;
-                _data[i]     = (byte)(((_data[i]     * inv) + (r * a)) / 255);
-                _data[i + 1] = (byte)(((_data[i + 1] * inv) + (g * a)) / 255);
-                _data[i + 2] = (byte)(((_data[i + 2] * inv) + (b * a)) / 255);
+                _data[i]     = (byte)((_data[i]     * inv + r * a) / 255);
+                _data[i + 1] = (byte)((_data[i + 1] * inv + g * a) / 255);
+                _data[i + 2] = (byte)((_data[i + 2] * inv + b * a) / 255);
             }
         }
         else
@@ -187,17 +187,17 @@ internal sealed class RasterBuffer(int width, int height)
         {
             case "Multiply":
             {
-                var mr = (byte)((br * sr) / 255);
-                var mg = (byte)((bg * sg) / 255);
-                var mb = (byte)((bb * sb) / 255);
+                var mr = (byte)(br * sr / 255);
+                var mg = (byte)(bg * sg / 255);
+                var mb = (byte)(bb * sb / 255);
                 AlphaComposite(br, bg, bb, mr, mg, mb, a, out or, out og, out ob);
                 break;
             }
             case "Screen":
             {
-                var mr = (byte)(br + sr - ((br * sr) / 255));
-                var mg = (byte)(bg + sg - ((bg * sg) / 255));
-                var mb = (byte)(bb + sb - ((bb * sb) / 255));
+                var mr = (byte)(br + sr - br * sr / 255);
+                var mg = (byte)(bg + sg - bg * sg / 255);
+                var mb = (byte)(bb + sb - bb * sb / 255);
                 AlphaComposite(br, bg, bb, mr, mg, mb, a, out or, out og, out ob);
                 break;
             }
@@ -267,9 +267,9 @@ internal sealed class RasterBuffer(int width, int height)
             }
             case "Exclusion":
             {
-                var mr = (byte)(br + sr - ((2 * br * sr) / 255));
-                var mg = (byte)(bg + sg - ((2 * bg * sg) / 255));
-                var mb = (byte)(bb + sb - ((2 * bb * sb) / 255));
+                var mr = (byte)(br + sr - 2 * br * sr / 255);
+                var mg = (byte)(bg + sg - 2 * bg * sg / 255);
+                var mb = (byte)(bb + sb - 2 * bb * sb / 255);
                 AlphaComposite(br, bg, bb, mr, mg, mb, a, out or, out og, out ob);
                 break;
             }
@@ -309,9 +309,9 @@ internal sealed class RasterBuffer(int width, int height)
             {
                 // Unknown mode: fall back to Normal compositing.
                 var inv = 255 - a;
-                or = (byte)(((br * inv) + (sr * a)) / 255);
-                og = (byte)(((bg * inv) + (sg * a)) / 255);
-                ob = (byte)(((bb * inv) + (sb * a)) / 255);
+                or = (byte)((br * inv + sr * a) / 255);
+                og = (byte)((bg * inv + sg * a) / 255);
+                ob = (byte)((bb * inv + sb * a) / 255);
                 break;
             }
         }
@@ -326,21 +326,21 @@ internal sealed class RasterBuffer(int width, int height)
         out byte or, out byte og, out byte ob)
     {
         var inv = 255 - a;
-        or = (byte)(((br * inv) + (mr * a)) / 255);
-        og = (byte)(((bg * inv) + (mg * a)) / 255);
-        ob = (byte)(((bb * inv) + (mb * a)) / 255);
+        or = (byte)((br * inv + mr * a) / 255);
+        og = (byte)((bg * inv + mg * a) / 255);
+        ob = (byte)((bb * inv + mb * a) / 255);
     }
 
     private static byte HardLightChannel(byte cb, byte cs) =>
         cs < 128
-            ? (byte)((2 * cb * cs) / 255)
-            : (byte)(255 - ((2 * (255 - cb) * (255 - cs)) / 255));
+            ? (byte)(2 * cb * cs / 255)
+            : (byte)(255 - 2 * (255 - cb) * (255 - cs) / 255);
 
     private static byte ColorDodgeChannel(byte cb, byte cs) =>
-        cs == 255 ? (byte)255 : (byte)Math.Min(255, (cb * 255) / (255 - cs));
+        cs == 255 ? (byte)255 : (byte)Math.Min(255, cb * 255 / (255 - cs));
 
     private static byte ColorBurnChannel(byte cb, byte cs) =>
-        cs == 0 ? (byte)0 : (byte)Math.Max(0, 255 - ((255 - cb) * 255 / cs));
+        cs == 0 ? (byte)0 : (byte)Math.Max(0, 255 - (255 - cb) * 255 / cs);
 
     private static byte SoftLightChannel(byte cb, byte cs)
     {
@@ -348,13 +348,13 @@ internal sealed class RasterBuffer(int width, int height)
         var s = cs / 255.0;
         double result;
         if (s <= 0.5)
-            result = b - ((1 - (2 * s)) * b * (1 - b));
+            result = b - (1 - 2 * s) * b * (1 - b);
         else
         {
             var d = b <= 0.25
                 ? ((16 * b - 12) * b + 4) * b
                 : Math.Sqrt(b);
-            result = b + ((2 * s) - 1) * (d - b);
+            result = b + (2 * s - 1) * (d - b);
         }
         return (byte)Math.Clamp((int)Math.Round(result * 255), 0, 255);
     }
@@ -383,8 +383,8 @@ internal sealed class RasterBuffer(int width, int height)
             r = g = b = v;
             return;
         }
-        var q = l < 0.5 ? l * (1 + s) : l + s - (l * s);
-        var p = (2 * l) - q;
+        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        var p = 2 * l - q;
         r = (byte)Math.Clamp((int)Math.Round(HueToRgb(p, q, h + 1.0 / 3) * 255), 0, 255);
         g = (byte)Math.Clamp((int)Math.Round(HueToRgb(p, q, h) * 255), 0, 255);
         b = (byte)Math.Clamp((int)Math.Round(HueToRgb(p, q, h - 1.0 / 3) * 255), 0, 255);
@@ -394,9 +394,9 @@ internal sealed class RasterBuffer(int width, int height)
     {
         if (t < 0) t += 1;
         if (t > 1) t -= 1;
-        if (t < 1.0 / 6) return p + ((q - p) * 6 * t);
+        if (t < 1.0 / 6) return p + (q - p) * 6 * t;
         if (t < 1.0 / 2) return q;
-        if (t < 2.0 / 3) return p + ((q - p) * (2.0 / 3 - t) * 6);
+        if (t < 2.0 / 3) return p + (q - p) * (2.0 / 3 - t) * 6;
         return p;
     }
 
@@ -528,7 +528,7 @@ internal sealed class RasterBuffer(int width, int height)
         if (!InClip(x, y))
             return;
 
-        var i = ((y * Width) + x) * 4;
+        var i = (y * Width + x) * 4;
         _data[i] = r;
         _data[i + 1] = g;
         _data[i + 2] = b;
@@ -540,7 +540,7 @@ internal sealed class RasterBuffer(int width, int height)
     {
         if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
             return (255, 255, 255);
-        var i = ((y * Width) + x) * 4;
+        var i = (y * Width + x) * 4;
         return (_data[i], _data[i + 1], _data[i + 2]);
     }
 
@@ -561,7 +561,7 @@ internal sealed class RasterBuffer(int width, int height)
         for (var y = 0; y < Height; y++)
         for (var x = 0; x < Width; x++)
         {
-            if (_clipMask[(y * Width) + x] == 0) continue;
+            if (_clipMask[y * Width + x] == 0) continue;
             if (x < x0) x0 = x;
             if (y < y0) y0 = y;
             if (x > x1) x1 = x;
@@ -579,7 +579,7 @@ internal sealed class RasterBuffer(int width, int height)
         var r2 = r * r;
         for (var dy = -r; dy <= r; dy++)
         for (var dx = -r; dx <= r; dx++)
-            if ((dx * dx) + (dy * dy) <= r2)
+            if (dx * dx + dy * dy <= r2)
                 SetPixel(cx + dx, cy + dy, red, grn, blu, a, blendMode);
     }
 
@@ -601,7 +601,7 @@ internal sealed class RasterBuffer(int width, int height)
                 var (ax, ay) = pts[i]; var (bx, by) = pts[(i + 1) % 3];
                 if (ay == by) continue;
                 if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
-                    crosses.Add(ax + ((sy - ay) / (by - ay)) * (bx - ax));
+                    crosses.Add(ax + (sy - ay) / (by - ay) * (bx - ax));
             }
             if (crosses.Count < 2) continue;
             crosses.Sort();

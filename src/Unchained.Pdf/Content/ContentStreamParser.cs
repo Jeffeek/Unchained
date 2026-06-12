@@ -327,10 +327,10 @@ internal static class ContentStreamParser
     {
         var pixelCount = w * h;
 
-        if ((cs is null or "DeviceRGB" or "RGB") && bpc == 8 && data.Length == pixelCount * 3)
+        if (cs is null or "DeviceRGB" or "RGB" && bpc == 8 && data.Length == pixelCount * 3)
             return data.ToArray();
 
-        if ((cs is null or "DeviceGray" or "G") && bpc == 8 && data.Length == pixelCount)
+        if (cs is null or "DeviceGray" or "G" && bpc == 8 && data.Length == pixelCount)
         {
             var src = data.Span;
             var rgb = new byte[pixelCount * 3];
@@ -339,19 +339,19 @@ internal static class ContentStreamParser
             return rgb;
         }
 
-        if ((cs is "DeviceCMYK" or "CMYK") && bpc == 8 && data.Length == pixelCount * 4)
+        if (cs is "DeviceCMYK" or "CMYK" && bpc == 8 && data.Length == pixelCount * 4)
         {
             var src = data.Span;
             var rgb = new byte[pixelCount * 3];
             for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
             {
-                var c = src[(i * 4)    ] / 255.0;
-                var m = src[(i * 4) + 1] / 255.0;
-                var y = src[(i * 4) + 2] / 255.0;
-                var k = src[(i * 4) + 3] / 255.0;
-                rgb[j]     = (byte)Math.Clamp(((1 - c) * (1 - k)) * 255, 0, 255);
-                rgb[j + 1] = (byte)Math.Clamp(((1 - m) * (1 - k)) * 255, 0, 255);
-                rgb[j + 2] = (byte)Math.Clamp(((1 - y) * (1 - k)) * 255, 0, 255);
+                var c = src[i * 4    ] / 255.0;
+                var m = src[i * 4 + 1] / 255.0;
+                var y = src[i * 4 + 2] / 255.0;
+                var k = src[i * 4 + 3] / 255.0;
+                rgb[j]     = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
+                rgb[j + 1] = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
+                rgb[j + 2] = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
             }
             return rgb;
         }
@@ -359,7 +359,7 @@ internal static class ContentStreamParser
         // DeviceGray 1 bpc — bit-packed rows.
         // PDF §8.9.5.1: for 1-bpc images the sample value 0 = white (minimum),
         // 1 = black (maximum), i.e. 0 = paper, 1 = ink (CCITT fax convention).
-        if ((cs is null or "DeviceGray" or "G") && bpc == 1)
+        if (cs is null or "DeviceGray" or "G" && bpc == 1)
         {
             var src      = data.Span;
             var rgb      = new byte[pixelCount * 3];
@@ -367,12 +367,12 @@ internal static class ContentStreamParser
             for (var row = 0; row < h; row++)
             for (var col = 0; col < w; col++)
             {
-                var byteIdx = (row * rowBytes) + (col >> 3);
+                var byteIdx = row * rowBytes + (col >> 3);
                 if (byteIdx >= src.Length) break;
                 var bit = (src[byteIdx] >> (7 - (col & 7))) & 1;
                 // bit=0 → white (paper), bit=1 → black (ink)
                 var v   = (byte)(bit == 0 ? 255 : 0);
-                var j   = ((row * w) + col) * 3;
+                var j   = (row * w + col) * 3;
                 rgb[j] = rgb[j + 1] = rgb[j + 2] = v;
             }
             return rgb;

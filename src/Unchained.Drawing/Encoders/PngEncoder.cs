@@ -16,7 +16,7 @@ internal static class PngEncoder
 
     internal static byte[] Encode(RasterBuffer buffer)
     {
-        using var ms = new MemoryStream((buffer.Width * buffer.Height * 4) + 256);
+        using var ms = new MemoryStream(buffer.Width * buffer.Height * 4 + 256);
         ms.Write(PngSignature);
         WriteIHDR(ms, buffer.Width, buffer.Height);
         WriteIDAT(ms, buffer);
@@ -48,10 +48,10 @@ internal static class PngEncoder
         var pixels = buffer.ToArgbBytes();
 
         // Filtered scanline data: filter_byte(0=None) + R G B A per pixel
-        var raw = new byte[h * (1 + (w * 4))];
+        var raw = new byte[h * (1 + w * 4)];
         for (var y = 0; y < h; y++)
         {
-            var outOffset = y * (1 + (w * 4));
+            var outOffset = y * (1 + w * 4);
             raw[outOffset] = 0; // filter type: None
             var srcOffset = y * w * 4;
             Buffer.BlockCopy(pixels, srcOffset, raw, outOffset + 1, w * 4);

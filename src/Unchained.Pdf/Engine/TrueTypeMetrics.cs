@@ -46,7 +46,7 @@ internal static class TrueTypeMetrics
         int? os2Off = null, hheaOff = null, headOff = null;
         for (var i = 0; i < numTables; i++)
         {
-            var entry = 12 + (i * 16);
+            var entry = 12 + i * 16;
             if (entry + 16 > b.Length) break;
             var tag = ReadTag(b, entry);
             var offset = (int)ReadU32(b, entry + 8);

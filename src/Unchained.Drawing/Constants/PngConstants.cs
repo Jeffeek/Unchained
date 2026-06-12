@@ -35,6 +35,7 @@ internal static class PngConstants
     internal const string IHDR = "IHDR";
     internal const string IDAT = "IDAT";
     internal const string PLTE = "PLTE";
-    internal const string tRNS = "tRNS";
+    // ReSharper disable once InconsistentNaming
+    internal const string TRNS = "tRNS";
     internal const string IEND = "IEND";
 }

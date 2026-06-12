@@ -1,6 +1,5 @@
 using Unchained.Pptx.Themes;
 using Unchained.Pptx.Shapes;
-using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Slides;
 

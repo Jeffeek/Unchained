@@ -1,7 +1,6 @@
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Animations;
-using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;
 

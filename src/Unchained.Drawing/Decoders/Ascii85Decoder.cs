@@ -8,8 +8,8 @@ namespace Unchained.Drawing.Decoders;
 /// </summary>
 internal static class Ascii85Decoder
 {
-    const char exclamationMarkChar = '!';
-    const char zChar = 'z';
+    private const char ExclamationMarkChar = '!';
+    private const char ZChar = 'z';
 
     public static ReadOnlyMemory<byte> Decode(ReadOnlyMemory<byte> data)
     {
@@ -37,12 +37,12 @@ internal static class Ascii85Decoder
 
             switch (b)
             {
-                case (byte)zChar when groupLen != 0:
-                    throw new InvalidDataException($"ASCII85Decode: '{zChar}' inside a group.");
-                case (byte)zChar:
+                case (byte)ZChar when groupLen != 0:
+                    throw new InvalidDataException($"ASCII85Decode: '{ZChar}' inside a group.");
+                case (byte)ZChar:
                     output.AddRange([0, 0, 0, 0]);
                     continue;
-                case < (byte)exclamationMarkChar or > (byte)'u':
+                case < (byte)ExclamationMarkChar or > (byte)'u':
                     throw new InvalidDataException($"ASCII85Decode: character 0x{b:X2} is out of range.");
             }
 
@@ -67,18 +67,18 @@ internal static class Ascii85Decoder
 
     private static void DecodeGroup(IReadOnlyList<byte> group, int count, ICollection<byte> output)
     {
-        const int shifteen = 24;
-        const int shiftLength = 8;
+        const int msbShift = 24;
+        const int shiftStep = 8;
 
         var value =
-            ((uint)(group[0] - exclamationMarkChar) * 52200625u) +
-            ((uint)(group[1] - exclamationMarkChar) * 614125u) +
-            ((uint)(group[2] - exclamationMarkChar) * 7225u) +
-            ((uint)(group[3] - exclamationMarkChar) * 85u) +
-            (uint)(group[4] - exclamationMarkChar);
+            (uint)(group[0] - ExclamationMarkChar) * 52200625u +
+            (uint)(group[1] - ExclamationMarkChar) * 614125u +
+            (uint)(group[2] - ExclamationMarkChar) * 7225u +
+            (uint)(group[3] - ExclamationMarkChar) * 85u +
+            (uint)(group[4] - ExclamationMarkChar);
 
         var emit = count - 1;
-        for (var shift = shifteen; shift >= shifteen - ((emit - 1) * shiftLength); shift -= shiftLength)
+        for (var shift = msbShift; shift >= msbShift - (emit - 1) * shiftStep; shift -= shiftStep)
             output.Add((byte)(value >> shift));
     }
 }

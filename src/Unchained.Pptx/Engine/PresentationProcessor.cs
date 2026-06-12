@@ -1,16 +1,12 @@
 using Unchained.Pptx.Themes;
 using Unchained.Pptx.Core;
-using Unchained.Ooxml;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
-using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Slides;
-using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Writing;
-using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Engine;
 

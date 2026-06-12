@@ -2,7 +2,6 @@ using System.IO.Compression;
 using System.Text;
 using Shouldly;
 using Unchained.Ooxml;
-using Unchained.Pptx.Export;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;

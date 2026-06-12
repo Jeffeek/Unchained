@@ -35,7 +35,7 @@ public sealed class MediaStore
     /// </summary>
     /// <param name="data">The raw image bytes.</param>
     /// <param name="contentType">MIME type (e.g. <c>"image/png"</c>).</param>
-    public EmbeddedImage AddImage(ReadOnlyMemory<byte> data, string contentType)
+    internal EmbeddedImage AddImage(ReadOnlyMemory<byte> data, string contentType)
     {
         ArgumentNullException.ThrowIfNull(contentType);
         var image = new EmbeddedImage(contentType, data);
@@ -82,7 +82,7 @@ public sealed class MediaStore
     /// requested style, or <see langword="null"/> when no embedded font matches. Falls back
     /// to the regular variant of the same typeface when the exact style is absent.
     /// </summary>
-    public ReadOnlyMemory<byte>? FindFontData(string typeface, EmbeddedFontStyle style)
+    internal ReadOnlyMemory<byte>? FindFontData(string typeface, EmbeddedFontStyle style)
     {
         if (string.IsNullOrEmpty(typeface) || _fonts.Count == 0)
             return null;
@@ -91,16 +91,17 @@ public sealed class MediaStore
         EmbeddedFont? regular = null;
         EmbeddedFont? anyOfTypeface = null;
 
-        foreach (var font in _fonts)
+        foreach (var font in _fonts.Where(font => font.Typeface.Equals(typeface, StringComparison.OrdinalIgnoreCase)))
         {
-            if (!font.Typeface.Equals(typeface, StringComparison.OrdinalIgnoreCase))
-                continue;
             anyOfTypeface ??= font;
-            if (font.Style == style) exact = font;
-            if (font.Style == EmbeddedFontStyle.Regular) regular = font;
+            if (font.Style == style)
+                exact = font;
+            if (font.Style == EmbeddedFontStyle.Regular)
+                regular = font;
         }
 
         var chosen = exact ?? regular ?? anyOfTypeface;
+
         return chosen?.Data;
     }
 
@@ -116,14 +117,14 @@ public sealed class MediaStore
     /// Pass <see cref="Engine.PresentationDocument.Slides"/> to purge unreferenced media
     /// after removing shapes or slides.
     /// </param>
-    public int RemoveUnused(SlideCollection slides)
+    internal int RemoveUnused(SlideCollection slides)
     {
         ArgumentNullException.ThrowIfNull(slides);
 
         // Collect all EmbeddedImage instances that are reachable from any shape.
         var usedImages = new HashSet<EmbeddedImage>(ReferenceEqualityComparer.Instance);
-        for (var i = 0; i < slides.Count; i++)
-            CollectImages(slides[i].Shapes, usedImages);
+        foreach (var slide in slides)
+            CollectImages(slide.Shapes, usedImages);
 
         // Remove images that are not reachable.
         var removedCount = _images.RemoveAll(img => !usedImages.Contains(img));
@@ -131,8 +132,8 @@ public sealed class MediaStore
         // Audio and video are stored on AudioShape / VideoShape respectively.
         var usedAudio = new HashSet<EmbeddedAudio>(ReferenceEqualityComparer.Instance);
         var usedVideo = new HashSet<EmbeddedVideo>(ReferenceEqualityComparer.Instance);
-        for (var i = 0; i < slides.Count; i++)
-            CollectMedia(slides[i].Shapes, usedAudio, usedVideo);
+        foreach (var slide in slides)
+            CollectMedia(slide.Shapes, usedAudio, usedVideo);
 
         removedCount += _audioFiles.RemoveAll(a => !usedAudio.Contains(a));
         removedCount += _videoFiles.RemoveAll(v => !usedVideo.Contains(v));
@@ -142,30 +143,38 @@ public sealed class MediaStore
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    private static void CollectImages(ShapeCollection shapes, HashSet<EmbeddedImage> used)
+    private static void CollectImages(ShapeCollection shapes, ISet<EmbeddedImage> used)
     {
         foreach (var shape in shapes)
         {
-            if (shape is PictureShape pic && pic.Image != null)
-                used.Add(pic.Image);
-            else if (shape is GroupShape grp)
-                CollectImages(grp.Children, used);
+            switch (shape)
+            {
+                case PictureShape { Image: not null } pic:
+                    used.Add(pic.Image);
+                break;
+                case GroupShape grp:
+                    CollectImages(grp.Children, used);
+                break;
+            }
         }
     }
 
-    private static void CollectMedia(
-        ShapeCollection shapes,
-        HashSet<EmbeddedAudio> usedAudio,
-        HashSet<EmbeddedVideo> usedVideo)
+    private static void CollectMedia(ShapeCollection shapes, ISet<EmbeddedAudio> usedAudio, ISet<EmbeddedVideo> usedVideo)
     {
         foreach (var shape in shapes)
         {
-            if (shape is AudioShape audio && audio.Audio != null)
-                usedAudio.Add(audio.Audio);
-            else if (shape is VideoShape video && video.Video != null)
-                usedVideo.Add(video.Video);
-            else if (shape is GroupShape grp)
-                CollectMedia(grp.Children, usedAudio, usedVideo);
+            switch (shape)
+            {
+                case AudioShape { Audio: not null } audio:
+                    usedAudio.Add(audio.Audio);
+                break;
+                case VideoShape { Video: not null } video:
+                    usedVideo.Add(video.Video);
+                break;
+                case GroupShape grp:
+                    CollectMedia(grp.Children, usedAudio, usedVideo);
+                break;
+            }
         }
     }
 }

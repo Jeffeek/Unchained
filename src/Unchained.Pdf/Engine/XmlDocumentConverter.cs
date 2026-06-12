@@ -242,7 +242,7 @@ internal static class XmlDocumentConverter
                 csw.Float(0f);
                 csw.Float(0f);
                 csw.Float(1f);
-                csw.Float(x + (c * colWidth));
+                csw.Float(x + c * colWidth);
                 csw.Float(curY);
                 csw.Op("Tm"u8);
                 csw.LiteralString(headers[c]);
@@ -266,7 +266,7 @@ internal static class XmlDocumentConverter
                 csw.Float(0f);
                 csw.Float(0f);
                 csw.Float(1f);
-                csw.Float(x + (c * colWidth));
+                csw.Float(x + c * colWidth);
                 csw.Float(curY);
                 csw.Op("Tm"u8);
                 csw.LiteralString(row[c]);

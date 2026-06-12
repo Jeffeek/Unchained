@@ -514,7 +514,7 @@ internal static class CfbDocument
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static int Pad(int value, int boundary) =>
-        value == 0 ? 0 : ((value + boundary - 1) / boundary) * boundary;
+        value == 0 ? 0 : (value + boundary - 1) / boundary * boundary;
 
     private static int Sectors(int byteCount) =>
         (byteCount + SectorSize - 1) / SectorSize;

@@ -1,4 +1,3 @@
-using Unchained.Pptx.Core;
 using Unchained.Pptx.Themes;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;

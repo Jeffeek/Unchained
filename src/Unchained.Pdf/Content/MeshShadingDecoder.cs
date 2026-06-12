@@ -56,7 +56,7 @@ internal static class MeshShadingDecoder
         PdfFunction? fn, List<ShadingTriangle> tris)
     {
         Vertex? va = null, vb = null;
-        while (r.HasBits(bpf + (2 * bpc) + (nComp * bpComp)))
+        while (r.HasBits(bpf + 2 * bpc + nComp * bpComp))
         {
             var flag = (int)r.Read(bpf);
             var v = ReadVertex(r, bpc, bpComp, decode, nComp, fn);
@@ -64,7 +64,7 @@ internal static class MeshShadingDecoder
             {
                 case 0:
                     // Start of a new triangle: read two more vertices.
-                    if (!r.HasBits(2 * (bpf + (2 * bpc) + (nComp * bpComp)))) return;
+                    if (!r.HasBits(2 * (bpf + 2 * bpc + nComp * bpComp))) return;
                     r.Read(bpf); var v1 = ReadVertex(r, bpc, bpComp, decode, nComp, fn);
                     r.Read(bpf); var v2 = ReadVertex(r, bpc, bpComp, decode, nComp, fn);
                     tris.Add(Tri(v, v1, v2));
@@ -99,7 +99,7 @@ internal static class MeshShadingDecoder
             var ok = true;
             for (var i = 0; i < vpr; i++)
             {
-                if (!r.HasBits((2 * bpc) + (nComp * bpComp))) { ok = false; break; }
+                if (!r.HasBits(2 * bpc + nComp * bpComp)) { ok = false; break; }
                 row[i] = ReadVertex(r, bpc, bpComp, decode, nComp, fn);
             }
             if (!ok) break;
@@ -171,8 +171,8 @@ internal static class MeshShadingDecoder
         var max = (1UL << bpc) - 1;
         var xr = r.Read(bpc) / (double)max;
         var yr = r.Read(bpc) / (double)max;
-        var x = decode[0] + (xr * (decode[1] - decode[0]));
-        var y = decode[2] + (yr * (decode[3] - decode[2]));
+        var x = decode[0] + xr * (decode[1] - decode[0]);
+        var y = decode[2] + yr * (decode[3] - decode[2]);
         return (x, y);
     }
 
@@ -183,9 +183,9 @@ internal static class MeshShadingDecoder
         for (var i = 0; i < nComp; i++)
         {
             var raw = r.Read(bpComp) / (double)max;
-            var lo = decode[4 + (2 * i)];
-            var hi = decode[5 + (2 * i)];
-            comps[i] = lo + (raw * (hi - lo));
+            var lo = decode[4 + 2 * i];
+            var hi = decode[5 + 2 * i];
+            comps[i] = lo + raw * (hi - lo);
         }
         if (fn is not null)
             comps = fn.Eval(comps[0]);

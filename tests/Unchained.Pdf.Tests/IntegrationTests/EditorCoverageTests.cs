@@ -350,7 +350,7 @@ public sealed class TableLayoutCoverageTests
             Rows = [["1", "2", "3"], ["4", "5", "6"]]
         };
         var layout = TableLayout.Compute(columnCount: 3, DefaultStyle, hasTitle: false, data);
-        const float usable = TableLayout.PageWidth - (2 * TableLayout.Margin);
+        const float usable = TableLayout.PageWidth - 2 * TableLayout.Margin;
         layout.ColumnWidths.Sum().ShouldBe(usable, tolerance: 0.1f);
     }
 
@@ -363,7 +363,7 @@ public sealed class TableLayoutCoverageTests
             Rows = [["tiny"]]
         };
         var layout = TableLayout.Compute(columnCount: 1, DefaultStyle, hasTitle: false, data);
-        const float usable = TableLayout.PageWidth - (2 * TableLayout.Margin);
+        const float usable = TableLayout.PageWidth - 2 * TableLayout.Margin;
         layout.ColumnWidths[0].ShouldBe(usable, tolerance: 0.1f);
     }
 
@@ -378,7 +378,7 @@ public sealed class TableLayoutCoverageTests
             Rows = [[longHeader, longHeader, longHeader]]
         };
         var layout = TableLayout.Compute(columnCount: 3, DefaultStyle, hasTitle: false, data);
-        const float usable = TableLayout.PageWidth - (2 * TableLayout.Margin);
+        const float usable = TableLayout.PageWidth - 2 * TableLayout.Margin;
         layout.ColumnWidths.Sum().ShouldBe(usable, tolerance: 0.5f);
     }
 
@@ -416,7 +416,7 @@ public sealed class TableLayoutCoverageTests
             Rows = [["val1", "val2"]]
         };
         var layout = TableLayout.Compute(columnCount: 2, DefaultStyle, hasTitle: false, data);
-        const float usable = TableLayout.PageWidth - (2 * TableLayout.Margin);
+        const float usable = TableLayout.PageWidth - 2 * TableLayout.Margin;
         layout.ColumnWidths.Sum().ShouldBe(usable, tolerance: 0.1f);
     }
 
@@ -430,7 +430,7 @@ public sealed class TableLayoutCoverageTests
             Rows = []
         };
         var layout = TableLayout.Compute(columnCount: 3, DefaultStyle, hasTitle: false, data);
-        const float usable = TableLayout.PageWidth - (2 * TableLayout.Margin);
+        const float usable = TableLayout.PageWidth - 2 * TableLayout.Margin;
         layout.ColumnWidths.Sum().ShouldBe(usable, tolerance: 0.1f);
     }
 
@@ -461,7 +461,7 @@ public sealed class TableLayoutCoverageTests
     {
         // When data is null columns are equal — exercises the non-proportional branch.
         var layout = TableLayout.Compute(columnCount: 4, DefaultStyle, hasTitle: false, data: null);
-        const float expected = (TableLayout.PageWidth - (2 * TableLayout.Margin)) / 4;
+        const float expected = (TableLayout.PageWidth - 2 * TableLayout.Margin) / 4;
         foreach (var w in layout.ColumnWidths)
             w.ShouldBe(expected, tolerance: 0.01f);
     }

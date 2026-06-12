@@ -25,7 +25,7 @@ internal static class PdfSigner
     // typical certificate chains (1–3 certs, RSA-2048 or EC-256).
     private const int SignatureReservedBytes = 8192;
     // Hex representation: 2 chars per byte, plus < and >
-    private const int ContentsHexLen = (SignatureReservedBytes * 2) + 2; // <hex> total
+    private const int ContentsHexLen = SignatureReservedBytes * 2 + 2; // <hex> total
 
     // Placeholder values written to /ByteRange before the true byte offsets are known;
     // replaced with actual values after the document is serialized.
@@ -267,7 +267,7 @@ internal static class PdfSigner
             if (!allZeros)
                 continue;
 
-            if (buf[i + (SignatureReservedBytes * 2) + 1] != '>')
+            if (buf[i + SignatureReservedBytes * 2 + 1] != '>')
                 continue;
 
             return i;

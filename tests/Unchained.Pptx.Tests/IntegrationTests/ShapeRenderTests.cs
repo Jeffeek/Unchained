@@ -62,14 +62,14 @@ public sealed class ShapeRenderTests : PptxTestBase
         zlib.CopyTo(raw);
         var bytes = raw.ToArray();
 
-        var stride = 1 + (width * 4);
+        var stride = 1 + width * 4;
         var count = 0;
         for (var y = 0; y < height; y++)
         {
-            var rowStart = (y * stride) + 1;
+            var rowStart = y * stride + 1;
             for (var x = 0; x < width; x++)
             {
-                var p = rowStart + (x * 4);
+                var p = rowStart + x * 4;
                 // Non-white, non-near-white pixel.
                 if (bytes[p] < 240 || bytes[p + 1] < 240 || bytes[p + 2] < 240)
                     count++;

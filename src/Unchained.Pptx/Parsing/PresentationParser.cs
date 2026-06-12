@@ -8,7 +8,6 @@ using Unchained.Pptx.Media;
 using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
-using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 using System.Xml.Linq;
 

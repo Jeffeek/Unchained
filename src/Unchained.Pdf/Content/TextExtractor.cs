@@ -363,8 +363,8 @@ internal static class TextExtractor
         // Result: a'=tlmA, b'=tlmB, c'=tlmC, d'=tlmD
         //         e' = tx*tlmA + ty*tlmC + tlmE
         //         f' = tx*tlmB + ty*tlmD + tlmF
-        var newE = (tx * tlmA) + (ty * tlmC) + tlmE;
-        var newF = (tx * tlmB) + (ty * tlmD) + tlmF;
+        var newE = tx * tlmA + ty * tlmC + tlmE;
+        var newF = tx * tlmB + ty * tlmD + tlmF;
         tlmE = newE;
         tlmF = newF;
         tmA = tlmA;
@@ -396,14 +396,14 @@ internal static class TextExtractor
         var text = System.Text.Encoding.Latin1.GetString(bytes);
         // Text origin (tmE, tmF) is in user space; map through the CTM to device space so
         // translated / rotated / scaled coordinate systems position text correctly.
-        var startX = (tmE * ctm[0]) + (tmF * ctm[2]) + ctm[4];
-        var startY = (tmE * ctm[1]) + (tmF * ctm[3]) + ctm[5];
+        var startX = tmE * ctm[0] + tmF * ctm[2] + ctm[4];
+        var startY = tmE * ctm[1] + tmF * ctm[3] + ctm[5];
         var totalAdvance = 0.0;
 
         foreach (var ch in text)
         {
             var w = Standard14Widths.Get(fontName, ch);
-            var advance = ((w / 1000.0 * fontSize) + tc) * (th / 100.0);
+            var advance = (w / 1000.0 * fontSize + tc) * (th / 100.0);
             if (ch == ' ') advance += tw * (th / 100.0);
             totalAdvance += advance;
         }
@@ -489,19 +489,19 @@ internal static class TextExtractor
     // Row-major [a b c d e f] affine matrix multiply: result = m1 × m2 (apply m1 first).
     private static double[] MultiplyMatrix(double[] m1, double[] m2) =>
     [
-        (m1[0] * m2[0]) + (m1[1] * m2[2]),
-        (m1[0] * m2[1]) + (m1[1] * m2[3]),
-        (m1[2] * m2[0]) + (m1[3] * m2[2]),
-        (m1[2] * m2[1]) + (m1[3] * m2[3]),
-        (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
-        (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
+        m1[0] * m2[0] + m1[1] * m2[2],
+        m1[0] * m2[1] + m1[1] * m2[3],
+        m1[2] * m2[0] + m1[3] * m2[2],
+        m1[2] * m2[1] + m1[3] * m2[3],
+        m1[4] * m2[0] + m1[5] * m2[2] + m2[4],
+        m1[4] * m2[1] + m1[5] * m2[3] + m2[5]
     ];
 
     // Average linear scale of a CTM (geometric mean of the two basis-vector magnitudes).
     private static double CtmScale(double[] m)
     {
-        var sx = Math.Sqrt((m[0] * m[0]) + (m[1] * m[1]));
-        var sy = Math.Sqrt((m[2] * m[2]) + (m[3] * m[3]));
+        var sx = Math.Sqrt(m[0] * m[0] + m[1] * m[1]);
+        var sy = Math.Sqrt(m[2] * m[2] + m[3] * m[3]);
         var s = Math.Sqrt(sx * sy);
         return s > 1e-6 ? s : 1.0;
     }

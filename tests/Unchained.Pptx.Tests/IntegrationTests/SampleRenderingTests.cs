@@ -1,7 +1,6 @@
 using Shouldly;
 using System.IO.Compression;
 using Unchained.Drawing.Constants;
-using Unchained.Pptx.Engine;
 using Unchained.Pptx.Rendering;
 using Unchained.Pptx.Rendering.Engine;
 using Unchained.Pptx.Shapes;
@@ -198,7 +197,7 @@ public sealed class SampleRenderingTests : PptxTestBase
             for (var x = 0; x < width; x++)
             {
                 var s = x * channels;
-                var d = ((y * width) + x) * 3;
+                var d = (y * width + x) * 3;
                 rgb[d] = cur[s];
                 rgb[d + 1] = cur[s + 1];
                 rgb[d + 2] = cur[s + 2];
@@ -220,7 +219,7 @@ public sealed class SampleRenderingTests : PptxTestBase
             {
                 1 => (byte)(val + a),
                 2 => (byte)(val + b),
-                3 => (byte)(val + ((a + b) / 2)),
+                3 => (byte)(val + (a + b) / 2),
                 4 => (byte)(val + Paeth(a, b, c)),
                 _ => (byte)val,
             };

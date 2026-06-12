@@ -14,9 +14,7 @@ internal static class Jbig2Decoder
     /// Optional decoded bytes of the JBIG2Globals shared segment data.
     /// Must be provided when the stream references shared segments.
     /// </param>
-    internal static ReadOnlyMemory<byte> Decode(
-        ReadOnlyMemory<byte> data,
-        ReadOnlyMemory<byte>? globals = null)
+    internal static ReadOnlyMemory<byte> Decode(ReadOnlyMemory<byte> data, ReadOnlyMemory<byte>? globals = null)
     {
         try
         {

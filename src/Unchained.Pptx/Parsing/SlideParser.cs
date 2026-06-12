@@ -1,8 +1,6 @@
 using Unchained.Pptx.Core.Xml;
-using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Animations;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
 using Unchained.Ooxml.Media;

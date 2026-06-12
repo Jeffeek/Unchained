@@ -1,6 +1,5 @@
 using DocumentFormat.OpenXml.Packaging;
 using Unchained.Ooxml.Engine;
-using Unchained.Pptx.Slides;
 using Unchained.Pptx.Writing;
 using P = DocumentFormat.OpenXml.Presentation;
 using SdkPresentationDocument = DocumentFormat.OpenXml.Packaging.PresentationDocument;

@@ -267,7 +267,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         using var dec = new MemoryStream();
         using (var z = new ZLibStream(cms, CompressionMode.Decompress)) z.CopyTo(dec);
         var raw    = dec.ToArray();
-        var stride = 1 + (width * 4); // RGBA color type 6
+        var stride = 1 + width * 4; // RGBA color type 6
         var count  = 0;
         for (var y = 0; y < height; y++)
         {

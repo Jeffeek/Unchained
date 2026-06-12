@@ -1,5 +1,3 @@
-using Unchained.Ooxml;
-
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
@@ -56,8 +54,8 @@ public sealed class TableShape : Shape
             return; // single cell — nothing to merge
 
         var anchor = Grid[c0, r0];
-        anchor.ColumnSpan = (c1 - c0) + 1;
-        anchor.RowSpan = (r1 - r0) + 1;
+        anchor.ColumnSpan = c1 - c0 + 1;
+        anchor.RowSpan = r1 - r0 + 1;
 
         for (var r = r0; r <= r1; r++)
         for (var c = c0; c <= c1; c++)

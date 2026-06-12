@@ -34,11 +34,11 @@ internal static class PngWriter
             var dst = rowStart + 1;
             for (var x = 0; x < width; x++)
             {
-                var si = ((y * width) + x) * 3;
+                var si = (y * width + x) * 3;
                 raw[dst++] = rgb[si];
                 raw[dst++] = rgb[si + 1];
                 raw[dst++] = rgb[si + 2];
-                if (hasAlpha) raw[dst++] = alpha![(y * width) + x];
+                if (hasAlpha) raw[dst++] = alpha![y * width + x];
             }
         }
 

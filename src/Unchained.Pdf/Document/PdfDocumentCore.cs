@@ -465,7 +465,7 @@ internal sealed class PdfDocumentCore : IDisposable
         var start = (negative || span[0] == (byte)'+') ? 1 : 0;
         long value = 0;
         for (var i = start; i < span.Length; i++)
-            value = (value * 10) + (span[i] - '0');
+            value = value * 10 + (span[i] - '0');
 
         return negative ? -value : value;
     }

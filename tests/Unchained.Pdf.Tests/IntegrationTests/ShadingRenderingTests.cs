@@ -19,16 +19,16 @@ public sealed class ShadingRenderingTests : RendererTestBase
         using var dec = new MemoryStream();
         using (var z = new ZLibStream(comp, CompressionMode.Decompress)) z.CopyTo(dec);
         var raw = dec.ToArray();
-        var stride = 1 + (width * 4);
+        var stride = 1 + width * 4;
         var gray = new int[height, width];
         for (var y = 0; y < height; y++)
         {
             var row = y * stride + 1;
             for (var x = 0; x < width; x++)
             {
-                var r = raw[row + (x * 4)];
-                var g = raw[row + (x * 4) + 1];
-                var b = raw[row + (x * 4) + 2];
+                var r = raw[row + x * 4];
+                var g = raw[row + x * 4 + 1];
+                var b = raw[row + x * 4 + 2];
                 gray[y, x] = (r + g + b) / 3;
             }
         }

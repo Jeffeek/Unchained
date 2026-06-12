@@ -11,16 +11,17 @@ namespace Unchained.Drawing.Decoders;
 /// </summary>
 internal static class SvgDecoder
 {
-    private static readonly XNamespace Svg = "http://www.w3.org/2000/svg";
-
     /// <summary>
     /// Decodes SVG bytes to a flat RGB array (3 bytes per pixel, row-major).
     /// Returns null if the SVG cannot be parsed.
     /// </summary>
     public static byte[]? TryDecodeToRgb(
         ReadOnlySpan<byte> svgBytes,
-        int targetWidth, int targetHeight,
-        out int width, out int height)
+        int targetWidth,
+        int targetHeight,
+        out int width,
+        out int height
+    )
     {
         width = targetWidth;
         height = targetHeight;
@@ -35,10 +36,21 @@ internal static class SvgDecoder
             var (vx, vy, vw, vh) = ParseViewBox(root);
             var svgW = ParseLength(root.Attribute("width")?.Value) ?? vw;
             var svgH = ParseLength(root.Attribute("height")?.Value) ?? vh;
-            if (svgW <= 0) svgW = targetWidth;
-            if (svgH <= 0) svgH = targetHeight;
-            if (vw <= 0) { vw = svgW; vx = 0; }
-            if (vh <= 0) { vh = svgH; vy = 0; }
+            if (svgW <= 0)
+                svgW = targetWidth;
+            if (svgH <= 0)
+                svgH = targetHeight;
+            if (vw <= 0)
+            {
+                vw = svgW;
+                vx = 0;
+            }
+
+            if (vh <= 0)
+            {
+                vh = svgH;
+                vy = 0;
+            }
 
             // Scale factor: viewBox → target pixels.
             var scaleX = targetWidth / vw;
@@ -50,8 +62,15 @@ internal static class SvgDecoder
             var pixels = new byte[targetWidth * targetHeight * 3];
             for (var i = 0; i < pixels.Length; i++) pixels[i] = 255;
 
-            var ctx = new RenderContext(pixels, targetWidth, targetHeight,
-                scaleX, scaleY, offsetX, offsetY);
+            var ctx = new RenderContext(
+                pixels,
+                targetWidth,
+                targetHeight,
+                scaleX,
+                scaleY,
+                offsetX,
+                offsetY
+            );
 
             // Render all child elements.
             RenderElements(root.Elements(), ctx, "none", "#000000", 1.0f);
@@ -71,7 +90,8 @@ internal static class SvgDecoder
         RenderContext ctx,
         string inheritFill,
         string inheritStroke,
-        float inheritOpacity)
+        float inheritOpacity
+    )
     {
         foreach (var el in elements)
         {
@@ -85,33 +105,53 @@ internal static class SvgDecoder
             switch (localName)
             {
                 case "g":
+                {
                     RenderElements(el.Elements(), ctx, fill, stroke, opacity);
                     break;
+                }
                 case "rect":
+                {
                     RenderRect(el, ctx, fill, stroke, opacity);
                     break;
+                }
                 case "circle":
+                {
                     RenderCircle(el, ctx, fill, stroke, opacity);
                     break;
+                }
                 case "ellipse":
-                    RenderEllipse(el, ctx, fill, stroke, opacity);
+                {
+                    RenderEllipse(el, ctx, fill, opacity);
                     break;
+                }
                 case "line":
+                {
                     RenderLine(el, ctx, stroke, opacity);
                     break;
+                }
                 case "polygon":
                 case "polyline":
+                {
+                    // ReSharper disable once BadListLineBreaks
                     RenderPoly(el, ctx, fill, stroke, opacity, localName == "polygon");
                     break;
+                }
                 case "path":
+                {
                     RenderPath(el, ctx, fill, stroke, opacity);
                     break;
+                }
             }
         }
     }
 
-    private static void RenderRect(XElement el, RenderContext ctx,
-        string fill, string stroke, float opacity)
+    private static void RenderRect(
+        XElement el,
+        RenderContext ctx,
+        string fill,
+        string stroke,
+        float opacity
+    )
     {
         var x = (float)(ParseLength(el.Attribute("x")?.Value) ?? 0);
         var y = (float)(ParseLength(el.Attribute("y")?.Value) ?? 0);
@@ -122,17 +162,28 @@ internal static class SvgDecoder
         if (fill != "none")
         {
             var (r, g, b) = ParseColor(fill);
+            // ReSharper disable BadListLineBreaks
             FillRect(ctx, x, y, w, h, r, g, b, opacity);
+            // ReSharper restore BadListLineBreaks
         }
+
+        // ReSharper disable once InvertIf
         if (stroke != "none" && stroke != "")
         {
             var (r, g, b) = ParseColor(stroke);
+            // ReSharper disable BadListLineBreaks
             StrokeRect(ctx, x, y, w, h, r, g, b, opacity);
+            // ReSharper restore BadListLineBreaks
         }
     }
 
-    private static void RenderCircle(XElement el, RenderContext ctx,
-        string fill, string stroke, float opacity)
+    private static void RenderCircle(
+        XElement el,
+        RenderContext ctx,
+        string fill,
+        string stroke,
+        float opacity
+    )
     {
         var cx = (float)(ParseLength(el.Attribute("cx")?.Value) ?? 0);
         var cy = (float)(ParseLength(el.Attribute("cy")?.Value) ?? 0);
@@ -142,45 +193,74 @@ internal static class SvgDecoder
         if (fill != "none")
         {
             var (fr, fg, fb) = ParseColor(fill);
+            // ReSharper disable BadListLineBreaks
             FillEllipse(ctx, cx - r, cy - r, r * 2, r * 2, fr, fg, fb, opacity);
+            // ReSharper restore BadListLineBreaks
         }
+
+        // ReSharper disable once InvertIf
         if (stroke != "none" && stroke != "")
         {
             var (sr, sg, sb) = ParseColor(stroke);
+            // ReSharper disable BadListLineBreaks
             StrokeEllipse(ctx, cx - r, cy - r, r * 2, r * 2, sr, sg, sb, opacity);
+            // ReSharper restore BadListLineBreaks
         }
     }
 
-    private static void RenderEllipse(XElement el, RenderContext ctx,
-        string fill, string stroke, float opacity)
+    private static void RenderEllipse(
+        XElement el,
+        RenderContext ctx,
+        string fill,
+        float opacity
+    )
     {
         var cx = (float)(ParseLength(el.Attribute("cx")?.Value) ?? 0);
         var cy = (float)(ParseLength(el.Attribute("cy")?.Value) ?? 0);
         var rx = (float)(ParseLength(el.Attribute("rx")?.Value) ?? 0);
         var ry2 = (float)(ParseLength(el.Attribute("ry")?.Value) ?? 0);
-        if (rx <= 0 || ry2 <= 0) return;
+        if (rx <= 0 || ry2 <= 0)
+            return;
 
+        // ReSharper disable once InvertIf
         if (fill != "none")
         {
             var (fr, fg, fb) = ParseColor(fill);
+            // ReSharper disable BadListLineBreaks
             FillEllipse(ctx, cx - rx, cy - ry2, rx * 2, ry2 * 2, fr, fg, fb, opacity);
+            // ReSharper restore BadListLineBreaks
         }
     }
 
-    private static void RenderLine(XElement el, RenderContext ctx,
-        string stroke, float opacity)
+    private static void RenderLine(
+        XElement el,
+        RenderContext ctx,
+        string stroke,
+        float opacity
+    )
     {
         var x1 = (float)(ParseLength(el.Attribute("x1")?.Value) ?? 0);
         var y1 = (float)(ParseLength(el.Attribute("y1")?.Value) ?? 0);
         var x2 = (float)(ParseLength(el.Attribute("x2")?.Value) ?? 0);
         var y2 = (float)(ParseLength(el.Attribute("y2")?.Value) ?? 0);
-        if (stroke == "none" || stroke == "") return;
+
+        if (stroke is "none" or "")
+            return;
+
         var (r, g, b) = ParseColor(stroke);
+        // ReSharper disable BadListLineBreaks
         DrawLine(ctx, x1, y1, x2, y2, r, g, b, opacity);
+        // ReSharper restore BadListLineBreaks
     }
 
-    private static void RenderPoly(XElement el, RenderContext ctx,
-        string fill, string stroke, float opacity, bool close)
+    private static void RenderPoly(
+        XElement el,
+        RenderContext ctx,
+        string fill,
+        string stroke,
+        float opacity,
+        bool close
+    )
     {
         var pts = ParsePoints(el.Attribute("points")?.Value);
         if (pts.Count < 2) return;
@@ -188,49 +268,72 @@ internal static class SvgDecoder
         if (fill != "none" && close)
         {
             var (fr, fg, fb) = ParseColor(fill);
+            // ReSharper disable once BadListLineBreaks
             FillPolygon(ctx, pts, fr, fg, fb, opacity);
         }
+
+        // ReSharper disable once InvertIf
         if (stroke != "none" && stroke != "")
         {
             var (sr, sg, sb) = ParseColor(stroke);
+            // ReSharper disable BadListLineBreaks
             for (var i = 0; i < pts.Count - 1; i++)
                 DrawLine(ctx, pts[i].X, pts[i].Y, pts[i + 1].X, pts[i + 1].Y, sr, sg, sb, opacity);
             if (close && pts.Count > 2)
                 DrawLine(ctx, pts[^1].X, pts[^1].Y, pts[0].X, pts[0].Y, sr, sg, sb, opacity);
+            // ReSharper restore BadListLineBreaks
         }
     }
 
-    private static void RenderPath(XElement el, RenderContext ctx,
-        string fill, string stroke, float opacity)
+    private static void RenderPath(
+        XElement el,
+        RenderContext ctx,
+        string fill,
+        string stroke,
+        float opacity
+    )
     {
         var d = el.Attribute("d")?.Value;
-        if (string.IsNullOrEmpty(d)) return;
+        if (string.IsNullOrEmpty(d))
+            return;
 
         var polygons = ParsePathToPolygons(d);
 
         if (fill != "none" && fill != "")
         {
             var (fr, fg, fb) = ParseColor(fill);
-            foreach (var poly in polygons)
-                if (poly.Count >= 3)
-                    FillPolygon(ctx, poly, fr, fg, fb, opacity);
+            foreach (var poly in polygons.Where(static poly => poly.Count >= 3))
+                // ReSharper disable once BadListLineBreaks
+                FillPolygon(ctx, poly, fr, fg, fb, opacity);
         }
+
+        // ReSharper disable once InvertIf
         if (stroke != "none" && stroke != "")
         {
             var (sr, sg, sb) = ParseColor(stroke);
             foreach (var poly in polygons)
             {
+                // ReSharper disable BadListLineBreaks
                 for (var i = 0; i < poly.Count - 1; i++)
                     DrawLine(ctx, poly[i].X, poly[i].Y, poly[i + 1].X, poly[i + 1].Y, sr, sg, sb, opacity);
+                // ReSharper restore BadListLineBreaks
             }
         }
     }
 
     // ── Raster primitives ─────────────────────────────────────────────────────
 
-    private static void FillRect(RenderContext ctx,
-        float x, float y, float w, float h,
-        byte r, byte g, byte b, float opacity)
+    private static void FillRect(
+        RenderContext ctx,
+        float x,
+        float y,
+        float w,
+        float h,
+        byte r,
+        byte g,
+        byte b,
+        float opacity
+    )
     {
         var (px, py, pw, ph) = ctx.TransformRect(x, y, w, h);
         for (var row = py; row < py + ph; row++)
@@ -238,19 +341,37 @@ internal static class SvgDecoder
             ctx.BlendPixel(col, row, r, g, b, opacity);
     }
 
-    private static void StrokeRect(RenderContext ctx,
-        float x, float y, float w, float h,
-        byte r, byte g, byte b, float opacity)
+    private static void StrokeRect(
+        RenderContext ctx,
+        float x,
+        float y,
+        float w,
+        float h,
+        byte r,
+        byte g,
+        byte b,
+        float opacity
+    )
     {
+        // ReSharper disable BadListLineBreaks
         DrawLine(ctx, x, y, x + w, y, r, g, b, opacity);
         DrawLine(ctx, x + w, y, x + w, y + h, r, g, b, opacity);
         DrawLine(ctx, x + w, y + h, x, y + h, r, g, b, opacity);
         DrawLine(ctx, x, y + h, x, y, r, g, b, opacity);
+        // ReSharper restore BadListLineBreaks
     }
 
-    private static void FillEllipse(RenderContext ctx,
-        float x, float y, float w, float h,
-        byte r, byte g, byte b, float opacity)
+    private static void FillEllipse(
+        RenderContext ctx,
+        float x,
+        float y,
+        float w,
+        float h,
+        byte r,
+        byte g,
+        byte b,
+        float opacity
+    )
     {
         var (px, py, pw, ph) = ctx.TransformRect(x, y, w, h);
         var cx = px + pw / 2.0f;
@@ -263,7 +384,7 @@ internal static class SvgDecoder
         {
             var dx = (col - cx) / rx;
             var dy = (row - cy) / ry;
-            if ((dx * dx) + (dy * dy) <= 1.0f)
+            if (dx * dx + dy * dy <= 1.0f)
                 ctx.BlendPixel(col, row, r, g, b, opacity);
         }
     }
@@ -277,8 +398,8 @@ internal static class SvgDecoder
         for (var i = 0; i <= steps; i++)
         {
             var angle = 2 * Math.PI * i / steps;
-            var ex = (float)(x + (w / 2) + (w / 2 * Math.Cos(angle)));
-            var ey = (float)(y + (h / 2) + (h / 2 * Math.Sin(angle)));
+            var ex = (float)(x + w / 2 + w / 2 * Math.Cos(angle));
+            var ey = (float)(y + h / 2 + h / 2 * Math.Sin(angle));
             if (prevX.HasValue)
                 DrawLine(ctx, prevX.Value, prevY!.Value, ex, ey, r, g, b, opacity);
             prevX = ex; prevY = ey;
@@ -487,8 +608,8 @@ internal static class SvgDecoder
         {
             var t = (float)step / steps;
             var mt = 1 - t;
-            var x = (mt * mt * mt * x0) + (3 * mt * mt * t * x1) + (3 * mt * t * t * x2) + (t * t * t * x3);
-            var y = (mt * mt * mt * y0) + (3 * mt * mt * t * y1) + (3 * mt * t * t * y2) + (t * t * t * y3);
+            var x = mt * mt * mt * x0 + 3 * mt * mt * t * x1 + 3 * mt * t * t * x2 + t * t * t * x3;
+            var y = mt * mt * mt * y0 + 3 * mt * mt * t * y1 + 3 * mt * t * t * y2 + t * t * t * y3;
             pts.Add((x, y));
         }
     }
@@ -502,8 +623,8 @@ internal static class SvgDecoder
         {
             var t = (float)step / steps;
             var mt = 1 - t;
-            var x = (mt * mt * x0) + (2 * mt * t * x1) + (t * t * x2);
-            var y = (mt * mt * y0) + (2 * mt * t * y1) + (t * t * y2);
+            var x = mt * mt * x0 + 2 * mt * t * x1 + t * t * x2;
+            var y = mt * mt * y0 + 2 * mt * t * y1 + t * t * y2;
             pts.Add((x, y));
         }
     }
@@ -515,7 +636,7 @@ internal static class SvgDecoder
         for (var step = 1; step <= steps; step++)
         {
             var t = (float)step / steps;
-            pts.Add((x0 + ((x1 - x0) * t), y0 + ((y1 - y0) * t)));
+            pts.Add((x0 + (x1 - x0) * t, y0 + (y1 - y0) * t));
         }
     }
 
@@ -658,7 +779,7 @@ internal static class SvgDecoder
         public double ScaleY => scaleY;
 
         public (int X, int Y) Transform(float x, float y) =>
-            ((int)((x * scaleX) + offsetX), (int)((y * scaleY) + offsetY));
+            ((int)(x * scaleX + offsetX), (int)(y * scaleY + offsetY));
 
         public (int X, int Y, int W, int H) TransformRect(float x, float y, float w, float h)
         {
@@ -671,7 +792,7 @@ internal static class SvgDecoder
         public void BlendPixel(int x, int y, byte r, byte g, byte b, float opacity)
         {
             if (x < 0 || x >= width || y < 0 || y >= height) return;
-            var idx = ((y * width) + x) * 3;
+            var idx = (y * width + x) * 3;
             if (opacity >= 1.0f)
             {
                 pixels[idx] = r;
@@ -681,9 +802,9 @@ internal static class SvgDecoder
             else
             {
                 var a = opacity;
-                pixels[idx] = (byte)(pixels[idx] * (1 - a) + (r * a));
-                pixels[idx + 1] = (byte)(pixels[idx + 1] * (1 - a) + (g * a));
-                pixels[idx + 2] = (byte)(pixels[idx + 2] * (1 - a) + (b * a));
+                pixels[idx] = (byte)(pixels[idx] * (1 - a) + r * a);
+                pixels[idx + 1] = (byte)(pixels[idx + 1] * (1 - a) + g * a);
+                pixels[idx + 2] = (byte)(pixels[idx + 2] * (1 - a) + b * a);
             }
         }
     }

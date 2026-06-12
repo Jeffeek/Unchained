@@ -1,4 +1,3 @@
-using Unchained.Ooxml;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Shapes;

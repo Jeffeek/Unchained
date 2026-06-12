@@ -337,7 +337,7 @@
             _overallMessage = $"Processing {entry.FileName}…";
             StateHasChanged();
 
-            var folderName = $"{(_filesProcessed + 1):D3}_{SanitizeName(Path.GetFileNameWithoutExtension(entry.FileName))}";
+            var folderName = $"{_filesProcessed + 1:D3}_{SanitizeName(Path.GetFileNameWithoutExtension(entry.FileName))}";
             var pageErrors = new List<string>();
 
             try

@@ -28,8 +28,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     // onto its parent so nested shapes land in the right place.
     private readonly record struct Transform(double ScaleX, double ScaleY, double OffsetX, double OffsetY)
     {
-        public int PxX(long emu) => (int)((ScaleX * emu) + OffsetX);
-        public int PxY(long emu) => (int)((ScaleY * emu) + OffsetY);
+        public int PxX(long emu) => (int)(ScaleX * emu + OffsetX);
+        public int PxY(long emu) => (int)(ScaleY * emu + OffsetY);
         public int PxW(long emu) => (int)(ScaleX * emu);
         public int PxH(long emu) => (int)(ScaleY * emu);
     }
@@ -144,9 +144,9 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 for (var row = 0; row < h; row++)
                 {
                     var t = (double)row / Math.Max(1, h - 1);
-                    var r = (byte)(r1 + ((r2 - r1) * t));
-                    var g = (byte)(g1 + ((g2 - g1) * t));
-                    var bv = (byte)(b1 + ((b2 - b1) * t));
+                    var r = (byte)(r1 + (r2 - r1) * t);
+                    var g = (byte)(g1 + (g2 - g1) * t);
+                    var bv = (byte)(b1 + (b2 - b1) * t);
                     buffer.FillRect(0, row, buffer.Width, 1, r, g, bv, 255);
                 }
                 break;
@@ -251,8 +251,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             childTransform = new Transform(
                 parent.ScaleX * sx,
                 parent.ScaleY * sy,
-                groupPxX - (parent.ScaleX * sx * group.ChildOffsetX.Value),
-                groupPxY - (parent.ScaleY * sy * group.ChildOffsetY.Value));
+                groupPxX - parent.ScaleX * sx * group.ChildOffsetX.Value,
+                groupPxY - parent.ScaleY * sy * group.ChildOffsetY.Value);
         }
 
         foreach (var child in group.Children)
@@ -363,17 +363,17 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         // Highlight: top and left edges (lighter).
         for (var i = 0; i < bevelPx; i++)
         {
-            var alpha = (byte)(180 - (i * 20));
-            buffer.FillRect(x + i, y + i, width - (i * 2), 1, 255, 255, 255, alpha);
-            buffer.FillRect(x + i, y + i, 1, height - (i * 2), 255, 255, 255, alpha);
+            var alpha = (byte)(180 - i * 20);
+            buffer.FillRect(x + i, y + i, width - i * 2, 1, 255, 255, 255, alpha);
+            buffer.FillRect(x + i, y + i, 1, height - i * 2, 255, 255, 255, alpha);
         }
 
         // Shadow: bottom and right edges (darker).
         for (var i = 0; i < bevelPx; i++)
         {
-            var alpha = (byte)(140 - (i * 15));
-            buffer.FillRect(x + i, y + height - 1 - i, width - (i * 2), 1, 0, 0, 0, alpha);
-            buffer.FillRect(x + width - 1 - i, y + i, 1, height - (i * 2), 0, 0, 0, alpha);
+            var alpha = (byte)(140 - i * 15);
+            buffer.FillRect(x + i, y + height - 1 - i, width - i * 2, 1, 0, 0, 0, alpha);
+            buffer.FillRect(x + width - 1 - i, y + i, 1, height - i * 2, 0, 0, 0, alpha);
         }
     }
 
@@ -410,8 +410,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
             var sx = x + offX - expand;
             var sy = y + offY - expand;
-            var sw = width + (expand * 2);
-            var sh = height + (expand * 2);
+            var sw = width + expand * 2;
+            var sh = height + expand * 2;
             buffer.FillRect(sx, sy, sw, sh, sr, sg, sb, alpha);
         }
     }
@@ -534,7 +534,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
         var dx = tipX - fromX;
         var dy = tipY - fromY;
-        var len = Math.Sqrt((dx * dx) + (dy * dy));
+        var len = Math.Sqrt(dx * dx + dy * dy);
         if (len < 1) return;
 
         var ux = dx / len;
@@ -573,10 +573,10 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             var alpha = (double)(scanY - y0) / totalH;
             var beta = segH == 0 ? 1.0 : (double)(scanY - (isUpperHalf ? y0 : y1)) / segH;
 
-            var ax = (int)(x0 + ((x2 - x0) * alpha));
+            var ax = (int)(x0 + (x2 - x0) * alpha);
             var bx2 = isUpperHalf
-                ? (int)(x0 + ((x1 - x0) * beta))
-                : (int)(x1 + ((x2 - x1) * beta));
+                ? (int)(x0 + (x1 - x0) * beta)
+                : (int)(x1 + (x2 - x1) * beta);
 
             if (ax > bx2) (ax, bx2) = (bx2, ax);
             buffer.FillRect(ax, scanY, bx2 - ax + 1, 1, r, g, b, 255);
@@ -660,7 +660,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         for (var t = 0; t <= tickCount; t++)
         {
             var frac = (double)t / tickCount;
-            var val = minVal + (range * frac);
+            var val = minVal + range * frac;
             var label = FormatAxisValue(val);
 
             if (!horizontal)
@@ -762,13 +762,13 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 if (horizontal)
                 {
                     var barLen = (int)(val / maxVal * w);
-                    var by = y + (c * groupSpan) + (s * barSpan);
+                    var by = y + c * groupSpan + s * barSpan;
                     buffer.FillRect(x, by, barLen, barSpan - 1, color.R, color.G, color.B, 255);
                 }
                 else
                 {
                     var barLen = (int)(val / maxVal * h);
-                    var bx = x + (c * groupSpan) + (s * barSpan);
+                    var bx = x + c * groupSpan + s * barSpan;
                     buffer.FillRect(bx, y + h - barLen, barSpan - 1, barLen, color.R, color.G, color.B, 255);
                 }
             }
@@ -806,19 +806,19 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var total = series.Values.Sum();
         if (total <= 0) return;
 
-        var cx = x + (w / 2);
-        var cy = y + (h / 2);
+        var cx = x + w / 2;
+        var cy = y + h / 2;
         var radius = Math.Min(w, h) / 2 - 2;
         if (radius <= 0) return;
 
         var bounds = new double[series.Values.Count + 1];
         for (var i = 0; i < series.Values.Count; i++)
-            bounds[i + 1] = bounds[i] + (series.Values[i] / total);
+            bounds[i + 1] = bounds[i] + series.Values[i] / total;
 
         for (var py = -radius; py <= radius; py++)
         for (var px = -radius; px <= radius; px++)
         {
-            if ((px * px) + (py * py) > radius * radius) continue;
+            if (px * px + py * py > radius * radius) continue;
             var angle = Math.Atan2(py, px);
             var frac = (angle + Math.PI) / (2 * Math.PI);
             var slice = 0;
@@ -882,13 +882,13 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         RasterBuffer buffer, List<string> nodes,
         int x, int y, int width, int height, double dpi)
     {
-        var cx = x + (width / 2);
-        var cy2 = y + (height / 2);
+        var cx = x + width / 2;
+        var cy2 = y + height / 2;
         var radius = Math.Min(width, height) / 2 - 20;
         var nodeR = Math.Max(10, radius / 3);
         for (var i = 0; i < nodes.Count; i++)
         {
-            var angle = (2 * Math.PI * i / nodes.Count) - (Math.PI / 2);
+            var angle = 2 * Math.PI * i / nodes.Count - Math.PI / 2;
             var nx = cx + (int)(radius * Math.Cos(angle));
             var ny = cy2 + (int)(radius * Math.Sin(angle));
             var color = SeriesPalette[i % SeriesPalette.Length];
@@ -897,7 +897,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             for (var px = nx - nodeR; px <= nx + nodeR; px++)
             {
                 var dx = px - nx; var dy = py - ny;
-                if ((dx * dx) + (dy * dy) <= nodeR * nodeR)
+                if (dx * dx + dy * dy <= nodeR * nodeR)
                     buffer.BlitImagePixel(px, py, color.R, color.G, color.B);
             }
             RenderTextFrameText(buffer, TruncateLabel(nodes[i], 8),
@@ -927,16 +927,16 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             if (childY > y + height) return;
             for (var ci = 0; ci < node.Children.Count; ci++)
             {
-                var childX = x + (ci * childW) + 4;
+                var childX = x + ci * childW + 4;
                 // Connect line
-                buffer.DrawLine(nx + (boxW / 2), ny + boxH, childX + (childW / 2), childY, 180, 180, 180, 1);
+                buffer.DrawLine(nx + boxW / 2, ny + boxH, childX + childW / 2, childY, 180, 180, 180, 1);
                 DrawNode(node.Children[ci], childX, childY, colorIdx + ci + 1);
             }
         }
 
         var nodeSpacing = Math.Max(boxW + 8, width / Math.Max(1, roots.Count));
         for (var i = 0; i < roots.Count; i++)
-            DrawNode(roots[i], x + (i * nodeSpacing) + 4, y + 4, i);
+            DrawNode(roots[i], x + i * nodeSpacing + 4, y + 4, i);
     }
 
     // Matrix: 2×2 grid of colored boxes.
@@ -949,11 +949,11 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         for (var i = 0; i < Math.Min(4, nodes.Count); i++)
         {
             var col = i % 2; var row = i / 2;
-            var cx2 = x + 2 + (col * (cellW + 2));
-            var cy3 = y + 2 + (row * (cellH + 2));
+            var cx2 = x + 2 + col * (cellW + 2);
+            var cy3 = y + 2 + row * (cellH + 2);
             var color = SeriesPalette[i % SeriesPalette.Length];
             buffer.FillRect(cx2, cy3, cellW, cellH, color.R, color.G, color.B, 255);
-            RenderTextFrameText(buffer, nodes[i], cx2 + 4, cy3 + (cellH / 2) - 6, cellW - 8, 10.0, dpi, 255, 255, 255);
+            RenderTextFrameText(buffer, nodes[i], cx2 + 4, cy3 + cellH / 2 - 6, cellW - 8, 10.0, dpi, 255, 255, 255);
         }
     }
 
@@ -970,11 +970,11 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             var frac = (double)(row + 1) / n;
             var rowW = (int)(width * frac);
             var rx = x + (width - rowW) / 2;
-            var ry = y + (i * rowH);
+            var ry = y + i * rowH;
             var color = SeriesPalette[i % SeriesPalette.Length];
             buffer.FillRect(rx, ry, rowW, rowH - 2, color.R, color.G, color.B, 255);
             RenderTextFrameText(buffer, TruncateLabel(nodes[i], 12),
-                rx + 4, ry + (rowH / 2) - 5, rowW - 8, 9.0, dpi, 255, 255, 255);
+                rx + 4, ry + rowH / 2 - 5, rowW - 8, 9.0, dpi, 255, 255, 255);
         }
     }
 
@@ -1018,9 +1018,9 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 for (var i = 0; i < bands; i++)
                 {
                     var t = (double)i / (bands - 1);
-                    var r = (byte)(r1 + ((r2 - r1) * t));
-                    var g = (byte)(g1 + ((g2 - g1) * t));
-                    var bv = (byte)(b1 + ((b2 - b1) * t));
+                    var r = (byte)(r1 + (r2 - r1) * t);
+                    var g = (byte)(g1 + (g2 - g1) * t);
+                    var bv = (byte)(b1 + (b2 - b1) * t);
                     var bandY = y + (int)((double)i / bands * height);
                     var bandH = (int)((double)(i + 1) / bands * height) - (bandY - y);
                     buffer.FillRect(x, bandY, width, Math.Max(1, bandH), r, g, bv, 255);
@@ -1059,7 +1059,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             for (var px = 0; px < width; px++)
             {
                 var srcX = px * imgWidth / width;
-                var srcOffset = ((srcY * imgWidth) + srcX) * 3;
+                var srcOffset = (srcY * imgWidth + srcX) * 3;
                 buffer.BlitImagePixel(
                     x + px,
                     y + py,
@@ -1102,7 +1102,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             for (var px = 0; px < width; px++)
             {
                 var srcX = px * imgWidth / width;
-                var srcOffset = ((srcY * imgWidth) + srcX) * 3;
+                var srcOffset = (srcY * imgWidth + srcX) * 3;
                 buffer.BlitImagePixel(
                     x + px,
                     y + py,
@@ -1149,14 +1149,14 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         if (colCount > 1)
         {
             var spacingPx = (int)(textFrame.Format.ColumnSpacing.ToPoints() * scale / dpi * 96);
-            var colW = (shapeWidth - ((colCount - 1) * spacingPx)) / colCount;
+            var colW = (shapeWidth - (colCount - 1) * spacingPx) / colCount;
             if (colW > 0)
             {
                 // Evenly distribute paragraphs across columns.
                 var parasPerCol = (int)Math.Ceiling((double)textFrame.Paragraphs.Count / colCount);
                 for (var col = 0; col < colCount; col++)
                 {
-                    var colX = shapeX + (col * (colW + spacingPx));
+                    var colX = shapeX + col * (colW + spacingPx);
                     var start = col * parasPerCol;
                     var end = Math.Min(start + parasPerCol, textFrame.Paragraphs.Count);
                     if (start >= end) break;
@@ -1428,8 +1428,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                     continue;
                 }
 
-                var penX = cursorX + (glyphPositions[i].XOffset / 64);
-                var penY = startY + (int)pixelSize + (glyphPositions[i].YOffset / 64);
+                var penX = cursorX + glyphPositions[i].XOffset / 64;
+                var penY = startY + (int)pixelSize + glyphPositions[i].YOffset / 64;
 
                 buffer.BlitGlyphFromFace(penX, penY, ftFace, r, g, b);
 

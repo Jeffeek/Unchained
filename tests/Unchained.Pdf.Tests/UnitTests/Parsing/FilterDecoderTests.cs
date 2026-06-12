@@ -37,7 +37,7 @@ public sealed class LzwDecoderTests
         for (var i = 0; i < bits.Count; i++)
         {
             if (bits[i])
-                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
+                bytes[i / 8] |= (byte)(1 << (7 - i % 8));
         }
 
         return bytes;
@@ -402,7 +402,7 @@ public sealed class StreamFiltersAdditionalTests
         for (var i = 0; i < bits.Count; i++)
         {
             if (bits[i])
-                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
+                bytes[i / 8] |= (byte)(1 << (7 - i % 8));
         }
 
         var stream = MakeStream("LZW", bytes);
@@ -475,7 +475,7 @@ public sealed class StreamFiltersAdditionalTests
         for (var i = 0; i < bits.Count; i++)
         {
             if (bits[i])
-                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
+                bytes[i / 8] |= (byte)(1 << (7 - i % 8));
         }
 
         var parms = new PdfDictionary(new Dictionary<string, PdfObject>
@@ -546,7 +546,7 @@ public sealed class StreamFiltersAdditionalTests
         for (var i = 0; i < bits.Count; i++)
         {
             if (bits[i])
-                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
+                bytes[i / 8] |= (byte)(1 << (7 - i % 8));
         }
 
         var dict = new PdfDictionary(new Dictionary<string, PdfObject>
@@ -605,7 +605,7 @@ public sealed class CcittFaxDecoderTests
             var sb = new StringBuilder(16);
             for (var col = 0; col < 16; col++)
             {
-                var bit = (decoded[(row * rowBytes) + (col >> 3)] >> (7 - (col & 7))) & 1;
+                var bit = (decoded[row * rowBytes + (col >> 3)] >> (7 - (col & 7))) & 1;
                 sb.Append(bit);
             }
             sb.ToString().ShouldBe(expected[row], $"row {row} mismatch");
@@ -664,7 +664,7 @@ public sealed class CcittFaxDecoderTests
             var sb = new StringBuilder(16);
             for (var col = 0; col < 16; col++)
             {
-                var bit = (decoded[(row * rowBytes) + (col >> 3)] >> (7 - (col & 7))) & 1;
+                var bit = (decoded[row * rowBytes + (col >> 3)] >> (7 - (col & 7))) & 1;
                 sb.Append(bit);
             }
 

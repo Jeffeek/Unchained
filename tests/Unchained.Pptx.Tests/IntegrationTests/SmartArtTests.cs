@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;

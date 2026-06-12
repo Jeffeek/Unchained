@@ -1,8 +1,6 @@
 using Unchained.Pptx.Core;
-using Unchained.Ooxml;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Media;
-using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Slides;

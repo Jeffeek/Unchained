@@ -1,6 +1,5 @@
 using Shouldly;
 using Unchained.Ooxml;
-using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Slides;
 using Unchained.Pptx.Tests.Helpers;

@@ -271,8 +271,7 @@ internal static class JpegDecoder
             foreach (var c in _components)
             {
                 c.BlocksPerLine = mcusX * c.HSamp;
-                c.BlocksPerColumn = mcusY * c.VSamp;
-                c.Pixels = new byte[(mcusX * c.HSamp * 8) * (mcusY * c.VSamp * 8)];
+                c.Pixels = new byte[mcusX * c.HSamp * 8 * mcusY * c.VSamp * 8];
                 c.Prediction = 0;
             }
 
@@ -293,8 +292,8 @@ internal static class JpegDecoder
                         if (block is null)
                             return null;
 
-                        var blockX = ((mx * comp.HSamp) + bx) * 8;
-                        var blockY = ((my * comp.VSamp) + by) * 8;
+                        var blockX = (mx * comp.HSamp + bx) * 8;
+                        var blockY = (my * comp.VSamp + by) * 8;
                         var stride = comp.BlocksPerLine * 8;
                         PlaceBlock(block, comp.Pixels!, blockX, blockY, stride);
                     }
@@ -455,7 +454,7 @@ internal static class JpegDecoder
 
             for (var i = 0; i < 64; i++)
             {
-                var v = (int)Math.Round((block[i] / 8.0) + 128);
+                var v = (int)Math.Round(block[i] / 8.0 + 128);
                 output[i] = v < 0 ? 0 : v > 255 ? 255 : v;
             }
 
@@ -466,7 +465,7 @@ internal static class JpegDecoder
         {
             // Naive 8-point IDCT — clear and correct; performance is acceptable for slides.
             Span<double> s = stackalloc double[8];
-            for (var i = 0; i < 8; i++) s[i] = b[offset + (i * stride)];
+            for (var i = 0; i < 8; i++) s[i] = b[offset + i * stride];
 
             Span<double> o = stackalloc double[8];
             for (var x = 0; x < 8; x++)
@@ -475,7 +474,7 @@ internal static class JpegDecoder
                 for (var u = 0; u < 8; u++)
                 {
                     var cu = u == 0 ? 1.0 / Math.Sqrt(2) : 1.0;
-                    sum += cu * s[u] * Math.Cos(((2 * x) + 1) * u * Math.PI / 16.0);
+                    sum += cu * s[u] * Math.Cos((2 * x + 1) * u * Math.PI / 16.0);
                 }
 
                 o[x] = sum;
@@ -499,9 +498,9 @@ internal static class JpegDecoder
                 for (var x = 0; x < 8; x++)
                 {
                     var dx = x0 + x;
-                    var di = (dy * stride) + dx;
+                    var di = dy * stride + dx;
                     if (di >= 0 && di < dest.Count)
-                        dest[di] = (byte)block[(y * 8) + x];
+                        dest[di] = (byte)block[y * 8 + x];
                 }
             }
         }
@@ -567,7 +566,6 @@ internal static class JpegDecoder
             public int VSamp;
             public int QuantId;
             public int BlocksPerLine;
-            public int BlocksPerColumn;
             public byte[]? Pixels;
             public int Prediction;
         }

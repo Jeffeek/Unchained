@@ -169,7 +169,7 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
         RgbToHls(red / 255.0, green / 255.0, blue / 255.0,
             out var hue, out var luminance, out var saturation);
 
-        luminance = Math.Clamp((luminance * modifier) + offset, 0.0, 1.0);
+        luminance = Math.Clamp(luminance * modifier + offset, 0.0, 1.0);
 
         HlsToRgb(hue, luminance, saturation, out var r, out var g, out var b);
 
@@ -201,11 +201,11 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
             : delta / (2.0 - maximum - minimum);
 
         if (maximum == r)
-            hue = ((g - b) / delta) % 6.0;
+            hue = (g - b) / delta % 6.0;
         else if (maximum == g)
-            hue = ((b - r) / delta) + 2.0;
+            hue = (b - r) / delta + 2.0;
         else
-            hue = ((r - g) / delta) + 4.0;
+            hue = (r - g) / delta + 4.0;
 
         hue /= 6.0;
         if (hue < 0) hue += 1.0;
@@ -223,12 +223,12 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
 
         var q = luminance < 0.5
             ? luminance * (1.0 + saturation)
-            : luminance + saturation - (luminance * saturation);
-        var p = (2.0 * luminance) - q;
+            : luminance + saturation - luminance * saturation;
+        var p = 2.0 * luminance - q;
 
-        r = HueToRgbChannel(p, q, hue + (1.0 / 3.0));
+        r = HueToRgbChannel(p, q, hue + 1.0 / 3.0);
         g = HueToRgbChannel(p, q, hue);
-        b = HueToRgbChannel(p, q, hue - (1.0 / 3.0));
+        b = HueToRgbChannel(p, q, hue - 1.0 / 3.0);
     }
 
     private static double HueToRgbChannel(double p, double q, double t)
@@ -236,9 +236,9 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
         if (t < 0) t += 1.0;
         if (t > 1) t -= 1.0;
 
-        if (t < 1.0 / 6.0) return p + ((q - p) * 6.0 * t);
+        if (t < 1.0 / 6.0) return p + (q - p) * 6.0 * t;
         if (t < 1.0 / 2.0) return q;
-        if (t < 2.0 / 3.0) return p + ((q - p) * (2.0 / 3.0 - t) * 6.0);
+        if (t < 2.0 / 3.0) return p + (q - p) * (2.0 / 3.0 - t) * 6.0;
         return p;
     }
 }

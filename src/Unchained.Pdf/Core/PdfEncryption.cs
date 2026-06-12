@@ -439,7 +439,7 @@ internal static class PdfEncryption
         var hex = s.Bytes.Span;
         var result = new byte[hex.Length / 2];
         for (var i = 0; i < result.Length; i++)
-            result[i] = (byte)((HexNibble(hex[i * 2]) << 4) | HexNibble(hex[(i * 2) + 1]));
+            result[i] = (byte)((HexNibble(hex[i * 2]) << 4) | HexNibble(hex[i * 2 + 1]));
 
         return result;
     }

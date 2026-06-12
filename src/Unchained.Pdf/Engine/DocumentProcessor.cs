@@ -1160,8 +1160,8 @@ public sealed class DocumentProcessor : IDocumentProcessor
             {
                 var cid = (span[i] << 8) | span[i + 1];
                 var gid = cfi.IdentityCidToGid ? cid
-                    : (cfi.CidToGid is not null && cid < cfi.CidToGid.Count
-                        ? (int)cfi.CidToGid[cid] : cid);
+                    : cfi.CidToGid is not null && cid < cfi.CidToGid.Count
+                        ? (int)cfi.CidToGid[cid] : cid;
                 result.Add(gid);
             }
         }

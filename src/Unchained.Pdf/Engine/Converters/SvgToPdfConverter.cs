@@ -34,13 +34,13 @@ internal static class SvgToPdfConverter
         float scaleX, scaleY, offsetX, offsetY;
         if (options.FitToPage && svgW > 0 && svgH > 0)
         {
-            var fitW = options.PageWidthPt - (2 * options.MarginPt);
-            var fitH = options.PageHeightPt - (2 * options.MarginPt);
+            var fitW = options.PageWidthPt - 2 * options.MarginPt;
+            var fitH = options.PageHeightPt - 2 * options.MarginPt;
             var scale = Math.Min(fitW / svgW, fitH / svgH);
             scaleX = scale;
             scaleY = scale;
-            offsetX = options.MarginPt + ((fitW - (svgW * scale)) / 2f);
-            offsetY = options.MarginPt + ((fitH - (svgH * scale)) / 2f);
+            offsetX = options.MarginPt + (fitW - svgW * scale) / 2f;
+            offsetY = options.MarginPt + (fitH - svgH * scale) / 2f;
         }
         else
         {
@@ -72,7 +72,7 @@ internal static class SvgToPdfConverter
         w.Float(0f);
         w.Float(-scaleY);
         w.Float(offsetX);
-        w.Float(offsetY + (svgH * scaleY));
+        w.Float(offsetY + svgH * scaleY);
         w.Op("cm"u8);
 
         WalkElement(root, w, root.Name.Namespace);
@@ -187,30 +187,30 @@ internal static class SvgToPdfConverter
         w.Float(cy);
         w.Op("m"u8);
         w.Float(cx + rx);
-        w.Float(cy + (ry * k));
-        w.Float(cx + (rx * k));
+        w.Float(cy + ry * k);
+        w.Float(cx + rx * k);
         w.Float(cy + ry);
         w.Float(cx);
         w.Float(cy + ry);
         w.Op("c"u8);
-        w.Float(cx - (rx * k));
+        w.Float(cx - rx * k);
         w.Float(cy + ry);
         w.Float(cx - rx);
-        w.Float(cy + (ry * k));
+        w.Float(cy + ry * k);
         w.Float(cx - rx);
         w.Float(cy);
         w.Op("c"u8);
         w.Float(cx - rx);
-        w.Float(cy - (ry * k));
-        w.Float(cx - (rx * k));
+        w.Float(cy - ry * k);
+        w.Float(cx - rx * k);
         w.Float(cy - ry);
         w.Float(cx);
         w.Float(cy - ry);
         w.Op("c"u8);
-        w.Float(cx + (rx * k));
+        w.Float(cx + rx * k);
         w.Float(cy - ry);
         w.Float(cx + rx);
-        w.Float(cy - (ry * k));
+        w.Float(cy - ry * k);
         w.Float(cx + rx);
         w.Float(cy);
         w.Op("c"u8);

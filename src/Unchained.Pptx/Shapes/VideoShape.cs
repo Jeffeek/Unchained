@@ -1,6 +1,4 @@
-using Unchained.Pptx.Media;
 using Unchained.Ooxml.Media;
-using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Shapes;
 

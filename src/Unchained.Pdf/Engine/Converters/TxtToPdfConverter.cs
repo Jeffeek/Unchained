@@ -20,9 +20,9 @@ internal static class TxtToPdfConverter
         var fontRef = acc.AddFont(options.FontName);
         var fontMap = new Dictionary<string, Core.PdfIndirectReference> { ["F1"] = fontRef };
 
-        var usableWidth = options.PageWidthPt - (2 * options.MarginPt);
+        var usableWidth = options.PageWidthPt - 2 * options.MarginPt;
         var lineHeight = options.FontSize * options.LineSpacing;
-        var usableHeight = options.PageHeightPt - (2 * options.MarginPt);
+        var usableHeight = options.PageHeightPt - 2 * options.MarginPt;
         var linesPerPage = Math.Max(1, (int)(usableHeight / lineHeight));
 
         var allLines = LayoutLines(text, options.FontName, options.FontSize, usableWidth);
@@ -108,7 +108,7 @@ internal static class TxtToPdfConverter
 
     private static byte[] BuildPageContent(IReadOnlyCollection<string> lines, TxtLoadOptions options)
     {
-        var buf = new ArrayBufferWriter<byte>(256 + (lines.Count * 80));
+        var buf = new ArrayBufferWriter<byte>(256 + lines.Count * 80);
         var w = new ContentStreamWriter(buf);
 
         var leading = options.FontSize * options.LineSpacing;
@@ -151,7 +151,7 @@ internal static class TxtToPdfConverter
         ICollection<TaggedContentItem> taggedItems
     )
     {
-        var buf = new ArrayBufferWriter<byte>(256 + (lines.Count * 120));
+        var buf = new ArrayBufferWriter<byte>(256 + lines.Count * 120);
         var w = new ContentStreamWriter(buf);
 
         var leading = options.FontSize * options.LineSpacing;
@@ -162,7 +162,7 @@ internal static class TxtToPdfConverter
         for (var i = 0; i < lines.Count; i++)
         {
             var line = lines[i];
-            var y = startY - (i * leading);
+            var y = startY - i * leading;
 
             if (string.IsNullOrEmpty(line))
             {

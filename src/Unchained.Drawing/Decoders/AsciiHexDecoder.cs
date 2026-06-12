@@ -1,4 +1,3 @@
-using System.IO;
 using Unchained.Drawing.Extensions;
 
 namespace Unchained.Drawing.Decoders;
@@ -23,17 +22,25 @@ internal static class AsciiHexDecoder
             switch (b)
             {
                 case >= (byte)'0' and <= (byte)'9':
+                {
                     value = b - '0';
                     break;
+                }
                 case >= (byte)'A' and <= (byte)'F':
+                {
                     value = b - 'A' + 10;
                     break;
+                }
                 case >= (byte)'a' and <= (byte)'f':
+                {
                     value = b - 'a' + 10;
                     break;
+                }
                 default:
                 {
-                    if (b.IsWhitespace()) continue;
+                    if (b.IsWhitespace())
+                        continue;
+
                     throw new InvalidDataException($"ASCIIHexDecode: unexpected byte 0x{b:X2}.");
                 }
             }
@@ -52,5 +59,4 @@ internal static class AsciiHexDecoder
 
         return output.ToArray();
     }
-
 }

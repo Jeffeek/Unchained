@@ -126,7 +126,7 @@ internal sealed class ColorSpaceInfo
             case "Indexed":
             {
                 if (IndexedLookup is null || components.Length == 0) return (128, 128, 128);
-                var idx = (int)Math.Clamp(Math.Round(components[0] * 255), 0, (IndexedLookup.Length / Math.Max(1, IndexedBaseChannels)) - 1);
+                var idx = (int)Math.Clamp(Math.Round(components[0] * 255), 0, IndexedLookup.Length / Math.Max(1, IndexedBaseChannels) - 1);
                 var offset = idx * IndexedBaseChannels;
                 if (offset + IndexedBaseChannels > IndexedLookup.Length) return (128, 128, 128);
                 var palette = IndexedLookup.AsSpan(offset, IndexedBaseChannels);
@@ -152,17 +152,17 @@ internal sealed class ColorSpaceInfo
                 double xr, yg, zb;
                 if (CalRgbMatrix is { Length: >= 9 } m)
                 {
-                    xr = (m[0] * ar) + (m[3] * ag) + (m[6] * ab);
-                    yg = (m[1] * ar) + (m[4] * ag) + (m[7] * ab);
-                    zb = (m[2] * ar) + (m[5] * ag) + (m[8] * ab);
+                    xr = m[0] * ar + m[3] * ag + m[6] * ab;
+                    yg = m[1] * ar + m[4] * ag + m[7] * ab;
+                    zb = m[2] * ar + m[5] * ag + m[8] * ab;
                 }
                 else { xr = ar; yg = ag; zb = ab; }
                 // D65 XYZ → linear sRGB (IEC 61966-2-1)
-                var lr = ( 3.2404542 * xr) + (-1.5371385 * yg) + (-0.4985314 * zb);
-                var lg = (-0.9692660 * xr) + ( 1.8760108 * yg) + ( 0.0415560 * zb);
-                var lb = ( 0.0556434 * xr) + (-0.2040259 * yg) + ( 1.0572252 * zb);
+                var lr = 3.2404542 * xr + -1.5371385 * yg + -0.4985314 * zb;
+                var lg = -0.9692660 * xr + 1.8760108 * yg + 0.0415560 * zb;
+                var lb = 0.0556434 * xr + -0.2040259 * yg + 1.0572252 * zb;
                 // Gamma-compress sRGB
-                static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
+                static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : 1.055 * Math.Pow(v, 1.0 / 2.4) - 0.055;
                 return (B255(Gamma(Math.Max(0, lr))), B255(Gamma(Math.Max(0, lg))), B255(Gamma(Math.Max(0, lb))));
             }
 
@@ -172,14 +172,14 @@ internal sealed class ColorSpaceInfo
                 // L*a*b* → XYZ D50 → linear sRGB (approximate)
                 var lStar = components[0]; var a = components[1]; var b2 = components[2];
                 var fy = (lStar + 16) / 116.0;
-                var fx = (a / 500.0) + fy;
-                var fz = fy - (b2 / 200.0);
-                static double F(double t) => t > 0.206897 ? t * t * t : (t - (16.0 / 116.0)) / 7.787;
+                var fx = a / 500.0 + fy;
+                var fz = fy - b2 / 200.0;
+                static double F(double t) => t > 0.206897 ? t * t * t : (t - 16.0 / 116.0) / 7.787;
                 var x = 0.9505 * F(fx); var y = 1.0000 * F(fy); var z = 1.0890 * F(fz);
-                var lr2 = ( 3.2404542 * x) + (-1.5371385 * y) + (-0.4985314 * z);
-                var lg2 = (-0.9692660 * x) + ( 1.8760108 * y) + ( 0.0415560 * z);
-                var lb2 = ( 0.0556434 * x) + (-0.2040259 * y) + ( 1.0572252 * z);
-                static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
+                var lr2 = 3.2404542 * x + -1.5371385 * y + -0.4985314 * z;
+                var lg2 = -0.9692660 * x + 1.8760108 * y + 0.0415560 * z;
+                var lb2 = 0.0556434 * x + -0.2040259 * y + 1.0572252 * z;
+                static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : 1.055 * Math.Pow(v, 1.0 / 2.4) - 0.055;
                 return (B255(Gamma(Math.Max(0, lr2))), B255(Gamma(Math.Max(0, lg2))), B255(Gamma(Math.Max(0, lb2))));
             }
 

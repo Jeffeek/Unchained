@@ -45,7 +45,7 @@ public sealed class RenderingPixelTests : RendererTestBase
 
         // PdfPngEncoder uses color type 6 (RGBA), filter=0 (None)
         // Scanline layout: 1 filter byte + width * 4 bytes (R,G,B,A)
-        var stride      = 1 + (width * 4);
+        var stride      = 1 + width * 4;
         var nonWhite    = 0;
 
         for (var y = 0; y < height; y++)
@@ -53,9 +53,9 @@ public sealed class RenderingPixelTests : RendererTestBase
             var rowStart = y * stride + 1; // +1 to skip filter byte
             for (var x = 0; x < width; x++)
             {
-                var r = raw[rowStart + (x * 4)];
-                var g = raw[rowStart + (x * 4) + 1];
-                var b = raw[rowStart + (x * 4) + 2];
+                var r = raw[rowStart + x * 4];
+                var g = raw[rowStart + x * 4 + 1];
+                var b = raw[rowStart + x * 4 + 2];
                 if (r < 255 || g < 255 || b < 255)
                     nonWhite++;
             }
@@ -68,7 +68,7 @@ public sealed class RenderingPixelTests : RendererTestBase
         ((uint)data[offset]     << 24) |
         ((uint)data[offset + 1] << 16) |
         ((uint)data[offset + 2] << 8)  |
-        ((uint)data[offset + 3]);
+        (uint)data[offset + 3];
 
     // ── Blank-page baseline ───────────────────────────────────────────────────
 

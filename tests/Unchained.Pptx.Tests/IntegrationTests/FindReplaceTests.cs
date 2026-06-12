@@ -1,7 +1,5 @@
 using Shouldly;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Text;
-using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 

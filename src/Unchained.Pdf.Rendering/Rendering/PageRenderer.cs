@@ -382,8 +382,8 @@ internal sealed class PageRenderer(
 
     private void MoveTextLine(double tx, double ty)
     {
-        var newE = (tx * _gs.TextLineMatrix[0]) + (ty * _gs.TextLineMatrix[2]) + _gs.TextLineMatrix[4];
-        var newF = (tx * _gs.TextLineMatrix[1]) + (ty * _gs.TextLineMatrix[3]) + _gs.TextLineMatrix[5];
+        var newE = tx * _gs.TextLineMatrix[0] + ty * _gs.TextLineMatrix[2] + _gs.TextLineMatrix[4];
+        var newF = tx * _gs.TextLineMatrix[1] + ty * _gs.TextLineMatrix[3] + _gs.TextLineMatrix[5];
         _gs.TextLineMatrix[4] = newE;
         _gs.TextLineMatrix[5] = newF;
         _gs.TextMatrix = (double[])_gs.TextLineMatrix.Clone();
@@ -402,9 +402,9 @@ internal sealed class PageRenderer(
         var cd = _gs.Ctm[3];
         var ca = _gs.Ctm[0];
         var cc = _gs.Ctm[2];
-        var vx = (tb * ca) + (td * cc);
-        var vy = (tb * cb) + (td * cd);
-        var mag = Math.Sqrt((vx * vx) + (vy * vy));
+        var vx = tb * ca + td * cc;
+        var vy = tb * cb + td * cd;
+        var mag = Math.Sqrt(vx * vx + vy * vy);
         return mag > 1e-6 ? mag : 1.0;
     }
 
@@ -418,7 +418,7 @@ internal sealed class PageRenderer(
         // Horizontal text-space basis (1,0) through the text matrix linear part.
         var hx = ta;
         var hy = tc;
-        var mag = Math.Sqrt((hx * hx) + (hy * hy));
+        var mag = Math.Sqrt(hx * hx + hy * hy);
         return mag > 1e-6 ? mag : 1.0;
     }
 
@@ -550,8 +550,8 @@ internal sealed class PageRenderer(
 
             GlyphsAttempted++;
 
-            var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
-            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale) + _gs.TextRise;
+            var originX = _gs.TextMatrix[4] + glyphPositions[i].XOffset / 64.0 / scale;
+            var originY = _gs.TextMatrix[5] + glyphPositions[i].YOffset / 64.0 / scale + _gs.TextRise;
             var (px, py) = UToPixel(originX, originY);
 
             // Mode 0 (fill) and 2/4/6 (fill variants): blit the bitmap.
@@ -566,7 +566,7 @@ internal sealed class PageRenderer(
             if (_gs.TextRenderMode is 4 or 5 or 6 or 7)
                 ClipGlyphOutline(ftFace, (int)px, (int)py);
 
-            var advance = ((glyphPositions[i].XAdvance / 64.0 / scale) + _gs.CharSpace)
+            var advance = (glyphPositions[i].XAdvance / 64.0 / scale + _gs.CharSpace)
                           * (_gs.HorizontalScale / 100.0);
             _gs.TextMatrix[4] += advance;
         }
@@ -660,8 +660,8 @@ internal sealed class PageRenderer(
             // UToPixel consumes (handles producers that carry size in the matrix).
             var wGlyph = info.Widths.TryGetValue(cid, out var w) ? w : info.DefaultWidth;
             var hScale = TextMatrixHorizontalScale();
-            var advance = (((wGlyph / 1000.0 * _gs.FontSize) + _gs.CharSpace) * hScale)
-                          * (_gs.HorizontalScale / 100.0);
+            var advance = (wGlyph / 1000.0 * _gs.FontSize + _gs.CharSpace) * hScale
+                                                                           * (_gs.HorizontalScale / 100.0);
             _gs.TextMatrix[4] += advance;
         }
     }
@@ -723,8 +723,8 @@ internal sealed class PageRenderer(
         {
             var s  = t / 8.0;
             var u  = 1 - s;
-            var bx = (u * u * u * p0.X) + (3 * u * u * s * x1) + (3 * u * s * s * x2) + (s * s * s * x3);
-            var by = (u * u * u * p0.Y) + (3 * u * u * s * y1) + (3 * u * s * s * y2) + (s * s * s * y3);
+            var bx = u * u * u * p0.X + 3 * u * u * s * x1 + 3 * u * s * s * x2 + s * s * s * x3;
+            var by = u * u * u * p0.Y + 3 * u * u * s * y1 + 3 * u * s * s * y2 + s * s * s * y3;
             _curSub!.Add((bx, by));
             _currentPoint = (bx, by);
         }
@@ -825,8 +825,8 @@ internal sealed class PageRenderer(
 
         // Pattern cell size in device pixels (pattern matrix scale × device scale).
         var pm = tp.Matrix;
-        var sxv = Math.Sqrt((pm[0] * pm[0]) + (pm[1] * pm[1]));
-        var syv = Math.Sqrt((pm[2] * pm[2]) + (pm[3] * pm[3]));
+        var sxv = Math.Sqrt(pm[0] * pm[0] + pm[1] * pm[1]);
+        var syv = Math.Sqrt(pm[2] * pm[2] + pm[3] * pm[3]);
         var stepXpx = Math.Abs(tp.XStep) * sxv * scale;
         var stepYpx = Math.Abs(tp.YStep) * syv * scale;
         if (stepXpx < 0.5 || stepYpx < 0.5) return;
@@ -872,7 +872,7 @@ internal sealed class PageRenderer(
         {
             var tx = ((px - x0) % tileW + tileW) % tileW;
             var ty = ((py - y0) % tileH + tileH) % tileH;
-            var o = ((ty * tileW) + tx) * 4;
+            var o = (ty * tileW + tx) * 4;
             var r = tileData[o]; var g = tileData[o + 1]; var b = tileData[o + 2];
             if (r >= 250 && g >= 250 && b >= 250) continue; // skip the cell's white background
             buffer.BlitImagePixel(px, py, r, g, b);
@@ -949,21 +949,21 @@ internal sealed class PageRenderer(
                 maxX = Math.Min(maxX, cx1 - 1); maxY = Math.Min(maxY, cy1 - 1);
             }
 
-            var denom = ((by - cy) * (ax - cx)) + ((cx - bx) * (ay - cy));
+            var denom = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
             if (Math.Abs(denom) < 1e-9) continue; // degenerate triangle
 
             for (var py = minY; py <= maxY; py++)
             for (var px = minX; px <= maxX; px++)
             {
                 var fx = px + 0.5; var fy = py + 0.5;
-                var w0 = (((by - cy) * (fx - cx)) + ((cx - bx) * (fy - cy))) / denom;
-                var w1 = (((cy - ay) * (fx - cx)) + ((ax - cx) * (fy - cy))) / denom;
+                var w0 = ((by - cy) * (fx - cx) + (cx - bx) * (fy - cy)) / denom;
+                var w1 = ((cy - ay) * (fx - cx) + (ax - cx) * (fy - cy)) / denom;
                 var w2 = 1 - w0 - w1;
                 if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001) continue; // outside triangle
 
-                var r = (byte)Math.Clamp((w0 * t.R0) + (w1 * t.R1) + (w2 * t.R2), 0, 255);
-                var g = (byte)Math.Clamp((w0 * t.G0) + (w1 * t.G1) + (w2 * t.G2), 0, 255);
-                var b = (byte)Math.Clamp((w0 * t.B0) + (w1 * t.B1) + (w2 * t.B2), 0, 255);
+                var r = (byte)Math.Clamp(w0 * t.R0 + w1 * t.R1 + w2 * t.R2, 0, 255);
+                var g = (byte)Math.Clamp(w0 * t.G0 + w1 * t.G1 + w2 * t.G2, 0, 255);
+                var b = (byte)Math.Clamp(w0 * t.B0 + w1 * t.B1 + w2 * t.B2, 0, 255);
                 if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
                 else buffer.BlendPixel(px, py, r, g, b, _gs.FillA);
             }
@@ -981,9 +981,9 @@ internal sealed class PageRenderer(
             var x0 = sh.Coords[0]; var y0 = sh.Coords[1];
             var x1 = sh.Coords[2]; var y1 = sh.Coords[3];
             var dx = x1 - x0; var dy = y1 - y0;
-            var len2 = (dx * dx) + (dy * dy);
+            var len2 = dx * dx + dy * dy;
             if (len2 < 1e-9) { t = 0; return true; }
-            t = (((x - x0) * dx) + ((y - y0) * dy)) / len2;
+            t = ((x - x0) * dx + (y - y0) * dy) / len2;
         }
         else
         {
@@ -991,9 +991,9 @@ internal sealed class PageRenderer(
             // normalised distance from centre 0 to centre 1 (handles the common concentric case).
             var cx0 = sh.Coords[0]; var cy0 = sh.Coords[1]; var r0 = sh.Coords[2];
             var cx1 = sh.Coords[3]; var cy1 = sh.Coords[4]; var r1 = sh.Coords[5];
-            var d = Math.Sqrt(((x - cx1) * (x - cx1)) + ((y - cy1) * (y - cy1)));
+            var d = Math.Sqrt((x - cx1) * (x - cx1) + (y - cy1) * (y - cy1));
             var denom = r1 - r0;
-            t = Math.Abs(denom) > 1e-9 ? (d - r0) / denom : (r1 > 1e-9 ? d / r1 : 0);
+            t = Math.Abs(denom) > 1e-9 ? (d - r0) / denom : r1 > 1e-9 ? d / r1 : 0;
             _ = cx0; _ = cy0;
         }
 
@@ -1013,7 +1013,7 @@ internal sealed class PageRenderer(
         var dd = -_gs.Ctm[3] * scale;
         var e = _gs.Ctm[4] * scale;
         var f = (pageHeightPt - _gs.Ctm[5]) * scale;
-        var det = (a * dd) - (b * cc);
+        var det = a * dd - b * cc;
         if (Math.Abs(det) < 1e-12) { inv = []; return false; }
         var id = 1.0 / det;
         // Inverse affine.
@@ -1021,13 +1021,13 @@ internal sealed class PageRenderer(
         [
             dd * id, -b * id,
             -cc * id, a * id,
-            ((cc * f) - (dd * e)) * id, ((b * e) - (a * f)) * id
+            (cc * f - dd * e) * id, (b * e - a * f) * id
         ];
         return true;
     }
 
     private static (double X, double Y) ApplyInv(double[] m, double px, double py) =>
-        ((m[0] * px) + (m[2] * py) + m[4], (m[1] * px) + (m[3] * py) + m[5]);
+        (m[0] * px + m[2] * py + m[4], m[1] * px + m[3] * py + m[5]);
 
     // Scan-converts all current subpaths to device pixels and fills using the given winding
     // rule. Each subpath is treated as implicitly closed (PDF fills close open subpaths).
@@ -1073,7 +1073,7 @@ internal sealed class PageRenderer(
                     if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
                     {
                         var t = (sy - ay) / (by - ay);
-                        var cx = ax + (t * (bx - ax));
+                        var cx = ax + t * (bx - ax);
                         xs.Add((cx, by > ay ? 1 : -1));
                     }
                 }
@@ -1175,8 +1175,8 @@ internal sealed class PageRenderer(
         // Direction vectors of incoming (A→B) and outgoing (B→C) segments.
         var dxIn  = b.X - a.X; var dyIn  = b.Y - a.Y;
         var dxOut = c.X - b.X; var dyOut = c.Y - b.Y;
-        var lenIn  = Math.Sqrt((dxIn  * dxIn)  + (dyIn  * dyIn));
-        var lenOut = Math.Sqrt((dxOut * dxOut) + (dyOut * dyOut));
+        var lenIn  = Math.Sqrt(dxIn  * dxIn  + dyIn  * dyIn);
+        var lenOut = Math.Sqrt(dxOut * dxOut + dyOut * dyOut);
         if (lenIn < 1e-6 || lenOut < 1e-6) return;
 
         // Unit normals (perpendicular to each segment, pointing "outward").
@@ -1194,17 +1194,17 @@ internal sealed class PageRenderer(
 
             case 2: // Bevel — fill triangle between the two outer corners and the vertex
             {
-                var ox1 = (int)(bx + (nxIn  * half));
-                var oy1 = (int)(by + (nyIn  * half));
-                var ox2 = (int)(bx + (nxOut * half));
-                var oy2 = (int)(by + (nyOut * half));
+                var ox1 = (int)(bx + nxIn  * half);
+                var oy1 = (int)(by + nyIn  * half);
+                var ox2 = (int)(bx + nxOut * half);
+                var oy2 = (int)(by + nyOut * half);
                 buffer.FillTriangle(bx, by, ox1, oy1, ox2, oy2,
                     _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
                 // Also fill the inner side.
-                var ix1 = (int)(bx - (nxIn  * half));
-                var iy1 = (int)(by - (nyIn  * half));
-                var ix2 = (int)(bx - (nxOut * half));
-                var iy2 = (int)(by - (nyOut * half));
+                var ix1 = (int)(bx - nxIn  * half);
+                var iy1 = (int)(by - nyIn  * half);
+                var ix2 = (int)(bx - nxOut * half);
+                var iy2 = (int)(by - nyOut * half);
                 buffer.FillTriangle(bx, by, ix1, iy1, ix2, iy2,
                     _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
                 break;
@@ -1216,7 +1216,7 @@ internal sealed class PageRenderer(
                 // Edge 1: point = b + nIn*half, direction = (dxIn/lenIn, dyIn/lenIn)
                 // Edge 2: point = b + nOut*half, direction = (dxOut/lenOut, dyOut/lenOut)
                 // Fall back to bevel if the angle is too shallow (miter limit exceeded).
-                var sinHalf = (nxIn * dyOut / lenOut) - (nyIn * dxOut / lenOut);
+                var sinHalf = nxIn * dyOut / lenOut - nyIn * dxOut / lenOut;
                 if (Math.Abs(sinHalf) < 1e-6) break; // parallel segments
 
                 var miterLen = half / Math.Abs(sinHalf);
@@ -1225,17 +1225,17 @@ internal sealed class PageRenderer(
                 var mx = bx + (nxIn + nxOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf));
                 var my = by + (nyIn + nyOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf));
 
-                var ox1 = (int)(bx + (nxIn  * half));
-                var oy1 = (int)(by + (nyIn  * half));
-                var ox2 = (int)(bx + (nxOut * half));
-                var oy2 = (int)(by + (nyOut * half));
+                var ox1 = (int)(bx + nxIn  * half);
+                var oy1 = (int)(by + nyIn  * half);
+                var ox2 = (int)(bx + nxOut * half);
+                var oy2 = (int)(by + nyOut * half);
                 buffer.FillTriangle((int)mx, (int)my, ox1, oy1, ox2, oy2,
                     _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, _gs.StrokeA, _gs.BlendMode);
                 // Inner side.
-                var ix1 = (int)(bx - (nxIn  * half));
-                var iy1 = (int)(by - (nyIn  * half));
-                var ix2 = (int)(bx - (nxOut * half));
-                var iy2 = (int)(by - (nyOut * half));
+                var ix1 = (int)(bx - nxIn  * half);
+                var iy1 = (int)(by - nyIn  * half);
+                var ix2 = (int)(bx - nxOut * half);
+                var iy2 = (int)(by - nyOut * half);
                 var imx = bx - (nxIn + nxOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf));
                 var imy = by - (nyIn + nyOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf));
                 buffer.FillTriangle((int)imx, (int)imy, ix1, iy1, ix2, iy2,
@@ -1252,7 +1252,7 @@ internal sealed class PageRenderer(
     {
         var dx = x1 - x0;
         var dy = y1 - y0;
-        var len = Math.Sqrt((dx * dx) + (dy * dy));
+        var len = Math.Sqrt(dx * dx + dy * dy);
         if (len < 1e-6) return;
         var ux = dx / len;
         var uy = dy / len;
@@ -1267,8 +1267,8 @@ internal sealed class PageRenderer(
             var end = Math.Min(len, pos + seg);
             if (on)
             {
-                var ax = x0 + (ux * pos); var ay = y0 + (uy * pos);
-                var bx = x0 + (ux * end); var by = y0 + (uy * end);
+                var ax = x0 + ux * pos; var ay = y0 + uy * pos;
+                var bx = x0 + ux * end; var by = y0 + uy * end;
                 buffer.DrawLine((int)ax, (int)ay, (int)bx, (int)by,
                     _gs.StrokeR, _gs.StrokeG, _gs.StrokeB, thickPx, _gs.StrokeA, _gs.BlendMode);
             }
@@ -1284,8 +1284,8 @@ internal sealed class PageRenderer(
     {
         var a = _gs.Ctm[0]; var b = _gs.Ctm[1];
         var c = _gs.Ctm[2]; var d = _gs.Ctm[3];
-        var sx = Math.Sqrt((a * a) + (b * b));
-        var sy = Math.Sqrt((c * c) + (d * d));
+        var sx = Math.Sqrt(a * a + b * b);
+        var sy = Math.Sqrt(c * c + d * d);
         var s = Math.Sqrt(sx * sy);
         return s > 1e-6 ? s : 1.0;
     }
@@ -1413,7 +1413,7 @@ internal sealed class PageRenderer(
                 for (var sy = sy0; sy < sy1 && sy < srcH; sy++)
                 for (var sx = sx0; sx < sx1 && sx < srcW; sx++)
                 {
-                    var idx = (sy * srcW) + sx;
+                    var idx = sy * srcW + sx;
                     var o = idx * 3;
                     sr += rgb[o]; sg += rgb[o + 1]; sb += rgb[o + 2];
                     sa += alpha is not null ? alpha[idx] : 255;
@@ -1426,7 +1426,7 @@ internal sealed class PageRenderer(
             {
                 var sx = px * srcW / dstW;
                 var sy = py * srcH / dstH;
-                var idx = (sy * srcW) + sx;
+                var idx = sy * srcW + sx;
                 var o = idx * 3;
                 r = rgb[o]; g = rgb[o + 1]; b = rgb[o + 2];
                 a = alpha is not null ? alpha[idx] : 255;
@@ -1501,8 +1501,8 @@ internal sealed class PageRenderer(
                 var poly = new (double X, double Y)[count];
                 for (var j = 0; j < count; j++)
                 {
-                    poly[j] = (penX + (pts[start + j].X / 64.0),
-                               penY - (pts[start + j].Y / 64.0));
+                    poly[j] = (penX + pts[start + j].X / 64.0,
+                               penY - pts[start + j].Y / 64.0);
                 }
                 polys.Add(poly);
                 start = endIdx + 1;
@@ -1523,8 +1523,8 @@ internal sealed class PageRenderer(
     {
         if (_gs.SoftMask is not { } mask) return a;
         if ((uint)x >= (uint)_gs.SoftMaskWidth || (uint)y >= (uint)_gs.SoftMaskHeight) return 0;
-        var maskA = mask[(y * _gs.SoftMaskWidth) + x];
-        return (byte)((a * maskA) / 255);
+        var maskA = mask[y * _gs.SoftMaskWidth + x];
+        return (byte)(a * maskA / 255);
     }
 
     // Whether a soft mask is active — if so, fills must apply per-pixel alpha modulation.
@@ -1581,10 +1581,10 @@ internal sealed class PageRenderer(
                 for (var j = start; j <= endIdx; j++)
                 {
                     // FreeType outline X is in 26.6 pixels → divide by 64, add pen.
-                    var ptX = penX + (pts[j].X / 64.0);
+                    var ptX = penX + pts[j].X / 64.0;
                     // FreeType Y is upward (baseline = 0), buffer Y is downward; bitmapTop
                     // is already applied via penY = py from UToPixel. Y flips here:
-                    var ptY = penY - (pts[j].Y / 64.0);
+                    var ptY = penY - pts[j].Y / 64.0;
 
                     if (!first)
                         buffer.DrawLine(
@@ -1599,8 +1599,8 @@ internal sealed class PageRenderer(
                 // Close the contour back to the first point.
                 if (!first && endIdx >= start)
                 {
-                    var firstX = penX + (pts[start].X / 64.0);
-                    var firstY = penY - (pts[start].Y / 64.0);
+                    var firstX = penX + pts[start].X / 64.0;
+                    var firstY = penY - pts[start].Y / 64.0;
                     buffer.DrawLine(
                         (int)prevX, (int)prevY, (int)firstX, (int)firstY,
                         _gs.StrokeR, _gs.StrokeG, _gs.StrokeB,
@@ -1806,8 +1806,8 @@ internal sealed class PageRenderer(
             for (var y = 0; y < smInfo.HeightPx; y++)
             for (var x = 0; x < smInfo.WidthPx; x++)
             {
-                var o = ((y * smInfo.WidthPx) + x) * 4;
-                alpha[(y * smInfo.WidthPx) + x] = smInfo.MaskType == "Luminosity"
+                var o = (y * smInfo.WidthPx + x) * 4;
+                alpha[y * smInfo.WidthPx + x] = smInfo.MaskType == "Luminosity"
                     ? (byte)(((int)pixels[o] * 77 + (int)pixels[o + 1] * 150 + (int)pixels[o + 2] * 29) >> 8)
                     : pixels[o];
             }

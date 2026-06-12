@@ -1,7 +1,6 @@
 using Shouldly;
 using Unchained.Drawing.Constants;
 using Unchained.Drawing.Decoders;
-using Unchained.Pptx.Rendering.Engine;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Rendering;
@@ -64,7 +63,7 @@ public sealed class JpegDecoderTests
 
     private static (int R, int G, int B) Pixel(byte[] rgb, int width, int x, int y)
     {
-        var i = ((y * width) + x) * 3;
+        var i = (y * width + x) * 3;
         return (rgb[i], rgb[i + 1], rgb[i + 2]);
     }
 }

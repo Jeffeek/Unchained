@@ -129,7 +129,7 @@ public sealed class FontSubsystemTests : RendererTestBase
         };
         var layout = TableLayout.Compute(data.Headers.Count, TableStyle.Default, hasTitle: false, data);
         layout.ColumnWidths.Sum().ShouldBe(
-            TableLayout.PageWidth - (2 * TableLayout.Margin),
+            TableLayout.PageWidth - 2 * TableLayout.Margin,
             tolerance: 0.1f);
     }
 

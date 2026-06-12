@@ -130,11 +130,11 @@ internal static class CcittFaxDecoder
     // ── Lookup tables (built once, indexed by top 13 bits of bit stream) ────
 
     /// <summary>ITU-T T.4 standard fax page width in pixels; default /Columns value.</summary>
-    private const int DefaultColumns    = 1728;
+    private const int DefaultColumns = 1728;
     /// <summary>MSB mask for writing 1 bpp packed bits left-to-right into a byte.</summary>
-    private const byte MonoBitMsb       = 0x80;
+    private const byte MonoBitMsb = 0x80;
     /// <summary>Low 16 bits of a packed lookup entry hold the run length.</summary>
-    private const int RunLengthLowMask  = 0xFFFF;
+    private const int RunLengthLowMask = 0xFFFF;
 
     private const int LookupBits = 13;
     private const int LookupSize = 1 << LookupBits; // 8192
@@ -185,13 +185,14 @@ internal static class CcittFaxDecoder
         int rows = 0,
         bool blackIs1 = false,
         bool endOfBlock = true,
-        bool encodedByteAlign = false) =>
-        k switch
-        {
-            < 0 => DecodeGroup4(data, columns, rows, blackIs1, endOfBlock),
-            0   => DecodeGroup3_1D(data, columns, rows, blackIs1, encodedByteAlign, endOfBlock),
-            _   => DecodeGroup3_2D(data, columns, rows, blackIs1, encodedByteAlign, endOfBlock)
-        };
+        bool encodedByteAlign = false
+    ) => k switch
+    {
+        < 0 => DecodeGroup4(data, columns, rows, blackIs1, endOfBlock),
+        // ReSharper disable once BadListLineBreaks
+        0 => DecodeGroup3_1D(data, columns, rows, blackIs1, encodedByteAlign, endOfBlock),
+        _ => DecodeGroup3_2D(data, columns, rows, blackIs1, encodedByteAlign)
+    };
 
     // ── Group 4 (K = -1, T.6 pure 2D) ───────────────────────────────────────
 
@@ -221,7 +222,16 @@ internal static class CcittFaxDecoder
             var a0Color = white;
 
             var complete = DecodeRow2D(
-                input, ref bitPos, refRow, curRow, columns, white, endOfBlock, ref a0, ref a0Color);
+                input,
+                ref bitPos,
+                refRow,
+                curRow,
+                columns,
+                white,
+                endOfBlock,
+                ref a0,
+                ref a0Color
+            );
             if (!complete)
                 break;
 
@@ -254,6 +264,7 @@ internal static class CcittFaxDecoder
                 var saved = bitPos;
                 if (TryReadEolOrEofb(input, ref bitPos))
                     return false;
+
                 bitPos = saved;
             }
 
@@ -275,9 +286,12 @@ internal static class CcittFaxDecoder
                 case Mode2D.Horizontal:
                 {
                     var run1 = ReadRunLength(input, ref bitPos, a0Color == whiteBit);
-                    if (run1 < 0) return true;
+                    if (run1 < 0)
+                        return true;
+
                     var run2 = ReadRunLength(input, ref bitPos, a0Color != whiteBit);
-                    if (run2 < 0) return true;
+                    if (run2 < 0)
+                        return true;
 
                     FillRun(curRow, start, run1, a0Color);
                     FillRun(curRow, start + run1, run2, !a0Color);
@@ -333,7 +347,7 @@ internal static class CcittFaxDecoder
                 var run = ReadRunLength(input, ref bitPos, isWhite);
                 if (run < 0)
                 {
-                    output.Write(Array.Empty<byte>());
+                    output.Write([]);
                     break;
                 }
 
@@ -364,8 +378,7 @@ internal static class CcittFaxDecoder
         int columns,
         int rows,
         bool blackIs1,
-        bool encodedByteAlign,
-        bool endOfBlock
+        bool encodedByteAlign
     )
     {
         var input = data.Span;
@@ -385,6 +398,7 @@ internal static class CcittFaxDecoder
             var tag = PeekBit(input, bitPos);
             if (tag < 0)
                 break;
+
             bitPos++;
 
             if (encodedByteAlign)
@@ -394,15 +408,22 @@ internal static class CcittFaxDecoder
 
             bool decoded;
             if (tag == 1)
-            {
                 decoded = DecodeRow1D(input, ref bitPos, curRow, columns, white);
-            }
             else
             {
                 var a0 = -1;
                 var a0Color = white;
                 decoded = DecodeRow2D(
-                    input, ref bitPos, refRow, curRow, columns, white, endOfBlock: false, ref a0, ref a0Color);
+                    input,
+                    ref bitPos,
+                    refRow,
+                    curRow,
+                    columns,
+                    white,
+                    endOfBlock: false,
+                    ref a0,
+                    ref a0Color
+                );
             }
 
             if (!decoded)
@@ -432,6 +453,7 @@ internal static class CcittFaxDecoder
             var run = ReadRunLength(input, ref bitPos, isWhite);
             if (run < 0)
                 return readAny;
+
             readAny = true;
 
             FillRun(curRow, pos, run, isWhite == whiteBit);
@@ -449,54 +471,90 @@ internal static class CcittFaxDecoder
         public const int V0 = 10;
         public const int Pass = 20;
         public const int Horizontal = 21;
-        public const int EndOfData = -1;
     }
 
     private static int Read2dMode(ReadOnlySpan<byte> data, ref int bitPos)
     {
         var b = PeekBit(data, bitPos);
-        if (b < 0) return -1;
-        if (b == 1) { bitPos += 1; return Mode2D.V0; }
+        switch (b)
+        {
+            case < 0:
+                return -1;
+            case 1:
+                bitPos += 1;
+                return Mode2D.V0;
+        }
 
         b = PeekBit(data, bitPos + 1);
-        if (b < 0) return -1;
-        if (b == 1)
+
+        switch (b)
         {
-            var b2 = PeekBit(data, bitPos + 2);
-            if (b2 < 0) return -1;
-            bitPos += 3;
-            return b2 == 1 ? Mode2D.V0 + 1 : Mode2D.V0 - 1;
+            case < 0:
+                return -1;
+            case 1:
+            {
+                var b2 = PeekBit(data, bitPos + 2);
+                if (b2 < 0)
+                    return -1;
+
+                bitPos += 3;
+                return b2 == 1 ? Mode2D.V0 + 1 : Mode2D.V0 - 1;
+            }
         }
 
         b = PeekBit(data, bitPos + 2);
-        if (b < 0) return -1;
-        if (b == 1) { bitPos += 3; return Mode2D.Horizontal; }
+        switch (b)
+        {
+            case < 0:
+                return -1;
+            case 1:
+                bitPos += 3;
+                return Mode2D.Horizontal;
+        }
 
         b = PeekBit(data, bitPos + 3);
-        if (b < 0) return -1;
-        if (b == 1) { bitPos += 4; return Mode2D.Pass; }
+        switch (b)
+        {
+            case < 0:
+                return -1;
+            case 1:
+                bitPos += 4;
+                return Mode2D.Pass;
+        }
 
         b = PeekBit(data, bitPos + 4);
-        if (b < 0) return -1;
-        if (b == 1)
+        switch (b)
         {
-            var b5 = PeekBit(data, bitPos + 5);
-            if (b5 < 0) return -1;
-            bitPos += 6;
-            return b5 == 1 ? Mode2D.V0 + 2 : Mode2D.V0 - 2;
+            case < 0:
+                return -1;
+            case 1:
+            {
+                var b5 = PeekBit(data, bitPos + 5);
+                if (b5 < 0)
+                    return -1;
+
+                bitPos += 6;
+                return b5 == 1 ? Mode2D.V0 + 2 : Mode2D.V0 - 2;
+            }
         }
 
         b = PeekBit(data, bitPos + 5);
-        if (b < 0) return -1;
-        if (b == 1)
+        switch (b)
         {
-            var b6 = PeekBit(data, bitPos + 6);
-            if (b6 < 0) return -1;
-            bitPos += 7;
-            return b6 == 1 ? Mode2D.V0 + 3 : Mode2D.V0 - 3;
-        }
+            case < 0:
+                return -1;
+            case 1:
+            {
+                var b6 = PeekBit(data, bitPos + 6);
+                if (b6 < 0)
+                    return -1;
 
-        return -1;
+                bitPos += 7;
+                return b6 == 1 ? Mode2D.V0 + 3 : Mode2D.V0 - 3;
+            }
+            default:
+                return -1;
+        }
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
@@ -505,12 +563,14 @@ internal static class CcittFaxDecoder
         var i = a0 + 1;
         while (i < columns)
         {
-            var prevColor = i == 0 ? true : refRow[i - 1];
+            var prevColor = i == 0 || refRow[i - 1];
             var isChange = refRow[i] != prevColor;
             if (isChange && refRow[i] != a0Color)
                 break;
+
             i++;
         }
+
         var b1 = i;
 
         var j = b1 + 1;
@@ -550,7 +610,7 @@ internal static class CcittFaxDecoder
     private static int Peek13(ReadOnlySpan<byte> data, int bitPos)
     {
         var result = 0;
-        var avail = (data.Length * 8) - bitPos;
+        var avail = data.Length * 8 - bitPos;
         var count = Math.Min(LookupBits, avail);
         if (count <= 0)
             return -1;
@@ -614,7 +674,8 @@ internal static class CcittFaxDecoder
     private static void FillRun(IList<bool> row, int start, int length, bool color)
     {
         var end = Math.Min(start + length, row.Count - 1);
-        for (var i = start; i < end; i++) row[i] = color;
+        for (var i = start; i < end; i++)
+            row[i] = color;
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
@@ -626,7 +687,8 @@ internal static class CcittFaxDecoder
         for (var i = 0; i < columns; i++)
         {
             var isSet = blackIs1 ? !row[i] : row[i];
-            if (isSet) buf[i >> 3] |= (byte)(MonoBitMsb >> (i & 7));
+            if (isSet)
+                buf[i >> 3] |= (byte)(MonoBitMsb >> (i & 7));
         }
 
         output.Write(buf);

@@ -1,11 +1,9 @@
 using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
-using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Text;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Export;
 

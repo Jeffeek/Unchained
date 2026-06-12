@@ -127,8 +127,8 @@ public sealed class PdfiumReferenceRenderer
         for (var row = 0; row < height; row++)
         for (var col = 0; col < width;  col++)
         {
-            var src = (row * stride) + (col * 4);
-            var dst = ((row * width) + col) * 3;
+            var src = row * stride + col * 4;
+            var dst = (row * width + col) * 3;
             rgb[dst]     = bgra[src + 2]; // R
             rgb[dst + 1] = bgra[src + 1]; // G
             rgb[dst + 2] = bgra[src];     // B
@@ -139,7 +139,7 @@ public sealed class PdfiumReferenceRenderer
 
     private static byte[] EncodeRgbPng(byte[] rgb, int width, int height)
     {
-        using var ms = new MemoryStream((width * height * 3) + 256);
+        using var ms = new MemoryStream(width * height * 3 + 256);
         ms.Write(PngConstants.Signature);
         WriteIhdr(ms, width, height);
         WriteIdat(ms, rgb, width, height);

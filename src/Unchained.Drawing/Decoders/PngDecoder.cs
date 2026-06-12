@@ -49,7 +49,7 @@ internal static class PngDecoder
                     palette = png.Slice(dataStart, len).ToArray();
                     break;
                 }
-                case PngConstants.tRNS:
+                case PngConstants.TRNS:
                 {
                     png.Slice(dataStart, len).ToArray();
                     break;
@@ -107,6 +107,7 @@ internal static class PngDecoder
             return null;
 
         var unfiltered = Unfilter(raw, w, h, channels, stride);
+        // ReSharper disable once BadListLineBreaks
         var rgb = ToRgb(unfiltered, w, h, channels, colorType, palette);
         if (rgb is null)
             return null;
@@ -149,7 +150,7 @@ internal static class PngDecoder
                     0 => value,
                     1 => (byte)(value + a),
                     2 => (byte)(value + b),
-                    3 => (byte)(value + ((a + b) / 2)),
+                    3 => (byte)(value + (a + b) / 2),
                     4 => (byte)(value + Paeth(a, b, c)),
                     _ => value
                 };

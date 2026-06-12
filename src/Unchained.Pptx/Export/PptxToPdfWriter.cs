@@ -471,7 +471,7 @@ internal static class PptxToPdfWriter
             for (var c = 0; c < grid.ColumnCount; c++)
             {
                 var frac = (double)grid.ColumnWidths[c].Value / totalW;
-                colEdgesPt[c + 1] = colEdgesPt[c] + (frac * w);
+                colEdgesPt[c + 1] = colEdgesPt[c] + frac * w;
             }
 
             var rowEdgesPt = new double[grid.RowCount + 1];
@@ -479,7 +479,7 @@ internal static class PptxToPdfWriter
             for (var r = 0; r < grid.RowCount; r++)
             {
                 var frac = (double)grid.RowHeights[r].Value / totalH;
-                rowEdgesPt[r + 1] = rowEdgesPt[r] + (frac * h);
+                rowEdgesPt[r + 1] = rowEdgesPt[r] + frac * h;
             }
 
             for (var r = 0; r < grid.RowCount; r++)

@@ -295,7 +295,7 @@ internal static class MarkdownToPdfConverter
             {
                 var ww = TxtToPdfConverter.MeasureText(word, fontName, fs);
                 var effectiveIndent = isFirst ? indent : continuationIndent;
-                var effective = opts.PageWidthPt - (2 * opts.MarginPt) - effectiveIndent;
+                var effective = opts.PageWidthPt - 2 * opts.MarginPt - effectiveIndent;
 
                 if (lineWidth > 0 && lineWidth + spaceWidth + ww > effective)
                 {
@@ -354,7 +354,7 @@ internal static class MarkdownToPdfConverter
         var pages = new List<List<TextRun>>();
         var current = new List<TextRun>();
         var usedY = 0f;
-        var usableHeight = opts.PageHeightPt - (2 * opts.MarginPt);
+        var usableHeight = opts.PageHeightPt - 2 * opts.MarginPt;
 
         foreach (var run in runs)
         {
@@ -410,7 +410,7 @@ internal static class MarkdownToPdfConverter
                 w.Float(0.5f);
                 w.Op("w"u8);
                 w.Op("S"u8);
-                y -= (run.FontSize * 0.5f) + 2f;
+                y -= run.FontSize * 0.5f + 2f;
                 w.Op("BT"u8);
                 curFont = string.Empty;
                 continue;
@@ -480,7 +480,7 @@ internal static class MarkdownToPdfConverter
                 w.Float(0.5f);
                 w.Op("w"u8);
                 w.Op("S"u8);
-                y -= (run.FontSize * 0.5f) + 2f;
+                y -= run.FontSize * 0.5f + 2f;
                 w.Op("EMC"u8);
                 w.Op("BT"u8);
                 curFont = string.Empty;

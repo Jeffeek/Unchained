@@ -2,7 +2,6 @@ using System.Xml.Linq;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
-using Unchained.Pptx.Models.Shapes;
 
 namespace Unchained.Pptx.Parsing;
 

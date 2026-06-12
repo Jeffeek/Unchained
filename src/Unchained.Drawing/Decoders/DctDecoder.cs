@@ -49,8 +49,8 @@ internal static class DctDecoder
             for (var i = 0; i < width * height; i++)
             {
                 rgb[i * 3] = y[i];
-                rgb[(i * 3) + 1] = y[i];
-                rgb[(i * 3) + 2] = y[i];
+                rgb[i * 3 + 1] = y[i];
+                rgb[i * 3 + 2] = y[i];
             }
         }
         else
@@ -66,8 +66,8 @@ internal static class DctDecoder
                 var cr = crPlane[i] - 128;
 
                 rgb[i * 3] = Clamp(yy + (int)((float)YCbCrConstants.CrToR * cr));
-                rgb[(i * 3) + 1] = Clamp(yy - (int)((float)YCbCrConstants.CbToGCb * cb) - (int)((float)YCbCrConstants.CrToGCr * cr));
-                rgb[(i * 3) + 2] = Clamp(yy + (int)((float)YCbCrConstants.CbToB * cb));
+                rgb[i * 3 + 1] = Clamp(yy - (int)((float)YCbCrConstants.CbToGCb * cb) - (int)((float)YCbCrConstants.CrToGCr * cr));
+                rgb[i * 3 + 2] = Clamp(yy + (int)((float)YCbCrConstants.CbToB * cb));
             }
         }
 
@@ -83,6 +83,7 @@ internal static class DctDecoder
         int componentCount
     ) : JpegBlockOutputWriter
     {
+        // ReSharper disable once BadListLineBreaks
         public override void WriteBlock(ref short blockRef, int componentIndex, int x, int y)
         {
             if (componentIndex >= componentCount) return;
@@ -94,7 +95,7 @@ internal static class DctDecoder
 
             for (var row = 0; row < writeH; row++)
             {
-                var destBase = ((y + row) * width) + x;
+                var destBase = (y + row) * width + x;
                 var srcBase = row * 8;
                 for (var col = 0; col < writeW; col++)
                     plane[destBase + col] = (byte)Math.Clamp(block[srcBase + col], (short)0, (short)255);

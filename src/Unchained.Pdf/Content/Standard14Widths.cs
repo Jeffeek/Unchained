@@ -19,7 +19,7 @@ internal static class Standard14Widths
         var table = Lookup(fontName);
         var w = table[charCode];
 
-        return w != 0 ? w : (charCode is >= 32 and <= 126 ? 500 : 0);
+        return w != 0 ? w : charCode is >= 32 and <= 126 ? 500 : 0;
     }
 
     private static short[] Lookup(string fontName) => fontName switch

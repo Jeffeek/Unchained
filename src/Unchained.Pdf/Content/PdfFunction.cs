@@ -107,7 +107,7 @@ internal sealed class PdfFunction
                 {
                     var a = i < _c0.Length ? _c0[i] : 0;
                     var b = i < _c1.Length ? _c1[i] : 0;
-                    result[i] = a + (f * (b - a));
+                    result[i] = a + f * (b - a);
                 }
                 return result;
             }
@@ -118,11 +118,11 @@ internal sealed class PdfFunction
                 while (k < _bounds.Length && x >= _bounds[k]) k++;
                 var lo = k == 0 ? _domain[0] : _bounds[k - 1];
                 var hi = k < _bounds.Length ? _bounds[k] : _domain[1];
-                var e0 = (2 * k) < _encode.Length ? _encode[2 * k] : 0;
-                var e1 = ((2 * k) + 1) < _encode.Length ? _encode[(2 * k) + 1] : 1;
+                var e0 = 2 * k < _encode.Length ? _encode[2 * k] : 0;
+                var e1 = 2 * k + 1 < _encode.Length ? _encode[2 * k + 1] : 1;
                 var sub = _functions[Math.Min(k, _functions.Length - 1)];
                 var span = hi - lo;
-                var enc = span > 1e-9 ? e0 + ((x - lo) / span * (e1 - e0)) : e0;
+                var enc = span > 1e-9 ? e0 + (x - lo) / span * (e1 - e0) : e0;
                 return sub.Eval(enc);
             }
             default:

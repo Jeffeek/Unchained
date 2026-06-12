@@ -35,7 +35,7 @@ internal static class ColorWriter
         // RGB — emit as sRGB hex (strip alpha for the val attribute, keep as separate alpha child if < 255)
         var argb = color.Rgb;
         var alpha = (argb >> 24) & 0xFF;
-        var hex = $"{(argb & 0x00FFFFFF):X6}";
+        var hex = $"{argb & 0x00FFFFFF:X6}";
         var srgbEl = new XElement(DmlNames.SrgbColor,
             new XAttribute(DmlNames.AttributeValue, hex));
 

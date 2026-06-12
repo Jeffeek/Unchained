@@ -1,6 +1,5 @@
 using DocumentFormat.OpenXml.Packaging;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Engine;
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Text;
@@ -13,7 +12,6 @@ using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Themes;
 using D = DocumentFormat.OpenXml.Drawing;
 using P = DocumentFormat.OpenXml.Presentation;
 

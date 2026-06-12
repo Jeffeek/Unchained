@@ -13,7 +13,7 @@ public sealed class TableLayoutTests
     public void Compute_ColumnWidths_SumEqualsUsableWidth()
     {
         var layout = TableLayout.Compute(columnCount: 4, DefaultStyle, hasTitle: false);
-        layout.ColumnWidths.Sum().ShouldBe(TableLayout.PageWidth - (2 * TableLayout.Margin), tolerance: 0.01f);
+        layout.ColumnWidths.Sum().ShouldBe(TableLayout.PageWidth - 2 * TableLayout.Margin, tolerance: 0.01f);
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public sealed class TableLayoutTests
     {
         const int cols = 3;
         var layout = TableLayout.Compute(cols, DefaultStyle, hasTitle: false);
-        const float expected = (TableLayout.PageWidth - (2 * TableLayout.Margin)) / cols;
+        const float expected = (TableLayout.PageWidth - 2 * TableLayout.Margin) / cols;
         foreach (var w in layout.ColumnWidths)
             w.ShouldBe(expected, tolerance: 0.01f);
     }
@@ -31,7 +31,7 @@ public sealed class TableLayoutTests
     {
         var style = TableStyle.Default;
         var layout = TableLayout.Compute(2, style, hasTitle: false);
-        layout.RowHeight.ShouldBe((2 * style.CellPaddingPt) + style.CellFontSize, tolerance: 0.001f);
+        layout.RowHeight.ShouldBe(2 * style.CellPaddingPt + style.CellFontSize, tolerance: 0.001f);
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public sealed class TableLayoutTests
     {
         var style = TableStyle.Default;
         var layout = TableLayout.Compute(2, style, hasTitle: false);
-        layout.HeaderRowHeight.ShouldBe((2 * style.CellPaddingPt) + style.HeaderFontSize, tolerance: 0.001f);
+        layout.HeaderRowHeight.ShouldBe(2 * style.CellPaddingPt + style.HeaderFontSize, tolerance: 0.001f);
     }
 
     [Fact]
@@ -60,14 +60,14 @@ public sealed class TableLayoutTests
     public void Compute_TableWidth_EqualsUsableWidth()
     {
         var layout = TableLayout.Compute(5, DefaultStyle, hasTitle: false);
-        layout.TableWidth.ShouldBe(TableLayout.PageWidth - (2 * TableLayout.Margin), tolerance: 0.01f);
+        layout.TableWidth.ShouldBe(TableLayout.PageWidth - 2 * TableLayout.Margin, tolerance: 0.01f);
     }
 
     [Fact]
     public void Compute_RowsPerPage_FitsInUsableHeight()
     {
         var layout = TableLayout.Compute(2, DefaultStyle, hasTitle: false);
-        var usable = TableLayout.PageHeight - (2 * TableLayout.Margin) - layout.TitleHeight - layout.HeaderRowHeight;
+        var usable = TableLayout.PageHeight - 2 * TableLayout.Margin - layout.TitleHeight - layout.HeaderRowHeight;
         var expected = (int)(usable / layout.RowHeight);
         layout.RowsPerPage.ShouldBe(expected);
     }
@@ -90,6 +90,6 @@ public sealed class TableLayoutTests
     public void Compute_SingleColumn_WidthEqualsFullUsableWidth()
     {
         var layout = TableLayout.Compute(columnCount: 1, DefaultStyle, hasTitle: false);
-        layout.ColumnWidths[0].ShouldBe(TableLayout.PageWidth - (2 * TableLayout.Margin), tolerance: 0.01f);
+        layout.ColumnWidths[0].ShouldBe(TableLayout.PageWidth - 2 * TableLayout.Margin, tolerance: 0.01f);
     }
 }

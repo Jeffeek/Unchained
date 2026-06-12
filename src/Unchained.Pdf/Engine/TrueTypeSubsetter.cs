@@ -40,7 +40,7 @@ internal static class TrueTypeSubsetter
         var tables = new Dictionary<string, (uint CheckSum, int Offset, int Length)>();
         for (var i = 0; i < numTables; i++)
         {
-            var e = 12 + (i * 16);
+            var e = 12 + i * 16;
             if (e + 16 > b.Length) break;
             var tag = ReadTag(b, e);
             var cs = ReadU32(b, e + 4);
@@ -166,7 +166,7 @@ internal static class TrueTypeSubsetter
 
         // Calculate new offsets (all aligned to 4 bytes).
         // Offset table (12 bytes) + table records (16 bytes each) = header size.
-        var headerSize = 12 + (tableOrder.Count * 16);
+        var headerSize = 12 + tableOrder.Count * 16;
         var currentOffset = headerSize;
         var newOffsets = new Dictionary<string, int>();
         var newLengths = new Dictionary<string, int>();
@@ -180,7 +180,7 @@ internal static class TrueTypeSubsetter
             newLengths[tag] = len;
             currentOffset += len;
             // Pad to 4-byte boundary.
-            if (currentOffset % 4 != 0) currentOffset += 4 - (currentOffset % 4);
+            if (currentOffset % 4 != 0) currentOffset += 4 - currentOffset % 4;
         }
 
         var totalSize = currentOffset;
@@ -200,7 +200,7 @@ internal static class TrueTypeSubsetter
         for (var i = 0; i < tableOrder.Count; i++)
         {
             var tag = tableOrder[i];
-            var entry = 12 + (i * 16);
+            var entry = 12 + i * 16;
             WriteTag(result, entry, tag);
             WriteU32(result, entry + 4, ComputeCheckSum(result, tag, orig, tables, newOffsets, newLengths, newGlyf, newLoca));
             WriteU32(result, entry + 8, (uint)newOffsets[tag]);
@@ -260,7 +260,7 @@ internal static class TrueTypeSubsetter
         {
             uint last = 0;
             for (var j = 0; j < data.Length - i; j++)
-                last |= (uint)data[i + j] << (24 - (j * 8));
+                last |= (uint)data[i + j] << (24 - j * 8);
             sum += last;
         }
         return sum;
@@ -272,13 +272,13 @@ internal static class TrueTypeSubsetter
         int start, end;
         if (indexToLocFormat == 0)
         {
-            start = glyfOff + (ReadU16(b, locaOff + (gid * 2)) * 2);
-            end   = glyfOff + (ReadU16(b, locaOff + ((gid + 1) * 2)) * 2);
+            start = glyfOff + ReadU16(b, locaOff + gid * 2) * 2;
+            end   = glyfOff + ReadU16(b, locaOff + (gid + 1) * 2) * 2;
         }
         else
         {
-            start = glyfOff + (int)ReadU32(b, locaOff + (gid * 4));
-            end   = glyfOff + (int)ReadU32(b, locaOff + ((gid + 1) * 4));
+            start = glyfOff + (int)ReadU32(b, locaOff + gid * 4);
+            end   = glyfOff + (int)ReadU32(b, locaOff + (gid + 1) * 4);
         }
         var len = Math.Max(0, end - start);
         // Sanity check against buffer bounds.

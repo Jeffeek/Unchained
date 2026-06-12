@@ -1,5 +1,3 @@
-using Unchained.Ooxml;
-using Unchained.Pptx.Media;
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Text;
 

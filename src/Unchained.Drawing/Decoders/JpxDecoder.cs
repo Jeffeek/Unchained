@@ -35,7 +35,7 @@ internal static class JpxDecoder
             {
                 var gray = image.GetComponentBytes(0);
                 for (var i = 0; i < width * height; i++)
-                    rgb[i * 3] = rgb[(i * 3) + 1] = rgb[(i * 3) + 2] = gray[i];
+                    rgb[i * 3] = rgb[i * 3 + 1] = rgb[i * 3 + 2] = gray[i];
             }
             else
             {
@@ -45,8 +45,8 @@ internal static class JpxDecoder
                 for (var i = 0; i < width * height; i++)
                 {
                     rgb[i * 3] = r[i];
-                    rgb[(i * 3) + 1] = g[i];
-                    rgb[(i * 3) + 2] = b[i];
+                    rgb[i * 3 + 1] = g[i];
+                    rgb[i * 3 + 2] = b[i];
                 }
             }
 
