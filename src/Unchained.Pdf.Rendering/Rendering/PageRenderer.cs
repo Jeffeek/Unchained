@@ -149,10 +149,10 @@ internal sealed class PageRenderer(
             // We only handle DeviceGray/DeviceRGB/DeviceCMYK here; others are ignored.
             // The operators still need to be consumed so the graphics state stays in sync.
             case "cs" when op.Operands.Count >= 1:
-                _gs.FillColorSpace = (op.Operands[0] as PdfName)?.Value ?? "DeviceGray";
+                _gs.FillColorSpace = (op.Operands[0] as PdfName)?.Value ?? RenderingConstants.DeviceGray;
             break;
             case "CS" when op.Operands.Count >= 1:
-                _gs.StrokeColorSpace = (op.Operands[0] as PdfName)?.Value ?? "DeviceGray";
+                _gs.StrokeColorSpace = (op.Operands[0] as PdfName)?.Value ?? RenderingConstants.DeviceGray;
             break;
             case "cs" or "CS": break; // no operand — consume
 
@@ -256,8 +256,8 @@ internal sealed class PageRenderer(
                 if (name is not null && extGStateAlphas is not null
                                      && extGStateAlphas.TryGetValue(name, out var a))
                 {
-                    _gs.FillA = (byte)Math.Clamp((int)Math.Round(a.Fill * 255), 0, 255);
-                    _gs.StrokeA = (byte)Math.Clamp((int)Math.Round(a.Stroke * 255), 0, 255);
+                    _gs.FillA = (byte)Math.Clamp((int)Math.Round(a.Fill * RenderingConstants.ByteMax), 0, RenderingConstants.ByteMax);
+                    _gs.StrokeA = (byte)Math.Clamp((int)Math.Round(a.Stroke * RenderingConstants.ByteMax), 0, RenderingConstants.ByteMax);
                     _gs.BlendMode = a.BlendMode;
                     // Activate soft mask if present.
                     if (a.SoftMaskName is { } smName && softMasks is not null
@@ -474,8 +474,8 @@ internal sealed class PageRenderer(
         var cc = _gs.Ctm[2];
         var vx = (tb * ca) + (td * cc);
         var vy = (tb * cb) + (td * cd);
-        var mag = Math.Sqrt((vx * vx) + (vy * vy));
-        return mag > 1e-6 ? mag : 1.0;
+        var mag = Vector2D.Magnitude(vx, vy);
+        return mag > RenderingConstants.Epsilon ? mag : 1.0;
     }
 
     // Horizontal scale magnitude of the text matrix combined with the CTM's linear part.
@@ -486,14 +486,14 @@ internal sealed class PageRenderer(
         var ta = _gs.TextMatrix[0];
         var tc = _gs.TextMatrix[2];
         // Horizontal text-space basis (1,0) through the text matrix linear part.
-        var mag = Math.Sqrt((ta * ta) + (tc * tc));
-        return mag > 1e-6 ? mag : 1.0;
+        var mag = Vector2D.Magnitude(ta, tc);
+        return mag > RenderingConstants.Epsilon ? mag : 1.0;
     }
 
     private void ShowString(ReadOnlySpan<byte> bytes)
     {
         // Text rendering mode 3 = invisible; do not draw.
-        if (_gs.TextRenderMode == 3) return;
+        if (_gs.TextRenderMode == RenderingConstants.TextModeInvisible) return;
         if (_gs.FontSize <= 0 || _gs.FontName.Length == 0 || bytes.IsEmpty) return;
 
         // Type3 font: glyphs are content streams, not binary font files.
@@ -619,12 +619,12 @@ internal sealed class PageRenderer(
 
             GlyphsAttempted++;
 
-            var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / 64.0 / scale);
-            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / 64.0 / scale) + _gs.TextRise;
+            var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / RenderingConstants.HarfBuzzFixed / scale);
+            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / RenderingConstants.HarfBuzzFixed / scale) + _gs.TextRise;
             var (px, py) = UToPixel(originX, originY);
 
             // Mode 0 (fill) and 2/4/6 (fill variants): blit the bitmap.
-            if (_gs.TextRenderMode is 0 or 2 or 4 or 6)
+            if (_gs.ShouldFillText)
             {
                 buffer.BlitGlyphFromFace((int)px,
                     (int)py,
@@ -636,15 +636,15 @@ internal sealed class PageRenderer(
             }
 
             // Mode 1/2/5/6 (stroke variants): stroke the glyph outline.
-            if (_gs.TextRenderMode is 1 or 2 or 5 or 6)
+            if (_gs.ShouldStrokeText)
                 StrokeGlyphOutline(ftFace, (int)px, (int)py);
 
             // Mode 4/5/6/7 (clip variants): add glyph outline to clip mask.
-            if (_gs.TextRenderMode is 4 or 5 or 6 or 7)
+            if (_gs.ShouldClipText)
                 ClipGlyphOutline(ftFace, (int)px, (int)py);
 
-            var advance = ((glyphPositions[i].XAdvance / 64.0 / scale) + _gs.CharSpace)
-                          * (_gs.HorizontalScale / 100.0);
+            var advance = ((glyphPositions[i].XAdvance / RenderingConstants.HarfBuzzFixed / scale) + _gs.CharSpace)
+                          * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
             _gs.TextMatrix[4] += advance;
         }
     }
@@ -693,10 +693,10 @@ internal sealed class PageRenderer(
 
             // Glyph advance (FT_Get_Advance returns 16.16 fixed-point pixels) → user-space points.
             var rawAdvance = glyphId != 0 ? ftFace.GetAdvance(glyphId) : 0;
-            var advancePts = rawAdvance != 0 ? rawAdvance / 65536.0 / scale : pixelSize / scale * 0.5;
+            var advancePts = rawAdvance != 0 ? rawAdvance / RenderingConstants.FreeTypeFixed / scale : pixelSize / scale * 0.5;
 
             var advance = (advancePts + _gs.CharSpace + (code == 32 ? _gs.WordSpace : 0))
-                          * (_gs.HorizontalScale / 100.0);
+                          * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
             _gs.TextMatrix[4] += advance;
         }
     }
@@ -726,7 +726,7 @@ internal sealed class PageRenderer(
             {
                 GlyphsAttempted++;
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
-                if (_gs.TextRenderMode is 0 or 2 or 4 or 6)
+                if (_gs.ShouldFillText)
                 {
                     buffer.BlitGlyphFromFace((int)px,
                         (int)py,
@@ -737,10 +737,10 @@ internal sealed class PageRenderer(
                         _gs.BlendMode);
                 }
 
-                if (_gs.TextRenderMode is 1 or 2 or 5 or 6)
+                if (_gs.ShouldStrokeText)
                     StrokeGlyphOutline(ftFace, (int)px, (int)py);
 
-                if (_gs.TextRenderMode is 4 or 5 or 6 or 7)
+                if (_gs.ShouldClipText)
                     ClipGlyphOutline(ftFace, (int)px, (int)py);
             }
 
@@ -749,8 +749,8 @@ internal sealed class PageRenderer(
             // UToPixel consumes (handles producers that carry size in the matrix).
             var wGlyph = info.Widths.TryGetValue(cid, out var w) ? w : info.DefaultWidth;
             var hScale = TextMatrixHorizontalScale();
-            var advance = ((wGlyph / 1000.0 * _gs.FontSize) + _gs.CharSpace) * hScale
-                                                                             * (_gs.HorizontalScale / 100.0);
+            var advance = ((wGlyph / RenderingConstants.CidEmUnits * _gs.FontSize) + _gs.CharSpace) * hScale
+                                                                             * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
             _gs.TextMatrix[4] += advance;
         }
     }
@@ -765,10 +765,10 @@ internal sealed class PageRenderer(
                     ShowString(s.GetBinaryBytes().Span);
                 break;
                 case PdfInteger n:
-                    _gs.TextMatrix[4] -= n.Value / 1000.0 * _gs.FontSize * (_gs.HorizontalScale / 100.0);
+                    _gs.TextMatrix[4] -= n.Value / RenderingConstants.CidEmUnits * _gs.FontSize * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
                 break;
                 case PdfReal r:
-                    _gs.TextMatrix[4] -= r.Value / 1000.0 * _gs.FontSize * (_gs.HorizontalScale / 100.0);
+                    _gs.TextMatrix[4] -= r.Value / RenderingConstants.CidEmUnits * _gs.FontSize * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
                 break;
             }
         }
@@ -953,8 +953,8 @@ internal sealed class PageRenderer(
 
         // Pattern cell size in device pixels (pattern matrix scale × device scale).
         var pm = tp.Matrix;
-        var sxv = Math.Sqrt((pm[0] * pm[0]) + (pm[1] * pm[1]));
-        var syv = Math.Sqrt((pm[2] * pm[2]) + (pm[3] * pm[3]));
+        var sxv = Vector2D.Magnitude(pm[0], pm[1]);
+        var syv = Vector2D.Magnitude(pm[2], pm[3]);
         var stepXpx = Math.Abs(tp.XStep) * sxv * scale;
         var stepYpx = Math.Abs(tp.YStep) * syv * scale;
         if (stepXpx < 0.5 || stepYpx < 0.5) return;
@@ -1122,7 +1122,7 @@ internal sealed class PageRenderer(
             }
 
             var denom = ((by - cy) * (ax - cx)) + ((cx - bx) * (ay - cy));
-            if (Math.Abs(denom) < 1e-9) continue; // degenerate triangle
+            if (Math.Abs(denom) < RenderingConstants.DeterminantEpsilon) continue; // degenerate triangle
 
             for (var py = minY; py <= maxY; py++)
             for (var px = minX; px <= maxX; px++)
@@ -1171,7 +1171,7 @@ internal sealed class PageRenderer(
             var dx = x1 - x0;
             var dy = y1 - y0;
             var len2 = (dx * dx) + (dy * dy);
-            if (len2 < 1e-9)
+            if (len2 < RenderingConstants.DeterminantEpsilon)
             {
                 t = 0;
                 return true;
@@ -1189,9 +1189,9 @@ internal sealed class PageRenderer(
             var cx1 = sh.Coords[3];
             var cy1 = sh.Coords[4];
             var r1 = sh.Coords[5];
-            var d = Math.Sqrt(((x - cx1) * (x - cx1)) + ((y - cy1) * (y - cy1)));
+            var d = Vector2D.Distance(x, y, cx1, cy1);
             var denom = r1 - r0;
-            t = Math.Abs(denom) > 1e-9 ? (d - r0) / denom : r1 > 1e-9 ? d / r1 : 0;
+            t = Math.Abs(denom) > RenderingConstants.DeterminantEpsilon ? (d - r0) / denom : r1 > RenderingConstants.DeterminantEpsilon ? d / r1 : 0;
             _ = cx0;
             _ = cy0;
         }
@@ -1226,7 +1226,7 @@ internal sealed class PageRenderer(
         var e = _gs.Ctm[4] * scale;
         var f = (pageHeightPt - _gs.Ctm[5]) * scale;
         var det = (a * dd) - (b * cc);
-        if (Math.Abs(det) < 1e-12)
+        if (Math.Abs(det) < RenderingConstants.MatrixInverseEpsilon)
         {
             inv = [];
             return false;
@@ -1471,9 +1471,9 @@ internal sealed class PageRenderer(
         var dyIn = b.Y - a.Y;
         var dxOut = c.X - b.X;
         var dyOut = c.Y - b.Y;
-        var lenIn = Math.Sqrt((dxIn * dxIn) + (dyIn * dyIn));
-        var lenOut = Math.Sqrt((dxOut * dxOut) + (dyOut * dyOut));
-        if (lenIn < 1e-6 || lenOut < 1e-6) return;
+        var lenIn = Vector2D.Magnitude(dxIn, dyIn);
+        var lenOut = Vector2D.Magnitude(dxOut, dyOut);
+        if (lenIn < RenderingConstants.Epsilon || lenOut < RenderingConstants.Epsilon) return;
 
         // Unit normals (perpendicular to each segment, pointing "outward").
         var nxIn = -dyIn / lenIn;
@@ -1540,13 +1540,13 @@ internal sealed class PageRenderer(
                 // Edge 2: point = b + nOut*half, direction = (dxOut/lenOut, dyOut/lenOut)
                 // Fall back to bevel if the angle is too shallow (miter limit exceeded).
                 var sinHalf = (nxIn * dyOut / lenOut) - (nyIn * dxOut / lenOut);
-                if (Math.Abs(sinHalf) < 1e-6) break; // parallel segments
+                if (Math.Abs(sinHalf) < RenderingConstants.Epsilon) break; // parallel segments
 
                 var miterLen = half / Math.Abs(sinHalf);
                 if (miterLen > half * _gs.MiterLimit) goto case 2; // exceed limit → bevel
 
-                var mx = bx + ((nxIn + nxOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf)));
-                var my = by + ((nyIn + nyOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf)));
+                var mx = bx + ((nxIn + nxOut) * half / 2.0 / Math.Max(RenderingConstants.Epsilon, Math.Abs(sinHalf)));
+                var my = by + ((nyIn + nyOut) * half / 2.0 / Math.Max(RenderingConstants.Epsilon, Math.Abs(sinHalf)));
 
                 var ox1 = (int)(bx + (nxIn * half));
                 var oy1 = (int)(by + (nyIn * half));
@@ -1568,8 +1568,8 @@ internal sealed class PageRenderer(
                 var iy1 = (int)(by - (nyIn * half));
                 var ix2 = (int)(bx - (nxOut * half));
                 var iy2 = (int)(by - (nyOut * half));
-                var imx = bx - ((nxIn + nxOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf)));
-                var imy = by - ((nyIn + nyOut) * half / 2.0 / Math.Max(1e-6, Math.Abs(sinHalf)));
+                var imx = bx - ((nxIn + nxOut) * half / 2.0 / Math.Max(RenderingConstants.Epsilon, Math.Abs(sinHalf)));
+                var imy = by - ((nyIn + nyOut) * half / 2.0 / Math.Max(RenderingConstants.Epsilon, Math.Abs(sinHalf)));
                 buffer.FillTriangle((int)imx,
                     (int)imy,
                     ix1,
@@ -1600,8 +1600,8 @@ internal sealed class PageRenderer(
     {
         var dx = x1 - x0;
         var dy = y1 - y0;
-        var len = Math.Sqrt((dx * dx) + (dy * dy));
-        if (len < 1e-6) return;
+        var len = Vector2D.Magnitude(dx, dy);
+        if (len < RenderingConstants.Epsilon) return;
 
         var ux = dx / len;
         var uy = dy / len;
@@ -1652,10 +1652,10 @@ internal sealed class PageRenderer(
         var b = _gs.Ctm[1];
         var c = _gs.Ctm[2];
         var d = _gs.Ctm[3];
-        var sx = Math.Sqrt((a * a) + (b * b));
-        var sy = Math.Sqrt((c * c) + (d * d));
+        var sx = Vector2D.Magnitude(a, b);
+        var sy = Vector2D.Magnitude(c, d);
         var s = Math.Sqrt(sx * sy);
-        return s > 1e-6 ? s : 1.0;
+        return s > RenderingConstants.Epsilon ? s : 1.0;
     }
 
     private void ClearPath()
@@ -1891,6 +1891,12 @@ internal sealed class PageRenderer(
         _ => 0
     };
 
+    // Maps a PDF colour component in [0,1] to an 8-bit channel value. Truncates (matches the
+    // historic renderer behaviour) rather than rounding — do not change without re-baselining
+    // the pixel-agreement tests.
+    private static byte ToByteColor(double value) =>
+        (byte)Math.Clamp((int)(value * RenderingConstants.ByteMax), 0, RenderingConstants.ByteMax);
+
     // ReSharper disable once BadListLineBreaks
     private static (double R, double G, double B) CmykToRgb(
         double c,
@@ -2082,16 +2088,16 @@ internal sealed class PageRenderer(
         // Device spaces — fast path, no lookup needed.
         switch (csName)
         {
-            case "DeviceGray":
+            case RenderingConstants.DeviceGray:
             {
                 var v = components.Length > 0 ? components[0] : 0;
                 return (v, v, v);
             }
-            case "DeviceRGB":
+            case RenderingConstants.DeviceRgb:
                 return components.Length >= 3
                     ? (components[0], components[1], components[2])
                     : (0, 0, 0);
-            case "DeviceCMYK":
+            case RenderingConstants.DeviceCmyk:
             {
                 if (components.Length < 4) return (0, 0, 0);
 
@@ -2192,13 +2198,13 @@ internal sealed class PageRenderer(
         // Convert glyph space → text space via FontMatrix[0] (x scale), then apply FontSize.
         var fm = t3.FontMatrix;
         var advance = ((wGlyph * fm[0] * _gs.FontSize) + _gs.CharSpace)
-                      * (_gs.HorizontalScale / 100.0);
+                      * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
         _gs.TextMatrix[4] += advance;
     }
 
     private void SetFillGray(double gray)
     {
-        var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
+        var v = ToByteColor(gray);
         _gs.FillR = _gs.FillG = _gs.FillB = v;
         _gs.FillIsPattern = false;
         _gs.FillShadingName = null;
@@ -2207,15 +2213,15 @@ internal sealed class PageRenderer(
 
     private void SetStrokeGray(double gray)
     {
-        var v = (byte)Math.Clamp((int)(gray * 255), 0, 255);
+        var v = ToByteColor(gray);
         _gs.StrokeR = _gs.StrokeG = _gs.StrokeB = v;
     }
 
     private void SetFillRgb(double r, double g, double b)
     {
-        _gs.FillR = (byte)Math.Clamp((int)(r * 255), 0, 255);
-        _gs.FillG = (byte)Math.Clamp((int)(g * 255), 0, 255);
-        _gs.FillB = (byte)Math.Clamp((int)(b * 255), 0, 255);
+        _gs.FillR = ToByteColor(r);
+        _gs.FillG = ToByteColor(g);
+        _gs.FillB = ToByteColor(b);
         _gs.FillIsPattern = false;
         _gs.FillShadingName = null;
         _gs.FillTilingName = null;
@@ -2223,9 +2229,9 @@ internal sealed class PageRenderer(
 
     private void SetStrokeRgb(double r, double g, double b)
     {
-        _gs.StrokeR = (byte)Math.Clamp((int)(r * 255), 0, 255);
-        _gs.StrokeG = (byte)Math.Clamp((int)(g * 255), 0, 255);
-        _gs.StrokeB = (byte)Math.Clamp((int)(b * 255), 0, 255);
+        _gs.StrokeR = ToByteColor(r);
+        _gs.StrokeG = ToByteColor(g);
+        _gs.StrokeB = ToByteColor(b);
     }
 
     // Renders a soft mask Form XObject into a per-pixel alpha array (device space).
@@ -2281,8 +2287,10 @@ internal sealed class PageRenderer(
             for (var x = 0; x < smInfo.WidthPx; x++)
             {
                 var o = ((y * smInfo.WidthPx) + x) * 4;
-                alpha[(y * smInfo.WidthPx) + x] = smInfo.MaskType == "Luminosity"
-                    ? (byte)(((pixels[o] * 77) + (pixels[o + 1] * 150) + (pixels[o + 2] * 29)) >> 8)
+                alpha[(y * smInfo.WidthPx) + x] = smInfo.MaskType == RenderingConstants.SoftMaskLuminosity
+                    ? (byte)(((pixels[o] * RenderingConstants.LumaR)
+                              + (pixels[o + 1] * RenderingConstants.LumaG)
+                              + (pixels[o + 2] * RenderingConstants.LumaB)) >> RenderingConstants.LumaShift)
                     : pixels[o];
             }
 
@@ -2293,7 +2301,7 @@ internal sealed class PageRenderer(
         {
             // On failure, return a fully-opaque mask so content is not incorrectly hidden.
             var fallback = new byte[smInfo.WidthPx * smInfo.HeightPx];
-            Array.Fill(fallback, (byte)255);
+            Array.Fill(fallback, RenderingConstants.OpaqueAlpha);
             return fallback;
         }
     }
