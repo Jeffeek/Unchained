@@ -1,23 +1,24 @@
-using Unchained.Pptx.Themes;
 using System.Xml.Linq;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core;
+using Unchained.Pptx.Themes;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a DrawingML theme part (<c>&lt;a:theme&gt;</c>) into a <see cref="PptxTheme"/>.
+///     Parses a DrawingML theme part (<c>&lt;a:theme&gt;</c>) into a <see cref="PptxTheme" />.
 /// </summary>
 internal static class ThemeParser
 {
-    /// <summary>Parses a theme XML byte array into a <see cref="PptxTheme"/>.</summary>
+    /// <summary>Parses a theme XML byte array into a <see cref="PptxTheme" />.</summary>
     public static PptxTheme Parse(byte[] bytes)
     {
         var doc = OoXmlHelper.ParseXml(bytes);
-        return Parse(doc.Root ?? throw new Core.PptxException("Theme XML has no root element."));
+        return Parse(doc.Root ?? throw new PptxException("Theme XML has no root element."));
     }
 
-    /// <summary>Parses a <c>&lt;a:theme&gt;</c> root element into a <see cref="PptxTheme"/>.</summary>
+    /// <summary>Parses a <c>&lt;a:theme&gt;</c> root element into a <see cref="PptxTheme" />.</summary>
     public static PptxTheme Parse(XElement root)
     {
         var theme = new PptxTheme
@@ -90,13 +91,13 @@ internal static class ThemeParser
         var set = new ThemeFontSet
         {
             LatinFont = fontSetEl.Element(DmlNames.LatinFont)
-                                  ?.GetAttr(DmlNames.AttributeTypeface, string.Empty)
+                            ?.GetAttr(DmlNames.AttributeTypeface, string.Empty)
                         ?? string.Empty,
             EastAsianFont = fontSetEl.Element(DmlNames.EastAsianFont)
-                                      ?.GetAttr(DmlNames.AttributeTypeface, string.Empty)
+                                ?.GetAttr(DmlNames.AttributeTypeface, string.Empty)
                             ?? string.Empty,
             ComplexScriptFont = fontSetEl.Element(DmlNames.ComplexScriptFont)
-                                          ?.GetAttr(DmlNames.AttributeTypeface, string.Empty)
+                                    ?.GetAttr(DmlNames.AttributeTypeface, string.Empty)
                                 ?? string.Empty
         };
 

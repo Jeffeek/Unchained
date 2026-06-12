@@ -4,18 +4,18 @@ using Unchained.Pdf.Core;
 namespace Unchained.Pdf.Parsing;
 
 /// <summary>
-/// Tokenizes a PDF byte stream into a sequence of <see cref="PdfToken"/> values
-/// (ISO 32000-1 §7.2 — Lexical Conventions).
-/// <para>
-/// The lexer works directly on a <see cref="ReadOnlyMemory{T}">ReadOnlyMemory&lt;byte&gt;</see>
-/// to avoid encoding overhead and allocates no heap objects for fixed-size tokens.
-/// String and stream data are returned as zero-copy slices into the source buffer.
-/// </para>
-/// <para>
-/// The lexer is forward-only by default, but the cursor can be repositioned with
-/// <see cref="Seek"/> to support the backwards-reading strategy required by the
-/// PDF cross-reference table (<c>startxref</c> at end of file → xref offset → objects).
-/// </para>
+///     Tokenizes a PDF byte stream into a sequence of <see cref="PdfToken" /> values
+///     (ISO 32000-1 §7.2 — Lexical Conventions).
+///     <para>
+///         The lexer works directly on a <see cref="ReadOnlyMemory{T}">ReadOnlyMemory&lt;byte&gt;</see>
+///         to avoid encoding overhead and allocates no heap objects for fixed-size tokens.
+///         String and stream data are returned as zero-copy slices into the source buffer.
+///     </para>
+///     <para>
+///         The lexer is forward-only by default, but the cursor can be repositioned with
+///         <see cref="Seek" /> to support the backwards-reading strategy required by the
+///         PDF cross-reference table (<c>startxref</c> at end of file → xref offset → objects).
+///     </para>
 /// </summary>
 internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
 {
@@ -23,8 +23,8 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     public int Position { get; private set; } = startPosition;
 
     /// <summary>
-    /// <see langword="true"/> when <see cref="Position"/> has reached or passed
-    /// the end of the source buffer.
+    ///     <see langword="true" /> when <see cref="Position" /> has reached or passed
+    ///     the end of the source buffer.
     /// </summary>
     // ReSharper disable once MemberCanBePrivate.Global
     public bool AtEnd => Position >= source.Length;
@@ -32,10 +32,10 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     // ── Public API ────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Reads and returns the next token, advancing <see cref="Position"/> past it.
-    /// Leading whitespace and comments are skipped automatically.
-    /// Returns a token of kind <see cref="PdfTokenKind.EndOfFile"/> when the
-    /// source is exhausted.
+    ///     Reads and returns the next token, advancing <see cref="Position" /> past it.
+    ///     Leading whitespace and comments are skipped automatically.
+    ///     Returns a token of kind <see cref="PdfTokenKind.EndOfFile" /> when the
+    ///     source is exhausted.
     /// </summary>
     public PdfToken ReadNext()
     {
@@ -49,7 +49,9 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
             (byte)'/' => ReadName(),
             (byte)'(' => ReadLiteralString(),
             (byte)'<' => PeekByte(1) == (byte)'<' ? ReadKeywordToken(PdfTokenKind.DictionaryBegin, 2) : ReadHexString(),
-            (byte)'>' => PeekByte(1) == (byte)'>' ? ReadKeywordToken(PdfTokenKind.DictionaryEnd, 2) : throw new PdfException("Unexpected '>'", Position),
+            (byte)'>' => PeekByte(1) == (byte)'>'
+                ? ReadKeywordToken(PdfTokenKind.DictionaryEnd, 2)
+                : throw new PdfException("Unexpected '>'", Position),
             (byte)'[' => ReadKeywordToken(PdfTokenKind.ArrayBegin, 1),
             (byte)']' => ReadKeywordToken(PdfTokenKind.ArrayEnd, 1),
             _ when IsDigit(b) || b == (byte)'-' || b == (byte)'+' || b == (byte)'.' => ReadNumber(),
@@ -58,8 +60,8 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     }
 
     /// <summary>
-    /// Returns the next token without advancing <see cref="Position"/>.
-    /// Useful for one-token lookahead in the parser.
+    ///     Returns the next token without advancing <see cref="Position" />.
+    ///     Useful for one-token lookahead in the parser.
     /// </summary>
     public PdfToken Peek()
     {
@@ -70,16 +72,16 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     }
 
     /// <summary>
-    /// Repositions the cursor to an absolute byte <paramref name="offset"/> within the source buffer.
-    /// Used by <see cref="PdfParser"/> to jump to cross-reference offsets and to backtrack
-    /// during indirect-reference disambiguation.
+    ///     Repositions the cursor to an absolute byte <paramref name="offset" /> within the source buffer.
+    ///     Used by <see cref="PdfParser" /> to jump to cross-reference offsets and to backtrack
+    ///     during indirect-reference disambiguation.
     /// </summary>
     public void Seek(int offset) => Position = offset;
 
     /// <summary>
-    /// Skips a CR, LF, or CR+LF sequence at the current position without consuming a full token.
-    /// Required after the <c>stream</c> keyword (ISO 32000-1 §7.3.8.1) to position the cursor
-    /// at the first byte of stream data.
+    ///     Skips a CR, LF, or CR+LF sequence at the current position without consuming a full token.
+    ///     Required after the <c>stream</c> keyword (ISO 32000-1 §7.3.8.1) to position the cursor
+    ///     at the first byte of stream data.
     /// </summary>
     public void SkipLineEnding()
     {

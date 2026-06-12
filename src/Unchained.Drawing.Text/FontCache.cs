@@ -2,20 +2,23 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using HarfBuzzSharp;
+using SharpFont;
+using Buffer = HarfBuzzSharp.Buffer;
+using Face = HarfBuzzSharp.Face;
 using FtFace = SharpFont.Face;
 using FtLibrary = SharpFont.Library;
 
 namespace Unchained.Drawing.Text;
 
 /// <summary>
-/// Owns the FreeType2 library handle, one HarfBuzz font per loaded typeface,
-/// and the corresponding raw font bytes used to create both.
-/// Standard 14 fonts are substituted with bundled DejaVu fonts (Bitstream Vera / SIL OFL).
-/// Unrecognised fonts fall back to bundled NotoSans-Regular (SIL OFL).
+///     Owns the FreeType2 library handle, one HarfBuzz font per loaded typeface,
+///     and the corresponding raw font bytes used to create both.
+///     Standard 14 fonts are substituted with bundled DejaVu fonts (Bitstream Vera / SIL OFL).
+///     Unrecognised fonts fall back to bundled NotoSans-Regular (SIL OFL).
 /// </summary>
 internal sealed class FontCache : IDisposable
 {
-    private readonly FtLibrary _ftLibrary;
+    private static int _resolverRegistered;
 
     // Each entry: FreeType2 Face + HarfBuzz Font + the GCHandle that pins the font bytes.
     // SharpFont passes byte[] to FT_New_Memory_Face via P/Invoke, which pins only during the
@@ -24,10 +27,26 @@ internal sealed class FontCache : IDisposable
     // moving the array, which would leave FreeType with a dangling pointer.
     private readonly Dictionary<string, (FtFace FtFace, Font HbFont, GCHandle Pin)> _fonts =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly FtLibrary _ftLibrary;
 
     private bool _disposed;
 
-    private static int _resolverRegistered;
+    internal FontCache() => _ftLibrary = new FtLibrary();
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        foreach (var (ftFace, hbFont, pin) in _fonts.Values)
+        {
+            hbFont.Dispose();
+            ftFace.Dispose();
+            if (pin.IsAllocated) pin.Free();
+        }
+
+        _fonts.Clear();
+        _ftLibrary.Dispose();
+    }
 
     // ModuleInitializer runs when the Unchained.Drawing.Text assembly is first loaded —
     // before any P/Invoke in SharpFont can fire, regardless of which class triggers the load.
@@ -97,12 +116,10 @@ internal sealed class FontCache : IDisposable
         return nint.Zero;
     }
 
-    internal FontCache() => _ftLibrary = new FtLibrary();
-
     /// <summary>
-    /// Returns the FreeType2 face and HarfBuzz font for the named typeface.
-    /// When <paramref name="embeddedBytes"/> are provided they are used directly;
-    /// otherwise a bundled substitute font is selected.
+    ///     Returns the FreeType2 face and HarfBuzz font for the named typeface.
+    ///     When <paramref name="embeddedBytes" /> are provided they are used directly;
+    ///     otherwise a bundled substitute font is selected.
     /// </summary>
     internal (FtFace FtFace, Font HbFont) GetFonts(string fontName, byte[]? embeddedBytes = null)
     {
@@ -144,7 +161,7 @@ internal sealed class FontCache : IDisposable
         // FT_New_Memory_Face via P/Invoke (pinned only during the call); FreeType then
         // keeps a raw pointer into that buffer. If GC moves the array afterwards, FreeType
         // reads stale memory and bitmap data becomes corrupt/garbage.
-        var pin    = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
+        var pin = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
         var ftFace = _ftLibrary.NewMemoryFace(fontBytes, 0);
 
         var gch = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
@@ -198,11 +215,16 @@ internal sealed class FontCache : IDisposable
     }
 
     /// <summary>
-    /// Diagnostic helper used by tests. Shapes the character through HarfBuzz,
-    /// loads the glyph through FreeType2, and returns a human-readable summary.
-    /// Returns an error description instead of throwing.
+    ///     Diagnostic helper used by tests. Shapes the character through HarfBuzz,
+    ///     loads the glyph through FreeType2, and returns a human-readable summary.
+    ///     Returns an error description instead of throwing.
     /// </summary>
-    internal string DiagnoseGlyphRender(string fontName, byte[]? embeddedBytes, char ch, int pixelSize)
+    internal string DiagnoseGlyphRender(
+        string fontName,
+        byte[]? embeddedBytes,
+        char ch,
+        int pixelSize
+    )
     {
         try
         {
@@ -212,25 +234,25 @@ internal sealed class FontCache : IDisposable
             var hbScale = pixelSize * 64;
             hbFont.SetScale(hbScale, hbScale);
 
-            using var buf = new HarfBuzzSharp.Buffer();
+            using var buf = new Buffer();
             buf.AddUtf8(ch.ToString());
             buf.GuessSegmentProperties();
             hbFont.Shape(buf);
 
-            var infos     = buf.GlyphInfos;
+            var infos = buf.GlyphInfos;
             var positions = buf.GlyphPositions;
 
             if (infos.Length == 0)
                 return $"FAIL: HarfBuzz produced 0 glyphs for '{ch}' in font '{fontName}'";
 
             var glyphId = infos[0].Codepoint;
-            var xAdv    = positions[0].XAdvance;
+            var xAdv = positions[0].XAdvance;
 
             // Capture full stack trace to pinpoint the overflow
             string? loadError = null;
             try
             {
-                ftFace.LoadGlyph(glyphId, SharpFont.LoadFlags.Render, SharpFont.LoadTarget.Normal);
+                ftFace.LoadGlyph(glyphId, LoadFlags.Render, LoadTarget.Normal);
             }
             catch (Exception ex)
             {
@@ -244,7 +266,7 @@ internal sealed class FontCache : IDisposable
             // Do NOT use bm.BufferData — throws OverflowException for negative Pitch.
             // Read via Marshal.Copy from bm.Buffer instead.
             // Guard against garbage values from SharpFont struct offset mismatch on Windows x64.
-            int nonZero = -1;
+            var nonZero = -1;
             const int maxGlyphDim = 4096;
             if (bm.Buffer != IntPtr.Zero && bm.Width > 0 && bm.Rows > 0
                 && bm.Width <= maxGlyphDim && bm.Rows <= maxGlyphDim)
@@ -253,7 +275,7 @@ internal sealed class FontCache : IDisposable
                 if (absPitch > 0 && absPitch <= maxGlyphDim * 4)
                 {
                     var rawBytes = new byte[absPitch * bm.Rows];
-                    System.Runtime.InteropServices.Marshal.Copy(bm.Buffer, rawBytes, 0, rawBytes.Length);
+                    Marshal.Copy(bm.Buffer, rawBytes, 0, rawBytes.Length);
                     nonZero = rawBytes.Count(b => b > 0);
                 }
             }
@@ -267,20 +289,5 @@ internal sealed class FontCache : IDisposable
         {
             return $"EXCEPTION in DiagnoseGlyphRender: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}";
         }
-    }
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        foreach (var (ftFace, hbFont, pin) in _fonts.Values)
-        {
-            hbFont.Dispose();
-            ftFace.Dispose();
-            if (pin.IsAllocated) pin.Free();
-        }
-
-        _fonts.Clear();
-        _ftLibrary.Dispose();
     }
 }

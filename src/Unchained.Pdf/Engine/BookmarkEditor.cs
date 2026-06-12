@@ -6,8 +6,8 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IBookmarkEditor"/> implementation.
-/// Builds a flat or nested <c>/Outlines</c> tree and replaces the catalog entry.
+///     Default <see cref="IBookmarkEditor" /> implementation.
+///     Builds a flat or nested <c>/Outlines</c> tree and replaces the catalog entry.
 /// </summary>
 public sealed class BookmarkEditor : IBookmarkEditor
 {
@@ -27,7 +27,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
         // Build the page object-number lookup: page N → object number.
         var pageObjNums = BuildPageObjectNumbers(existing, adapter.Core);

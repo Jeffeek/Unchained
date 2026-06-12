@@ -6,14 +6,14 @@ using Unchained.Pptx.Slides;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a <c>&lt;p:notes&gt;</c> XML root into a <see cref="NotesSlide"/> model.
+///     Parses a <c>&lt;p:notes&gt;</c> XML root into a <see cref="NotesSlide" /> model.
 /// </summary>
 internal static class NotesParser
 {
     /// <summary>
-    /// Extracts the speaker notes text from the notes XML root and populates
-    /// <paramref name="notes"/>. The <c>NotesText</c> shortcut and the full
-    /// <c>NotesTextFrame</c> are both populated.
+    ///     Extracts the speaker notes text from the notes XML root and populates
+    ///     <paramref name="notes" />. The <c>NotesText</c> shortcut and the full
+    ///     <c>NotesTextFrame</c> are both populated.
     /// </summary>
     public static void Parse(XElement notesRoot, NotesSlide notes)
     {
@@ -31,8 +31,8 @@ internal static class NotesParser
         foreach (var sp in spTree.Elements(pml + "sp"))
         {
             var phEl = sp.Element(pml + "nvSpPr")
-                         ?.Element(pml + "nvPr")
-                         ?.Element(pml + "ph");
+                ?.Element(pml + "nvPr")
+                ?.Element(pml + "ph");
             if (phEl == null) continue;
 
             var phType = phEl.GetAttr("type", string.Empty);

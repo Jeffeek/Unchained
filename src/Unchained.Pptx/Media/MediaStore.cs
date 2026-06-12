@@ -5,16 +5,16 @@ using Unchained.Pptx.Slides;
 namespace Unchained.Pptx.Media;
 
 /// <summary>
-/// The central store for all media assets (images, audio, and video) embedded in or
-/// linked from a presentation. All shapes that reference media hold a reference to an
-/// object in this store.
+///     The central store for all media assets (images, audio, and video) embedded in or
+///     linked from a presentation. All shapes that reference media hold a reference to an
+///     object in this store.
 /// </summary>
 public sealed class MediaStore
 {
-    private readonly List<EmbeddedImage> _images = [];
     private readonly List<EmbeddedAudio> _audioFiles = [];
-    private readonly List<EmbeddedVideo> _videoFiles = [];
     private readonly List<EmbeddedFont> _fonts = [];
+    private readonly List<EmbeddedImage> _images = [];
+    private readonly List<EmbeddedVideo> _videoFiles = [];
 
     /// <summary>All images currently embedded in the presentation.</summary>
     public IReadOnlyList<EmbeddedImage> Images => _images;
@@ -31,7 +31,7 @@ public sealed class MediaStore
     // ── Images ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Adds an image from raw bytes and returns the resulting <see cref="EmbeddedImage"/>.
+    ///     Adds an image from raw bytes and returns the resulting <see cref="EmbeddedImage" />.
     /// </summary>
     /// <param name="data">The raw image bytes.</param>
     /// <param name="contentType">MIME type (e.g. <c>"image/png"</c>).</param>
@@ -43,7 +43,7 @@ public sealed class MediaStore
         return image;
     }
 
-    /// <summary>Adds an already-constructed <see cref="EmbeddedImage"/> to the store.</summary>
+    /// <summary>Adds an already-constructed <see cref="EmbeddedImage" /> to the store.</summary>
     internal EmbeddedImage AddImage(EmbeddedImage image)
     {
         _images.Add(image);
@@ -78,9 +78,9 @@ public sealed class MediaStore
     }
 
     /// <summary>
-    /// Returns the embedded font bytes best matching <paramref name="typeface"/> and the
-    /// requested style, or <see langword="null"/> when no embedded font matches. Falls back
-    /// to the regular variant of the same typeface when the exact style is absent.
+    ///     Returns the embedded font bytes best matching <paramref name="typeface" /> and the
+    ///     requested style, or <see langword="null" /> when no embedded font matches. Falls back
+    ///     to the regular variant of the same typeface when the exact style is absent.
     /// </summary>
     internal ReadOnlyMemory<byte>? FindFontData(string typeface, EmbeddedFontStyle style)
     {
@@ -108,14 +108,14 @@ public sealed class MediaStore
     // ── Cleanup ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Removes all media assets that are not referenced by any shape across
-    /// all slides, masters, and layouts in the given <paramref name="slides"/> collection.
-    /// Returns the total number of items removed.
+    ///     Removes all media assets that are not referenced by any shape across
+    ///     all slides, masters, and layouts in the given <paramref name="slides" /> collection.
+    ///     Returns the total number of items removed.
     /// </summary>
     /// <param name="slides">
-    /// The slide collection to scan for live references.
-    /// Pass <see cref="Engine.PresentationDocument.Slides"/> to purge unreferenced media
-    /// after removing shapes or slides.
+    ///     The slide collection to scan for live references.
+    ///     Pass <see cref="Engine.PresentationDocument.Slides" /> to purge unreferenced media
+    ///     after removing shapes or slides.
     /// </param>
     internal int RemoveUnused(SlideCollection slides)
     {

@@ -1,24 +1,31 @@
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Reads font metrics from a TrueType or OpenType font file by parsing the minimal set
-/// of tables needed for a PDF /FontDescriptor: OS/2, hhea, head, and post.
-/// All values are returned in glyph-space units (1000 units/em after normalisation),
-/// matching the expected scale for PDF /FontDescriptor entries.
-/// ISO 32000-1 §9.8.1, OpenType Specification §5.
+///     Reads font metrics from a TrueType or OpenType font file by parsing the minimal set
+///     of tables needed for a PDF /FontDescriptor: OS/2, hhea, head, and post.
+///     All values are returned in glyph-space units (1000 units/em after normalisation),
+///     matching the expected scale for PDF /FontDescriptor entries.
+///     ISO 32000-1 §9.8.1, OpenType Specification §5.
 /// </summary>
 internal static class TrueTypeMetrics
 {
     /// <summary>
-    /// Helvetica/Arial fallback metrics used when FreeType cannot extract real metrics,
-    /// expressed in 1000-unit glyph space.
+    ///     Helvetica/Arial fallback metrics used when FreeType cannot extract real metrics,
+    ///     expressed in 1000-unit glyph space.
     /// </summary>
     internal static readonly FontMetrics HelveticaFallback =
-        new(-166, -225, FontConstants.NormalizedUnitsPerEm, 931, 800, -200, 716, 80);
+        new(-166,
+            -225,
+            FontConstants.NormalizedUnitsPerEm,
+            931,
+            800,
+            -200,
+            716,
+            80);
 
     /// <summary>
-    /// Parses metrics from a TrueType/OpenType font byte array.
-    /// Returns null when the font cannot be parsed (not TrueType, truncated, etc.).
+    ///     Parses metrics from a TrueType/OpenType font byte array.
+    ///     Returns null when the font cannot be parsed (not TrueType, truncated, etc.).
     /// </summary>
     internal static FontMetrics? Read(byte[] fontBytes)
     {
@@ -46,7 +53,7 @@ internal static class TrueTypeMetrics
         int? os2Off = null, hheaOff = null, headOff = null;
         for (var i = 0; i < numTables; i++)
         {
-            var entry = 12 + i * 16;
+            var entry = 12 + (i * 16);
             if (entry + 16 > b.Length) break;
             var tag = ReadTag(b, entry);
             var offset = (int)ReadU32(b, entry + 8);
@@ -76,8 +83,8 @@ internal static class TrueTypeMetrics
         int ascent, descent, capHeight;
         if (os2Off is { } oo && oo + 90 <= b.Length)
         {
-            ascent    = (int)Scale(ReadS16(b, oo + 68), scale);
-            descent   = (int)Scale(ReadS16(b, oo + 70), scale);
+            ascent = (int)Scale(ReadS16(b, oo + 68), scale);
+            descent = (int)Scale(ReadS16(b, oo + 70), scale);
             // sCapHeight is at OS/2 v2+ (offset 88); version at offset 0.
             var os2Version = ReadU16(b, oo);
             capHeight = os2Version >= 2 && oo + 90 <= b.Length
@@ -87,14 +94,12 @@ internal static class TrueTypeMetrics
         else if (hheaOff is { } hh && hh + 36 <= b.Length)
         {
             // Fallback to hhea ascender/descender.
-            ascent    = (int)Scale(ReadS16(b, hh + 4), scale);
-            descent   = (int)Scale(ReadS16(b, hh + 6), scale);
+            ascent = (int)Scale(ReadS16(b, hh + 4), scale);
+            descent = (int)Scale(ReadS16(b, hh + 6), scale);
             capHeight = (int)(ascent * FontConstants.CapHeightAscentRatio);
         }
         else
-        {
             return Default();
-        }
 
         // StemV: approximate from OS/2 usWeightClass if available.
         // Common formula: StemV ≈ (usWeightClass/65)^2 + 50.
@@ -106,7 +111,14 @@ internal static class TrueTypeMetrics
                 stemV = (int)Math.Clamp(Math.Pow(weightClass / 65.0, 2) + 50, 10, 340);
         }
 
-        return new FontMetrics(xMin, yMin, xMax, yMax, ascent, descent, capHeight, stemV);
+        return new FontMetrics(xMin,
+            yMin,
+            xMax,
+            yMax,
+            ascent,
+            descent,
+            capHeight,
+            stemV);
     }
 
     private static FontMetrics Default() => HelveticaFallback;

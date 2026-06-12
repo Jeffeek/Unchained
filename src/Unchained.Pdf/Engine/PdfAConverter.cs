@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
 using Unchained.Pdf.Core;
@@ -6,18 +7,19 @@ using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 using Unchained.Pdf.Writing;
+using SaveOptions = System.Xml.Linq.SaveOptions;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Performs structural PDF/A conformance fixes on a PDF document.
-/// <para>
-/// Handles the structural requirements that can be fixed programmatically:
-/// pdfaid XMP metadata, /ID in trailer, removing prohibited catalog entries,
-/// and setting annotation Print flags. Does NOT embed fonts, add output intents,
-/// or remove transparency — those require additional resources or content rewriting.
-/// Validate after conversion to see any remaining violations.
-/// </para>
+///     Performs structural PDF/A conformance fixes on a PDF document.
+///     <para>
+///         Handles the structural requirements that can be fixed programmatically:
+///         pdfaid XMP metadata, /ID in trailer, removing prohibited catalog entries,
+///         and setting annotation Print flags. Does NOT embed fonts, add output intents,
+///         or remove transparency — those require additional resources or content rewriting.
+///         Validate after conversion to see any remaining violations.
+///     </para>
 /// </summary>
 internal static class PdfAConverter
 {
@@ -85,7 +87,7 @@ internal static class PdfAConverter
 
         SetPdfaidProperties(xmpDoc, profile);
 
-        return Encoding.UTF8.GetBytes(xmpDoc.ToString(System.Xml.Linq.SaveOptions.OmitDuplicateNamespaces));
+        return Encoding.UTF8.GetBytes(xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces));
     }
 
     private static string? ReadExistingXmp(IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
@@ -244,8 +246,8 @@ internal static class PdfAConverter
         var existingId = core.Trailer.Get<PdfArray>(PdfName.Get("ID"));
         entries["ID"] = existingId
                         ?? new PdfArray([
-                            new PdfString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16), isHex: true),
-                            new PdfString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16), isHex: true)
+                            new PdfString(RandomNumberGenerator.GetBytes(16), true),
+                            new PdfString(RandomNumberGenerator.GetBytes(16), true)
                         ]);
 
         return new PdfDictionary(entries);

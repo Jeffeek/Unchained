@@ -1,27 +1,27 @@
-using Unchained.Ooxml;
-using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
-using Unchained.Ooxml.Xml;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Text;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes <see cref="TextFrame"/> objects to DrawingML <c>&lt;p:txBody&gt;</c> /
-/// <c>&lt;a:txBody&gt;</c> XML elements.
+///     Serializes <see cref="TextFrame" /> objects to DrawingML <c>&lt;p:txBody&gt;</c> /
+///     <c>&lt;a:txBody&gt;</c> XML elements.
 /// </summary>
 internal static class TextWriter
 {
     /// <summary>
-    /// Returns a complete <c>&lt;p:txBody&gt;</c> element for the given <paramref name="frame"/>,
-    /// using the PresentationML namespace for the root element name.
+    ///     Returns a complete <c>&lt;p:txBody&gt;</c> element for the given <paramref name="frame" />,
+    ///     using the PresentationML namespace for the root element name.
     /// </summary>
     public static XElement WriteAsShape(TextFrame frame) =>
         Write(frame, PmlNames.TextBody);
 
     /// <summary>
-    /// Returns a complete <c>&lt;a:txBody&gt;</c> element for the given <paramref name="frame"/>,
-    /// using the DrawingML namespace (used inside table cells).
+    ///     Returns a complete <c>&lt;a:txBody&gt;</c> element for the given <paramref name="frame" />,
+    ///     using the DrawingML namespace (used inside table cells).
     /// </summary>
     public static XElement WriteAsDml(TextFrame frame) =>
         Write(frame, DmlNames.TextBody);
@@ -37,8 +37,10 @@ internal static class TextWriter
 
         // Ensure at least one paragraph exists (required by OOXML spec)
         if (frame.Paragraphs.Count == 0)
+        {
             txBody.Add(new XElement(DmlNames.Paragraph,
                 new XElement(DmlNames.EndParagraphRunProperties, new XAttribute(DmlNames.AttributeLanguage, "en-US"))));
+        }
 
         return txBody;
     }
@@ -74,22 +76,24 @@ internal static class TextWriter
 
         // WordArt warp (<a:prstTxWarp>) precedes the autofit elements per the bodyPr schema.
         if (format.Warp is { } warp && !string.IsNullOrEmpty(warp.Preset))
+        {
             bodyPr.Add(new XElement(DmlNames.Dml + "prstTxWarp",
                 new XAttribute("prst", warp.Preset),
                 new XElement(DmlNames.Dml + "avLst")));
+        }
 
         // Autofit
         switch (format.Autofit)
         {
             case TextAutofit.ShrinkText:
                 bodyPr.Add(new XElement(DmlNames.Dml + "normAutofit"));
-                break;
+            break;
             case TextAutofit.ResizeShape:
                 bodyPr.Add(new XElement(DmlNames.Dml + "spAutoFit"));
-                break;
+            break;
             default:
                 bodyPr.Add(new XElement(DmlNames.Dml + "noAutofit"));
-                break;
+            break;
         }
 
         return bodyPr;
@@ -174,29 +178,39 @@ internal static class TextWriter
         {
             case BulletType.None:
                 pPr.Add(new XElement(DmlNames.BulletNone));
-                break;
+            break;
             case BulletType.Character:
                 if (bullet.Character != null)
+                {
                     pPr.Add(new XElement(DmlNames.BulletChar,
                         new XAttribute("char", bullet.Character)));
+                }
+
                 if (bullet.Font != null)
+                {
                     pPr.Add(new XElement(DmlNames.BulletFont,
                         new XAttribute(DmlNames.AttributeTypeface, bullet.Font)));
+                }
+
                 if (bullet.Color.HasValue)
                 {
                     var clr = new XElement(DmlNames.BulletColor);
                     clr.Add(ColorWriter.Write(bullet.Color.Value));
                     pPr.Add(clr);
                 }
+
                 if (bullet.SizePercent.HasValue)
+                {
                     pPr.Add(new XElement(DmlNames.BulletSizePercent,
                         new XAttribute(DmlNames.AttributeValue, (int)(bullet.SizePercent.Value * 1_000))));
-                break;
+                }
+
+            break;
             case BulletType.Numbered when bullet.Numbered != null:
                 pPr.Add(new XElement(DmlNames.BulletAutoNumber,
                     new XAttribute("type", NumberedStyleToString(bullet.Numbered.Style)),
                     new XAttribute("startAt", bullet.Numbered.StartAt)));
-                break;
+            break;
         }
     }
 
@@ -204,11 +218,16 @@ internal static class TextWriter
     {
         var lnSpc = new XElement(DmlNames.LineSpacing);
         if (spacing.Mode == LineSpacingMode.Points)
+        {
             lnSpc.Add(new XElement(DmlNames.SpacingPoints,
                 new XAttribute(DmlNames.AttributeValue, (int)(spacing.Value * 100))));
+        }
         else
+        {
             lnSpc.Add(new XElement(DmlNames.SpacingPercent,
                 new XAttribute(DmlNames.AttributeValue, (int)(spacing.Value * 1_000))));
+        }
+
         return lnSpc;
     }
 
@@ -275,23 +294,29 @@ internal static class TextWriter
             rPr.Add(runEffects);
 
         if (format.LatinFont != null)
+        {
             rPr.Add(new XElement(DmlNames.LatinFont,
                 new XAttribute(DmlNames.AttributeTypeface, format.LatinFont)));
+        }
 
         if (format.EastAsianFont != null)
+        {
             rPr.Add(new XElement(DmlNames.EastAsianFont,
                 new XAttribute(DmlNames.AttributeTypeface, format.EastAsianFont)));
+        }
 
         if (format.ComplexScriptFont != null)
+        {
             rPr.Add(new XElement(DmlNames.ComplexScriptFont,
                 new XAttribute(DmlNames.AttributeTypeface, format.ComplexScriptFont)));
+        }
 
         // Click hyperlink (<a:hlinkClick>) follows the font elements per the rPr schema order.
         // The relationship id is assigned by PresentationWriter before this runs.
         if (format.Hyperlink is { } link)
         {
             var hlink = new XElement(DmlNames.HyperlinkClick,
-                new XAttribute(Core.Xml.PmlNames.Relationships + "id", link.RelationshipId));
+                new XAttribute(PmlNames.Relationships + "id", link.RelationshipId));
             if (!string.IsNullOrEmpty(link.Tooltip))
                 hlink.Add(new XAttribute("tooltip", link.Tooltip));
             rPr.Add(hlink);

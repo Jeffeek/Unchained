@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -8,28 +9,28 @@ using Unchained.Pdf.Writing;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Produces a linearized (web-optimized) PDF byte stream conforming to ISO 32000-1 Annex F.
-/// <para>
-/// A linearized PDF is structured so that a PDF reader can render the first page as soon as
-/// the first part of the file arrives over a network, without waiting for the full download.
-/// The file layout is:
-/// <list type="number">
-///   <item>Header</item>
-///   <item>Linearization parameter dictionary (object 1, fixed 256-byte reserved block)</item>
-///   <item>First-page objects: catalog, page-1 dict, page-1 content streams, page-1 resources</item>
-///   <item>Hint stream (page offset table + shared object table, FlateDecode compressed)</item>
-///   <item>First-page xref section</item>
-///   <item>First-page trailer</item>
-///   <item>Remaining-pages objects</item>
-///   <item>Main (overflow) xref section</item>
-///   <item>Main trailer</item>
-/// </list>
-/// </para>
-/// <para>
-/// Because byte offsets in the linearization dict and hint stream must be exact,
-/// a two-pass approach is used: the first pass serializes everything and records all offsets;
-/// the second pass patches the linearization-dict placeholder and hint stream with correct values.
-/// </para>
+///     Produces a linearized (web-optimized) PDF byte stream conforming to ISO 32000-1 Annex F.
+///     <para>
+///         A linearized PDF is structured so that a PDF reader can render the first page as soon as
+///         the first part of the file arrives over a network, without waiting for the full download.
+///         The file layout is:
+///         <list type="number">
+///             <item>Header</item>
+///             <item>Linearization parameter dictionary (object 1, fixed 256-byte reserved block)</item>
+///             <item>First-page objects: catalog, page-1 dict, page-1 content streams, page-1 resources</item>
+///             <item>Hint stream (page offset table + shared object table, FlateDecode compressed)</item>
+///             <item>First-page xref section</item>
+///             <item>First-page trailer</item>
+///             <item>Remaining-pages objects</item>
+///             <item>Main (overflow) xref section</item>
+///             <item>Main trailer</item>
+///         </list>
+///     </para>
+///     <para>
+///         Because byte offsets in the linearization dict and hint stream must be exact,
+///         a two-pass approach is used: the first pass serializes everything and records all offsets;
+///         the second pass patches the linearization-dict placeholder and hint stream with correct values.
+///     </para>
 /// </summary>
 internal static class LinearizedWriter
 {
@@ -39,7 +40,7 @@ internal static class LinearizedWriter
     private const int LinearizationDictReservedBytes = 256;
 
     /// <summary>
-    /// Serializes <paramref name="objects"/> as a linearized PDF and returns the resulting bytes.
+    ///     Serializes <paramref name="objects" /> as a linearized PDF and returns the resulting bytes.
     /// </summary>
     /// <param name="objects">All indirect objects of the document, sorted by object number.</param>
     /// <param name="trailer">The document trailer dictionary (must contain /Root and /Size).</param>
@@ -64,26 +65,18 @@ internal static class LinearizedWriter
 
         // ── 4. Second pass — write final output ───────────────────────────────
         // ReSharper disable once BadListLineBreaks
-        return WriteFinal(firstPageObjects, remainingObjects, trailer, firstPageRef, layout, hintStream);
-    }
-
-    // ── Object partitioning ───────────────────────────────────────────────────
-
-    private sealed class Partition(
-        List<PdfIndirectObject> firstPage,
-        List<PdfIndirectObject> remaining,
-        PdfIndirectReference firstPageRef
-    )
-    {
-        internal List<PdfIndirectObject> FirstPage { get; } = firstPage;
-        internal List<PdfIndirectObject> Remaining { get; } = remaining;
-        internal PdfIndirectReference FirstPageRef { get; } = firstPageRef;
+        return WriteFinal(firstPageObjects,
+            remainingObjects,
+            trailer,
+            firstPageRef,
+            layout,
+            hintStream);
     }
 
     /// <summary>
-    /// Splits the object list into the first-page cluster and everything else.
-    /// The first-page cluster contains: the catalog, the first page dict, all objects
-    /// transitively reachable from the first page (content streams, fonts, resources).
+    ///     Splits the object list into the first-page cluster and everything else.
+    ///     The first-page cluster contains: the catalog, the first page dict, all objects
+    ///     transitively reachable from the first page (content streams, fonts, resources).
     /// </summary>
     private static Partition PartitionObjects(
         IReadOnlyList<PdfIndirectObject> objects,
@@ -156,7 +149,7 @@ internal static class LinearizedWriter
         );
     }
 
-    /// <summary>Finds the indirect reference for the object whose value is reference-equal to <paramref name="dict"/>.</summary>
+    /// <summary>Finds the indirect reference for the object whose value is reference-equal to <paramref name="dict" />.</summary>
     private static PdfIndirectReference? FindObjectRef(
         PdfDictionary dict,
         IReadOnlyList<PdfIndirectObject> objects
@@ -223,47 +216,6 @@ internal static class LinearizedWriter
         }
     }
 
-    // ── Layout measurement ────────────────────────────────────────────────────
-
-    private sealed class LinearizedLayout
-    {
-        // Byte offset where the linearization dict placeholder starts.
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        internal long LinearizationDictOffset { get; init; }
-
-        // Byte offset of the first-page xref section.
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        internal long FirstXrefOffset { get; init; }
-
-        // Byte offset where the hint stream indirect object starts.
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        internal long HintStreamOffset { get; init; }
-
-        // Object number assigned to the hint stream.
-        internal int HintStreamObjectNumber { get; init; }
-
-        // Byte offset immediately after the last byte of the first-page section.
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        internal long EndOfFirstPageOffset { get; init; }
-
-        // Byte offset of the main (overflow) xref section.
-        internal long MainXrefOffset { get; init; }
-
-        // Total file length (set after second pass).
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        internal long FileLength { get; set; }
-
-        // Per-page starting byte offsets (index 0 = page 1).
-        internal long[] PageOffsets { get; init; } = [];
-
-        // Object numbers for all first-page objects (for hint table).
-        internal int[] FirstPageObjectNumbers { get; init; } = [];
-
-        // Object numbers for remaining objects (reserved for future hint table extension).
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        internal int[] RemainingObjectNumbers { get; init; } = [];
-    }
-
     private static LinearizedLayout MeasureLayout(
         List<PdfIndirectObject> firstPageObjects,
         List<PdfIndirectObject> remainingObjects,
@@ -321,7 +273,12 @@ internal static class LinearizedWriter
 
         // First-page trailer.
         // ReSharper disable once BadListLineBreaks
-        var firstTrailerBytes = BuildFirstTrailer(trailer, firstPageObjects, remainingObjects, hintObjNum, firstXrefOffset, 0 /*mainXref unknown yet*/);
+        var firstTrailerBytes = BuildFirstTrailer(trailer,
+            firstPageObjects,
+            remainingObjects,
+            hintObjNum,
+            firstXrefOffset,
+            0 /*mainXref unknown yet*/);
         buf.Write(firstTrailerBytes);
         pos += firstTrailerBytes.Length;
 
@@ -360,14 +317,14 @@ internal static class LinearizedWriter
     // ── Hint stream ───────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Builds the hint stream per ISO 32000-1 Annex F §F.4.
-    /// Contains a page offset hint table and a shared object hint table,
-    /// concatenated and FlateDecode-compressed.
+    ///     Builds the hint stream per ISO 32000-1 Annex F §F.4.
+    ///     Contains a page offset hint table and a shared object hint table,
+    ///     concatenated and FlateDecode-compressed.
     /// </summary>
     private static byte[] BuildHintStream(LinearizedLayout layout)
     {
         using var raw = new MemoryStream();
-        using var bw = new BinaryWriter(raw, Encoding.ASCII, leaveOpen: true);
+        using var bw = new BinaryWriter(raw, Encoding.ASCII, true);
 
         // ── Page offset hint table (§F.4.5) ───────────────────────────────────
         bw.Write((uint)layout.PageOffsets.Length);
@@ -383,7 +340,7 @@ internal static class LinearizedWriter
         raw.Position = 0;
 
         using var compressed = new MemoryStream();
-        using (var deflate = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
+        using (var deflate = new ZLibStream(compressed, CompressionLevel.Optimal, true))
             raw.CopyTo(deflate);
 
         return compressed.ToArray();
@@ -475,16 +432,16 @@ internal static class LinearizedWriter
         // ── Patch linearization dict ───────────────────────────────────────────
         var fileLength = pos;
         var linDict = BuildLinearizationDict(
-            fileLength: fileLength,
-            hintOffset: hintStreamStart,
-            hintLength: hintStreamBytes.Length + EstimateHintObjectOverhead(hintObjNum, hintStreamBytes.Length),
-            firstPageObjNum: firstPageRef.ObjectNumber,
-            endOfFirstPage: endOfFirstPage,
-            pageCount: firstPageObjects.Count > 0
+            fileLength,
+            hintStreamStart,
+            hintStreamBytes.Length + EstimateHintObjectOverhead(hintObjNum, hintStreamBytes.Length),
+            firstPageRef.ObjectNumber,
+            endOfFirstPage,
+            firstPageObjects.Count > 0
                 ? 1 + remainingObjects.Count(static o =>
                     o.Value is PdfDictionary d && d.GetName("Type") == "Page")
                 : 1,
-            mainXrefOffset: mainXrefOffset
+            mainXrefOffset
         );
 
         PatchBytes(buf, linearizationDictStart, linDict, LinearizationDictReservedBytes);
@@ -630,7 +587,7 @@ internal static class LinearizedWriter
     {
         var raw = new byte[64];
         using var ms = new MemoryStream();
-        using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+        using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, true))
             zlib.Write(raw, 0, raw.Length);
 
         var compressed = ms.ToArray();
@@ -687,8 +644,8 @@ internal static class LinearizedWriter
     // ── Buffer patching ───────────────────────────────────────────────────────
 
     /// <summary>
-    /// Patches <paramref name="data"/> into <paramref name="buf"/> at <paramref name="offset"/>,
-    /// padding with spaces up to <paramref name="reservedLength"/> bytes.
+    ///     Patches <paramref name="data" /> into <paramref name="buf" /> at <paramref name="offset" />,
+    ///     padding with spaces up to <paramref name="reservedLength" /> bytes.
     /// </summary>
     private static void PatchBytes(
         ArrayBufferWriter<byte> buf,
@@ -698,7 +655,7 @@ internal static class LinearizedWriter
     )
     {
         // ArrayBufferWriter does not expose a writable span; use MemoryMarshal to get one.
-        var span = System.Runtime.InteropServices.MemoryMarshal.AsMemory(buf.WrittenMemory).Span;
+        var span = MemoryMarshal.AsMemory(buf.WrittenMemory).Span;
         var start = (int)offset;
 
         // Fill the reserved area with spaces first (safe default).
@@ -714,8 +671,8 @@ internal static class LinearizedWriter
     private static byte[] BuildAscii(string s) => Encoding.ASCII.GetBytes(s);
 
     /// <summary>
-    /// Estimates the byte overhead of the hint stream indirect object header/footer
-    /// so the /H length value in the linearization dict is accurate.
+    ///     Estimates the byte overhead of the hint stream indirect object header/footer
+    ///     so the /H length value in the linearization dict is accurate.
     /// </summary>
     private static long EstimateHintObjectOverhead(int objNum, int dataLen)
     {
@@ -723,5 +680,59 @@ internal static class LinearizedWriter
             $"{objNum} 0 obj\n<<\n/Length {dataLen}\n/Filter /FlateDecode\n/S 0\n>>\nstream\n".Length;
         var footerLen = "\nendstream\nendobj\n".Length;
         return headerLen + footerLen;
+    }
+
+    // ── Object partitioning ───────────────────────────────────────────────────
+
+    private sealed class Partition(
+        List<PdfIndirectObject> firstPage,
+        List<PdfIndirectObject> remaining,
+        PdfIndirectReference firstPageRef
+    )
+    {
+        internal List<PdfIndirectObject> FirstPage { get; } = firstPage;
+        internal List<PdfIndirectObject> Remaining { get; } = remaining;
+        internal PdfIndirectReference FirstPageRef { get; } = firstPageRef;
+    }
+
+    // ── Layout measurement ────────────────────────────────────────────────────
+
+    private sealed class LinearizedLayout
+    {
+        // Byte offset where the linearization dict placeholder starts.
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        internal long LinearizationDictOffset { get; init; }
+
+        // Byte offset of the first-page xref section.
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        internal long FirstXrefOffset { get; init; }
+
+        // Byte offset where the hint stream indirect object starts.
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        internal long HintStreamOffset { get; init; }
+
+        // Object number assigned to the hint stream.
+        internal int HintStreamObjectNumber { get; init; }
+
+        // Byte offset immediately after the last byte of the first-page section.
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        internal long EndOfFirstPageOffset { get; init; }
+
+        // Byte offset of the main (overflow) xref section.
+        internal long MainXrefOffset { get; init; }
+
+        // Total file length (set after second pass).
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        internal long FileLength { get; set; }
+
+        // Per-page starting byte offsets (index 0 = page 1).
+        internal long[] PageOffsets { get; init; } = [];
+
+        // Object numbers for all first-page objects (for hint table).
+        internal int[] FirstPageObjectNumbers { get; init; } = [];
+
+        // Object numbers for remaining objects (reserved for future hint table extension).
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        internal int[] RemainingObjectNumbers { get; init; } = [];
     }
 }

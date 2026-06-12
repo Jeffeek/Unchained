@@ -3,12 +3,23 @@ using System.Diagnostics.CodeAnalysis;
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes CCITT facsimile-compressed data (Group 3 1D/2D and Group 4).
-/// Used by PDF /CCITTFaxDecode (ISO 32000-1 §7.4.6) and TIFF compression types 2, 3, 4.
-/// Output: packed-bit rows, MSB first, 1 bit per pixel.
+///     Decodes CCITT facsimile-compressed data (Group 3 1D/2D and Group 4).
+///     Used by PDF /CCITTFaxDecode (ISO 32000-1 §7.4.6) and TIFF compression types 2, 3, 4.
+///     Output: packed-bit rows, MSB first, 1 bit per pixel.
 /// </summary>
 internal static class CcittFaxDecoder
 {
+    // ── Lookup tables (built once, indexed by top 13 bits of bit stream) ────
+
+    /// <summary>ITU-T T.4 standard fax page width in pixels; default /Columns value.</summary>
+    private const int DefaultColumns = 1728;
+    /// <summary>MSB mask for writing 1 bpp packed bits left-to-right into a byte.</summary>
+    private const byte MonoBitMsb = 0x80;
+    /// <summary>Low 16 bits of a packed lookup entry hold the run length.</summary>
+    private const int RunLengthLowMask = 0xFFFF;
+
+    private const int LookupBits = 13;
+    private const int LookupSize = 1 << LookupBits; // 8192
     // ── T.4 / T.6 run-length Huffman tables ─────────────────────────────────
     // Each entry: (code_length, code_value_msb_aligned_to_13_bits, run_length)
     // Negative run_length = makeup code (add to accumulator, then read another code).
@@ -127,18 +138,6 @@ internal static class CcittFaxDecoder
         (12, 0b000000011111_0, 2560)
     ];
 
-    // ── Lookup tables (built once, indexed by top 13 bits of bit stream) ────
-
-    /// <summary>ITU-T T.4 standard fax page width in pixels; default /Columns value.</summary>
-    private const int DefaultColumns = 1728;
-    /// <summary>MSB mask for writing 1 bpp packed bits left-to-right into a byte.</summary>
-    private const byte MonoBitMsb = 0x80;
-    /// <summary>Low 16 bits of a packed lookup entry hold the run length.</summary>
-    private const int RunLengthLowMask = 0xFFFF;
-
-    private const int LookupBits = 13;
-    private const int LookupSize = 1 << LookupBits; // 8192
-
     private static readonly int[] WhiteLookup = BuildLookup(WhiteTermRaw, WhiteMakeupRaw);
     private static readonly int[] BlackLookup = BuildLookup(BlackTermRaw, BlackMakeupRaw);
 
@@ -153,7 +152,13 @@ internal static class CcittFaxDecoder
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private static void FillTable(IList<int> table, int codeLen, int baseIdx, int run, int len)
+    private static void FillTable(
+        IList<int> table,
+        int codeLen,
+        int baseIdx,
+        int run,
+        int len
+    )
     {
         var extra = LookupBits - codeLen;
         var count = 1 << extra;
@@ -165,13 +170,13 @@ internal static class CcittFaxDecoder
     // ── Decoder entry point ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Decodes CCITT-compressed data.
-    /// Output is a packed-bit bitmap: 1 bit per pixel, MSB = leftmost pixel, rows packed to byte boundaries.
+    ///     Decodes CCITT-compressed data.
+    ///     Output is a packed-bit bitmap: 1 bit per pixel, MSB = leftmost pixel, rows packed to byte boundaries.
     /// </summary>
     /// <param name="data">The compressed input bytes.</param>
     /// <param name="k">
-    /// Encoding scheme: 0 = Group 3 1D (default); negative = Group 4 (T.6 pure 2D);
-    /// positive = Group 3 mixed 1D/2D (T.4).
+    ///     Encoding scheme: 0 = Group 3 1D (default); negative = Group 4 (T.6 pure 2D);
+    ///     positive = Group 3 mixed 1D/2D (T.4).
     /// </param>
     /// <param name="columns">Image width in pixels (default 1728).</param>
     /// <param name="rows">Expected row count; 0 = decode until data exhausted.</param>
@@ -190,7 +195,12 @@ internal static class CcittFaxDecoder
     {
         < 0 => DecodeGroup4(data, columns, rows, blackIs1, endOfBlock),
         // ReSharper disable once BadListLineBreaks
-        0 => DecodeGroup3_1D(data, columns, rows, blackIs1, encodedByteAlign, endOfBlock),
+        0 => DecodeGroup3_1D(data,
+            columns,
+            rows,
+            blackIs1,
+            encodedByteAlign,
+            endOfBlock),
         _ => DecodeGroup3_2D(data, columns, rows, blackIs1, encodedByteAlign)
     };
 
@@ -420,7 +430,7 @@ internal static class CcittFaxDecoder
                     curRow,
                     columns,
                     white,
-                    endOfBlock: false,
+                    false,
                     ref a0,
                     ref a0Color
                 );
@@ -462,15 +472,6 @@ internal static class CcittFaxDecoder
         }
 
         return true;
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static class Mode2D
-    {
-        public const int V0 = 10;
-        public const int Pass = 20;
-        public const int Horizontal = 21;
     }
 
     private static int Read2dMode(ReadOnlySpan<byte> data, ref int bitPos)
@@ -558,7 +559,12 @@ internal static class CcittFaxDecoder
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private static (int b1, int b2) FindB1B2(IReadOnlyList<bool> refRow, int a0, bool a0Color, int columns)
+    private static (int b1, int b2) FindB1B2(
+        IReadOnlyList<bool> refRow,
+        int a0,
+        bool a0Color,
+        int columns
+    )
     {
         var i = a0 + 1;
         while (i < columns)
@@ -610,7 +616,7 @@ internal static class CcittFaxDecoder
     private static int Peek13(ReadOnlySpan<byte> data, int bitPos)
     {
         var result = 0;
-        var avail = data.Length * 8 - bitPos;
+        var avail = (data.Length * 8) - bitPos;
         var count = Math.Min(LookupBits, avail);
         if (count <= 0)
             return -1;
@@ -671,7 +677,12 @@ internal static class CcittFaxDecoder
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private static void FillRun(IList<bool> row, int start, int length, bool color)
+    private static void FillRun(
+        IList<bool> row,
+        int start,
+        int length,
+        bool color
+    )
     {
         var end = Math.Min(start + length, row.Count - 1);
         for (var i = start; i < end; i++)
@@ -679,7 +690,12 @@ internal static class CcittFaxDecoder
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private static void WriteRow(Stream output, IList<bool> row, int columns, bool blackIs1)
+    private static void WriteRow(
+        Stream output,
+        IList<bool> row,
+        int columns,
+        bool blackIs1
+    )
     {
         var rowBytes = (columns + 7) >> 3;
         var buf = new byte[rowBytes];
@@ -692,5 +708,14 @@ internal static class CcittFaxDecoder
         }
 
         output.Write(buf);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static class Mode2D
+    {
+        public const int V0 = 10;
+        public const int Pass = 20;
+        public const int Horizontal = 21;
     }
 }

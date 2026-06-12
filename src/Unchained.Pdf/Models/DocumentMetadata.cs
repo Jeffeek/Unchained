@@ -1,10 +1,10 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// Immutable snapshot of the document information dictionary (<c>/Info</c>),
-/// as defined in ISO 32000-1 §14.3.3 Table 317.
-/// All fields are optional; a value of <see langword="null"/> means the entry
-/// is absent or could not be decoded.
+///     Immutable snapshot of the document information dictionary (<c>/Info</c>),
+///     as defined in ISO 32000-1 §14.3.3 Table 317.
+///     All fields are optional; a value of <see langword="null" /> means the entry
+///     is absent or could not be decoded.
 /// </summary>
 /// <param name="Title">The document title (<c>/Title</c>).</param>
 /// <param name="Author">The name of the person who created the document (<c>/Author</c>).</param>

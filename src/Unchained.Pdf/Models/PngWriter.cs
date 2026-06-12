@@ -5,9 +5,9 @@ using Unchained.Drawing.Extensions;
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// Minimal, dependency-free PNG encoder for 8-bit RGB / RGBA raster data. Lives in the core
-/// package (which has no reference to Unchained.Drawing) so extracted images can be exported
-/// without pulling in the rendering stack. Uses BCL <see cref="ZLibStream"/> for IDAT.
+///     Minimal, dependency-free PNG encoder for 8-bit RGB / RGBA raster data. Lives in the core
+///     package (which has no reference to Unchained.Drawing) so extracted images can be exported
+///     without pulling in the rendering stack. Uses BCL <see cref="ZLibStream" /> for IDAT.
 /// </summary>
 internal static class PngWriter
 {
@@ -34,16 +34,16 @@ internal static class PngWriter
             var dst = rowStart + 1;
             for (var x = 0; x < width; x++)
             {
-                var si = (y * width + x) * 3;
+                var si = ((y * width) + x) * 3;
                 raw[dst++] = rgb[si];
                 raw[dst++] = rgb[si + 1];
                 raw[dst++] = rgb[si + 2];
-                if (hasAlpha) raw[dst++] = alpha![y * width + x];
+                if (hasAlpha) raw[dst++] = alpha![(y * width) + x];
             }
         }
 
         using var comp = new MemoryStream();
-        using (var z = new ZLibStream(comp, CompressionLevel.Optimal, leaveOpen: true))
+        using (var z = new ZLibStream(comp, CompressionLevel.Optimal, true))
             z.Write(raw, 0, raw.Length);
 
         var idat = comp.ToArray();
@@ -62,8 +62,8 @@ internal static class PngWriter
         var b = new byte[13];
         WriteU32(b, 0, (uint)w);
         WriteU32(b, 4, (uint)h);
-        b[8] = 8;          // bit depth
-        b[9] = colorType;  // 2 = RGB, 6 = RGBA
+        b[8] = 8;         // bit depth
+        b[9] = colorType; // 2 = RGB, 6 = RGBA
         // b[10..12] = 0: deflate, adaptive filtering, no interlace
 
         return b;

@@ -3,9 +3,9 @@ using Unchained.Drawing.Constants;
 namespace Unchained.Drawing.Encoders;
 
 /// <summary>
-/// Encodes a <see cref="RasterBuffer"/> to a baseline JFIF JPEG using only BCL APIs.
-/// Uses standard Annex K Huffman tables and a simple DCT implementation.
-/// Quality maps to a quantisation scale factor via the standard formula.
+///     Encodes a <see cref="RasterBuffer" /> to a baseline JFIF JPEG using only BCL APIs.
+///     Uses standard Annex K Huffman tables and a simple DCT implementation.
+///     Quality maps to a quantisation scale factor via the standard formula.
 /// </summary>
 internal static class JpegEncoder
 {
@@ -78,7 +78,7 @@ internal static class JpegEncoder
     internal static byte[] Encode(RasterBuffer buffer, int quality = 85)
     {
         quality = Math.Clamp(quality, 1, 100);
-        var scale = quality < 50 ? 5000 / quality : 200 - quality * 2;
+        var scale = quality < 50 ? 5000 / quality : 200 - (quality * 2);
 
         var lumQt = ScaleQt(LumQ, scale);
         var chrQt = ScaleQt(ChrQ, scale);
@@ -133,21 +133,42 @@ internal static class JpegEncoder
             {
                 var px = Math.Min(bx + dx, w - 1);
                 var py = Math.Min(by + dy, h - 1);
-                var o = (py * w + px) * 4;
+                var o = ((py * w) + px) * 4;
                 var r = src[o];
                 var g = src[o + 1];
                 var b2 = src[o + 2];
-                var idx = dy * 8 + dx;
+                var idx = (dy * 8) + dx;
 
-                y[idx] = YCbCrConstants.RToY * r + YCbCrConstants.GToY * g + YCbCrConstants.BToY * b2 - 128;
-                cb[idx] = -(YCbCrConstants.RtoCbNeg * r) - YCbCrConstants.GtoCbNeg * g + 0.5 * b2;
-                cr[idx] = 0.5 * r - YCbCrConstants.GtoCrNeg * g - YCbCrConstants.BtoCrNeg * b2;
+                y[idx] = (YCbCrConstants.RToY * r) + (YCbCrConstants.GToY * g) + (YCbCrConstants.BToY * b2) - 128;
+                cb[idx] = -(YCbCrConstants.RtoCbNeg * r) - (YCbCrConstants.GtoCbNeg * g) + (0.5 * b2);
+                cr[idx] = (0.5 * r) - (YCbCrConstants.GtoCrNeg * g) - (YCbCrConstants.BtoCrNeg * b2);
             }
 
             // ReSharper disable BadListLineBreaks
-            EncodeBlock(y, lumQt, dcLumCodes, dcLumLens, acLumCodes, acLumLens, ref dcY, bw);
-            EncodeBlock(cb, chrQt, dcChrCodes, dcChrLens, acChrCodes, acChrLens, ref dcCb, bw);
-            EncodeBlock(cr, chrQt, dcChrCodes, dcChrLens, acChrCodes, acChrLens, ref dcCr, bw);
+            EncodeBlock(y,
+                lumQt,
+                dcLumCodes,
+                dcLumLens,
+                acLumCodes,
+                acLumLens,
+                ref dcY,
+                bw);
+            EncodeBlock(cb,
+                chrQt,
+                dcChrCodes,
+                dcChrLens,
+                acChrCodes,
+                acChrLens,
+                ref dcCb,
+                bw);
+            EncodeBlock(cr,
+                chrQt,
+                dcChrCodes,
+                dcChrLens,
+                acChrCodes,
+                acChrLens,
+                ref dcCr,
+                bw);
             // ReSharper restore BadListLineBreaks
         }
 
@@ -257,7 +278,7 @@ internal static class JpegEncoder
             {
                 var sum = 0.0;
                 for (var x = 0; x < 8; x++)
-                    sum += block[r + x] * Math.Cos((2 * x + 1) * u * Math.PI / 16.0);
+                    sum += block[r + x] * Math.Cos(((2 * x) + 1) * u * Math.PI / 16.0);
                 tmp[r + u] = (u == 0 ? 1.0 / Math.Sqrt(2) : 1.0) * sum;
             }
         }
@@ -268,8 +289,8 @@ internal static class JpegEncoder
         {
             var sum = 0.0;
             for (var y = 0; y < 8; y++)
-                sum += tmp[y * 8 + col] * Math.Cos((2 * y + 1) * v * Math.PI / 16.0);
-            out2[v * 8 + col] = 0.25 * (v == 0 ? 1.0 / Math.Sqrt(2) : 1.0) * sum;
+                sum += tmp[(y * 8) + col] * Math.Cos(((2 * y) + 1) * v * Math.PI / 16.0);
+            out2[(v * 8) + col] = 0.25 * (v == 0 ? 1.0 / Math.Sqrt(2) : 1.0) * sum;
         }
 
         return out2;
@@ -303,7 +324,7 @@ internal static class JpegEncoder
     {
         var result = new int[64];
         for (var i = 0; i < 64; i++)
-            result[i] = Math.Clamp((qt[i] * scale + 50) / 100, 1, 255);
+            result[i] = Math.Clamp(((qt[i] * scale) + 50) / 100, 1, 255);
 
         return result;
     }
@@ -322,7 +343,7 @@ internal static class JpegEncoder
     {
         s.WriteByte(JpegMarkers.MarkerPrefix);
         s.WriteByte(JpegMarkers.Dqt);
-        WriteU16(s, 67); // length = 2 + 1 + 64
+        WriteU16(s, 67);             // length = 2 + 1 + 64
         s.WriteByte((byte)(0 | id)); // precision 0 = 8-bit
 
         for (var i = 0; i < 64; i++)
@@ -337,7 +358,7 @@ internal static class JpegEncoder
         s.WriteByte(8);  // precision
         WriteU16(s, h);
         WriteU16(s, w);
-        s.WriteByte(3);  // components: Y, Cb, Cr
+        s.WriteByte(3); // components: Y, Cb, Cr
         // Component: id, sampling, qt id
         s.WriteByte(1);
         s.WriteByte(JpegMarkers.SamplingFactor1X1);
@@ -392,8 +413,8 @@ internal static class JpegEncoder
     // ── Bit-level writer (stuffs JpegMarkers.ByteStuff after JpegMarkers.MarkerPrefix per JPEG spec) ─────────────
     private sealed class BitWriter(Stream stream)
     {
-        private uint _buf;
         private int _bits;
+        private uint _buf;
 
         internal void WriteBits(int code, int len)
         {

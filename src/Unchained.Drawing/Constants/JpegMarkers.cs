@@ -43,8 +43,9 @@ internal static class JpegMarkers
     internal const byte RstLast = 0xD7;
 
     /// <summary>
-    /// Byte-stuffed zero: a JpegMarkers.ByteStuff byte emitted after a JpegMarkers.MarkerPrefix data byte in entropy-coded scan
-    /// data so readers do not mistake it for a marker prefix.
+    ///     Byte-stuffed zero: a JpegMarkers.ByteStuff byte emitted after a JpegMarkers.MarkerPrefix data byte in entropy-coded
+    ///     scan
+    ///     data so readers do not mistake it for a marker prefix.
     /// </summary>
     internal const byte ByteStuff = 0x00;
 
@@ -55,8 +56,8 @@ internal static class JpegMarkers
     internal const byte NibbleMask = 0x0F;
 
     /// <summary>
-    /// Sampling-factor byte for 1×1 chroma subsampling — used in SOF and SOS segments
-    /// to indicate no subsampling on a component.
+    ///     Sampling-factor byte for 1×1 chroma subsampling — used in SOF and SOS segments
+    ///     to indicate no subsampling on a component.
     /// </summary>
     internal const byte SamplingFactor1X1 = 0x11;
 

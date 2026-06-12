@@ -3,8 +3,8 @@ using Unchained.Drawing.Extensions;
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes ASCII85-encoded data (base-85 encoding).
-/// Used by PDF /ASCII85Decode (ISO 32000-1 §7.4.3) and PostScript.
+///     Decodes ASCII85-encoded data (base-85 encoding).
+///     Used by PDF /ASCII85Decode (ISO 32000-1 §7.4.3) and PostScript.
 /// </summary>
 internal static class Ascii85Decoder
 {
@@ -71,14 +71,14 @@ internal static class Ascii85Decoder
         const int shiftStep = 8;
 
         var value =
-            (uint)(group[0] - ExclamationMarkChar) * 52200625u +
-            (uint)(group[1] - ExclamationMarkChar) * 614125u +
-            (uint)(group[2] - ExclamationMarkChar) * 7225u +
-            (uint)(group[3] - ExclamationMarkChar) * 85u +
+            ((uint)(group[0] - ExclamationMarkChar) * 52200625u) +
+            ((uint)(group[1] - ExclamationMarkChar) * 614125u) +
+            ((uint)(group[2] - ExclamationMarkChar) * 7225u) +
+            ((uint)(group[3] - ExclamationMarkChar) * 85u) +
             (uint)(group[4] - ExclamationMarkChar);
 
         var emit = count - 1;
-        for (var shift = msbShift; shift >= msbShift - (emit - 1) * shiftStep; shift -= shiftStep)
+        for (var shift = msbShift; shift >= msbShift - ((emit - 1) * shiftStep); shift -= shiftStep)
             output.Add((byte)(value >> shift));
     }
 }

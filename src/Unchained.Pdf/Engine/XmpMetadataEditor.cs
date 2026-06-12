@@ -5,7 +5,7 @@ using Unchained.Pdf.Document;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="IXmpMetadataEditor"/> implementation.</summary>
+/// <summary>Default <see cref="IXmpMetadataEditor" /> implementation.</summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class XmpMetadataEditor : IXmpMetadataEditor
 {
@@ -27,7 +27,7 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
         var adapter = MutationHelper.Cast(nameof(document), document);
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
         var xmpBytes = Encoding.UTF8.GetBytes(xmpXml);
         var metaStream = builder.Add(new PdfStream(

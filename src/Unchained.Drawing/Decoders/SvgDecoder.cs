@@ -1,19 +1,20 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// A minimal SVG rasterizer that decodes the most common SVG elements
-/// (rect, circle, ellipse, line, polygon, polyline, path) to an RGB pixel array.
-/// Handles viewBox scaling. Does not support CSS stylesheets, filters, or gradients.
+///     A minimal SVG rasterizer that decodes the most common SVG elements
+///     (rect, circle, ellipse, line, polygon, polyline, path) to an RGB pixel array.
+///     Handles viewBox scaling. Does not support CSS stylesheets, filters, or gradients.
 /// </summary>
 internal static class SvgDecoder
 {
     /// <summary>
-    /// Decodes SVG bytes to a flat RGB array (3 bytes per pixel, row-major).
-    /// Returns null if the SVG cannot be parsed.
+    ///     Decodes SVG bytes to a flat RGB array (3 bytes per pixel, row-major).
+    ///     Returns null if the SVG cannot be parsed.
     /// </summary>
     public static byte[]? TryDecodeToRgb(
         ReadOnlySpan<byte> svgBytes,
@@ -27,7 +28,7 @@ internal static class SvgDecoder
         height = targetHeight;
         try
         {
-            var xml = System.Text.Encoding.UTF8.GetString(svgBytes);
+            var xml = Encoding.UTF8.GetString(svgBytes);
             var doc = XDocument.Parse(xml);
             var root = doc.Root;
             if (root is null) return null;
@@ -133,7 +134,12 @@ internal static class SvgDecoder
                 case "polyline":
                 {
                     // ReSharper disable once BadListLineBreaks
-                    RenderPoly(el, ctx, fill, stroke, opacity, localName == "polygon");
+                    RenderPoly(el,
+                        ctx,
+                        fill,
+                        stroke,
+                        opacity,
+                        localName == "polygon");
                     break;
                 }
                 case "path":
@@ -163,7 +169,15 @@ internal static class SvgDecoder
         {
             var (r, g, b) = ParseColor(fill);
             // ReSharper disable BadListLineBreaks
-            FillRect(ctx, x, y, w, h, r, g, b, opacity);
+            FillRect(ctx,
+                x,
+                y,
+                w,
+                h,
+                r,
+                g,
+                b,
+                opacity);
             // ReSharper restore BadListLineBreaks
         }
 
@@ -172,7 +186,15 @@ internal static class SvgDecoder
         {
             var (r, g, b) = ParseColor(stroke);
             // ReSharper disable BadListLineBreaks
-            StrokeRect(ctx, x, y, w, h, r, g, b, opacity);
+            StrokeRect(ctx,
+                x,
+                y,
+                w,
+                h,
+                r,
+                g,
+                b,
+                opacity);
             // ReSharper restore BadListLineBreaks
         }
     }
@@ -194,7 +216,15 @@ internal static class SvgDecoder
         {
             var (fr, fg, fb) = ParseColor(fill);
             // ReSharper disable BadListLineBreaks
-            FillEllipse(ctx, cx - r, cy - r, r * 2, r * 2, fr, fg, fb, opacity);
+            FillEllipse(ctx,
+                cx - r,
+                cy - r,
+                r * 2,
+                r * 2,
+                fr,
+                fg,
+                fb,
+                opacity);
             // ReSharper restore BadListLineBreaks
         }
 
@@ -203,7 +233,15 @@ internal static class SvgDecoder
         {
             var (sr, sg, sb) = ParseColor(stroke);
             // ReSharper disable BadListLineBreaks
-            StrokeEllipse(ctx, cx - r, cy - r, r * 2, r * 2, sr, sg, sb, opacity);
+            StrokeEllipse(ctx,
+                cx - r,
+                cy - r,
+                r * 2,
+                r * 2,
+                sr,
+                sg,
+                sb,
+                opacity);
             // ReSharper restore BadListLineBreaks
         }
     }
@@ -227,7 +265,15 @@ internal static class SvgDecoder
         {
             var (fr, fg, fb) = ParseColor(fill);
             // ReSharper disable BadListLineBreaks
-            FillEllipse(ctx, cx - rx, cy - ry2, rx * 2, ry2 * 2, fr, fg, fb, opacity);
+            FillEllipse(ctx,
+                cx - rx,
+                cy - ry2,
+                rx * 2,
+                ry2 * 2,
+                fr,
+                fg,
+                fb,
+                opacity);
             // ReSharper restore BadListLineBreaks
         }
     }
@@ -249,7 +295,15 @@ internal static class SvgDecoder
 
         var (r, g, b) = ParseColor(stroke);
         // ReSharper disable BadListLineBreaks
-        DrawLine(ctx, x1, y1, x2, y2, r, g, b, opacity);
+        DrawLine(ctx,
+            x1,
+            y1,
+            x2,
+            y2,
+            r,
+            g,
+            b,
+            opacity);
         // ReSharper restore BadListLineBreaks
     }
 
@@ -269,7 +323,12 @@ internal static class SvgDecoder
         {
             var (fr, fg, fb) = ParseColor(fill);
             // ReSharper disable once BadListLineBreaks
-            FillPolygon(ctx, pts, fr, fg, fb, opacity);
+            FillPolygon(ctx,
+                pts,
+                fr,
+                fg,
+                fb,
+                opacity);
         }
 
         // ReSharper disable once InvertIf
@@ -278,9 +337,30 @@ internal static class SvgDecoder
             var (sr, sg, sb) = ParseColor(stroke);
             // ReSharper disable BadListLineBreaks
             for (var i = 0; i < pts.Count - 1; i++)
-                DrawLine(ctx, pts[i].X, pts[i].Y, pts[i + 1].X, pts[i + 1].Y, sr, sg, sb, opacity);
+            {
+                DrawLine(ctx,
+                    pts[i].X,
+                    pts[i].Y,
+                    pts[i + 1].X,
+                    pts[i + 1].Y,
+                    sr,
+                    sg,
+                    sb,
+                    opacity);
+            }
+
             if (close && pts.Count > 2)
-                DrawLine(ctx, pts[^1].X, pts[^1].Y, pts[0].X, pts[0].Y, sr, sg, sb, opacity);
+            {
+                DrawLine(ctx,
+                    pts[^1].X,
+                    pts[^1].Y,
+                    pts[0].X,
+                    pts[0].Y,
+                    sr,
+                    sg,
+                    sb,
+                    opacity);
+            }
             // ReSharper restore BadListLineBreaks
         }
     }
@@ -304,7 +384,14 @@ internal static class SvgDecoder
             var (fr, fg, fb) = ParseColor(fill);
             foreach (var poly in polygons.Where(static poly => poly.Count >= 3))
                 // ReSharper disable once BadListLineBreaks
-                FillPolygon(ctx, poly, fr, fg, fb, opacity);
+            {
+                FillPolygon(ctx,
+                    poly,
+                    fr,
+                    fg,
+                    fb,
+                    opacity);
+            }
         }
 
         // ReSharper disable once InvertIf
@@ -315,7 +402,17 @@ internal static class SvgDecoder
             {
                 // ReSharper disable BadListLineBreaks
                 for (var i = 0; i < poly.Count - 1; i++)
-                    DrawLine(ctx, poly[i].X, poly[i].Y, poly[i + 1].X, poly[i + 1].Y, sr, sg, sb, opacity);
+                {
+                    DrawLine(ctx,
+                        poly[i].X,
+                        poly[i].Y,
+                        poly[i + 1].X,
+                        poly[i + 1].Y,
+                        sr,
+                        sg,
+                        sb,
+                        opacity);
+                }
                 // ReSharper restore BadListLineBreaks
             }
         }
@@ -338,7 +435,14 @@ internal static class SvgDecoder
         var (px, py, pw, ph) = ctx.TransformRect(x, y, w, h);
         for (var row = py; row < py + ph; row++)
         for (var col = px; col < px + pw; col++)
-            ctx.BlendPixel(col, row, r, g, b, opacity);
+        {
+            ctx.BlendPixel(col,
+                row,
+                r,
+                g,
+                b,
+                opacity);
+        }
     }
 
     private static void StrokeRect(
@@ -354,10 +458,42 @@ internal static class SvgDecoder
     )
     {
         // ReSharper disable BadListLineBreaks
-        DrawLine(ctx, x, y, x + w, y, r, g, b, opacity);
-        DrawLine(ctx, x + w, y, x + w, y + h, r, g, b, opacity);
-        DrawLine(ctx, x + w, y + h, x, y + h, r, g, b, opacity);
-        DrawLine(ctx, x, y + h, x, y, r, g, b, opacity);
+        DrawLine(ctx,
+            x,
+            y,
+            x + w,
+            y,
+            r,
+            g,
+            b,
+            opacity);
+        DrawLine(ctx,
+            x + w,
+            y,
+            x + w,
+            y + h,
+            r,
+            g,
+            b,
+            opacity);
+        DrawLine(ctx,
+            x + w,
+            y + h,
+            x,
+            y + h,
+            r,
+            g,
+            b,
+            opacity);
+        DrawLine(ctx,
+            x,
+            y + h,
+            x,
+            y,
+            r,
+            g,
+            b,
+            opacity);
         // ReSharper restore BadListLineBreaks
     }
 
@@ -374,63 +510,122 @@ internal static class SvgDecoder
     )
     {
         var (px, py, pw, ph) = ctx.TransformRect(x, y, w, h);
-        var cx = px + pw / 2.0f;
-        var cy = py + ph / 2.0f;
+        var cx = px + (pw / 2.0f);
+        var cy = py + (ph / 2.0f);
         var rx = pw / 2.0f;
         var ry = ph / 2.0f;
-        if (rx <= 0 || ry <= 0) return;
+        if (rx <= 0 || ry <= 0)
+            return;
+
         for (var row = py; row < py + ph; row++)
         for (var col = px; col < px + pw; col++)
         {
             var dx = (col - cx) / rx;
             var dy = (row - cy) / ry;
-            if (dx * dx + dy * dy <= 1.0f)
-                ctx.BlendPixel(col, row, r, g, b, opacity);
+            if ((dx * dx) + (dy * dy) <= 1.0f)
+            {
+                ctx.BlendPixel(col,
+                    row,
+                    r,
+                    g,
+                    b,
+                    opacity);
+            }
         }
     }
 
-    private static void StrokeEllipse(RenderContext ctx,
-        float x, float y, float w, float h,
-        byte r, byte g, byte b, float opacity)
+    private static void StrokeEllipse(
+        RenderContext ctx,
+        float x,
+        float y,
+        float w,
+        float h,
+        byte r,
+        byte g,
+        byte b,
+        float opacity
+    )
     {
         var steps = Math.Max(32, (int)(Math.PI * (w + h) / 2 * Math.Max(ctx.ScaleX, ctx.ScaleY)));
         float? prevX = null, prevY = null;
         for (var i = 0; i <= steps; i++)
         {
             var angle = 2 * Math.PI * i / steps;
-            var ex = (float)(x + w / 2 + w / 2 * Math.Cos(angle));
-            var ey = (float)(y + h / 2 + h / 2 * Math.Sin(angle));
+            var ex = (float)(x + (w / 2) + (w / 2 * Math.Cos(angle)));
+            var ey = (float)(y + (h / 2) + (h / 2 * Math.Sin(angle)));
             if (prevX.HasValue)
-                DrawLine(ctx, prevX.Value, prevY!.Value, ex, ey, r, g, b, opacity);
-            prevX = ex; prevY = ey;
+            {
+                DrawLine(ctx,
+                    prevX.Value,
+                    prevY!.Value,
+                    ex,
+                    ey,
+                    r,
+                    g,
+                    b,
+                    opacity);
+            }
+
+            prevX = ex;
+            prevY = ey;
         }
     }
 
-    private static void DrawLine(RenderContext ctx,
-        float x0, float y0, float x1, float y1,
-        byte r, byte g, byte b, float opacity)
+    private static void DrawLine(
+        RenderContext ctx,
+        float x0,
+        float y0,
+        float x1,
+        float y1,
+        byte r,
+        byte g,
+        byte b,
+        float opacity
+    )
     {
         var (px0, py0) = ctx.Transform(x0, y0);
         var (px1, py1) = ctx.Transform(x1, y1);
 
-        var dx = Math.Abs(px1 - px0); var dy = Math.Abs(py1 - py0);
-        var sx = px0 < px1 ? 1 : -1; var sy = py0 < py1 ? 1 : -1;
+        var dx = Math.Abs(px1 - px0);
+        var dy = Math.Abs(py1 - py0);
+        var sx = px0 < px1 ? 1 : -1;
+        var sy = py0 < py1 ? 1 : -1;
         var err = dx - dy;
-        var cx = px0; var cy = py0;
+        var cx = px0;
+        var cy = py0;
 
         for (var steps = 0; steps < 4096; steps++)
         {
-            ctx.BlendPixel(cx, cy, r, g, b, opacity);
+            ctx.BlendPixel(cx,
+                cy,
+                r,
+                g,
+                b,
+                opacity);
             if (cx == px1 && cy == py1) break;
             var e2 = 2 * err;
-            if (e2 > -dy) { err -= dy; cx += sx; }
-            if (e2 < dx) { err += dx; cy += sy; }
+            if (e2 > -dy)
+            {
+                err -= dy;
+                cx += sx;
+            }
+
+            if (e2 < dx)
+            {
+                err += dx;
+                cy += sy;
+            }
         }
     }
 
-    private static void FillPolygon(RenderContext ctx,
+    private static void FillPolygon(
+        RenderContext ctx,
         List<(float X, float Y)> points,
-        byte r, byte g, byte b, float opacity)
+        byte r,
+        byte g,
+        byte b,
+        float opacity
+    )
     {
         if (points.Count < 3) return;
 
@@ -446,18 +641,27 @@ internal static class SvgDecoder
             for (var i = 0; i < px.Count; i++)
             {
                 var j = (i + 1) % px.Count;
-                var y0 = px[i].Item2; var y1 = px[j].Item2;
+                var y0 = px[i].Item2;
+                var y1 = px[j].Item2;
                 if ((y0 <= scanY && y1 > scanY) || (y1 <= scanY && y0 > scanY))
                 {
-                    var x = px[i].Item1 + (scanY - y0) * (px[j].Item1 - px[i].Item1) / (y1 - y0);
-                    intersections.Add((int)x);
+                    var x = px[i].Item1 + ((scanY - y0) * (px[j].Item1 - px[i].Item1) / (y1 - y0));
+                    intersections.Add(x);
                 }
             }
+
             intersections.Sort();
             for (var k = 0; k + 1 < intersections.Count; k += 2)
             {
                 for (var col = intersections[k]; col <= intersections[k + 1]; col++)
-                    ctx.BlendPixel(col, scanY, r, g, b, opacity);
+                {
+                    ctx.BlendPixel(col,
+                        scanY,
+                        r,
+                        g,
+                        b,
+                        opacity);
+                }
             }
         }
     }
@@ -483,30 +687,60 @@ internal static class SvgDecoder
             {
                 case 'M':
                 {
-                    if (current.Count > 0) { result.Add(current); current = []; }
-                    var x = NextFloat(tokens, ref i); var y = NextFloat(tokens, ref i);
-                    if (isRelative) { x += cx; y += cy; }
-                    cx = x; cy = y; startX = x; startY = y;
+                    if (current.Count > 0)
+                    {
+                        result.Add(current);
+                        current = [];
+                    }
+
+                    var x = NextFloat(tokens, ref i);
+                    var y = NextFloat(tokens, ref i);
+                    if (isRelative)
+                    {
+                        x += cx;
+                        y += cy;
+                    }
+
+                    cx = x;
+                    cy = y;
+                    startX = x;
+                    startY = y;
                     current.Add((cx, cy));
                     // Implicit lineto after first moveto coords.
                     while (i < tokens.Count && float.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
-                        x = NextFloat(tokens, ref i); y = NextFloat(tokens, ref i);
-                        if (isRelative) { x += cx; y += cy; }
-                        cx = x; cy = y;
+                        x = NextFloat(tokens, ref i);
+                        y = NextFloat(tokens, ref i);
+                        if (isRelative)
+                        {
+                            x += cx;
+                            y += cy;
+                        }
+
+                        cx = x;
+                        cy = y;
                         current.Add((cx, cy));
                     }
+
                     break;
                 }
                 case 'L':
                 {
                     while (i < tokens.Count && float.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
-                        var x = NextFloat(tokens, ref i); var y = NextFloat(tokens, ref i);
-                        if (isRelative) { x += cx; y += cy; }
-                        cx = x; cy = y;
+                        var x = NextFloat(tokens, ref i);
+                        var y = NextFloat(tokens, ref i);
+                        if (isRelative)
+                        {
+                            x += cx;
+                            y += cy;
+                        }
+
+                        cx = x;
+                        cy = y;
                         current.Add((cx, cy));
                     }
+
                     break;
                 }
                 case 'H':
@@ -517,6 +751,7 @@ internal static class SvgDecoder
                         cx = isRelative ? cx + x : x;
                         current.Add((cx, cy));
                     }
+
                     break;
                 }
                 case 'V':
@@ -527,6 +762,7 @@ internal static class SvgDecoder
                         cy = isRelative ? cy + y : y;
                         current.Add((cx, cy));
                     }
+
                     break;
                 }
                 case 'C':
@@ -534,13 +770,35 @@ internal static class SvgDecoder
                     // Cubic Bezier — approximate with midpoint.
                     while (i < tokens.Count && float.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
-                        var x1 = NextFloat(tokens, ref i); var y1 = NextFloat(tokens, ref i);
-                        var x2 = NextFloat(tokens, ref i); var y2 = NextFloat(tokens, ref i);
-                        var x = NextFloat(tokens, ref i); var y = NextFloat(tokens, ref i);
-                        if (isRelative) { x1 += cx; y1 += cy; x2 += cx; y2 += cy; x += cx; y += cy; }
-                        AppendBezierCubic(current, cx, cy, x1, y1, x2, y2, x, y);
-                        cx = x; cy = y;
+                        var x1 = NextFloat(tokens, ref i);
+                        var y1 = NextFloat(tokens, ref i);
+                        var x2 = NextFloat(tokens, ref i);
+                        var y2 = NextFloat(tokens, ref i);
+                        var x = NextFloat(tokens, ref i);
+                        var y = NextFloat(tokens, ref i);
+                        if (isRelative)
+                        {
+                            x1 += cx;
+                            y1 += cy;
+                            x2 += cx;
+                            y2 += cy;
+                            x += cx;
+                            y += cy;
+                        }
+
+                        AppendBezierCubic(current,
+                            cx,
+                            cy,
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            x,
+                            y);
+                        cx = x;
+                        cy = y;
                     }
+
                     break;
                 }
                 case 'Q':
@@ -548,12 +806,29 @@ internal static class SvgDecoder
                     // Quadratic Bezier.
                     while (i < tokens.Count && float.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
-                        var x1 = NextFloat(tokens, ref i); var y1 = NextFloat(tokens, ref i);
-                        var x = NextFloat(tokens, ref i); var y = NextFloat(tokens, ref i);
-                        if (isRelative) { x1 += cx; y1 += cy; x += cx; y += cy; }
-                        AppendBezierQuadratic(current, cx, cy, x1, y1, x, y);
-                        cx = x; cy = y;
+                        var x1 = NextFloat(tokens, ref i);
+                        var y1 = NextFloat(tokens, ref i);
+                        var x = NextFloat(tokens, ref i);
+                        var y = NextFloat(tokens, ref i);
+                        if (isRelative)
+                        {
+                            x1 += cx;
+                            y1 += cy;
+                            x += cx;
+                            y += cy;
+                        }
+
+                        AppendBezierQuadratic(current,
+                            cx,
+                            cy,
+                            x1,
+                            y1,
+                            x,
+                            y);
+                        cx = x;
+                        cy = y;
                     }
+
                     break;
                 }
                 case 'A':
@@ -561,13 +836,29 @@ internal static class SvgDecoder
                     // Arc — approximate as line to endpoint.
                     while (i < tokens.Count && float.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
-                        NextFloat(tokens, ref i); NextFloat(tokens, ref i); // rx, ry
-                        NextFloat(tokens, ref i); NextFloat(tokens, ref i); NextFloat(tokens, ref i); // rotation, largeArc, sweep
-                        var x = NextFloat(tokens, ref i); var y = NextFloat(tokens, ref i);
-                        if (isRelative) { x += cx; y += cy; }
-                        AppendArc(current, cx, cy, x, y, 8);
-                        cx = x; cy = y;
+                        NextFloat(tokens, ref i);
+                        NextFloat(tokens, ref i); // rx, ry
+                        NextFloat(tokens, ref i);
+                        NextFloat(tokens, ref i);
+                        NextFloat(tokens, ref i); // rotation, largeArc, sweep
+                        var x = NextFloat(tokens, ref i);
+                        var y = NextFloat(tokens, ref i);
+                        if (isRelative)
+                        {
+                            x += cx;
+                            y += cy;
+                        }
+
+                        AppendArc(current,
+                            cx,
+                            cy,
+                            x,
+                            y,
+                            8);
+                        cx = x;
+                        cy = y;
                     }
+
                     break;
                 }
                 case 'S':
@@ -575,12 +866,31 @@ internal static class SvgDecoder
                     // Smooth cubic — treat as cubic with first control = current.
                     while (i < tokens.Count && float.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
-                        var x2 = NextFloat(tokens, ref i); var y2 = NextFloat(tokens, ref i);
-                        var x = NextFloat(tokens, ref i); var y = NextFloat(tokens, ref i);
-                        if (isRelative) { x2 += cx; y2 += cy; x += cx; y += cy; }
-                        AppendBezierCubic(current, cx, cy, cx, cy, x2, y2, x, y);
-                        cx = x; cy = y;
+                        var x2 = NextFloat(tokens, ref i);
+                        var y2 = NextFloat(tokens, ref i);
+                        var x = NextFloat(tokens, ref i);
+                        var y = NextFloat(tokens, ref i);
+                        if (isRelative)
+                        {
+                            x2 += cx;
+                            y2 += cy;
+                            x += cx;
+                            y += cy;
+                        }
+
+                        AppendBezierCubic(current,
+                            cx,
+                            cy,
+                            cx,
+                            cy,
+                            x2,
+                            y2,
+                            x,
+                            y);
+                        cx = x;
+                        cy = y;
                     }
+
                     break;
                 }
                 case 'Z':
@@ -588,7 +898,8 @@ internal static class SvgDecoder
                     current.Add((startX, startY));
                     result.Add(current);
                     current = [];
-                    cx = startX; cy = startY;
+                    cx = startX;
+                    cy = startY;
                     break;
                 }
             }
@@ -600,43 +911,61 @@ internal static class SvgDecoder
 
     private static void AppendBezierCubic(
         List<(float X, float Y)> pts,
-        float x0, float y0, float x1, float y1,
-        float x2, float y2, float x3, float y3,
-        int steps = 12)
+        float x0,
+        float y0,
+        float x1,
+        float y1,
+        float x2,
+        float y2,
+        float x3,
+        float y3,
+        int steps = 12
+    )
     {
         for (var step = 1; step <= steps; step++)
         {
             var t = (float)step / steps;
             var mt = 1 - t;
-            var x = mt * mt * mt * x0 + 3 * mt * mt * t * x1 + 3 * mt * t * t * x2 + t * t * t * x3;
-            var y = mt * mt * mt * y0 + 3 * mt * mt * t * y1 + 3 * mt * t * t * y2 + t * t * t * y3;
+            var x = (mt * mt * mt * x0) + (3 * mt * mt * t * x1) + (3 * mt * t * t * x2) + (t * t * t * x3);
+            var y = (mt * mt * mt * y0) + (3 * mt * mt * t * y1) + (3 * mt * t * t * y2) + (t * t * t * y3);
             pts.Add((x, y));
         }
     }
 
     private static void AppendBezierQuadratic(
         List<(float X, float Y)> pts,
-        float x0, float y0, float x1, float y1, float x2, float y2,
-        int steps = 8)
+        float x0,
+        float y0,
+        float x1,
+        float y1,
+        float x2,
+        float y2,
+        int steps = 8
+    )
     {
         for (var step = 1; step <= steps; step++)
         {
             var t = (float)step / steps;
             var mt = 1 - t;
-            var x = mt * mt * x0 + 2 * mt * t * x1 + t * t * x2;
-            var y = mt * mt * y0 + 2 * mt * t * y1 + t * t * y2;
+            var x = (mt * mt * x0) + (2 * mt * t * x1) + (t * t * x2);
+            var y = (mt * mt * y0) + (2 * mt * t * y1) + (t * t * y2);
             pts.Add((x, y));
         }
     }
 
     private static void AppendArc(
         List<(float X, float Y)> pts,
-        float x0, float y0, float x1, float y1, int steps)
+        float x0,
+        float y0,
+        float x1,
+        float y1,
+        int steps
+    )
     {
         for (var step = 1; step <= steps; step++)
         {
             var t = (float)step / steps;
-            pts.Add((x0 + (x1 - x0) * t, y0 + (y1 - y0) * t));
+            pts.Add((x0 + ((x1 - x0) * t), y0 + ((y1 - y0) * t)));
         }
     }
 
@@ -648,8 +977,18 @@ internal static class SvgDecoder
         var i = 0;
         while (i < d.Length)
         {
-            if (char.IsWhiteSpace(d[i]) || d[i] == ',') { i++; continue; }
-            if (char.IsLetter(d[i])) { result.Add(d[i].ToString()); i++; continue; }
+            if (char.IsWhiteSpace(d[i]) || d[i] == ',')
+            {
+                i++;
+                continue;
+            }
+
+            if (char.IsLetter(d[i]))
+            {
+                result.Add(d[i].ToString());
+                i++;
+                continue;
+            }
 
             // Number (possibly starting with '-').
             var start = i;
@@ -662,9 +1001,11 @@ internal static class SvgDecoder
                 if (i < d.Length && (d[i] == '+' || d[i] == '-')) i++;
                 while (i < d.Length && char.IsDigit(d[i])) i++;
             }
+
             if (i > start) result.Add(d[start..i]);
             else i++; // skip unknown char
         }
+
         return result;
     }
 
@@ -686,9 +1027,11 @@ internal static class SvgDecoder
         // rgb(r,g,b)
         var rgbMatch = Regex.Match(color, @"rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)");
         if (rgbMatch.Success)
+        {
             return (byte.Parse(rgbMatch.Groups[1].Value),
-                    byte.Parse(rgbMatch.Groups[2].Value),
-                    byte.Parse(rgbMatch.Groups[3].Value));
+                byte.Parse(rgbMatch.Groups[2].Value),
+                byte.Parse(rgbMatch.Groups[3].Value));
+        }
 
         // Named colors (most common ones)
         return color.ToLowerInvariant() switch
@@ -705,7 +1048,7 @@ internal static class SvgDecoder
             "orange" => (255, 165, 0),
             "purple" => (128, 0, 128),
             "transparent" => (255, 255, 255),
-            _ => (80, 80, 80)  // unknown color — dark grey
+            _ => (80, 80, 80) // unknown color — dark grey
         };
     }
 
@@ -772,16 +1115,27 @@ internal static class SvgDecoder
     // ── Render context ────────────────────────────────────────────────────────
 
     private sealed class RenderContext(
-        byte[] pixels, int width, int height,
-        double scaleX, double scaleY, double offsetX, double offsetY)
+        byte[] pixels,
+        int width,
+        int height,
+        double scaleX,
+        double scaleY,
+        double offsetX,
+        double offsetY
+    )
     {
         public double ScaleX => scaleX;
         public double ScaleY => scaleY;
 
         public (int X, int Y) Transform(float x, float y) =>
-            ((int)(x * scaleX + offsetX), (int)(y * scaleY + offsetY));
+            ((int)((x * scaleX) + offsetX), (int)((y * scaleY) + offsetY));
 
-        public (int X, int Y, int W, int H) TransformRect(float x, float y, float w, float h)
+        public (int X, int Y, int W, int H) TransformRect(
+            float x,
+            float y,
+            float w,
+            float h
+        )
         {
             var (px, py) = Transform(x, y);
             var pw = (int)Math.Max(1, w * scaleX);
@@ -789,10 +1143,17 @@ internal static class SvgDecoder
             return (px, py, pw, ph);
         }
 
-        public void BlendPixel(int x, int y, byte r, byte g, byte b, float opacity)
+        public void BlendPixel(
+            int x,
+            int y,
+            byte r,
+            byte g,
+            byte b,
+            float opacity
+        )
         {
             if (x < 0 || x >= width || y < 0 || y >= height) return;
-            var idx = (y * width + x) * 3;
+            var idx = ((y * width) + x) * 3;
             if (opacity >= 1.0f)
             {
                 pixels[idx] = r;
@@ -802,9 +1163,9 @@ internal static class SvgDecoder
             else
             {
                 var a = opacity;
-                pixels[idx] = (byte)(pixels[idx] * (1 - a) + r * a);
-                pixels[idx + 1] = (byte)(pixels[idx + 1] * (1 - a) + g * a);
-                pixels[idx + 2] = (byte)(pixels[idx + 2] * (1 - a) + b * a);
+                pixels[idx] = (byte)((pixels[idx] * (1 - a)) + (r * a));
+                pixels[idx + 1] = (byte)((pixels[idx + 1] * (1 - a)) + (g * a));
+                pixels[idx + 2] = (byte)((pixels[idx + 2] * (1 - a)) + (b * a));
             }
         }
     }

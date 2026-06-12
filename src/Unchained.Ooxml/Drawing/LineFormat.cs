@@ -1,19 +1,18 @@
-
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// Describes the outline (border) of a shape or text, including its colour, width,
-/// dash style, and arrowhead settings.
+///     Describes the outline (border) of a shape or text, including its colour, width,
+///     dash style, and arrowhead settings.
 /// </summary>
 public sealed class LineFormat
 {
     /// <summary>
-    /// The line width in points. <see langword="null"/> means no explicit width is set
-    /// (the reader uses its default, typically 0.75 pt).
+    ///     The line width in points. <see langword="null" /> means no explicit width is set
+    ///     (the reader uses its default, typically 0.75 pt).
     /// </summary>
     public double? WidthPoints { get; set; }
 
-    /// <summary>The dash pattern of the line. Defaults to <see cref="LineDashStyle.Solid"/>.</summary>
+    /// <summary>The dash pattern of the line. Defaults to <see cref="LineDashStyle.Solid" />.</summary>
     public LineDashStyle DashStyle { get; set; } = LineDashStyle.Solid;
 
     /// <summary>The cap style at the ends of the line.</summary>

@@ -1,21 +1,22 @@
 using System.Globalization;
 using System.Xml.Linq;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Charts;
+using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a <c>&lt;c:chartSpace&gt;</c> XML root into a <see cref="ChartModel"/>.
-/// Only cached/literal data is read; workbook references are used as a fallback
-/// label but raw data is read from the embedded cache.
+///     Parses a <c>&lt;c:chartSpace&gt;</c> XML root into a <see cref="ChartModel" />.
+///     Only cached/literal data is read; workbook references are used as a fallback
+///     label but raw data is read from the embedded cache.
 /// </summary>
 internal static class ChartParser
 {
     /// <summary>
-    /// Populates <paramref name="model"/> from the <c>&lt;c:chartSpace&gt;</c> root element.
-    /// Fields not present in the XML are left at their default values.
+    ///     Populates <paramref name="model" /> from the <c>&lt;c:chartSpace&gt;</c> root element.
+    ///     Fields not present in the XML are left at their default values.
     /// </summary>
     public static void Parse(XElement chartSpaceRoot, ChartModel model)
     {
@@ -48,16 +49,16 @@ internal static class ChartParser
         if (richEl != null)
         {
             var texts = richEl.Descendants(DmlNames.Text)
-                              .Select(static t => t.Value)
-                              .ToList();
+                .Select(static t => t.Value)
+                .ToList();
             model.Title = string.Concat(texts);
             return;
         }
 
         // <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>...</c:v>
         var strCache = titleEl.Element(CmlNames.Text)
-                              ?.Element(CmlNames.StringReference)
-                              ?.Element(CmlNames.StringCache);
+            ?.Element(CmlNames.StringReference)
+            ?.Element(CmlNames.StringCache);
         if (strCache != null)
         {
             var pt = strCache.Elements(CmlNames.Point).FirstOrDefault();
@@ -139,7 +140,7 @@ internal static class ChartParser
         {
             var grouping = element.Element(CmlNames.Grouping)?.GetAttr(CmlNames.AttributeValue, "standard") ?? "standard";
             var hasMarkers = element.Elements(CmlNames.Series)
-                                    .Any(static s => s.Element(CmlNames.Marker) != null);
+                .Any(static s => s.Element(CmlNames.Marker) != null);
             var type = (grouping, hasMarkers) switch
             {
                 ("stacked", false) => ChartType.LineStacked,
@@ -155,11 +156,11 @@ internal static class ChartParser
         if (element.Name == CmlNames.PieChart)
         {
             var hasExplosion = element.Elements(CmlNames.Series)
-                                      .Any(static s =>
-                                      {
-                                          var exp = s.Element(CmlNames.Cml + "explosion");
-                                          return exp?.GetAttrInt(CmlNames.AttributeValue) > 0;
-                                      });
+                .Any(static s =>
+                {
+                    var exp = s.Element(CmlNames.Cml + "explosion");
+                    return exp?.GetAttrInt(CmlNames.AttributeValue) > 0;
+                });
             return (hasExplosion ? ChartType.PieExploded : ChartType.Pie, true);
         }
 
@@ -239,7 +240,7 @@ internal static class ChartParser
         var spPr = serEl.Element(DmlNames.Dml + "spPr");
         if (spPr is not null && spPr.Element(DmlNames.SolidFill) is not null)
         {
-            var fill = new Unchained.Ooxml.Drawing.FillFormat();
+            var fill = new FillFormat();
             FillParser.Parse(spPr, fill);
             series.Fill = fill;
         }
@@ -258,8 +259,10 @@ internal static class ChartParser
     private static ChartDataLabels ParseDataLabels(XElement dLbls)
     {
         var c = CmlNames.Cml;
+
         bool Show(string name, bool dflt) =>
             dLbls.Element(c + name)?.GetAttrInt(CmlNames.AttributeValue) is { } v ? v == 1 : dflt;
+
         return new ChartDataLabels
         {
             IsVisible = true,
@@ -336,7 +339,7 @@ internal static class ChartParser
     {
         // <c:val> for standard charts; <c:yVal> for scatter/bubble
         var valEl = serEl.Element(CmlNames.Values)
-                 ?? serEl.Element(CmlNames.YValues);
+                    ?? serEl.Element(CmlNames.YValues);
         if (valEl == null) return;
 
         var points = ReadNumericPoints(valEl);
@@ -424,6 +427,7 @@ internal static class ChartParser
                 if (double.TryParse(pt.Element(CmlNames.PointValue)?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
                     results.Add(v);
             }
+
             return results;
         }
 

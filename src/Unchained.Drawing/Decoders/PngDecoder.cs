@@ -1,14 +1,15 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
+using System.Text;
 using Unchained.Drawing.Constants;
 
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Minimal PNG decoder using only BCL APIs (<see cref="ZLibStream"/> for inflate).
-/// Decodes 8-bit-per-channel grayscale, grayscale+alpha, truecolor, truecolor+alpha,
-/// and indexed-colour PNGs to packed 24-bit RGB. Returns <see langword="null"/> for
-/// formats it cannot handle (16-bit, interlaced) so the caller can skip the image.
+///     Minimal PNG decoder using only BCL APIs (<see cref="ZLibStream" /> for inflate).
+///     Decodes 8-bit-per-channel grayscale, grayscale+alpha, truecolor, truecolor+alpha,
+///     and indexed-colour PNGs to packed 24-bit RGB. Returns <see langword="null" /> for
+///     formats it cannot handle (16-bit, interlaced) so the caller can skip the image.
 /// </summary>
 internal static class PngDecoder
 {
@@ -28,7 +29,7 @@ internal static class PngDecoder
         while (pos + 8 <= png.Length)
         {
             var len = BinaryPrimitives.ReadInt32BigEndian(png.Slice(pos, 4));
-            var type = System.Text.Encoding.ASCII.GetString(png.Slice(pos + 4, 4));
+            var type = Encoding.ASCII.GetString(png.Slice(pos + 4, 4));
             var dataStart = pos + 8;
             if (len < 0 || dataStart + len + 4 > png.Length)
                 break;
@@ -108,7 +109,12 @@ internal static class PngDecoder
 
         var unfiltered = Unfilter(raw, w, h, channels, stride);
         // ReSharper disable once BadListLineBreaks
-        var rgb = ToRgb(unfiltered, w, h, channels, colorType, palette);
+        var rgb = ToRgb(unfiltered,
+            w,
+            h,
+            channels,
+            colorType,
+            palette);
         if (rgb is null)
             return null;
 
@@ -150,7 +156,7 @@ internal static class PngDecoder
                     0 => value,
                     1 => (byte)(value + a),
                     2 => (byte)(value + b),
-                    3 => (byte)(value + (a + b) / 2),
+                    3 => (byte)(value + ((a + b) / 2)),
                     4 => (byte)(value + Paeth(a, b, c)),
                     _ => value
                 };

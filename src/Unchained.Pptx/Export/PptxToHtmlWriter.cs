@@ -9,9 +9,9 @@ using Unchained.Pptx.Slides;
 namespace Unchained.Pptx.Export;
 
 /// <summary>
-/// Exports a <see cref="PresentationDocument"/> to HTML5 — one file per slide.
-/// Shapes are positioned with CSS absolute positioning; text is embedded as
-/// HTML; images are optionally inlined as Base64 data URIs.
+///     Exports a <see cref="PresentationDocument" /> to HTML5 — one file per slide.
+///     Shapes are positioned with CSS absolute positioning; text is embedded as
+///     HTML; images are optionally inlined as Base64 data URIs.
 /// </summary>
 internal static class PptxToHtmlWriter
 {
@@ -19,12 +19,13 @@ internal static class PptxToHtmlWriter
     private const double EmuToPx = EmuConversions.EmuToCssPx;
 
     /// <summary>
-    /// Returns a dictionary mapping slide file names to their HTML content bytes.
-    /// The caller writes each entry to a file.
+    ///     Returns a dictionary mapping slide file names to their HTML content bytes.
+    ///     The caller writes each entry to a file.
     /// </summary>
     public static Dictionary<string, byte[]> Write(
         PresentationDocument document,
-        HtmlSaveOptions options)
+        HtmlSaveOptions options
+    )
     {
         var result = new Dictionary<string, byte[]>();
         var slides = document.Slides;
@@ -49,7 +50,11 @@ internal static class PptxToHtmlWriter
     }
 
     private static string BuildSlideHtml(
-        Slide slide, double slideW, double slideH, HtmlSaveOptions options)
+        Slide slide,
+        double slideW,
+        double slideH,
+        HtmlSaveOptions options
+    )
     {
         var sb = new StringBuilder();
         sb.AppendLine("<!DOCTYPE html>");
@@ -79,12 +84,17 @@ internal static class PptxToHtmlWriter
     }
 
     /// <summary>
-    /// Writes the inner content of a slide (background + shapes) into <paramref name="sb"/>,
-    /// without the surrounding document or <c>.slide</c> wrapper. Shared by the per-slide export
-    /// and the single-file HTML5 player.
+    ///     Writes the inner content of a slide (background + shapes) into <paramref name="sb" />,
+    ///     without the surrounding document or <c>.slide</c> wrapper. Shared by the per-slide export
+    ///     and the single-file HTML5 player.
     /// </summary>
     internal static void WriteSlideContent(
-        StringBuilder sb, Slide slide, double slideW, double slideH, HtmlSaveOptions options)
+        StringBuilder sb,
+        Slide slide,
+        double slideW,
+        double slideH,
+        HtmlSaveOptions options
+    )
     {
         var colorScheme = slide.Master?.Theme?.Colors;
         WriteBackground(sb, slide, slideW, slideH, colorScheme);
@@ -93,7 +103,12 @@ internal static class PptxToHtmlWriter
     }
 
     private static void WriteBackground(
-        StringBuilder sb, Slide slide, double w, double h, ColorScheme? colorScheme)
+        StringBuilder sb,
+        Slide slide,
+        double w,
+        double h,
+        ColorScheme? colorScheme
+    )
     {
         var fill = ResolveBackground(slide);
         if (fill is null || fill.Type != FillType.Solid || fill.Solid == null) return;
@@ -111,7 +126,11 @@ internal static class PptxToHtmlWriter
     }
 
     private static void WriteShape(
-        StringBuilder sb, Shape shape, HtmlSaveOptions options, ColorScheme? colorScheme)
+        StringBuilder sb,
+        Shape shape,
+        HtmlSaveOptions options,
+        ColorScheme? colorScheme
+    )
     {
         var x = shape.X.Value * EmuToPx;
         var y = shape.Y.Value * EmuToPx;
@@ -122,7 +141,7 @@ internal static class PptxToHtmlWriter
 
         // Fill
         var effectiveFill = shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue
-            ? null  // handled below via StyleFillColor
+            ? null // handled below via StyleFillColor
             : shape.Fill;
 
         if (shape.Fill.Type == FillType.Solid && shape.Fill.Solid != null)
@@ -145,10 +164,10 @@ internal static class PptxToHtmlWriter
         {
             case AutoShape auto when auto.TextFrame.Paragraphs.Count > 0:
                 WriteTextFrame(sb, auto, colorScheme);
-                break;
+            break;
             case PictureShape pic when pic.Image != null && options.EmbedImages:
                 WritePicture(sb, pic);
-                break;
+            break;
         }
 
         sb.AppendLine("</div>");
@@ -170,9 +189,9 @@ internal static class PptxToHtmlWriter
         {
             var align = para.Alignment switch
             {
-                Unchained.Ooxml.Text.TextAlignment.Center => "center",
-                Unchained.Ooxml.Text.TextAlignment.Right => "right",
-                Unchained.Ooxml.Text.TextAlignment.Justify => "justify",
+                TextAlignment.Center => "center",
+                TextAlignment.Right => "right",
+                TextAlignment.Justify => "justify",
                 _ => "left"
             };
             sb.Append($"<p class=\"para\" style=\"text-align:{align}\">");
@@ -195,6 +214,7 @@ internal static class PptxToHtmlWriter
 
             sb.AppendLine("</p>");
         }
+
         sb.AppendLine("</div>");
     }
 
@@ -203,7 +223,8 @@ internal static class PptxToHtmlWriter
         var data = pic.Image!.Data;
         var contentType = pic.Image.ContentType;
         var b64 = Convert.ToBase64String(data.ToArray());
-        sb.AppendLine($"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"data:{contentType};base64,{b64}\" alt=\"{EscapeHtml(pic.AltText ?? string.Empty)}\">");
+        sb.AppendLine(
+            $"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"data:{contentType};base64,{b64}\" alt=\"{EscapeHtml(pic.AltText ?? string.Empty)}\">");
     }
 
     private static string ToCssColor(uint argb)

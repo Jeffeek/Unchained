@@ -1,4 +1,5 @@
 @page "/pptx"
+@using Unchained.Pptx.Rendering.Models
 @inject SessionStateService Session
 @inject FileExportService Exporter
 @inject IDialogService Dialogs
@@ -230,6 +231,7 @@
     {
         if (_extractedText is null)
             return;
+
         try
         {
             await Exporter.TriggerDownloadAsync(
@@ -247,6 +249,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         SetBusy("Rendering slide…");
         try
         {
@@ -256,7 +259,7 @@
             var image = await Unchained.Pptx.Rendering.Engine.SlideRenderer.RenderAsync(
                 slide,
                 state.Document.SlideSize,
-                new Unchained.Pptx.Rendering.RenderOptions { WidthPx = 1920, HeightPx = 1080 });
+                new RenderOptions { WidthPx = 1920, HeightPx = 1080 });
 
             var baseName = Path.GetFileNameWithoutExtension(state.FileName);
             await Exporter.TriggerDownloadAsync(

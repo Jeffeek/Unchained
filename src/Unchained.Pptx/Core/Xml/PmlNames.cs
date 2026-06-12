@@ -3,22 +3,11 @@ using System.Xml.Linq;
 namespace Unchained.Pptx.Core.Xml;
 
 /// <summary>
-/// PresentationML XML namespace constants and commonly-used element/attribute names.
-/// All values are taken directly from ECMA-376 5th Edition.
+///     PresentationML XML namespace constants and commonly-used element/attribute names.
+///     All values are taken directly from ECMA-376 5th Edition.
 /// </summary>
 internal static class PmlNames
 {
-    // ── Namespaces ───────────────────────────────────────────────────────────
-
-    /// <summary>PresentationML main namespace: <c>http://schemas.openxmlformats.org/presentationml/2006/main</c></summary>
-    public static readonly XNamespace Pml = "http://schemas.openxmlformats.org/presentationml/2006/main";
-
-    /// <summary>Relationship namespace: <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships</c></summary>
-    public static readonly XNamespace Relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-
-    /// <summary>Markup compatibility namespace.</summary>
-    public static readonly XNamespace MarkupCompatibility = "http://schemas.openxmlformats.org/markup-compatibility/2006";
-
     // ── Relationship type URIs ────────────────────────────────────────────────
 
     private const string RelBase = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
@@ -105,29 +94,6 @@ internal static class PmlNames
     /// <summary>Microsoft extension relationship type for the pre-rendered SmartArt drawing part.</summary>
     public const string RelTypeDiagramDrawing =
         "http://schemas.microsoft.com/office/2007/relationships/diagramDrawing";
-
-    // ── Embedded fonts ──────────────────────────────────────────────────────────
-
-    /// <summary><c>&lt;p:embeddedFontLst&gt;</c> — list of embedded fonts in presentation.xml.</summary>
-    public static readonly XName EmbeddedFontList = Pml + "embeddedFontLst";
-
-    /// <summary><c>&lt;p:embeddedFont&gt;</c> — one embedded typeface with its style variants.</summary>
-    public static readonly XName EmbeddedFont = Pml + "embeddedFont";
-
-    /// <summary><c>&lt;p:font&gt;</c> — the typeface descriptor (carries the <c>typeface</c> attribute).</summary>
-    public static readonly XName Font = Pml + "font";
-
-    /// <summary><c>&lt;p:regular&gt;</c> — regular style variant reference.</summary>
-    public static readonly XName FontRegular = Pml + "regular";
-
-    /// <summary><c>&lt;p:bold&gt;</c> — bold style variant reference.</summary>
-    public static readonly XName FontBold = Pml + "bold";
-
-    /// <summary><c>&lt;p:italic&gt;</c> — italic style variant reference.</summary>
-    public static readonly XName FontItalic = Pml + "italic";
-
-    /// <summary><c>&lt;p:boldItalic&gt;</c> — bold-italic style variant reference.</summary>
-    public static readonly XName FontBoldItalic = Pml + "boldItalic";
 
     /// <summary>The <c>typeface</c> attribute on <c>&lt;p:font&gt;</c>.</summary>
     public const string AttributeTypeface = "typeface";
@@ -221,6 +187,57 @@ internal static class PmlNames
     /// <summary>Content type for the Microsoft-extension pre-rendered SmartArt drawing part.</summary>
     public const string ContentTypeDiagramDrawing =
         "application/vnd.ms-office.drawingml.diagramDrawing+xml";
+
+    /// <summary>The <c>showMasterSp</c> attribute on <c>p:sld</c>/<c>p:sldLayout</c> (default true).</summary>
+    public const string AttributeShowMasterShapes = "showMasterSp";
+
+    /// <summary>Slide identifier attribute: <c>id</c></summary>
+    public const string AttributeId = "id";
+
+    /// <summary>Slide name attribute: <c>name</c></summary>
+    public const string AttributeName = "name";
+
+    /// <summary>Hidden slide attribute: <c>show</c> (0 = hidden).</summary>
+    public const string AttributeShow = "show";
+
+    /// <summary>Width in EMU: <c>cx</c></summary>
+    public const string AttributeWidth = "cx";
+
+    /// <summary>Height in EMU: <c>cy</c></summary>
+    public const string AttributeHeight = "cy";
+    // ── Namespaces ───────────────────────────────────────────────────────────
+
+    /// <summary>PresentationML main namespace: <c>http://schemas.openxmlformats.org/presentationml/2006/main</c></summary>
+    public static readonly XNamespace Pml = "http://schemas.openxmlformats.org/presentationml/2006/main";
+
+    /// <summary>Relationship namespace: <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships</c></summary>
+    public static readonly XNamespace Relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+
+    /// <summary>Markup compatibility namespace.</summary>
+    public static readonly XNamespace MarkupCompatibility = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+
+    // ── Embedded fonts ──────────────────────────────────────────────────────────
+
+    /// <summary><c>&lt;p:embeddedFontLst&gt;</c> — list of embedded fonts in presentation.xml.</summary>
+    public static readonly XName EmbeddedFontList = Pml + "embeddedFontLst";
+
+    /// <summary><c>&lt;p:embeddedFont&gt;</c> — one embedded typeface with its style variants.</summary>
+    public static readonly XName EmbeddedFont = Pml + "embeddedFont";
+
+    /// <summary><c>&lt;p:font&gt;</c> — the typeface descriptor (carries the <c>typeface</c> attribute).</summary>
+    public static readonly XName Font = Pml + "font";
+
+    /// <summary><c>&lt;p:regular&gt;</c> — regular style variant reference.</summary>
+    public static readonly XName FontRegular = Pml + "regular";
+
+    /// <summary><c>&lt;p:bold&gt;</c> — bold style variant reference.</summary>
+    public static readonly XName FontBold = Pml + "bold";
+
+    /// <summary><c>&lt;p:italic&gt;</c> — italic style variant reference.</summary>
+    public static readonly XName FontItalic = Pml + "italic";
+
+    /// <summary><c>&lt;p:boldItalic&gt;</c> — bold-italic style variant reference.</summary>
+    public static readonly XName FontBoldItalic = Pml + "boldItalic";
 
     // ── PresentationML element names ──────────────────────────────────────────
 
@@ -335,9 +352,6 @@ internal static class PmlNames
     /// <summary><c>&lt;p:ph&gt;</c> — placeholder reference inside <c>p:nvPr</c>.</summary>
     public static readonly XName Placeholder = Pml + "ph";
 
-    /// <summary>The <c>showMasterSp</c> attribute on <c>p:sld</c>/<c>p:sldLayout</c> (default true).</summary>
-    public const string AttributeShowMasterShapes = "showMasterSp";
-
     // ── Common PresentationML attribute names ─────────────────────────────────
 
     /// <summary>Relationship reference attribute: <c>r:id</c></summary>
@@ -345,19 +359,4 @@ internal static class PmlNames
 
     /// <summary>Blip embed-reference attribute: <c>r:embed</c> (used by <c>&lt;a:blip&gt;</c>).</summary>
     public static readonly XName RelationshipEmbed = Relationships + "embed";
-
-    /// <summary>Slide identifier attribute: <c>id</c></summary>
-    public const string AttributeId = "id";
-
-    /// <summary>Slide name attribute: <c>name</c></summary>
-    public const string AttributeName = "name";
-
-    /// <summary>Hidden slide attribute: <c>show</c> (0 = hidden).</summary>
-    public const string AttributeShow = "show";
-
-    /// <summary>Width in EMU: <c>cx</c></summary>
-    public const string AttributeWidth = "cx";
-
-    /// <summary>Height in EMU: <c>cy</c></summary>
-    public const string AttributeHeight = "cy";
 }

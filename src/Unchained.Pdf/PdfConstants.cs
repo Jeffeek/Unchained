@@ -6,29 +6,29 @@ internal static class PdfConstants
     // ── Glyph space (ISO 32000-1 §9.2.4) ────────────────────────────────────
 
     /// <summary>
-    /// PDF glyph-space units per em: one em = 1000 glyph units.
-    /// All glyph advance widths and bounding-box values are expressed in this unit.
-    /// Divide by this value to convert to text-space units.
+    ///     PDF glyph-space units per em: one em = 1000 glyph units.
+    ///     All glyph advance widths and bounding-box values are expressed in this unit.
+    ///     Divide by this value to convert to text-space units.
     /// </summary>
     internal const double GlyphSpaceUnitsPerEm = 1000.0;
 
     /// <summary>
-    /// Horizontal scale (Tz operator) is a percentage; divide by this to obtain a ratio.
-    /// Default Tz = 100 → ratio = 1.0 (ISO 32000-1 §9.3.4).
+    ///     Horizontal scale (Tz operator) is a percentage; divide by this to obtain a ratio.
+    ///     Default Tz = 100 → ratio = 1.0 (ISO 32000-1 §9.3.4).
     /// </summary>
     internal const double HorizontalScaleDivisor = 100.0;
 
     // ── Cross-reference table (ISO 32000-1 §7.5.4) ──────────────────────────
 
     /// <summary>
-    /// Generation number used for the mandatory free head entry (object 0) in an xref table.
-    /// The free list head always carries generation 65535.
+    ///     Generation number used for the mandatory free head entry (object 0) in an xref table.
+    ///     The free list head always carries generation 65535.
     /// </summary>
     internal const int XrefFreeGenerationNumber = 65535;
 
     /// <summary>
-    /// Number of bytes scanned from the file start or end when searching for the
-    /// linearisation marker (/Linearized) or the xref/%%EOF trailer.
+    ///     Number of bytes scanned from the file start or end when searching for the
+    ///     linearisation marker (/Linearized) or the xref/%%EOF trailer.
     /// </summary>
     internal const int XrefScanWindowBytes = 1024;
 

@@ -1,10 +1,11 @@
+using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="INamedDestinationEditor"/> implementation.</summary>
+/// <summary>Default <see cref="INamedDestinationEditor" /> implementation.</summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class NamedDestinationEditor : INamedDestinationEditor
 {
@@ -21,7 +22,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
         IPdfDocument document,
         string name,
         CancellationToken ct = default
-    ) => Task.Run(() => Mutate(document, name, pageNumber: 0), ct);
+    ) => Task.Run(() => Mutate(document, name, 0), ct);
 
     private static void Mutate(IPdfDocument document, string name, int pageNumber)
     {
@@ -104,7 +105,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
         for (var i = 0; i + 1 < namesArr.Count; i += 2)
         {
             var key = namesArr[i] is PdfString ks
-                ? System.Text.Encoding.Latin1.GetString(ks.Bytes.Span)
+                ? Encoding.Latin1.GetString(ks.Bytes.Span)
                 : (namesArr[i] as PdfName)?.Value ?? string.Empty;
             if (key.Length > 0)
                 result[key] = namesArr[i + 1];

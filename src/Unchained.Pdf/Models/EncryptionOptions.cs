@@ -1,7 +1,7 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// Algorithms supported for PDF Standard Security Handler encryption.
+///     Algorithms supported for PDF Standard Security Handler encryption.
 /// </summary>
 public enum PdfEncryptionAlgorithm
 {
@@ -17,20 +17,20 @@ public enum PdfEncryptionAlgorithm
 }
 
 /// <summary>
-/// Password-protection settings applied when saving a PDF document.
+///     Password-protection settings applied when saving a PDF document.
 /// </summary>
 /// <param name="UserPassword">
-/// Password required to open and read the document.
-/// An empty string means any user can open the file (the document is still encrypted).
+///     Password required to open and read the document.
+///     An empty string means any user can open the file (the document is still encrypted).
 /// </param>
 /// <param name="OwnerPassword">
-/// Password that grants unrestricted access and overrides <see cref="Permissions"/>.
-/// If empty, defaults to the same value as <paramref name="UserPassword"/>.
+///     Password that grants unrestricted access and overrides <see cref="Permissions" />.
+///     If empty, defaults to the same value as <paramref name="UserPassword" />.
 /// </param>
-/// <param name="Algorithm">Encryption algorithm (default <see cref="PdfEncryptionAlgorithm.Aes256"/>).</param>
+/// <param name="Algorithm">Encryption algorithm (default <see cref="PdfEncryptionAlgorithm.Aes256" />).</param>
 /// <param name="Permissions">
-/// Operations permitted when the document is opened with the user password
-/// (default <see cref="PdfPermissions.All"/>).
+///     Operations permitted when the document is opened with the user password
+///     (default <see cref="PdfPermissions.All" />).
 /// </param>
 public sealed record EncryptionOptions(
     string UserPassword = "",

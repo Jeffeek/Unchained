@@ -3,19 +3,11 @@ using System.Xml.Linq;
 namespace Unchained.Ooxml.Xml;
 
 /// <summary>
-/// DrawingML XML namespace constants and commonly-used element/attribute names.
-/// All values are taken directly from ECMA-376 5th Edition.
+///     DrawingML XML namespace constants and commonly-used element/attribute names.
+///     All values are taken directly from ECMA-376 5th Edition.
 /// </summary>
 internal static class DmlNames
 {
-    // ── Namespaces ───────────────────────────────────────────────────────────
-
-    /// <summary>DrawingML main namespace: <c>http://schemas.openxmlformats.org/drawingml/2006/main</c></summary>
-    public static readonly XNamespace Dml = "http://schemas.openxmlformats.org/drawingml/2006/main";
-
-    /// <summary>DrawingML chart namespace.</summary>
-    public static readonly XNamespace Chart = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-
     /// <summary>DrawingML table namespace URI (used as <c>uri</c> attribute on <c>&lt;a:graphicData&gt;</c>).</summary>
     public const string GraphicDataTableUri = "http://schemas.openxmlformats.org/drawingml/2006/table";
 
@@ -24,6 +16,87 @@ internal static class DmlNames
 
     /// <summary>DrawingML diagram (SmartArt) namespace URI (used as <c>uri</c> on <c>&lt;a:graphicData&gt;</c>).</summary>
     public const string GraphicDataDiagramUri = "http://schemas.openxmlformats.org/drawingml/2006/diagram";
+
+    // ── Commonly used attribute names ─────────────────────────────────────────
+
+    /// <summary>Preset shape type attribute: <c>prst</c></summary>
+    public const string AttributePreset = "prst";
+
+    /// <summary>Width attribute: <c>cx</c></summary>
+    public const string AttributeWidth = "cx";
+
+    /// <summary>Height attribute: <c>cy</c></summary>
+    public const string AttributeHeight = "cy";
+
+    /// <summary>X position attribute: <c>x</c></summary>
+    public const string AttributeX = "x";
+
+    /// <summary>Y position attribute: <c>y</c></summary>
+    public const string AttributeY = "y";
+
+    /// <summary>Rotation attribute: <c>rot</c> (in 1/60000 degrees, clockwise).</summary>
+    public const string AttributeRotation = "rot";
+
+    /// <summary>Flip horizontal attribute: <c>flipH</c></summary>
+    public const string AttributeFlipHorizontal = "flipH";
+
+    /// <summary>Flip vertical attribute: <c>flipV</c></summary>
+    public const string AttributeFlipVertical = "flipV";
+
+    /// <summary>Line width attribute: <c>w</c> (in EMU).</summary>
+    public const string AttributeLineWidth = "w";
+
+    /// <summary>Colour value attribute: <c>val</c></summary>
+    public const string AttributeValue = "val";
+
+    /// <summary>Language attribute: <c>lang</c></summary>
+    public const string AttributeLanguage = "lang";
+
+    /// <summary>Bold attribute: <c>b</c></summary>
+    public const string AttributeBold = "b";
+
+    /// <summary>Italic attribute: <c>i</c></summary>
+    public const string AttributeItalic = "i";
+
+    /// <summary>Underline attribute: <c>u</c></summary>
+    public const string AttributeUnderline = "u";
+
+    /// <summary>Strike attribute: <c>strike</c></summary>
+    public const string AttributeStrike = "strike";
+
+    /// <summary>Font size attribute: <c>sz</c> (in hundredths of a point).</summary>
+    public const string AttributeFontSize = "sz";
+
+    /// <summary>Alignment attribute: <c>algn</c></summary>
+    public const string AttributeAlignment = "algn";
+
+    /// <summary>Gradient stop position: <c>pos</c> (0–100000).</summary>
+    public const string AttributePosition = "pos";
+
+    /// <summary>Table row height: <c>h</c> (in EMU).</summary>
+    public const string AttributeRowHeight = "h";
+
+    /// <summary>Font typeface attribute: <c>typeface</c></summary>
+    public const string AttributeTypeface = "typeface";
+
+    /// <summary>Dirty flag attribute: <c>dirty</c></summary>
+    public const string AttributeDirty = "dirty";
+
+    /// <summary>Hidden attribute: <c>hidden</c></summary>
+    public const string AttributeHidden = "hidden";
+
+    /// <summary>Description / alt-text attribute: <c>descr</c></summary>
+    public const string AttributeDescription = "descr";
+
+    /// <summary>URI attribute on <c>&lt;a:graphicData&gt;</c>: <c>uri</c></summary>
+    public const string AttributeUri = "uri";
+    // ── Namespaces ───────────────────────────────────────────────────────────
+
+    /// <summary>DrawingML main namespace: <c>http://schemas.openxmlformats.org/drawingml/2006/main</c></summary>
+    public static readonly XNamespace Dml = "http://schemas.openxmlformats.org/drawingml/2006/main";
+
+    /// <summary>DrawingML chart namespace.</summary>
+    public static readonly XNamespace Chart = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 
     /// <summary>SmartArt diagram namespace (<c>dgm:</c>).</summary>
     public static readonly XNamespace Diagram = "http://schemas.openxmlformats.org/drawingml/2006/diagram";
@@ -270,17 +343,29 @@ internal static class DmlNames
     public static readonly XName Dark2 = Dml + "dk2";
     /// <summary><c>&lt;a:lt2&gt;</c> — Light 2 colour slot.</summary>
     public static readonly XName Light2 = Dml + "lt2";
-    /// <summary><c>&lt;a:accent1&gt;</c></summary>
+    /// <summary>
+    ///     <c>&lt;a:accent1&gt;</c>
+    /// </summary>
     public static readonly XName Accent1 = Dml + "accent1";
-    /// <summary><c>&lt;a:accent2&gt;</c></summary>
+    /// <summary>
+    ///     <c>&lt;a:accent2&gt;</c>
+    /// </summary>
     public static readonly XName Accent2 = Dml + "accent2";
-    /// <summary><c>&lt;a:accent3&gt;</c></summary>
+    /// <summary>
+    ///     <c>&lt;a:accent3&gt;</c>
+    /// </summary>
     public static readonly XName Accent3 = Dml + "accent3";
-    /// <summary><c>&lt;a:accent4&gt;</c></summary>
+    /// <summary>
+    ///     <c>&lt;a:accent4&gt;</c>
+    /// </summary>
     public static readonly XName Accent4 = Dml + "accent4";
-    /// <summary><c>&lt;a:accent5&gt;</c></summary>
+    /// <summary>
+    ///     <c>&lt;a:accent5&gt;</c>
+    /// </summary>
     public static readonly XName Accent5 = Dml + "accent5";
-    /// <summary><c>&lt;a:accent6&gt;</c></summary>
+    /// <summary>
+    ///     <c>&lt;a:accent6&gt;</c>
+    /// </summary>
     public static readonly XName Accent6 = Dml + "accent6";
     /// <summary><c>&lt;a:hlink&gt;</c> — Hyperlink colour slot.</summary>
     public static readonly XName Hyperlink = Dml + "hlink";
@@ -322,78 +407,4 @@ internal static class DmlNames
 
     /// <summary><c>&lt;a:graphicData&gt;</c> — typed graphic data.</summary>
     public static readonly XName GraphicData = Dml + "graphicData";
-
-    // ── Commonly used attribute names ─────────────────────────────────────────
-
-    /// <summary>Preset shape type attribute: <c>prst</c></summary>
-    public const string AttributePreset = "prst";
-
-    /// <summary>Width attribute: <c>cx</c></summary>
-    public const string AttributeWidth = "cx";
-
-    /// <summary>Height attribute: <c>cy</c></summary>
-    public const string AttributeHeight = "cy";
-
-    /// <summary>X position attribute: <c>x</c></summary>
-    public const string AttributeX = "x";
-
-    /// <summary>Y position attribute: <c>y</c></summary>
-    public const string AttributeY = "y";
-
-    /// <summary>Rotation attribute: <c>rot</c> (in 1/60000 degrees, clockwise).</summary>
-    public const string AttributeRotation = "rot";
-
-    /// <summary>Flip horizontal attribute: <c>flipH</c></summary>
-    public const string AttributeFlipHorizontal = "flipH";
-
-    /// <summary>Flip vertical attribute: <c>flipV</c></summary>
-    public const string AttributeFlipVertical = "flipV";
-
-    /// <summary>Line width attribute: <c>w</c> (in EMU).</summary>
-    public const string AttributeLineWidth = "w";
-
-    /// <summary>Colour value attribute: <c>val</c></summary>
-    public const string AttributeValue = "val";
-
-    /// <summary>Language attribute: <c>lang</c></summary>
-    public const string AttributeLanguage = "lang";
-
-    /// <summary>Bold attribute: <c>b</c></summary>
-    public const string AttributeBold = "b";
-
-    /// <summary>Italic attribute: <c>i</c></summary>
-    public const string AttributeItalic = "i";
-
-    /// <summary>Underline attribute: <c>u</c></summary>
-    public const string AttributeUnderline = "u";
-
-    /// <summary>Strike attribute: <c>strike</c></summary>
-    public const string AttributeStrike = "strike";
-
-    /// <summary>Font size attribute: <c>sz</c> (in hundredths of a point).</summary>
-    public const string AttributeFontSize = "sz";
-
-    /// <summary>Alignment attribute: <c>algn</c></summary>
-    public const string AttributeAlignment = "algn";
-
-    /// <summary>Gradient stop position: <c>pos</c> (0–100000).</summary>
-    public const string AttributePosition = "pos";
-
-    /// <summary>Table row height: <c>h</c> (in EMU).</summary>
-    public const string AttributeRowHeight = "h";
-
-    /// <summary>Font typeface attribute: <c>typeface</c></summary>
-    public const string AttributeTypeface = "typeface";
-
-    /// <summary>Dirty flag attribute: <c>dirty</c></summary>
-    public const string AttributeDirty = "dirty";
-
-    /// <summary>Hidden attribute: <c>hidden</c></summary>
-    public const string AttributeHidden = "hidden";
-
-    /// <summary>Description / alt-text attribute: <c>descr</c></summary>
-    public const string AttributeDescription = "descr";
-
-    /// <summary>URI attribute on <c>&lt;a:graphicData&gt;</c>: <c>uri</c></summary>
-    public const string AttributeUri = "uri";
 }

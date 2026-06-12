@@ -5,9 +5,9 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Core;
 
 /// <summary>
-/// PDF Standard Security Handler cryptographic operations (ISO 32000-1 §7.6 and ISO 32000-2 §7.6).
-/// Supports RC4-128 (V=2, R=3), AES-128 (V=4, R=4), and AES-256 (V=5, R=6) for reading;
-/// AES-256 (V=5, R=6) for writing.
+///     PDF Standard Security Handler cryptographic operations (ISO 32000-1 §7.6 and ISO 32000-2 §7.6).
+///     Supports RC4-128 (V=2, R=3), AES-128 (V=4, R=4), and AES-256 (V=5, R=6) for reading;
+///     AES-256 (V=5, R=6) for writing.
 /// </summary>
 internal static class PdfEncryption
 {
@@ -23,9 +23,9 @@ internal static class PdfEncryption
     // ── Read path: derive context from /Encrypt dict + password ──────────────
 
     /// <summary>
-    /// Creates an <see cref="PdfEncryptionContext"/> for reading an encrypted document.
-    /// Returns <see langword="null"/> when the encryption handler or revision is unsupported.
-    /// Throws <see cref="PdfEncryptedException"/> when the password is invalid.
+    ///     Creates an <see cref="PdfEncryptionContext" /> for reading an encrypted document.
+    ///     Returns <see langword="null" /> when the encryption handler or revision is unsupported.
+    ///     Throws <see cref="PdfEncryptedException" /> when the password is invalid.
     /// </summary>
     internal static PdfEncryptionContext? CreateReadContext(PdfDictionary encryptDict, byte[] fileId, string password)
     {
@@ -49,9 +49,19 @@ internal static class PdfEncryption
                 var ueBytes = GetStringBytes(encryptDict, "UE");
                 var oeBytes = GetStringBytes(encryptDict, "OE");
                 // ReSharper disable BadListLineBreaks
-                var fileKey = DeriveKeyV5(password, uBytes, ueBytes, oBytes, oeBytes, isOwner: false)
-                              ?? DeriveKeyV5(password, uBytes, ueBytes, oBytes, oeBytes, isOwner: true);
-                              // ReSharper restore BadListLineBreaks
+                var fileKey = DeriveKeyV5(password,
+                                  uBytes,
+                                  ueBytes,
+                                  oBytes,
+                                  oeBytes,
+                                  false)
+                              ?? DeriveKeyV5(password,
+                                  uBytes,
+                                  ueBytes,
+                                  oBytes,
+                                  oeBytes,
+                                  true);
+                // ReSharper restore BadListLineBreaks
 
                 return fileKey is null
                     ? throw new PdfEncryptedException("Incorrect password for AES-256 encrypted PDF.")
@@ -64,13 +74,23 @@ internal static class PdfEncryption
                 var keyLen = v == 1 ? 5 : Math.Clamp(keyBits / 8, 5, 16);
 
                 // ReSharper disable once BadListLineBreaks
-                var encKey = DeriveKeyV2V4(password, oBytes, pFlags, fileId, r, keyLen);
+                var encKey = DeriveKeyV2V4(password,
+                    oBytes,
+                    pFlags,
+                    fileId,
+                    r,
+                    keyLen);
                 if (ValidateUserPasswordV2V4(encKey, uBytes, fileId, r))
                     return new PdfEncryptionContext(encKey, algo, permissions);
 
                 // Try with empty password before failing
                 // ReSharper disable once BadListLineBreaks
-                var emptyKey = DeriveKeyV2V4(string.Empty, oBytes, pFlags, fileId, r, keyLen);
+                var emptyKey = DeriveKeyV2V4(string.Empty,
+                    oBytes,
+                    pFlags,
+                    fileId,
+                    r,
+                    keyLen);
 
                 return !ValidateUserPasswordV2V4(emptyKey, uBytes, fileId, r)
                     ? throw new PdfEncryptedException("Incorrect password for encrypted PDF.")
@@ -84,8 +104,8 @@ internal static class PdfEncryption
     // ── Write path: generate /Encrypt dict + context for AES-256 ─────────────
 
     /// <summary>
-    /// Creates a write-path <see cref="PdfEncryptionContext"/> and the corresponding
-    /// <c>/Encrypt</c> dictionary for AES-256 (V=5, R=6).
+    ///     Creates a write-path <see cref="PdfEncryptionContext" /> and the corresponding
+    ///     <c>/Encrypt</c> dictionary for AES-256 (V=5, R=6).
     /// </summary>
     internal static (PdfEncryptionContext Context, PdfDictionary EncryptDict) CreateWriteContext(EncryptionOptions opts, byte[] fileId)
     {
@@ -107,11 +127,11 @@ internal static class PdfEncryption
             ["R"] = new PdfInteger(6),
             ["Length"] = new PdfInteger(256),
             ["P"] = new PdfInteger(EncodePermissions(opts.Permissions)),
-            ["O"] = new PdfString(oBytes, isHex: true),
-            ["U"] = new PdfString(uBytes, isHex: true),
-            ["OE"] = new PdfString(oeBytes, isHex: true),
-            ["UE"] = new PdfString(ueBytes, isHex: true),
-            ["Perms"] = new PdfString(permsBytes, isHex: true),
+            ["O"] = new PdfString(oBytes, true),
+            ["U"] = new PdfString(uBytes, true),
+            ["OE"] = new PdfString(oeBytes, true),
+            ["UE"] = new PdfString(ueBytes, true),
+            ["Perms"] = new PdfString(permsBytes, true),
             ["EncryptMetadata"] = PdfBoolean.True,
             ["StmF"] = PdfName.Get("StdCF"),
             ["StrF"] = PdfName.Get("StdCF"),
@@ -241,7 +261,14 @@ internal static class PdfEncryption
     // ── RC4/AES-128 (V≤4) key derivation ─────────────────────────────────────
 
     // ReSharper disable BadListLineBreaks
-    private static byte[] DeriveKeyV2V4(string password, byte[] oValue, int pFlags, byte[] fileId, int r, int keyLen)
+    private static byte[] DeriveKeyV2V4(
+            string password,
+            byte[] oValue,
+            int pFlags,
+            byte[] fileId,
+            int r,
+            int keyLen
+        )
         // ReSharper restore BadListLineBreaks
     {
         using var md5 = MD5.Create();
@@ -275,7 +302,12 @@ internal static class PdfEncryption
     }
 
     // ReSharper disable once BadListLineBreaks
-    private static bool ValidateUserPasswordV2V4(byte[] key, byte[] uValue, byte[] fileId, int r)
+    private static bool ValidateUserPasswordV2V4(
+        byte[] key,
+        byte[] uValue,
+        byte[] fileId,
+        int r
+    )
     {
         if (r == 2)
         {
@@ -304,7 +336,12 @@ internal static class PdfEncryption
 
     /// <summary>Derives the per-object encryption key for V≤4.</summary>
     // ReSharper disable once BadListLineBreaks
-    internal static byte[] DeriveObjectKey(byte[] fileKey, int objNum, int genNum, bool isAes)
+    internal static byte[] DeriveObjectKey(
+        byte[] fileKey,
+        int objNum,
+        int genNum,
+        bool isAes
+    )
     {
         using var md5 = MD5.Create();
         var salt = isAes ? "sAlT"u8.ToArray() : [];
@@ -333,7 +370,7 @@ internal static class PdfEncryption
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
 
-        return aes.DecryptCbc(ciphertext, iv, paddingMode: PaddingMode.PKCS7);
+        return aes.DecryptCbc(ciphertext, iv, PaddingMode.PKCS7);
     }
 
     /// <summary>AES-CBC encrypt with the given key and IV. Returns IV + ciphertext (PKCS#7 padded).</summary>
@@ -345,7 +382,7 @@ internal static class PdfEncryption
         aes.IV = iv;
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
-        var cipher = aes.EncryptCbc(data, iv, paddingMode: PaddingMode.PKCS7);
+        var cipher = aes.EncryptCbc(data, iv, PaddingMode.PKCS7);
 
         return [.. iv, .. cipher];
     }
@@ -439,7 +476,7 @@ internal static class PdfEncryption
         var hex = s.Bytes.Span;
         var result = new byte[hex.Length / 2];
         for (var i = 0; i < result.Length; i++)
-            result[i] = (byte)((HexNibble(hex[i * 2]) << 4) | HexNibble(hex[i * 2 + 1]));
+            result[i] = (byte)((HexNibble(hex[i * 2]) << 4) | HexNibble(hex[(i * 2) + 1]));
 
         return result;
     }

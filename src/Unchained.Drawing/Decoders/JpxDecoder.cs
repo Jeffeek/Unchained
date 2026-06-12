@@ -4,16 +4,16 @@ using CoreJ2K.Configuration;
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes JPEG 2000-compressed data using CoreJ2K, producing a flat RGB byte array.
-/// Used by PDF /JPXDecode (ISO 32000-1 §7.4.9).
-/// Grayscale (1-component) images are expanded to R=G=B=Y.
+///     Decodes JPEG 2000-compressed data using CoreJ2K, producing a flat RGB byte array.
+///     Used by PDF /JPXDecode (ISO 32000-1 §7.4.9).
+///     Grayscale (1-component) images are expanded to R=G=B=Y.
 /// </summary>
 internal static class JpxDecoder
 {
     private static readonly J2KDecoderConfiguration DefaultConfig = new();
 
     /// <exception cref="NotSupportedException">
-    /// Image has an unsupported number of components (not 1 or 3).
+    ///     Image has an unsupported number of components (not 1 or 3).
     /// </exception>
     /// <exception cref="InvalidOperationException">JPEG 2000 data is malformed.</exception>
     internal static ReadOnlyMemory<byte> Decode(ReadOnlyMemory<byte> data)
@@ -35,7 +35,7 @@ internal static class JpxDecoder
             {
                 var gray = image.GetComponentBytes(0);
                 for (var i = 0; i < width * height; i++)
-                    rgb[i * 3] = rgb[i * 3 + 1] = rgb[i * 3 + 2] = gray[i];
+                    rgb[i * 3] = rgb[(i * 3) + 1] = rgb[(i * 3) + 2] = gray[i];
             }
             else
             {
@@ -45,8 +45,8 @@ internal static class JpxDecoder
                 for (var i = 0; i < width * height; i++)
                 {
                     rgb[i * 3] = r[i];
-                    rgb[i * 3 + 1] = g[i];
-                    rgb[i * 3 + 2] = b[i];
+                    rgb[(i * 3) + 1] = g[i];
+                    rgb[(i * 3) + 2] = b[i];
                 }
             }
 

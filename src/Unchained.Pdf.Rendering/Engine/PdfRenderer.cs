@@ -1,62 +1,43 @@
+using Unchained.Drawing;
+using Unchained.Drawing.Encoders;
+using Unchained.Drawing.Text;
 using Unchained.Pdf.Abstractions;
+using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Rendering.Rendering;
-using Unchained.Drawing;
-using Unchained.Drawing.Text;
-using Unchained.Drawing.Encoders;
 
 namespace Unchained.Pdf.Rendering.Engine;
 
 /// <summary>
-/// Default <see cref="IRenderer"/> implementation backed by FreeType2 (via SharpFont).
-/// <para>
-/// Requires the FreeType2 native library to be present at runtime:
-/// <c>freetype6.dll</c> on Windows, <c>libfreetype.so.6</c> on Linux,
-/// <c>libfreetype.6.dylib</c> on macOS. On Windows the DLL is bundled with the package.
-/// </para>
-/// <para>
-/// Reference the <c>Unchained.Pdf.Rendering</c> package to use this class;
-/// the core <c>Unchained.Pdf</c> package only exposes the <see cref="IRenderer"/> interface.
-/// </para>
+///     Default <see cref="IRenderer" /> implementation backed by FreeType2 (via SharpFont).
+///     <para>
+///         Requires the FreeType2 native library to be present at runtime:
+///         <c>freetype6.dll</c> on Windows, <c>libfreetype.so.6</c> on Linux,
+///         <c>libfreetype.6.dylib</c> on macOS. On Windows the DLL is bundled with the package.
+///     </para>
+///     <para>
+///         Reference the <c>Unchained.Pdf.Rendering</c> package to use this class;
+///         the core <c>Unchained.Pdf</c> package only exposes the <see cref="IRenderer" /> interface.
+///     </para>
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class PdfRenderer : IRenderer
 {
-    private readonly FontCache _fonts;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private int _disposed;
 
-    /// <summary>
-    /// Number of text operators (Tj / TJ / ' / ") that threw an exception during
-    /// the most recent render. 0 = healthy. &gt;0 = font loading or shaping issue.
-    /// Set after every <see cref="RenderPageAsync"/> call; thread-safe because
-    /// renders are serialised by <c>_lock</c>.
-    /// </summary>
-    // ReSharper disable once MemberCanBePrivate.Global
-    internal int LastTextErrors { get; private set; }
-
-    /// <summary>Exposes the font cache for diagnostic tests.</summary>
-    internal FontCache FontsForDiagnostics => _fonts;
-
-
-    /// <summary>Glyph bitmaps successfully passed to BlitGlyphBitmap in the last render.</summary>
-    internal int LastGlyphsAttempted { get; private set; }
-
-    /// <summary>Glyph bitmaps skipped because LoadGlyph threw in the last render.</summary>
-    internal int LastGlyphsSkipped { get; private set; }
-
 
     /// <summary>
-    /// Creates a new <see cref="PdfRenderer"/> and initialises the FreeType2 library.
+    ///     Creates a new <see cref="PdfRenderer" /> and initialises the FreeType2 library.
     /// </summary>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when the FreeType2 native library cannot be loaded.
+    ///     Thrown when the FreeType2 native library cannot be loaded.
     /// </exception>
     public PdfRenderer()
     {
         try
         {
-            _fonts = new FontCache();
+            FontsForDiagnostics = new FontCache();
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -68,11 +49,31 @@ public sealed class PdfRenderer : IRenderer
         }
     }
 
+    /// <summary>
+    ///     Number of text operators (Tj / TJ / ' / ") that threw an exception during
+    ///     the most recent render. 0 = healthy. &gt;0 = font loading or shaping issue.
+    ///     Set after every <see cref="RenderPageAsync" /> call; thread-safe because
+    ///     renders are serialised by <c>_lock</c>.
+    /// </summary>
+    // ReSharper disable once MemberCanBePrivate.Global
+    internal int LastTextErrors { get; private set; }
+
+    /// <summary>Exposes the font cache for diagnostic tests.</summary>
+    internal FontCache FontsForDiagnostics { get; }
+
+
+    /// <summary>Glyph bitmaps successfully passed to BlitGlyphBitmap in the last render.</summary>
+    internal int LastGlyphsAttempted { get; private set; }
+
+    /// <summary>Glyph bitmaps skipped because LoadGlyph threw in the last render.</summary>
+    internal int LastGlyphsSkipped { get; private set; }
+
     /// <inheritdoc />
     public async Task<byte[]> RenderPageAsync(
         IPdfPage page,
         RenderOptions options,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -89,7 +90,8 @@ public sealed class PdfRenderer : IRenderer
     public async Task<IReadOnlyList<byte[]>> RenderDocumentAsync(
         IPdfDocument document,
         RenderOptions options,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -113,11 +115,21 @@ public sealed class PdfRenderer : IRenderer
         }
     }
 
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
+        {
+            FontsForDiagnostics.Dispose();
+            _lock.Dispose();
+        }
+    }
+
     private byte[] RenderPage(IPdfPage page, RenderOptions options)
     {
         ObjectDisposedException.ThrowIf(_disposed == 1, this);
 
-        var scale  = options.Dpi / 72.0;
+        var scale = options.Dpi / 72.0;
         var rotate = page.Rotate; // 0 / 90 / 180 / 270
 
         // For rotated pages the pixel canvas dimensions are swapped.
@@ -125,11 +137,11 @@ public sealed class PdfRenderer : IRenderer
         // Use rounding consistent with common rasterizers (Pdfium): the device pixel
         // count is the truncated point×scale product, so a 3.8pt page at 96 DPI yields
         // 5 px, not 6. Ceiling would add a stray white row/column that mismatches.
-        var pixW = Math.Max(1, (int)(page.Width  * scale));
+        var pixW = Math.Max(1, (int)(page.Width * scale));
         var pixH = Math.Max(1, (int)(page.Height * scale));
 
         var buffer = new RasterBuffer(pixW, pixH);
-        buffer.Clear(r: 255, g: 255, b: 255);
+        buffer.Clear(255, 255, 255);
 
         // UToPixel in PageRenderer does:  px = ctm_x * scale,  py = (pageHeightPt - ctm_y) * scale
         // We choose pageHeightPt and the initial CTM so that content rendered in the
@@ -142,7 +154,7 @@ public sealed class PdfRenderer : IRenderer
         var cropLly = page.CropOriginY;
 
         var rawW = rotate is 90 or 270 ? page.Height : page.Width;
-        var rawH = rotate is 90 or 270 ? page.Width  : page.Height;
+        var rawH = rotate is 90 or 270 ? page.Width : page.Height;
 
         // ReSharper disable BadListLineBreaks
         // The initial CTM maps content-stream points to the pixel canvas.
@@ -152,7 +164,7 @@ public sealed class PdfRenderer : IRenderer
         {
             // 90° CW: (x,y) → pixel (y-cropLly, rawW-(x-cropLlx))
             //   = [0,1,1,0,-cropLly, rawW+cropLlx]? Simplification: shift before rotate
-            90  => [0, 1, 1, 0, -cropLly, cropLlx],
+            90 => [0, 1, 1, 0, -cropLly, cropLlx],
 
             // 180°: (x,y) → pixel (rawW-(x-cropLlx), rawH-(y-cropLly))
             180 => [-1, 0, 0, 1, rawW + cropLlx, cropLly],
@@ -161,7 +173,7 @@ public sealed class PdfRenderer : IRenderer
             270 => [0, -1, -1, 0, rawH + cropLly, rawW - cropLlx],
 
             // 0°: translate by -cropLlx, -cropLly so crop origin maps to pixel (0,0)
-            _   => [1, 0, 0, 1, -cropLlx, -cropLly]
+            _ => [1, 0, 0, 1, -cropLlx, -cropLly]
         };
         // ReSharper restore BadListLineBreaks
 
@@ -169,46 +181,48 @@ public sealed class PdfRenderer : IRenderer
         // For rotation 0/180 this is the CropBox height; for 90/270 it's the CropBox width.
         var pageHeightPt = rotate is 90 or 270 ? rawW : rawH;
 
-        var fontMap          = page.GetFontNameMap();
+        var fontMap = page.GetFontNameMap();
         var embeddedFontBytes = page.GetEmbeddedFontBytes();
-        var imageXObjects    = page.GetImageXObjects();
-        var toUnicodeMaps    = page.GetToUnicodeMaps();
-        var compositeFonts   = page.GetCompositeFonts();
-        var extGStateAlphas  = page.GetExtGStateAlphas();
-        var shadings         = page.GetShadings();
-        var tilingPatterns   = page.GetTilingPatterns();
-        var softMasks        = page.GetSoftMasks(pixW, pixH);
+        var imageXObjects = page.GetImageXObjects();
+        var toUnicodeMaps = page.GetToUnicodeMaps();
+        var compositeFonts = page.GetCompositeFonts();
+        var extGStateAlphas = page.GetExtGStateAlphas();
+        var shadings = page.GetShadings();
+        var tilingPatterns = page.GetTilingPatterns();
+        var softMasks = page.GetSoftMasks(pixW, pixH);
         // GetColorSpaces() is an internal method on PdfPageAdapter — access via cast.
-        var colorSpaces      = (page as Unchained.Pdf.Engine.PdfPageAdapter)?.GetColorSpaces()
-                               ?? new Dictionary<string, Unchained.Pdf.Models.ColorSpaceInfo>();
-        var type3Fonts       = (page as Unchained.Pdf.Engine.PdfPageAdapter)?.GetType3Fonts()
-                               ?? new Dictionary<string, Unchained.Pdf.Models.Type3FontInfo>();
+        var colorSpaces = (page as PdfPageAdapter)?.GetColorSpaces()
+                          ?? new Dictionary<string, ColorSpaceInfo>();
+        var type3Fonts = (page as PdfPageAdapter)?.GetType3Fonts()
+                         ?? new Dictionary<string, Type3FontInfo>();
 
         var renderer = new PageRenderer(
-            buffer, _fonts, scale, pageHeightPt,
-            embeddedFontBytes, imageXObjects, initialCtm, toUnicodeMaps, compositeFonts,
-            extGStateAlphas, shadings, tilingPatterns, softMasks, colorSpaces, type3Fonts);
+            buffer,
+            FontsForDiagnostics,
+            scale,
+            pageHeightPt,
+            embeddedFontBytes,
+            imageXObjects,
+            initialCtm,
+            toUnicodeMaps,
+            compositeFonts,
+            extGStateAlphas,
+            shadings,
+            tilingPatterns,
+            softMasks,
+            colorSpaces,
+            type3Fonts);
         renderer.Render(page.GetContentOperators(), fontMap);
 
-        LastTextErrors      = renderer.TextErrorCount;
+        LastTextErrors = renderer.TextErrorCount;
         LastGlyphsAttempted = renderer.GlyphsAttempted;
-        LastGlyphsSkipped   = renderer.GlyphsSkipped;
+        LastGlyphsSkipped = renderer.GlyphsSkipped;
 
         return options.Format switch
         {
             OutputFormat.Jpeg => JpegEncoder.Encode(buffer, options.JpegQuality),
-            OutputFormat.Bmp  => BmpEncoder.Encode(buffer),
-            _                 => PngEncoder.Encode(buffer)
+            OutputFormat.Bmp => BmpEncoder.Encode(buffer),
+            _ => PngEncoder.Encode(buffer)
         };
-    }
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0)
-        {
-            _fonts.Dispose();
-            _lock.Dispose();
-        }
     }
 }

@@ -1,3 +1,4 @@
+using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing;
@@ -6,26 +7,33 @@ using Unchained.Pdf.Parsing.Filters;
 namespace Unchained.Pdf.Document;
 
 /// <summary>
-/// Internal document model. Owns the source byte buffer and provides lazy,
-/// cached resolution of indirect objects via the cross-reference table.
-/// <para>
-/// Objects are parsed on first access and stored in an internal cache;
-/// subsequent dereferences of the same object number return the cached instance
-/// without reparsing. Memory consumption is proportional to the number of
-/// objects accessed, not the total number present in the file.
-/// </para>
+///     Internal document model. Owns the source byte buffer and provides lazy,
+///     cached resolution of indirect objects via the cross-reference table.
+///     <para>
+///         Objects are parsed on first access and stored in an internal cache;
+///         subsequent dereferences of the same object number return the cached instance
+///         without reparsing. Memory consumption is proportional to the number of
+///         objects accessed, not the total number present in the file.
+///     </para>
 /// </summary>
 internal sealed class PdfDocumentCore : IDisposable
 {
-    // ReSharper disable once NotAccessedField.Local
-    private readonly ReadOnlyMemory<byte> _source;
-    private readonly CrossReferenceTable _xref;
-    private readonly PdfParser _parser;
     private readonly Dictionary<int, PdfIndirectObject> _cache = new();
     // Object stream cache: stream object number → (objectNumber → decoded PdfObject)
     // Avoids re-decompressing the same object stream when multiple objects are resolved from it.
     private readonly Dictionary<int, Dictionary<int, PdfObject>> _objectStreamCache = new();
+    private readonly PdfParser _parser;
+    // ReSharper disable once NotAccessedField.Local
+    private readonly ReadOnlyMemory<byte> _source;
+    private readonly CrossReferenceTable _xref;
     private bool _disposed;
+
+    // ── Document properties ───────────────────────────────────────────────────
+
+    // ── Encryption state ──────────────────────────────────────────────────────
+
+    private PdfEncryptionContext? _encryption;
+    private int _encryptObjNum = -1; // object number of /Encrypt — not decrypted
 
     private PdfDocumentCore(ReadOnlyMemory<byte> source, CrossReferenceTable xref, PdfDictionary trailer)
     {
@@ -36,16 +44,102 @@ internal sealed class PdfDocumentCore : IDisposable
     }
 
     /// <summary>
-    /// When <see langword="true"/>, <see cref="ResolveIndirect"/> returns
-    /// <see cref="PdfNull.Instance"/> instead of throwing when an object cannot be parsed.
-    /// Useful for processing real-world PDFs with isolated corrupt objects.
+    ///     When <see langword="true" />, <see cref="ResolveIndirect" /> returns
+    ///     <see cref="PdfNull.Instance" /> instead of throwing when an object cannot be parsed.
+    ///     Useful for processing real-world PDFs with isolated corrupt objects.
     /// </summary>
     internal bool IgnoreCorruptedObjects { get; set; }
 
     /// <summary>
-    /// Evicts all resolved objects from the in-memory cache.
-    /// Subsequent accesses will reparse from the source buffer.
-    /// Call this to reduce memory pressure after processing a large document.
+    ///     <see langword="true" /> when the PDF was saved in linearized (web-optimized) form.
+    ///     Detected by scanning the first 1024 bytes for the <c>/Linearized</c> keyword,
+    ///     as specified in ISO 32000-1 Annex F §F.3.1.
+    /// </summary>
+    public bool IsLinearized
+    {
+        get
+        {
+            // Scan up to the first 1024 bytes per spec.
+            var span = _source.Span;
+            var limit = Math.Min(span.Length, PdfConstants.XrefScanWindowBytes);
+            var target = "/Linearized"u8;
+            for (var i = 0; i <= limit - target.Length; i++)
+            {
+                if (span.Slice(i, target.Length).SequenceEqual(target))
+                    return true;
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary><see langword="true" /> when the source PDF was password-protected.</summary>
+    public bool IsEncrypted => _encryption is not null;
+
+    /// <summary>
+    ///     The encryption algorithm used to protect this document,
+    ///     or <see langword="null" /> for unencrypted documents.
+    /// </summary>
+    public PdfEncryptionAlgorithm? EncryptionAlgorithm => _encryption?.Algorithm;
+
+    /// <summary>
+    ///     Operations permitted when the document is opened with the user password.
+    ///     Returns <see cref="PdfPermissions.All" /> for unencrypted documents.
+    /// </summary>
+    public PdfPermissions EncryptionPermissions => _encryption?.Permissions ?? PdfPermissions.All;
+
+    /// <summary>The raw trailer dictionary from the most-recent update section.</summary>
+    // ReSharper disable once MemberCanBePrivate.Global
+    public PdfDictionary Trailer { get; }
+
+    /// <summary>
+    ///     The document catalog dictionary (<c>/Type /Catalog</c>), resolved from
+    ///     the <c>/Root</c> entry in <see cref="Trailer" />.
+    /// </summary>
+    /// <exception cref="PdfException">Thrown when <c>/Root</c> is absent or malformed.</exception>
+    // ReSharper disable once MemberCanBePrivate.Global
+    public PdfDictionary Catalog => Resolve<PdfDictionary>(GetRequiredRef("Root"), "Catalog must be a dictionary.");
+
+    /// <summary>
+    ///     The document information dictionary (<c>/Info</c>), or <see langword="null" />
+    ///     if the document does not carry one.
+    /// </summary>
+    public PdfDictionary? Info =>
+        Trailer["Info"] is PdfIndirectReference infoRef
+            ? Resolve<PdfDictionary>(infoRef, "Info must be a dictionary.")
+            : null;
+
+    /// <summary>
+    ///     The total number of pages declared in the root Pages tree node (<c>/Count</c>).
+    ///     Triggers resolution of the Catalog and root Pages objects on first access.
+    /// </summary>
+    public int PageCount
+    {
+        get
+        {
+            var pages = Resolve<PdfDictionary>(GetRefFromDict(Catalog, "Pages"), "Pages must be a dictionary.");
+            return (int)(pages.Get<PdfInteger>(PdfName.Count)?.Value ?? 0);
+        }
+    }
+
+    /// <summary>
+    ///     Clears the object cache and marks the instance as disposed.
+    ///     The source byte buffer is not freed here; its lifetime is managed externally.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _cache.Clear();
+        _objectStreamCache.Clear();
+    }
+
+    /// <summary>
+    ///     Evicts all resolved objects from the in-memory cache.
+    ///     Subsequent accesses will reparse from the source buffer.
+    ///     Call this to reduce memory pressure after processing a large document.
     /// </summary>
     internal void TrimCache()
     {
@@ -55,9 +149,9 @@ internal sealed class PdfDocumentCore : IDisposable
 
     // ── Factory ───────────────────────────────────────────────────────────────
     /// <summary>
-    /// Rebuilds the cross-reference table from the found objects, and returns a
-    /// <see cref="PdfDocumentCore"/> suitable for reading recovered content.
-    /// Use this when <see cref="Parse"/> throws due to a corrupted xref.
+    ///     Rebuilds the cross-reference table from the found objects, and returns a
+    ///     <see cref="PdfDocumentCore" /> suitable for reading recovered content.
+    ///     Use this when <see cref="Parse" /> throws due to a corrupted xref.
     /// </summary>
     public static PdfDocumentCore Repair(ReadOnlyMemory<byte> source)
     {
@@ -81,7 +175,7 @@ internal sealed class PdfDocumentCore : IDisposable
                 continue;
 
             if (!int.TryParse(
-                    System.Text.Encoding.ASCII.GetString(span[start..pos]),
+                    Encoding.ASCII.GetString(span[start..pos]),
                     out var objNum) || objNum <= 0) continue;
 
             // Parse generation number
@@ -92,7 +186,7 @@ internal sealed class PdfDocumentCore : IDisposable
             if (pos + 4 >= span.Length || span[pos] != ' ')
                 continue;
 
-            if (!int.TryParse(System.Text.Encoding.ASCII.GetString(span[genStart..pos]), out var gen)) continue;
+            if (!int.TryParse(Encoding.ASCII.GetString(span[genStart..pos]), out var gen)) continue;
 
             // Confirm " obj" follows
             if (span[pos + 1] != 'o' || span[pos + 2] != 'b' || span[pos + 3] != 'j')
@@ -110,7 +204,7 @@ internal sealed class PdfDocumentCore : IDisposable
         entries[0] = new CrossReferenceEntry(0, PdfConstants.XrefFreeGenerationNumber, CrossReferenceEntryType.Free);
 
         // Build synthetic xref using the scanned offsets.
-        var syntheticXref = new CrossReferenceTable(entries, trailerOffset: 0);
+        var syntheticXref = new CrossReferenceTable(entries, 0);
 
         // Parse the recovered document. Trailer might be missing — synthesise one from the catalog.
         var parser = new PdfParser(source);
@@ -121,7 +215,7 @@ internal sealed class PdfDocumentCore : IDisposable
         }
         catch
         {
-             /* ignore if trailer is corrupt */
+            /* ignore if trailer is corrupt */
         }
 
         // Find catalog from scanned objects if trailer is missing.
@@ -163,14 +257,14 @@ internal sealed class PdfDocumentCore : IDisposable
     }
 
     /// <summary>
-    /// Parses the structural skeleton of a PDF document from <paramref name="source"/>
-    /// and returns a ready-to-use <see cref="PdfDocumentCore"/>.
-    /// Only the cross-reference table and trailer dictionary are parsed at this point;
-    /// all other objects are resolved lazily on first access.
+    ///     Parses the structural skeleton of a PDF document from <paramref name="source" />
+    ///     and returns a ready-to-use <see cref="PdfDocumentCore" />.
+    ///     Only the cross-reference table and trailer dictionary are parsed at this point;
+    ///     all other objects are resolved lazily on first access.
     /// </summary>
     /// <exception cref="PdfException">
-    /// Thrown when the file structure (<c>startxref</c>, cross-reference table,
-    /// or trailer dictionary) is missing or malformed.
+    ///     Thrown when the file structure (<c>startxref</c>, cross-reference table,
+    ///     or trailer dictionary) is missing or malformed.
     /// </exception>
     public static PdfDocumentCore Parse(ReadOnlyMemory<byte> source, string? password = null)
     {
@@ -180,51 +274,6 @@ internal sealed class PdfDocumentCore : IDisposable
         doc.InitializeEncryption(password);
         return doc;
     }
-
-    // ── Document properties ───────────────────────────────────────────────────
-
-    // ── Encryption state ──────────────────────────────────────────────────────
-
-    private PdfEncryptionContext? _encryption;
-    private int _encryptObjNum = -1; // object number of /Encrypt — not decrypted
-
-    /// <summary>
-    /// <see langword="true"/> when the PDF was saved in linearized (web-optimized) form.
-    /// Detected by scanning the first 1024 bytes for the <c>/Linearized</c> keyword,
-    /// as specified in ISO 32000-1 Annex F §F.3.1.
-    /// </summary>
-    public bool IsLinearized
-    {
-        get
-        {
-            // Scan up to the first 1024 bytes per spec.
-            var span = _source.Span;
-            var limit = Math.Min(span.Length, PdfConstants.XrefScanWindowBytes);
-            var target = "/Linearized"u8;
-            for (var i = 0; i <= limit - target.Length; i++)
-            {
-                if (span.Slice(i, target.Length).SequenceEqual(target))
-                    return true;
-            }
-
-            return false;
-        }
-    }
-
-    /// <summary><see langword="true"/> when the source PDF was password-protected.</summary>
-    public bool IsEncrypted => _encryption is not null;
-
-    /// <summary>
-    /// The encryption algorithm used to protect this document,
-    /// or <see langword="null"/> for unencrypted documents.
-    /// </summary>
-    public PdfEncryptionAlgorithm? EncryptionAlgorithm => _encryption?.Algorithm;
-
-    /// <summary>
-    /// Operations permitted when the document is opened with the user password.
-    /// Returns <see cref="PdfPermissions.All"/> for unencrypted documents.
-    /// </summary>
-    public PdfPermissions EncryptionPermissions => _encryption?.Permissions ?? PdfPermissions.All;
 
     private void InitializeEncryption(string? password)
     {
@@ -269,47 +318,13 @@ internal sealed class PdfDocumentCore : IDisposable
                           $"R={encryptDict.Get<PdfInteger>("R")?.Value}).");
     }
 
-    /// <summary>The raw trailer dictionary from the most-recent update section.</summary>
-    // ReSharper disable once MemberCanBePrivate.Global
-    public PdfDictionary Trailer { get; }
-
-    /// <summary>
-    /// The document catalog dictionary (<c>/Type /Catalog</c>), resolved from
-    /// the <c>/Root</c> entry in <see cref="Trailer"/>.
-    /// </summary>
-    /// <exception cref="PdfException">Thrown when <c>/Root</c> is absent or malformed.</exception>
-    // ReSharper disable once MemberCanBePrivate.Global
-    public PdfDictionary Catalog => Resolve<PdfDictionary>(GetRequiredRef("Root"), "Catalog must be a dictionary.");
-
-    /// <summary>
-    /// The document information dictionary (<c>/Info</c>), or <see langword="null"/>
-    /// if the document does not carry one.
-    /// </summary>
-    public PdfDictionary? Info =>
-        Trailer["Info"] is PdfIndirectReference infoRef
-            ? Resolve<PdfDictionary>(infoRef, "Info must be a dictionary.")
-            : null;
-
-    /// <summary>
-    /// The total number of pages declared in the root Pages tree node (<c>/Count</c>).
-    /// Triggers resolution of the Catalog and root Pages objects on first access.
-    /// </summary>
-    public int PageCount
-    {
-        get
-        {
-            var pages = Resolve<PdfDictionary>(GetRefFromDict(Catalog, "Pages"), "Pages must be a dictionary.");
-            return (int)(pages.Get<PdfInteger>(PdfName.Count)?.Value ?? 0);
-        }
-    }
-
     // ── Object resolution ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Follows one level of indirection: if <paramref name="obj"/> is a
-    /// <see cref="PdfIndirectReference"/> it is resolved and its value returned;
-    /// otherwise <paramref name="obj"/> is returned unchanged.
-    /// Does not recurse — call again if the resolved value is itself a reference.
+    ///     Follows one level of indirection: if <paramref name="obj" /> is a
+    ///     <see cref="PdfIndirectReference" /> it is resolved and its value returned;
+    ///     otherwise <paramref name="obj" /> is returned unchanged.
+    ///     Does not recurse — call again if the resolved value is itself a reference.
     /// </summary>
     // ReSharper disable once MemberCanBePrivate.Global
     public PdfObject Dereference(PdfObject obj) => obj switch
@@ -319,27 +334,27 @@ internal sealed class PdfDocumentCore : IDisposable
     };
 
     /// <summary>
-    /// Resolves <paramref name="reference"/>, dereferences one level, and casts to
-    /// <typeparamref name="T"/>.
+    ///     Resolves <paramref name="reference" />, dereferences one level, and casts to
+    ///     <typeparamref name="T" />.
     /// </summary>
     /// <exception cref="PdfException">
-    /// Thrown when the resolved value cannot be cast to <typeparamref name="T"/>.
-    /// <paramref name="errorMessage"/> is used as the exception message.
+    ///     Thrown when the resolved value cannot be cast to <typeparamref name="T" />.
+    ///     <paramref name="errorMessage" /> is used as the exception message.
     /// </exception>
     private T Resolve<T>(PdfIndirectReference reference, string errorMessage)
         where T : PdfObject => Dereference(ResolveIndirect(reference.ObjectNumber).Value) as T ?? throw new PdfException(errorMessage);
 
     /// <summary>
-    /// Resolves and parses the indirect object identified by <paramref name="objectNumber"/>,
-    /// caching it for subsequent requests.
+    ///     Resolves and parses the indirect object identified by <paramref name="objectNumber" />,
+    ///     caching it for subsequent requests.
     /// </summary>
     /// <exception cref="PdfException">
-    /// Thrown when the object is marked free in the xref table, when the xref entry
-    /// is missing, or when the object body cannot be parsed.
+    ///     Thrown when the object is marked free in the xref table, when the xref entry
+    ///     is missing, or when the object body cannot be parsed.
     /// </exception>
     /// <exception cref="NotImplementedException">
-    /// Thrown when the object lives in a compressed object stream (§7.5.7),
-    /// which is not yet implemented.
+    ///     Thrown when the object lives in a compressed object stream (§7.5.7),
+    ///     which is not yet implemented.
     /// </exception>
     public PdfIndirectObject ResolveIndirect(int objectNumber)
     {
@@ -354,7 +369,7 @@ internal sealed class PdfDocumentCore : IDisposable
         try
         {
             obj = entry.Type == CrossReferenceEntryType.Compressed
-                ? ResolveFromObjectStream(objectNumber, streamObjNum: (int)entry.Offset)
+                ? ResolveFromObjectStream(objectNumber, (int)entry.Offset)
                 : _parser.ReadObject(entry.Offset);
         }
         catch when (IgnoreCorruptedObjects)
@@ -374,9 +389,9 @@ internal sealed class PdfDocumentCore : IDisposable
     // ── Serialization support ─────────────────────────────────────────────────
 
     /// <summary>
-    /// Resolves every in-use indirect object in the document and returns them
-    /// sorted by object number. Called by the serialization layer to collect
-    /// the full object graph for a full-rewrite save.
+    ///     Resolves every in-use indirect object in the document and returns them
+    ///     sorted by object number. Called by the serialization layer to collect
+    ///     the full object graph for a full-rewrite save.
     /// </summary>
     internal IReadOnlyList<PdfIndirectObject> CollectObjects() =>
         _xref.InUseObjectNumbers
@@ -387,9 +402,9 @@ internal sealed class PdfDocumentCore : IDisposable
     // ── Object stream resolution (§7.5.7) ────────────────────────────────────
 
     /// <summary>
-    /// Resolves an object that is stored inside a compressed object stream.
-    /// The stream is decoded and its embedded objects are parsed and cached so
-    /// subsequent calls for siblings from the same stream are free.
+    ///     Resolves an object that is stored inside a compressed object stream.
+    ///     The stream is decoded and its embedded objects are parsed and cached so
+    ///     subsequent calls for siblings from the same stream are free.
     /// </summary>
     private PdfIndirectObject ResolveFromObjectStream(int objectNumber, int streamObjNum)
     {
@@ -421,8 +436,10 @@ internal sealed class PdfDocumentCore : IDisposable
         if (streamIndirect.Value is not PdfStream objStream)
             throw new PdfException($"Object {streamObjNum} is expected to be an object stream but is {streamIndirect.Value.GetType().Name}.");
 
-        var n = (int)(objStream.Dictionary.Get<PdfInteger>("N")?.Value ?? throw new PdfException($"Object stream {streamObjNum} missing required /N entry."));
-        var first = (int)(objStream.Dictionary.Get<PdfInteger>("First")?.Value ?? throw new PdfException($"Object stream {streamObjNum} missing required /First entry."));
+        var n = (int)(objStream.Dictionary.Get<PdfInteger>("N")?.Value ??
+                      throw new PdfException($"Object stream {streamObjNum} missing required /N entry."));
+        var first = (int)(objStream.Dictionary.Get<PdfInteger>("First")?.Value ??
+                          throw new PdfException($"Object stream {streamObjNum} missing required /First entry."));
 
         var decoded = StreamFilters.Decode(objStream);
 
@@ -465,7 +482,7 @@ internal sealed class PdfDocumentCore : IDisposable
         var start = (negative || span[0] == (byte)'+') ? 1 : 0;
         long value = 0;
         for (var i = start; i < span.Length; i++)
-            value = value * 10 + (span[i] - '0');
+            value = (value * 10) + (span[i] - '0');
 
         return negative ? -value : value;
     }
@@ -473,12 +490,12 @@ internal sealed class PdfDocumentCore : IDisposable
     // ── Page access ───────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the page dictionary for the given 1-based <paramref name="pageNumber"/>
-    /// by walking the page tree (ISO 32000-1 §7.7.3).
-    /// Only the nodes on the direct path to the target page are resolved.
+    ///     Returns the page dictionary for the given 1-based <paramref name="pageNumber" />
+    ///     by walking the page tree (ISO 32000-1 §7.7.3).
+    ///     Only the nodes on the direct path to the target page are resolved.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="pageNumber"/> is less than 1 or greater than <see cref="PageCount"/>.
+    ///     Thrown when <paramref name="pageNumber" /> is less than 1 or greater than <see cref="PageCount" />.
     /// </exception>
     /// <exception cref="PdfException">Thrown when the page tree structure is malformed.</exception>
     public PdfDictionary GetPage(int pageNumber)
@@ -540,18 +557,4 @@ internal sealed class PdfDocumentCore : IDisposable
 
     private static PdfIndirectReference GetRefFromDict(PdfDictionary dict, string key) =>
         dict[key] as PdfIndirectReference ?? throw new PdfException($"Dictionary is missing required /{key} indirect reference.");
-
-    /// <summary>
-    /// Clears the object cache and marks the instance as disposed.
-    /// The source byte buffer is not freed here; its lifetime is managed externally.
-    /// </summary>
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _disposed = true;
-        _cache.Clear();
-        _objectStreamCache.Clear();
-    }
 }

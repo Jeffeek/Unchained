@@ -6,8 +6,8 @@ public enum PictureStretchMode
     /// <summary>The image is stretched to fill the entire shape bounding box.</summary>
     Fill,
     /// <summary>
-    /// The image is tiled (repeated) across the shape area.
-    /// The tile size and alignment are controlled by the fill's tile settings.
+    ///     The image is tiled (repeated) across the shape area.
+    ///     The tile size and alignment are controlled by the fill's tile settings.
     /// </summary>
     Tile
 }

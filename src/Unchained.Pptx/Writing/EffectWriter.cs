@@ -6,9 +6,9 @@ using Unchained.Ooxml.Xml;
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes an <see cref="EffectFormat"/> to a DrawingML <c>&lt;a:effectLst&gt;</c> element,
-/// or <see langword="null"/> when no effects are set. Child order follows the OOXML schema
-/// (blur, fillOverlay, glow, innerShdw, outerShdw, reflection, softEdge).
+///     Serializes an <see cref="EffectFormat" /> to a DrawingML <c>&lt;a:effectLst&gt;</c> element,
+///     or <see langword="null" /> when no effects are set. Child order follows the OOXML schema
+///     (blur, fillOverlay, glow, innerShdw, outerShdw, reflection, softEdge).
 /// </summary>
 internal static class EffectWriter
 {
@@ -21,9 +21,11 @@ internal static class EffectWriter
         var lst = new XElement(A + "effectLst");
 
         if (effects.Blur is { } blur)
+        {
             lst.Add(new XElement(A + "blur",
                 new XAttribute("rad", blur.Radius.Value),
                 new XAttribute("grow", blur.GrowBounds ? "1" : "0")));
+        }
 
         if (effects.Glow is { } glow)
         {
@@ -57,12 +59,14 @@ internal static class EffectWriter
         }
 
         if (effects.Reflection is { } refl)
+        {
             lst.Add(new XElement(A + "reflection",
                 new XAttribute("blurRad", refl.BlurRadius.Value),
                 new XAttribute("stA", PercentToThousandths(refl.StartOpacityPercent)),
                 new XAttribute("endA", PercentToThousandths(refl.EndOpacityPercent)),
                 new XAttribute("dist", refl.Distance.Value),
                 new XAttribute("dir", DegreesToAngle(refl.DirectionDegrees))));
+        }
 
         if (effects.SoftEdge is { } soft)
             lst.Add(new XElement(A + "softEdge", new XAttribute("rad", soft.Radius.Value)));

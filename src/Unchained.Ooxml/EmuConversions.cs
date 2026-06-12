@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml;
 
 /// <summary>
-/// English Metric Unit (EMU) conversion ratios.
-/// All OOXML coordinates and sizes are stored as integer EMU values.
+///     English Metric Unit (EMU) conversion ratios.
+///     All OOXML coordinates and sizes are stored as integer EMU values.
 /// </summary>
 internal static class EmuConversions
 {
@@ -13,8 +13,8 @@ internal static class EmuConversions
     internal const long EmuPerPoint = 12_700;
 
     /// <summary>
-    /// EMU per CSS/screen pixel at 96 DPI: 1 px = 914 400 / 96 = 9 525 EMU.
-    /// Used when converting slide coordinates to HTML/CSS pixel values.
+    ///     EMU per CSS/screen pixel at 96 DPI: 1 px = 914 400 / 96 = 9 525 EMU.
+    ///     Used when converting slide coordinates to HTML/CSS pixel values.
     /// </summary>
     internal const long EmuPerPixel96Dpi = 9_525;
 

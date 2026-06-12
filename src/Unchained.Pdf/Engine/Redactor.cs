@@ -8,11 +8,11 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IRedactor"/> implementation. For each page it walks the content
-/// operators while tracking the CTM and text matrix, drops text-show and image-paint
-/// operators whose drawing origin falls inside a redaction region, re-serializes the
-/// remaining operators as the page's new (single) content stream, and appends an opaque
-/// fill over each region so the area is both removed from the data and visually covered.
+///     Default <see cref="IRedactor" /> implementation. For each page it walks the content
+///     operators while tracking the CTM and text matrix, drops text-show and image-paint
+///     operators whose drawing origin falls inside a redaction region, re-serializes the
+///     remaining operators as the page's new (single) content stream, and appends an opaque
+///     fill over each region so the area is both removed from the data and visually covered.
 /// </summary>
 public sealed class Redactor : IRedactor
 {
@@ -29,13 +29,18 @@ public sealed class Redactor : IRedactor
         var adapter = MutationHelper.Cast(nameof(document), document);
         var pageCount = adapter.Core.PageCount;
         foreach (var r in regions)
+        {
             if (r.PageNumber < 1 || r.PageNumber > pageCount)
-                throw new ArgumentOutOfRangeException(nameof(regions), r.PageNumber,
+            {
+                throw new ArgumentOutOfRangeException(nameof(regions),
+                    r.PageNumber,
                     $"Region page number must be between 1 and {pageCount}.");
+            }
+        }
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
         var swaps = new Dictionary<int, PdfIndirectObject>();
 
         var byPage = regions.GroupBy(static r => r.PageNumber).ToDictionary(static g => g.Key, static g => g.ToList());
@@ -98,35 +103,40 @@ public sealed class Redactor : IRedactor
             {
                 case "q":
                     ctmStack.Push((double[])ctm.Clone());
-                    break;
+                break;
                 case "Q":
                     if (ctmStack.Count > 0) ctm = ctmStack.Pop();
-                    break;
+                break;
                 case "cm" when op.Operands.Count >= 6:
                     ctm = Mul(ReadMatrix(op), ctm);
-                    break;
+                break;
                 case "BT":
-                    tm = Identity(); tlm = Identity();
-                    break;
+                    tm = Identity();
+                    tlm = Identity();
+                break;
                 case "Tf" when op.Operands.Count >= 2:
                     fontSize = Num(op.Operands[1]);
-                    break;
+                break;
                 case "TL" when op.Operands.Count >= 1:
                     leading = Num(op.Operands[0]);
-                    break;
+                break;
                 case "Td" when op.Operands.Count >= 2:
-                    tlm = Mul(Translate(Num(op.Operands[0]), Num(op.Operands[1])), tlm); tm = (double[])tlm.Clone();
-                    break;
+                    tlm = Mul(Translate(Num(op.Operands[0]), Num(op.Operands[1])), tlm);
+                    tm = (double[])tlm.Clone();
+                break;
                 case "TD" when op.Operands.Count >= 2:
                     leading = -Num(op.Operands[1]);
-                    tlm = Mul(Translate(Num(op.Operands[0]), Num(op.Operands[1])), tlm); tm = (double[])tlm.Clone();
-                    break;
+                    tlm = Mul(Translate(Num(op.Operands[0]), Num(op.Operands[1])), tlm);
+                    tm = (double[])tlm.Clone();
+                break;
                 case "Tm" when op.Operands.Count >= 6:
-                    tm = ReadMatrix(op); tlm = (double[])tm.Clone();
-                    break;
+                    tm = ReadMatrix(op);
+                    tlm = (double[])tm.Clone();
+                break;
                 case "T*":
-                    tlm = Mul(Translate(0, -leading), tlm); tm = (double[])tlm.Clone();
-                    break;
+                    tlm = Mul(Translate(0, -leading), tlm);
+                    tm = (double[])tlm.Clone();
+                break;
             }
 
             // Decide whether to drop this operator.
@@ -156,7 +166,8 @@ public sealed class Redactor : IRedactor
             // so subsequent text keeps its position.
             if (op.Name is "'" or "\"")
             {
-                tlm = Mul(Translate(0, -leading), tlm); tm = (double[])tlm.Clone();
+                tlm = Mul(Translate(0, -leading), tlm);
+                tm = (double[])tlm.Clone();
             }
         }
 
@@ -166,7 +177,7 @@ public sealed class Redactor : IRedactor
             var (cr, cg, cb) = r.FillColor;
             sb.Append("q ").Append(F(cr)).Append(' ').Append(F(cg)).Append(' ').Append(F(cb)).Append(" rg ");
             sb.Append(F(r.X)).Append(' ').Append(F(r.Y)).Append(' ')
-              .Append(F(r.Width)).Append(' ').Append(F(r.Height)).Append(" re f Q\n");
+                .Append(F(r.Width)).Append(' ').Append(F(r.Height)).Append(" re f Q\n");
         }
 
         return sb.ToString();
@@ -175,7 +186,8 @@ public sealed class Redactor : IRedactor
     private static bool InAnyRegion(List<RedactionRegion> regions, double x, double y)
     {
         foreach (var r in regions)
-            if (r.Contains(x, y)) return true;
+            if (r.Contains(x, y))
+                return true;
         return false;
     }
 
@@ -188,6 +200,7 @@ public sealed class Redactor : IRedactor
             WriteOperand(sb, operand);
             sb.Append(' ');
         }
+
         sb.Append(op.Name).Append('\n');
     }
 
@@ -203,14 +216,25 @@ public sealed class Redactor : IRedactor
             case PdfString s: WriteString(sb, s); break;
             case PdfArray a:
                 sb.Append('[');
-                for (var i = 0; i < a.Count; i++) { if (i > 0) sb.Append(' '); WriteOperand(sb, a[i]); }
+                for (var i = 0; i < a.Count; i++)
+                {
+                    if (i > 0) sb.Append(' ');
+                    WriteOperand(sb, a[i]);
+                }
+
                 sb.Append(']');
-                break;
+            break;
             case PdfDictionary d:
                 sb.Append("<<");
-                foreach (var (k, v) in d.Entries) { sb.Append('/').Append(k).Append(' '); WriteOperand(sb, v); sb.Append(' '); }
+                foreach (var (k, v) in d.Entries)
+                {
+                    sb.Append('/').Append(k).Append(' ');
+                    WriteOperand(sb, v);
+                    sb.Append(' ');
+                }
+
                 sb.Append(">>");
-                break;
+            break;
             default: sb.Append("null"); break;
         }
     }
@@ -223,7 +247,11 @@ public sealed class Redactor : IRedactor
         var bytes = s.GetBinaryBytes().Span;
         var printable = true;
         foreach (var b in bytes)
-            if (b < PdfConstants.PrintableAsciiMin || b > PdfConstants.PrintableAsciiMax) { printable = false; break; }
+            if (b < PdfConstants.PrintableAsciiMin || b > PdfConstants.PrintableAsciiMax)
+            {
+                printable = false;
+                break;
+            }
 
         if (printable)
         {
@@ -233,6 +261,7 @@ public sealed class Redactor : IRedactor
                 if (b is (byte)'(' or (byte)')' or (byte)'\\') sb.Append('\\');
                 sb.Append((char)b);
             }
+
             sb.Append(')');
         }
         else
@@ -256,16 +285,16 @@ public sealed class Redactor : IRedactor
     // m1 × m2 (apply m1 first, then m2).
     private static double[] Mul(double[] m1, double[] m2) =>
     [
-        m1[0] * m2[0] + m1[1] * m2[2],
-        m1[0] * m2[1] + m1[1] * m2[3],
-        m1[2] * m2[0] + m1[3] * m2[2],
-        m1[2] * m2[1] + m1[3] * m2[3],
-        m1[4] * m2[0] + m1[5] * m2[2] + m2[4],
-        m1[4] * m2[1] + m1[5] * m2[3] + m2[5]
+        (m1[0] * m2[0]) + (m1[1] * m2[2]),
+        (m1[0] * m2[1]) + (m1[1] * m2[3]),
+        (m1[2] * m2[0]) + (m1[3] * m2[2]),
+        (m1[2] * m2[1]) + (m1[3] * m2[3]),
+        (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
+        (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
     ];
 
     private static (double X, double Y) Apply(double[] m, double x, double y) =>
-        (m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]);
+        ((m[0] * x) + (m[2] * y) + m[4], (m[1] * x) + (m[3] * y) + m[5]);
 
     private static double Num(PdfObject o) => o switch
     {

@@ -3,150 +3,152 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Abstractions;
 
 /// <summary>
-/// Represents a single page within an <see cref="IPdfDocument"/>.
-/// All dimensions are in PDF user space units (points), where 1 pt = 1/72 inch.
+///     Represents a single page within an <see cref="IPdfDocument" />.
+///     All dimensions are in PDF user space units (points), where 1 pt = 1/72 inch.
 /// </summary>
 public interface IPdfPage
 {
     /// <summary>
-    /// The 1-based page number of this page within its containing document.
+    ///     The 1-based page number of this page within its containing document.
     /// </summary>
     int PageNumber { get; }
 
     /// <summary>
-    /// The visible width of the page in points — taken from <c>/CropBox</c> when present,
-    /// otherwise from <c>/MediaBox</c> (horizontal dimension).
+    ///     The visible width of the page in points — taken from <c>/CropBox</c> when present,
+    ///     otherwise from <c>/MediaBox</c> (horizontal dimension).
     /// </summary>
     double Width { get; }
 
     /// <summary>
-    /// The visible height of the page in points — taken from <c>/CropBox</c> when present,
-    /// otherwise from <c>/MediaBox</c> (vertical dimension).
+    ///     The visible height of the page in points — taken from <c>/CropBox</c> when present,
+    ///     otherwise from <c>/MediaBox</c> (vertical dimension).
     /// </summary>
     double Height { get; }
 
     /// <summary>
-    /// The X coordinate (in PDF user-space points) of the lower-left corner of the visible
-    /// area (<c>/CropBox llx</c>, or 0 when no CropBox is defined). Renderers must subtract
-    /// this from all content coordinates to clip correctly to the visible region.
+    ///     The X coordinate (in PDF user-space points) of the lower-left corner of the visible
+    ///     area (<c>/CropBox llx</c>, or 0 when no CropBox is defined). Renderers must subtract
+    ///     this from all content coordinates to clip correctly to the visible region.
     /// </summary>
     double CropOriginX { get; }
 
     /// <summary>
-    /// The Y coordinate (in PDF user-space points) of the lower-left corner of the visible
-    /// area (<c>/CropBox lly</c>, or 0 when no CropBox is defined).
+    ///     The Y coordinate (in PDF user-space points) of the lower-left corner of the visible
+    ///     area (<c>/CropBox lly</c>, or 0 when no CropBox is defined).
     /// </summary>
     double CropOriginY { get; }
 
     /// <summary>
-    /// Page rotation in degrees clockwise as specified by the <c>/Rotate</c> entry
-    /// (ISO 32000-1 §7.7.3.3). Always 0, 90, 180, or 270.
+    ///     Page rotation in degrees clockwise as specified by the <c>/Rotate</c> entry
+    ///     (ISO 32000-1 §7.7.3.3). Always 0, 90, 180, or 270.
     /// </summary>
     int Rotate { get; }
 
     /// <summary>
-    /// <see langword="true"/> when <see cref="Width"/> is greater than <see cref="Height"/>.
+    ///     <see langword="true" /> when <see cref="Width" /> is greater than <see cref="Height" />.
     /// </summary>
     bool IsLandscape => Width > Height;
 
     /// <summary>
-    /// Parses and returns all content stream operators for this page in stream order
-    /// (ISO 32000-1 §7.8.2). Each <see cref="ContentOperator"/> contains the operator
-    /// keyword and its preceding operand values.
-    /// <para>
-    /// Returns an empty list when the page has no <c>/Contents</c> entry.
-    /// Multiple content streams (when <c>/Contents</c> is an array) are concatenated
-    /// before parsing (§7.8.1).
-    /// </para>
+    ///     Parses and returns all content stream operators for this page in stream order
+    ///     (ISO 32000-1 §7.8.2). Each <see cref="ContentOperator" /> contains the operator
+    ///     keyword and its preceding operand values.
+    ///     <para>
+    ///         Returns an empty list when the page has no <c>/Contents</c> entry.
+    ///         Multiple content streams (when <c>/Contents</c> is an array) are concatenated
+    ///         before parsing (§7.8.1).
+    ///     </para>
     /// </summary>
     IReadOnlyList<ContentOperator> GetContentOperators();
 
     /// <summary>
-    /// Extracts text from this page as positioned <see cref="TextSpan"/> instances,
-    /// sorted in reading order (top-to-bottom, left-to-right).
-    /// <para>
-    /// Advance widths are computed using hardcoded AFM tables for the Standard 14 fonts.
-    /// Fonts not in the Standard 14 (embedded TrueType/OpenType/CFF) receive a fallback
-    /// width of 500/1000 em per character — positions will be approximate until the full
-    /// font subsystem is implemented in Milestone 6.
-    /// </para>
-    /// <para>CTM transformations (rotation, shear) are not applied in this release;
-    /// only axis-aligned text is positioned accurately.</para>
+    ///     Extracts text from this page as positioned <see cref="TextSpan" /> instances,
+    ///     sorted in reading order (top-to-bottom, left-to-right).
+    ///     <para>
+    ///         Advance widths are computed using hardcoded AFM tables for the Standard 14 fonts.
+    ///         Fonts not in the Standard 14 (embedded TrueType/OpenType/CFF) receive a fallback
+    ///         width of 500/1000 em per character — positions will be approximate until the full
+    ///         font subsystem is implemented in Milestone 6.
+    ///     </para>
+    ///     <para>
+    ///         CTM transformations (rotation, shear) are not applied in this release;
+    ///         only axis-aligned text is positioned accurately.
+    ///     </para>
     /// </summary>
     IReadOnlyList<TextSpan> GetTextSpans();
 
     /// <summary>
-    /// Extracts all text from this page as a plain string in reading order.
-    /// Lines are separated by <c>\n</c>; spans on the same line are joined with a space
-    /// when there is a visible gap between them.
+    ///     Extracts all text from this page as a plain string in reading order.
+    ///     Lines are separated by <c>\n</c>; spans on the same line are joined with a space
+    ///     when there is a visible gap between them.
     /// </summary>
     string ExtractText();
 
     /// <summary>
-    /// Returns all annotations attached to this page, parsed from the <c>/Annots</c> array.
-    /// Returns an empty list when the page has no annotations.
+    ///     Returns all annotations attached to this page, parsed from the <c>/Annots</c> array.
+    ///     Returns an empty list when the page has no annotations.
     /// </summary>
     IReadOnlyList<Annotation> GetAnnotations();
 
     /// <summary>
-    /// Returns a map from PDF font resource name (e.g. <c>F1</c>) to base font name
-    /// (e.g. <c>Helvetica</c>) as declared in the page's <c>/Resources /Font</c> dictionary.
-    /// Used by renderers to resolve the actual typeface for each <c>Tf</c> operator.
+    ///     Returns a map from PDF font resource name (e.g. <c>F1</c>) to base font name
+    ///     (e.g. <c>Helvetica</c>) as declared in the page's <c>/Resources /Font</c> dictionary.
+    ///     Used by renderers to resolve the actual typeface for each <c>Tf</c> operator.
     /// </summary>
     IReadOnlyDictionary<string, string> GetFontNameMap();
 
     /// <summary>
-    /// Returns a map from PDF font resource name (e.g. <c>F1</c>) to the raw bytes of the
-    /// embedded font program (<c>/FontFile</c>, <c>/FontFile2</c>, or <c>/FontFile3</c>),
-    /// or <see langword="null"/> when the font is not embedded (Standard 14, system font).
+    ///     Returns a map from PDF font resource name (e.g. <c>F1</c>) to the raw bytes of the
+    ///     embedded font program (<c>/FontFile</c>, <c>/FontFile2</c>, or <c>/FontFile3</c>),
+    ///     or <see langword="null" /> when the font is not embedded (Standard 14, system font).
     /// </summary>
     IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes();
 
     /// <summary>
-    /// Returns a map from PDF font resource name to a char-code→Unicode dictionary parsed
-    /// from the font's <c>/ToUnicode</c> CMap stream. Keys are font resource names (e.g.
-    /// <c>F1</c>); values are dictionaries mapping raw PDF char codes (as byte arrays)
-    /// to Unicode strings. Returns an empty outer dictionary when no /ToUnicode entries
-    /// are present.
+    ///     Returns a map from PDF font resource name to a char-code→Unicode dictionary parsed
+    ///     from the font's <c>/ToUnicode</c> CMap stream. Keys are font resource names (e.g.
+    ///     <c>F1</c>); values are dictionaries mapping raw PDF char codes (as byte arrays)
+    ///     to Unicode strings. Returns an empty outer dictionary when no /ToUnicode entries
+    ///     are present.
     /// </summary>
     IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>> GetToUnicodeMaps();
 
     /// <summary>
-    /// Decodes and returns all raster image XObjects referenced in this page's
-    /// <c>/Resources /XObject</c> dictionary. Only <c>/DeviceRGB</c> images with 8 bits per
-    /// component are decoded; other colour spaces produce a solid mid-grey placeholder.
-    /// Returns an empty dictionary when the page has no image XObjects.
+    ///     Decodes and returns all raster image XObjects referenced in this page's
+    ///     <c>/Resources /XObject</c> dictionary. Only <c>/DeviceRGB</c> images with 8 bits per
+    ///     component are decoded; other colour spaces produce a solid mid-grey placeholder.
+    ///     Returns an empty dictionary when the page has no image XObjects.
     /// </summary>
     IReadOnlyDictionary<string, ImageXObject> GetImageXObjects();
 
     /// <summary>
-    /// Returns metadata for composite (Type0) fonts on this page keyed by font resource
-    /// name. Composite fonts encode text as multi-byte character codes mapped through a
-    /// CMap (e.g. <c>/Identity-H</c>) to CIDs, then to glyph indices via
-    /// <c>/CIDToGIDMap</c> (§9.7). Renderers use this to bypass the simple-font
-    /// code→Unicode→shape pipeline, which produces wrong glyphs for these fonts.
-    /// Returns an empty dictionary when the page has no composite fonts.
+    ///     Returns metadata for composite (Type0) fonts on this page keyed by font resource
+    ///     name. Composite fonts encode text as multi-byte character codes mapped through a
+    ///     CMap (e.g. <c>/Identity-H</c>) to CIDs, then to glyph indices via
+    ///     <c>/CIDToGIDMap</c> (§9.7). Renderers use this to bypass the simple-font
+    ///     code→Unicode→shape pipeline, which produces wrong glyphs for these fonts.
+    ///     Returns an empty dictionary when the page has no composite fonts.
     /// </summary>
     IReadOnlyDictionary<string, CompositeFontInfo> GetCompositeFonts() =>
         new Dictionary<string, CompositeFontInfo>();
 
     /// <summary>
-    /// Returns the constant alpha values and blend mode declared by each <c>/ExtGState</c>
-    /// resource on this page, keyed by resource name (the operand of the <c>gs</c> operator).
-    /// The tuple is (fill alpha <c>/ca</c>, stroke alpha <c>/CA</c>, blend mode <c>/BM</c>,
-    /// soft-mask resource name <c>/SMask</c>),
-    /// alphas each in 0–1 (ISO 32000-1 §11.6.4.4); blend mode is the PDF name string
-    /// (e.g. "Normal", "Multiply") or "Normal" when absent; soft-mask name is null when absent.
-    /// Returns an empty dictionary when the page has no <c>/ExtGState</c> resources.
+    ///     Returns the constant alpha values and blend mode declared by each <c>/ExtGState</c>
+    ///     resource on this page, keyed by resource name (the operand of the <c>gs</c> operator).
+    ///     The tuple is (fill alpha <c>/ca</c>, stroke alpha <c>/CA</c>, blend mode <c>/BM</c>,
+    ///     soft-mask resource name <c>/SMask</c>),
+    ///     alphas each in 0–1 (ISO 32000-1 §11.6.4.4); blend mode is the PDF name string
+    ///     (e.g. "Normal", "Multiply") or "Normal" when absent; soft-mask name is null when absent.
+    ///     Returns an empty dictionary when the page has no <c>/ExtGState</c> resources.
     /// </summary>
     IReadOnlyDictionary<string, (double Fill, double Stroke, string BlendMode, string? SoftMaskName)> GetExtGStateAlphas() =>
         new Dictionary<string, (double, double, string, string?)>();
 
     /// <summary>
-    /// Returns decoded soft masks for this page, keyed by a unique name derived from the
-    /// ExtGState resource that references them. Each value is a pre-rasterised per-pixel
-    /// alpha map in device space (ISO 32000-1 §11.6.5).
-    /// Returns an empty dictionary when the page has no soft-mask resources.
+    ///     Returns decoded soft masks for this page, keyed by a unique name derived from the
+    ///     ExtGState resource that references them. Each value is a pre-rasterised per-pixel
+    ///     alpha map in device space (ISO 32000-1 §11.6.5).
+    ///     Returns an empty dictionary when the page has no soft-mask resources.
     /// </summary>
     /// <param name="widthPx">Device pixel width of the page (used to size the alpha map).</param>
     /// <param name="heightPx">Device pixel height of the page.</param>
@@ -154,21 +156,21 @@ public interface IPdfPage
         new Dictionary<string, SoftMaskInfo>();
 
     /// <summary>
-    /// Returns decoded axial/radial shadings available on this page, keyed by resource name.
-    /// Includes both <c>/Shading</c> resources (painted by the <c>sh</c> operator) and
-    /// shading-pattern resources (<c>/Pattern</c> entries with <c>/PatternType 2</c>, used as
-    /// a fill colour). Each value carries the geometry plus a pre-sampled colour ramp so the
-    /// renderer needs no PDF-function evaluation. Returns an empty dictionary when the page
-    /// has no axial/radial shadings.
+    ///     Returns decoded axial/radial shadings available on this page, keyed by resource name.
+    ///     Includes both <c>/Shading</c> resources (painted by the <c>sh</c> operator) and
+    ///     shading-pattern resources (<c>/Pattern</c> entries with <c>/PatternType 2</c>, used as
+    ///     a fill colour). Each value carries the geometry plus a pre-sampled colour ramp so the
+    ///     renderer needs no PDF-function evaluation. Returns an empty dictionary when the page
+    ///     has no axial/radial shadings.
     /// </summary>
     IReadOnlyDictionary<string, ShadingInfo> GetShadings() =>
         new Dictionary<string, ShadingInfo>();
 
     /// <summary>
-    /// Returns tiling patterns (ISO 32000-1 §8.7.3.1, <c>/PatternType 1</c>) available on
-    /// this page, keyed by <c>/Pattern</c> resource name. Each carries the cell's content
-    /// operators, bounding box, step, matrix, and paint type so the renderer can rasterise
-    /// one cell and tile it. Returns an empty dictionary when the page has no tiling patterns.
+    ///     Returns tiling patterns (ISO 32000-1 §8.7.3.1, <c>/PatternType 1</c>) available on
+    ///     this page, keyed by <c>/Pattern</c> resource name. Each carries the cell's content
+    ///     operators, bounding box, step, matrix, and paint type so the renderer can rasterise
+    ///     one cell and tile it. Returns an empty dictionary when the page has no tiling patterns.
     /// </summary>
     IReadOnlyDictionary<string, TilingPatternInfo> GetTilingPatterns() =>
         new Dictionary<string, TilingPatternInfo>();

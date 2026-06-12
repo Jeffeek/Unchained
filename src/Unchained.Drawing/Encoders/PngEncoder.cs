@@ -6,9 +6,9 @@ using Unchained.Drawing.Extensions;
 namespace Unchained.Drawing.Encoders;
 
 /// <summary>
-/// Encodes a <see cref="RasterBuffer"/> to PNG bytes using only BCL APIs
-/// (ZLibStream for DEFLATE, CRC32 computed from a look-up table).
-/// No external image library is required.
+///     Encodes a <see cref="RasterBuffer" /> to PNG bytes using only BCL APIs
+///     (ZLibStream for DEFLATE, CRC32 computed from a look-up table).
+///     No external image library is required.
 /// </summary>
 internal static class PngEncoder
 {
@@ -16,7 +16,7 @@ internal static class PngEncoder
 
     internal static byte[] Encode(RasterBuffer buffer)
     {
-        using var ms = new MemoryStream(buffer.Width * buffer.Height * 4 + 256);
+        using var ms = new MemoryStream((buffer.Width * buffer.Height * 4) + 256);
         ms.Write(PngSignature);
         WriteIHDR(ms, buffer.Width, buffer.Height);
         WriteIDAT(ms, buffer);
@@ -32,11 +32,11 @@ internal static class PngEncoder
         BinaryPrimitives.WriteInt32BigEndian(data[..], width);
         BinaryPrimitives.WriteInt32BigEndian(data[4..], height);
         // ReSharper disable once GrammarMistakeInComment
-        data[8] = 8;   // bit depth
-        data[9] = 6;   // colour type: RGBA
-        data[10] = 0;  // compression method
-        data[11] = 0;  // filter method
-        data[12] = 0;  // interlace: none
+        data[8] = 8;  // bit depth
+        data[9] = 6;  // colour type: RGBA
+        data[10] = 0; // compression method
+        data[11] = 0; // filter method
+        data[12] = 0; // interlace: none
         WriteChunk(stream, PngConstants.IHDR.ToUtf8Span(), data);
     }
 
@@ -48,17 +48,17 @@ internal static class PngEncoder
         var pixels = buffer.ToArgbBytes();
 
         // Filtered scanline data: filter_byte(0=None) + R G B A per pixel
-        var raw = new byte[h * (1 + w * 4)];
+        var raw = new byte[h * (1 + (w * 4))];
         for (var y = 0; y < h; y++)
         {
-            var outOffset = y * (1 + w * 4);
+            var outOffset = y * (1 + (w * 4));
             raw[outOffset] = 0; // filter type: None
             var srcOffset = y * w * 4;
             Buffer.BlockCopy(pixels, srcOffset, raw, outOffset + 1, w * 4);
         }
 
         using var compressedMs = new MemoryStream();
-        using (var zlib = new ZLibStream(compressedMs, CompressionLevel.Optimal, leaveOpen: true))
+        using (var zlib = new ZLibStream(compressedMs, CompressionLevel.Optimal, true))
             zlib.Write(raw);
 
         WriteChunk(stream, PngConstants.IDAT.ToUtf8Span(), compressedMs.ToArray());

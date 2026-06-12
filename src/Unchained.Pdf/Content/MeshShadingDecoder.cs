@@ -6,11 +6,11 @@ using Unchained.Pdf.Parsing.Filters;
 namespace Unchained.Pdf.Content;
 
 /// <summary>
-/// Decodes mesh shadings (ISO 32000-1 §8.7.4.5.5–.8) into a flat list of Gouraud-shaded
-/// triangles. Supports type 4 (free-form Gouraud triangles), type 5 (lattice-form),
-/// and types 6/7 (Coons / tensor-product patch meshes) — the latter approximated by two
-/// triangles per patch from the four corner points and colours, which captures the
-/// dominant colour blend without evaluating the cubic patch surface.
+///     Decodes mesh shadings (ISO 32000-1 §8.7.4.5.5–.8) into a flat list of Gouraud-shaded
+///     triangles. Supports type 4 (free-form Gouraud triangles), type 5 (lattice-form),
+///     and types 6/7 (Coons / tensor-product patch meshes) — the latter approximated by two
+///     triangles per patch from the four corner points and colours, which captures the
+///     dominant colour blend without evaluating the cubic patch surface.
 /// </summary>
 internal static class MeshShadingDecoder
 {
@@ -38,45 +38,119 @@ internal static class MeshShadingDecoder
 
             switch (shadingType)
             {
-                case 4: DecodeType4(reader, bpf, bpc, bpComp, decode, nComp, fn, triangles); break;
-                case 5: DecodeType5(reader, bpc, bpComp, decode, nComp, fn, vpr, triangles); break;
-                case 6: DecodePatches(reader, bpf, bpc, bpComp, decode, nComp, fn, controlPoints: 12, triangles); break;
-                case 7: DecodePatches(reader, bpf, bpc, bpComp, decode, nComp, fn, controlPoints: 16, triangles); break;
+                case 4:
+                    DecodeType4(reader,
+                        bpf,
+                        bpc,
+                        bpComp,
+                        decode,
+                        nComp,
+                        fn,
+                        triangles); break;
+                case 5:
+                    DecodeType5(reader,
+                        bpc,
+                        bpComp,
+                        decode,
+                        nComp,
+                        fn,
+                        vpr,
+                        triangles); break;
+                case 6:
+                    DecodePatches(reader,
+                        bpf,
+                        bpc,
+                        bpComp,
+                        decode,
+                        nComp,
+                        fn,
+                        12,
+                        triangles); break;
+                case 7:
+                    DecodePatches(reader,
+                        bpf,
+                        bpc,
+                        bpComp,
+                        decode,
+                        nComp,
+                        fn,
+                        16,
+                        triangles); break;
             }
         }
         catch
         {
             // Malformed mesh data — return whatever decoded successfully (possibly empty).
         }
+
         return triangles;
     }
 
     // ── Type 4: free-form Gouraud triangles ─────────────────────────────────────
-    private static void DecodeType4(BitCursor r, int bpf, int bpc, int bpComp, double[] decode, int nComp,
-        PdfFunction? fn, List<ShadingTriangle> tris)
+    private static void DecodeType4(
+        BitCursor r,
+        int bpf,
+        int bpc,
+        int bpComp,
+        double[] decode,
+        int nComp,
+        PdfFunction? fn,
+        List<ShadingTriangle> tris
+    )
     {
         Vertex? va = null, vb = null;
-        while (r.HasBits(bpf + 2 * bpc + nComp * bpComp))
+        while (r.HasBits(bpf + (2 * bpc) + (nComp * bpComp)))
         {
             var flag = (int)r.Read(bpf);
-            var v = ReadVertex(r, bpc, bpComp, decode, nComp, fn);
+            var v = ReadVertex(r,
+                bpc,
+                bpComp,
+                decode,
+                nComp,
+                fn);
             switch (flag)
             {
                 case 0:
                     // Start of a new triangle: read two more vertices.
-                    if (!r.HasBits(2 * (bpf + 2 * bpc + nComp * bpComp))) return;
-                    r.Read(bpf); var v1 = ReadVertex(r, bpc, bpComp, decode, nComp, fn);
-                    r.Read(bpf); var v2 = ReadVertex(r, bpc, bpComp, decode, nComp, fn);
+                    if (!r.HasBits(2 * (bpf + (2 * bpc) + (nComp * bpComp)))) return;
+                    r.Read(bpf);
+                    var v1 = ReadVertex(r,
+                        bpc,
+                        bpComp,
+                        decode,
+                        nComp,
+                        fn);
+                    r.Read(bpf);
+                    var v2 = ReadVertex(r,
+                        bpc,
+                        bpComp,
+                        decode,
+                        nComp,
+                        fn);
                     tris.Add(Tri(v, v1, v2));
-                    va = v1; vb = v2;
-                    break;
+                    va = v1;
+                    vb = v2;
+                break;
                 case 1: // share vertices vb, v(prev c) — use (vb, prev, v)
-                    if (va is { } a1 && vb is { } b1) { tris.Add(Tri(b1, GetPrev(tris), v)); va = b1; vb = v; _ = a1; }
-                    break;
+                    if (va is { } a1 && vb is { } b1)
+                    {
+                        tris.Add(Tri(b1, GetPrev(tris), v));
+                        va = b1;
+                        vb = v;
+                        _ = a1;
+                    }
+
+                break;
                 case 2:
-                    if (va is { } a2 && vb is { } b2) { tris.Add(Tri(a2, b2, v)); vb = v; }
-                    break;
+                    if (va is { } a2 && vb is { } b2)
+                    {
+                        tris.Add(Tri(a2, b2, v));
+                        vb = v;
+                    }
+
+                break;
             }
+
             r.AlignToByte(); // each vertex record is byte-aligned in type 4
         }
     }
@@ -88,8 +162,16 @@ internal static class MeshShadingDecoder
     }
 
     // ── Type 5: lattice-form Gouraud ────────────────────────────────────────────
-    private static void DecodeType5(BitCursor r, int bpc, int bpComp, double[] decode, int nComp,
-        PdfFunction? fn, int vpr, List<ShadingTriangle> tris)
+    private static void DecodeType5(
+        BitCursor r,
+        int bpc,
+        int bpComp,
+        double[] decode,
+        int nComp,
+        PdfFunction? fn,
+        int vpr,
+        List<ShadingTriangle> tris
+    )
     {
         if (vpr < 2) return;
         var rows = new List<Vertex[]>();
@@ -99,25 +181,48 @@ internal static class MeshShadingDecoder
             var ok = true;
             for (var i = 0; i < vpr; i++)
             {
-                if (!r.HasBits(2 * bpc + nComp * bpComp)) { ok = false; break; }
-                row[i] = ReadVertex(r, bpc, bpComp, decode, nComp, fn);
+                if (!r.HasBits((2 * bpc) + (nComp * bpComp)))
+                {
+                    ok = false;
+                    break;
+                }
+
+                row[i] = ReadVertex(r,
+                    bpc,
+                    bpComp,
+                    decode,
+                    nComp,
+                    fn);
             }
+
             if (!ok) break;
             rows.Add(row);
         }
+
         for (var rr = 0; rr + 1 < rows.Count; rr++)
         for (var cc = 0; cc + 1 < vpr; cc++)
         {
-            var a = rows[rr][cc]; var b = rows[rr][cc + 1];
-            var c = rows[rr + 1][cc]; var d = rows[rr + 1][cc + 1];
+            var a = rows[rr][cc];
+            var b = rows[rr][cc + 1];
+            var c = rows[rr + 1][cc];
+            var d = rows[rr + 1][cc + 1];
             tris.Add(Tri(a, b, c));
             tris.Add(Tri(b, d, c));
         }
     }
 
     // ── Types 6/7: Coons / tensor patches → 2 triangles per patch from corners ──
-    private static void DecodePatches(BitCursor r, int bpf, int bpc, int bpComp, double[] decode, int nComp,
-        PdfFunction? fn, int controlPoints, List<ShadingTriangle> tris)
+    private static void DecodePatches(
+        BitCursor r,
+        int bpf,
+        int bpc,
+        int bpComp,
+        double[] decode,
+        int nComp,
+        PdfFunction? fn,
+        int controlPoints,
+        List<ShadingTriangle> tris
+    )
     {
         // Track the previous patch's corners/colours for flag-based edge sharing (we read
         // them but, for the triangle approximation, always use the 4 corners of each patch).
@@ -133,6 +238,7 @@ internal static class MeshShadingDecoder
                 if (!r.HasBits(2 * bpc)) return;
                 pts[i] = ReadPoint(r, bpc, decode);
             }
+
             var cols = new (byte R, byte G, byte B)[newColors];
             for (var i = 0; i < newColors; i++)
             {
@@ -144,7 +250,10 @@ internal static class MeshShadingDecoder
             // starts at indices 0, 3, 6, 9 (Coons/tensor share this corner ordering).
             if (flag == 0 && newPoints >= 10 && newColors == 4)
             {
-                var c0 = pts[0]; var c1 = pts[3]; var c2 = pts[6]; var c3 = pts[9];
+                var c0 = pts[0];
+                var c1 = pts[3];
+                var c2 = pts[6];
+                var c3 = pts[9];
                 var a = new Vertex(c0.X, c0.Y, cols[0].R, cols[0].G, cols[0].B);
                 var b = new Vertex(c1.X, c1.Y, cols[1].R, cols[1].G, cols[1].B);
                 var c = new Vertex(c2.X, c2.Y, cols[2].R, cols[2].G, cols[2].B);
@@ -152,14 +261,19 @@ internal static class MeshShadingDecoder
                 tris.Add(Tri(a, b, c));
                 tris.Add(Tri(a, c, d));
             }
+
             r.AlignToByte();
         }
     }
 
-    // ── Vertex / point / colour readers ─────────────────────────────────────────
-    private readonly record struct Vertex(double X, double Y, byte R, byte G, byte B);
-
-    private static Vertex ReadVertex(BitCursor r, int bpc, int bpComp, double[] decode, int nComp, PdfFunction? fn)
+    private static Vertex ReadVertex(
+        BitCursor r,
+        int bpc,
+        int bpComp,
+        double[] decode,
+        int nComp,
+        PdfFunction? fn
+    )
     {
         var (x, y) = ReadPoint(r, bpc, decode);
         var (cr, cg, cb) = ReadColor(r, bpComp, decode, nComp, fn);
@@ -171,22 +285,29 @@ internal static class MeshShadingDecoder
         var max = (1UL << bpc) - 1;
         var xr = r.Read(bpc) / (double)max;
         var yr = r.Read(bpc) / (double)max;
-        var x = decode[0] + xr * (decode[1] - decode[0]);
-        var y = decode[2] + yr * (decode[3] - decode[2]);
+        var x = decode[0] + (xr * (decode[1] - decode[0]));
+        var y = decode[2] + (yr * (decode[3] - decode[2]));
         return (x, y);
     }
 
-    private static (byte R, byte G, byte B) ReadColor(BitCursor r, int bpComp, double[] decode, int nComp, PdfFunction? fn)
+    private static (byte R, byte G, byte B) ReadColor(
+        BitCursor r,
+        int bpComp,
+        double[] decode,
+        int nComp,
+        PdfFunction? fn
+    )
     {
         var max = (1UL << bpComp) - 1;
         var comps = new double[nComp];
         for (var i = 0; i < nComp; i++)
         {
             var raw = r.Read(bpComp) / (double)max;
-            var lo = decode[4 + 2 * i];
-            var hi = decode[5 + 2 * i];
-            comps[i] = lo + raw * (hi - lo);
+            var lo = decode[4 + (2 * i)];
+            var hi = decode[5 + (2 * i)];
+            comps[i] = lo + (raw * (hi - lo));
         }
+
         if (fn is not null)
             comps = fn.Eval(comps[0]);
         return ComponentsToRgb(comps);
@@ -205,11 +326,33 @@ internal static class MeshShadingDecoder
     }
 
     private static ShadingTriangle Tri(Vertex a, Vertex b, Vertex c) =>
-        new(a.X, a.Y, a.R, a.G, a.B, b.X, b.Y, b.R, b.G, b.B, c.X, c.Y, c.R, c.G, c.B);
+        new(a.X,
+            a.Y,
+            a.R,
+            a.G,
+            a.B,
+            b.X,
+            b.Y,
+            b.R,
+            b.G,
+            b.B,
+            c.X,
+            c.Y,
+            c.R,
+            c.G,
+            c.B);
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj is PdfArray a
-        ? a.Elements.Select(e => e switch { PdfInteger i => (double)i.Value, PdfReal r => r.Value, _ => 0.0 }).ToArray()
+        ? a.Elements.Select(e => e switch { PdfInteger i => i.Value, PdfReal r => r.Value, _ => 0.0 }).ToArray()
         : null;
+
+    // ── Vertex / point / colour readers ─────────────────────────────────────────
+    private readonly record struct Vertex(double X,
+        double Y,
+        byte R,
+        byte G,
+        byte B
+    );
 
     // MSB-first bit cursor over a byte span.
     private sealed class BitCursor(ReadOnlySpan<byte> data)
@@ -229,6 +372,7 @@ internal static class MeshShadingDecoder
                 v = (v << 1) | (uint)bit;
                 _bit++;
             }
+
             return v;
         }
 

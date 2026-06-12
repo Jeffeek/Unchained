@@ -3,11 +3,18 @@ using System.Xml.Linq;
 namespace Unchained.Pptx.Core.Xml;
 
 /// <summary>
-/// DrawingML Chart namespace constants and commonly-used element/attribute names.
-/// All values are taken directly from ECMA-376 5th Edition §21.2.
+///     DrawingML Chart namespace constants and commonly-used element/attribute names.
+///     All values are taken directly from ECMA-376 5th Edition §21.2.
 /// </summary>
 internal static class CmlNames
 {
+    // ── Attributes ────────────────────────────────────────────────────────────
+
+    /// <summary>Generic value attribute: <c>val</c></summary>
+    public const string AttributeValue = "val";
+
+    /// <summary>Data point index attribute: <c>idx</c></summary>
+    public const string AttributeIndex = "idx";
     // ── Namespace ────────────────────────────────────────────────────────────
 
     /// <summary>DrawingML Chart main namespace.</summary>
@@ -223,12 +230,4 @@ internal static class CmlNames
 
     /// <summary><c>&lt;c:printSettings&gt;</c> — print settings block.</summary>
     public static readonly XName PrintSettings = Cml + "printSettings";
-
-    // ── Attributes ────────────────────────────────────────────────────────────
-
-    /// <summary>Generic value attribute: <c>val</c></summary>
-    public const string AttributeValue = "val";
-
-    /// <summary>Data point index attribute: <c>idx</c></summary>
-    public const string AttributeIndex = "idx";
 }

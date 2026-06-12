@@ -3,8 +3,8 @@ using System.Xml.Linq;
 namespace Unchained.Ooxml.Opc;
 
 /// <summary>
-/// Parses and serializes the <c>[Content_Types].xml</c> part of an OPC package,
-/// which maps part URIs and file extensions to their MIME content types.
+///     Parses and serializes the <c>[Content_Types].xml</c> part of an OPC package,
+///     which maps part URIs and file extensions to their MIME content types.
 /// </summary>
 internal sealed class ContentTypeMap
 {
@@ -17,7 +17,7 @@ internal sealed class ContentTypeMap
     // ── Factory ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Creates a <see cref="ContentTypeMap"/> pre-populated with the mandatory OPC defaults.
+    ///     Creates a <see cref="ContentTypeMap" /> pre-populated with the mandatory OPC defaults.
     /// </summary>
     public static ContentTypeMap CreateWithDefaults()
     {
@@ -27,7 +27,7 @@ internal sealed class ContentTypeMap
         return map;
     }
 
-    /// <summary>Parses a <c>[Content_Types].xml</c> byte array into a <see cref="ContentTypeMap"/>.</summary>
+    /// <summary>Parses a <c>[Content_Types].xml</c> byte array into a <see cref="ContentTypeMap" />.</summary>
     public static ContentTypeMap Parse(byte[] bytes)
     {
         var map = new ContentTypeMap();
@@ -58,8 +58,8 @@ internal sealed class ContentTypeMap
     // ── Lookup ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the content type for a given part URI, or <see langword="null"/> if
-    /// neither an explicit override nor an extension default is registered.
+    ///     Returns the content type for a given part URI, or <see langword="null" /> if
+    ///     neither an explicit override nor an extension default is registered.
     /// </summary>
     public string? GetContentType(string partUri)
     {
@@ -90,14 +90,18 @@ internal sealed class ContentTypeMap
         var root = new XElement(ns + "Types");
 
         foreach (var (extension, contentType) in _extensionDefaults.OrderBy(static kv => kv.Key))
+        {
             root.Add(new XElement(ns + "Default",
                 new XAttribute("Extension", extension),
                 new XAttribute("ContentType", contentType)));
+        }
 
         foreach (var (partName, contentType) in _partOverrides.OrderBy(static kv => kv.Key))
+        {
             root.Add(new XElement(ns + "Override",
                 new XAttribute("PartName", partName),
                 new XAttribute("ContentType", contentType)));
+        }
 
         using var ms = new MemoryStream();
         new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).Save(ms);

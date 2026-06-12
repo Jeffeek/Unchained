@@ -10,8 +10,8 @@ public enum TextDirection
     /// <summary>Text rotated 270 degrees clockwise (reads bottom-to-top).</summary>
     Vertical270,
     /// <summary>
-    /// Stacked text — each character is placed upright and stacked vertically,
-    /// typically used for East Asian scripts.
+    ///     Stacked text — each character is placed upright and stacked vertically,
+    ///     typically used for East Asian scripts.
     /// </summary>
     Stacked
 }

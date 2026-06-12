@@ -1,7 +1,7 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// Numbering style for a page label range (ISO 32000-1 §12.4.2 Table 159).
+///     Numbering style for a page label range (ISO 32000-1 §12.4.2 Table 159).
 /// </summary>
 public enum PageLabelStyle
 {
@@ -20,21 +20,21 @@ public enum PageLabelStyle
 }
 
 /// <summary>
-/// Defines a contiguous range of pages that share the same numbering style and prefix.
-/// Ranges are applied in ascending <see cref="StartPageIndex"/> order.
+///     Defines a contiguous range of pages that share the same numbering style and prefix.
+///     Ranges are applied in ascending <see cref="StartPageIndex" /> order.
 /// </summary>
 /// <param name="StartPageIndex">
-/// Zero-based index of the first page in this range.
-/// The first range must start at 0.
+///     Zero-based index of the first page in this range.
+///     The first range must start at 0.
 /// </param>
 /// <param name="Style">Numbering style for pages in this range.</param>
 /// <param name="Prefix">
-/// Optional prefix string prepended to every label in this range (e.g. <c>"A-"</c>).
-/// Pass <see langword="null"/> or an empty string for no prefix.
+///     Optional prefix string prepended to every label in this range (e.g. <c>"A-"</c>).
+///     Pass <see langword="null" /> or an empty string for no prefix.
 /// </param>
 /// <param name="FirstLabelNumber">
-/// The logical page number assigned to the first page of this range.
-/// Defaults to 1. Use a higher value to continue numbering from a prior section.
+///     The logical page number assigned to the first page of this range.
+///     Defaults to 1. Use a higher value to continue numbering from a prior section.
 /// </param>
 public sealed record PageLabelRange(
     int StartPageIndex,

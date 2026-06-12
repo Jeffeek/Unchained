@@ -6,7 +6,7 @@ using Unchained.Ooxml.Xml;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses the DrawingML <c>&lt;a:sp3d&gt;</c> 3-D format element into a <see cref="Shape3DFormat"/>.
+///     Parses the DrawingML <c>&lt;a:sp3d&gt;</c> 3-D format element into a <see cref="Shape3DFormat" />.
 /// </summary>
 internal static class Shape3DParser
 {

@@ -4,7 +4,7 @@ using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="IViewerPreferencesEditor"/> implementation.</summary>
+/// <summary>Default <see cref="IViewerPreferencesEditor" /> implementation.</summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
 {

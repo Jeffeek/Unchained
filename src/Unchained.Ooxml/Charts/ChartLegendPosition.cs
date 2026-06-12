@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Charts;
 
 /// <summary>
-/// Position of the chart legend relative to the plot area.
-/// Maps to the OOXML <c>c:legendPos @val</c> attribute values.
+///     Position of the chart legend relative to the plot area.
+///     Maps to the OOXML <c>c:legendPos @val</c> attribute values.
 /// </summary>
 public enum ChartLegendPosition
 {
@@ -15,5 +15,5 @@ public enum ChartLegendPosition
     /// <summary>Legend to the right of the plot area. OOXML: <c>r</c>.</summary>
     Right,
     /// <summary>Legend in the top-right corner. OOXML: <c>tr</c>.</summary>
-    TopRight,
+    TopRight
 }

@@ -1,19 +1,20 @@
+using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses DrawingML colour elements into <see cref="ColorSpec"/> values.
+///     Parses DrawingML colour elements into <see cref="ColorSpec" /> values.
 /// </summary>
 internal static class ColorParser
 {
     /// <summary>
-    /// Reads the first recognised colour child element from <paramref name="parent"/>
-    /// and returns the corresponding <see cref="ColorSpec"/>.
-    /// Returns a default mid-grey when no colour element is found.
+    ///     Reads the first recognised colour child element from <paramref name="parent" />
+    ///     and returns the corresponding <see cref="ColorSpec" />.
+    ///     Returns a default mid-grey when no colour element is found.
     /// </summary>
     public static ColorSpec Parse(XElement parent)
     {
@@ -23,11 +24,13 @@ internal static class ColorParser
         {
             var hex = srgb.GetAttr(DmlNames.AttributeValue, "000000");
             if (TryParseHex(hex, out var argb))
+            {
                 return ColorSpec.FromArgb(
                     ReadAlpha(srgb),
                     (byte)((argb >> 16) & 0xFF),
                     (byte)((argb >> 8) & 0xFF),
                     (byte)(argb & 0xFF));
+            }
         }
 
         // Theme slot reference
@@ -47,10 +50,12 @@ internal static class ColorParser
         {
             var lastClr = sysClr.GetAttr("lastClr", "000000");
             if (TryParseHex(lastClr, out var argb))
+            {
                 return ColorSpec.FromRgb(
                     (byte)((argb >> 16) & 0xFF),
                     (byte)((argb >> 8) & 0xFF),
                     (byte)(argb & 0xFF));
+            }
         }
 
         // Preset colour — map to a neutral value for now
@@ -93,7 +98,7 @@ internal static class ColorParser
         hex = hex.TrimStart('#');
         if (hex.Length == 6)
             hex = "FF" + hex;
-        return uint.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out value);
+        return uint.TryParse(hex, NumberStyles.HexNumber, null, out value);
     }
 
     private static ThemeColorSlot ParseThemeSlot(string name) => name switch

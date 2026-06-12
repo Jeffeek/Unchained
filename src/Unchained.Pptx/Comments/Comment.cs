@@ -1,11 +1,17 @@
 namespace Unchained.Pptx.Comments;
 
 /// <summary>
-/// A single comment anchored to a position on a slide.
+///     A single comment anchored to a position on a slide.
 /// </summary>
 public sealed class Comment
 {
-    internal Comment(CommentAuthor author, string text, SlidePosition position, DateTimeOffset createdAt, uint index)
+    internal Comment(
+        CommentAuthor author,
+        string text,
+        SlidePosition position,
+        DateTimeOffset createdAt,
+        uint index
+    )
     {
         Author = author;
         Text = text;
@@ -27,8 +33,8 @@ public sealed class Comment
     public DateTimeOffset CreatedAt { get; }
 
     /// <summary>
-    /// The sequential index of this comment within the author's comments on this slide.
-    /// Used internally for the OOXML <c>idx</c> attribute.
+    ///     The sequential index of this comment within the author's comments on this slide.
+    ///     Used internally for the OOXML <c>idx</c> attribute.
     /// </summary>
     internal uint Index { get; }
 }

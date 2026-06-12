@@ -5,12 +5,13 @@ using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
+using Unchained.Pdf.Parsing.Filters;
 using Unchained.Pdf.Writing;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Adapts <see cref="PdfDocumentCore"/> to the public <see cref="IPdfDocument"/> interface.
+///     Adapts <see cref="PdfDocumentCore" /> to the public <see cref="IPdfDocument" /> interface.
 /// </summary>
 internal sealed class PdfDocumentAdapter : IPdfDocument
 {
@@ -23,18 +24,6 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     }
 
     internal PdfDocumentCore Core { get; private set; }
-
-    /// <summary>
-    /// Disposes the current core and replaces it with <paramref name="newCore"/>.
-    /// Called by <see cref="TableGenerator"/> and <see cref="DocumentMerger"/> after
-    /// in-place document mutation (e.g. <c>AppendTableAsync</c>, <c>MergeAsync</c>).
-    /// </summary>
-    internal void ReplaceCore(PdfDocumentCore newCore)
-    {
-        Core.Dispose();
-        Core = newCore;
-        Pages = new PdfPageCollectionAdapter(Core);
-    }
 
     /// <inheritdoc />
     public int PageCount => Core.PageCount;
@@ -51,14 +40,14 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             return info is null
                 ? DocumentMetadata.Empty
                 : new DocumentMetadata(
-                    Title: GetInfoString(info, "Title"),
-                    Author: GetInfoString(info, "Author"),
-                    Subject: GetInfoString(info, "Subject"),
-                    Keywords: GetInfoString(info, "Keywords"),
-                    Creator: GetInfoString(info, "Creator"),
-                    Producer: GetInfoString(info, "Producer"),
-                    CreationDate: null,
-                    ModificationDate: null);
+                    GetInfoString(info, "Title"),
+                    GetInfoString(info, "Author"),
+                    GetInfoString(info, "Subject"),
+                    GetInfoString(info, "Keywords"),
+                    GetInfoString(info, "Creator"),
+                    GetInfoString(info, "Producer"),
+                    null,
+                    null);
         }
     }
 
@@ -133,15 +122,192 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         }
     }
 
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            Core.Dispose();
+    }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync()
+    {
+        Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    // ── Viewer preferences ────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public ViewerPreferences GetViewerPreferences()
+    {
+        var vp = ResolveDict(Core.Catalog[PdfName.ViewerPreferences]);
+
+        return vp is null
+            ? ViewerPreferences.Default
+            : new ViewerPreferences(
+                vp[PdfName.Get("HideToolbar")] is PdfBoolean { Value: true },
+                vp[PdfName.Get("HideMenubar")] is PdfBoolean { Value: true },
+                vp[PdfName.Get("HideWindowUI")] is PdfBoolean { Value: true },
+                vp[PdfName.Get("FitWindow")] is PdfBoolean { Value: true },
+                vp[PdfName.Get("CenterWindow")] is PdfBoolean { Value: true },
+                vp[PdfName.Get("DisplayDocTitle")] is PdfBoolean { Value: true },
+                (vp.GetName("Direction") ?? string.Empty) == "R2L" ? ReadingDirection.RightToLeft : ReadingDirection.LeftToRight,
+                (vp.GetName("Duplex") ?? string.Empty) switch
+                {
+                    "Simplex" => DuplexMode.Simplex,
+                    "DuplexFlipShortEdge" => DuplexMode.DuplexFlipShortEdge,
+                    "DuplexFlipLongEdge" => DuplexMode.DuplexFlipLongEdge,
+                    _ => DuplexMode.None
+                },
+                ParsePageMode(vp.GetName("NonFullScreenPageMode"))
+            );
+    }
+
+    /// <inheritdoc />
+    public PageLayout PageLayout => (Core.Catalog.GetName(PdfName.PageLayout.Value) ?? string.Empty) switch
+    {
+        "SinglePage" => PageLayout.SinglePage,
+        "OneColumn" => PageLayout.OneColumn,
+        "TwoColumnLeft" => PageLayout.TwoColumnLeft,
+        "TwoColumnRight" => PageLayout.TwoColumnRight,
+        "TwoPageLeft" => PageLayout.TwoPageLeft,
+        "TwoPageRight" => PageLayout.TwoPageRight,
+        _ => PageLayout.Default
+    };
+
+    /// <inheritdoc />
+    public PageMode PageMode => ParsePageMode(Core.Catalog.GetName(PdfName.PageMode.Value));
+
+    // ── XMP metadata ──────────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public string? GetXmpMetadata()
+    {
+        var metaRef = Core.Catalog[PdfName.Metadata];
+        var stream = metaRef switch
+        {
+            PdfStream s => s,
+            PdfIndirectReference r => Core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
+            _ => null
+        };
+        if (stream is null) return null;
+
+        var decoded = StreamFilters.Decode(stream);
+        return Encoding.UTF8.GetString(decoded.Span);
+    }
+
+    // ── Named destinations ────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public IReadOnlyList<NamedDestination> GetNamedDestinations()
+    {
+        var result = new List<NamedDestination>();
+        var catalog = Core.Catalog;
+
+        // Try /Names /Dests name tree (PDF 1.2+)
+        var namesDict = ResolveDict(catalog[PdfName.Names]);
+        var destsTree = namesDict is not null ? ResolveDict(namesDict[PdfName.Dests]) : null;
+        if (destsTree is not null)
+            CollectNameTree(destsTree, result);
+
+        // Legacy /Dests dict (PDF 1.0)
+        var legacyDests = ResolveDict(catalog[PdfName.Dests]);
+
+        if (legacyDests is null)
+            return result;
+
+        foreach (var (name, value) in legacyDests.Entries)
+        {
+            var resolved = value is PdfIndirectReference r
+                ? Core.ResolveIndirect(r.ObjectNumber).Value
+                : value;
+            var pageNum = ResolveDestPageFromObject(resolved);
+            if (pageNum > 0)
+                result.Add(new NamedDestination(name, pageNum));
+        }
+
+        return result;
+    }
+
+    public IReadOnlyList<OptionalContentGroup> GetLayers()
+    {
+        var result = new List<OptionalContentGroup>();
+        var ocProps = ResolveDict(Core.Catalog[PdfName.Get("OCProperties")]);
+        if (ocProps is null) return result;
+
+        // Collect the set of OCGs that are OFF in the default (/D) configuration.
+        var off = new HashSet<int>();
+        var defaultCfg = ResolveDict(ocProps[PdfName.Get("D")]);
+        if (defaultCfg?[PdfName.Get("OFF")] is PdfArray offArr)
+        {
+            foreach (var e in offArr.Elements)
+                if (e is PdfIndirectReference offRef)
+                    off.Add(offRef.ObjectNumber);
+        }
+
+        if (ocProps[PdfName.Get("OCGs")] is not PdfArray ocgs) return result;
+        foreach (var e in ocgs.Elements)
+        {
+            if (e is not PdfIndirectReference r) continue;
+            var ocg = Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary;
+            if (ocg is null) continue;
+            var name = ocg[PdfName.Get("Name")] is PdfString s
+                ? Encoding.Latin1.GetString(s.Bytes.Span)
+                : string.Empty;
+            result.Add(new OptionalContentGroup(name, r.ObjectNumber, !off.Contains(r.ObjectNumber)));
+        }
+
+        return result;
+    }
+
+    // ── Bookmarks ─────────────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public IReadOnlyList<Bookmark> GetBookmarks()
+    {
+        var outlines = ResolveDict(Core.Catalog[PdfName.Outlines]);
+        return outlines is null ? [] : ReadOutlineLevel(outlines);
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<FormField> GetFormFields()
+    {
+        var acroForm = ResolveDict(Core.Catalog[PdfName.AcroForm]);
+        if (acroForm is null)
+            return [];
+
+        var fields = acroForm.Get<PdfArray>(PdfName.Fields);
+        if (fields is null)
+            return [];
+
+        var result = new List<FormField>();
+        CollectFields(fields, string.Empty, result);
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Disposes the current core and replaces it with <paramref name="newCore" />.
+    ///     Called by <see cref="TableGenerator" /> and <see cref="DocumentMerger" /> after
+    ///     in-place document mutation (e.g. <c>AppendTableAsync</c>, <c>MergeAsync</c>).
+    /// </summary>
+    internal void ReplaceCore(PdfDocumentCore newCore)
+    {
+        Core.Dispose();
+        Core = newCore;
+        Pages = new PdfPageCollectionAdapter(Core);
+    }
+
     private static string IdEntryToHex(PdfObject obj) =>
         obj is PdfString s
             ? BitConverter.ToString(s.Bytes.ToArray()).Replace("-", string.Empty)
             : string.Empty;
 
     /// <summary>
-    /// Performs a full-rewrite serialization: collects every in-use indirect object
-    /// from the document, rebuilds the xref table with fresh byte offsets, and
-    /// writes a clean PDF via <see cref="PdfWriter"/>.
+    ///     Performs a full-rewrite serialization: collects every in-use indirect object
+    ///     from the document, rebuilds the xref table with fresh byte offsets, and
+    ///     writes a clean PDF via <see cref="PdfWriter" />.
     /// </summary>
     internal byte[] Serialize(SaveOptions? options)
     {
@@ -211,63 +377,6 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         }
     }
 
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0)
-            Core.Dispose();
-    }
-
-    /// <inheritdoc />
-    public ValueTask DisposeAsync()
-    {
-        Dispose();
-        return ValueTask.CompletedTask;
-    }
-
-    // ── Viewer preferences ────────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public ViewerPreferences GetViewerPreferences()
-    {
-        var vp = ResolveDict(Core.Catalog[PdfName.ViewerPreferences]);
-
-        return vp is null
-            ? ViewerPreferences.Default
-            : new ViewerPreferences(
-                HideToolbar: vp[PdfName.Get("HideToolbar")] is PdfBoolean { Value: true },
-                HideMenubar: vp[PdfName.Get("HideMenubar")] is PdfBoolean { Value: true },
-                HideWindowUI: vp[PdfName.Get("HideWindowUI")] is PdfBoolean { Value: true },
-                FitWindow: vp[PdfName.Get("FitWindow")] is PdfBoolean { Value: true },
-                CenterWindow: vp[PdfName.Get("CenterWindow")] is PdfBoolean { Value: true },
-                DisplayDocTitle: vp[PdfName.Get("DisplayDocTitle")] is PdfBoolean { Value: true },
-                Direction: (vp.GetName("Direction") ?? string.Empty) == "R2L" ? ReadingDirection.RightToLeft : ReadingDirection.LeftToRight,
-                Duplex: (vp.GetName("Duplex") ?? string.Empty) switch
-                {
-                    "Simplex" => DuplexMode.Simplex,
-                    "DuplexFlipShortEdge" => DuplexMode.DuplexFlipShortEdge,
-                    "DuplexFlipLongEdge" => DuplexMode.DuplexFlipLongEdge,
-                    _ => DuplexMode.None
-                },
-                NonFullScreenPageMode: ParsePageMode(vp.GetName("NonFullScreenPageMode"))
-            );
-    }
-
-    /// <inheritdoc />
-    public PageLayout PageLayout => (Core.Catalog.GetName(PdfName.PageLayout.Value) ?? string.Empty) switch
-    {
-        "SinglePage" => PageLayout.SinglePage,
-        "OneColumn" => PageLayout.OneColumn,
-        "TwoColumnLeft" => PageLayout.TwoColumnLeft,
-        "TwoColumnRight" => PageLayout.TwoColumnRight,
-        "TwoPageLeft" => PageLayout.TwoPageLeft,
-        "TwoPageRight" => PageLayout.TwoPageRight,
-        _ => PageLayout.Default
-    };
-
-    /// <inheritdoc />
-    public PageMode PageMode => ParsePageMode(Core.Catalog.GetName(PdfName.PageMode.Value));
-
     private static PageMode ParsePageMode(string? name) => (name ?? string.Empty) switch
     {
         "UseNone" => PageMode.UseNone,
@@ -278,84 +387,6 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         "UseAttachments" => PageMode.UseAttachments,
         _ => PageMode.Default
     };
-
-    // ── XMP metadata ──────────────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public string? GetXmpMetadata()
-    {
-        var metaRef = Core.Catalog[PdfName.Metadata];
-        var stream = metaRef switch
-        {
-            PdfStream s => s,
-            PdfIndirectReference r => Core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-            _ => null
-        };
-        if (stream is null) return null;
-
-        var decoded = Parsing.Filters.StreamFilters.Decode(stream);
-        return Encoding.UTF8.GetString(decoded.Span);
-    }
-
-    // ── Named destinations ────────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public IReadOnlyList<NamedDestination> GetNamedDestinations()
-    {
-        var result = new List<NamedDestination>();
-        var catalog = Core.Catalog;
-
-        // Try /Names /Dests name tree (PDF 1.2+)
-        var namesDict = ResolveDict(catalog[PdfName.Names]);
-        var destsTree = namesDict is not null ? ResolveDict(namesDict[PdfName.Dests]) : null;
-        if (destsTree is not null)
-            CollectNameTree(destsTree, result);
-
-        // Legacy /Dests dict (PDF 1.0)
-        var legacyDests = ResolveDict(catalog[PdfName.Dests]);
-
-        if (legacyDests is null)
-            return result;
-
-        foreach (var (name, value) in legacyDests.Entries)
-        {
-            var resolved = value is PdfIndirectReference r
-                ? Core.ResolveIndirect(r.ObjectNumber).Value
-                : value;
-            var pageNum = ResolveDestPageFromObject(resolved);
-            if (pageNum > 0)
-                result.Add(new NamedDestination(name, pageNum));
-        }
-
-        return result;
-    }
-
-    public IReadOnlyList<OptionalContentGroup> GetLayers()
-    {
-        var result = new List<OptionalContentGroup>();
-        var ocProps = ResolveDict(Core.Catalog[PdfName.Get("OCProperties")]);
-        if (ocProps is null) return result;
-
-        // Collect the set of OCGs that are OFF in the default (/D) configuration.
-        var off = new HashSet<int>();
-        var defaultCfg = ResolveDict(ocProps[PdfName.Get("D")]);
-        if (defaultCfg?[PdfName.Get("OFF")] is PdfArray offArr)
-            foreach (var e in offArr.Elements)
-                if (e is PdfIndirectReference offRef) off.Add(offRef.ObjectNumber);
-
-        if (ocProps[PdfName.Get("OCGs")] is not PdfArray ocgs) return result;
-        foreach (var e in ocgs.Elements)
-        {
-            if (e is not PdfIndirectReference r) continue;
-            var ocg = Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary;
-            if (ocg is null) continue;
-            var name = ocg[PdfName.Get("Name")] is PdfString s
-                ? Encoding.Latin1.GetString(s.Bytes.Span)
-                : string.Empty;
-            result.Add(new OptionalContentGroup(name, r.ObjectNumber, !off.Contains(r.ObjectNumber)));
-        }
-        return result;
-    }
 
     private void CollectNameTree(PdfDictionary node, ICollection<NamedDestination> result)
     {
@@ -388,15 +419,6 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             if (childDict is not null)
                 CollectNameTree(childDict, result);
         }
-    }
-
-    // ── Bookmarks ─────────────────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public IReadOnlyList<Bookmark> GetBookmarks()
-    {
-        var outlines = ResolveDict(Core.Catalog[PdfName.Outlines]);
-        return outlines is null ? [] : ReadOutlineLevel(outlines);
     }
 
     private IReadOnlyList<Bookmark> ReadOutlineLevel(PdfDictionary node)
@@ -467,23 +489,6 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         }
 
         return 0;
-    }
-
-    /// <inheritdoc />
-    public IReadOnlyList<FormField> GetFormFields()
-    {
-        var acroForm = ResolveDict(Core.Catalog[PdfName.AcroForm]);
-        if (acroForm is null)
-            return [];
-
-        var fields = acroForm.Get<PdfArray>(PdfName.Fields);
-        if (fields is null)
-            return [];
-
-        var result = new List<FormField>();
-        CollectFields(fields, prefix: string.Empty, result);
-
-        return result;
     }
 
     private void CollectFields(PdfArray fields, string prefix, ICollection<FormField> result)

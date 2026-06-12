@@ -4,8 +4,8 @@ using Unchained.Pdf.Document;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Represents a single tagged content item collected during content-stream construction.
-/// Each item corresponds to one <c>BDC</c>/<c>EMC</c> pair in a page's content stream.
+///     Represents a single tagged content item collected during content-stream construction.
+///     Each item corresponds to one <c>BDC</c>/<c>EMC</c> pair in a page's content stream.
 /// </summary>
 internal sealed class TaggedContentItem(
     string structureType,
@@ -14,9 +14,9 @@ internal sealed class TaggedContentItem(
 )
 {
     /// <summary>
-    /// Standard PDF structure type name — e.g. <c>"P"</c>, <c>"H1"</c>, <c>"Figure"</c>,
-    /// <c>"Table"</c>, <c>"TR"</c>, <c>"TH"</c>, <c>"TD"</c>, <c>"L"</c>,
-    /// <c>"LI"</c>, <c>"LBody"</c>, <c>"Code"</c>.
+    ///     Standard PDF structure type name — e.g. <c>"P"</c>, <c>"H1"</c>, <c>"Figure"</c>,
+    ///     <c>"Table"</c>, <c>"TR"</c>, <c>"TH"</c>, <c>"TD"</c>, <c>"L"</c>,
+    ///     <c>"LI"</c>, <c>"LBody"</c>, <c>"Code"</c>.
     /// </summary>
     internal string StructureType { get; } = structureType;
 
@@ -31,31 +31,31 @@ internal sealed class TaggedContentItem(
 }
 
 /// <summary>
-/// Builds the PDF logical structure tree (<c>/StructTreeRoot</c>) and
-/// <c>/ParentTree</c> number tree from a flat list of <see cref="TaggedContentItem"/>
-/// instances collected during content-stream construction.
-/// <para>
-/// The resulting objects are added to an <see cref="ObjectGraphBuilder"/> and the
-/// <c>/StructTreeRoot</c> indirect reference is returned for injection into the catalog.
-/// </para>
+///     Builds the PDF logical structure tree (<c>/StructTreeRoot</c>) and
+///     <c>/ParentTree</c> number tree from a flat list of <see cref="TaggedContentItem" />
+///     instances collected during content-stream construction.
+///     <para>
+///         The resulting objects are added to an <see cref="ObjectGraphBuilder" /> and the
+///         <c>/StructTreeRoot</c> indirect reference is returned for injection into the catalog.
+///     </para>
 /// </summary>
 internal static class StructureTreeBuilder
 {
     /// <summary>
-    /// Builds the full structure tree and appends all required objects to
-    /// <paramref name="builder"/>. Returns a reference to the <c>/StructTreeRoot</c>
-    /// object that must be added to the document catalog.
+    ///     Builds the full structure tree and appends all required objects to
+    ///     <paramref name="builder" />. Returns a reference to the <c>/StructTreeRoot</c>
+    ///     object that must be added to the document catalog.
     /// </summary>
     /// <param name="items">
-    /// All tagged content items collected from all pages, in MCID order per page.
+    ///     All tagged content items collected from all pages, in MCID order per page.
     /// </param>
     /// <param name="pageRefs">
-    /// Indirect references to each page dict, indexed by zero-based page number.
-    /// Required to populate <c>/Pg</c> entries in marked-content references.
+    ///     Indirect references to each page dict, indexed by zero-based page number.
+    ///     Required to populate <c>/Pg</c> entries in marked-content references.
     /// </param>
     /// <param name="builder">
-    /// The object graph builder that owns object-number allocation. All structure
-    /// tree objects are added here.
+    ///     The object graph builder that owns object-number allocation. All structure
+    ///     tree objects are added here.
     /// </param>
     internal static PdfIndirectReference Build(
         IReadOnlyList<TaggedContentItem> items,
@@ -173,9 +173,9 @@ internal static class StructureTreeBuilder
     }
 
     /// <summary>
-    /// Groups a page's tagged items into runs of consecutive same-type items.
-    /// Items of different types break the run, starting a new struct element.
-    /// This keeps the structure tree shallow while preserving semantic boundaries.
+    ///     Groups a page's tagged items into runs of consecutive same-type items.
+    ///     Items of different types break the run, starting a new struct element.
+    ///     This keeps the structure tree shallow while preserving semantic boundaries.
     /// </summary>
     private static List<List<TaggedContentItem>> GroupByType(IReadOnlyList<TaggedContentItem> items)
     {

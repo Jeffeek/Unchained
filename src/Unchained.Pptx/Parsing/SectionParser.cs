@@ -4,20 +4,19 @@ using Unchained.Pptx.Slides;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses PowerPoint 2010 section data from the <c>&lt;p:extLst&gt;</c> element in
-/// <c>presentation.xml</c> into a <see cref="SectionCollection"/>.
+///     Parses PowerPoint 2010 section data from the <c>&lt;p:extLst&gt;</c> element in
+///     <c>presentation.xml</c> into a <see cref="SectionCollection" />.
 /// </summary>
 internal static class SectionParser
 {
+    private const string SectionExtUri = "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}";
     // PowerPoint 2010 extensions
     private static readonly XNamespace P14 =
         "http://schemas.microsoft.com/office/powerpoint/2010/main";
 
-    private const string SectionExtUri = "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}";
-
     /// <summary>
-    /// Scans the <c>&lt;p:extLst&gt;</c> children of <paramref name="presentationRoot"/>
-    /// for the section list extension and populates <paramref name="sections"/>.
+    ///     Scans the <c>&lt;p:extLst&gt;</c> children of <paramref name="presentationRoot" />
+    ///     for the section list extension and populates <paramref name="sections" />.
     /// </summary>
     public static void Parse(XElement presentationRoot, SectionCollection sections)
     {

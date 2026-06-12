@@ -6,8 +6,8 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IAnnotationEditor"/> implementation.
-/// Annotations are appended to the page's <c>/Annots</c> array and persisted via full-rewrite.
+///     Default <see cref="IAnnotationEditor" /> implementation.
+///     Annotations are appended to the page's <c>/Annots</c> array and persisted via full-rewrite.
 /// </summary>
 public sealed class AnnotationEditor : IAnnotationEditor
 {
@@ -28,7 +28,7 @@ public sealed class AnnotationEditor : IAnnotationEditor
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
         // Build annotation dict.
         var annotEntries = new Dictionary<string, PdfObject>

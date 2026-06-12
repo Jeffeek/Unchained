@@ -4,23 +4,23 @@ using Unchained.Pdf.Core;
 namespace Unchained.Pdf.Parsing.Filters;
 
 /// <summary>
-/// Applies the filter chain declared in a stream's /Filter entry
-/// (ISO 32000-1 §7.4) to produce the decoded stream data.
-/// <para>
-/// /Filter may be a single name (<c>/FlateDecode</c>) or an array of names applied
-/// left-to-right. /DecodeParms may be a single dictionary or an array parallel to the
-/// filter array; each element is passed to its corresponding filter.
-/// </para>
+///     Applies the filter chain declared in a stream's /Filter entry
+///     (ISO 32000-1 §7.4) to produce the decoded stream data.
+///     <para>
+///         /Filter may be a single name (<c>/FlateDecode</c>) or an array of names applied
+///         left-to-right. /DecodeParms may be a single dictionary or an array parallel to the
+///         filter array; each element is passed to its corresponding filter.
+///     </para>
 /// </summary>
 internal static class StreamFilters
 {
     /// <summary>
-    /// Returns the decoded bytes for <paramref name="stream"/>.
-    /// If the stream has no /Filter entry the raw data is returned unchanged.
+    ///     Returns the decoded bytes for <paramref name="stream" />.
+    ///     If the stream has no /Filter entry the raw data is returned unchanged.
     /// </summary>
     /// <exception cref="PdfException">Thrown when a filter name is unknown or decoding fails.</exception>
     /// <exception cref="NotSupportedException">
-    /// Thrown for JBIG2/JPX images with unsupported color spaces.
+    ///     Thrown for JBIG2/JPX images with unsupported color spaces.
     /// </exception>
     public static ReadOnlyMemory<byte> Decode(PdfStream stream)
     {
@@ -65,26 +65,26 @@ internal static class StreamFilters
     private static ReadOnlyMemory<byte> ApplyFilter(string name, ReadOnlyMemory<byte> data, PdfDictionary? parms) =>
         name switch
         {
-            "FlateDecode"    or "Fl"  => FlateDecoder.Decode(data),
+            "FlateDecode" or "Fl" => FlateDecoder.Decode(data),
             "ASCIIHexDecode" or "AHx" => AsciiHexDecoder.Decode(data),
-            "ASCII85Decode"  or "A85" => Ascii85Decoder.Decode(data),
+            "ASCII85Decode" or "A85" => Ascii85Decoder.Decode(data),
             "RunLengthDecode" or "RL" => RunLengthDecoder.Decode(data),
-            "LZWDecode"      or "LZW" => LzwDecoder.Decode(data,
-                earlyChange: (int)(parms?.Get<PdfInteger>("EarlyChange")?.Value ?? 1L)),
+            "LZWDecode" or "LZW" => LzwDecoder.Decode(data,
+                (int)(parms?.Get<PdfInteger>("EarlyChange")?.Value ?? 1L)),
             "CCITTFaxDecode" or "CCF" => CcittFaxDecoder.Decode(data,
-                k:               (int)(parms?.Get<PdfInteger>("K")?.Value ?? 0L),
-                columns:         (int)(parms?.Get<PdfInteger>("Columns")?.Value ?? 1728L),
-                rows:            (int)(parms?.Get<PdfInteger>("Rows")?.Value ?? 0L),
-                blackIs1:        parms?.Get<PdfBoolean>("BlackIs1")?.Value ?? false,
-                endOfBlock:      parms?.Get<PdfBoolean>("EndOfBlock")?.Value ?? true,
-                encodedByteAlign:parms?.Get<PdfBoolean>("EncodedByteAlign")?.Value ?? false),
+                (int)(parms?.Get<PdfInteger>("K")?.Value ?? 0L),
+                (int)(parms?.Get<PdfInteger>("Columns")?.Value ?? 1728L),
+                (int)(parms?.Get<PdfInteger>("Rows")?.Value ?? 0L),
+                parms?.Get<PdfBoolean>("BlackIs1")?.Value ?? false,
+                parms?.Get<PdfBoolean>("EndOfBlock")?.Value ?? true,
+                parms?.Get<PdfBoolean>("EncodedByteAlign")?.Value ?? false),
             "JBIG2Decode" => Jbig2Decoder.Decode(data,
-                globals: parms?[PdfName.Get("JBIG2Globals")] is PdfStream gs
+                parms?[PdfName.Get("JBIG2Globals")] is PdfStream gs
                     ? Decode(gs)
                     : (ReadOnlyMemory<byte>?)null),
             "DCTDecode" or "DCT" => DctDecoder.Decode(data),
-            "JPXDecode"          => JpxDecoder.Decode(data),
-            "Crypt"              => data, // identity pass-through
+            "JPXDecode" => JpxDecoder.Decode(data),
+            "Crypt" => data, // identity pass-through
             _ => throw new PdfException($"Unknown stream filter: /{name}.")
         };
 }

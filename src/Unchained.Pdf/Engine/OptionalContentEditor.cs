@@ -6,9 +6,9 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IOptionalContentEditor"/> implementation. Toggling a layer rewrites
-/// the default configuration's <c>/OFF</c> array (ISO 32000-1 §8.11.4.3) and persists via
-/// full-rewrite.
+///     Default <see cref="IOptionalContentEditor" /> implementation. Toggling a layer rewrites
+///     the default configuration's <c>/OFF</c> array (ISO 32000-1 §8.11.4.3) and persists via
+///     full-rewrite.
 /// </summary>
 public sealed class OptionalContentEditor : IOptionalContentEditor
 {

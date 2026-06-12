@@ -1,9 +1,9 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// PDF/X conformance profile for print production (ISO 15930). PDF/X mandates an
-/// <c>/OutputIntents</c> entry describing the target printing condition and a
-/// <c>GTS_PDFXVersion</c> marker.
+///     PDF/X conformance profile for print production (ISO 15930). PDF/X mandates an
+///     <c>/OutputIntents</c> entry describing the target printing condition and a
+///     <c>GTS_PDFXVersion</c> marker.
 /// </summary>
 public enum PdfXProfile
 {

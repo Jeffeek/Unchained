@@ -1,32 +1,32 @@
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
-/// A shape that contains a table — a grid of rows and columns with individual cell
-/// text and formatting.
+///     A shape that contains a table — a grid of rows and columns with individual cell
+///     text and formatting.
 /// </summary>
 public sealed class TableShape : Shape
 {
     /// <summary>
-    /// The column and row grid. Access cells via <c>Grid[columnIndex, rowIndex]</c>.
+    ///     The column and row grid. Access cells via <c>Grid[columnIndex, rowIndex]</c>.
     /// </summary>
     public TableGrid Grid { get; internal set; } = new();
 
-    /// <summary><see langword="true"/> when the first row is styled as a header row.</summary>
+    /// <summary><see langword="true" /> when the first row is styled as a header row.</summary>
     public bool HasHeaderRow { get; set; }
 
-    /// <summary><see langword="true"/> when the last row is styled as a totals row.</summary>
+    /// <summary><see langword="true" /> when the last row is styled as a totals row.</summary>
     public bool HasTotalRow { get; set; }
 
-    /// <summary><see langword="true"/> when alternate rows use a banded (striped) style.</summary>
+    /// <summary><see langword="true" /> when alternate rows use a banded (striped) style.</summary>
     public bool HasBandedRows { get; set; }
 
-    /// <summary><see langword="true"/> when alternate columns use a banded style.</summary>
+    /// <summary><see langword="true" /> when alternate columns use a banded style.</summary>
     public bool HasBandedColumns { get; set; }
 
-    /// <summary><see langword="true"/> when the first column uses a distinct style.</summary>
+    /// <summary><see langword="true" /> when the first column uses a distinct style.</summary>
     public bool HasFirstColumn { get; set; }
 
-    /// <summary><see langword="true"/> when the last column uses a distinct style.</summary>
+    /// <summary><see langword="true" /> when the last column uses a distinct style.</summary>
     public bool HasLastColumn { get; set; }
 
     // ── Convenience ──────────────────────────────────────────────────────────
@@ -35,13 +35,18 @@ public sealed class TableShape : Shape
     public TableCell this[int column, int row] => Grid[column, row];
 
     /// <summary>
-    /// Merges the rectangular block of cells spanning from <paramref name="firstColumn"/>,
-    /// <paramref name="firstRow"/> to <paramref name="lastColumn"/>, <paramref name="lastRow"/>
-    /// (all zero-based, inclusive). The top-left (anchor) cell receives the combined
-    /// <see cref="TableCell.ColumnSpan"/>/<see cref="TableCell.RowSpan"/>; every other cell in
-    /// the block is flagged as a merge continuation (the OOXML <c>hMerge</c>/<c>vMerge</c> model).
+    ///     Merges the rectangular block of cells spanning from <paramref name="firstColumn" />,
+    ///     <paramref name="firstRow" /> to <paramref name="lastColumn" />, <paramref name="lastRow" />
+    ///     (all zero-based, inclusive). The top-left (anchor) cell receives the combined
+    ///     <see cref="TableCell.ColumnSpan" />/<see cref="TableCell.RowSpan" />; every other cell in
+    ///     the block is flagged as a merge continuation (the OOXML <c>hMerge</c>/<c>vMerge</c> model).
     /// </summary>
-    public void MergeCells(int firstColumn, int firstRow, int lastColumn, int lastRow)
+    public void MergeCells(
+        int firstColumn,
+        int firstRow,
+        int lastColumn,
+        int lastRow
+    )
     {
         var c0 = Math.Min(firstColumn, lastColumn);
         var c1 = Math.Max(firstColumn, lastColumn);
@@ -81,8 +86,11 @@ public sealed class TableShape : Shape
     {
         for (var r = 0; r < Grid.RowCount; r++)
         for (var c = 0; c < Grid.ColumnCount; c++)
+        {
             if (ReferenceEquals(Grid[c, r], target))
                 return (c, r);
+        }
+
         return null;
     }
 }

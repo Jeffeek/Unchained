@@ -5,14 +5,14 @@ using Unchained.Pptx.Shapes;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a SmartArt diagram data model (<c>dgm:dataModel</c> from <c>data*.xml</c>) into the
-/// hierarchical <see cref="SmartArtNode"/> tree carried by a <see cref="SmartArtShape"/>.
+///     Parses a SmartArt diagram data model (<c>dgm:dataModel</c> from <c>data*.xml</c>) into the
+///     hierarchical <see cref="SmartArtNode" /> tree carried by a <see cref="SmartArtShape" />.
 /// </summary>
 /// <remarks>
-/// The data model stores a flat list of points (<c>dgm:pt</c>) plus a list of connections
-/// (<c>dgm:cxn</c>). The visible node hierarchy is reconstructed from the connections whose
-/// type is the (default) <c>parOf</c> kind — those link a parent point to a child point with a
-/// sibling order (<c>srcOrd</c>). Structural points (doc / transitions / presentation) are skipped.
+///     The data model stores a flat list of points (<c>dgm:pt</c>) plus a list of connections
+///     (<c>dgm:cxn</c>). The visible node hierarchy is reconstructed from the connections whose
+///     type is the (default) <c>parOf</c> kind — those link a parent point to a child point with a
+///     sibling order (<c>srcOrd</c>). Structural points (doc / transitions / presentation) are skipped.
 /// </remarks>
 internal static class SmartArtParser
 {
@@ -60,7 +60,8 @@ internal static class SmartArtParser
     private static List<SmartArtNode> BuildChildren(
         string parentId,
         Dictionary<string, XElement> points,
-        Dictionary<string, List<(int Order, string DestId)>> childLinks)
+        Dictionary<string, List<(int Order, string DestId)>> childLinks
+    )
     {
         var result = new List<SmartArtNode>();
         if (!childLinks.TryGetValue(parentId, out var children)) return result;
@@ -97,9 +98,9 @@ internal static class SmartArtParser
     }
 
     /// <summary>
-    /// Applies the current <see cref="SmartArtNode.Text"/> of each node back onto its matching
-    /// <c>dgm:pt</c> in <paramref name="dataModel"/>, so edits are reflected on save. Only the text
-    /// of the first run of the first paragraph is updated; nodes without a model id are skipped.
+    ///     Applies the current <see cref="SmartArtNode.Text" /> of each node back onto its matching
+    ///     <c>dgm:pt</c> in <paramref name="dataModel" />, so edits are reflected on save. Only the text
+    ///     of the first run of the first paragraph is updated; nodes without a model id are skipped.
     /// </summary>
     public static void ApplyTextEdits(XElement dataModel, IEnumerable<SmartArtNode> nodes)
     {

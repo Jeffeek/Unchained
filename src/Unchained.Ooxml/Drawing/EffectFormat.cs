@@ -1,31 +1,31 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// The DrawingML effect list applied to a shape, picture, or text run — outer/inner shadow,
-/// glow, reflection, soft edges, and blur. Mirrors the OOXML <c>&lt;a:effectLst&gt;</c>.
-/// Each effect is <see langword="null"/> when not present.
+///     The DrawingML effect list applied to a shape, picture, or text run — outer/inner shadow,
+///     glow, reflection, soft edges, and blur. Mirrors the OOXML <c>&lt;a:effectLst&gt;</c>.
+///     Each effect is <see langword="null" /> when not present.
 /// </summary>
 public sealed class EffectFormat
 {
-    /// <summary>Outer (drop) shadow, cast outside the shape. <see langword="null"/> when absent.</summary>
+    /// <summary>Outer (drop) shadow, cast outside the shape. <see langword="null" /> when absent.</summary>
     public OuterShadowEffect? OuterShadow { get; set; }
 
-    /// <summary>Inner shadow, cast inside the shape edges. <see langword="null"/> when absent.</summary>
+    /// <summary>Inner shadow, cast inside the shape edges. <see langword="null" /> when absent.</summary>
     public InnerShadowEffect? InnerShadow { get; set; }
 
-    /// <summary>Glow halo around the shape. <see langword="null"/> when absent.</summary>
+    /// <summary>Glow halo around the shape. <see langword="null" /> when absent.</summary>
     public GlowEffect? Glow { get; set; }
 
-    /// <summary>Mirror reflection below the shape. <see langword="null"/> when absent.</summary>
+    /// <summary>Mirror reflection below the shape. <see langword="null" /> when absent.</summary>
     public ReflectionEffect? Reflection { get; set; }
 
-    /// <summary>Soft (feathered) edge radius. <see langword="null"/> when absent.</summary>
+    /// <summary>Soft (feathered) edge radius. <see langword="null" /> when absent.</summary>
     public SoftEdgeEffect? SoftEdge { get; set; }
 
-    /// <summary>Blur applied to the whole shape. <see langword="null"/> when absent.</summary>
+    /// <summary>Blur applied to the whole shape. <see langword="null" /> when absent.</summary>
     public BlurEffect? Blur { get; set; }
 
-    /// <summary><see langword="true"/> when no effects are set.</summary>
+    /// <summary><see langword="true" /> when no effects are set.</summary>
     public bool IsEmpty =>
         OuterShadow is null && InnerShadow is null && Glow is null &&
         Reflection is null && SoftEdge is null && Blur is null;

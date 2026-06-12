@@ -4,19 +4,19 @@ using System.Xml.Linq;
 namespace Unchained.Ooxml.Opc;
 
 /// <summary>
-/// A thin Open Packaging Conventions (OPC) wrapper over <see cref="ZipArchive"/>.
-/// Handles part storage, content-type registration, and relationship traversal
-/// as defined in ECMA-376 Part 2 §10.
+///     A thin Open Packaging Conventions (OPC) wrapper over <see cref="ZipArchive" />.
+///     Handles part storage, content-type registration, and relationship traversal
+///     as defined in ECMA-376 Part 2 §10.
 /// </summary>
 /// <remarks>
-/// Load an existing package with <see cref="Open(byte[])"/> or <see cref="Open(Stream)"/>.
-/// Create a new empty package with <see cref="CreateEmpty"/>.
-/// Serialize to bytes with <see cref="Save"/>.
+///     Load an existing package with <see cref="Open(byte[])" /> or <see cref="Open(Stream)" />.
+///     Create a new empty package with <see cref="CreateEmpty" />.
+///     Serialize to bytes with <see cref="Save" />.
 /// </remarks>
 internal sealed class OpcPackage : IDisposable
 {
-    private readonly Dictionary<string, OpcPart> _parts = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<OpcRelationship> _packageRelationships = [];
+    private readonly Dictionary<string, OpcPart> _parts = new(StringComparer.OrdinalIgnoreCase);
     // Seed with the OPC standard defaults (rels, xml). Required so serialized
     // [Content_Types].xml contains the <Default> entries that System.IO.Packaging and the
     // Open XML SDK need to resolve relationship parts. The Open() path replaces this with the
@@ -25,6 +25,24 @@ internal sealed class OpcPackage : IDisposable
     private bool _disposed;
 
     private OpcPackage() { }
+
+    /// <summary>Returns all parts in the package.</summary>
+    public IReadOnlyCollection<OpcPart> Parts => _parts.Values;
+
+    // ── Relationship access ─────────────────────────────────────────────────
+
+    /// <summary>Returns the package-level relationships (stored in <c>/_rels/.rels</c>).</summary>
+    public IReadOnlyList<OpcRelationship> PackageRelationships => _packageRelationships;
+
+    // ── IDisposable ─────────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _parts.Clear();
+    }
 
     // ── Factory methods ─────────────────────────────────────────────────────
 
@@ -36,7 +54,7 @@ internal sealed class OpcPackage : IDisposable
     public static OpcPackage Open(byte[] data)
     {
         ArgumentNullException.ThrowIfNull(data);
-        return Open(new MemoryStream(data, writable: false));
+        return Open(new MemoryStream(data, false));
     }
 
     /// <summary>Opens an OPC package from a stream.</summary>
@@ -48,7 +66,7 @@ internal sealed class OpcPackage : IDisposable
         try
         {
             var package = new OpcPackage();
-            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, true);
             package.LoadFromArchive(archive);
             return package;
         }
@@ -61,8 +79,8 @@ internal sealed class OpcPackage : IDisposable
     // ── Part access ─────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the part at the given URI, or <see langword="null"/> if no such part exists.
-    /// Part URIs are case-insensitive and use forward slashes (e.g. <c>/ppt/presentation.xml</c>).
+    ///     Returns the part at the given URI, or <see langword="null" /> if no such part exists.
+    ///     Part URIs are case-insensitive and use forward slashes (e.g. <c>/ppt/presentation.xml</c>).
     /// </summary>
     public OpcPart? TryGetPart(string partUri)
     {
@@ -76,18 +94,18 @@ internal sealed class OpcPackage : IDisposable
     public OpcPart GetPart(string partUri)
     {
         var part = TryGetPart(partUri)
-            ?? throw new OoXmlException($"OPC part not found: '{partUri}'.");
+                   ?? throw new OoXmlException($"OPC part not found: '{partUri}'.");
         return part;
     }
 
-    /// <summary>Returns all parts in the package.</summary>
-    public IReadOnlyCollection<OpcPart> Parts => _parts.Values;
-
     /// <summary>
-    /// Adds or replaces a part. The content type is registered automatically.
+    ///     Adds or replaces a part. The content type is registered automatically.
     /// </summary>
     /// <param name="partUri">Absolute part URI (e.g. <c>/ppt/slides/slide1.xml</c>).</param>
-    /// <param name="contentType">MIME type (e.g. <c>application/vnd.openxmlformats-officedocument.presentationml.slide+xml</c>).</param>
+    /// <param name="contentType">
+    ///     MIME type (e.g. <c>application/vnd.openxmlformats-officedocument.presentationml.slide+xml</c>
+    ///     ).
+    /// </param>
     /// <param name="data">Raw bytes of the part.</param>
     public OpcPart AddOrReplacePart(string partUri, string contentType, byte[] data)
     {
@@ -109,14 +127,9 @@ internal sealed class OpcPackage : IDisposable
         _parts.Remove(normalised);
     }
 
-    // ── Relationship access ─────────────────────────────────────────────────
-
-    /// <summary>Returns the package-level relationships (stored in <c>/_rels/.rels</c>).</summary>
-    public IReadOnlyList<OpcRelationship> PackageRelationships => _packageRelationships;
-
     /// <summary>
-    /// Returns the relationships for the part at <paramref name="partUri"/>
-    /// (stored in the corresponding <c>_rels/</c> directory).
+    ///     Returns the relationships for the part at <paramref name="partUri" />
+    ///     (stored in the corresponding <c>_rels/</c> directory).
     /// </summary>
     public IReadOnlyList<OpcRelationship> GetRelationships(string partUri)
     {
@@ -127,15 +140,14 @@ internal sealed class OpcPackage : IDisposable
     }
 
     /// <summary>
-    /// Adds a relationship to the package-level relationships file (<c>/_rels/.rels</c>).
+    ///     Adds a relationship to the package-level relationships file (<c>/_rels/.rels</c>).
     /// </summary>
     public void AddPackageRelationship(
         string relationshipId,
         string relationshipType,
-        string targetUri)
-    {
+        string targetUri
+    ) =>
         _packageRelationships.Add(new OpcRelationship(relationshipId, relationshipType, targetUri));
-    }
 
     /// <summary>Adds a relationship to the specified source part.</summary>
     public void AddRelationship(
@@ -143,16 +155,15 @@ internal sealed class OpcPackage : IDisposable
         string relationshipId,
         string relationshipType,
         string targetUri,
-        bool isExternal = false)
-    {
+        bool isExternal = false
+    ) =>
         GetPart(sourcePartUri).AddRelationship(
             new OpcRelationship(relationshipId, relationshipType, targetUri, isExternal));
-    }
 
     // ── Serialization ───────────────────────────────────────────────────────
 
     /// <summary>
-    /// Serializes the package to a byte array in ZIP format.
+    ///     Serializes the package to a byte array in ZIP format.
     /// </summary>
     public byte[] Save()
     {
@@ -162,11 +173,11 @@ internal sealed class OpcPackage : IDisposable
     }
 
     /// <summary>
-    /// Serializes the package into <paramref name="stream"/>.
+    ///     Serializes the package into <paramref name="stream" />.
     /// </summary>
     public void SaveTo(Stream stream)
     {
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true);
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Create, true);
 
         var contentTypesXml = _contentTypes.Serialize();
         WriteEntry(archive, "[Content_Types].xml", contentTypesXml);
@@ -287,15 +298,5 @@ internal sealed class OpcPackage : IDisposable
         using var ms = new MemoryStream();
         new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).Save(ms);
         return ms.ToArray();
-    }
-
-    // ── IDisposable ─────────────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        _parts.Clear();
     }
 }

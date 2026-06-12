@@ -2,8 +2,8 @@ using Shouldly;
 using Unchained.Drawing.Constants;
 using Unchained.Ooxml;
 using Unchained.Pptx.Models.Shapes;
-using Unchained.Pptx.Rendering;
 using Unchained.Pptx.Rendering.Engine;
+using Unchained.Pptx.Rendering.Models;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 

@@ -1,40 +1,42 @@
+using System.Globalization;
+using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 
 namespace Unchained.Pdf.Parsing;
 
 /// <summary>
-/// Parses a raw PDF byte buffer into a structured object graph
-/// (ISO 32000-1 §7.3 object types + §7.5 file structure).
-/// <para>
-/// <b>Read strategy:</b>
-/// <list type="number">
-///   <item>Locate <c>startxref</c> near the end of the file (§7.5.5).</item>
-///   <item>Parse the cross-reference table or stream at that offset (§7.5.4 / §7.5.8).</item>
-///   <item>Read the trailer dictionary to locate the <c>/Root</c> catalog object.</item>
-///   <item>Resolve individual objects lazily via their cross-reference byte offsets.</item>
-/// </list>
-/// Incremental updates (§7.5.6) are handled by chaining multiple xref sections
-/// through the <c>/Prev</c> entry; the most-recent definition of any object wins.
-/// </para>
+///     Parses a raw PDF byte buffer into a structured object graph
+///     (ISO 32000-1 §7.3 object types + §7.5 file structure).
+///     <para>
+///         <b>Read strategy:</b>
+///         <list type="number">
+///             <item>Locate <c>startxref</c> near the end of the file (§7.5.5).</item>
+///             <item>Parse the cross-reference table or stream at that offset (§7.5.4 / §7.5.8).</item>
+///             <item>Read the trailer dictionary to locate the <c>/Root</c> catalog object.</item>
+///             <item>Resolve individual objects lazily via their cross-reference byte offsets.</item>
+///         </list>
+///         Incremental updates (§7.5.6) are handled by chaining multiple xref sections
+///         through the <c>/Prev</c> entry; the most-recent definition of any object wins.
+///     </para>
 /// </summary>
 internal sealed class PdfParser(ReadOnlyMemory<byte> source)
 {
     // ── Entry points ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Performs the initial structural parse: locates and reads the cross-reference table
-    /// (including incremental-update chains) and returns the merged table together with
-    /// the most-recent trailer dictionary.
-    /// Individual objects are <b>not</b> loaded — they are resolved on demand by
-    /// <see cref="Unchained.Pdf.Document.PdfDocumentCore"/> via <see cref="ReadObject"/>.
+    ///     Performs the initial structural parse: locates and reads the cross-reference table
+    ///     (including incremental-update chains) and returns the merged table together with
+    ///     the most-recent trailer dictionary.
+    ///     Individual objects are <b>not</b> loaded — they are resolved on demand by
+    ///     <see cref="Unchained.Pdf.Document.PdfDocumentCore" /> via <see cref="ReadObject" />.
     /// </summary>
     /// <returns>
-    /// A tuple of the merged <see cref="CrossReferenceTable"/> and the trailer
-    /// <see cref="PdfDictionary"/> from the most-recent update section.
+    ///     A tuple of the merged <see cref="CrossReferenceTable" /> and the trailer
+    ///     <see cref="PdfDictionary" /> from the most-recent update section.
     /// </returns>
     /// <exception cref="PdfException">
-    /// Thrown when <c>startxref</c> cannot be found or the xref section is malformed.
+    ///     Thrown when <c>startxref</c> cannot be found or the xref section is malformed.
     /// </exception>
     public (CrossReferenceTable Xref, PdfDictionary Trailer) ParseStructure()
     {
@@ -43,16 +45,16 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     }
 
     /// <summary>
-    /// Reads and fully parses the indirect object whose body begins at
-    /// <paramref name="byteOffset"/> in the source buffer.
-    /// Called on demand by <see cref="Unchained.Pdf.Document.PdfDocumentCore.ResolveIndirect"/>
-    /// when an indirect reference is first dereferenced.
+    ///     Reads and fully parses the indirect object whose body begins at
+    ///     <paramref name="byteOffset" /> in the source buffer.
+    ///     Called on demand by <see cref="Unchained.Pdf.Document.PdfDocumentCore.ResolveIndirect" />
+    ///     when an indirect reference is first dereferenced.
     /// </summary>
     /// <param name="byteOffset">
-    /// The absolute byte offset from the start of the source buffer, as stored in the
-    /// <see cref="CrossReferenceEntry.Offset"/> of an in-use cross-reference entry.
+    ///     The absolute byte offset from the start of the source buffer, as stored in the
+    ///     <see cref="CrossReferenceEntry.Offset" /> of an in-use cross-reference entry.
     /// </param>
-    /// <returns>The parsed <see cref="PdfIndirectObject"/>.</returns>
+    /// <returns>The parsed <see cref="PdfIndirectObject" />.</returns>
     /// <exception cref="PdfException">Thrown when the object header or body is malformed.</exception>
     public PdfIndirectObject ReadObject(long byteOffset)
     {
@@ -96,9 +98,9 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     // ── Object value parser ───────────────────────────────────────────────────
 
     /// <summary>
-    /// Reads one complete PDF value from <paramref name="lexer"/> and returns it as
-    /// the appropriate <see cref="PdfObject"/> subtype. Handles all eight PDF primitive
-    /// types plus arrays, dictionaries, and indirect references.
+    ///     Reads one complete PDF value from <paramref name="lexer" /> and returns it as
+    ///     the appropriate <see cref="PdfObject" /> subtype. Handles all eight PDF primitive
+    ///     types plus arrays, dictionaries, and indirect references.
     /// </summary>
     /// <exception cref="PdfException">Thrown when an unexpected token is encountered.</exception>
     internal PdfObject ReadValue(Lexer lexer)
@@ -225,6 +227,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
             if (beforeLen > 0 && source[i - 1] == '\r') return beforeLen - 1;
             return beforeLen; // endstream without newline — accept as-is
         }
+
         return 0;
     }
 
@@ -499,7 +502,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     private static PdfString ParseLiteralString(PdfToken token)
     {
         var inner = token.Raw.Slice(1, token.Raw.Length - 2);
-        return new PdfString(inner, isHex: false);
+        return new PdfString(inner, false);
     }
 
     // Strips the surrounding angle brackets from a hex string token.
@@ -509,7 +512,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     private static PdfString ParseHexString(PdfToken token)
     {
         var inner = token.Raw.Slice(1, token.Raw.Length - 2);
-        return new PdfString(inner, isHex: true);
+        return new PdfString(inner, true);
     }
 
     private static long ParseRawInteger(ReadOnlySpan<byte> span)
@@ -518,23 +521,23 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         var start = (negative || span[0] == (byte)'+') ? 1 : 0;
         long value = 0;
         for (var i = start; i < span.Length; i++)
-            value = value * 10 + (span[i] - '0');
+            value = (value * 10) + (span[i] - '0');
 
         return negative ? -value : value;
     }
 
     private static double ParseRawReal(ReadOnlySpan<byte> span) =>
-        double.Parse(System.Text.Encoding.Latin1.GetString(span),
-            System.Globalization.CultureInfo.InvariantCulture);
+        double.Parse(Encoding.Latin1.GetString(span),
+            CultureInfo.InvariantCulture);
 
     // §7.3.5 — decodes a name token: strips the leading '/' and expands '#xx' escapes.
     private static string ParseRawName(ReadOnlySpan<byte> span)
     {
         var start = span[0] == (byte)'/' ? 1 : 0;
         if (!span[start..].Contains((byte)'#'))
-            return System.Text.Encoding.Latin1.GetString(span[start..]);
+            return Encoding.Latin1.GetString(span[start..]);
 
-        var sb = new System.Text.StringBuilder(span.Length);
+        var sb = new StringBuilder(span.Length);
         for (var i = start; i < span.Length; i++)
         {
             if (span[i] == (byte)'#' && i + 2 < span.Length)

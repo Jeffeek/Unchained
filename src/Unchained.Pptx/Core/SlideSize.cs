@@ -1,12 +1,13 @@
 using Unchained.Ooxml;
+
 namespace Unchained.Pptx.Core;
 
 /// <summary>
-/// The size of a presentation slide, stored as <see cref="Emu"/> dimensions.
+///     The size of a presentation slide, stored as <see cref="Emu" /> dimensions.
 /// </summary>
 /// <remarks>
-/// Use the static presets (<see cref="Widescreen"/>, <see cref="Standard"/>) for common sizes,
-/// or <see cref="Custom"/> for arbitrary dimensions.
+///     Use the static presets (<see cref="Widescreen" />, <see cref="Standard" />) for common sizes,
+///     or <see cref="Custom" /> for arbitrary dimensions.
 /// </remarks>
 public readonly struct SlideSize : IEquatable<SlideSize>
 {
@@ -26,14 +27,14 @@ public readonly struct SlideSize : IEquatable<SlideSize>
     // ── Presets ──────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Widescreen 16:9 (33,867,200 × 19,050,000 EMU ≈ 13.33 × 7.5 in).
-    /// The default size for PowerPoint presentations since Office 2013.
+    ///     Widescreen 16:9 (33,867,200 × 19,050,000 EMU ≈ 13.33 × 7.5 in).
+    ///     The default size for PowerPoint presentations since Office 2013.
     /// </summary>
     public static readonly SlideSize Widescreen = new(new Emu(33_867_200), new Emu(19_050_000));
 
     /// <summary>
-    /// Standard 4:3 (27,432,000 × 20,574,000 EMU ≈ 10 × 7.5 in).
-    /// The legacy default for older presentations.
+    ///     Standard 4:3 (27,432,000 × 20,574,000 EMU ≈ 10 × 7.5 in).
+    ///     The legacy default for older presentations.
     /// </summary>
     public static readonly SlideSize Standard = new(new Emu(27_432_000), new Emu(20_574_000));
 
@@ -65,10 +66,10 @@ public readonly struct SlideSize : IEquatable<SlideSize>
     /// <inheritdoc />
     public override int GetHashCode() => HashCode.Combine(Width, Height);
 
-    /// <summary>Returns <see langword="true"/> when both sizes have equal dimensions.</summary>
+    /// <summary>Returns <see langword="true" /> when both sizes have equal dimensions.</summary>
     public static bool operator ==(SlideSize left, SlideSize right) => left.Equals(right);
 
-    /// <summary>Returns <see langword="true"/> when the sizes differ.</summary>
+    /// <summary>Returns <see langword="true" /> when the sizes differ.</summary>
     public static bool operator !=(SlideSize left, SlideSize right) => !left.Equals(right);
 
     /// <inheritdoc />

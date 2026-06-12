@@ -1,7 +1,7 @@
 namespace Unchained.Ooxml.Media;
 
 /// <summary>
-/// An image embedded in the presentation package, referenced by one or more picture shapes.
+///     An image embedded in the presentation package, referenced by one or more picture shapes.
 /// </summary>
 public sealed class EmbeddedImage
 {
@@ -22,18 +22,18 @@ public sealed class EmbeddedImage
     public ReadOnlyMemory<byte> Data { get; }
 
     /// <summary>
-    /// The pixel width of the image, or 0 if not yet determined.
+    ///     The pixel width of the image, or 0 if not yet determined.
     /// </summary>
     public int PixelWidth { get; init; }
 
     /// <summary>
-    /// The pixel height of the image, or 0 if not yet determined.
+    ///     The pixel height of the image, or 0 if not yet determined.
     /// </summary>
     public int PixelHeight { get; init; }
 
     /// <summary>
-    /// The relationship ID of this image within its part.
-    /// This is set by the parser and used by the writer; consumers can ignore it.
+    ///     The relationship ID of this image within its part.
+    ///     This is set by the parser and used by the writer; consumers can ignore it.
     /// </summary>
     internal string RelationshipId { get; set; } = string.Empty;
 

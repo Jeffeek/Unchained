@@ -1,8 +1,10 @@
+using System.Collections;
+
 namespace Unchained.Pptx.Comments;
 
 /// <summary>
-/// The registry of comment authors for a presentation.
-/// All comments reference an author from this collection.
+///     The registry of comment authors for a presentation.
+///     All comments reference an author from this collection.
 /// </summary>
 public sealed class CommentAuthorCollection : IReadOnlyList<CommentAuthor>
 {
@@ -19,18 +21,18 @@ public sealed class CommentAuthorCollection : IReadOnlyList<CommentAuthor>
     /// <inheritdoc />
     public IEnumerator<CommentAuthor> GetEnumerator() => _authors.GetEnumerator();
 
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+    IEnumerator IEnumerable.GetEnumerator() =>
         _authors.GetEnumerator();
 
     // ── Mutation ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Adds a new author with the given name and initials and returns the new author.
+    ///     Adds a new author with the given name and initials and returns the new author.
     /// </summary>
     /// <param name="name">The full display name of the author.</param>
     /// <param name="initials">
-    /// Abbreviated label for the author (1–3 characters). Defaults to the first letters
-    /// of each word in <paramref name="name"/>.
+    ///     Abbreviated label for the author (1–3 characters). Defaults to the first letters
+    ///     of each word in <paramref name="name" />.
     /// </param>
     public CommentAuthor Add(string name, string? initials = null)
     {
@@ -43,7 +45,7 @@ public sealed class CommentAuthorCollection : IReadOnlyList<CommentAuthor>
     }
 
     /// <summary>
-    /// Returns the author with the given ID, or <see langword="null"/> if not found.
+    ///     Returns the author with the given ID, or <see langword="null" /> if not found.
     /// </summary>
     public CommentAuthor? FindById(uint id) =>
         _authors.FirstOrDefault(a => a.Id == id);

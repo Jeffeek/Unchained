@@ -4,10 +4,11 @@ using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
+using Unchained.Pdf.Parsing.Filters;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="IEmbeddedFileEditor"/> implementation.</summary>
+/// <summary>Default <see cref="IEmbeddedFileEditor" /> implementation.</summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
 {
@@ -52,7 +53,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
     {
         ArgumentNullException.ThrowIfNull(document);
         var adapter = MutationHelper.Cast(nameof(document), document);
-        return Task.Run(() => SetPortfolioMode(adapter, enable: true), ct);
+        return Task.Run(() => SetPortfolioMode(adapter, true), ct);
     }
 
     /// <inheritdoc />
@@ -63,7 +64,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
     {
         ArgumentNullException.ThrowIfNull(document);
         var adapter = MutationHelper.Cast(nameof(document), document);
-        return Task.Run(() => SetPortfolioMode(adapter, enable: false), ct);
+        return Task.Run(() => SetPortfolioMode(adapter, false), ct);
     }
 
     // ── Read ──────────────────────────────────────────────────────────────────
@@ -146,7 +147,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         var mimeType = fileSpec[PdfName.Get("Subtype")] is PdfName mtn ? mtn.Value : null;
 
         byte[] data;
-        try { data = Parsing.Filters.StreamFilters.Decode(streamObj).ToArray(); }
+        try { data = StreamFilters.Decode(streamObj).ToArray(); }
         catch { data = streamObj.Data.ToArray(); }
 
         return new EmbeddedFile(name, fileName, desc, mimeType, data);
@@ -158,13 +159,13 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
     {
         var existing = adapter.Core.CollectObjects().ToList();
         var maxObj = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObj + 1);
+        var builder = new ObjectGraphBuilder(maxObj + 1);
 
         // Compress file data with FlateDecode.
         byte[] compressed;
         using (var ms = new MemoryStream())
         {
-            using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+            using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, true))
                 zlib.Write(file.Data);
             compressed = ms.ToArray();
         }
@@ -192,7 +193,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
             ["Type"] = PdfName.Get("Filespec"),
             ["F"] = PdfString.FromLatin1(file.FileName),
             ["UF"] = new PdfString(
-                new byte[] { PdfConstants.Utf16BeBomByte0, PdfConstants.Utf16BeBomByte1 }
+                new[] { PdfConstants.Utf16BeBomByte0, PdfConstants.Utf16BeBomByte1 }
                     .Concat(Encoding.BigEndianUnicode.GetBytes(file.FileName))
                     .ToArray()),
             ["EF"] = new PdfDictionary(new Dictionary<string, PdfObject>
@@ -304,7 +305,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
 
         // Rebuild catalog with updated name tree.
         var maxObj = existing.Max(static o => o.ObjectNumber);
-        var builder = new ObjectGraphBuilder(startAt: maxObj + 1);
+        var builder = new ObjectGraphBuilder(maxObj + 1);
 
         var newEfRef = builder.Add(new PdfDictionary(new Dictionary<string, PdfObject>
         {

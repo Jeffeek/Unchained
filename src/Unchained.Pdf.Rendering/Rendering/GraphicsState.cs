@@ -1,8 +1,8 @@
 namespace Unchained.Pdf.Rendering.Rendering;
 
 /// <summary>
-/// Mutable snapshot of the PDF graphics state (ISO 32000-1 §8.4).
-/// Cloned on every <c>q</c> (save) and restored on every <c>Q</c>.
+///     Mutable snapshot of the PDF graphics state (ISO 32000-1 §8.4).
+///     Cloned on every <c>q</c> (save) and restored on every <c>Q</c>.
 /// </summary>
 internal sealed class GraphicsState
 {
@@ -77,7 +77,9 @@ internal sealed class GraphicsState
     internal double FontSize { get; set; }
     internal double CharSpace { get; set; }
     internal double WordSpace { get; set; }
+
     internal double HorizontalScale { get; set; } = 100;
+
     // Text rise (Ts): vertical shift of the text baseline in unscaled text-space units.
     internal double TextRise { get; set; }
     internal double Leading { get; set; }
@@ -140,7 +142,7 @@ internal sealed class GraphicsState
         var e = Ctm[4];
         var f = Ctm[5];
 
-        return (a * x + c * y + e, b * x + d * y + f);
+        return ((a * x) + (c * y) + e, (b * x) + (d * y) + f);
     }
 
     internal static double[] MultiplyMatrix(double[] m1, double[] m2) =>
@@ -148,11 +150,11 @@ internal sealed class GraphicsState
         // [c1 d1 0] × [c2 d2 0]
         // [e1 f1 1]   [e2 f2 1]
         [
-            m1[0] * m2[0] + m1[1] * m2[2],
-            m1[0] * m2[1] + m1[1] * m2[3],
-            m1[2] * m2[0] + m1[3] * m2[2],
-            m1[2] * m2[1] + m1[3] * m2[3],
-            m1[4] * m2[0] + m1[5] * m2[2] + m2[4],
-            m1[4] * m2[1] + m1[5] * m2[3] + m2[5]
+            (m1[0] * m2[0]) + (m1[1] * m2[2]),
+            (m1[0] * m2[1]) + (m1[1] * m2[3]),
+            (m1[2] * m2[0]) + (m1[3] * m2[2]),
+            (m1[2] * m2[1]) + (m1[3] * m2[3]),
+            (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
+            (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
         ];
 }

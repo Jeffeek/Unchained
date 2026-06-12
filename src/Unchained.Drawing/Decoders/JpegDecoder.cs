@@ -3,11 +3,11 @@ using Unchained.Drawing.Constants;
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Minimal baseline (sequential DCT, Huffman) JPEG decoder using only BCL APIs, producing
-/// packed 24-bit RGB. Supports the common case for slide imagery: baseline JFIF, 8-bit,
-/// 1-component (grayscale) or 3-component (YCbCr) with 4:4:4 / 4:2:0 / 4:2:2 subsampling.
-/// Returns <see langword="null"/> for progressive, arithmetic-coded, CMYK, or otherwise
-/// unsupported streams so the caller can skip the image rather than crash.
+///     Minimal baseline (sequential DCT, Huffman) JPEG decoder using only BCL APIs, producing
+///     packed 24-bit RGB. Supports the common case for slide imagery: baseline JFIF, 8-bit,
+///     1-component (grayscale) or 3-component (YCbCr) with 4:4:4 / 4:2:0 / 4:2:2 subsampling.
+///     Returns <see langword="null" /> for progressive, arithmetic-coded, CMYK, or otherwise
+///     unsupported streams so the caller can skip the image rather than crash.
 /// </summary>
 internal static class JpegDecoder
 {
@@ -29,21 +29,21 @@ internal static class JpegDecoder
     private sealed class Decoder(ReadOnlySpan<byte> data)
     {
         private readonly byte[] _data = data.ToArray();
-        private int _pos;
-
-        // Quantization tables [id] → 64 entries (zig-zag order stored, applied in natural order).
-        private readonly int[]?[] _quant = new int[4][];
 
         // Huffman tables: [class(0=DC,1=AC)][id]
         private readonly HuffTable?[,] _huff = new HuffTable?[2, 4];
 
-        private int _width, _height;
-        private Component[] _components = [];
-        private int _restartInterval;
+        // Quantization tables [id] → 64 entries (zig-zag order stored, applied in natural order).
+        private readonly int[]?[] _quant = new int[4][];
 
         // Bit reader state for entropy-coded segment.
         private int _bitBuffer;
         private int _bitCount;
+        private Component[] _components = [];
+        private int _pos;
+        private int _restartInterval;
+
+        private int _width, _height;
 
         internal byte[]? Decode(out int width, out int height)
         {
@@ -206,7 +206,7 @@ internal static class JpegDecoder
             while (_pos < end)
             {
                 var tcTh = _data[_pos++];
-                var cls = tcTh >> 4;   // 0 = DC, 1 = AC
+                var cls = tcTh >> 4; // 0 = DC, 1 = AC
                 var id = tcTh & JpegMarkers.NibbleMask;
                 var counts = new byte[16];
                 var total = 0;
@@ -292,8 +292,8 @@ internal static class JpegDecoder
                         if (block is null)
                             return null;
 
-                        var blockX = (mx * comp.HSamp + bx) * 8;
-                        var blockY = (my * comp.VSamp + by) * 8;
+                        var blockX = ((mx * comp.HSamp) + bx) * 8;
+                        var blockY = ((my * comp.VSamp) + by) * 8;
                         var stride = comp.BlocksPerLine * 8;
                         PlaceBlock(block, comp.Pixels!, blockX, blockY, stride);
                     }
@@ -454,7 +454,7 @@ internal static class JpegDecoder
 
             for (var i = 0; i < 64; i++)
             {
-                var v = (int)Math.Round(block[i] / 8.0 + 128);
+                var v = (int)Math.Round((block[i] / 8.0) + 128);
                 output[i] = v < 0 ? 0 : v > 255 ? 255 : v;
             }
 
@@ -465,7 +465,7 @@ internal static class JpegDecoder
         {
             // Naive 8-point IDCT — clear and correct; performance is acceptable for slides.
             Span<double> s = stackalloc double[8];
-            for (var i = 0; i < 8; i++) s[i] = b[offset + i * stride];
+            for (var i = 0; i < 8; i++) s[i] = b[offset + (i * stride)];
 
             Span<double> o = stackalloc double[8];
             for (var x = 0; x < 8; x++)
@@ -474,14 +474,14 @@ internal static class JpegDecoder
                 for (var u = 0; u < 8; u++)
                 {
                     var cu = u == 0 ? 1.0 / Math.Sqrt(2) : 1.0;
-                    sum += cu * s[u] * Math.Cos((2 * x + 1) * u * Math.PI / 16.0);
+                    sum += cu * s[u] * Math.Cos(((2 * x) + 1) * u * Math.PI / 16.0);
                 }
 
                 o[x] = sum;
             }
 
             for (var i = 0; i < 8; i++)
-                b[offset + i * stride] = o[i];
+                b[offset + (i * stride)] = o[i];
         }
 
         private static void PlaceBlock(
@@ -498,9 +498,9 @@ internal static class JpegDecoder
                 for (var x = 0; x < 8; x++)
                 {
                     var dx = x0 + x;
-                    var di = dy * stride + dx;
+                    var di = (dy * stride) + dx;
                     if (di >= 0 && di < dest.Count)
-                        dest[di] = (byte)block[y * 8 + x];
+                        dest[di] = (byte)block[(y * 8) + x];
                 }
             }
         }
@@ -518,8 +518,8 @@ internal static class JpegDecoder
                 for (var y = 0; y < _height; y++)
                 for (var x = 0; x < _width; x++)
                 {
-                    var gray = c.Pixels![y * stride + x];
-                    var d = (y * _width + x) * 3;
+                    var gray = c.Pixels![(y * stride) + x];
+                    var d = ((y * _width) + x) * 3;
                     rgb[d] = rgb[d + 1] = rgb[d + 2] = gray;
                 }
 
@@ -536,19 +536,19 @@ internal static class JpegDecoder
             for (var y = 0; y < _height; y++)
             for (var x = 0; x < _width; x++)
             {
-                var yy = yc.Pixels![y * yStride + x];
+                var yy = yc.Pixels![(y * yStride) + x];
                 var cbx = x * cb.HSamp / hMax;
                 var cby = y * cb.VSamp / vMax;
                 var crx = x * cr.HSamp / hMax;
                 var cry = y * cr.VSamp / vMax;
-                var cbv = cb.Pixels![cby * cbStride + cbx] - 128;
-                var crv = cr.Pixels![cry * crStride + crx] - 128;
+                var cbv = cb.Pixels![(cby * cbStride) + cbx] - 128;
+                var crv = cr.Pixels![(cry * crStride) + crx] - 128;
 
-                var r = yy + YCbCrConstants.CrToR * crv;
-                var g = yy - YCbCrConstants.CbToGCb * cbv - YCbCrConstants.CrToGCr * crv;
-                var b = yy + YCbCrConstants.CbToB * cbv;
+                var r = yy + (YCbCrConstants.CrToR * crv);
+                var g = yy - (YCbCrConstants.CbToGCb * cbv) - (YCbCrConstants.CrToGCr * crv);
+                var b = yy + (YCbCrConstants.CbToB * cbv);
 
-                var d = (y * _width + x) * 3;
+                var d = ((y * _width) + x) * 3;
                 rgb[d] = Clamp(r);
                 rgb[d + 1] = Clamp(g);
                 rgb[d + 2] = Clamp(b);
@@ -561,20 +561,20 @@ internal static class JpegDecoder
 
         private sealed class Component
         {
-            public int Id;
-            public int HSamp;
-            public int VSamp;
-            public int QuantId;
             public int BlocksPerLine;
+            public int HSamp;
+            public int Id;
             public byte[]? Pixels;
             public int Prediction;
+            public int QuantId;
+            public int VSamp;
         }
 
         private sealed class HuffTable
         {
-            public readonly byte[] Symbols;
-            public readonly int[] MinCode = new int[17];
             public readonly long[] MaxCode = new long[17];
+            public readonly int[] MinCode = new int[17];
+            public readonly byte[] Symbols;
             public readonly int[] ValPtr = new int[17];
 
             public HuffTable(IReadOnlyList<byte> counts, byte[] symbols)

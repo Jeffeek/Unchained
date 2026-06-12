@@ -1,5 +1,9 @@
+using System.Xml.Linq;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Packaging;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Engine;
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Text;
@@ -9,26 +13,28 @@ using Unchained.Pptx.Core;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Models.Shapes;
+using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 using D = DocumentFormat.OpenXml.Drawing;
 using P = DocumentFormat.OpenXml.Presentation;
+using Shape = Unchained.Pptx.Shapes.Shape;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Phase 2 OpenXML-SDK-backed presentation reader. Produces the same <see cref="ParsedPresentation"/>
-/// typed model as the legacy custom <see cref="PresentationParser"/>, but maps it from the SDK's
-/// validated typed DOM (<c>DocumentFormat.OpenXml</c>) instead of hand-rolled XElement walking.
+///     Phase 2 OpenXML-SDK-backed presentation reader. Produces the same <see cref="ParsedPresentation" />
+///     typed model as the legacy custom <see cref="PresentationParser" />, but maps it from the SDK's
+///     validated typed DOM (<c>DocumentFormat.OpenXml</c>) instead of hand-rolled XElement walking.
 /// </summary>
 /// <remarks>
-/// This runs in parallel with the custom parser (selected via <c>OpenOptions.UseOpenXmlEngine</c>)
-/// and is being grown to full parity. It currently maps: slide size, core document properties,
-/// slide structure (real id / name / hidden), and every shape-tree element to its concrete
-/// <see cref="Shape"/> subtype (autoshape, picture, table, chart, group, connector) with geometry,
-/// text, and table cell content. Masters/layouts are represented minimally so the model is
-/// internally consistent; fills, themes, and image bytes are later parity steps.
+///     This runs in parallel with the custom parser (selected via <c>OpenOptions.UseOpenXmlEngine</c>)
+///     and is being grown to full parity. It currently maps: slide size, core document properties,
+///     slide structure (real id / name / hidden), and every shape-tree element to its concrete
+///     <see cref="Shapes.Shape" /> subtype (autoshape, picture, table, chart, group, connector) with geometry,
+///     text, and table cell content. Masters/layouts are represented minimally so the model is
+///     internally consistent; fills, themes, and image bytes are later parity steps.
 /// </remarks>
 internal static class OpenXmlPresentationParser
 {
@@ -39,7 +45,7 @@ internal static class OpenXmlPresentationParser
         // Opened editable and kept open: ownership passes to ParsedPresentation -> the document,
         // so a later SDK-backed save (M5) can mutate this same package in place (parts that the
         // model does not touch pass through unchanged). Disposed here only if parsing fails.
-        var engine = OoxmlEngine.Open(data, editable: true);
+        var engine = OoxmlEngine.Open(data, true);
         try
         {
             return ParseWithEngine(engine, options);
@@ -104,23 +110,23 @@ internal static class OpenXmlPresentationParser
         // Sections (presentation extLst) and comment authors — reuse the shared parsers.
         if (presPart.Presentation is { } presentation)
         {
-            var presXml = System.Xml.Linq.XElement.Parse(presentation.OuterXml, System.Xml.Linq.LoadOptions.None);
+            var presXml = XElement.Parse(presentation.OuterXml, LoadOptions.None);
             SectionParser.Parse(presXml, sections);
         }
 
         if (presPart.CommentAuthorsPart?.CommentAuthorList is { } authorList)
         {
-            var authorsXml = System.Xml.Linq.XElement.Parse(authorList.OuterXml, System.Xml.Linq.LoadOptions.None);
+            var authorsXml = XElement.Parse(authorList.OuterXml, LoadOptions.None);
             CommentAuthorParser.Parse(authorsXml, commentAuthors);
         }
 
         return new ParsedPresentation(
-            package: null, // the SDK engine owns the real package; not consumed downstream
+            null, // the SDK engine owns the real package; not consumed downstream
             slides,
             masters,
             mediaStore,
             properties,
-            protection: new ProtectionInfo(),
+            new ProtectionInfo(),
             slideSize,
             commentAuthors,
             sections)
@@ -147,7 +153,8 @@ internal static class OpenXmlPresentationParser
         SlideMasterPart masterPart,
         MediaStore mediaStore,
         Dictionary<string, EmbeddedImage> imageCache,
-        Dictionary<SlideLayoutPart, SlideLayout> layoutMap)
+        Dictionary<SlideLayoutPart, SlideLayout> layoutMap
+    )
     {
         var master = new MasterSlide
         {
@@ -159,12 +166,12 @@ internal static class OpenXmlPresentationParser
         // does not capture (txStyles, clrMap, header/footer placeholders). The writers honour
         // RawElement when present.
         if (masterPart.SlideMaster is { } sdkMaster)
-            master.RawElement = System.Xml.Linq.XElement.Parse(sdkMaster.OuterXml, System.Xml.Linq.LoadOptions.None);
+            master.RawElement = XElement.Parse(sdkMaster.OuterXml, LoadOptions.None);
 
         // Theme — reuse the shared ThemeParser on the theme part's XML.
         if (masterPart.ThemePart?.Theme is { } sdkTheme)
         {
-            var themeXml = System.Xml.Linq.XElement.Parse(sdkTheme.OuterXml, System.Xml.Linq.LoadOptions.None);
+            var themeXml = XElement.Parse(sdkTheme.OuterXml, LoadOptions.None);
             master.Theme = ThemeParser.Parse(themeXml);
         }
 
@@ -188,7 +195,8 @@ internal static class OpenXmlPresentationParser
         SlideLayoutPart layoutPart,
         MasterSlide master,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache)
+        Dictionary<string, EmbeddedImage> imageCache
+    )
     {
         var sdkLayout = layoutPart.SlideLayout;
         var layout = new SlideLayout
@@ -202,7 +210,7 @@ internal static class OpenXmlPresentationParser
         // Preserve the full layout XML for lossless custom-writer save (placeholders the typed
         // model does not capture).
         if (sdkLayout is not null)
-            layout.RawElement = System.Xml.Linq.XElement.Parse(sdkLayout.OuterXml, System.Xml.Linq.LoadOptions.None);
+            layout.RawElement = XElement.Parse(sdkLayout.OuterXml, LoadOptions.None);
 
         var tree = sdkLayout?.CommonSlideData?.ShapeTree;
         if (tree is not null)
@@ -217,11 +225,12 @@ internal static class OpenXmlPresentationParser
         P.ShapeTree tree,
         ShapeCollection target,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache)
+        Dictionary<string, EmbeddedImage> imageCache
+    )
     {
         foreach (var child in tree.ChildElements)
         {
-            Shape? shape = child switch
+            var shape = child switch
             {
                 P.Shape sp => ReadAutoShape(sp, null, null, null),
                 P.GraphicFrame gf => gf.Graphic?.GraphicData?.Uri?.Value == DmlNames.GraphicDataTableUri
@@ -235,19 +244,19 @@ internal static class OpenXmlPresentationParser
         }
     }
 
-    private static Models.Themes.LayoutType MapLayoutType(string? type) => type switch
+    private static LayoutType MapLayoutType(string? type) => type switch
     {
-        "blank" => Models.Themes.LayoutType.Blank,
-        "title" => Models.Themes.LayoutType.Title,
-        "tx" or "obj" or "twoObj" => Models.Themes.LayoutType.TitleAndContent,
-        "twoTxTwoObj" => Models.Themes.LayoutType.TitleAndTwoContent,
-        "titleOnly" => Models.Themes.LayoutType.TitleOnly,
-        "secHead" => Models.Themes.LayoutType.SectionHeader,
-        "twoTx" => Models.Themes.LayoutType.TwoTextColumns,
-        "vertTx" => Models.Themes.LayoutType.TitleAndVerticalText,
-        "picTx" => Models.Themes.LayoutType.PictureWithCaption,
-        "ctrTitle" => Models.Themes.LayoutType.TitleSlide,
-        _ => Models.Themes.LayoutType.Custom
+        "blank" => LayoutType.Blank,
+        "title" => LayoutType.Title,
+        "tx" or "obj" or "twoObj" => LayoutType.TitleAndContent,
+        "twoTxTwoObj" => LayoutType.TitleAndTwoContent,
+        "titleOnly" => LayoutType.TitleOnly,
+        "secHead" => LayoutType.SectionHeader,
+        "twoTx" => LayoutType.TwoTextColumns,
+        "vertTx" => LayoutType.TitleAndVerticalText,
+        "picTx" => LayoutType.PictureWithCaption,
+        "ctrTitle" => LayoutType.TitleSlide,
+        _ => LayoutType.Custom
     };
 
     private static SlideLayout SynthesizeFallback(MasterSlideCollection masters)
@@ -256,7 +265,7 @@ internal static class OpenXmlPresentationParser
         var layout = new SlideLayout
         {
             Name = "Blank",
-            LayoutType = Models.Themes.LayoutType.Blank,
+            LayoutType = LayoutType.Blank,
             Master = master
         };
         master.Layouts.Add(layout);
@@ -319,7 +328,8 @@ internal static class OpenXmlPresentationParser
         SlideLayout layout,
         uint slideId,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache)
+        Dictionary<string, EmbeddedImage> imageCache
+    )
     {
         var slide = new Slide
         {
@@ -338,7 +348,7 @@ internal static class OpenXmlPresentationParser
         // Speaker notes — reuse the shared NotesParser on the notes-slide XML.
         if (slidePart.NotesSlidePart?.NotesSlide is { } sdkNotes)
         {
-            var notesXml = System.Xml.Linq.XElement.Parse(sdkNotes.OuterXml, System.Xml.Linq.LoadOptions.None);
+            var notesXml = XElement.Parse(sdkNotes.OuterXml, LoadOptions.None);
             NotesParser.Parse(notesXml, slide.Notes);
         }
 
@@ -350,15 +360,16 @@ internal static class OpenXmlPresentationParser
     // Walks a shape-tree (or group) child collection in document order, mapping each element to
     // its concrete Shape subtype. Skips the non-visual group properties container.
     private static void ReadShapeTree(
-        DocumentFormat.OpenXml.OpenXmlCompositeElement tree,
+        OpenXmlCompositeElement tree,
         ShapeCollection target,
         SlidePart slidePart,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache)
+        Dictionary<string, EmbeddedImage> imageCache
+    )
     {
         foreach (var child in tree.ChildElements)
         {
-            Shape? shape = child switch
+            var shape = child switch
             {
                 P.Shape sp => ReadAutoShape(sp, slidePart, mediaStore, imageCache),
                 P.Picture pic => ReadPicture(pic, slidePart, mediaStore, imageCache),
@@ -376,7 +387,8 @@ internal static class OpenXmlPresentationParser
         P.Shape sp,
         SlidePart? slidePart,
         MediaStore? mediaStore,
-        Dictionary<string, EmbeddedImage>? imageCache)
+        Dictionary<string, EmbeddedImage>? imageCache
+    )
     {
         var shape = new AutoShape();
         ReadCommon(sp.NonVisualShapeProperties?.NonVisualDrawingProperties, shape);
@@ -390,8 +402,8 @@ internal static class OpenXmlPresentationParser
             var embedId = blipFill?.Blip?.Embed?.Value;
             if (!string.IsNullOrEmpty(embedId) && slidePart.GetPartById(embedId) is ImagePart imagePart)
             {
-                shape.Fill.Type = Unchained.Ooxml.Drawing.FillType.Picture;
-                shape.Fill.Picture = new Unchained.Ooxml.Drawing.PictureFill
+                shape.Fill.Type = FillType.Picture;
+                shape.Fill.Picture = new PictureFill
                 {
                     Image = LoadImage(imagePart, mediaStore, imageCache)
                 };
@@ -411,7 +423,8 @@ internal static class OpenXmlPresentationParser
         P.Picture pic,
         SlidePart slidePart,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache)
+        Dictionary<string, EmbeddedImage> imageCache
+    )
     {
         var shape = new PictureShape();
         ReadCommon(pic.NonVisualPictureProperties?.NonVisualDrawingProperties, shape);
@@ -458,7 +471,7 @@ internal static class OpenXmlPresentationParser
             ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, smartArt);
             ReadFrameGeometry(gf.Transform, smartArt);
             // Preserve the frame XML (incl. <dgm:relIds>) so the SDK save path can re-emit it.
-            smartArt.RawElement = System.Xml.Linq.XElement.Parse(gf.OuterXml, System.Xml.Linq.LoadOptions.None);
+            smartArt.RawElement = XElement.Parse(gf.OuterXml, LoadOptions.None);
             return smartArt;
         }
 
@@ -473,7 +486,8 @@ internal static class OpenXmlPresentationParser
         P.GroupShape grp,
         SlidePart slidePart,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache)
+        Dictionary<string, EmbeddedImage> imageCache
+    )
     {
         var shape = new GroupShape();
         ReadCommon(grp.NonVisualGroupShapeProperties?.NonVisualDrawingProperties, shape);
@@ -484,16 +498,19 @@ internal static class OpenXmlPresentationParser
             shape.X = new Emu(off.X ?? 0);
             shape.Y = new Emu(off.Y ?? 0);
         }
+
         if (xfrmGroup?.Extents is { } ext)
         {
             shape.Width = new Emu(ext.Cx ?? 0);
             shape.Height = new Emu(ext.Cy ?? 0);
         }
+
         if (xfrmGroup?.ChildOffset is { } chOff)
         {
             shape.ChildOffsetX = new Emu(chOff.X ?? 0);
             shape.ChildOffsetY = new Emu(chOff.Y ?? 0);
         }
+
         if (xfrmGroup?.ChildExtents is { } chExt)
         {
             shape.ChildExtentWidth = new Emu(chExt.Cx ?? 0);
@@ -539,7 +556,7 @@ internal static class OpenXmlPresentationParser
         if (spPr is null)
             return;
 
-        var element = System.Xml.Linq.XElement.Parse(spPr.OuterXml, System.Xml.Linq.LoadOptions.None);
+        var element = XElement.Parse(spPr.OuterXml, LoadOptions.None);
         FillParser.Parse(element, shape.Fill);
         LineParser.Parse(element, shape.Line);
         EffectParser.Parse(element, shape.Effects);
@@ -551,7 +568,8 @@ internal static class OpenXmlPresentationParser
     private static EmbeddedImage LoadImage(
         ImagePart imagePart,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache)
+        Dictionary<string, EmbeddedImage> imageCache
+    )
     {
         var key = imagePart.Uri.ToString();
         if (imageCache.TryGetValue(key, out var existing))
@@ -572,6 +590,7 @@ internal static class OpenXmlPresentationParser
             shape.X = new Emu(off.X ?? 0);
             shape.Y = new Emu(off.Y ?? 0);
         }
+
         if (xfrm?.Extents is { } ext)
         {
             shape.Width = new Emu(ext.Cx ?? 0);
@@ -586,6 +605,7 @@ internal static class OpenXmlPresentationParser
             shape.X = new Emu(off.X ?? 0);
             shape.Y = new Emu(off.Y ?? 0);
         }
+
         if (xfrm?.Extents is { } ext)
         {
             shape.Width = new Emu(ext.Cx ?? 0);
@@ -626,7 +646,7 @@ internal static class OpenXmlPresentationParser
     private static void ReadChart(P.GraphicFrame gf, SlidePart slidePart, ChartShape shape)
     {
         var chartRef = gf.Graphic?.GraphicData
-            ?.GetFirstChild<DocumentFormat.OpenXml.Drawing.Charts.ChartReference>();
+            ?.GetFirstChild<ChartReference>();
         var rId = chartRef?.Id?.Value;
         if (string.IsNullOrEmpty(rId))
             return;
@@ -652,9 +672,9 @@ internal static class OpenXmlPresentationParser
     // the a: paragraph/run vocabulary) into the model. Reuses the shared TextParser so run/
     // paragraph formatting (bold/italic/size/font/colour/underline/caps, alignment, bullets,
     // spacing, body anchor/margins) maps identically to the custom parser — no divergence.
-    private static void ReadTextBody(DocumentFormat.OpenXml.OpenXmlElement body, TextFrame frame)
+    private static void ReadTextBody(OpenXmlElement body, TextFrame frame)
     {
-        var element = System.Xml.Linq.XElement.Parse(body.OuterXml, System.Xml.Linq.LoadOptions.None);
+        var element = XElement.Parse(body.OuterXml, LoadOptions.None);
         var parsed = TextParser.ParseTextBody(element);
         frame.AbsorbFrom(parsed);
     }

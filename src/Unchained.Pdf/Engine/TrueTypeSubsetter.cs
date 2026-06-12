@@ -1,21 +1,18 @@
-using Unchained.Pdf.Abstractions;
-using Unchained.Pdf.Core;
-
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Subsets an embedded TrueType font to the glyphs actually used in a PDF page,
-/// reducing file size significantly for fonts with large glyph sets (CJK, symbol fonts).
-/// Only modifies the <c>/glyf</c> and <c>/loca</c> tables; all other tables are kept intact
-/// so font metrics and hinting are preserved. Unused glyph data is zeroed out.
-/// Glyph 0 (.notdef) is always retained (required by the TrueType spec).
+///     Subsets an embedded TrueType font to the glyphs actually used in a PDF page,
+///     reducing file size significantly for fonts with large glyph sets (CJK, symbol fonts).
+///     Only modifies the <c>/glyf</c> and <c>/loca</c> tables; all other tables are kept intact
+///     so font metrics and hinting are preserved. Unused glyph data is zeroed out.
+///     Glyph 0 (.notdef) is always retained (required by the TrueType spec).
 /// </summary>
 internal static class TrueTypeSubsetter
 {
     /// <summary>
-    /// Subsets the given TrueType font to include only the glyphs in <paramref name="usedGlyphIds"/>,
-    /// plus glyph 0 (.notdef) and any composite-glyph components.
-    /// Returns the original bytes unchanged when subsetting fails or is not beneficial.
+    ///     Subsets the given TrueType font to include only the glyphs in <paramref name="usedGlyphIds" />,
+    ///     plus glyph 0 (.notdef) and any composite-glyph components.
+    ///     Returns the original bytes unchanged when subsetting fails or is not beneficial.
     /// </summary>
     internal static byte[] Subset(byte[] fontBytes, IReadOnlySet<int> usedGlyphIds)
     {
@@ -40,7 +37,7 @@ internal static class TrueTypeSubsetter
         var tables = new Dictionary<string, (uint CheckSum, int Offset, int Length)>();
         for (var i = 0; i < numTables; i++)
         {
-            var e = 12 + i * 16;
+            var e = 12 + (i * 16);
             if (e + 16 > b.Length) break;
             var tag = ReadTag(b, e);
             var cs = ReadU32(b, e + 4);
@@ -77,7 +74,12 @@ internal static class TrueTypeSubsetter
         {
             var gid = toExpand.Dequeue();
             if (gid >= numGlyphs) continue;
-            var (gStart, gLen) = GetGlyphRange(b, locaOff, glyfOff, indexToLocFormat, gid, numGlyphs);
+            var (gStart, gLen) = GetGlyphRange(b,
+                locaOff,
+                glyfOff,
+                indexToLocFormat,
+                gid,
+                numGlyphs);
             if (gLen < 2) continue;
             var contourCount = ReadS16(b, gStart);
             if (contourCount >= 0) continue; // simple glyph — no components
@@ -92,11 +94,12 @@ internal static class TrueTypeSubsetter
                     toExpand.Enqueue(compGlyph);
                 // Advance past this component record.
                 pos += 4; // flags + glyphIndex
-                if ((flags & 1) != 0) pos += 4; else pos += 2; // ARG_1_AND_2_ARE_WORDS
-                if ((flags & 8) != 0) pos += 2;  // WE_HAVE_A_SCALE
-                else if ((flags & 64) != 0) pos += 4; // WE_HAVE_AN_X_AND_Y_SCALE
+                if ((flags & 1) != 0) pos += 4;
+                else pos += 2;                         // ARG_1_AND_2_ARE_WORDS
+                if ((flags & 8) != 0) pos += 2;        // WE_HAVE_A_SCALE
+                else if ((flags & 64) != 0) pos += 4;  // WE_HAVE_AN_X_AND_Y_SCALE
                 else if ((flags & 128) != 0) pos += 8; // WE_HAVE_A_TWO_BY_TWO
-                if ((flags & 32) == 0) break; // MORE_COMPONENTS not set
+                if ((flags & 32) == 0) break;          // MORE_COMPONENTS not set
             }
         }
 
@@ -112,7 +115,12 @@ internal static class TrueTypeSubsetter
             newLocaOffsets[gid] = newGlyfBytes.Count;
             if (keepGlyphs.Contains(gid))
             {
-                var (gStart, gLen) = GetGlyphRange(b, locaOff, glyfOff, indexToLocFormat, gid, numGlyphs);
+                var (gStart, gLen) = GetGlyphRange(b,
+                    locaOff,
+                    glyfOff,
+                    indexToLocFormat,
+                    gid,
+                    numGlyphs);
                 if (gLen > 0)
                 {
                     newGlyfBytes.AddRange(b.AsSpan(gStart, gLen).ToArray());
@@ -122,6 +130,7 @@ internal static class TrueTypeSubsetter
             }
             // Unused glyphs: loca[gid] == loca[gid+1] (zero-length entry)
         }
+
         newLocaOffsets[numGlyphs] = newGlyfBytes.Count;
 
         var newGlyf = newGlyfBytes.ToArray();
@@ -151,22 +160,32 @@ internal static class TrueTypeSubsetter
 
         // Rebuild the font file with updated glyf and loca tables.
         // Also update head.indexToLocFormat if we switched from short to long.
-        return RebuildFont(b, tables, numTables, headOff, indexToLocFormat,
-            newGlyf, newLoca);
+        return RebuildFont(b,
+            tables,
+            numTables,
+            headOff,
+            indexToLocFormat,
+            newGlyf,
+            newLoca);
     }
 
     // Rebuilds the TrueType font with the updated glyf and loca tables.
     private static byte[] RebuildFont(
-        byte[] orig, Dictionary<string, (uint CheckSum, int Offset, int Length)> tables,
-        int numTables, int headOff, short indexToLocFormat,
-        byte[] newGlyf, byte[] newLoca)
+        byte[] orig,
+        Dictionary<string, (uint CheckSum, int Offset, int Length)> tables,
+        int numTables,
+        int headOff,
+        short indexToLocFormat,
+        byte[] newGlyf,
+        byte[] newLoca
+    )
     {
         // Collect all tables, replacing glyf and loca.
         var tableOrder = tables.Keys.OrderBy(static t => t, StringComparer.Ordinal).ToList();
 
         // Calculate new offsets (all aligned to 4 bytes).
         // Offset table (12 bytes) + table records (16 bytes each) = header size.
-        var headerSize = 12 + tableOrder.Count * 16;
+        var headerSize = 12 + (tableOrder.Count * 16);
         var currentOffset = headerSize;
         var newOffsets = new Dictionary<string, int>();
         var newLengths = new Dictionary<string, int>();
@@ -175,12 +194,12 @@ internal static class TrueTypeSubsetter
         {
             newOffsets[tag] = currentOffset;
             var len = tag == "glyf" ? newGlyf.Length
-                    : tag == "loca" ? newLoca.Length
-                    : tables[tag].Length;
+                : tag == "loca" ? newLoca.Length
+                : tables[tag].Length;
             newLengths[tag] = len;
             currentOffset += len;
             // Pad to 4-byte boundary.
-            if (currentOffset % 4 != 0) currentOffset += 4 - currentOffset % 4;
+            if (currentOffset % 4 != 0) currentOffset += 4 - (currentOffset % 4);
         }
 
         var totalSize = currentOffset;
@@ -191,7 +210,8 @@ internal static class TrueTypeSubsetter
         WriteU16(result, 4, (ushort)tableOrder.Count);
         // searchRange, entrySelector, rangeShift (not critical for reading, but write them).
         var n = tableOrder.Count;
-        var sr = 1; while (sr * 2 <= n) sr *= 2;
+        var sr = 1;
+        while (sr * 2 <= n) sr *= 2;
         WriteU16(result, 6, (ushort)(sr * 16));
         WriteU16(result, 8, (ushort)(int)Math.Log2(sr));
         WriteU16(result, 10, (ushort)((n - sr) * 16));
@@ -200,9 +220,18 @@ internal static class TrueTypeSubsetter
         for (var i = 0; i < tableOrder.Count; i++)
         {
             var tag = tableOrder[i];
-            var entry = 12 + i * 16;
+            var entry = 12 + (i * 16);
             WriteTag(result, entry, tag);
-            WriteU32(result, entry + 4, ComputeCheckSum(result, tag, orig, tables, newOffsets, newLengths, newGlyf, newLoca));
+            WriteU32(result,
+            entry + 4,
+            ComputeCheckSum(result,
+                tag,
+                orig,
+                tables,
+                newOffsets,
+                newLengths,
+                newGlyf,
+                newLoca));
             WriteU32(result, entry + 8, (uint)newOffsets[tag]);
             WriteU32(result, entry + 12, (uint)newLengths[tag]);
         }
@@ -234,10 +263,15 @@ internal static class TrueTypeSubsetter
     }
 
     private static uint ComputeCheckSum(
-        byte[] result, string tag, byte[] orig,
+        byte[] result,
+        string tag,
+        byte[] orig,
         Dictionary<string, (uint CheckSum, int Offset, int Length)> tables,
-        Dictionary<string, int> newOffsets, Dictionary<string, int> newLengths,
-        byte[] newGlyf, byte[] newLoca)
+        Dictionary<string, int> newOffsets,
+        Dictionary<string, int> newLengths,
+        byte[] newGlyf,
+        byte[] newLoca
+    )
     {
         // For glyf and loca use the new data; for others reuse the original checksum.
         if (tag == "glyf") return TableCheckSum(newGlyf);
@@ -255,31 +289,40 @@ internal static class TrueTypeSubsetter
                    ((uint)data[i + 2] << 8) | data[i + 3];
             i += 4;
         }
+
         // Handle trailing bytes.
         if (i < data.Length)
         {
             uint last = 0;
             for (var j = 0; j < data.Length - i; j++)
-                last |= (uint)data[i + j] << (24 - j * 8);
+                last |= (uint)data[i + j] << (24 - (j * 8));
             sum += last;
         }
+
         return sum;
     }
 
     private static (int Start, int Length) GetGlyphRange(
-        byte[] b, int locaOff, int glyfOff, short indexToLocFormat, int gid, int numGlyphs)
+        byte[] b,
+        int locaOff,
+        int glyfOff,
+        short indexToLocFormat,
+        int gid,
+        int numGlyphs
+    )
     {
         int start, end;
         if (indexToLocFormat == 0)
         {
-            start = glyfOff + ReadU16(b, locaOff + gid * 2) * 2;
-            end   = glyfOff + ReadU16(b, locaOff + (gid + 1) * 2) * 2;
+            start = glyfOff + (ReadU16(b, locaOff + (gid * 2)) * 2);
+            end = glyfOff + (ReadU16(b, locaOff + ((gid + 1) * 2)) * 2);
         }
         else
         {
-            start = glyfOff + (int)ReadU32(b, locaOff + gid * 4);
-            end   = glyfOff + (int)ReadU32(b, locaOff + (gid + 1) * 4);
+            start = glyfOff + (int)ReadU32(b, locaOff + (gid * 4));
+            end = glyfOff + (int)ReadU32(b, locaOff + ((gid + 1) * 4));
         }
+
         var len = Math.Max(0, end - start);
         // Sanity check against buffer bounds.
         if (start < 0 || start + len > b.Length) return (glyfOff, 0);
@@ -308,17 +351,21 @@ internal static class TrueTypeSubsetter
 
     private static void WriteU16(byte[] b, int o, ushort v)
     {
-        b[o] = (byte)(v >> 8); b[o + 1] = (byte)v;
+        b[o] = (byte)(v >> 8);
+        b[o + 1] = (byte)v;
     }
 
     private static void WriteS16(byte[] b, int o, short v)
     {
-        b[o] = (byte)(v >> 8); b[o + 1] = (byte)v;
+        b[o] = (byte)(v >> 8);
+        b[o + 1] = (byte)v;
     }
 
     private static void WriteU32(byte[] b, int o, uint v)
     {
-        b[o] = (byte)(v >> 24); b[o + 1] = (byte)(v >> 16);
-        b[o + 2] = (byte)(v >> 8); b[o + 3] = (byte)v;
+        b[o] = (byte)(v >> 24);
+        b[o + 1] = (byte)(v >> 16);
+        b[o + 2] = (byte)(v >> 8);
+        b[o + 3] = (byte)v;
     }
 }

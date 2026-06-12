@@ -1,19 +1,19 @@
-using Unchained.Pptx.Core.Xml;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a slide master OPC part into a <see cref="MasterSlide"/>, including its
-/// associated theme and all slide layouts.
+///     Parses a slide master OPC part into a <see cref="MasterSlide" />, including its
+///     associated theme and all slide layouts.
 /// </summary>
 internal sealed class MasterParser
 {
-    private readonly OpcPackage _package;
     private readonly MediaStore _mediaStore;
+    private readonly OpcPackage _package;
 
     public MasterParser(OpcPackage package, MediaStore mediaStore)
     {
@@ -22,8 +22,8 @@ internal sealed class MasterParser
     }
 
     /// <summary>
-    /// Parses the master at <paramref name="partUri"/> and returns a fully populated
-    /// <see cref="MasterSlide"/> with theme and layouts.
+    ///     Parses the master at <paramref name="partUri" /> and returns a fully populated
+    ///     <see cref="MasterSlide" /> with theme and layouts.
     /// </summary>
     public MasterSlide Parse(string partUri, string relationshipId)
     {

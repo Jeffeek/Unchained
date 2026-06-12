@@ -1,7 +1,7 @@
 namespace Unchained.Pptx.Export;
 
 /// <summary>
-/// The PDF/A or PDF conformance level for PPTX-to-PDF export.
+///     The PDF/A or PDF conformance level for PPTX-to-PDF export.
 /// </summary>
 public enum PdfCompliance
 {
@@ -16,5 +16,5 @@ public enum PdfCompliance
     /// <summary>PDF/A-2b — extends A-1b with transparency and JPEG 2000 support.</summary>
     PdfA2b,
     /// <summary>PDF/A-3b — same as A-2b but permits embedded files of any type.</summary>
-    PdfA3b,
+    PdfA3b
 }

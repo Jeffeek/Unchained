@@ -1,10 +1,10 @@
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes PackBits / PDF run-length encoded data.
-/// Used by PDF /RunLengthDecode (ISO 32000-1 §7.4.5) and Apple PackBits (BMP, TIFF, PICT).
-/// Length byte semantics: 0–127 = copy next (length+1) bytes verbatim;
-/// 129–255 = repeat next byte (257−length) times; 128 = end-of-data.
+///     Decodes PackBits / PDF run-length encoded data.
+///     Used by PDF /RunLengthDecode (ISO 32000-1 §7.4.5) and Apple PackBits (BMP, TIFF, PICT).
+///     Length byte semantics: 0–127 = copy next (length+1) bytes verbatim;
+///     129–255 = repeat next byte (257−length) times; 128 = end-of-data.
 /// </summary>
 internal static class RunLengthDecoder
 {

@@ -6,9 +6,9 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IDocumentMerger"/> implementation.
-/// Source documents are processed sequentially so that peak memory is proportional
-/// to the largest single source file, not the total size of all inputs.
+///     Default <see cref="IDocumentMerger" /> implementation.
+///     Source documents are processed sequentially so that peak memory is proportional
+///     to the largest single source file, not the total size of all inputs.
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class DocumentMerger : IDocumentMerger
@@ -18,7 +18,7 @@ public sealed class DocumentMerger : IDocumentMerger
         IReadOnlyList<IPdfDocument> documents,
         MergeOptions options,
         CancellationToken ct = default
-    ) => Task.Run(() => MergeDocuments(documents, options, copyStreamData: false), ct);
+    ) => Task.Run(() => MergeDocuments(documents, options, false), ct);
 
     /// <inheritdoc />
     public Task<IPdfDocument> MergeAsync(

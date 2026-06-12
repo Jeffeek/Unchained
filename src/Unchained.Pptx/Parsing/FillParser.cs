@@ -1,19 +1,19 @@
 using System.Xml.Linq;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses DrawingML fill elements into <see cref="FillFormat"/> objects.
+///     Parses DrawingML fill elements into <see cref="FillFormat" /> objects.
 /// </summary>
 internal static class FillParser
 {
     /// <summary>
-    /// Reads fill information from <paramref name="parent"/> and populates
-    /// <paramref name="fill"/>. Supports solid, gradient, pattern, picture, no-fill, and group-fill.
+    ///     Reads fill information from <paramref name="parent" /> and populates
+    ///     <paramref name="fill" />. Supports solid, gradient, pattern, picture, no-fill, and group-fill.
     /// </summary>
     public static void Parse(XElement parent, FillFormat fill)
     {
@@ -45,10 +45,7 @@ internal static class FillParser
         }
 
         var blip = parent.Element(DmlNames.BlipFill);
-        if (blip != null)
-        {
-            ParsePicture(blip, fill);
-        }
+        if (blip != null) ParsePicture(blip, fill);
     }
 
     // ── Sub-parsers ───────────────────────────────────────────────────────────

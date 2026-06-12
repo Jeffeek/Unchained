@@ -7,15 +7,15 @@ using Unchained.Pptx.Core.Xml;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a <c>&lt;p:timing&gt;</c> element into an <see cref="AnimationTimeline"/>.
-/// Extracts preset-based effects from the main sequence and interactive sequences;
-/// complex custom animations that cannot be represented in the model are silently ignored
-/// (the raw element is preserved for round-trip by the caller).
+///     Parses a <c>&lt;p:timing&gt;</c> element into an <see cref="AnimationTimeline" />.
+///     Extracts preset-based effects from the main sequence and interactive sequences;
+///     complex custom animations that cannot be represented in the model are silently ignored
+///     (the raw element is preserved for round-trip by the caller).
 /// </summary>
 internal static class AnimationParser
 {
     /// <summary>
-    /// Populates <paramref name="timeline"/> from the <c>&lt;p:timing&gt;</c> element.
+    ///     Populates <paramref name="timeline" /> from the <c>&lt;p:timing&gt;</c> element.
     /// </summary>
     public static void Parse(XElement timingEl, AnimationTimeline timeline)
     {
@@ -102,7 +102,7 @@ internal static class AnimationParser
 
         var presetClass = ctn.GetAttr("presetClass", "entr");
         var durRaw = ctn.GetAttr("dur");
-        double durationSeconds = 0.5;
+        var durationSeconds = 0.5;
         if (durRaw != null && int.TryParse(durRaw, out var durMs) && durMs > 0)
             durationSeconds = durMs / 1000.0;
 
@@ -113,7 +113,7 @@ internal static class AnimationParser
         // Delay from the condition
         double delay = 0;
         var condDelay = ctn.Element(pml + "stCondLst")?.Element(pml + "cond")
-                           ?.GetAttr("delay");
+            ?.GetAttr("delay");
         if (condDelay != null && int.TryParse(condDelay, out var delayMs) && delayMs > 0)
             delay = delayMs / 1000.0;
 
@@ -122,7 +122,7 @@ internal static class AnimationParser
             "exit" => EffectCategory.Exit,
             "emph" => EffectCategory.Emphasis,
             "path" => EffectCategory.Motion,
-            _ => EffectCategory.Entrance,
+            _ => EffectCategory.Entrance
         };
 
         var preset = (AnimationPreset)presetId;
@@ -132,7 +132,7 @@ internal static class AnimationParser
             TargetShapeId = targetSpid,
             Preset = preset,
             Category = category,
-            Trigger = EffectTrigger.OnClick,
+            Trigger = EffectTrigger.OnClick
         };
         effect.Timing.DurationSeconds = durationSeconds;
         effect.Timing.DelaySeconds = delay;

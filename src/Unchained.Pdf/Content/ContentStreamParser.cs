@@ -8,17 +8,17 @@ using Unchained.Pdf.Parsing.Filters;
 namespace Unchained.Pdf.Content;
 
 /// <summary>
-/// Parses a decoded PDF content stream into a flat sequence of
-/// <see cref="ContentOperator"/> records (ISO 32000-1 §7.8.2).
-/// <para>
-/// Inline images (<c>BI</c>…<c>ID</c>…<c>EI</c>) are decoded at parse time and
-/// emitted as a <c>BI</c> operator whose first operand is a <see cref="PdfInlineImage"/>.
-/// </para>
+///     Parses a decoded PDF content stream into a flat sequence of
+///     <see cref="ContentOperator" /> records (ISO 32000-1 §7.8.2).
+///     <para>
+///         Inline images (<c>BI</c>…<c>ID</c>…<c>EI</c>) are decoded at parse time and
+///         emitted as a <c>BI</c> operator whose first operand is a <see cref="PdfInlineImage" />.
+///     </para>
 /// </summary>
 internal static class ContentStreamParser
 {
     /// <summary>
-    /// Parses <paramref name="data"/> and returns the ordered list of content operators.
+    ///     Parses <paramref name="data" /> and returns the ordered list of content operators.
     /// </summary>
     /// <param name="data">Decoded (decompressed) content stream bytes.</param>
     public static IReadOnlyList<ContentOperator> Parse(ReadOnlyMemory<byte> data)
@@ -26,7 +26,7 @@ internal static class ContentStreamParser
         var lexer = new Lexer(data);
         var parser = new PdfParser(data);
 
-        var operands  = new List<PdfObject>();
+        var operands = new List<PdfObject>();
         var operators = new List<ContentOperator>();
 
         while (!lexer.AtEnd)
@@ -57,9 +57,7 @@ internal static class ContentStreamParser
                 {
                     var raw = peek.Raw.Span;
                     if (raw.Length > 0 && raw[0] == (byte)'/')
-                    {
                         operands.Add(parser.ReadValue(lexer));
-                    }
                     else
                     {
                         lexer.ReadNext();
@@ -113,7 +111,8 @@ internal static class ContentStreamParser
     private static PdfInlineImage? DecodeInlineImage(
         List<PdfObject> operands,
         Lexer lexer,
-        ReadOnlyMemory<byte> source)
+        ReadOnlyMemory<byte> source
+    )
     {
         try
         {
@@ -127,10 +126,10 @@ internal static class ContentStreamParser
                     dict[key.Value] = operands[i + 1];
             }
 
-            var w   = GetInt(dict, "W",   "Width",            0);
-            var h   = GetInt(dict, "H",   "Height",           0);
+            var w = GetInt(dict, "W", "Width", 0);
+            var h = GetInt(dict, "H", "Height", 0);
             var bpc = GetInt(dict, "BPC", "BitsPerComponent", 8);
-            var cs  = GetName(dict, "CS", "ColorSpace");
+            var cs = GetName(dict, "CS", "ColorSpace");
             var filters = GetFilters(dict);
 
             if (w <= 0 || h <= 0) return null;
@@ -158,7 +157,7 @@ internal static class ContentStreamParser
             // exactly like Do XObjects. The cm matrix placed before BI maps the
             // unit square to the desired position and size; pixel dimensions here
             // would cause wrong placement when a cm transform is present.
-            return new PdfInlineImage(w, h, rgb, userWidth: 1, userHeight: 1);
+            return new PdfInlineImage(w, h, rgb, 1, 1);
         }
         catch
         {
@@ -170,20 +169,25 @@ internal static class ContentStreamParser
 
     private static int GetInt(
         Dictionary<string, PdfObject> dict,
-        string abbr, string full, int fallback)
+        string abbr,
+        string full,
+        int fallback
+    )
     {
         var obj = dict.GetValueOrDefault(abbr) ?? dict.GetValueOrDefault(full);
         return obj switch
         {
             PdfInteger n => (int)n.Value,
-            PdfReal r    => (int)r.Value,
-            _            => fallback
+            PdfReal r => (int)r.Value,
+            _ => fallback
         };
     }
 
     private static string? GetName(
         Dictionary<string, PdfObject> dict,
-        string abbr, string full)
+        string abbr,
+        string full
+    )
     {
         var obj = dict.GetValueOrDefault(abbr) ?? dict.GetValueOrDefault(full);
         return obj is PdfName n ? n.Value : null;
@@ -205,8 +209,8 @@ internal static class ContentStreamParser
     // Otherwise (filtered data of unknown length) scan for a whitespace-delimited EI.
     private static byte[] ExtractInlineImageBytes(Lexer lexer, ReadOnlyMemory<byte> source, long expectedLen = 0)
     {
-        var span  = source.Span;
-        var pos   = lexer.Position;
+        var span = source.Span;
+        var pos = lexer.Position;
 
         // Skip exactly one byte of whitespace that immediately follows the ID keyword.
         if (pos < span.Length && span[pos].IsWhitespace()) pos++;
@@ -214,7 +218,8 @@ internal static class ContentStreamParser
         var dataStart = pos;
 
         if (expectedLen > 0 && dataStart + expectedLen <= span.Length)
-        {            var end = dataStart + (int)expectedLen;
+        {
+            var end = dataStart + (int)expectedLen;
             var data = span[dataStart..end].ToArray();
             // Advance past optional whitespace + EI so the stream stays in sync.
             var p = end;
@@ -235,6 +240,7 @@ internal static class ContentStreamParser
                 lexer.Seek(pos + 3); // advance past EI
                 return data;
             }
+
             pos++;
         }
 
@@ -245,7 +251,7 @@ internal static class ContentStreamParser
     private static void SkipToEi(Lexer lexer, ReadOnlyMemory<byte> source)
     {
         var span = source.Span;
-        var pos  = lexer.Position;
+        var pos = lexer.Position;
         while (pos < span.Length - 2)
         {
             if (span[pos].IsWhitespace() &&
@@ -255,8 +261,10 @@ internal static class ContentStreamParser
                 lexer.Seek(pos + 3);
                 return;
             }
+
             pos++;
         }
+
         lexer.Seek(span.Length);
     }
 
@@ -271,12 +279,14 @@ internal static class ContentStreamParser
         {
             case PdfName n:
                 result.Add(n.Value);
-                break;
+            break;
             case PdfArray arr:
                 foreach (var e in arr.Elements)
-                    if (e is PdfName en) result.Add(en.Value);
-                break;
+                    if (e is PdfName en)
+                        result.Add(en.Value);
+            break;
         }
+
         return result;
     }
 
@@ -294,14 +304,14 @@ internal static class ContentStreamParser
         var expanded = filterName switch
         {
             "AHx" or "ASCIIHexDecode" => "ASCIIHexDecode",
-            "A85" or "ASCII85Decode"  => "ASCII85Decode",
-            "Fl"  or "FlateDecode"    => "FlateDecode",
-            "LZW" or "LZWDecode"      => "LZWDecode",
-            "RL"  or "RunLengthDecode"=> "RunLengthDecode",
+            "A85" or "ASCII85Decode" => "ASCII85Decode",
+            "Fl" or "FlateDecode" => "FlateDecode",
+            "LZW" or "LZWDecode" => "LZWDecode",
+            "RL" or "RunLengthDecode" => "RunLengthDecode",
             "CCF" or "CCITTFaxDecode" => "CCITTFaxDecode",
-            "DCT" or "DCTDecode"      => "DCTDecode",
-            null or ""                => null,
-            _                         => filterName
+            "DCT" or "DCTDecode" => "DCTDecode",
+            null or "" => null,
+            _ => filterName
         };
 
         if (expanded is null) return raw;
@@ -323,7 +333,13 @@ internal static class ContentStreamParser
     }
 
     // Convert decoded bytes to packed RGB (3 bytes/pixel).
-    private static byte[]? ConvertToRgb(ReadOnlyMemory<byte> data, int w, int h, string? cs, int bpc)
+    private static byte[]? ConvertToRgb(
+        ReadOnlyMemory<byte> data,
+        int w,
+        int h,
+        string? cs,
+        int bpc
+    )
     {
         var pixelCount = w * h;
 
@@ -345,14 +361,15 @@ internal static class ContentStreamParser
             var rgb = new byte[pixelCount * 3];
             for (int i = 0, j = 0; i < pixelCount; i++, j += 3)
             {
-                var c = src[i * 4    ] / 255.0;
-                var m = src[i * 4 + 1] / 255.0;
-                var y = src[i * 4 + 2] / 255.0;
-                var k = src[i * 4 + 3] / 255.0;
-                rgb[j]     = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
+                var c = src[i * 4] / 255.0;
+                var m = src[(i * 4) + 1] / 255.0;
+                var y = src[(i * 4) + 2] / 255.0;
+                var k = src[(i * 4) + 3] / 255.0;
+                rgb[j] = (byte)Math.Clamp((1 - c) * (1 - k) * 255, 0, 255);
                 rgb[j + 1] = (byte)Math.Clamp((1 - m) * (1 - k) * 255, 0, 255);
                 rgb[j + 2] = (byte)Math.Clamp((1 - y) * (1 - k) * 255, 0, 255);
             }
+
             return rgb;
         }
 
@@ -361,20 +378,21 @@ internal static class ContentStreamParser
         // 1 = black (maximum), i.e. 0 = paper, 1 = ink (CCITT fax convention).
         if (cs is null or "DeviceGray" or "G" && bpc == 1)
         {
-            var src      = data.Span;
-            var rgb      = new byte[pixelCount * 3];
+            var src = data.Span;
+            var rgb = new byte[pixelCount * 3];
             var rowBytes = (w + 7) / 8;
             for (var row = 0; row < h; row++)
             for (var col = 0; col < w; col++)
             {
-                var byteIdx = row * rowBytes + (col >> 3);
+                var byteIdx = (row * rowBytes) + (col >> 3);
                 if (byteIdx >= src.Length) break;
                 var bit = (src[byteIdx] >> (7 - (col & 7))) & 1;
                 // bit=0 → white (paper), bit=1 → black (ink)
-                var v   = (byte)(bit == 0 ? 255 : 0);
-                var j   = (row * w + col) * 3;
+                var v = (byte)(bit == 0 ? 255 : 0);
+                var j = ((row * w) + col) * 3;
                 rgb[j] = rgb[j + 1] = rgb[j + 2] = v;
             }
+
             return rgb;
         }
 

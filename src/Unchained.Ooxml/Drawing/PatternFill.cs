@@ -1,7 +1,7 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// A fill that tiles two colours in a repeating geometric pattern.
+///     A fill that tiles two colours in a repeating geometric pattern.
 /// </summary>
 public sealed class PatternFill
 {

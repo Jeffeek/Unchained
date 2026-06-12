@@ -1,8 +1,8 @@
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
-/// The placeholder type of a shape (<c>p:ph/@type</c>). Placeholders inherit position, size, and
-/// default formatting from the matching placeholder on the slide layout (and in turn the master).
+///     The placeholder type of a shape (<c>p:ph/@type</c>). Placeholders inherit position, size, and
+///     default formatting from the matching placeholder on the slide layout (and in turn the master).
 /// </summary>
 public enum PlaceholderType
 {
@@ -40,5 +40,5 @@ public enum PlaceholderType
     Header,
 
     /// <summary>Chart, table, picture, media, or other typed placeholder.</summary>
-    Media,
+    Media
 }

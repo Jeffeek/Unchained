@@ -1,10 +1,10 @@
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes LZW-compressed data.
-/// Used by PDF /LZWDecode (ISO 32000-1 §7.4.4) and TIFF LZW compression.
-/// Implements TIFF-compatible LZW: MSB-first variable-length codes,
-/// initial code width 9 bits, Clear=256, EOD=257.
+///     Decodes LZW-compressed data.
+///     Used by PDF /LZWDecode (ISO 32000-1 §7.4.4) and TIFF LZW compression.
+///     Implements TIFF-compatible LZW: MSB-first variable-length codes,
+///     initial code width 9 bits, Clear=256, EOD=257.
 /// </summary>
 internal static class LzwDecoder
 {
@@ -15,8 +15,8 @@ internal static class LzwDecoder
 
     /// <param name="data">The LZW-compressed bytes.</param>
     /// <param name="earlyChange">
-    /// 1 (default, TIFF/PDF) = increase code width one entry earlier.
-    /// 0 = increase at the exact power-of-2 boundary.
+    ///     1 (default, TIFF/PDF) = increase code width one entry earlier.
+    ///     0 = increase at the exact power-of-2 boundary.
     /// </param>
     internal static ReadOnlyMemory<byte> Decode(ReadOnlyMemory<byte> data, int earlyChange = 1)
     {

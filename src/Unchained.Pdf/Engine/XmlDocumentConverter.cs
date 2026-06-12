@@ -1,16 +1,18 @@
 using System.Buffers;
+using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.Converters;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Converts between <see cref="IPdfDocument"/> and Unchained's document XML schema.
-/// <para>
-/// <b>Schema overview</b> — a document is represented as:
-/// <code>
+///     Converts between <see cref="IPdfDocument" /> and Unchained's document XML schema.
+///     <para>
+///         <b>Schema overview</b> — a document is represented as:
+///         <code>
 /// &lt;Document&gt;
 ///   &lt;Page width="595" height="842"&gt;
 ///     &lt;Paragraph font="Helvetica" size="12" x="72" y="770"&gt;text&lt;/Paragraph&gt;
@@ -23,19 +25,19 @@ namespace Unchained.Pdf.Engine;
 ///   &lt;/Page&gt;
 /// &lt;/Document&gt;
 /// </code>
-/// </para>
-/// <para>
-/// <b>SaveXml</b> derives the XML from the parsed text spans and content operators of each page.
-/// <b>BindXml / LoadFromXml</b> renders each page element into a PDF content stream.
-/// </para>
+///     </para>
+///     <para>
+///         <b>SaveXml</b> derives the XML from the parsed text spans and content operators of each page.
+///         <b>BindXml / LoadFromXml</b> renders each page element into a PDF content stream.
+///     </para>
 /// </summary>
 internal static class XmlDocumentConverter
 {
     // ── SaveXml ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Serializes the structure of <paramref name="core"/> to the Unchained document XML schema
-    /// and returns the UTF-8 encoded XML string.
+    ///     Serializes the structure of <paramref name="core" /> to the Unchained document XML schema
+    ///     and returns the UTF-8 encoded XML string.
     /// </summary>
     internal static string SaveXml(PdfDocumentCore core)
     {
@@ -48,8 +50,8 @@ internal static class XmlDocumentConverter
             var height = GetMediaBoxDimension(pageDict, 3);
 
             var pageEl = new XElement("Page",
-                new XAttribute("width", width.ToString("G", System.Globalization.CultureInfo.InvariantCulture)),
-                new XAttribute("height", height.ToString("G", System.Globalization.CultureInfo.InvariantCulture)));
+                new XAttribute("width", width.ToString("G", CultureInfo.InvariantCulture)),
+                new XAttribute("height", height.ToString("G", CultureInfo.InvariantCulture)));
 
             // Emit text spans as Paragraph elements.
             try
@@ -64,11 +66,11 @@ internal static class XmlDocumentConverter
                         // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
                         new XAttribute("font", span.FontName ?? "Helvetica"),
                         new XAttribute("size",
-                            span.FontSize.ToString("G", System.Globalization.CultureInfo.InvariantCulture)),
+                            span.FontSize.ToString("G", CultureInfo.InvariantCulture)),
                         new XAttribute("x",
-                            span.X.ToString("G", System.Globalization.CultureInfo.InvariantCulture)),
+                            span.X.ToString("G", CultureInfo.InvariantCulture)),
                         new XAttribute("y",
-                            span.Y.ToString("G", System.Globalization.CultureInfo.InvariantCulture)),
+                            span.Y.ToString("G", CultureInfo.InvariantCulture)),
                         span.Text));
                 }
             }
@@ -86,8 +88,8 @@ internal static class XmlDocumentConverter
     // ── LoadFromXml (BindXml) ─────────────────────────────────────────────────
 
     /// <summary>
-    /// Parses an Unchained document XML string and produces an <see cref="IPdfDocument"/>.
-    /// Supports: <c>Page</c>, <c>Paragraph</c>, <c>Heading</c>, <c>Table</c>.
+    ///     Parses an Unchained document XML string and produces an <see cref="IPdfDocument" />.
+    ///     Supports: <c>Page</c>, <c>Paragraph</c>, <c>Heading</c>, <c>Table</c>.
     /// </summary>
     internal static IPdfDocument LoadFromXml(string xmlContent)
     {
@@ -97,7 +99,7 @@ internal static class XmlDocumentConverter
         if (!root.Name.LocalName.Equals("Document", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Root element must be <Document>, got <{root.Name.LocalName}>.");
 
-        var acc = new Converters.PdfPageAccumulator();
+        var acc = new PdfPageAccumulator();
 
         foreach (var pageEl in root.Elements().Where(static e => e.Name.LocalName.Equals("Page", StringComparison.OrdinalIgnoreCase)))
         {
@@ -124,12 +126,12 @@ internal static class XmlDocumentConverter
                 {
                     case "paragraph":
                     {
-                        EmitText(csw, el, height, fontRefs, isBold: false);
+                        EmitText(csw, el, height, fontRefs, false);
                         break;
                     }
                     case "heading":
                     {
-                        EmitText(csw, el, height, fontRefs, isBold: true);
+                        EmitText(csw, el, height, fontRefs, true);
                         break;
                     }
                     case "table":
@@ -242,7 +244,7 @@ internal static class XmlDocumentConverter
                 csw.Float(0f);
                 csw.Float(0f);
                 csw.Float(1f);
-                csw.Float(x + c * colWidth);
+                csw.Float(x + (c * colWidth));
                 csw.Float(curY);
                 csw.Op("Tm"u8);
                 csw.LiteralString(headers[c]);
@@ -266,7 +268,7 @@ internal static class XmlDocumentConverter
                 csw.Float(0f);
                 csw.Float(0f);
                 csw.Float(1f);
-                csw.Float(x + c * colWidth);
+                csw.Float(x + (c * colWidth));
                 csw.Float(curY);
                 csw.Op("Tm"u8);
                 csw.LiteralString(row[c]);
@@ -302,7 +304,7 @@ internal static class XmlDocumentConverter
     private static float FloatAttr(XElement el, string name, float fallback)
     {
         var val = el.Attribute(name)?.Value;
-        return val is not null && float.TryParse(val, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)
+        return val is not null && float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)
             ? v
             : fallback;
     }

@@ -1,21 +1,37 @@
+using System.Collections;
+
 namespace Unchained.Pptx.Slides;
 
 /// <summary>
-/// An ordered, mutable collection of <see cref="Slide"/> objects in a presentation.
-/// Provides named methods for adding, inserting, reordering, and removing slides.
+///     An ordered, mutable collection of <see cref="Slide" /> objects in a presentation.
+///     Provides named methods for adding, inserting, reordering, and removing slides.
 /// </summary>
 public sealed class SlideCollection : IReadOnlyList<Slide>
 {
     private readonly List<Slide> _slides = [];
     private uint _nextSlideId = 256; // OOXML minimum slide ID
 
+    // ── IReadOnlyList<Slide> ──────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public int Count => _slides.Count;
+
+    /// <inheritdoc cref="IReadOnlyList{T}.this" />
+    public Slide this[int index] => _slides[index];
+
+    /// <inheritdoc />
+    public IEnumerator<Slide> GetEnumerator() => _slides.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() =>
+        _slides.GetEnumerator();
+
     // ── Mutation ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Appends a blank slide using the first layout of the first master and returns it.
+    ///     Appends a blank slide using the first layout of the first master and returns it.
     /// </summary>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when the presentation has no masters or no layouts.
+    ///     Thrown when the presentation has no masters or no layouts.
     /// </exception>
     public Slide AddBlank(SlideLayout layout)
     {
@@ -27,8 +43,8 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
     }
 
     /// <summary>
-    /// Appends a shallow clone of the given slide and returns the new slide.
-    /// Shape objects are deep-copied so changes to one slide do not affect the other.
+    ///     Appends a shallow clone of the given slide and returns the new slide.
+    ///     Shape objects are deep-copied so changes to one slide do not affect the other.
     /// </summary>
     public Slide AddClone(Slide source)
     {
@@ -40,7 +56,7 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
     }
 
     /// <summary>
-    /// Inserts a blank slide at the given zero-based position and returns it.
+    ///     Inserts a blank slide at the given zero-based position and returns it.
     /// </summary>
     public Slide InsertBlank(int index, SlideLayout layout)
     {
@@ -52,7 +68,7 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
     }
 
     /// <summary>
-    /// Inserts a clone of the given slide at the given zero-based position and returns it.
+    ///     Inserts a clone of the given slide at the given zero-based position and returns it.
     /// </summary>
     public Slide InsertClone(int index, Slide source)
     {
@@ -64,8 +80,8 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
     }
 
     /// <summary>
-    /// Moves the slide at <paramref name="currentIndex"/> to <paramref name="newIndex"/>.
-    /// Both indices are zero-based.
+    ///     Moves the slide at <paramref name="currentIndex" /> to <paramref name="newIndex" />.
+    ///     Both indices are zero-based.
     /// </summary>
     public void MoveTo(int currentIndex, int newIndex)
     {
@@ -91,20 +107,6 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
         _slides.RemoveAt(index);
         RenumberSlides();
     }
-
-    // ── IReadOnlyList<Slide> ──────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public int Count => _slides.Count;
-
-    /// <inheritdoc cref="IReadOnlyList{T}.this" />
-    public Slide this[int index] => _slides[index];
-
-    /// <inheritdoc />
-    public IEnumerator<Slide> GetEnumerator() => _slides.GetEnumerator();
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
-        _slides.GetEnumerator();
 
     // ── Internal helpers ─────────────────────────────────────────────────────
 

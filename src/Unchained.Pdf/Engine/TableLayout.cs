@@ -4,8 +4,8 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Pre-computed geometry for a table. All fields are in PDF user space points (1 pt = 1/72 inch).
-/// Computed once before any content stream operators are emitted.
+///     Pre-computed geometry for a table. All fields are in PDF user space points (1 pt = 1/72 inch).
+///     Computed once before any content stream operators are emitted.
 /// </summary>
 internal readonly struct TableLayout
 {
@@ -38,9 +38,9 @@ internal readonly struct TableLayout
     }
 
     /// <summary>
-    /// Computes layout geometry. When <paramref name="data"/> is provided, column widths are
-    /// proportional to the widest content in each column (using Standard 14 font AFM metrics).
-    /// When <paramref name="data"/> is <see langword="null"/>, columns are distributed equally.
+    ///     Computes layout geometry. When <paramref name="data" /> is provided, column widths are
+    ///     proportional to the widest content in each column (using Standard 14 font AFM metrics).
+    ///     When <paramref name="data" /> is <see langword="null" />, columns are distributed equally.
     /// </summary>
     internal static TableLayout Compute(
         int columnCount,
@@ -49,11 +49,11 @@ internal readonly struct TableLayout
         TableData? data = null
     )
     {
-        const float usableWidth = PageWidth - 2 * Margin;
-        const float usableHeight = PageHeight - 2 * Margin;
-        var rowH = 2 * style.CellPaddingPt + style.CellFontSize;
-        var headerH = 2 * style.CellPaddingPt + style.HeaderFontSize;
-        var titleH = hasTitle ? style.HeaderFontSize + 2 * style.CellPaddingPt : 0f;
+        const float usableWidth = PageWidth - (2 * Margin);
+        const float usableHeight = PageHeight - (2 * Margin);
+        var rowH = (2 * style.CellPaddingPt) + style.CellFontSize;
+        var headerH = (2 * style.CellPaddingPt) + style.HeaderFontSize;
+        var titleH = hasTitle ? style.HeaderFontSize + (2 * style.CellPaddingPt) : 0f;
         var rowsPerPage = Math.Max(1, (int)((usableHeight - titleH - headerH) / rowH));
 
         float[] cols;
@@ -66,7 +66,12 @@ internal readonly struct TableLayout
         }
 
         // ReSharper disable once BadListLineBreaks
-        return new TableLayout(cols, rowH, headerH, titleH, usableWidth, rowsPerPage);
+        return new TableLayout(cols,
+            rowH,
+            headerH,
+            titleH,
+            usableWidth,
+            rowsPerPage);
     }
 
     // Measures each column's required width (widest header or cell text + padding),
@@ -84,13 +89,13 @@ internal readonly struct TableLayout
         for (var c = 0; c < count; c++)
         {
             // Header uses bold font at headerFontSize
-            widths[c] = MeasureText(data.Headers[c], boldFont, style.HeaderFontSize) + 2 * style.CellPaddingPt;
+            widths[c] = MeasureText(data.Headers[c], boldFont, style.HeaderFontSize) + (2 * style.CellPaddingPt);
 
             // All data rows use regular font at cellFontSize
             foreach (var cellW in from row in data.Rows
                                   // ReSharper disable AccessToModifiedClosure
                                   where c < row.Count
-                                  select MeasureText(row[c], style.FontName, style.CellFontSize) + 2 * style.CellPaddingPt
+                                  select MeasureText(row[c], style.FontName, style.CellFontSize) + (2 * style.CellPaddingPt)
                                   into cellW
                                   where cellW > widths[c]
                                   // ReSharper restore AccessToModifiedClosure

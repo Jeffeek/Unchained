@@ -1,9 +1,11 @@
+using System.Collections;
+
 namespace Unchained.Pptx.Slides;
 
 /// <summary>
-/// An ordered, mutable collection of presentation sections.
-/// Sections logically group consecutive slides under named headings visible in PowerPoint's
-/// slide panel; they are stored as PowerPoint 2010+ extensions in <c>presentation.xml</c>.
+///     An ordered, mutable collection of presentation sections.
+///     Sections logically group consecutive slides under named headings visible in PowerPoint's
+///     slide panel; they are stored as PowerPoint 2010+ extensions in <c>presentation.xml</c>.
 /// </summary>
 public sealed class SectionCollection : IReadOnlyList<PptxSection>
 {
@@ -20,17 +22,17 @@ public sealed class SectionCollection : IReadOnlyList<PptxSection>
     /// <inheritdoc />
     public IEnumerator<PptxSection> GetEnumerator() => _sections.GetEnumerator();
 
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+    IEnumerator IEnumerable.GetEnumerator() =>
         _sections.GetEnumerator();
 
     // ── Mutation ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Adds a new section with the given name and optional initial slide IDs.
+    ///     Adds a new section with the given name and optional initial slide IDs.
     /// </summary>
     /// <param name="name">The display name shown in PowerPoint's slide panel.</param>
     /// <param name="slideIds">
-    /// Slide IDs (<see cref="Slide.SlideId"/>) to assign to this section.
+    ///     Slide IDs (<see cref="Slide.SlideId" />) to assign to this section.
     /// </param>
     public PptxSection Add(string name, IEnumerable<uint>? slideIds = null)
     {

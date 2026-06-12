@@ -1,8 +1,8 @@
 namespace Unchained.Drawing.Constants;
 
 /// <summary>
-/// YCbCr ↔ RGB color conversion coefficients.
-/// Decode coefficients follow ITU-T T.871 (JFIF); encode coefficients follow ITU-R BT.601.
+///     YCbCr ↔ RGB color conversion coefficients.
+///     Decode coefficients follow ITU-T T.871 (JFIF); encode coefficients follow ITU-R BT.601.
 /// </summary>
 internal static class YCbCrConstants
 {

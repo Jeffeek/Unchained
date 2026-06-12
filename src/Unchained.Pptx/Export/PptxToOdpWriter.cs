@@ -8,11 +8,11 @@ using Unchained.Pptx.Shapes;
 namespace Unchained.Pptx.Export;
 
 /// <summary>
-/// Exports a <see cref="PresentationDocument"/> to OpenDocument Presentation (<c>.odp</c>) format.
-/// Produces a valid ODF package: an uncompressed <c>mimetype</c> entry followed by
-/// <c>content.xml</c>, <c>styles.xml</c>, <c>meta.xml</c>, and <c>META-INF/manifest.xml</c>.
-/// Slides map to <c>draw:page</c>, shapes to <c>draw:frame</c>, and text to <c>text:p</c>/<c>text:span</c>.
-/// This is a one-directional structural export; advanced effects are not translated.
+///     Exports a <see cref="PresentationDocument" /> to OpenDocument Presentation (<c>.odp</c>) format.
+///     Produces a valid ODF package: an uncompressed <c>mimetype</c> entry followed by
+///     <c>content.xml</c>, <c>styles.xml</c>, <c>meta.xml</c>, and <c>META-INF/manifest.xml</c>.
+///     Slides map to <c>draw:page</c>, shapes to <c>draw:frame</c>, and text to <c>text:p</c>/<c>text:span</c>.
+///     This is a one-directional structural export; advanced effects are not translated.
 /// </summary>
 internal static class PptxToOdpWriter
 {
@@ -25,7 +25,7 @@ internal static class PptxToOdpWriter
         var manifest = BuildManifest(images);
 
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             // The mimetype entry MUST be first and stored (uncompressed) per the ODF spec.
             WriteStored(zip, "mimetype", Encoding.ASCII.GetBytes(OdfNames.PresentationMimeType));
@@ -48,7 +48,8 @@ internal static class PptxToOdpWriter
     private static byte[] BuildContent(
         PresentationDocument document,
         OdpSaveOptions options,
-        List<(string Path, byte[] Data, string Mime)> images)
+        List<(string Path, byte[] Data, string Mime)> images
+    )
     {
         var o = OdfNames.Office;
         var draw = OdfNames.Draw;
@@ -94,7 +95,8 @@ internal static class PptxToOdpWriter
         XElement page,
         Shape shape,
         List<(string Path, byte[] Data, string Mime)> images,
-        OdpSaveOptions options)
+        OdpSaveOptions options
+    )
     {
         var draw = OdfNames.Draw;
 
@@ -142,7 +144,7 @@ internal static class PptxToOdpWriter
             case GroupShape group:
                 foreach (var child in group.Children)
                     WriteShape(page, child, images, options);
-                break;
+            break;
         }
     }
 
@@ -158,6 +160,7 @@ internal static class PptxToOdpWriter
                 // Plain span; ODF run formatting requires automatic styles, out of scope here.
                 p.Add(new XElement(t + "span", run.Text));
             }
+
             container.Add(p);
         }
     }
@@ -252,7 +255,7 @@ internal static class PptxToOdpWriter
         new(XNamespace.Xmlns + "presentation", OdfNames.Presentation.NamespaceName),
         new(XNamespace.Xmlns + "meta", OdfNames.Meta.NamespaceName),
         new(XNamespace.Xmlns + "xlink", OdfNames.XLink.NamespaceName),
-        new(XNamespace.Xmlns + "dc", OdfNames.Dc.NamespaceName),
+        new(XNamespace.Xmlns + "dc", OdfNames.Dc.NamespaceName)
     ];
 
     private static byte[] Serialize(XElement root)
@@ -283,6 +286,6 @@ internal static class PptxToOdpWriter
         "image/gif" => ".gif",
         "image/bmp" => ".bmp",
         "image/tiff" => ".tif",
-        _ => ".dat",
+        _ => ".dat"
     };
 }

@@ -1,8 +1,8 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// Controls how a PDF viewer displays the document window (ISO 32000-1 §12.2).
-/// Maps to the document catalog's <c>/ViewerPreferences</c> dictionary.
+///     Controls how a PDF viewer displays the document window (ISO 32000-1 §12.2).
+///     Maps to the document catalog's <c>/ViewerPreferences</c> dictionary.
 /// </summary>
 /// <param name="HideToolbar">Hide the viewer toolbar when the document is open.</param>
 /// <param name="HideMenubar">Hide the viewer menu bar.</param>
@@ -52,7 +52,7 @@ public enum PageLayout
 /// <summary>Initial page mode used by the PDF viewer (ISO 32000-1 Table 28).</summary>
 public enum PageMode
 {
-    /// <summary>Not specified — typically <see cref="UseNone"/>.</summary>
+    /// <summary>Not specified — typically <see cref="UseNone" />.</summary>
     Default,
     /// <summary>No side panel open.</summary>
     UseNone,

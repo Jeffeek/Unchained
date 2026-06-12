@@ -1,8 +1,8 @@
 using Shouldly;
 using System.IO.Compression;
 using Unchained.Drawing.Constants;
-using Unchained.Pptx.Rendering;
 using Unchained.Pptx.Rendering.Engine;
+using Unchained.Pptx.Rendering.Models;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 using Unchained.Pptx.Tests.Helpers;

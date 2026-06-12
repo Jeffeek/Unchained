@@ -1,27 +1,28 @@
-using Unchained.Pptx.Themes;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
+using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Slides;
+using Unchained.Pptx.Themes;
 using Unchained.Pptx.Writing;
 
 namespace Unchained.Pptx.Engine;
 
 /// <summary>
-/// The primary entry point for all Unchained PPTX operations.
-/// Load, create, and save presentations; thread-safe for concurrent use.
+///     The primary entry point for all Unchained PPTX operations.
+///     Load, create, and save presentations; thread-safe for concurrent use.
 /// </summary>
 /// <remarks>
-/// <para>
-/// All I/O-bound methods are <see langword="async"/> and dispatch CPU-bound parse/serialize
-/// work to the thread pool via <see cref="Task.Run"/>. A <see cref="SemaphoreSlim"/> limits
-/// concurrency to <see cref="Environment.ProcessorCount"/> simultaneous parse operations,
-/// preventing thread-pool saturation on high-throughput ASP.NET or gRPC servers.
-/// </para>
-/// <para>Dispose the processor when it is no longer needed to release the semaphore.</para>
+///     <para>
+///         All I/O-bound methods are <see langword="async" /> and dispatch CPU-bound parse/serialize
+///         work to the thread pool via <see cref="Task.Run" />. A <see cref="SemaphoreSlim" /> limits
+///         concurrency to <see cref="Environment.ProcessorCount" /> simultaneous parse operations,
+///         preventing thread-pool saturation on high-throughput ASP.NET or gRPC servers.
+///     </para>
+///     <para>Dispose the processor when it is no longer needed to release the semaphore.</para>
 /// </remarks>
 public sealed class PresentationProcessor : IDisposable
 {
@@ -29,36 +30,51 @@ public sealed class PresentationProcessor : IDisposable
     private int _disposed;
 
     /// <summary>
-    /// Initialises a new <see cref="PresentationProcessor"/>.
+    ///     Initialises a new <see cref="PresentationProcessor" />.
     /// </summary>
     /// <param name="maxConcurrency">
-    /// Maximum number of presentations that may be parsed or serialized simultaneously.
-    /// Defaults to <see cref="Environment.ProcessorCount"/>.
+    ///     Maximum number of presentations that may be parsed or serialized simultaneously.
+    ///     Defaults to <see cref="Environment.ProcessorCount" />.
     /// </param>
     public PresentationProcessor(int? maxConcurrency = null)
     {
         var limit = maxConcurrency ?? Environment.ProcessorCount;
-        if (limit < 1) throw new ArgumentOutOfRangeException(
-            nameof(maxConcurrency), "Concurrency limit must be at least 1.");
+        if (limit < 1)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxConcurrency),
+                "Concurrency limit must be at least 1.");
+        }
+
         _gate = new SemaphoreSlim(limit, limit);
+    }
+
+    // ── IDisposable ───────────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _gate.Dispose();
     }
 
     // ── Load ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Loads a presentation from a file path.
+    ///     Loads a presentation from a file path.
     /// </summary>
     /// <param name="path">The path to the <c>.pptx</c> file.</param>
     /// <param name="options">Optional load settings (e.g. password for encrypted files).</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <exception cref="PptxEncryptedException">
-    /// Thrown when the file is password-protected and no password was supplied.
+    ///     Thrown when the file is password-protected and no password was supplied.
     /// </exception>
     /// <exception cref="PptxException">Thrown for any other parse error.</exception>
     public async Task<PresentationDocument> LoadAsync(
         string path,
         OpenOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         var bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
@@ -66,8 +82,8 @@ public sealed class PresentationProcessor : IDisposable
     }
 
     /// <summary>
-    /// Loads a presentation from a stream. The stream is read to completion and may be closed
-    /// after this method returns.
+    ///     Loads a presentation from a stream. The stream is read to completion and may be closed
+    ///     after this method returns.
     /// </summary>
     /// <param name="stream">A readable stream containing the PPTX data.</param>
     /// <param name="options">Optional load settings.</param>
@@ -75,7 +91,8 @@ public sealed class PresentationProcessor : IDisposable
     public async Task<PresentationDocument> LoadAsync(
         Stream stream,
         OpenOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(stream);
         using var ms = new MemoryStream();
@@ -84,7 +101,7 @@ public sealed class PresentationProcessor : IDisposable
     }
 
     /// <summary>
-    /// Loads a presentation from a raw byte array.
+    ///     Loads a presentation from a raw byte array.
     /// </summary>
     /// <param name="data">The raw PPTX bytes.</param>
     /// <param name="options">Optional load settings.</param>
@@ -92,24 +109,25 @@ public sealed class PresentationProcessor : IDisposable
     public Task<PresentationDocument> LoadAsync(
         ReadOnlyMemory<byte> data,
         OpenOptions? options = null,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken = default
+    ) =>
         ParseBytesAsync(data.ToArray(), options, cancellationToken);
 
     // ── Create ────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Creates a new blank presentation in memory (no I/O).
-    /// The presentation contains a single default slide master with one blank layout.
+    ///     Creates a new blank presentation in memory (no I/O).
+    ///     The presentation contains a single default slide master with one blank layout.
     /// </summary>
     /// <param name="size">
-    /// The slide size. Defaults to <see cref="SlideSize.Widescreen"/> (16:9).
+    ///     The slide size. Defaults to <see cref="SlideSize.Widescreen" /> (16:9).
     /// </param>
     public PresentationDocument CreateBlank(SlideSize? size = null)
     {
         var slideSize = size ?? SlideSize.Widescreen;
 
         var master = new MasterSlide { Name = "Office Theme", Theme = new PptxTheme() };
-        var layout = new SlideLayout { Name = "Blank", LayoutType = Models.Themes.LayoutType.Blank };
+        var layout = new SlideLayout { Name = "Blank", LayoutType = LayoutType.Blank };
         layout.Master = master;
         master.Layouts.Add(layout);
 
@@ -125,21 +143,27 @@ public sealed class PresentationProcessor : IDisposable
         };
         var protection = new ProtectionInfo();
 
-        return new PresentationDocument(slides, masters, mediaStore, properties, protection, slideSize);
+        return new PresentationDocument(slides,
+            masters,
+            mediaStore,
+            properties,
+            protection,
+            slideSize);
     }
 
     // ── HTML Export (M10) ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Exports each slide of <paramref name="document"/> as an HTML5 file in
-    /// <paramref name="directoryPath"/>, creating the directory if it does not exist.
-    /// Returns the list of file paths written.
+    ///     Exports each slide of <paramref name="document" /> as an HTML5 file in
+    ///     <paramref name="directoryPath" />, creating the directory if it does not exist.
+    ///     Returns the list of file paths written.
     /// </summary>
     public async Task<IReadOnlyList<string>> SaveAsHtmlAsync(
         PresentationDocument document,
         string directoryPath,
         HtmlSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(directoryPath);
@@ -157,21 +181,23 @@ public sealed class PresentationProcessor : IDisposable
             await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
             written.Add(path);
         }
+
         return written;
     }
 
     // ── HTML5 player Export (M-H) ──────────────────────────────────────────────
 
     /// <summary>
-    /// Exports <paramref name="document"/> as a single self-contained HTML5 player file: every
-    /// slide in one navigable document (keyboard / click navigation, slide counter, fullscreen),
-    /// written to <paramref name="path"/>.
+    ///     Exports <paramref name="document" /> as a single self-contained HTML5 player file: every
+    ///     slide in one navigable document (keyboard / click navigation, slide counter, fullscreen),
+    ///     written to <paramref name="path" />.
     /// </summary>
     public async Task SaveAsHtmlPlayerAsync(
         PresentationDocument document,
         string path,
         HtmlPlayerSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -181,13 +207,14 @@ public sealed class PresentationProcessor : IDisposable
     }
 
     /// <summary>
-    /// Exports <paramref name="document"/> as a single self-contained HTML5 player and returns the
-    /// document bytes (UTF-8).
+    ///     Exports <paramref name="document" /> as a single self-contained HTML5 player and returns the
+    ///     document bytes (UTF-8).
     /// </summary>
     public Task<byte[]> ExportHtmlPlayerAsync(
         PresentationDocument document,
         HtmlPlayerSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         var opts = options ?? HtmlPlayerSaveOptions.Default;
@@ -199,15 +226,16 @@ public sealed class PresentationProcessor : IDisposable
     // ── ODP Export (M-H) ───────────────────────────────────────────────────────
 
     /// <summary>
-    /// Exports <paramref name="document"/> to an OpenDocument Presentation (<c>.odp</c>) file.
-    /// Structural export: slides, shapes, text, and images are mapped to ODF; advanced effects are
-    /// not translated.
+    ///     Exports <paramref name="document" /> to an OpenDocument Presentation (<c>.odp</c>) file.
+    ///     Structural export: slides, shapes, text, and images are mapped to ODF; advanced effects are
+    ///     not translated.
     /// </summary>
     public async Task SaveAsOdpAsync(
         PresentationDocument document,
         string path,
         OdpSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -216,11 +244,12 @@ public sealed class PresentationProcessor : IDisposable
         await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Exports <paramref name="document"/> to an <c>.odp</c> package and returns the bytes.</summary>
+    /// <summary>Exports <paramref name="document" /> to an <c>.odp</c> package and returns the bytes.</summary>
     public Task<byte[]> ExportOdpAsync(
         PresentationDocument document,
         OdpSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         var opts = options ?? OdpSaveOptions.Default;
@@ -232,13 +261,14 @@ public sealed class PresentationProcessor : IDisposable
     // ── SVG Export (M10) ──────────────────────────────────────────────────────
 
     /// <summary>
-    /// Exports a single slide as an SVG byte array.
+    ///     Exports a single slide as an SVG byte array.
     /// </summary>
     public Task<byte[]> ExportSlideAsSvgAsync(
         Slide slide,
         SlideSize slideSize,
         SvgSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(slide);
         var opts = options ?? SvgSaveOptions.Default;
@@ -248,13 +278,14 @@ public sealed class PresentationProcessor : IDisposable
     }
 
     /// <summary>
-    /// Exports every non-hidden slide in <paramref name="document"/> as SVG bytes,
-    /// one element per slide.
+    ///     Exports every non-hidden slide in <paramref name="document" /> as SVG bytes,
+    ///     one element per slide.
     /// </summary>
     public Task<byte[][]> ExportAsSvgAsync(
         PresentationDocument document,
         SvgSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         var opts = options ?? SvgSaveOptions.Default;
@@ -266,14 +297,15 @@ public sealed class PresentationProcessor : IDisposable
     // ── PDF Export (M9) ───────────────────────────────────────────────────────
 
     /// <summary>
-    /// Exports <paramref name="document"/> to a PDF file.
-    /// Each non-hidden slide becomes one PDF page at the correct dimensions.
+    ///     Exports <paramref name="document" /> to a PDF file.
+    ///     Each non-hidden slide becomes one PDF page at the correct dimensions.
     /// </summary>
     public async Task SaveAsPdfAsync(
         PresentationDocument document,
         string path,
         PdfSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -282,13 +314,14 @@ public sealed class PresentationProcessor : IDisposable
     }
 
     /// <summary>
-    /// Exports <paramref name="document"/> to a PDF stream.
+    ///     Exports <paramref name="document" /> to a PDF stream.
     /// </summary>
     public async Task SaveAsPdfAsync(
         PresentationDocument document,
         Stream stream,
         PdfSaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(stream);
@@ -299,7 +332,8 @@ public sealed class PresentationProcessor : IDisposable
     private async Task<byte[]> ExportPdfAsync(
         PresentationDocument document,
         PdfSaveOptions? options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -318,7 +352,7 @@ public sealed class PresentationProcessor : IDisposable
     // ── Save ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Saves the presentation to a file.
+    ///     Saves the presentation to a file.
     /// </summary>
     /// <param name="document">The presentation to save.</param>
     /// <param name="path">The output file path.</param>
@@ -328,7 +362,8 @@ public sealed class PresentationProcessor : IDisposable
         PresentationDocument document,
         string path,
         SaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -338,7 +373,7 @@ public sealed class PresentationProcessor : IDisposable
     }
 
     /// <summary>
-    /// Saves the presentation to a stream.
+    ///     Saves the presentation to a stream.
     /// </summary>
     /// <param name="document">The presentation to save.</param>
     /// <param name="stream">A writable stream to receive the PPTX data.</param>
@@ -348,7 +383,8 @@ public sealed class PresentationProcessor : IDisposable
         PresentationDocument document,
         Stream stream,
         SaveOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(stream);
@@ -362,7 +398,8 @@ public sealed class PresentationProcessor : IDisposable
     private async Task<PresentationDocument> ParseBytesAsync(
         byte[] bytes,
         OpenOptions? options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -387,7 +424,7 @@ public sealed class PresentationProcessor : IDisposable
                 parsed.Engine)
             {
                 SlideShow = parsed.SlideShow ?? new SlideShowSettings(),
-                Preserved = parsed.Preserved,
+                Preserved = parsed.Preserved
             };
         }
         finally
@@ -399,7 +436,8 @@ public sealed class PresentationProcessor : IDisposable
     private async Task<byte[]> SerializeAsync(
         PresentationDocument document,
         SaveOptions? options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -417,32 +455,23 @@ public sealed class PresentationProcessor : IDisposable
             }
 
             return await Task.Run(() =>
-                PresentationWriter.Write(
-                    document.Slides,
-                    document.Masters,
-                    document.Media,
-                    document.Properties,
-                    document.SlideSize,
-                    document.CommentAuthors,
-                    document.Sections,
-                    document.Protection,
-                    options,
-                    document.SlideShow,
-                    document.Preserved),
+                    PresentationWriter.Write(
+                        document.Slides,
+                        document.Masters,
+                        document.Media,
+                        document.Properties,
+                        document.SlideSize,
+                        document.CommentAuthors,
+                        document.Sections,
+                        document.Protection,
+                        options,
+                        document.SlideShow,
+                        document.Preserved),
                 cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             _gate.Release();
         }
-    }
-
-    // ── IDisposable ───────────────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        _gate.Dispose();
     }
 }

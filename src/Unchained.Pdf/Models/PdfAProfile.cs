@@ -1,7 +1,7 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// PDF/A conformance profiles supported for validation and conversion.
+///     PDF/A conformance profiles supported for validation and conversion.
 /// </summary>
 public enum PdfAProfile
 {

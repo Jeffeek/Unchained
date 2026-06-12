@@ -1,27 +1,30 @@
-using Unchained.Pptx.Core.Xml;
-using Unchained.Pptx.Core;
+using System.Xml.Linq;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Engine;
+using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Comments;
+using Unchained.Pptx.Core;
+using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Engine;
 using Unchained.Pptx.Media;
-using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using System.Xml.Linq;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a raw PPTX byte array (OPC package) into the Unchained presentation object model.
-/// This is the top-level entry point for the M1–M4 parsing pipeline.
+///     Parses a raw PPTX byte array (OPC package) into the Unchained presentation object model.
+///     This is the top-level entry point for the M1–M4 parsing pipeline.
 /// </summary>
 internal sealed class PresentationParser
 {
     /// <summary>
-    /// Parses <paramref name="data"/> into a presentation and returns the key objects
-    /// needed to construct the public <see cref="Engine.PresentationDocument"/> adapter.
+    ///     Parses <paramref name="data" /> into a presentation and returns the key objects
+    ///     needed to construct the public <see cref="Engine.PresentationDocument" /> adapter.
     /// </summary>
     public static ParsedPresentation Parse(byte[] data, OpenOptions? options = null)
     {
@@ -58,15 +61,16 @@ internal sealed class PresentationParser
     }
 
     /// <summary>
-    /// Parses an already-opened <see cref="OpcPackage"/> into the presentation model.
-    /// Takes ownership of <paramref name="package"/>.
+    ///     Parses an already-opened <see cref="OpcPackage" /> into the presentation model.
+    ///     Takes ownership of <paramref name="package" />.
     /// </summary>
     public static ParsedPresentation ParsePackage(OpcPackage package, OpenOptions? options = null)
     {
         // Locate the presentation part via package-level relationships
         var presentationRel = package.PackageRelationships
             .FirstOrDefault(r => r.RelationshipType.Equals(
-                PmlNames.RelTypePresentation, StringComparison.Ordinal));
+                PmlNames.RelTypePresentation,
+                StringComparison.Ordinal));
 
         if (presentationRel == null)
             throw new PptxException("The package does not contain a presentation relationship.");
@@ -75,7 +79,7 @@ internal sealed class PresentationParser
         var presentationPart = package.GetPart(presentationUri);
         var presentationXml = OoXmlHelper.ParseXml(presentationPart.Data);
         var root = presentationXml.Root
-            ?? throw new PptxException("The presentation XML has no root element.");
+                   ?? throw new PptxException("The presentation XML has no root element.");
 
         var mediaStore = new MediaStore();
         var masters = new MasterSlideCollection();
@@ -95,7 +99,7 @@ internal sealed class PresentationParser
         // Parse masters (and their themes + layouts)
         var masterParser = new MasterParser(package, mediaStore);
         foreach (var masterIdEl in root.Elements(PmlNames.SlideMasterIdList)
-                                        .SelectMany(static l => l.Elements(PmlNames.SlideMasterId)))
+                     .SelectMany(static l => l.Elements(PmlNames.SlideMasterId)))
         {
             var rId = (string?)masterIdEl.Attribute(PmlNames.RelationshipId);
             if (rId == null) continue;
@@ -114,7 +118,8 @@ internal sealed class PresentationParser
         // Parse comment authors (M7)
         var commentAuthorsRel = presentationPart.Relationships
             .FirstOrDefault(static r => r.RelationshipType.Equals(
-                PmlNames.RelTypeCommentAuthors, StringComparison.Ordinal));
+                PmlNames.RelTypeCommentAuthors,
+                StringComparison.Ordinal));
         if (commentAuthorsRel != null)
         {
             var caUri = presentationPart.ResolveUri(commentAuthorsRel.TargetUri);
@@ -138,7 +143,7 @@ internal sealed class PresentationParser
         // Parse slides
         var slideParser = new SlideParser(package, mediaStore, ToList(masters), commentAuthors);
         foreach (var slideIdEl in root.Elements(PmlNames.SlideIdList)
-                                       .SelectMany(static l => l.Elements(PmlNames.SlideId)))
+                     .SelectMany(static l => l.Elements(PmlNames.SlideId)))
         {
             var id = (uint)(slideIdEl.GetAttrInt(PmlNames.AttributeId) ?? 256);
             var rId = (string?)slideIdEl.Attribute(PmlNames.RelationshipId);
@@ -177,23 +182,24 @@ internal sealed class PresentationParser
             sections)
         {
             SlideShow = slideShow,
-            Preserved = preserved,
+            Preserved = preserved
         };
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Captures parts that Unchained does not model but must round-trip verbatim: the VBA macro
-    /// project (referenced from <c>presentation.xml</c>) and the digital-signature parts
-    /// (referenced from the package root). Their relationships are captured too so the writer can
-    /// re-link them.
+    ///     Captures parts that Unchained does not model but must round-trip verbatim: the VBA macro
+    ///     project (referenced from <c>presentation.xml</c>) and the digital-signature parts
+    ///     (referenced from the package root). Their relationships are captured too so the writer can
+    ///     re-link them.
     /// </summary>
-    private static Engine.PreservedContent CapturePreservedContent(
+    private static PreservedContent CapturePreservedContent(
         OpcPackage package,
-        OpcPart presentationPart)
+        OpcPart presentationPart
+    )
     {
-        var preserved = new Engine.PreservedContent();
+        var preserved = new PreservedContent();
 
         // VBA project — a presentation-level relationship to /ppt/vbaProject.bin.
         foreach (var rel in presentationPart.Relationships)
@@ -206,19 +212,19 @@ internal sealed class PresentationParser
             if (part == null) continue;
 
             preserved.HasMacros = true;
-            preserved.Parts.Add(new Engine.PreservedPart
+            preserved.Parts.Add(new PreservedPart
             {
                 Uri = uri,
                 ContentType = part.ContentType,
-                Data = part.Data,
+                Data = part.Data
             });
-            preserved.AnchorRelationships.Add(new Engine.PreservedRelationship
+            preserved.AnchorRelationships.Add(new PreservedRelationship
             {
                 SourceUri = null, // anchored to presentation.xml; writer supplies the source
                 Id = rel.Id,
                 Type = rel.RelationshipType,
                 Target = uri,
-                IsExternal = rel.IsExternal,
+                IsExternal = rel.IsExternal
             });
         }
 
@@ -228,7 +234,8 @@ internal sealed class PresentationParser
         foreach (var originRel in package.PackageRelationships)
         {
             if (!originRel.RelationshipType.Equals(
-                    PmlNames.RelTypeDigitalSignatureOrigin, StringComparison.Ordinal))
+                    PmlNames.RelTypeDigitalSignatureOrigin,
+                    StringComparison.Ordinal))
                 continue;
 
             var originUri = "/" + originRel.TargetUri.TrimStart('/');
@@ -236,13 +243,13 @@ internal sealed class PresentationParser
             if (originPart == null) continue;
 
             CapturePartTree(package, originPart, originUri, preserved);
-            preserved.AnchorRelationships.Add(new Engine.PreservedRelationship
+            preserved.AnchorRelationships.Add(new PreservedRelationship
             {
                 SourceUri = string.Empty, // package-level anchor
                 Id = originRel.Id,
                 Type = originRel.RelationshipType,
                 Target = originUri,
-                IsExternal = originRel.IsExternal,
+                IsExternal = originRel.IsExternal
             });
         }
 
@@ -250,34 +257,35 @@ internal sealed class PresentationParser
     }
 
     /// <summary>
-    /// Captures <paramref name="part"/> and, recursively, every internal part it relates to,
-    /// keeping each part's relationships verbatim. Used for the signature origin → signature parts.
+    ///     Captures <paramref name="part" /> and, recursively, every internal part it relates to,
+    ///     keeping each part's relationships verbatim. Used for the signature origin → signature parts.
     /// </summary>
     private static void CapturePartTree(
         OpcPackage package,
         OpcPart part,
         string partUri,
-        Engine.PreservedContent preserved)
+        PreservedContent preserved
+    )
     {
         if (preserved.Parts.Any(p => p.Uri.Equals(partUri, StringComparison.OrdinalIgnoreCase)))
             return;
 
-        var captured = new Engine.PreservedPart
+        var captured = new PreservedPart
         {
             Uri = partUri,
             ContentType = part.ContentType,
-            Data = part.Data,
+            Data = part.Data
         };
 
         foreach (var rel in part.Relationships)
         {
-            captured.Relationships.Add(new Engine.PreservedRelationship
+            captured.Relationships.Add(new PreservedRelationship
             {
                 SourceUri = partUri,
                 Id = rel.Id,
                 Type = rel.RelationshipType,
                 Target = rel.TargetUri,
-                IsExternal = rel.IsExternal,
+                IsExternal = rel.IsExternal
             });
 
             if (rel.IsExternal) continue;
@@ -290,7 +298,7 @@ internal sealed class PresentationParser
         preserved.Parts.Add(captured);
     }
 
-    private static Slides.SlideShowSettings? ParsePresProps(OpcPart presentationPart, OpcPackage package)
+    private static SlideShowSettings? ParsePresProps(OpcPart presentationPart, OpcPackage package)
     {
         var rel = presentationPart.Relationships.FirstOrDefault(static r =>
             r.RelationshipType.Equals(PmlNames.RelTypePresProps, StringComparison.Ordinal));
@@ -305,14 +313,14 @@ internal sealed class PresentationParser
         if (showPr == null) return null;
 
         var pml = PmlNames.Pml;
-        var settings = new Slides.SlideShowSettings();
+        var settings = new SlideShowSettings();
 
         if (showPr.Element(pml + "browse") != null)
-            settings.ShowType = Slides.SlideShowType.Browsed;
+            settings.ShowType = SlideShowType.Browsed;
         else if (showPr.Element(pml + "kiosk") != null)
-            settings.ShowType = Slides.SlideShowType.Kiosk;
+            settings.ShowType = SlideShowType.Kiosk;
         else
-            settings.ShowType = Slides.SlideShowType.Presenter;
+            settings.ShowType = SlideShowType.Presenter;
 
         settings.Loop = showPr.GetAttrBool("loop") ?? false;
         // XML stores positive sense; absence means "show". Our model stores the inverse.
@@ -353,7 +361,7 @@ internal sealed class PresentationParser
 
         // Run-level slide-jump links.
         foreach (var slide in slides)
-        foreach (var frame in Slides.ShapeTextWalker.EnumerateTextFrames(slide.Shapes))
+        foreach (var frame in ShapeTextWalker.EnumerateTextFrames(slide.Shapes))
         foreach (var paragraph in frame.Paragraphs)
         foreach (var run in paragraph.Runs)
         {
@@ -363,14 +371,16 @@ internal sealed class PresentationParser
         }
     }
 
-    private static IEnumerable<Shapes.Shape> EnumerateAllShapes(IEnumerable<Shapes.Shape> shapes)
+    private static IEnumerable<Shape> EnumerateAllShapes(IEnumerable<Shape> shapes)
     {
         foreach (var shape in shapes)
         {
             yield return shape;
-            if (shape is Shapes.GroupShape group)
+            if (shape is GroupShape group)
+            {
                 foreach (var child in EnumerateAllShapes(group.Children))
                     yield return child;
+            }
         }
     }
 
@@ -378,7 +388,8 @@ internal sealed class PresentationParser
         XElement root,
         OpcPart presentationPart,
         OpcPackage package,
-        MediaStore mediaStore)
+        MediaStore mediaStore
+    )
     {
         var listEl = root.Element(PmlNames.EmbeddedFontList);
         if (listEl == null) return;
@@ -450,7 +461,8 @@ internal sealed class PresentationParser
         // Core properties
         var coreRel = package.PackageRelationships
             .FirstOrDefault(static r => r.RelationshipType.Equals(
-                PmlNames.RelTypeCoreProperties, StringComparison.Ordinal));
+                PmlNames.RelTypeCoreProperties,
+                StringComparison.Ordinal));
 
         if (coreRel != null)
         {
@@ -470,10 +482,10 @@ internal sealed class PresentationParser
             var root = doc.Root;
             if (root == null) return;
 
-            var dc = System.Xml.Linq.XNamespace.Get("http://purl.org/dc/elements/1.1/");
-            var cp = System.Xml.Linq.XNamespace.Get(
+            var dc = XNamespace.Get("http://purl.org/dc/elements/1.1/");
+            var cp = XNamespace.Get(
                 "http://schemas.openxmlformats.org/package/2006/metadata/core-properties");
-            var dcterms = System.Xml.Linq.XNamespace.Get("http://purl.org/dc/terms/");
+            var dcterms = XNamespace.Get("http://purl.org/dc/terms/");
 
             props.Title = root.Element(dc + "title")?.Value;
             props.Subject = root.Element(dc + "subject")?.Value;
@@ -508,45 +520,47 @@ internal sealed class PresentationParser
 }
 
 /// <summary>
-/// The result of parsing a PPTX package — all components needed to construct
-/// the public presentation adapter.
+///     The result of parsing a PPTX package — all components needed to construct
+///     the public presentation adapter.
 /// </summary>
 internal sealed class ParsedPresentation(
     OpcPackage? package,
     SlideCollection slides,
     MasterSlideCollection masters,
     MediaStore mediaStore,
-    Models.DocumentProperties properties,
-    Security.ProtectionInfo protection,
-    Core.SlideSize slideSize,
+    DocumentProperties properties,
+    ProtectionInfo protection,
+    SlideSize slideSize,
     CommentAuthorCollection commentAuthors,
-    SectionCollection sections)
+    SectionCollection sections
+)
 {
     /// <summary>
-    /// The source OPC package, when parsed via the custom OPC layer. <see langword="null"/>
-    /// when the presentation was read through the OpenXML-SDK-backed engine (which owns its
-    /// own package). Not consumed downstream of construction.
+    ///     The source OPC package, when parsed via the custom OPC layer. <see langword="null" />
+    ///     when the presentation was read through the OpenXML-SDK-backed engine (which owns its
+    ///     own package). Not consumed downstream of construction.
     /// </summary>
     public OpcPackage? Package { get; } = package;
+
     public SlideCollection Slides { get; } = slides;
     public MasterSlideCollection Masters { get; } = masters;
     public MediaStore MediaStore { get; } = mediaStore;
-    public Models.DocumentProperties Properties { get; } = properties;
-    public Security.ProtectionInfo Protection { get; } = protection;
-    public Core.SlideSize SlideSize { get; } = slideSize;
+    public DocumentProperties Properties { get; } = properties;
+    public ProtectionInfo Protection { get; } = protection;
+    public SlideSize SlideSize { get; } = slideSize;
     public CommentAuthorCollection CommentAuthors { get; } = commentAuthors;
     public SectionCollection Sections { get; } = sections;
 
     /// <summary>
-    /// The still-open OpenXML-SDK engine when parsed via the SDK path; <see langword="null"/>
-    /// for the custom-OPC path. The document takes ownership and disposes it, keeping the source
-    /// package alive for an in-place SDK-backed save.
+    ///     The still-open OpenXML-SDK engine when parsed via the SDK path; <see langword="null" />
+    ///     for the custom-OPC path. The document takes ownership and disposes it, keeping the source
+    ///     package alive for an in-place SDK-backed save.
     /// </summary>
-    public Ooxml.Engine.OoxmlEngine? Engine { get; init; }
+    public OoxmlEngine? Engine { get; init; }
 
     /// <summary>Slide-show settings parsed from the <c>presProps.xml</c> part, if present.</summary>
-    public Slides.SlideShowSettings? SlideShow { get; init; }
+    public SlideShowSettings? SlideShow { get; init; }
 
     /// <summary>Verbatim-preserved content (VBA project, digital signatures) for round-trip.</summary>
-    public Engine.PreservedContent? Preserved { get; init; }
+    public PreservedContent? Preserved { get; init; }
 }

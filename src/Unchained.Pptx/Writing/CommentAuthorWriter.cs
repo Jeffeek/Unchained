@@ -5,8 +5,8 @@ using Unchained.Pptx.Core.Xml;
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes the <see cref="CommentAuthorCollection"/> to the
-/// <c>ppt/commentAuthors.xml</c> OPC part format.
+///     Serializes the <see cref="CommentAuthorCollection" /> to the
+///     <c>ppt/commentAuthors.xml</c> OPC part format.
 /// </summary>
 internal static class CommentAuthorWriter
 {

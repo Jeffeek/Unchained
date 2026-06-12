@@ -3,14 +3,15 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Content;
+using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine.Converters;
 
 /// <summary>
-/// Converts plain text to a PDF document with automatic word-wrap and pagination.
-/// When <see cref="TxtLoadOptions.Tagged"/> is <see langword="true"/>, each text line
-/// is wrapped in a <c>/P</c> marked-content sequence for accessibility.
+///     Converts plain text to a PDF document with automatic word-wrap and pagination.
+///     When <see cref="TxtLoadOptions.Tagged" /> is <see langword="true" />, each text line
+///     is wrapped in a <c>/P</c> marked-content sequence for accessibility.
 /// </summary>
 internal static class TxtToPdfConverter
 {
@@ -18,11 +19,11 @@ internal static class TxtToPdfConverter
     {
         var acc = new PdfPageAccumulator();
         var fontRef = acc.AddFont(options.FontName);
-        var fontMap = new Dictionary<string, Core.PdfIndirectReference> { ["F1"] = fontRef };
+        var fontMap = new Dictionary<string, PdfIndirectReference> { ["F1"] = fontRef };
 
-        var usableWidth = options.PageWidthPt - 2 * options.MarginPt;
+        var usableWidth = options.PageWidthPt - (2 * options.MarginPt);
         var lineHeight = options.FontSize * options.LineSpacing;
-        var usableHeight = options.PageHeightPt - 2 * options.MarginPt;
+        var usableHeight = options.PageHeightPt - (2 * options.MarginPt);
         var linesPerPage = Math.Max(1, (int)(usableHeight / lineHeight));
 
         var allLines = LayoutLines(text, options.FontName, options.FontSize, usableWidth);
@@ -40,7 +41,12 @@ internal static class TxtToPdfConverter
                 var taggedItems = new List<TaggedContentItem>();
                 var content = BuildPageContentTagged(pageLines, options, pageIndex, taggedItems);
                 // ReSharper disable once BadListLineBreaks
-                acc.AddPage(options.PageWidthPt, options.PageHeightPt, content, fontMap, taggedItems, options.Language);
+                acc.AddPage(options.PageWidthPt,
+                    options.PageHeightPt,
+                    content,
+                    fontMap,
+                    taggedItems,
+                    options.Language);
             }
             else
             {
@@ -55,7 +61,12 @@ internal static class TxtToPdfConverter
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private static List<string> LayoutLines(string text, string fontName, float fontSize, float usableWidth)
+    private static List<string> LayoutLines(
+        string text,
+        string fontName,
+        float fontSize,
+        float usableWidth
+    )
     {
         var result = new List<string>();
         foreach (var rawLine in text.ReplaceLineEndings("\n").Split('\n'))
@@ -65,7 +76,12 @@ internal static class TxtToPdfConverter
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private static IEnumerable<string> WrapLine(string line, string fontName, float fontSize, float maxWidth)
+    private static IEnumerable<string> WrapLine(
+        string line,
+        string fontName,
+        float fontSize,
+        float maxWidth
+    )
     {
         if (line.Length == 0)
         {
@@ -108,7 +124,7 @@ internal static class TxtToPdfConverter
 
     private static byte[] BuildPageContent(IReadOnlyCollection<string> lines, TxtLoadOptions options)
     {
-        var buf = new ArrayBufferWriter<byte>(256 + lines.Count * 80);
+        var buf = new ArrayBufferWriter<byte>(256 + (lines.Count * 80));
         var w = new ContentStreamWriter(buf);
 
         var leading = options.FontSize * options.LineSpacing;
@@ -140,9 +156,9 @@ internal static class TxtToPdfConverter
     }
 
     /// <summary>
-    /// Builds a page content stream with BDC/EMC wrappers around each line.
-    /// Each non-empty line is tagged as a /P (paragraph) structure element.
-    /// Empty lines are tagged as /Artifact to exclude them from the structure tree.
+    ///     Builds a page content stream with BDC/EMC wrappers around each line.
+    ///     Each non-empty line is tagged as a /P (paragraph) structure element.
+    ///     Empty lines are tagged as /Artifact to exclude them from the structure tree.
     /// </summary>
     private static byte[] BuildPageContentTagged(
         IReadOnlyList<string> lines,
@@ -151,7 +167,7 @@ internal static class TxtToPdfConverter
         ICollection<TaggedContentItem> taggedItems
     )
     {
-        var buf = new ArrayBufferWriter<byte>(256 + lines.Count * 120);
+        var buf = new ArrayBufferWriter<byte>(256 + (lines.Count * 120));
         var w = new ContentStreamWriter(buf);
 
         var leading = options.FontSize * options.LineSpacing;
@@ -162,7 +178,7 @@ internal static class TxtToPdfConverter
         for (var i = 0; i < lines.Count; i++)
         {
             var line = lines[i];
-            var y = startY - i * leading;
+            var y = startY - (i * leading);
 
             if (string.IsNullOrEmpty(line))
             {

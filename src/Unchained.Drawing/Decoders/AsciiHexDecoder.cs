@@ -3,8 +3,8 @@ using Unchained.Drawing.Extensions;
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes ASCII hex-encoded data.
-/// Used by PDF /ASCIIHexDecode (ISO 32000-1 §7.4.2).
+///     Decodes ASCII hex-encoded data.
+///     Used by PDF /ASCIIHexDecode (ISO 32000-1 §7.4.2).
 /// </summary>
 internal static class AsciiHexDecoder
 {

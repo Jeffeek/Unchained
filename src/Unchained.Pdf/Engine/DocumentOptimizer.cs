@@ -5,7 +5,7 @@ using Unchained.Pdf.Document;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="IDocumentOptimizer"/> implementation.</summary>
+/// <summary>Default <see cref="IDocumentOptimizer" /> implementation.</summary>
 public sealed class DocumentOptimizer : IDocumentOptimizer
 {
     private const int CompressionThresholdBytes = 128;
@@ -63,7 +63,7 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
 
         // Group streams by their byte content; keep the lowest object number as canonical.
         var seenHashes = new Dictionary<string, int>(StringComparer.Ordinal); // hash → canonical objNum
-        var remapping = new Dictionary<int, int>(); // old objNum → canonical objNum
+        var remapping = new Dictionary<int, int>();                           // old objNum → canonical objNum
 
         foreach (var obj in existing)
         {
@@ -93,7 +93,7 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
     private static byte[] Compress(ReadOnlySpan<byte> data)
     {
         using var ms = new MemoryStream();
-        using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+        using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, true))
             zlib.Write(data);
         return ms.ToArray();
     }

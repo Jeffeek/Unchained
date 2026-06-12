@@ -4,16 +4,18 @@ using System.Xml.Linq;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
+using Unchained.Pdf.Parsing.Filters;
 using Unchained.Pdf.Writing;
+using SaveOptions = System.Xml.Linq.SaveOptions;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Converts a document to a PDF/X-conformant structure (ISO 15930): adds an
-/// <c>/OutputIntents</c> array describing the target print condition with a
-/// <c>/GTS_PDFX</c> subtype, a <c>GTS_PDFXVersion</c> marker, and pdfxid XMP metadata.
-/// This applies the required structural markers; it does not perform colour conversion
-/// (e.g. RGB→CMYK), which would require an ICC colour-management engine.
+///     Converts a document to a PDF/X-conformant structure (ISO 15930): adds an
+///     <c>/OutputIntents</c> array describing the target print condition with a
+///     <c>/GTS_PDFX</c> subtype, a <c>GTS_PDFXVersion</c> marker, and pdfxid XMP metadata.
+///     This applies the required structural markers; it does not perform colour conversion
+///     (e.g. RGB→CMYK), which would require an ICC colour-management engine.
 /// </summary>
 internal static class PdfXConverter
 {
@@ -60,7 +62,7 @@ internal static class PdfXConverter
 
         // ── 3. Info dict needs GTS_PDFXVersion + a Title (PDF/X requires both) ──
         var infoRef = core.Trailer[PdfName.Info] as PdfIndirectReference;
-        var infoObjNum = infoRef?.ObjectNumber ?? maxObj + 3;
+        var infoObjNum = infoRef?.ObjectNumber ?? (maxObj + 3);
         var infoEntries = new Dictionary<string, PdfObject>();
         if (infoRef is not null)
         {
@@ -68,6 +70,7 @@ internal static class PdfXConverter
             if (existingInfo is not null)
                 infoEntries = new Dictionary<string, PdfObject>(existingInfo.Entries);
         }
+
         infoEntries["GTS_PDFXVersion"] = PdfString.FromLatin1(VersionString(profile));
         if (!infoEntries.ContainsKey("Title"))
             infoEntries["Title"] = PdfString.FromLatin1("Untitled");
@@ -94,8 +97,10 @@ internal static class PdfXConverter
         else
         {
             var hex = new string('0', 32);
-            trailerEntries["ID"] = new PdfArray([new PdfString(Encoding.Latin1.GetBytes(hex), isHex: true),
-                                                 new PdfString(Encoding.Latin1.GetBytes(hex), isHex: true)]);
+            trailerEntries["ID"] = new PdfArray([
+                new PdfString(Encoding.Latin1.GetBytes(hex), true),
+                new PdfString(Encoding.Latin1.GetBytes(hex), true)
+            ]);
         }
 
         var buf = new ArrayBufferWriter<byte>();
@@ -133,7 +138,7 @@ internal static class PdfXConverter
             SetOrAdd(desc, pdfxid + "GTS_PDFXVersion", VersionString(profile));
         }
 
-        return Encoding.UTF8.GetBytes(xmpDoc.ToString(System.Xml.Linq.SaveOptions.OmitDuplicateNamespaces));
+        return Encoding.UTF8.GetBytes(xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces));
     }
 
     private static string? ReadExistingXmp(IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
@@ -146,7 +151,7 @@ internal static class PdfXConverter
             _ => null
         };
         if (stream is null) return null;
-        try { return Encoding.UTF8.GetString(Parsing.Filters.StreamFilters.Decode(stream).Span); }
+        try { return Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span); }
         catch { return null; }
     }
 

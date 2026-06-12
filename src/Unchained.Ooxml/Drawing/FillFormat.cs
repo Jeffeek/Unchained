@@ -1,9 +1,8 @@
-
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// Describes the fill applied to a shape or text outline, supporting solid colour,
-/// gradient, pattern, picture, and transparent (no fill) modes.
+///     Describes the fill applied to a shape or text outline, supporting solid colour,
+///     gradient, pattern, picture, and transparent (no fill) modes.
 /// </summary>
 public sealed class FillFormat
 {
@@ -11,26 +10,26 @@ public sealed class FillFormat
     public FillType Type { get; set; } = FillType.None;
 
     /// <summary>
-    /// The solid fill settings. Only meaningful when <see cref="Type"/> is
-    /// <see cref="FillType.Solid"/>.
+    ///     The solid fill settings. Only meaningful when <see cref="Type" /> is
+    ///     <see cref="FillType.Solid" />.
     /// </summary>
     public SolidFill? Solid { get; set; }
 
     /// <summary>
-    /// The gradient fill settings. Only meaningful when <see cref="Type"/> is
-    /// <see cref="FillType.Gradient"/>.
+    ///     The gradient fill settings. Only meaningful when <see cref="Type" /> is
+    ///     <see cref="FillType.Gradient" />.
     /// </summary>
     public GradientFill? Gradient { get; set; }
 
     /// <summary>
-    /// The pattern fill settings. Only meaningful when <see cref="Type"/> is
-    /// <see cref="FillType.Pattern"/>.
+    ///     The pattern fill settings. Only meaningful when <see cref="Type" /> is
+    ///     <see cref="FillType.Pattern" />.
     /// </summary>
     public PatternFill? Pattern { get; set; }
 
     /// <summary>
-    /// The picture fill settings. Only meaningful when <see cref="Type"/> is
-    /// <see cref="FillType.Picture"/>.
+    ///     The picture fill settings. Only meaningful when <see cref="Type" /> is
+    ///     <see cref="FillType.Picture" />.
     /// </summary>
     public PictureFill? Picture { get; set; }
 
@@ -47,7 +46,7 @@ public sealed class FillFormat
         return Solid;
     }
 
-    /// <summary>Sets the fill to a gradient and returns a new empty <see cref="GradientFill"/> to configure.</summary>
+    /// <summary>Sets the fill to a gradient and returns a new empty <see cref="GradientFill" /> to configure.</summary>
     public GradientFill SetGradient()
     {
         Type = FillType.Gradient;
