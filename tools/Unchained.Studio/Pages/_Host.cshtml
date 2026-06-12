@@ -1,4 +1,5 @@
 @page "/"
+@using Unchained.Studio.Components
 @namespace Unchained.Studio.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
@@ -7,22 +8,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Unchained Studio</title>
-    <base href="/" />
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
-    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-    <link href="css/app.css" rel="stylesheet" />
+    <base href="/"/>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet"/>
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet"/>
+    <link href="css/app.css" rel="stylesheet"/>
 </head>
 <body>
-    <component type="typeof(Unchained.Studio.Components.App)" render-mode="Server" />
+<component type="typeof(App)" render-mode="Server"/>
 
-    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-    <script src="js/interop.js"></script>
-    <script src="_framework/blazor.server.js"></script>
+<script src="_content/MudBlazor/MudBlazor.min.js"></script>
+<script src="js/interop.js"></script>
+<script src="_framework/blazor.server.js"></script>
 
-    <script>
+<script>
         // Catch "No interop methods are registered for renderer N" errors.
         // Per https://github.com/dotnet/aspnetcore/issues/56813, this is a known
         // Blazor race condition: when the circuit closes, global event listeners

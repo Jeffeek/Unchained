@@ -4,30 +4,30 @@
 @inject ThemeService ThemeSvc
 @implements IDisposable
 
-<MudThemeProvider Theme="ThemeSvc.Theme" IsDarkMode="ThemeSvc.IsDarkMode" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<MudThemeProvider Theme="ThemeSvc.Theme" IsDarkMode="ThemeSvc.IsDarkMode"/>
+<MudPopoverProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
 
 <MudLayout>
     <MudAppBar Elevation="1" Dense="true">
-        <MudIcon Icon="@Icons.Material.Filled.AutoStories" Class="mr-2" />
+        <MudIcon Icon="@Icons.Material.Filled.AutoStories" Class="mr-2"/>
         <MudText Typo="Typo.h6" Class="mr-6">Unchained Studio</MudText>
 
         <nav class="studio-nav">
-            <NavTab Label="Home" Icon="@Icons.Material.Outlined.Home" Path="/" Active="@IsActive("/")" OnNavigate="Navigate" />
-            <NavTab Label="PDF" Icon="@Icons.Material.Outlined.PictureAsPdf" Path="/pdf" Active="@IsActive("/pdf")" OnNavigate="Navigate" />
-            <NavTab Label="PPTX" Icon="@Icons.Material.Outlined.Slideshow" Path="/pptx" Active="@IsActive("/pptx")" OnNavigate="Navigate" />
-            <NavTab Label="DOCX" Icon="@Icons.Material.Outlined.Description" Disabled="true" />
-            <NavTab Label="XLSX" Icon="@Icons.Material.Outlined.TableChart" Disabled="true" />
+            <NavTab Label="Home" Icon="@Icons.Material.Outlined.Home" Path="/" Active="@IsActive("/")" OnNavigate="Navigate"/>
+            <NavTab Label="PDF" Icon="@Icons.Material.Outlined.PictureAsPdf" Path="/pdf" Active="@IsActive("/pdf")" OnNavigate="Navigate"/>
+            <NavTab Label="PPTX" Icon="@Icons.Material.Outlined.Slideshow" Path="/pptx" Active="@IsActive("/pptx")" OnNavigate="Navigate"/>
+            <NavTab Label="DOCX" Icon="@Icons.Material.Outlined.Description" Disabled="true"/>
+            <NavTab Label="XLSX" Icon="@Icons.Material.Outlined.TableChart" Disabled="true"/>
         </nav>
 
-        <MudSpacer />
+        <MudSpacer/>
 
         <MudTooltip Text="@(ThemeSvc.IsDarkMode ? "Switch to light mode" : "Switch to dark mode")">
             <MudIconButton Icon="@(ThemeSvc.IsDarkMode ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
                            Color="Color.Inherit"
-                           OnClick="ToggleTheme" />
+                           OnClick="ToggleTheme"/>
         </MudTooltip>
         <MudText Typo="Typo.caption" Class="mx-2" Style="opacity:0.7">
             v0.1.0
@@ -36,7 +36,7 @@
             <MudIconButton Icon="@Icons.Material.Outlined.Help"
                            Color="Color.Inherit"
                            Href="https://github.com/Jeffeek/Unchained"
-                           Target="_blank" />
+                           Target="_blank"/>
         </MudTooltip>
     </MudAppBar>
 
@@ -52,7 +52,7 @@
             <ErrorContent Context="ex">
                 <div class="pa-4">
                     <MudAlert Severity="Severity.Error" Class="mb-3">
-                        <strong>Rendering error — circuit protected.</strong><br />
+                        <strong>Rendering error — circuit protected.</strong><br/>
                         @ex.Message
                     </MudAlert>
                     <MudButton Color="Color.Primary" Variant="Variant.Filled"
@@ -81,7 +81,8 @@
     }
 
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
         => InvokeAsync(StateHasChanged);
 
     private async Task ToggleTheme() => await ThemeSvc.ToggleAsync();
@@ -102,4 +103,5 @@
         ThemeSvc.Changed -= OnThemeChanged;
         Nav.LocationChanged -= OnLocationChanged;
     }
+
 }

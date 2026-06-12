@@ -61,7 +61,7 @@ public sealed class PdfWriterValueTests
     [Fact]
     public void WriteValue_HexString_WritesWithAngleBrackets()
     {
-        var s = new PdfString("Hi"u8.ToArray(), isHex: true);
+        var s = new PdfString("Hi"u8.ToArray(), true);
         Write(s).ShouldBe("<4869>");
     }
 

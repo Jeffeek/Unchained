@@ -1,5 +1,5 @@
+using System.Text;
 using Shouldly;
-using Unchained.Ooxml;
 using Unchained.Ooxml.Opc;
 using Xunit;
 
@@ -53,7 +53,7 @@ public sealed class OpcPackageTests
     public void SaveAndReopen_PreservesPart()
     {
         using var package = OpcPackage.CreateEmpty();
-        var data = System.Text.Encoding.UTF8.GetBytes("<root/>");
+        var data = Encoding.UTF8.GetBytes("<root/>");
         package.AddOrReplacePart("/doc/doc.xml", "application/xml", data);
         package.AddPackageRelationship("rId1", "http://example.com/rel", "doc/doc.xml");
 
@@ -73,7 +73,8 @@ public sealed class OpcPackageTests
         package.AddOrReplacePart("/ppt/slide1.xml", "application/xml", []);
         package.AddOrReplacePart("/ppt/slideLayout1.xml", "application/xml", []);
         package.AddRelationship(
-            "/ppt/slide1.xml", "rId1",
+            "/ppt/slide1.xml",
+            "rId1",
             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
             "../slideLayouts/slideLayout1.xml");
 

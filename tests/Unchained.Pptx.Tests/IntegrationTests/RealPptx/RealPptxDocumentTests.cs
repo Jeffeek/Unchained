@@ -1,12 +1,13 @@
 using Shouldly;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests.RealPptx;
 
 /// <summary>
-/// Integration tests that run against real .pptx files placed in TestFiles/.
-/// All tests skip gracefully when the file is absent.
+///     Integration tests that run against real .pptx files placed in TestFiles/.
+///     All tests skip gracefully when the file is absent.
 /// </summary>
 public sealed class RealPptxDocumentTests : PptxTestBase
 {
@@ -61,7 +62,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
         var doc = await Processor.LoadAsync(stream);
 
         var hasTable = doc.Slides
-            .Any(s => s.Shapes.OfType<Shapes.TableShape>().Any());
+            .Any(s => s.Shapes.OfType<TableShape>().Any());
         hasTable.ShouldBeTrue();
     }
 
@@ -74,7 +75,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
         var doc = await Processor.LoadAsync(stream);
 
         var hasPicture = doc.Slides
-            .Any(s => s.Shapes.OfType<Shapes.PictureShape>().Any());
+            .Any(s => s.Shapes.OfType<PictureShape>().Any());
         hasPicture.ShouldBeTrue();
     }
 

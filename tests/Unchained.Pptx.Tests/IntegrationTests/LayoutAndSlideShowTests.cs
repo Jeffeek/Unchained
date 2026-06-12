@@ -8,7 +8,7 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Programmatic slide-layout creation and presentation-level slide-show settings (M-G).
+///     Programmatic slide-layout creation and presentation-level slide-show settings (M-G).
 /// </summary>
 public sealed class LayoutAndSlideShowTests : PptxTestBase
 {

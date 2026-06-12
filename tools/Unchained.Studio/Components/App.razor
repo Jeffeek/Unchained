@@ -1,12 +1,12 @@
 <Router AppAssembly="typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+        <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)"/>
     </Found>
     <NotFound>
         <LayoutView Layout="typeof(MainLayout)">
             <div class="pa-8" style="text-align:center;">
                 <MudIcon Icon="@Icons.Material.Outlined.SearchOff"
-                         Style="font-size:3rem;opacity:.4;" Class="mb-2" />
+                         Style="font-size:3rem;opacity:.4;" Class="mb-2"/>
                 <MudText Typo="Typo.h5" Class="mb-1">Page not found</MudText>
                 <MudText Typo="Typo.body2" Style="opacity:.65;" Class="mb-4">
                     The page you requested doesn't exist.

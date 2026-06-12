@@ -603,6 +603,7 @@ internal static class SvgDecoder
                 b,
                 opacity);
             if (cx == px1 && cy == py1) break;
+
             var e2 = 2 * err;
             if (e2 > -dy)
             {
@@ -610,6 +611,7 @@ internal static class SvgDecoder
                 cx += sx;
             }
 
+            // ReSharper disable once InvertIf
             if (e2 < dx)
             {
                 err += dx;
@@ -620,7 +622,7 @@ internal static class SvgDecoder
 
     private static void FillPolygon(
         RenderContext ctx,
-        List<(float X, float Y)> points,
+        IReadOnlyCollection<(float X, float Y)> points,
         byte r,
         byte g,
         byte b,
@@ -632,8 +634,8 @@ internal static class SvgDecoder
         // Transform points to pixel space.
         var px = points.Select(p => ctx.Transform(p.X, p.Y)).ToList();
 
-        var minY = px.Min(static p => p.Item2);
-        var maxY = px.Max(static p => p.Item2);
+        var minY = px.Min(static p => p.Y);
+        var maxY = px.Max(static p => p.Y);
 
         for (var scanY = minY; scanY <= maxY; scanY++)
         {
@@ -643,6 +645,8 @@ internal static class SvgDecoder
                 var j = (i + 1) % px.Count;
                 var y0 = px[i].Item2;
                 var y1 = px[j].Item2;
+
+                // ReSharper disable once InvertIf
                 if ((y0 <= scanY && y1 > scanY) || (y1 <= scanY && y0 > scanY))
                 {
                     var x = px[i].Item1 + ((scanY - y0) * (px[j].Item1 - px[i].Item1) / (y1 - y0));
@@ -910,7 +914,7 @@ internal static class SvgDecoder
     }
 
     private static void AppendBezierCubic(
-        List<(float X, float Y)> pts,
+        ICollection<(float X, float Y)> pts,
         float x0,
         float y0,
         float x1,
@@ -933,7 +937,7 @@ internal static class SvgDecoder
     }
 
     private static void AppendBezierQuadratic(
-        List<(float X, float Y)> pts,
+        ICollection<(float X, float Y)> pts,
         float x0,
         float y0,
         float x1,
@@ -954,7 +958,7 @@ internal static class SvgDecoder
     }
 
     private static void AppendArc(
-        List<(float X, float Y)> pts,
+        ICollection<(float X, float Y)> pts,
         float x0,
         float y0,
         float x1,
@@ -1026,30 +1030,28 @@ internal static class SvgDecoder
 
         // rgb(r,g,b)
         var rgbMatch = Regex.Match(color, @"rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)");
-        if (rgbMatch.Success)
-        {
-            return (byte.Parse(rgbMatch.Groups[1].Value),
+        return rgbMatch.Success
+            ? (byte.Parse(rgbMatch.Groups[1].Value),
                 byte.Parse(rgbMatch.Groups[2].Value),
-                byte.Parse(rgbMatch.Groups[3].Value));
-        }
-
-        // Named colors (most common ones)
-        return color.ToLowerInvariant() switch
-        {
-            "black" => (0, 0, 0),
-            "white" => (255, 255, 255),
-            "red" => (255, 0, 0),
-            "green" => (0, 128, 0),
-            "blue" => (0, 0, 255),
-            "gray" or "grey" => (128, 128, 128),
-            "darkgray" or "darkgrey" => (64, 64, 64),
-            "lightgray" or "lightgrey" => (192, 192, 192),
-            "yellow" => (255, 255, 0),
-            "orange" => (255, 165, 0),
-            "purple" => (128, 0, 128),
-            "transparent" => (255, 255, 255),
-            _ => (80, 80, 80) // unknown color — dark grey
-        };
+                byte.Parse(rgbMatch.Groups[3].Value))
+            : ((byte R, byte G, byte B))(
+                // Named colors (most common ones)
+                color.ToLowerInvariant() switch
+                {
+                    "black" => (0, 0, 0),
+                    "white" => (255, 255, 255),
+                    "red" => (255, 0, 0),
+                    "green" => (0, 128, 0),
+                    "blue" => (0, 0, 255),
+                    "gray" or "grey" => (128, 128, 128),
+                    "darkgray" or "darkgrey" => (64, 64, 64),
+                    "lightgray" or "lightgrey" => (192, 192, 192),
+                    "yellow" => (255, 255, 0),
+                    "orange" => (255, 165, 0),
+                    "purple" => (128, 0, 128),
+                    "transparent" => (255, 255, 255),
+                    _ => (80, 80, 80) // unknown color — dark grey
+                });
     }
 
     private static void ParseStyle(string style, ref string fill, ref string stroke)
@@ -1058,16 +1060,26 @@ internal static class SvgDecoder
         {
             var kv = part.Split(':', 2);
             if (kv.Length != 2) continue;
+
             var key = kv[0].Trim();
             var val = kv[1].Trim();
-            if (key == "fill") fill = val;
-            else if (key == "stroke") stroke = val;
+
+            switch (key)
+            {
+                case "fill":
+                    fill = val;
+                break;
+                case "stroke":
+                    stroke = val;
+                break;
+            }
         }
     }
 
     private static double? ParseLength(string? value)
     {
         if (string.IsNullOrEmpty(value)) return null;
+
         value = value.TrimEnd('p', 'x', 'e', 'm', '%');
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
     }
@@ -1075,6 +1087,7 @@ internal static class SvgDecoder
     private static float? ParseFloat(string? value)
     {
         if (string.IsNullOrEmpty(value)) return null;
+
         return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
     }
 
@@ -1082,9 +1095,10 @@ internal static class SvgDecoder
     {
         var result = new List<(float X, float Y)>();
         if (string.IsNullOrEmpty(value)) return result;
+
         var nums = Regex.Split(value.Trim(), @"[\s,]+")
             .Where(static s => s.Length > 0)
-            .Select(s => float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0f)
+            .Select(static s => float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0f)
             .ToList();
         for (var i = 0; i + 1 < nums.Count; i += 2)
             result.Add((nums[i], nums[i + 1]));
@@ -1095,19 +1109,23 @@ internal static class SvgDecoder
     {
         var vb = root.Attribute("viewBox")?.Value;
         if (string.IsNullOrEmpty(vb)) return (0, 0, 0, 0);
+
         var parts = Regex.Split(vb.Trim(), @"[\s,]+");
-        if (parts.Length >= 4 &&
-            double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x) &&
-            double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y) &&
-            double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var w) &&
-            double.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var h))
-            return (x, y, w, h);
-        return (0, 0, 0, 0);
+
+        return parts.Length >= 4 &&
+               double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x) &&
+               double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y) &&
+               double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var w) &&
+               double.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var h)
+            ? (x, y, w, h)
+            : (0, 0, 0, 0);
     }
 
-    private static float NextFloat(List<string> tokens, ref int i)
+    private static float NextFloat(IReadOnlyList<string> tokens, ref int i)
     {
-        if (i >= tokens.Count) return 0;
+        if (i >= tokens.Count)
+            return 0;
+
         var tok = tokens[i++];
         return float.TryParse(tok, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0f;
     }
@@ -1115,7 +1133,7 @@ internal static class SvgDecoder
     // ── Render context ────────────────────────────────────────────────────────
 
     private sealed class RenderContext(
-        byte[] pixels,
+        IList<byte> pixels,
         int width,
         int height,
         double scaleX,
@@ -1152,7 +1170,9 @@ internal static class SvgDecoder
             float opacity
         )
         {
-            if (x < 0 || x >= width || y < 0 || y >= height) return;
+            if (x < 0 || x >= width || y < 0 || y >= height)
+                return;
+
             var idx = ((y * width) + x) * 3;
             if (opacity >= 1.0f)
             {
@@ -1162,10 +1182,9 @@ internal static class SvgDecoder
             }
             else
             {
-                var a = opacity;
-                pixels[idx] = (byte)((pixels[idx] * (1 - a)) + (r * a));
-                pixels[idx + 1] = (byte)((pixels[idx + 1] * (1 - a)) + (g * a));
-                pixels[idx + 2] = (byte)((pixels[idx + 2] * (1 - a)) + (b * a));
+                pixels[idx] = (byte)((pixels[idx] * (1 - opacity)) + (r * opacity));
+                pixels[idx + 1] = (byte)((pixels[idx + 1] * (1 - opacity)) + (g * opacity));
+                pixels[idx + 2] = (byte)((pixels[idx + 2] * (1 - opacity)) + (b * opacity));
             }
         }
     }

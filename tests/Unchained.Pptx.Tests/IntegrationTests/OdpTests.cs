@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.RegularExpressions;
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Shapes;
@@ -9,7 +10,7 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// OpenDocument Presentation (.odp) export and import (M-H): structural round-trip through ODF.
+///     OpenDocument Presentation (.odp) export and import (M-H): structural round-trip through ODF.
 /// </summary>
 public sealed class OdpTests : PptxTestBase
 {
@@ -55,7 +56,7 @@ public sealed class OdpTests : PptxTestBase
         var odp = await Processor.ExportOdpAsync(doc);
         var content = Encoding.UTF8.GetString(EntryBytes(odp, "content.xml"));
 
-        System.Text.RegularExpressions.Regex.Matches(content, "<draw:page").Count.ShouldBe(3);
+        Regex.Matches(content, "<draw:page").Count.ShouldBe(3);
     }
 
     [Fact]

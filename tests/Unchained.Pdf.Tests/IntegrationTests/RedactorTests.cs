@@ -19,8 +19,9 @@ public sealed class RedactorTests : PdfTestBase
         doc.Pages[1].ExtractText().ShouldContain("SecretValue");
 
         // Region covering the text origin at (100, 700).
-        await Redactor.RedactAsync(doc, [new RedactionRegion(1, 80, 690, 200, 30)],
-            ct: TestContext.Current.CancellationToken);
+        await Redactor.RedactAsync(doc,
+            [new RedactionRegion(1, 80, 690, 200, 30)],
+            TestContext.Current.CancellationToken);
 
         doc.Pages[1].ExtractText().ShouldNotContain("SecretValue");
     }
@@ -30,8 +31,9 @@ public sealed class RedactorTests : PdfTestBase
     {
         await using var doc = await LoadAsync(PdfFixtures.WithTextContent("KeepMe"));
         // Region far from the text at (100,700).
-        await Redactor.RedactAsync(doc, [new RedactionRegion(1, 0, 0, 50, 50)],
-            ct: TestContext.Current.CancellationToken);
+        await Redactor.RedactAsync(doc,
+            [new RedactionRegion(1, 0, 0, 50, 50)],
+            TestContext.Current.CancellationToken);
 
         doc.Pages[1].ExtractText().ShouldContain("KeepMe");
     }
@@ -40,8 +42,9 @@ public sealed class RedactorTests : PdfTestBase
     public async Task Redact_RemovalSurvivesSaveReload()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithTextContent("TopSecret"));
-        await Redactor.RedactAsync(doc, [new RedactionRegion(1, 80, 690, 200, 30)],
-            ct: TestContext.Current.CancellationToken);
+        await Redactor.RedactAsync(doc,
+            [new RedactionRegion(1, 80, 690, 200, 30)],
+            TestContext.Current.CancellationToken);
 
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.Pages[1].ExtractText().ShouldNotContain("TopSecret");
@@ -51,8 +54,9 @@ public sealed class RedactorTests : PdfTestBase
     public async Task Redact_PaintsCoverRectangle_ProducesFillOperator()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithTextContent("Cover"));
-        await Redactor.RedactAsync(doc, [new RedactionRegion(1, 80, 690, 200, 30)],
-            ct: TestContext.Current.CancellationToken);
+        await Redactor.RedactAsync(doc,
+            [new RedactionRegion(1, 80, 690, 200, 30)],
+            TestContext.Current.CancellationToken);
 
         // The rebuilt content stream must contain a rectangle fill ('re' + 'f').
         var ops = doc.Pages[1].GetContentOperators();
@@ -72,8 +76,9 @@ public sealed class RedactorTests : PdfTestBase
         var before = doc.Pages[1].GetContentOperators();
         before.ShouldContain(o => o.Name == "Do");
 
-        await Redactor.RedactAsync(doc, [new RedactionRegion(1, 0, 0, 80, 80)],
-            ct: TestContext.Current.CancellationToken);
+        await Redactor.RedactAsync(doc,
+            [new RedactionRegion(1, 0, 0, 80, 80)],
+            TestContext.Current.CancellationToken);
 
         doc.Pages[1].GetContentOperators().ShouldNotContain(o => o.Name == "Do");
     }
@@ -82,7 +87,7 @@ public sealed class RedactorTests : PdfTestBase
     public async Task Redact_EmptyRegions_NoOp()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithTextContent("Untouched"));
-        await Redactor.RedactAsync(doc, [], ct: TestContext.Current.CancellationToken);
+        await Redactor.RedactAsync(doc, [], TestContext.Current.CancellationToken);
         doc.Pages[1].ExtractText().ShouldContain("Untouched");
     }
 

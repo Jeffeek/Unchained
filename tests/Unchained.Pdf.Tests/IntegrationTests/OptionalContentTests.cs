@@ -6,9 +6,9 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for optional content groups ("layers", ISO 32000-1 §8.11): reading layers via
-/// <see cref="Abstractions.IPdfDocument.GetLayers"/> and toggling their default visibility
-/// via <see cref="OptionalContentEditor"/> (the <c>/OCProperties /D /OFF</c> array).
+///     Tests for optional content groups ("layers", ISO 32000-1 §8.11): reading layers via
+///     <see cref="Abstractions.IPdfDocument.GetLayers" /> and toggling their default visibility
+///     via <see cref="OptionalContentEditor" /> (the <c>/OCProperties /D /OFF</c> array).
 /// </summary>
 public sealed class OptionalContentTests : PdfTestBase
 {
@@ -61,7 +61,7 @@ public sealed class OptionalContentTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.WithOptionalContentGroups(), TestContext.Current.CancellationToken);
 
         var layerOne = doc.GetLayers().Single(l => l.Name == "Layer One");
-        await editor.SetLayerVisibilityAsync(doc, layerOne.ObjectNumber, visible: false, TestContext.Current.CancellationToken);
+        await editor.SetLayerVisibilityAsync(doc, layerOne.ObjectNumber, false, TestContext.Current.CancellationToken);
 
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.GetLayers().Single(l => l.Name == "Layer One").Visible.ShouldBeFalse();
@@ -74,7 +74,7 @@ public sealed class OptionalContentTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.WithOptionalContentGroups(), TestContext.Current.CancellationToken);
 
         var layerTwo = doc.GetLayers().Single(l => l.Name == "Layer Two");
-        await editor.SetLayerVisibilityAsync(doc, layerTwo.ObjectNumber, visible: true, TestContext.Current.CancellationToken);
+        await editor.SetLayerVisibilityAsync(doc, layerTwo.ObjectNumber, true, TestContext.Current.CancellationToken);
 
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.GetLayers().Single(l => l.Name == "Layer Two").Visible.ShouldBeTrue();
@@ -88,7 +88,7 @@ public sealed class OptionalContentTests : PdfTestBase
 
         // Layer One is already visible — request visible again (no change path).
         var layerOne = doc.GetLayers().Single(l => l.Name == "Layer One");
-        await editor.SetLayerVisibilityAsync(doc, layerOne.ObjectNumber, visible: true, TestContext.Current.CancellationToken);
+        await editor.SetLayerVisibilityAsync(doc, layerOne.ObjectNumber, true, TestContext.Current.CancellationToken);
 
         doc.GetLayers().Single(l => l.Name == "Layer One").Visible.ShouldBeTrue();
     }
@@ -99,8 +99,8 @@ public sealed class OptionalContentTests : PdfTestBase
         var editor = new OptionalContentEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
-        await Should.ThrowAsync<InvalidOperationException>(
-            () => editor.SetLayerVisibilityAsync(doc, ocgObjectNumber: 5, visible: false, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            editor.SetLayerVisibilityAsync(doc, 5, false, TestContext.Current.CancellationToken));
     }
 
     // ── Soft mask parsing ─────────────────────────────────────────────────────────

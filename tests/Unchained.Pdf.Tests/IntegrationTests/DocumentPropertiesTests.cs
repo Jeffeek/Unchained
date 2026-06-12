@@ -1,5 +1,6 @@
 using System.Text;
 using Shouldly;
+using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -7,13 +8,13 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for document-level properties exposed on <see cref="Abstractions.IPdfDocument"/>:
-/// <c>IsLinearized</c>, <c>IsTagged</c>, <c>IsPdfaCompliant</c>, <c>IsPdfUaCompliant</c>,
-/// <c>CryptoAlgorithm</c>, <c>Id</c>.
-/// Also covers: <c>GetObjectByIdAsync</c>, <c>TrimCacheAsync</c>, <c>SetOpenActionAsync</c>,
-/// <c>RemovePdfaComplianceAsync</c>, <c>RemovePdfUaComplianceAsync</c>,
-/// <c>EmbedStandardFontsAsync</c>, <c>OptimizeSize</c> / <c>AllowReusePageContent</c>
-/// <c>SaveOptions</c> flags, and the <c>ignoreCorruptedObjects</c> processor option.
+///     Tests for document-level properties exposed on <see cref="Abstractions.IPdfDocument" />:
+///     <c>IsLinearized</c>, <c>IsTagged</c>, <c>IsPdfaCompliant</c>, <c>IsPdfUaCompliant</c>,
+///     <c>CryptoAlgorithm</c>, <c>Id</c>.
+///     Also covers: <c>GetObjectByIdAsync</c>, <c>TrimCacheAsync</c>, <c>SetOpenActionAsync</c>,
+///     <c>RemovePdfaComplianceAsync</c>, <c>RemovePdfUaComplianceAsync</c>,
+///     <c>EmbedStandardFontsAsync</c>, <c>OptimizeSize</c> / <c>AllowReusePageContent</c>
+///     <c>SaveOptions</c> flags, and the <c>ignoreCorruptedObjects</c> processor option.
 /// </summary>
 public sealed class DocumentPropertiesTests : PdfTestBase
 {
@@ -103,7 +104,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
     {
         await using var source = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(source, ms, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw")), TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(source, ms, new SaveOptions(Encryption: new EncryptionOptions("pw")), TestContext.Current.CancellationToken);
 
         await using var doc = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), "pw", TestContext.Current.CancellationToken);
         doc.CryptoAlgorithm.ShouldBe(PdfEncryptionAlgorithm.Aes256);
@@ -186,12 +187,12 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         await Processor.SetOpenActionAsync(
             doc,
-            Unchained.Pdf.Models.PdfOpenAction.Uri("https://example.com"),
+            PdfOpenAction.Uri("https://example.com"),
             TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
-        var text = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("URI");
         text.ShouldContain("example.com");
     }
@@ -202,12 +203,12 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         await Processor.SetOpenActionAsync(
             doc,
-            Unchained.Pdf.Models.PdfOpenAction.Named("FirstPage"),
+            PdfOpenAction.Named("FirstPage"),
             TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
-        var text = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("Named");
         text.ShouldContain("FirstPage");
     }
@@ -218,12 +219,12 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
         await Processor.SetOpenActionAsync(
             doc,
-            Unchained.Pdf.Models.PdfOpenAction.GoTo(2),
+            PdfOpenAction.GoTo(2),
             TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
-        var text = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("GoTo");
         text.ShouldContain("OpenAction");
     }
@@ -336,7 +337,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
     [Fact]
     public async Task DocumentProcessor_IgnoreCorruptedObjects_LoadsNormalPdfSuccessfully()
     {
-        var processor = new Engine.DocumentProcessor(ignoreCorruptedObjects: true);
+        var processor = new DocumentProcessor(ignoreCorruptedObjects: true);
         await using var doc = await processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }

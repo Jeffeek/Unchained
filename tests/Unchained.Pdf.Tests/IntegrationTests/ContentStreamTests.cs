@@ -7,7 +7,7 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// End-to-end tests for content stream parsing
+///     End-to-end tests for content stream parsing
 /// </summary>
 public sealed class ContentStreamTests : IDisposable
 {
@@ -18,7 +18,7 @@ public sealed class ContentStreamTests : IDisposable
     [Fact]
     public async Task GetContentOperators_PageWithText_ReturnsOperators()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), TestContext.Current.CancellationToken);
 
         var ops = doc.Pages[1].GetContentOperators();
 
@@ -28,7 +28,7 @@ public sealed class ContentStreamTests : IDisposable
     [Fact]
     public async Task GetContentOperators_PageWithText_ContainsBtEt()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), TestContext.Current.CancellationToken);
 
         var names = doc.Pages[1].GetContentOperators()
             .Select(static o => o.Name)
@@ -41,7 +41,8 @@ public sealed class ContentStreamTests : IDisposable
     [Fact]
     public async Task GetContentOperators_PageWithText_ContainsTjWithString()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent("Test string")), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent("Test string")),
+            TestContext.Current.CancellationToken);
 
         var tjOp = doc.Pages[1].GetContentOperators().FirstOrDefault(static o => o.Name == "Tj");
 
@@ -53,7 +54,7 @@ public sealed class ContentStreamTests : IDisposable
     [Fact]
     public async Task GetContentOperators_PageWithText_ContainsTfWithNameAndSize()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), TestContext.Current.CancellationToken);
 
         var tfOp = doc.Pages[1].GetContentOperators()
             .FirstOrDefault(static o => o.Name == "Tf");
@@ -67,7 +68,7 @@ public sealed class ContentStreamTests : IDisposable
     [Fact]
     public async Task GetContentOperators_EmptyPage_ReturnsEmpty()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
 
         // MinimalPdfFactory pages have no /Contents entry.
         var ops = doc.Pages[1].GetContentOperators();
@@ -77,7 +78,7 @@ public sealed class ContentStreamTests : IDisposable
     [Fact]
     public async Task GetContentOperators_CalledTwice_ReturnsSameCount()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), TestContext.Current.CancellationToken);
 
         var first = doc.Pages[1].GetContentOperators().Count;
         var second = doc.Pages[1].GetContentOperators().Count;

@@ -4,14 +4,13 @@ using Unchained.Drawing.Text;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
-using Unchained.Pdf.Rendering.Engine;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for M6: embedded font extraction, proportional table column widths,
-/// image XObject rendering, and corrected FreeType2 advance widths.
+///     Tests for M6: embedded font extraction, proportional table column widths,
+///     image XObject rendering, and corrected FreeType2 advance widths.
 /// </summary>
 public sealed class FontSubsystemTests : RendererTestBase
 {
@@ -20,7 +19,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task GetEmbeddedFontBytes_PageWithNoEmbeddedFonts_ReturnsNullValues()
     {
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(text: "Hello"), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("Hello"), TestContext.Current.CancellationToken);
         var fontBytes = doc.Pages[1].GetEmbeddedFontBytes();
         // Standard 14 fonts are never embedded — all entries null.
         fontBytes.Values.ShouldAllBe(static b => b == null);
@@ -31,7 +30,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     {
         var fontData = SyntheticFontBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var fontBytes = doc.Pages[1].GetEmbeddedFontBytes();
         fontBytes.ContainsKey("F1").ShouldBeTrue();
         fontBytes["F1"].ShouldNotBeNull();
@@ -43,7 +42,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     {
         var fontData = SyntheticFontBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var extracted = doc.Pages[1].GetEmbeddedFontBytes()["F1"];
         extracted.ShouldNotBeNull();
         extracted.Length.ShouldBe(fontData.Length);
@@ -52,7 +51,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task GetEmbeddedFontBytes_PageWithNoFonts_ReturnsEmptyDict()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         doc.Pages[1].GetEmbeddedFontBytes().ShouldBeEmpty();
     }
 
@@ -66,8 +65,8 @@ public sealed class FontSubsystemTests : RendererTestBase
         // Use the bundled DejaVu font (valid TrueType) so FreeType2 can actually load it.
         var fontData = LoadBundledDejaVuBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -78,8 +77,8 @@ public sealed class FontSubsystemTests : RendererTestBase
 
         var fontData = LoadBundledDejaVuBytes();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(200);
     }
 
@@ -94,7 +93,7 @@ public sealed class FontSubsystemTests : RendererTestBase
             Headers = ["A", "A very long header that needs more space"],
             Rows = [["x", "y"]]
         };
-        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
         // Verify the document round-trips; column proportionality is structural.
         doc.PageCount.ShouldBe(1);
         var ops = doc.Pages[1].GetContentOperators();
@@ -110,12 +109,12 @@ public sealed class FontSubsystemTests : RendererTestBase
             Headers = ["Col1", "Col2", "Col3"],
             Rows = [["a", "b", "c"]]
         };
-        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
         // Round-trip should still produce correct page count.
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
-        await using var reloaded = await LoadAsync(ms, ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
     }
 
@@ -127,10 +126,10 @@ public sealed class FontSubsystemTests : RendererTestBase
             Headers = ["Short", "A much longer header"],
             Rows = [["tiny", "this cell has a lot of content"]]
         };
-        var layout = TableLayout.Compute(data.Headers.Count, TableStyle.Default, hasTitle: false, data);
+        var layout = TableLayout.Compute(data.Headers.Count, TableStyle.Default, false, data);
         layout.ColumnWidths.Sum().ShouldBe(
-            TableLayout.PageWidth - 2 * TableLayout.Margin,
-            tolerance: 0.1f);
+            TableLayout.PageWidth - (2 * TableLayout.Margin),
+            0.1f);
     }
 
     [Fact]
@@ -142,7 +141,7 @@ public sealed class FontSubsystemTests : RendererTestBase
             Headers = ["X", "A very very long header that dwarfs the other"],
             Rows = [["a", "b"]]
         };
-        var layout = TableLayout.Compute(data.Headers.Count, TableStyle.Default, hasTitle: false, data);
+        var layout = TableLayout.Compute(data.Headers.Count, TableStyle.Default, false, data);
         layout.ColumnWidths[1].ShouldBeGreaterThan(layout.ColumnWidths[0]);
     }
 
@@ -151,15 +150,15 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task GetImageXObjects_PageWithNoImages_ReturnsEmpty()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         doc.Pages[1].GetImageXObjects().ShouldBeEmpty();
     }
 
     [Fact]
     public async Task GetImageXObjects_PageWithImage_ReturnsEntry()
     {
-        var rgb = CreateSolidRgb(4, 4, r: 255, g: 0, b: 0);
-        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, rgb), ct: TestContext.Current.CancellationToken);
+        var rgb = CreateSolidRgb(4, 4, 255, 0, 0);
+        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, rgb), TestContext.Current.CancellationToken);
         var images = doc.Pages[1].GetImageXObjects();
         images.ContainsKey("Im1").ShouldBeTrue();
     }
@@ -167,8 +166,8 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task GetImageXObjects_PageWithImage_CorrectDimensions()
     {
-        var rgb = CreateSolidRgb(8, 6, r: 0, g: 255, b: 0);
-        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(8, 6, rgb), ct: TestContext.Current.CancellationToken);
+        var rgb = CreateSolidRgb(8, 6, 0, 255, 0);
+        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(8, 6, rgb), TestContext.Current.CancellationToken);
         var img = doc.Pages[1].GetImageXObjects()["Im1"];
         img.Width.ShouldBe(8);
         img.Height.ShouldBe(6);
@@ -177,8 +176,8 @@ public sealed class FontSubsystemTests : RendererTestBase
     [Fact]
     public async Task GetImageXObjects_PageWithImage_RgbDataDecodedCorrectly()
     {
-        var rgb = CreateSolidRgb(2, 2, r: 128, g: 64, b: 32);
-        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(2, 2, rgb), ct: TestContext.Current.CancellationToken);
+        var rgb = CreateSolidRgb(2, 2, 128, 64, 32);
+        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(2, 2, rgb), TestContext.Current.CancellationToken);
         var img = doc.Pages[1].GetImageXObjects()["Im1"];
         img.RgbData[0].ShouldBe((byte)128);
         img.RgbData[1].ShouldBe((byte)64);
@@ -190,10 +189,10 @@ public sealed class FontSubsystemTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        var rgb = CreateSolidRgb(4, 4, r: 200, g: 100, b: 50);
+        var rgb = CreateSolidRgb(4, 4, 200, 100, 50);
         var pdfBytes = PdfFixtures.WithImageXObject(4, 4, rgb);
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -213,7 +212,7 @@ public sealed class FontSubsystemTests : RendererTestBase
     // usable by FreeType2 for rendering tests). Fonts moved from Pdf.Rendering → Drawing.Text.
     internal static byte[] LoadBundledDejaVuBytes()
     {
-        var asm = typeof(Unchained.Drawing.Text.FontCache).Assembly;
+        var asm = typeof(FontCache).Assembly;
         using var stream = asm.GetManifestResourceStream("Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
                            ?? throw new InvalidOperationException(
                                "DejaVuSans-Regular.ttf not found in Drawing.Text assembly.");
@@ -226,7 +225,13 @@ public sealed class FontSubsystemTests : RendererTestBase
     internal static byte[] LoadBundledDejaVuBytesPublic() => LoadBundledDejaVuBytes();
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private static byte[] CreateSolidRgb(int width, int height, byte r, byte g, byte b)
+    private static byte[] CreateSolidRgb(
+        int width,
+        int height,
+        byte r,
+        byte g,
+        byte b
+    )
     {
         var rgb = new byte[width * height * 3];
         for (var i = 0; i < rgb.Length; i += 3)
@@ -241,8 +246,8 @@ public sealed class FontSubsystemTests : RendererTestBase
 }
 
 /// <summary>
-/// Tests for font utilities: TrueType metrics extraction, font replacement,
-/// and font subsetting (SubsetFontsAsync / TrueTypeSubsetter).
+///     Tests for font utilities: TrueType metrics extraction, font replacement,
+///     and font subsetting (SubsetFontsAsync / TrueTypeSubsetter).
 /// </summary>
 public sealed class FontUtilitiesTests : PdfTestBase
 {
@@ -253,7 +258,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
     {
         // A non-TrueType byte array should fall back to the hardcoded defaults.
         // The method returns defaults rather than null when the input is too short.
-        var metrics = Unchained.Pdf.Engine.TrueTypeMetrics.Read([0x00, 0x01, 0x02]);
+        var metrics = TrueTypeMetrics.Read([0x00, 0x01, 0x02]);
         // Either null or default metrics — both are acceptable; the key invariant is no exception.
         if (metrics is not null)
         {
@@ -268,7 +273,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
     {
         // Use the bundled DejaVuSans font (valid TrueType).
         var fontBytes = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
-        var metrics = Unchained.Pdf.Engine.TrueTypeMetrics.Read(fontBytes);
+        var metrics = TrueTypeMetrics.Read(fontBytes);
 
         metrics.ShouldNotBeNull();
         metrics!.Ascent.ShouldBeGreaterThan(0, "ascent should be positive");
@@ -277,7 +282,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
         metrics.StemV.ShouldBeGreaterThan(0, "stem width should be positive");
         // Values should NOT all be the hardcoded defaults (800, -200, 716, 80).
         var isAllDefault = metrics.Ascent == 800 && metrics.Descent == -200
-            && metrics.CapHeight == 716 && metrics.StemV == 80;
+                                                 && metrics.CapHeight == 716 && metrics.StemV == 80;
         isAllDefault.ShouldBeFalse("real font should produce non-default metrics");
     }
 
@@ -321,7 +326,9 @@ public sealed class FontUtilitiesTests : PdfTestBase
 
         // Replace Helvetica (the font name in the fixture) with a new font.
         await Processor.ReplaceFontAsync(
-            doc, "Helvetica", replacementFont,
+            doc,
+            "Helvetica",
+            replacementFont,
             TestContext.Current.CancellationToken);
 
         // Save and reload to verify the change persisted.
@@ -380,7 +387,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
     public void TrueTypeSubsetter_EmptyGlyphs_ReturnsOriginal()
     {
         var original = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
-        var result = Unchained.Pdf.Engine.TrueTypeSubsetter.Subset(original, new HashSet<int>());
+        var result = TrueTypeSubsetter.Subset(original, new HashSet<int>());
         result.ShouldBeSameAs(original, "empty glyph set should return original unchanged");
     }
 
@@ -390,7 +397,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
         var original = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
         // Request all glyph IDs — subsetting should detect no savings and return original.
         var allGlyphs = Enumerable.Range(0, 65536).ToHashSet();
-        var result = Unchained.Pdf.Engine.TrueTypeSubsetter.Subset(original, allGlyphs);
+        var result = TrueTypeSubsetter.Subset(original, allGlyphs);
         // Either returns original reference or same length.
         result.Length.ShouldBe(original.Length,
             "requesting all glyphs should not change font size");
@@ -402,7 +409,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
         var original = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
         // Only keep glyphs for 'A'-'Z' (approx glyph IDs 36–61 for basic Latin).
         var usedGlyphs = Enumerable.Range(36, 26).ToHashSet();
-        var result = Unchained.Pdf.Engine.TrueTypeSubsetter.Subset(original, usedGlyphs);
+        var result = TrueTypeSubsetter.Subset(original, usedGlyphs);
 
         // Result should be a valid TrueType (starts with 0x00010000 or 'OTTO').
         result.Length.ShouldBeGreaterThan(12);

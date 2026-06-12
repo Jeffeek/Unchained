@@ -7,9 +7,9 @@ using Unchained.Studio.Models;
 namespace Unchained.Studio.Studio.Pptx;
 
 /// <summary>
-/// Builds the navigable <see cref="TreeNode"/> hierarchy for a loaded
-/// <see cref="PresentationDocument"/>: document → properties, slides (with shapes),
-/// masters/layouts, themes, and media.
+///     Builds the navigable <see cref="TreeNode" /> hierarchy for a loaded
+///     <see cref="PresentationDocument" />: document → properties, slides (with shapes),
+///     masters/layouts, themes, and media.
 /// </summary>
 public static class PptxTreeBuilder
 {

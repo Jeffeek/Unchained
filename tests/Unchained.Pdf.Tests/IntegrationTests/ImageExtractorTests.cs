@@ -13,7 +13,13 @@ public sealed class ImageExtractorTests : PdfTestBase
     private static byte[] RedImage(int w, int h)
     {
         var rgb = new byte[w * h * 3];
-        for (var i = 0; i < rgb.Length; i += 3) { rgb[i] = 255; rgb[i + 1] = 0; rgb[i + 2] = 0; }
+        for (var i = 0; i < rgb.Length; i += 3)
+        {
+            rgb[i] = 255;
+            rgb[i + 1] = 0;
+            rgb[i + 2] = 0;
+        }
+
         return rgb;
     }
 
@@ -21,7 +27,7 @@ public sealed class ImageExtractorTests : PdfTestBase
     public async Task ExtractImages_SingleImage_ReturnsOneWithCorrectDimensions()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(8, 6, RedImage(8, 6)));
-        var images = await Extractor.ExtractImagesAsync(doc, ct: TestContext.Current.CancellationToken);
+        var images = await Extractor.ExtractImagesAsync(doc, TestContext.Current.CancellationToken);
 
         images.Count.ShouldBe(1);
         images[0].Width.ShouldBe(8);
@@ -34,7 +40,7 @@ public sealed class ImageExtractorTests : PdfTestBase
     public async Task ExtractImages_DecodesPixelData_RedStaysRed()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, RedImage(4, 4)));
-        var images = await Extractor.ExtractImagesAsync(doc, ct: TestContext.Current.CancellationToken);
+        var images = await Extractor.ExtractImagesAsync(doc, TestContext.Current.CancellationToken);
 
         var rgb = images[0].RgbData;
         rgb[0].ShouldBe((byte)255); // R
@@ -46,7 +52,7 @@ public sealed class ImageExtractorTests : PdfTestBase
     public async Task ExtractImages_ToPng_ProducesValidPngSignature()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, RedImage(4, 4)));
-        var images = await Extractor.ExtractImagesAsync(doc, ct: TestContext.Current.CancellationToken);
+        var images = await Extractor.ExtractImagesAsync(doc, TestContext.Current.CancellationToken);
 
         var png = images[0].ToPng();
         png.Length.ShouldBeGreaterThan(8);
@@ -57,7 +63,7 @@ public sealed class ImageExtractorTests : PdfTestBase
     public async Task ExtractImages_PngRoundTripsThroughDecoder()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(5, 3, RedImage(5, 3)));
-        var images = await Extractor.ExtractImagesAsync(doc, ct: TestContext.Current.CancellationToken);
+        var images = await Extractor.ExtractImagesAsync(doc, TestContext.Current.CancellationToken);
         var png = images[0].ToPng();
 
         // IHDR width/height are big-endian at byte offsets 16 and 20.
@@ -71,7 +77,7 @@ public sealed class ImageExtractorTests : PdfTestBase
     public async Task ExtractImages_NoImages_ReturnsEmpty()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage());
-        var images = await Extractor.ExtractImagesAsync(doc, ct: TestContext.Current.CancellationToken);
+        var images = await Extractor.ExtractImagesAsync(doc, TestContext.Current.CancellationToken);
         images.ShouldBeEmpty();
     }
 
@@ -79,7 +85,7 @@ public sealed class ImageExtractorTests : PdfTestBase
     public async Task ExtractImages_ByPage_MatchesWholeDocument()
     {
         await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, RedImage(4, 4)));
-        var page1 = await Extractor.ExtractImagesAsync(doc, 1, ct: TestContext.Current.CancellationToken);
+        var page1 = await Extractor.ExtractImagesAsync(doc, 1, TestContext.Current.CancellationToken);
         page1.Count.ShouldBe(1);
         page1[0].ResourceName.ShouldBe("Im1");
     }

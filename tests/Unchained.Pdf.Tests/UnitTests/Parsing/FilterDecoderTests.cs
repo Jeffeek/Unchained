@@ -14,9 +14,12 @@ namespace Unchained.Pdf.Tests.UnitTests.Parsing;
 
 public sealed class LzwDecoderTests
 {
+    private const int Clear = 256;
+    private const int Eod = 257;
+
     /// <summary>
-    /// Builds a minimal valid LZW stream that encodes a Clear code followed by
-    /// literal byte codes followed by EOD.  Uses 9-bit codes (MSB-first).
+    ///     Builds a minimal valid LZW stream that encodes a Clear code followed by
+    ///     literal byte codes followed by EOD.  Uses 9-bit codes (MSB-first).
     /// </summary>
     private static ReadOnlyMemory<byte> BuildLzwStream(params int[] codes)
     {
@@ -37,14 +40,11 @@ public sealed class LzwDecoderTests
         for (var i = 0; i < bits.Count; i++)
         {
             if (bits[i])
-                bytes[i / 8] |= (byte)(1 << (7 - i % 8));
+                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
         }
 
         return bytes;
     }
-
-    private const int Clear = 256;
-    private const int Eod = 257;
 
     [Fact]
     public async Task Decode_SingleLiteral_ReturnsThatByte()
@@ -61,7 +61,13 @@ public sealed class LzwDecoderTests
     {
         // Clear, 'H','e','l','l','o', EOD
         // ReSharper disable BadListLineBreaks
-        var data = BuildLzwStream(Clear, 72, 101, 108, 108, 111, Eod);
+        var data = BuildLzwStream(Clear,
+            72,
+            101,
+            108,
+            108,
+            111,
+            Eod);
         // ReSharper restore BadListLineBreaks
         var result = await Task.Run(() => LzwDecoder.Decode(data));
         Encoding.ASCII.GetString(result.Span).ShouldBe("Hello");
@@ -79,7 +85,7 @@ public sealed class LzwDecoderTests
     public async Task Decode_EarlyChangeZero_StillDecodes()
     {
         var data = BuildLzwStream(Clear, 65, Eod);
-        var result = await Task.Run(() => LzwDecoder.Decode(data, earlyChange: 0));
+        var result = await Task.Run(() => LzwDecoder.Decode(data, 0));
         result.Span[0].ShouldBe((byte)'A');
     }
 
@@ -87,7 +93,7 @@ public sealed class LzwDecoderTests
     public async Task Decode_EarlyChangeOne_ExplicitParm_SameAsDefault()
     {
         var data = BuildLzwStream(Clear, 66, Eod);
-        var result = await Task.Run(() => LzwDecoder.Decode(data, earlyChange: 1));
+        var result = await Task.Run(() => LzwDecoder.Decode(data));
         result.Span[0].ShouldBe((byte)'B');
     }
 
@@ -97,7 +103,13 @@ public sealed class LzwDecoderTests
         // Clear, 'A','B','A','B' — second 'A' triggers table entry 258='AB',
         // second 'B' may reference 258. Use raw literals to stay below table threshold.
         // ReSharper disable BadListLineBreaks
-        var data = BuildLzwStream(Clear, 65, 66, 65, 66, 65, Eod);
+        var data = BuildLzwStream(Clear,
+            65,
+            66,
+            65,
+            66,
+            65,
+            Eod);
         // ReSharper restore BadListLineBreaks
         var result = await Task.Run(() => LzwDecoder.Decode(data));
         Encoding.ASCII.GetString(result.Span).ShouldBe("ABABA");
@@ -402,7 +414,7 @@ public sealed class StreamFiltersAdditionalTests
         for (var i = 0; i < bits.Count; i++)
         {
             if (bits[i])
-                bytes[i / 8] |= (byte)(1 << (7 - i % 8));
+                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
         }
 
         var stream = MakeStream("LZW", bytes);
@@ -415,7 +427,7 @@ public sealed class StreamFiltersAdditionalTests
     {
         var original = "test"u8.ToArray();
         using var ms = new MemoryStream();
-        await using (var z = new ZLibStream(ms, CompressionMode.Compress, leaveOpen: true))
+        await using (var z = new ZLibStream(ms, CompressionMode.Compress, true))
             z.Write(original);
         var compressed = ms.ToArray();
 
@@ -475,7 +487,7 @@ public sealed class StreamFiltersAdditionalTests
         for (var i = 0; i < bits.Count; i++)
         {
             if (bits[i])
-                bytes[i / 8] |= (byte)(1 << (7 - i % 8));
+                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
         }
 
         var parms = new PdfDictionary(new Dictionary<string, PdfObject>
@@ -546,7 +558,7 @@ public sealed class StreamFiltersAdditionalTests
         for (var i = 0; i < bits.Count; i++)
         {
             if (bits[i])
-                bytes[i / 8] |= (byte)(1 << (7 - i % 8));
+                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
         }
 
         var dict = new PdfDictionary(new Dictionary<string, PdfObject>
@@ -573,6 +585,14 @@ public sealed class CcittFaxDecoderTests
     private static readonly byte[] EncodedG4 =
         Convert.FromHexString("26a0bfcc39147c47231ffff1cc3918febb58fc004004");
 
+    // A 16×16 Group-3 2D (T.4, K>0) image of the same figure, produced by libtiff with
+    // T4Options bit-0 (2D) set and Photometric=0 (white runs first, matching the PDF/G4
+    // convention). Each line is framed by an EOL + a 1D/2D tag bit. Verified bit-exact
+    // against libtiff's own decoder. BlackIs1=false → 1=white.
+    private static readonly byte[] EncodedG3_2D =
+        Convert.FromHexString(
+            "001d4002800ea00118466a003a80047d4007ea6002e003f530010c0070bd5800bb800ec5b0010c0075000a");
+
     private static PdfDictionary Parms(int columns, int rows) =>
         new(new Dictionary<string, PdfObject>
         {
@@ -585,7 +605,7 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup4_ProducesExpectedBitmap()
     {
-        var decoded = CcittFaxDecoder.Decode(EncodedG4, k: -1, columns: 16, rows: 16).ToArray();
+        var decoded = CcittFaxDecoder.Decode(EncodedG4, -1, 16, 16).ToArray();
 
         // Expected per-row bits, 1 = white (BlackIs1=false). Bit-exact reference output.
         string[] expected =
@@ -605,9 +625,10 @@ public sealed class CcittFaxDecoderTests
             var sb = new StringBuilder(16);
             for (var col = 0; col < 16; col++)
             {
-                var bit = (decoded[row * rowBytes + (col >> 3)] >> (7 - (col & 7))) & 1;
+                var bit = (decoded[(row * rowBytes) + (col >> 3)] >> (7 - (col & 7))) & 1;
                 sb.Append(bit);
             }
+
             sb.ToString().ShouldBe(expected[row], $"row {row} mismatch");
         }
     }
@@ -615,22 +636,14 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup4_BlackIs1_InvertsOutput()
     {
-        var normal = CcittFaxDecoder.Decode(EncodedG4, k: -1, columns: 16, rows: 16).ToArray();
+        var normal = CcittFaxDecoder.Decode(EncodedG4, -1, 16, 16).ToArray();
 
-        var inverted = CcittFaxDecoder.Decode(EncodedG4, k: -1, columns: 16, rows: 16, blackIs1: true).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG4, -1, 16, 16, true).ToArray();
 
         inverted.Length.ShouldBe(normal.Length);
         for (var i = 0; i < normal.Length; i++)
             inverted[i].ShouldBe((byte)~normal[i]);
     }
-
-    // A 16×16 Group-3 2D (T.4, K>0) image of the same figure, produced by libtiff with
-    // T4Options bit-0 (2D) set and Photometric=0 (white runs first, matching the PDF/G4
-    // convention). Each line is framed by an EOL + a 1D/2D tag bit. Verified bit-exact
-    // against libtiff's own decoder. BlackIs1=false → 1=white.
-    private static readonly byte[] EncodedG3_2D =
-        Convert.FromHexString(
-            "001d4002800ea00118466a003a80047d4007ea6002e003f530010c0070bd5800bb800ec5b0010c0075000a");
 
     private static PdfDictionary Parms2D(int columns, int rows, bool blackIs1 = false) =>
         new(new Dictionary<string, PdfObject>
@@ -644,7 +657,7 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup3_2D_ProducesExpectedBitmap()
     {
-        var decoded = CcittFaxDecoder.Decode(EncodedG3_2D, k: 4, columns: 16, rows: 16).ToArray();
+        var decoded = CcittFaxDecoder.Decode(EncodedG3_2D, 4, 16, 16).ToArray();
 
         // Same figure as the Group-4 fixture. 1 = white (BlackIs1=false).
         string[] expected =
@@ -664,7 +677,7 @@ public sealed class CcittFaxDecoderTests
             var sb = new StringBuilder(16);
             for (var col = 0; col < 16; col++)
             {
-                var bit = (decoded[row * rowBytes + (col >> 3)] >> (7 - (col & 7))) & 1;
+                var bit = (decoded[(row * rowBytes) + (col >> 3)] >> (7 - (col & 7))) & 1;
                 sb.Append(bit);
             }
 
@@ -675,8 +688,8 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup3_2D_BlackIs1_InvertsOutput()
     {
-        var normal = CcittFaxDecoder.Decode(EncodedG3_2D, k: 4, columns: 16, rows: 16).ToArray();
-        var inverted = CcittFaxDecoder.Decode(EncodedG3_2D, k: 4, columns: 16, rows: 16, blackIs1: true).ToArray();
+        var normal = CcittFaxDecoder.Decode(EncodedG3_2D, 4, 16, 16).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG3_2D, 4, 16, 16, true).ToArray();
 
         inverted.Length.ShouldBe(normal.Length);
         for (var i = 0; i < normal.Length; i++)
@@ -693,7 +706,7 @@ public sealed class Jbig2DecoderTests
     {
         var garbage = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04 };
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            Task.Run(() => Jbig2Decoder.Decode(garbage, null)));
+            Task.Run(() => Jbig2Decoder.Decode(garbage)));
     }
 
     [Fact]
@@ -702,7 +715,7 @@ public sealed class Jbig2DecoderTests
         // Either it throws (malformed) or returns empty — both are valid for empty JBIG2.
         try
         {
-            var result = await Task.Run(static () => Jbig2Decoder.Decode(ReadOnlyMemory<byte>.Empty, null));
+            var result = await Task.Run(static () => Jbig2Decoder.Decode(ReadOnlyMemory<byte>.Empty));
             // If it didn't throw: result should at minimum be a non-null memory.
             _ = result.Length; // access property to confirm no NRE
         }
@@ -717,7 +730,7 @@ public sealed class Jbig2DecoderTests
     {
         // Should throw InvalidOperationException (bad data), not NullReferenceException.
         var ex = await Should.ThrowAsync<InvalidOperationException>(static () =>
-            Task.Run(static () => Jbig2Decoder.Decode(new byte[] { 0xFF, 0xFE }, null)));
+            Task.Run(static () => Jbig2Decoder.Decode(new byte[] { 0xFF, 0xFE })));
         ex.ShouldNotBeNull();
     }
 }

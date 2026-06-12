@@ -6,29 +6,29 @@ using Unchained.PerformanceTests.Infrastructure;
 namespace Unchained.PerformanceTests.Benchmarks;
 
 /// <summary>
-/// Baseline benchmarks for Unchained's own PDF parser.
-/// Measures the cost of parsing and structural traversal using fixtures
-/// produced by <see cref="MinimalPdfFactory"/> — no external library dependency.
+///     Baseline benchmarks for Unchained's own PDF parser.
+///     Measures the cost of parsing and structural traversal using fixtures
+///     produced by <see cref="MinimalPdfFactory" /> — no external library dependency.
 /// </summary>
 [
-    MemoryDiagnoser(displayGenColumns: true),
+    MemoryDiagnoser(true),
     ThreadingDiagnoser,
-    GcServer(value: false),
+    GcServer(false),
     HideColumns("StdDev", "RatioSD", "Median")
 ]
 // ReSharper disable once ClassCanBeSealed.Global
 public class PdfBaselineBenchmark
 {
-    private byte[] _singlePageBytes = null!;
-    private byte[] _tenPageBytes = null!;
-    private string _singlePagePath = null!;
     private IDocumentProcessor _processor = null!;
+    private byte[] _singlePageBytes = null!;
+    private string _singlePagePath = null!;
+    private byte[] _tenPageBytes = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        _singlePageBytes = MinimalPdfFactory.Build(pageCount: 1);
-        _tenPageBytes = MinimalPdfFactory.Build(pageCount: 10);
+        _singlePageBytes = MinimalPdfFactory.Build(1);
+        _tenPageBytes = MinimalPdfFactory.Build(10);
 
         _singlePagePath = Path.Combine(Path.GetTempPath(), $"unchained_bench_{Guid.NewGuid():N}.pdf");
         File.WriteAllBytes(_singlePagePath, _singlePageBytes);

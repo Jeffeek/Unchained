@@ -1,15 +1,16 @@
 using Shouldly;
 using Unchained.Pdf.Abstractions;
+using Unchained.Pdf.Core;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
 
 /// <summary>
-/// Smoke tests that run over every *.pdf in TestFiles/.
-/// Files that throw PdfException during parsing are skipped gracefully.
-/// Tests call Skip.Always when no parseable files exist — distinguishing
-/// "not run" from "passed".
+///     Smoke tests that run over every *.pdf in TestFiles/.
+///     Files that throw PdfException during parsing are skipped gracefully.
+///     Tests call Skip.Always when no parseable files exist — distinguishing
+///     "not run" from "passed".
 /// </summary>
 public sealed class RealPdfSmokeTests : PdfTestBase
 {
@@ -113,7 +114,7 @@ public sealed class RealPdfSmokeTests : PdfTestBase
     private static async Task<IPdfDocument?> TryLoadDocAsync(string path)
     {
         try { return await LoadAsync(await File.ReadAllBytesAsync(path)); }
-        catch (Core.PdfException) { return null; }
-        catch (Core.PdfEncryptedException) { return null; } // skip password-protected files
+        catch (PdfException) { return null; }
+        catch (PdfEncryptedException) { return null; } // skip password-protected files
     }
 }

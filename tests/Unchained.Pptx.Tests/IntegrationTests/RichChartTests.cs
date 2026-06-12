@@ -1,6 +1,8 @@
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
+using Unchained.Ooxml.Drawing;
+using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
@@ -10,11 +12,15 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 /// <summary>M-D: rich chart model — axes (title/min/max/gridlines/number-format) round-trip.</summary>
 public sealed class RichChartTests : PptxTestBase
 {
-    private static ChartShape NewColumnChart(out Unchained.Pptx.Engine.PresentationDocument doc)
+    private static ChartShape NewColumnChart(out PresentationDocument doc)
     {
         doc = PptxFixtures.WithSlides(1);
         var chart = doc.Slides[0].Shapes.AddChart(
-            ChartType.ColumnClustered, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(6), Emu.FromInches(4));
+            ChartType.ColumnClustered,
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(6),
+            Emu.FromInches(4));
         chart.Chart.Data.Categories.AddRange(["Q1", "Q2", "Q3"]);
         var series = new ChartSeries { Name = "Revenue" };
         series.Values.AddRange([10, 20, 30]);
@@ -62,8 +68,8 @@ public sealed class RichChartTests : PptxTestBase
     {
         var chart = NewColumnChart(out var doc);
         var s = chart.Chart.Data.Series[0];
-        s.Fill = new Unchained.Ooxml.Drawing.FillFormat();
-        s.Fill.SetSolid(Unchained.Ooxml.Drawing.ColorSpec.FromRgb(0xC0, 0x00, 0x00));
+        s.Fill = new FillFormat();
+        s.Fill.SetSolid(ColorSpec.FromRgb(0xC0, 0x00, 0x00));
         s.DataLabels = new ChartDataLabels { IsVisible = true, ShowValue = true, ShowPercentage = true, Position = "outEnd" };
         s.Trendline = new ChartTrendline { Type = "linear", DisplayEquation = true, DisplayRSquared = true };
 

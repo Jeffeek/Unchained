@@ -1,5 +1,6 @@
-using Shouldly;
 using System.IO.Compression;
+using System.Text;
+using Shouldly;
 using Unchained.Drawing.Constants;
 using Unchained.Pptx.Rendering.Engine;
 using Unchained.Pptx.Rendering.Models;
@@ -11,25 +12,19 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Regression guard against "blank slide" rendering. For each real python-pptx sample, this
-/// derives from the model whether a slide actually carries renderable content (text, picture,
-/// table cells, chart series, SmartArt nodes). Only then does it require non-trivial ink — so
-/// genuinely-empty fixtures pass while real content that fails to rasterize fails the test.
-/// The failure message names the content, making the test self-diagnosing.
+///     Regression guard against "blank slide" rendering. For each real python-pptx sample, this
+///     derives from the model whether a slide actually carries renderable content (text, picture,
+///     table cells, chart series, SmartArt nodes). Only then does it require non-trivial ink — so
+///     genuinely-empty fixtures pass while real content that fails to rasterize fails the test.
+///     The failure message names the content, making the test self-diagnosing.
 /// </summary>
 public sealed class SampleRenderingTests : PptxTestBase
 {
     private static string SamplePath(string name) =>
         Path.Combine(AppContext.BaseDirectory, "TestFiles", "python-pptx", name);
 
-    [Theory]
-    [InlineData("sld-slides.pptx")]
-    [InlineData("txt-font-props.pptx")]
-    [InlineData("shp-shapes.pptx")]
-    [InlineData("tbl-cell.pptx")]
-    [InlineData("shp-picture.pptx")]
-    [InlineData("cht-charts.pptx")]
-    [InlineData("shp-groupshape.pptx")]
+    [Theory, InlineData("sld-slides.pptx"), InlineData("txt-font-props.pptx"), InlineData("shp-shapes.pptx"), InlineData("tbl-cell.pptx"),
+     InlineData("shp-picture.pptx"), InlineData("cht-charts.pptx"), InlineData("shp-groupshape.pptx")]
     public async Task SlidesWithContent_RenderVisibleInk(string sample)
     {
         var path = SamplePath(sample);
@@ -63,8 +58,8 @@ public sealed class SampleRenderingTests : PptxTestBase
     }
 
     /// <summary>
-    /// Returns a short description of the renderable content on the slide, or <see langword="null"/>
-    /// when the slide carries nothing that should produce ink.
+    ///     Returns a short description of the renderable content on the slide, or <see langword="null" />
+    ///     when the slide carries nothing that should produce ink.
     /// </summary>
     private static string? DescribeContent(Slide slide)
     {
@@ -80,22 +75,22 @@ public sealed class SampleRenderingTests : PptxTestBase
                 {
                     case AutoShape a when !string.IsNullOrWhiteSpace(a.TextFrame.PlainText):
                         parts.Add($"text:\"{Trunc(a.TextFrame.PlainText)}\"{Geom(s)}");
-                        break;
+                    break;
                     case PictureShape { Image: not null } p:
                         parts.Add($"picture({p.Image.ContentType}){Geom(s)}");
-                        break;
+                    break;
                     case TableShape t when HasCellText(t):
                         parts.Add($"table[{t.Grid.ColumnCount}x{t.Grid.RowCount}]{Geom(s)}");
-                        break;
+                    break;
                     case ChartShape c when c.Chart.Data.Series.Count > 0:
                         parts.Add($"chart{Geom(s)}");
-                        break;
+                    break;
                     case SmartArtShape sa when sa.Nodes.Count > 0:
                         parts.Add($"smartart{Geom(s)}");
-                        break;
+                    break;
                     case GroupShape g:
                         Walk(g.Children, parts);
-                        break;
+                    break;
                 }
             }
         }
@@ -104,8 +99,11 @@ public sealed class SampleRenderingTests : PptxTestBase
         {
             for (var r = 0; r < t.Grid.RowCount; r++)
             for (var c = 0; c < t.Grid.ColumnCount; c++)
+            {
                 if (!string.IsNullOrWhiteSpace(t.Grid[c, r].TextFrame.PlainText))
                     return true;
+            }
+
             return false;
         }
 
@@ -128,6 +126,7 @@ public sealed class SampleRenderingTests : PptxTestBase
             var key = (rgb[p] << 16) | (rgb[p + 1] << 8) | rgb[p + 2];
             counts[key] = counts.GetValueOrDefault(key) + 1;
         }
+
         var bg = counts.Count == 0 ? 0 : counts.Values.Max();
         return 100.0 * (pixels - bg) / Math.Max(1, pixels);
     }
@@ -149,7 +148,7 @@ public sealed class SampleRenderingTests : PptxTestBase
         while (pos + 8 <= png.Length)
         {
             var len = (png[pos] << 24) | (png[pos + 1] << 16) | (png[pos + 2] << 8) | png[pos + 3];
-            var type = System.Text.Encoding.ASCII.GetString(png, pos + 4, 4);
+            var type = Encoding.ASCII.GetString(png, pos + 4, 4);
             var dataStart = pos + 8;
             if (type == PngConstants.IHDR)
             {
@@ -159,13 +158,9 @@ public sealed class SampleRenderingTests : PptxTestBase
                 colorType = png[dataStart + 9];
             }
             else if (type == PngConstants.IDAT)
-            {
                 idat.Write(png, dataStart, len);
-            }
-            else if (type == PngConstants.IEND)
-            {
-                break;
-            }
+            else if (type == PngConstants.IEND) break;
+
             pos = dataStart + len + 4; // skip data + CRC
         }
 
@@ -197,31 +192,39 @@ public sealed class SampleRenderingTests : PptxTestBase
             for (var x = 0; x < width; x++)
             {
                 var s = x * channels;
-                var d = (y * width + x) * 3;
+                var d = ((y * width) + x) * 3;
                 rgb[d] = cur[s];
                 rgb[d + 1] = cur[s + 1];
                 rgb[d + 2] = cur[s + 2];
             }
+
             (prev, cur) = (cur, prev);
         }
+
         return rgb;
     }
 
-    private static void Unfilter(int filter, byte[] cur, byte[] prev, int bpp, int stride)
+    private static void Unfilter(
+        int filter,
+        byte[] cur,
+        byte[] prev,
+        int bpp,
+        int stride
+    )
     {
         for (var i = 0; i < stride; i++)
         {
-            int a = i >= bpp ? cur[i - bpp] : 0;
+            var a = i >= bpp ? cur[i - bpp] : 0;
             int b = prev[i];
-            int c = i >= bpp ? prev[i - bpp] : 0;
+            var c = i >= bpp ? prev[i - bpp] : 0;
             int val = cur[i];
             cur[i] = filter switch
             {
                 1 => (byte)(val + a),
                 2 => (byte)(val + b),
-                3 => (byte)(val + (a + b) / 2),
+                3 => (byte)(val + ((a + b) / 2)),
                 4 => (byte)(val + Paeth(a, b, c)),
-                _ => (byte)val,
+                _ => (byte)val
             };
         }
     }

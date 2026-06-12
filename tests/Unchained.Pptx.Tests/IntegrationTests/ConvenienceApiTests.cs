@@ -8,8 +8,8 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// M-A convenience APIs: table cell merge, public row/column add/insert/remove, AddLine,
-/// and the AutoShape.Text shortcut.
+///     M-A convenience APIs: table cell merge, public row/column add/insert/remove, AddLine,
+///     and the AutoShape.Text shortcut.
 /// </summary>
 public sealed class ConvenienceApiTests : PptxTestBase
 {
@@ -86,8 +86,10 @@ public sealed class ConvenienceApiTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         // End point is left-and-up of the start: expect flips + positive extents.
         var line = doc.Slides[0].Shapes.AddLine(
-            Emu.FromInches(4), Emu.FromInches(3),
-            Emu.FromInches(1), Emu.FromInches(1));
+            Emu.FromInches(4),
+            Emu.FromInches(3),
+            Emu.FromInches(1),
+            Emu.FromInches(1));
 
         line.ConnectorType.ShouldBe(ConnectorType.Straight);
         line.X.Value.ShouldBe(Emu.FromInches(1).Value);
@@ -103,7 +105,11 @@ public sealed class ConvenienceApiTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Rectangle,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         shape.Text = "Hello";
         shape.Text.ShouldBe("Hello");
@@ -115,7 +121,8 @@ public sealed class ConvenienceApiTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero, Emu.Zero,
+            Emu.Zero,
+            Emu.Zero,
             [Emu.FromInches(1), Emu.FromInches(1)],
             [Emu.FromInches(0.5), Emu.FromInches(0.5)]);
         table.MergeCells(0, 0, 1, 0);

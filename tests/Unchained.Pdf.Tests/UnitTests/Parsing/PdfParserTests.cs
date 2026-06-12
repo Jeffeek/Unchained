@@ -44,7 +44,7 @@ public sealed class PdfParserReadValueTests
         InlineData("-.5", -0.5)
     ]
     public void ReadValue_Real_ReturnsCorrectValue(string input, double expected) =>
-        ((PdfReal)ReadValue(input)).Value.ShouldBe(expected, tolerance: 0.0001);
+        ((PdfReal)ReadValue(input)).Value.ShouldBe(expected, 0.0001);
 
     [Fact]
     public void ReadValue_Name_ReturnsInternedPdfName() =>

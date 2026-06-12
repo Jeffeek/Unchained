@@ -7,13 +7,13 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests.VeraPdf;
 
 /// <summary>
-/// Smoke tests against the veraPDF test corpus (https://github.com/veraPDF/veraPDF-corpus).
-/// Tests cover ISO 32000-1/2, PDF/A-1b, and TWG files.
-/// <para>
-/// "pass" files conform to the spec — they must parse and return pages.
-/// "fail" files intentionally violate a spec rule — <see cref="Core.PdfException"/> is acceptable.
-/// Neither category should ever throw an unhandled exception.
-/// </para>
+///     Smoke tests against the veraPDF test corpus (https://github.com/veraPDF/veraPDF-corpus).
+///     Tests cover ISO 32000-1/2, PDF/A-1b, and TWG files.
+///     <para>
+///         "pass" files conform to the spec — they must parse and return pages.
+///         "fail" files intentionally violate a spec rule — <see cref="Core.PdfException" /> is acceptable.
+///         Neither category should ever throw an unhandled exception.
+///     </para>
 /// </summary>
 public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestBase
 {
@@ -134,7 +134,8 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
         {
             try
             {
-                _ = await LoadAsync(await File.ReadAllBytesAsync(pdfPath, TestContext.Current.CancellationToken), ct: TestContext.Current.CancellationToken);
+                _ = await LoadAsync(await File.ReadAllBytesAsync(pdfPath, TestContext.Current.CancellationToken),
+                    TestContext.Current.CancellationToken);
                 successfullyParsed++;
             }
             catch (PdfException)
@@ -146,7 +147,8 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
             tested++;
         }
 
-        outputHelper.WriteLine($"[{nameof(Parse_FailVeraPdfFiles_ParsesOrThrows_PdfException)}] Tested: {tested}, Successfully Parsed: {successfullyParsed}, Throws PdfException: {throwsPdfException}");
+        outputHelper.WriteLine(
+            $"[{nameof(Parse_FailVeraPdfFiles_ParsesOrThrows_PdfException)}] Tested: {tested}, Successfully Parsed: {successfullyParsed}, Throws PdfException: {throwsPdfException}");
 
         if (tested == 0)
             Assert.Skip("No veraPDF test files found in TestFiles/veraPDF/.");

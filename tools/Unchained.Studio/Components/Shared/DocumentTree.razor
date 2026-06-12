@@ -7,11 +7,11 @@
                       Variant="Variant.Text"
                       Margin="Margin.Dense"
                       DebounceInterval="200"
-                      Class="tree-search" />
+                      Class="tree-search"/>
         <MudIconButton Icon="@Icons.Material.Outlined.Refresh"
                        Size="Size.Small"
                        OnClick="OnRefresh"
-                       title="Refresh tree" />
+                       title="Refresh tree"/>
     </div>
 
     @if (Root is not null)
@@ -25,9 +25,15 @@
 </div>
 
 @code {
-    [Parameter] public TreeNode? Root { get; set; }
-    [Parameter] public EventCallback<TreeNode?> SelectedNodeChanged { get; set; }
-    [Parameter] public EventCallback OnRefreshRequested { get; set; }
+
+    [Parameter]
+    public TreeNode? Root { get; set; }
+
+    [Parameter]
+    public EventCallback<TreeNode?> SelectedNodeChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnRefreshRequested { get; set; }
 
     private string _filter = string.Empty;
     private TreeNode? _selectedNode;

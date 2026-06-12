@@ -40,7 +40,7 @@ internal static class BmpEncoder
         BinaryPrimitives.WriteInt32LittleEndian(info[20..], pixelDataSize);
 
         // ── Pixel data (bottom-up, BGR) ──
-        var dataOffset = FileHeaderSize + InfoHeaderSize;
+        const int dataOffset = FileHeaderSize + InfoHeaderSize;
         for (var y = 0; y < height; y++)
         {
             var srcRow = (height - 1 - y) * width * 4;

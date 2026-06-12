@@ -90,9 +90,9 @@ public sealed class PdfAValidationResultTests
             Profile = PdfAProfile.PdfA1B,
             Violations =
             [
-                new PdfAViolation("6.3.3", "Font not embedded", Severity: PdfAViolationSeverity.Error),
-                new PdfAViolation("6.1.1", "Optional metadata", Severity: PdfAViolationSeverity.Warning),
-                new PdfAViolation("6.2.1", "Color space issue", Severity: PdfAViolationSeverity.Error)
+                new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error),
+                new PdfAViolation("6.1.1", "Optional metadata", PdfAViolationSeverity.Warning),
+                new PdfAViolation("6.2.1", "Color space issue", PdfAViolationSeverity.Error)
             ]
         };
         result.Errors.Count.ShouldBe(2);
@@ -122,8 +122,8 @@ public sealed class PdfAValidationResultTests
             Profile = PdfAProfile.PdfA2B,
             Violations =
             [
-                new PdfAViolation("6.3.3", "Font not embedded", Severity: PdfAViolationSeverity.Error),
-                new PdfAViolation("6.1.1", "Optional metadata", Severity: PdfAViolationSeverity.Warning)
+                new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error),
+                new PdfAViolation("6.1.1", "Optional metadata", PdfAViolationSeverity.Warning)
             ]
         };
         var str = result.ToString();
@@ -141,8 +141,8 @@ public sealed class PdfAValidationResultTests
             Profile = PdfAProfile.PdfA1B,
             Violations =
             [
-                new PdfAViolation("6.1.1", "Warn1", Severity: PdfAViolationSeverity.Warning),
-                new PdfAViolation("6.1.2", "Warn2", Severity: PdfAViolationSeverity.Warning)
+                new PdfAViolation("6.1.1", "Warn1", PdfAViolationSeverity.Warning),
+                new PdfAViolation("6.1.2", "Warn2", PdfAViolationSeverity.Warning)
             ]
         };
         var str = result.ToString();
@@ -177,7 +177,7 @@ public sealed class PdfAViolationTests
     public async Task ObjectNumber_Stored()
     {
         await Task.CompletedTask;
-        var v = new PdfAViolation("6.3.3", "Font not embedded", Severity: PdfAViolationSeverity.Error, ObjectNumber: 42);
+        var v = new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error, 42);
         v.ObjectNumber.ShouldBe(42);
         v.PageNumber.ShouldBeNull();
     }
@@ -186,7 +186,7 @@ public sealed class PdfAViolationTests
     public async Task PageNumber_Stored()
     {
         await Task.CompletedTask;
-        var v = new PdfAViolation("6.3.3", "Font issue", Severity: PdfAViolationSeverity.Error, PageNumber: 3);
+        var v = new PdfAViolation("6.3.3", "Font issue", PdfAViolationSeverity.Error, PageNumber: 3);
         v.PageNumber.ShouldBe(3);
         v.ObjectNumber.ShouldBeNull();
     }
@@ -195,7 +195,7 @@ public sealed class PdfAViolationTests
     public async Task AllParameters_Stored()
     {
         await Task.CompletedTask;
-        var v = new PdfAViolation("6.3.3", "Font issue", Severity: PdfAViolationSeverity.Warning, ObjectNumber: 7, PageNumber: 2);
+        var v = new PdfAViolation("6.3.3", "Font issue", PdfAViolationSeverity.Warning, 7, 2);
         v.RuleId.ShouldBe("6.3.3");
         v.Description.ShouldBe("Font issue");
         v.Severity.ShouldBe(PdfAViolationSeverity.Warning);
@@ -207,8 +207,8 @@ public sealed class PdfAViolationTests
     public async Task RecordEquality_SameValues_AreEqual()
     {
         await Task.CompletedTask;
-        var a = new PdfAViolation("6.3.3", "Font not embedded", Severity: PdfAViolationSeverity.Error, 10, 1);
-        var b = new PdfAViolation("6.3.3", "Font not embedded", Severity: PdfAViolationSeverity.Error, 10, 1);
+        var a = new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error, 10, 1);
+        var b = new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error, 10, 1);
         a.ShouldBe(b);
     }
 
@@ -216,8 +216,8 @@ public sealed class PdfAViolationTests
     public async Task RecordEquality_DifferentSeverity_NotEqual()
     {
         await Task.CompletedTask;
-        var a = new PdfAViolation("6.3.3", "Font not embedded", Severity: PdfAViolationSeverity.Error);
-        var b = new PdfAViolation("6.3.3", "Font not embedded", Severity: PdfAViolationSeverity.Warning);
+        var a = new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Error);
+        var b = new PdfAViolation("6.3.3", "Font not embedded", PdfAViolationSeverity.Warning);
         a.ShouldNotBe(b);
     }
 
@@ -253,15 +253,15 @@ public sealed class MdLoadOptionsTests
     {
         await Task.CompletedTask;
         var opts = new MdLoadOptions(
-            BodyFontName: "Times-Roman",
-            BodyFontSize: 12f,
-            CodeFontName: "Courier-Bold",
-            CodeFontSize: 9f,
-            LineSpacing: 1.5f,
-            ParagraphSpacingPt: 10f,
-            MarginPt: 36f,
-            PageWidthPt: 612f,
-            PageHeightPt: 792f
+            "Times-Roman",
+            12f,
+            "Courier-Bold",
+            9f,
+            1.5f,
+            10f,
+            36f,
+            612f,
+            792f
         );
         opts.BodyFontName.ShouldBe("Times-Roman");
         opts.BodyFontSize.ShouldBe(12f);
@@ -287,7 +287,7 @@ public sealed class MdLoadOptionsTests
     {
         await Task.CompletedTask;
         var opts = MdLoadOptions.Default;
-        opts.HeadingFontSize(level).ShouldBe(expected, tolerance: 0.01f);
+        opts.HeadingFontSize(level).ShouldBe(expected, 0.01f);
     }
 
     [Fact]
@@ -295,9 +295,9 @@ public sealed class MdLoadOptionsTests
     {
         await Task.CompletedTask;
         var opts = new MdLoadOptions(BodyFontSize: 10f);
-        opts.HeadingFontSize(1).ShouldBe(20f, tolerance: 0.01f);
-        opts.HeadingFontSize(2).ShouldBe(16f, tolerance: 0.01f);
-        opts.HeadingFontSize(3).ShouldBe(13f, tolerance: 0.01f);
+        opts.HeadingFontSize(1).ShouldBe(20f, 0.01f);
+        opts.HeadingFontSize(2).ShouldBe(16f, 0.01f);
+        opts.HeadingFontSize(3).ShouldBe(13f, 0.01f);
     }
 
     [Fact]
@@ -306,7 +306,7 @@ public sealed class MdLoadOptionsTests
         await Task.CompletedTask;
         var opts = MdLoadOptions.Default;
         // level 7 hits the default branch: BodyFontSize * 0.9
-        opts.HeadingFontSize(7).ShouldBe(opts.BodyFontSize * 0.9f, tolerance: 0.01f);
+        opts.HeadingFontSize(7).ShouldBe(opts.BodyFontSize * 0.9f, 0.01f);
     }
 
     [Fact]
@@ -342,7 +342,7 @@ public sealed class RenderOptionsTests
     public async Task CustomDpi_Stored()
     {
         await Task.CompletedTask;
-        var opts = new RenderOptions(Dpi: 72);
+        var opts = new RenderOptions(72);
         opts.Dpi.ShouldBe(72);
         opts.Format.ShouldBe(OutputFormat.Png);
     }
@@ -351,8 +351,8 @@ public sealed class RenderOptionsTests
     public async Task RecordEquality_SameDpi_Equal()
     {
         await Task.CompletedTask;
-        var a = new RenderOptions(Dpi: 200);
-        var b = new RenderOptions(Dpi: 200);
+        var a = new RenderOptions(200);
+        var b = new RenderOptions(200);
         a.ShouldBe(b);
     }
 
@@ -392,10 +392,10 @@ public sealed class EncryptionOptionsTests
     {
         await Task.CompletedTask;
         var opts = new EncryptionOptions(
-            UserPassword: "user123",
-            OwnerPassword: "owner456",
-            Algorithm: PdfEncryptionAlgorithm.Aes128,
-            Permissions: PdfPermissions.Print
+            "user123",
+            "owner456",
+            PdfEncryptionAlgorithm.Aes128,
+            PdfPermissions.Print
         );
         opts.UserPassword.ShouldBe("user123");
         opts.OwnerPassword.ShouldBe("owner456");
@@ -424,8 +424,8 @@ public sealed class EncryptionOptionsTests
     public async Task RecordEquality_SameValues_Equal()
     {
         await Task.CompletedTask;
-        var a = new EncryptionOptions("pw", "own", Algorithm: PdfEncryptionAlgorithm.Aes256, Permissions: PdfPermissions.All);
-        var b = new EncryptionOptions("pw", "own", Algorithm: PdfEncryptionAlgorithm.Aes256, Permissions: PdfPermissions.All);
+        var a = new EncryptionOptions("pw", "own", PdfEncryptionAlgorithm.Aes256, PdfPermissions.All);
+        var b = new EncryptionOptions("pw", "own", PdfEncryptionAlgorithm.Aes256, PdfPermissions.All);
         a.ShouldBe(b);
     }
 }
@@ -498,7 +498,7 @@ public sealed class PdfTokenTests
     public async Task Offset_StoredCorrectly()
     {
         await Task.CompletedTask;
-        var token = MakeToken(PdfTokenKind.Integer, "99", offset: 0x200);
+        var token = MakeToken(PdfTokenKind.Integer, "99", 0x200);
         token.Offset.ShouldBe(0x200L);
     }
 
@@ -514,7 +514,7 @@ public sealed class PdfTokenTests
     public async Task ToString_ContainsKindOffsetAndRaw()
     {
         await Task.CompletedTask;
-        var token = MakeToken(PdfTokenKind.Integer, "42", offset: 0x10);
+        var token = MakeToken(PdfTokenKind.Integer, "42", 0x10);
         var str = token.ToString();
         str.ShouldContain("Integer");
         str.ShouldContain("0x10");

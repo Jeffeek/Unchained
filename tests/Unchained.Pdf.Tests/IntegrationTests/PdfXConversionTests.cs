@@ -1,6 +1,5 @@
+using System.Text;
 using Shouldly;
-using Unchained.Pdf.Abstractions;
-using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -22,7 +21,7 @@ public sealed class PdfXConversionTests : PdfTestBase
     {
         var converted = await ConvertAsync(PdfFixtures.SinglePage(), PdfXProfile.PdfX1A2001);
         // /OutputIntents + the GTS_PDFX subtype must be present.
-        var text = System.Text.Encoding.Latin1.GetString(converted);
+        var text = Encoding.Latin1.GetString(converted);
         text.ShouldContain("/OutputIntents");
         text.ShouldContain("GTS_PDFX");
     }
@@ -31,7 +30,7 @@ public sealed class PdfXConversionTests : PdfTestBase
     public async Task ConvertToPdfX_AddsVersionMarker()
     {
         var converted = await ConvertAsync(PdfFixtures.SinglePage(), PdfXProfile.PdfX3_2002);
-        var text = System.Text.Encoding.Latin1.GetString(converted);
+        var text = Encoding.Latin1.GetString(converted);
         text.ShouldContain("GTS_PDFXVersion");
         text.ShouldContain("PDF/X-3:2002");
     }
@@ -51,7 +50,7 @@ public sealed class PdfXConversionTests : PdfTestBase
         await using var reloaded = await LoadAsync(converted);
         // The output intent object should be reachable and carry the GTS_PDFX subtype.
         reloaded.PageCount.ShouldBe(1);
-        var text = System.Text.Encoding.Latin1.GetString(converted);
+        var text = Encoding.Latin1.GetString(converted);
         text.ShouldContain("PDF/X-4");
     }
 

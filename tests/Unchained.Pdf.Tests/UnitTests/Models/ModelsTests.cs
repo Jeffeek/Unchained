@@ -106,8 +106,8 @@ public sealed class SaveOptionsTests
     public void RecordEquality_Works()
     {
         // ReSharper disable RedundantArgumentDefaultValue
-        var a = new SaveOptions(PdfVersion.Pdf17, Linearize: false);
-        var b = new SaveOptions(PdfVersion.Pdf17, Linearize: false);
+        var a = new SaveOptions(PdfVersion.Pdf17, false);
+        var b = new SaveOptions(PdfVersion.Pdf17, false);
         // ReSharper restore RedundantArgumentDefaultValue
         a.ShouldBe(b);
     }

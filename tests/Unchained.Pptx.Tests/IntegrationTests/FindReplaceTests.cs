@@ -6,8 +6,8 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Find/replace across the presentation, slides, and individual text frames (M-G).
-/// Run formatting must be preserved, and matches that span multiple runs must be handled.
+///     Find/replace across the presentation, slides, and individual text frames (M-G).
+///     Run formatting must be preserved, and matches that span multiple runs must be handled.
 /// </summary>
 public sealed class FindReplaceTests : PptxTestBase
 {
@@ -15,7 +15,10 @@ public sealed class FindReplaceTests : PptxTestBase
     public void ReplaceText_WithinSingleRun_ReplacesAndKeepsCount()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var box = doc.Slides[0].Shapes.AddTextBox(Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(1),
+        var box = doc.Slides[0].Shapes.AddTextBox(Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(4),
+            Emu.FromInches(1),
             "Hello world, hello again");
 
         var n = doc.ReplaceText("hello", "hi", StringComparison.OrdinalIgnoreCase);
@@ -67,7 +70,8 @@ public sealed class FindReplaceTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero, Emu.Zero,
+            Emu.Zero,
+            Emu.Zero,
             [Emu.FromInches(2), Emu.FromInches(2)],
             [Emu.FromInches(0.5)]);
         table.Grid[0, 0].TextFrame.PlainText = "TOKEN here";

@@ -1,5 +1,6 @@
 using Shouldly;
 using Unchained.Ooxml;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
@@ -12,7 +13,10 @@ public sealed class TextTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var tb = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(3), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(3),
+            Emu.FromInches(1));
         tb.TextFrame.PlainText = "Hello World";
         tb.TextFrame.PlainText.ShouldBe("Hello World");
     }
@@ -22,7 +26,10 @@ public sealed class TextTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var tb = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(3), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(3),
+            Emu.FromInches(1));
         tb.TextFrame.PlainText = "Test";
         tb.TextFrame.Paragraphs.Count.ShouldBe(1);
         tb.TextFrame.Paragraphs[0].Runs.Count.ShouldBe(1);
@@ -34,7 +41,10 @@ public sealed class TextTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var tb = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(3), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(3),
+            Emu.FromInches(1));
         var para = tb.TextFrame.Paragraphs.Add();
         para.Runs.Add("Hello");
         para.Runs.Add(" World");
@@ -46,7 +56,10 @@ public sealed class TextTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var tb = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(3), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(3),
+            Emu.FromInches(1));
         var para = tb.TextFrame.Paragraphs.Add();
         var run = para.Runs.Add("Bold text");
         run.Format.Bold = InheritableBool.True;
@@ -58,7 +71,10 @@ public sealed class TextTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var tb = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(3), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(3),
+            Emu.FromInches(1));
         var para = tb.TextFrame.Paragraphs.Add();
         var run = para.Runs.Add("Big text");
         run.Format.FontSizePoints = 24.0;
@@ -70,7 +86,10 @@ public sealed class TextTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var tb = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(3), Emu.FromInches(2));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(3),
+            Emu.FromInches(2));
         tb.TextFrame.Paragraphs.Add("Line 1");
         tb.TextFrame.Paragraphs.Add("Line 2");
         tb.TextFrame.PlainText.ShouldBe("Line 1\nLine 2");
@@ -81,12 +100,15 @@ public sealed class TextTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var tb = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(3), Emu.FromInches(1),
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(3),
+            Emu.FromInches(1),
             "Round-trip text");
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
         var reloadedShape = reloaded.Slides[0].Shapes
-            .OfType<Shapes.AutoShape>()
+            .OfType<AutoShape>()
             .FirstOrDefault(s => s.IsTextBox);
 
         reloadedShape.ShouldNotBeNull();
@@ -98,10 +120,16 @@ public sealed class TextTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
-        slide.Shapes.AddTextBox(Emu.Zero, Emu.Zero,
-            Emu.FromInches(2), Emu.FromInches(1), "Title");
-        slide.Shapes.AddTextBox(Emu.FromInches(3), Emu.Zero,
-            Emu.FromInches(2), Emu.FromInches(1), "Body");
+        slide.Shapes.AddTextBox(Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1),
+            "Title");
+        slide.Shapes.AddTextBox(Emu.FromInches(3),
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1),
+            "Body");
 
         var allText = slide.GetAllText();
         allText.ShouldContain("Title");

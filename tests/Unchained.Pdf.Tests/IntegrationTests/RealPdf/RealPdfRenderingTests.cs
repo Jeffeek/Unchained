@@ -6,9 +6,10 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
 
 /// <summary>
-/// Rendering tests against real-world PDFs.
-/// Requires FreeType2 at runtime; tests call <c>SkipIfNoFreeType()</c> so absent FreeType2 shows as Skipped, not Passed.
-/// Smoke tests loop over every *.pdf in the folder and pass vacuously when empty.
+///     Rendering tests against real-world PDFs.
+///     Requires FreeType2 at runtime; tests call <c>SkipIfNoFreeType()</c> so absent FreeType2 shows as Skipped, not
+///     Passed.
+///     Smoke tests loop over every *.pdf in the folder and pass vacuously when empty.
 /// </summary>
 public sealed class RealPdfRenderingTests : RendererTestBase
 {
@@ -22,11 +23,12 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         var tested = 0;
         foreach (var path in Files())
         {
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken), ct: TestContext.Current.CancellationToken);
+            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken);
             if (doc is null)
                 continue;
 
-            var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+            var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
             png[..8].ShouldBe(PdfTestConstants.PngSignature, path);
             tested++;
         }
@@ -43,7 +45,8 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         var tested = 0;
         foreach (var path in Files())
         {
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken), ct: TestContext.Current.CancellationToken);
+            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken);
             if (doc is null)
                 continue;
 
@@ -51,7 +54,7 @@ public sealed class RealPdfRenderingTests : RendererTestBase
             if (page.Width <= 0 || page.Height <= 0)
                 continue;
 
-            var png = await Renderer!.RenderPageAsync(page, new RenderOptions(Dpi: 72), ct: TestContext.Current.CancellationToken);
+            var png = await Renderer!.RenderPageAsync(page, new RenderOptions(72), TestContext.Current.CancellationToken);
             PdfTestConstants.PngWidth(png).ShouldBeInRange((int)page.Width - 2, (int)Math.Ceiling(page.Width) + 2, path);
             PdfTestConstants.PngHeight(png).ShouldBeInRange((int)page.Height - 2, (int)Math.Ceiling(page.Height) + 2, path);
             tested++;
@@ -70,8 +73,8 @@ public sealed class RealPdfRenderingTests : RendererTestBase
 
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Simple);
 
-        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         // A page with text should contain at least one non-white pixel.
         png.Skip(8).Any(static b => b != 0xFF)
             .ShouldBeTrue("Expected at least one non-white pixel.");
@@ -84,8 +87,8 @@ public sealed class RealPdfRenderingTests : RendererTestBase
 
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Multipage);
 
-        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
-        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
+        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default, TestContext.Current.CancellationToken);
         pages.Count.ShouldBe(doc.PageCount);
         foreach (var png in pages)
             png[..8].ShouldBe(PdfTestConstants.PngSignature);
@@ -98,8 +101,8 @@ public sealed class RealPdfRenderingTests : RendererTestBase
 
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithImages);
 
-        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(150), TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(5_000,
             "Expected a substantial PNG for a page containing images.");
     }
@@ -111,8 +114,8 @@ public sealed class RealPdfRenderingTests : RendererTestBase
 
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithEmbeddedFonts);
 
-        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -123,8 +126,8 @@ public sealed class RealPdfRenderingTests : RendererTestBase
 
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Large);
 
-        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 72), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(72), TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -138,7 +141,7 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         // Cancel after 50 ms — short enough to fire during rendering on any machine,
         // long enough for the render task to have started.
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
-        await using var doc = await LoadAsync(bytes, ct: TestContext.Current.CancellationToken);
-        await Should.ThrowAsync<OperationCanceledException>(() => Renderer!.RenderDocumentAsync(doc, new RenderOptions(Dpi: 72), cts.Token));
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
+        await Should.ThrowAsync<OperationCanceledException>(() => Renderer!.RenderDocumentAsync(doc, new RenderOptions(72), cts.Token));
     }
 }

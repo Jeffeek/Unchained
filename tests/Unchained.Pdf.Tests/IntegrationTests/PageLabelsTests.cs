@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -6,15 +7,15 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for <see cref="Engine.PageLabelEditor"/> — reading and writing
-/// the PDF <c>/PageLabels</c> number tree (ISO 32000-1 §12.4.2).
+///     Tests for <see cref="Engine.PageLabelEditor" /> — reading and writing
+///     the PDF <c>/PageLabels</c> number tree (ISO 32000-1 §12.4.2).
 /// </summary>
 public sealed class PageLabelsTests : PdfTestBase
 {
     [Fact]
     public async Task GetPageLabels_WhenNotSet_ReturnsEmpty()
     {
-        var editor = new Engine.PageLabelEditor();
+        var editor = new PageLabelEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         editor.GetPageLabels(doc).ShouldBeEmpty();
     }
@@ -22,13 +23,13 @@ public sealed class PageLabelsTests : PdfTestBase
     [Fact]
     public async Task SetPageLabels_TwoRanges_RoundTripsCorrectly()
     {
-        var editor = new Engine.PageLabelEditor();
+        var editor = new PageLabelEditor();
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(5), TestContext.Current.CancellationToken);
 
         var ranges = new List<PageLabelRange>
         {
-            new(0, PageLabelStyle.RomanLower, Prefix: null, FirstLabelNumber: 1),
-            new(2, Style: PageLabelStyle.Decimal, Prefix: null, FirstLabelNumber: 1)
+            new(0, PageLabelStyle.RomanLower, null, 1),
+            new(2, PageLabelStyle.Decimal, null, 1)
         };
         await editor.SetPageLabelsAsync(doc, ranges, TestContext.Current.CancellationToken);
 
@@ -42,12 +43,12 @@ public sealed class PageLabelsTests : PdfTestBase
     [Fact]
     public async Task SetPageLabels_WithPrefix_RoundTripsPrefix()
     {
-        var editor = new Engine.PageLabelEditor();
+        var editor = new PageLabelEditor();
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(3), TestContext.Current.CancellationToken);
 
         await editor.SetPageLabelsAsync(
             doc,
-            [new PageLabelRange(0, Style: PageLabelStyle.Decimal, Prefix: "A-", FirstLabelNumber: 1)],
+            [new PageLabelRange(0, PageLabelStyle.Decimal, "A-", 1)],
             TestContext.Current.CancellationToken);
 
         var result = editor.GetPageLabels(doc);
@@ -57,12 +58,12 @@ public sealed class PageLabelsTests : PdfTestBase
     [Fact]
     public async Task RemovePageLabels_AfterSet_ReturnsEmpty()
     {
-        var editor = new Engine.PageLabelEditor();
+        var editor = new PageLabelEditor();
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(3), TestContext.Current.CancellationToken);
 
         await editor.SetPageLabelsAsync(
             doc,
-            [new PageLabelRange(0, Style: PageLabelStyle.Decimal)],
+            [new PageLabelRange(0, PageLabelStyle.Decimal)],
             TestContext.Current.CancellationToken);
 
         await editor.RemovePageLabelsAsync(doc, TestContext.Current.CancellationToken);
@@ -72,20 +73,20 @@ public sealed class PageLabelsTests : PdfTestBase
     [Fact]
     public async Task SetPageLabels_FirstRangeNotAtZero_Throws()
     {
-        var editor = new Engine.PageLabelEditor();
+        var editor = new PageLabelEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         await Should.ThrowAsync<ArgumentException>(() =>
             editor.SetPageLabelsAsync(
                 doc,
-                [new PageLabelRange(1, Style: PageLabelStyle.Decimal)],
+                [new PageLabelRange(1, PageLabelStyle.Decimal)],
                 TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task SetPageLabels_SaveAndReload_Persists()
     {
-        var editor = new Engine.PageLabelEditor();
+        var editor = new PageLabelEditor();
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(4), TestContext.Current.CancellationToken);
 
         await editor.SetPageLabelsAsync(
@@ -109,7 +110,7 @@ public sealed class PageLabelsTests : PdfTestBase
     ]
     public async Task SetPageLabels_AllStyles_RoundTrip(PageLabelStyle style, string _)
     {
-        var editor = new Engine.PageLabelEditor();
+        var editor = new PageLabelEditor();
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
 
         await editor.SetPageLabelsAsync(

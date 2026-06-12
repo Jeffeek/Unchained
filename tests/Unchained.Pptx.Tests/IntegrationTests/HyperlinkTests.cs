@@ -1,5 +1,6 @@
 using Shouldly;
 using Unchained.Ooxml;
+using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
@@ -8,21 +9,25 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Shape click-hyperlinks: external URLs and internal slide jumps, round-trip, and the
-/// document-wide hyperlink manager (M-G).
+///     Shape click-hyperlinks: external URLs and internal slide jumps, round-trip, and the
+///     document-wide hyperlink manager (M-G).
 /// </summary>
 public sealed class HyperlinkTests : PptxTestBase
 {
-    private static AutoShape AddBox(Engine.PresentationDocument doc, int slideIndex)
+    private static AutoShape AddBox(PresentationDocument doc, int slideIndex)
         => doc.Slides[slideIndex].Shapes.AddShape(
-            AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Rectangle,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
     [Fact]
     public async Task UrlHyperlink_RoundTrips()
     {
         var doc = PptxFixtures.WithSlides(1);
         var box = AddBox(doc, 0);
-        box.ClickAction = HyperlinkAction.ToUrl("https://example.com/page", openInNewWindow: true);
+        box.ClickAction = HyperlinkAction.ToUrl("https://example.com/page", true);
         box.ClickAction.Tooltip = "Visit";
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);

@@ -3,15 +3,15 @@ using System.Text;
 namespace Unchained.PerformanceTests.Infrastructure;
 
 /// <summary>
-/// Generates minimal but spec-compliant PDF byte arrays without any external dependency.
-/// Used as benchmark fixtures so the benchmarks have no dependency on a working
-/// Unchained write path (the write path is what we're building).
+///     Generates minimal but spec-compliant PDF byte arrays without any external dependency.
+///     Used as benchmark fixtures so the benchmarks have no dependency on a working
+///     Unchained write path (the write path is what we're building).
 /// </summary>
 internal static class MinimalPdfFactory
 {
     /// <summary>
-    /// Builds a valid single-page PDF with <paramref name="pageCount"/> blank A4 pages.
-    /// The structure is the smallest PDF that conforms to ISO 32000-1 §7.5.
+    ///     Builds a valid single-page PDF with <paramref name="pageCount" /> blank A4 pages.
+    ///     The structure is the smallest PDF that conforms to ISO 32000-1 §7.5.
     /// </summary>
     public static byte[] Build(int pageCount = 1, string pageText = "Unchained benchmark")
     {
@@ -66,9 +66,9 @@ internal static class MinimalPdfFactory
     }
 
     /// <summary>
-    /// Builds a valid PDF with <paramref name="pageCount"/> pages, each containing
-    /// the given <paramref name="text"/> rendered in Helvetica 12pt.
-    /// Used for text-extraction benchmarks where all libraries must actually find content.
+    ///     Builds a valid PDF with <paramref name="pageCount" /> pages, each containing
+    ///     the given <paramref name="text" /> rendered in Helvetica 12pt.
+    ///     Used for text-extraction benchmarks where all libraries must actually find content.
     /// </summary>
     public static byte[] BuildWithText(int pageCount = 1, string text = "Unchained benchmark text content")
         => BuildWithTextCore(pageCount, text);
@@ -80,7 +80,7 @@ internal static class MinimalPdfFactory
         // Pre-build content stream bytes for each page
         var streams = Enumerable.Range(0, pageCount)
             .Select(i => Encoding.Latin1.GetBytes(
-                $"BT /F1 12 Tf 50 {700 - i * 15} Td ({escaped}) Tj ET"))
+                $"BT /F1 12 Tf 50 {700 - (i * 15)} Td ({escaped}) Tj ET"))
             .ToArray();
 
         // Object numbering:
@@ -89,7 +89,7 @@ internal static class MinimalPdfFactory
         //  3 = Font
         //  4 + 2*i = Page i dict
         //  5 + 2*i = Content stream i
-        var totalObjects = 3 + pageCount * 2;
+        var totalObjects = 3 + (pageCount * 2);
         const int fontObjNum = 3;
 
         var sb = new StringBuilder();
@@ -103,7 +103,7 @@ internal static class MinimalPdfFactory
 
         // Obj 2 — Pages
         offsets[2] = Encoding.Latin1.GetByteCount(sb.ToString());
-        var kids = string.Join(" ", Enumerable.Range(0, pageCount).Select(static i => $"{4 + i * 2} 0 R"));
+        var kids = string.Join(" ", Enumerable.Range(0, pageCount).Select(static i => $"{4 + (i * 2)} 0 R"));
         sb.Append($"2 0 obj\n<< /Type /Pages /Kids [{kids}] /Count {pageCount} >>\nendobj\n");
 
         // Obj 3 — Font
@@ -113,8 +113,8 @@ internal static class MinimalPdfFactory
         // Page pairs
         for (var i = 0; i < pageCount; i++)
         {
-            var pageNum = 4 + i * 2;
-            var contNum = 5 + i * 2;
+            var pageNum = 4 + (i * 2);
+            var contNum = 5 + (i * 2);
             var streamLen = streams[i].Length;
 
             offsets[pageNum] = Encoding.Latin1.GetByteCount(sb.ToString());

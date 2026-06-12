@@ -2,13 +2,14 @@ using System.Text;
 using Shouldly;
 using Unchained.Pdf.Content;
 using Unchained.Pdf.Core;
+using Unchained.Pdf.Models;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Content;
 
 public sealed class ContentStreamParserTests
 {
-    private static IReadOnlyList<Unchained.Pdf.Models.ContentOperator> Parse(string stream) =>
+    private static IReadOnlyList<ContentOperator> Parse(string stream) =>
         ContentStreamParser.Parse(Encoding.Latin1.GetBytes(stream));
 
     // ── Zero-operand operators ────────────────────────────────────────────────
@@ -136,12 +137,12 @@ public sealed class ContentStreamParserTests
     public void Parse_TextBlock_ExtractsAllOperators()
     {
         const string stream = """
-            BT
-            /Helvetica 12 Tf
-            100 700 Td
-            (Hello, Unchained!) Tj
-            ET
-            """;
+                              BT
+                              /Helvetica 12 Tf
+                              100 700 Td
+                              (Hello, Unchained!) Tj
+                              ET
+                              """;
 
         var ops = Parse(stream);
 

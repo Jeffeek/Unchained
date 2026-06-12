@@ -3,7 +3,7 @@
 @if (Disabled)
 {
     <span class="nav-tab nav-tab--disabled">
-        <MudIcon Icon="@Icon" Size="Size.Small" Class="nav-tab-icon" />
+        <MudIcon Icon="@Icon" Size="Size.Small" Class="nav-tab-icon"/>
         <span>@Label</span>
         <span class="nav-tab-soon">soon</span>
     </span>
@@ -13,18 +13,30 @@ else
     <button type="button"
             class="@CssClass"
             @onclick="HandleClick">
-        <MudIcon Icon="@Icon" Size="Size.Small" Class="nav-tab-icon" />
+        <MudIcon Icon="@Icon" Size="Size.Small" Class="nav-tab-icon"/>
         <span>@Label</span>
     </button>
 }
 
 @code {
-    [Parameter] public string Label { get; set; } = string.Empty;
-    [Parameter] public string Icon { get; set; } = string.Empty;
-    [Parameter] public string Path { get; set; } = "/";
-    [Parameter] public bool Active { get; set; }
-    [Parameter] public bool Disabled { get; set; }
-    [Parameter] public EventCallback<string> OnNavigate { get; set; }
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Icon { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Path { get; set; } = "/";
+
+    [Parameter]
+    public bool Active { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnNavigate { get; set; }
 
     private string CssClass => Active ? "nav-tab nav-tab--active" : "nav-tab";
 
@@ -33,4 +45,5 @@ else
         if (!Disabled)
             await OnNavigate.InvokeAsync(Path);
     }
+
 }

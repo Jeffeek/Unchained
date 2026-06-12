@@ -6,8 +6,8 @@ using Xunit;
 namespace Unchained.Pdf.Tests.UnitTests;
 
 /// <summary>
-/// Direct unit tests for AES-256 PDF encryption key derivation,
-/// bypassing PDF serialization to isolate crypto correctness.
+///     Direct unit tests for AES-256 PDF encryption key derivation,
+///     bypassing PDF serialization to isolate crypto correctness.
 /// </summary>
 public sealed class EncryptionCryptoTests
 {
@@ -20,7 +20,7 @@ public sealed class EncryptionCryptoTests
     ]
     public void CreateWriteContext_ThenReadContext_ValidatesPassword(string password)
     {
-        var options = new EncryptionOptions(UserPassword: password);
+        var options = new EncryptionOptions(password);
         var fileId = new byte[16]; // zeros — deterministic
 
         var (_, encryptDict) = PdfEncryption.CreateWriteContext(options, fileId);
@@ -33,7 +33,7 @@ public sealed class EncryptionCryptoTests
     [Fact]
     public void CreateWriteContext_WrongPassword_ReturnsNull()
     {
-        var options = new EncryptionOptions(UserPassword: "correct");
+        var options = new EncryptionOptions("correct");
         var fileId = new byte[16];
 
         var (_, encryptDict) = PdfEncryption.CreateWriteContext(options, fileId);
@@ -50,8 +50,8 @@ public sealed class EncryptionCryptoTests
 
         var ctx = new PdfEncryptionContext(key, PdfEncryptionAlgorithm.Aes256);
         var plain = "Hello, encrypted world!"u8.ToArray();
-        var encrypted = ctx.EncryptStream(plain, objNum: 5, genNum: 0);
-        var decrypted = ctx.DecryptStream(encrypted, objNum: 5, genNum: 0);
+        var encrypted = ctx.EncryptStream(plain, 5, 0);
+        var decrypted = ctx.DecryptStream(encrypted, 5, 0);
 
         decrypted.ShouldBe(plain);
     }

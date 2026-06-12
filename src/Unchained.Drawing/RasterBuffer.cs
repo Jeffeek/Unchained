@@ -8,23 +8,6 @@ namespace Unchained.Drawing;
 /// </summary>
 internal sealed class RasterBuffer(int width, int height)
 {
-    /// <summary>
-    ///     Blits a grayscale glyph bitmap (one byte per pixel = alpha) onto the buffer.
-    ///     Called by <c>RasterBufferGlyphExtensions.BlitGlyphBitmap</c> in Drawing.Text.
-    /// </summary>
-    /// <param name="destX">Left edge of the glyph in buffer coordinates.</param>
-    /// <param name="destY">Top edge of the glyph in buffer coordinates.</param>
-    /// <param name="glyphWidth">Width of the glyph bitmap in pixels.</param>
-    /// <param name="glyphHeight">Height of the glyph bitmap in rows.</param>
-    /// <param name="pitch">Absolute row stride of the glyph buffer in bytes.</param>
-    /// <param name="glyphBuffer">Raw grayscale alpha bytes from FreeType2.</param>
-    /// <param name="invertRows">
-    ///     <see langword="true" /> when <c>FTBitmap.Pitch</c> is negative (top-down).
-    /// </param>
-    /// <param name="r">Red channel of the glyph colour.</param>
-    /// <param name="g">Green channel of the glyph colour.</param>
-    /// <param name="b">Blue channel of the glyph colour.</param>
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     // Glyph coverage adjustment. FreeType emits linear coverage; reference rasterizers
     // (incl. Pdfium) lighten partial-coverage edge pixels, so a purely linear blit makes
     // Unchained text edges too heavy/dark. Applying gamma 2.0 to the coverage softens
@@ -84,22 +67,18 @@ internal sealed class RasterBuffer(int width, int height)
     internal void ClearClip() => _clipMask = null;
 
     /// <summary>Snapshots the current clip mask so it can be restored on Q.</summary>
-    internal byte[]? SaveClipMask() => _clipMask is null ? null : (byte[])_clipMask.Clone();
+    internal byte[]? SaveClipMask() => (byte[]?)_clipMask?.Clone();
 
     /// <summary>Restores a previously snapshotted clip mask (from SaveClipMask).</summary>
     internal void RestoreClipMask(byte[]? saved) => _clipMask = saved;
 
-    private bool InClip(int x, int y)
-    {
-        if (_clipMask is null) return true;
-        return _clipMask[(y * Width) + x] != 0;
-    }
+    private bool InClip(int x, int y) => _clipMask is null || _clipMask[(y * Width) + x] != 0;
 
     // Scanline-rasterises a set of polygons into a fresh Width×Height mask.
     // Each polygon is treated as implicitly closed. Same algorithm as FillPolygon in
     // PageRenderer — samples at pixel centre (y+0.5), half-open edge rule.
     private byte[] RasterisePolygons(
-        IReadOnlyList<(double X, double Y)[]> polys,
+        IReadOnlyCollection<(double X, double Y)[]> polys,
         bool evenOdd
     )
     {
@@ -130,16 +109,20 @@ internal sealed class RasterBuffer(int width, int height)
                 {
                     var (ax, ay) = pts[i];
                     var (bx, by) = pts[(i + 1) % n];
-                    if (ay == by) continue;
-                    if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
-                    {
-                        var t = (sy - ay) / (by - ay);
-                        xs.Add((ax + (t * (bx - ax)), by > ay ? 1 : -1));
-                    }
+                    if (Math.Abs(ay - by) < 0.05)
+                        continue;
+
+                    if (!(sy >= Math.Min(ay, by)) || !(sy < Math.Max(ay, by)))
+                        continue;
+
+                    var t = (sy - ay) / (by - ay);
+                    xs.Add((ax + (t * (bx - ax)), by > ay ? 1 : -1));
                 }
             }
 
-            if (xs.Count < 2) continue;
+            if (xs.Count < 2)
+                continue;
+
             xs.Sort(static (p, q) => p.X.CompareTo(q.X));
 
             var wind = 0;
@@ -147,7 +130,9 @@ internal sealed class RasterBuffer(int width, int height)
             {
                 wind += xs[i].Dir;
                 var inside = evenOdd ? ((i + 1) & 1) == 1 : wind != 0;
-                if (!inside) continue;
+                if (!inside)
+                    continue;
+
                 var xStart = Math.Max(0, (int)Math.Round(xs[i].X));
                 var xEnd = Math.Min(Width - 1, (int)Math.Round(xs[i + 1].X) - 1);
                 for (var px = xStart; px <= xEnd; px++)
@@ -186,7 +171,7 @@ internal sealed class RasterBuffer(int width, int height)
             return;
 
         var i = ((y * Width) + x) * 4;
-        if (blendMode == "Normal" || blendMode == "Compatible")
+        if (blendMode is "Normal" or "Compatible")
         {
             if (a == 255)
             {
@@ -649,8 +634,8 @@ internal sealed class RasterBuffer(int width, int height)
         }
 
         s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
-        if (max == rf) h = (((gf - bf) / delta) + (gf < bf ? 6 : 0)) / 6.0;
-        else if (max == gf) h = (((bf - rf) / delta) + 2) / 6.0;
+        if (Math.Abs(max - rf) < 0.05) h = (((gf - bf) / delta) + (gf < bf ? 6 : 0)) / 6.0;
+        else if (Math.Abs(max - gf) < 0.05) h = (((bf - rf) / delta) + 2) / 6.0;
         else h = (((rf - gf) / delta) + 4) / 6.0;
     }
 
@@ -682,10 +667,13 @@ internal sealed class RasterBuffer(int width, int height)
     {
         if (t < 0) t += 1;
         if (t > 1) t -= 1;
-        if (t < 1.0 / 6) return p + ((q - p) * 6 * t);
-        if (t < 1.0 / 2) return q;
-        if (t < 2.0 / 3) return p + ((q - p) * ((2.0 / 3) - t) * 6);
-        return p;
+        return t switch
+        {
+            < 1.0 / 6 => p + ((q - p) * 6 * t),
+            < 1.0 / 2 => q,
+            < 2.0 / 3 => p + ((q - p) * ((2.0 / 3) - t) * 6),
+            _ => p
+        };
     }
 
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
@@ -707,6 +695,7 @@ internal sealed class RasterBuffer(int width, int height)
         var y2 = Math.Min(Height, y + h);
         for (var py = y1; py < y2; py++)
         for (var px = x1; px < x2; px++)
+        {
             SetPixel(px,
                 py,
                 r,
@@ -714,6 +703,7 @@ internal sealed class RasterBuffer(int width, int height)
                 b,
                 a,
                 blendMode);
+        }
     }
 
     // Fills the inclusive horizontal span [x0, x1] on row y with an opaque colour.
@@ -729,10 +719,13 @@ internal sealed class RasterBuffer(int width, int height)
         string blendMode = "Normal"
     )
     {
-        if ((uint)y >= (uint)Height) return;
+        if ((uint)y >= (uint)Height)
+            return;
+
         var xa = Math.Max(0, x0);
         var xb = Math.Min(Width - 1, x1);
         for (var px = xa; px <= xb; px++)
+        {
             SetPixel(px,
                 y,
                 r,
@@ -740,6 +733,7 @@ internal sealed class RasterBuffer(int width, int height)
                 b,
                 a,
                 blendMode);
+        }
     }
 
     // Bresenham line with configurable thickness.
@@ -768,6 +762,7 @@ internal sealed class RasterBuffer(int width, int height)
         {
             for (var ty = -half; ty <= half; ty++)
             for (var tx = -half; tx <= half; tx++)
+            {
                 SetPixel(x0 + tx,
                     y0 + ty,
                     r,
@@ -775,6 +770,7 @@ internal sealed class RasterBuffer(int width, int height)
                     b,
                     a,
                     blendMode);
+            }
 
             if (x0 == x1 && y0 == y1)
                 break;
@@ -932,6 +928,7 @@ internal sealed class RasterBuffer(int width, int height)
         for (var dx = -r; dx <= r; dx++)
         {
             if ((dx * dx) + (dy * dy) <= r2)
+            {
                 SetPixel(cx + dx,
                     cy + dy,
                     red,
@@ -939,6 +936,7 @@ internal sealed class RasterBuffer(int width, int height)
                     blu,
                     a,
                     blendMode);
+            }
         }
     }
 
@@ -979,6 +977,7 @@ internal sealed class RasterBuffer(int width, int height)
             var xa = Math.Max(0, (int)Math.Round(crosses[0]));
             var xb = Math.Min(Width - 1, (int)Math.Round(crosses[^1]));
             for (var px = xa; px <= xb; px++)
+            {
                 SetPixel(px,
                     y,
                     r,
@@ -986,6 +985,7 @@ internal sealed class RasterBuffer(int width, int height)
                     b,
                     a,
                     blendMode);
+            }
         }
     }
 }

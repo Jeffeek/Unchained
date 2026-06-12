@@ -48,7 +48,7 @@ public sealed class ObjectGraphBuilderTests
     public void NextNumber_ThenAdd_NumbersAreSequential()
     {
         var builder = new ObjectGraphBuilder();
-        var reserved = builder.NextNumber(); // 1 reserved
+        var reserved = builder.NextNumber();     // 1 reserved
         var obj = builder.Add(PdfNull.Instance); // should get 2
         reserved.ShouldBe(1);
         obj.ObjectNumber.ShouldBe(2);
@@ -76,7 +76,7 @@ public sealed class ObjectGraphBuilderTests
     [Fact]
     public void StartAt_OverridesDefaultStartNumber()
     {
-        var builder = new ObjectGraphBuilder(startAt: 10);
+        var builder = new ObjectGraphBuilder(10);
         var obj = builder.Add(PdfNull.Instance);
         obj.ObjectNumber.ShouldBe(10);
     }

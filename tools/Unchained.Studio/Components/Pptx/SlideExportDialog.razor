@@ -1,6 +1,6 @@
 @using System.IO.Compression
+@using System.Text
 @using Unchained.Pptx.Engine
-@using Unchained.Pptx.Rendering
 @using Unchained.Pptx.Rendering.Engine
 @using Unchained.Pptx.Rendering.Models
 @inject FileExportService Exporter
@@ -9,7 +9,7 @@
 <MudDialog Style="min-width:480px; max-width:640px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Outlined.FolderZip" Class="mr-2" Style="vertical-align:middle;" />
+            <MudIcon Icon="@Icons.Material.Outlined.FolderZip" Class="mr-2" Style="vertical-align:middle;"/>
             Export Slides as ZIP
         </MudText>
     </TitleContent>
@@ -70,7 +70,7 @@
                             @_done / @_total
                         </MudText>
                     </div>
-                    <MudProgressLinear Value="@Percent" Color="Color.Primary" Rounded="true" />
+                    <MudProgressLinear Value="@Percent" Color="Color.Primary" Rounded="true"/>
                 </div>
                 @if (_phase == Phase.Done && _errors > 0)
                 {
@@ -104,11 +104,18 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
-    [Parameter] public PresentationDocument Document { get; set; } = default!;
-    [Parameter] public string FileName { get; set; } = "presentation.pptx";
-    [Parameter] public int CurrentSlide { get; set; } = 1;
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = default!;
+
+    [Parameter]
+    public string FileName { get; set; } = "presentation.pptx";
+
+    [Parameter]
+    public int CurrentSlide { get; set; } = 1;
 
     private SlideScope _scope = SlideScope.All;
     private int _width = 1920;
@@ -194,17 +201,18 @@
 
     private byte[] BuildReadme(int count, List<string> errors)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine($"# {FileName} — slide export");
         sb.AppendLine();
         sb.AppendLine($"- Slides rendered: {count - _errors}/{count}");
         sb.AppendLine($"- Resolution: {_width} × {_width * 9 / 16}");
-        sb.AppendLine($"- Renderer: Unchained.Pptx.Rendering (FreeType2 + HarfBuzz)");
+        sb.AppendLine("- Renderer: Unchained.Pptx.Rendering (FreeType2 + HarfBuzz)");
         if (_includeReferenceSlot)
         {
             sb.AppendLine();
             sb.AppendLine("Compare `unchained/slide_NNN.png` against the matching file in `reference/`.");
         }
+
         if (errors.Count > 0)
         {
             sb.AppendLine();
@@ -213,18 +221,19 @@
             foreach (var e in errors)
                 sb.AppendLine($"- {e}");
         }
-        return System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+
+        return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
     private byte[] BuildReferenceReadme() =>
-        System.Text.Encoding.UTF8.GetBytes(
+        Encoding.UTF8.GetBytes(
             "Drop the production engine's slide PNGs here, named slide_001.png, slide_002.png, …\n" +
             "so they line up with the files in ../unchained/ for visual comparison.\n");
 
     private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
     {
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             foreach (var (path, data) in entries)
             {
@@ -233,6 +242,8 @@
                 stream.Write(data);
             }
         }
+
         return ms.ToArray();
     }
+
 }

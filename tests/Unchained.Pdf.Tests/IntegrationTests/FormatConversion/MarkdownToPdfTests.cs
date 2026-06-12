@@ -1,3 +1,4 @@
+using System.Text;
 using Shouldly;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -7,22 +8,22 @@ namespace Unchained.Pdf.Tests.IntegrationTests.FormatConversion;
 public sealed class MarkdownToPdfTests : PdfTestBase
 {
     private const string SimpleMarkdown = """
-        # Heading 1
+                                          # Heading 1
 
-        This is a paragraph with **bold** and *italic* text.
+                                          This is a paragraph with **bold** and *italic* text.
 
-        ## Heading 2
+                                          ## Heading 2
 
-        Another paragraph.
+                                          Another paragraph.
 
-        - Item one
-        - Item two
-        - Item three
+                                          - Item one
+                                          - Item two
+                                          - Item three
 
-        ```
-        code block
-        ```
-        """;
+                                          ```
+                                          code block
+                                          ```
+                                          """;
 
     [Fact]
     public async Task LoadFromMarkdown_SimpleDocument_ProducesValidPdf()
@@ -50,7 +51,7 @@ public sealed class MarkdownToPdfTests : PdfTestBase
     [Fact]
     public async Task LoadFromMarkdown_LongDocument_Paginates()
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         for (var i = 1; i <= 30; i++)
             sb.AppendLine($"## Section {i}\n\n{string.Join(" ", Enumerable.Repeat("This is body text.", 10))}\n");
         await using var doc = await Processor.LoadFromMarkdownAsync(sb.ToString(), ct: TestContext.Current.CancellationToken);
@@ -77,7 +78,7 @@ public sealed class MarkdownToPdfTests : PdfTestBase
     public async Task LoadFromMarkdown_RoundTrip_PreservesPageCount()
     {
         await using var doc = await Processor.LoadFromMarkdownAsync(SimpleMarkdown, ct: TestContext.Current.CancellationToken);
-        await using var reloaded = await SaveAndReloadAsync(doc, ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(doc.PageCount);
     }
 }

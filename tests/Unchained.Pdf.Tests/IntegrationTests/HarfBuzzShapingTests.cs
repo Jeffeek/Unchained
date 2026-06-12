@@ -1,15 +1,15 @@
+using System.Text;
 using Shouldly;
 using Unchained.Drawing.Text;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
-using Unchained.Pdf.Rendering.Engine;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for M6 steps 6.7 (HarfBuzz text shaping) and 6.8 (NotoSans fallback font).
+///     Tests for M6 steps 6.7 (HarfBuzz text shaping) and 6.8 (NotoSans fallback font).
 /// </summary>
 public sealed class HarfBuzzShapingTests : RendererTestBase
 {
@@ -24,8 +24,8 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
         var fontData = LoadBundledDejaVuBytes();
         const string cs = "BT /F1 14 Tf 50 700 Td (fi) Tj ET"; // "fi" should form a ligature
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, cs);
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -38,8 +38,8 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
         var fontData = LoadBundledDejaVuBytes();
         const string cs = "BT /F1 12 Tf 50 700 Td (Hello, World!) Tj ET";
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, cs);
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(500);
     }
 
@@ -55,8 +55,8 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
             Headers = ["Name", "Score"],
             Rows = [["Alice", "100"], ["Bob", "95"]]
         };
-        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
-        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
+        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default, TestContext.Current.CancellationToken);
         pages.Count.ShouldBe(doc.PageCount);
         pages.ShouldAllBe(static p => p.Length > 100);
     }
@@ -74,8 +74,8 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
             Rows = Enumerable.Range(1, 5).Select(static i => (IReadOnlyList<string>)[$"Row {i}", $"Val {i}"]).ToList()
         };
         var style = new TableStyle(DrawBorders: true, AlternatingRowColor: true);
-        await using var doc = await gen.GenerateAsync(data, style, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await gen.GenerateAsync(data, style, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -90,8 +90,8 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
         const string cs = "BT /F1 12 Tf 50 700 Td (Fallback text) Tj ET";
         // Build PDF where F1 maps to an unrecognised base font name.
         var pdfBytes = BuildWithUnknownFont(cs);
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         // Should render without throwing — NotoSans is used as fallback.
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
@@ -154,7 +154,7 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
         Line("2 0 obj");
         Line("<< /Type /Pages /Kids [4 0 R] /Count 1 >>");
         Line("endobj");
-        var csBytes = System.Text.Encoding.Latin1.GetByteCount(contentStream);
+        var csBytes = Encoding.Latin1.GetByteCount(contentStream);
         var o3 = Pos();
         Line("3 0 obj");
         Line($"<< /Length {csBytes} >>");
@@ -177,14 +177,14 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
         Line("<< /Size 5 /Root 1 0 R >>");
         Line("startxref");
         Line(xref.ToString());
-        ms.Write(System.Text.Encoding.Latin1.GetBytes("%%EOF"));
+        ms.Write(Encoding.Latin1.GetBytes("%%EOF"));
         return ms.ToArray();
 
         long Pos() => ms.Position;
 
         void Line(string s)
         {
-            ms.Write(System.Text.Encoding.Latin1.GetBytes(s));
+            ms.Write(Encoding.Latin1.GetBytes(s));
             ms.WriteByte((byte)'\n');
         }
     }

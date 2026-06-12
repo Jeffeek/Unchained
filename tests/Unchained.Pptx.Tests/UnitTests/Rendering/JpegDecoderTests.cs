@@ -22,7 +22,9 @@ public sealed class JpegDecoderTests
 
     [Fact]
     public void TruncatedJpeg_ReturnsNullNotThrow() =>
-        JpegDecoder.TryDecodeToRgb([JpegMarkers.MarkerPrefix, JpegMarkers.Soi, JpegMarkers.MarkerPrefix, JpegMarkers.App0Jfif, JpegMarkers.ByteStuff], out _, out _).ShouldBeNull();
+        JpegDecoder.TryDecodeToRgb([JpegMarkers.MarkerPrefix, JpegMarkers.Soi, JpegMarkers.MarkerPrefix, JpegMarkers.App0Jfif, JpegMarkers.ByteStuff],
+            out _,
+            out _).ShouldBeNull();
 
     [Fact]
     public void BaselineJpeg_DecodesToFullRgbBuffer()
@@ -48,22 +50,27 @@ public sealed class JpegDecoderTests
 
         // Sample the centre of each quadrant. JPEG is lossy, so assert the dominant channel
         // rather than exact values.
-        var (tlR, tlG, tlB) = Pixel(rgb, w, 4, 4);   // red quadrant
+        var (tlR, tlG, tlB) = Pixel(rgb, w, 4, 4); // red quadrant
         tlR.ShouldBeGreaterThan(tlG);
         tlR.ShouldBeGreaterThan(tlB);
 
-        var (trR, trG, trB) = Pixel(rgb, w, 12, 4);  // green quadrant
+        var (trR, trG, trB) = Pixel(rgb, w, 12, 4); // green quadrant
         trG.ShouldBeGreaterThan(trR);
         trG.ShouldBeGreaterThan(trB);
 
-        var (blR, blG, blB) = Pixel(rgb, w, 4, 12);  // blue quadrant
+        var (blR, blG, blB) = Pixel(rgb, w, 4, 12); // blue quadrant
         blB.ShouldBeGreaterThan(blR);
         blB.ShouldBeGreaterThan(blG);
     }
 
-    private static (int R, int G, int B) Pixel(byte[] rgb, int width, int x, int y)
+    private static (int R, int G, int B) Pixel(
+        byte[] rgb,
+        int width,
+        int x,
+        int y
+    )
     {
-        var i = (y * width + x) * 3;
+        var i = ((y * width) + x) * 3;
         return (rgb[i], rgb[i + 1], rgb[i + 2]);
     }
 }

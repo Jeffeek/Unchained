@@ -1,5 +1,8 @@
+using System.Text;
 using Shouldly;
+using Unchained.Ooxml;
 using Unchained.Pptx.Core;
+using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Tests.Helpers;
@@ -14,13 +17,13 @@ public sealed class EncryptionTests : PptxTestBase
     [Fact]
     public void Cfb_WriteRead_SmallStreamRoundTrip()
     {
-        var smallData = System.Text.Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><root>hello world</root>");
+        var smallData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><root>hello world</root>");
         var largeData = new byte[8192];
         new Random(42).NextBytes(largeData);
 
         var cfb = CfbDocument.Write([
             ("EncryptionInfo", smallData),
-            ("EncryptedPackage", largeData),
+            ("EncryptedPackage", largeData)
         ]);
 
         var streams = CfbDocument.Read(cfb);
@@ -37,7 +40,7 @@ public sealed class EncryptionTests : PptxTestBase
     public async Task Encrypt_SaveBytes_AreNotRawZip()
     {
         var doc = PptxFixtures.WithSlides(2);
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" });
 
@@ -51,7 +54,7 @@ public sealed class EncryptionTests : PptxTestBase
     public async Task RoundTrip_EncryptDecrypt_SlideCountPreserved()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "mypassword" });
@@ -66,11 +69,13 @@ public sealed class EncryptionTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddTextBox(
-            Unchained.Ooxml.Emu.FromInches(1), Unchained.Ooxml.Emu.FromInches(1),
-            Unchained.Ooxml.Emu.FromInches(4), Unchained.Ooxml.Emu.FromInches(2),
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(4),
+            Emu.FromInches(2),
             "Encrypted content");
 
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "pass123" });
         ms.Position = 0;
@@ -83,7 +88,7 @@ public sealed class EncryptionTests : PptxTestBase
     public async Task RoundTrip_EncryptDecrypt_SlideSize_Preserved()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "abc" });
@@ -99,7 +104,7 @@ public sealed class EncryptionTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         const string password = "P@ssw0rd!#$%^&*()";
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = password });
@@ -113,7 +118,7 @@ public sealed class EncryptionTests : PptxTestBase
     public async Task RoundTrip_MultipleSlides_AllPreserved()
     {
         var doc = PptxFixtures.WithSlides(5);
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "test" });
@@ -129,42 +134,39 @@ public sealed class EncryptionTests : PptxTestBase
     public async Task WrongPassword_ThrowsPptxEncryptedException()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "correctpassword" });
         ms.Position = 0;
 
-        await Should.ThrowAsync<PptxEncryptedException>(
-            () => processor.LoadAsync(ms, new OpenOptions { Password = "wrongpassword" }));
+        await Should.ThrowAsync<PptxEncryptedException>(() => processor.LoadAsync(ms, new OpenOptions { Password = "wrongpassword" }));
     }
 
     [Fact]
     public async Task NoPassword_ThrowsPptxEncryptedException()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" });
         ms.Position = 0;
 
-        await Should.ThrowAsync<PptxEncryptedException>(
-            () => processor.LoadAsync(ms)); // no password supplied
+        await Should.ThrowAsync<PptxEncryptedException>(() => processor.LoadAsync(ms)); // no password supplied
     }
 
     [Fact]
     public async Task EmptyPassword_ThrowsPptxEncryptedException()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" });
         ms.Position = 0;
 
-        await Should.ThrowAsync<PptxEncryptedException>(
-            () => processor.LoadAsync(ms, new OpenOptions { Password = string.Empty }));
+        await Should.ThrowAsync<PptxEncryptedException>(() => processor.LoadAsync(ms, new OpenOptions { Password = string.Empty }));
     }
 
     // ── IsEncrypted flag ──────────────────────────────────────────────────────
@@ -173,7 +175,7 @@ public sealed class EncryptionTests : PptxTestBase
     public async Task LoadEncrypted_ProtectionIsEncrypted_IsTrue()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var processor = new Engine.PresentationProcessor();
+        var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
         await processor.SaveAsync(doc, ms, new SaveOptions { Password = "pwd" });

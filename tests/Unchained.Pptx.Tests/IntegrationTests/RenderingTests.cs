@@ -1,6 +1,8 @@
 using Shouldly;
 using Unchained.Drawing.Constants;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Drawing;
+using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Rendering.Engine;
 using Unchained.Pptx.Rendering.Models;
@@ -48,7 +50,8 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_BlankSlide_ProducesNonEmptyData()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
 
         image.Data.IsEmpty.ShouldBeFalse();
@@ -59,7 +62,8 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_OutputIsPng()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
 
         // PNG magic bytes: 89 50 4E 47
@@ -74,7 +78,8 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_DimensionsMatchOptions()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 640, HeightPx = 360 });
 
         image.WidthPx.ShouldBe(640);
@@ -86,11 +91,14 @@ public sealed class RenderingTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(4), Emu.FromInches(2),
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(4),
+            Emu.FromInches(2),
             "Hello Renderer");
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
 
         image.Data.Length.ShouldBeGreaterThan(100);
@@ -101,11 +109,14 @@ public sealed class RenderingTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(0.5), Emu.FromInches(0.5),
-            Emu.FromInches(3), Emu.FromInches(2));
-        shape.Fill.SetSolid(Unchained.Ooxml.Drawing.ColorSpec.FromRgb(0, 112, 192));
+            Emu.FromInches(0.5),
+            Emu.FromInches(0.5),
+            Emu.FromInches(3),
+            Emu.FromInches(2));
+        shape.Fill.SetSolid(ColorSpec.FromRgb(0, 112, 192));
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
 
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -140,7 +151,7 @@ public sealed class RenderingTests : PptxTestBase
     [Fact]
     public async Task RenderAllAsync_EmptyPresentation_ReturnsEmpty()
     {
-        var doc = new Engine.PresentationProcessor().CreateBlank();
+        var doc = new PresentationProcessor().CreateBlank();
         var images = await SlideRenderer.RenderAllAsync(doc,
             new RenderOptions { WidthPx = 320, HeightPx = 180 });
 
@@ -151,7 +162,8 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_BmpFormat_ProducesBmpBytesAndLabel()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Bmp });
 
         image.Format.ShouldBe(RenderImageFormat.Bmp);
@@ -164,7 +176,8 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_JpegFormat_ProducesJpegBytesAndLabel()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize,
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Jpeg });
 
         image.Format.ShouldBe(RenderImageFormat.Jpeg);

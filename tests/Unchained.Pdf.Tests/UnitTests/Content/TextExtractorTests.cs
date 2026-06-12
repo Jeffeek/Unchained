@@ -64,8 +64,8 @@ public sealed class TextExtractorTests
             new ContentOperator("ET", [])
         };
         var spans = TextExtractor.Extract(ops, HelveticaMap);
-        spans[0].X.ShouldBe(50.0, tolerance: 0.001);
-        spans[0].Y.ShouldBe(800.0, tolerance: 0.001);
+        spans[0].X.ShouldBe(50.0, 0.001);
+        spans[0].Y.ShouldBe(800.0, 0.001);
     }
 
     [Fact]
@@ -86,8 +86,8 @@ public sealed class TextExtractorTests
             new ContentOperator("ET", [])
         };
         var spans = TextExtractor.Extract(ops, HelveticaMap);
-        spans[0].X.ShouldBe(200.0, tolerance: 0.001);
-        spans[0].Y.ShouldBe(500.0, tolerance: 0.001);
+        spans[0].X.ShouldBe(200.0, 0.001);
+        spans[0].Y.ShouldBe(500.0, 0.001);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public sealed class TextExtractorTests
         };
         var spans = TextExtractor.Extract(ops, HelveticaMap);
         spans.Count.ShouldBe(2);
-        (spans[0].Y - spans[1].Y).ShouldBe(14.0, tolerance: 0.01);
+        (spans[0].Y - spans[1].Y).ShouldBe(14.0, 0.01);
     }
 
     // ── TJ array ─────────────────────────────────────────────────────────────
@@ -206,9 +206,11 @@ public sealed class TextExtractorTests
         {
             new ContentOperator("BT", []),
             new ContentOperator("Tf", [PdfName.Get("F1"), new PdfInteger(10)]),
-            new ContentOperator("Tm", [new PdfInteger(1), new PdfInteger(0), new PdfInteger(0), new PdfInteger(1), new PdfInteger(200), new PdfInteger(300)]),
+            new ContentOperator("Tm",
+                [new PdfInteger(1), new PdfInteger(0), new PdfInteger(0), new PdfInteger(1), new PdfInteger(200), new PdfInteger(300)]),
             new ContentOperator("Tj", [PdfString.FromLatin1("Low")]),
-            new ContentOperator("Tm", [new PdfInteger(1), new PdfInteger(0), new PdfInteger(0), new PdfInteger(1), new PdfInteger(50), new PdfInteger(700)]),
+            new ContentOperator("Tm",
+                [new PdfInteger(1), new PdfInteger(0), new PdfInteger(0), new PdfInteger(1), new PdfInteger(50), new PdfInteger(700)]),
             new ContentOperator("Tj", [PdfString.FromLatin1("High")]),
             new ContentOperator("ET", [])
         };

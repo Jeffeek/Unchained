@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using Shouldly;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
@@ -6,8 +7,8 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// SmartArt (diagram) support (M-F): the diagram is surfaced as a <see cref="SmartArtShape"/>
-/// with a readable/editable node-text model, and all backing diagram parts round-trip losslessly.
+///     SmartArt (diagram) support (M-F): the diagram is surfaced as a <see cref="SmartArtShape" />
+///     with a readable/editable node-text model, and all backing diagram parts round-trip losslessly.
 /// </summary>
 public sealed class SmartArtTests : PptxTestBase
 {
@@ -64,11 +65,9 @@ public sealed class SmartArtTests : PptxTestBase
                      "ppt/diagrams/layout1.xml",
                      "ppt/diagrams/quickStyle1.xml",
                      "ppt/diagrams/colors1.xml",
-                     "ppt/diagrams/drawing1.xml",
+                     "ppt/diagrams/drawing1.xml"
                  })
-        {
             PartExists(saved, partName).ShouldBeTrue($"{partName} must survive round-trip");
-        }
     }
 
     [Fact]
@@ -112,13 +111,14 @@ public sealed class SmartArtTests : PptxTestBase
             var hit = FindNodeWithText(node.Children, contains);
             if (hit != null) return hit;
         }
+
         return null;
     }
 
     private static bool PartExists(byte[] pptx, string partName)
     {
         using var ms = new MemoryStream(pptx);
-        using var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Read);
+        using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
         return archive.GetEntry(partName) != null;
     }
 }

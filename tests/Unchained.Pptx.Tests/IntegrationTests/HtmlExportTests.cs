@@ -1,5 +1,7 @@
 using Shouldly;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Drawing;
+using Unchained.Pptx.Engine;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Tests.Helpers;
@@ -9,7 +11,7 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 
 public sealed class HtmlExportTests : PptxTestBase
 {
-    private static Engine.PresentationProcessor Processor() => new();
+    private static PresentationProcessor Processor() => new();
 
     // ── Output structure ──────────────────────────────────────────────────────
 
@@ -24,7 +26,10 @@ public sealed class HtmlExportTests : PptxTestBase
             files.Count.ShouldBe(1);
             File.Exists(files[0]).ShouldBeTrue();
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
@@ -37,7 +42,10 @@ public sealed class HtmlExportTests : PptxTestBase
             var files = await Processor().SaveAsHtmlAsync(doc, dir);
             files.Count.ShouldBe(3);
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
@@ -50,7 +58,10 @@ public sealed class HtmlExportTests : PptxTestBase
             await Processor().SaveAsHtmlAsync(doc, dir);
             Directory.Exists(dir).ShouldBeTrue();
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     // ── HTML validity ─────────────────────────────────────────────────────────
@@ -66,7 +77,10 @@ public sealed class HtmlExportTests : PptxTestBase
             var html = await File.ReadAllTextAsync(files[0]);
             html.ShouldContain("<!DOCTYPE html>");
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
@@ -80,7 +94,10 @@ public sealed class HtmlExportTests : PptxTestBase
             var html = await File.ReadAllTextAsync(files[0]);
             html.ShouldContain("class=\"slide\"");
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
@@ -88,8 +105,10 @@ public sealed class HtmlExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(4), Emu.FromInches(2),
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(4),
+            Emu.FromInches(2),
             "Hello HTML World");
 
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -99,7 +118,10 @@ public sealed class HtmlExportTests : PptxTestBase
             var html = await File.ReadAllTextAsync(files[0]);
             html.ShouldContain("Hello HTML World");
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
@@ -114,7 +136,10 @@ public sealed class HtmlExportTests : PptxTestBase
             var files = await Processor().SaveAsHtmlAsync(doc, dir);
             files.Count.ShouldBe(1);
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
@@ -126,11 +151,15 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir,
+            var files = await Processor().SaveAsHtmlAsync(doc,
+                dir,
                 new HtmlSaveOptions { IncludeHiddenSlides = true });
             files.Count.ShouldBe(2);
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
@@ -138,9 +167,11 @@ public sealed class HtmlExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(3), Emu.FromInches(2));
-        shape.Fill.SetSolid(Unchained.Ooxml.Drawing.ColorSpec.FromRgb(0, 112, 192));
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(3),
+            Emu.FromInches(2));
+        shape.Fill.SetSolid(ColorSpec.FromRgb(0, 112, 192));
 
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
@@ -149,7 +180,10 @@ public sealed class HtmlExportTests : PptxTestBase
             var html = await File.ReadAllTextAsync(files[0]);
             html.ShouldContain("background:rgb(0,112,192)");
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
@@ -162,6 +196,9 @@ public sealed class HtmlExportTests : PptxTestBase
             var files = await Processor().SaveAsHtmlAsync(doc, dir);
             files.Count.ShouldBe(0);
         }
-        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
     }
 }

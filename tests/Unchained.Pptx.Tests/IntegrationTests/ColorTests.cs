@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Shouldly;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Parsing;
@@ -16,7 +17,7 @@ public sealed class ColorTests : PptxTestBase
 
         var element = ColorWriter.Write(color);
         // Wrap so ColorParser.Parse can find the child colour element.
-        var wrapper = new System.Xml.Linq.XElement("wrap", element);
+        var wrapper = new XElement("wrap", element);
         var result = ColorParser.Parse(wrapper);
 
         result.Rgb.ShouldBe(color.Rgb);
@@ -35,7 +36,7 @@ public sealed class ColorTests : PptxTestBase
         var color = ColorSpec.FromArgb(alpha, 0x12, 0x34, 0x56);
 
         var element = ColorWriter.Write(color);
-        var wrapper = new System.Xml.Linq.XElement("wrap", element);
+        var wrapper = new XElement("wrap", element);
         var result = ColorParser.Parse(wrapper);
 
         var resultAlpha = (byte)((result.Rgb >> 24) & 0xFF);
