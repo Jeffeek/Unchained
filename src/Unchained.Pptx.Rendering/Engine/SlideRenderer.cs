@@ -46,7 +46,7 @@ public static class SlideRenderer
     /// <param name="document">The presentation to render.</param>
     /// <param name="options">Render options; defaults are used when <see langword="null" />.</param>
     /// <param name="ct">Cancellation token.</param>
-    public static async Task<PptxImage[]> RenderAllAsync(
+    public static Task<PptxImage[]> RenderAllAsync(
         PresentationDocument document,
         RenderOptions? options = null,
         CancellationToken ct = default
@@ -64,7 +64,7 @@ public static class SlideRenderer
             tasks[i] = RenderWithGateAsync(slide, slideSize, opts, media, ct);
         }
 
-        return await Task.WhenAll(tasks).ConfigureAwait(false);
+        return Task.WhenAll(tasks);
     }
 
     private static async Task<PptxImage> RenderWithGateAsync(

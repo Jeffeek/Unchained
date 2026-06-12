@@ -19,21 +19,25 @@ internal static class ShapeTextWalker
             {
                 case AutoShape auto:
                     yield return auto.TextFrame;
+
                 break;
 
                 case PictureShape { Caption: { } caption }:
                     yield return caption;
+
                 break;
 
                 case TableShape table:
                     for (var r = 0; r < table.Grid.RowCount; r++)
                     for (var c = 0; c < table.Grid.ColumnCount; c++)
                         yield return table.Grid[c, r].TextFrame;
+
                 break;
 
                 case GroupShape group:
                     foreach (var frame in EnumerateTextFrames(group.Children))
                         yield return frame;
+
                 break;
             }
         }

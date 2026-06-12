@@ -27,6 +27,6 @@ public sealed class PptxImage(
     /// </summary>
     /// <param name="path">The destination file path.</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task SaveAsync(string path, CancellationToken ct = default) =>
-        await File.WriteAllBytesAsync(path, Data.ToArray(), ct).ConfigureAwait(false);
+    public Task SaveAsync(string path, CancellationToken ct = default) =>
+        File.WriteAllBytesAsync(path, Data.ToArray(), ct);
 }

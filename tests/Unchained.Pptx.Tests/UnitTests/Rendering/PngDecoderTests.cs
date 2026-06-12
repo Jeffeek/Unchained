@@ -71,7 +71,7 @@ public sealed class PngDecoderTests
         PngDecoder.TryDecodeToRgb(ReadOnlySpan<byte>.Empty, out _, out _).ShouldBeNull();
 
     private static (int, int, int) PixelAt(
-        byte[] rgb,
+        IReadOnlyList<byte> rgb,
         int width,
         int x,
         int y

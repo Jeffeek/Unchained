@@ -22,6 +22,7 @@ public sealed class OdpTests : PptxTestBase
         using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
         var entry = archive.GetEntry(name);
         if (entry == null) return [];
+
         using var s = entry.Open();
         using var outMs = new MemoryStream();
         s.CopyTo(outMs);
@@ -85,7 +86,7 @@ public sealed class OdpTests : PptxTestBase
 
         reloaded.Slides.Count.ShouldBe(2);
         reloaded.Slides[0].Shapes.OfType<AutoShape>()
-            .Any(s => s.TextFrame.PlainText.Contains("Slide one text")).ShouldBeTrue();
+            .Any(static s => s.TextFrame.PlainText.Contains("Slide one text")).ShouldBeTrue();
     }
 
     [Fact]

@@ -92,7 +92,7 @@ public sealed class ImageExtractorTests : PdfTestBase
 
     [Fact]
     public Task ExtractImages_PageOutOfRange_Throws() =>
-        Should.ThrowAsync<ArgumentOutOfRangeException>(async () =>
+        Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
         {
             await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, RedImage(4, 4)));
             await Extractor.ExtractImagesAsync(doc, 99);

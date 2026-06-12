@@ -86,6 +86,7 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
     public void MoveTo(int currentIndex, int newIndex)
     {
         if (currentIndex == newIndex) return;
+
         var slide = _slides[currentIndex];
         _slides.RemoveAt(currentIndex);
         _slides.Insert(newIndex, slide);
@@ -98,6 +99,7 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
         ArgumentNullException.ThrowIfNull(slide);
         if (!_slides.Remove(slide))
             throw new ArgumentException("The slide does not belong to this collection.", nameof(slide));
+
         RenumberSlides();
     }
 

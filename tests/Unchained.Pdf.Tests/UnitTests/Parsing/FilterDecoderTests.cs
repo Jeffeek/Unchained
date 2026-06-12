@@ -589,18 +589,9 @@ public sealed class CcittFaxDecoderTests
     // T4Options bit-0 (2D) set and Photometric=0 (white runs first, matching the PDF/G4
     // convention). Each line is framed by an EOL + a 1D/2D tag bit. Verified bit-exact
     // against libtiff's own decoder. BlackIs1=false → 1=white.
-    private static readonly byte[] EncodedG3_2D =
+    private static readonly byte[] EncodedG32D =
         Convert.FromHexString(
             "001d4002800ea00118466a003a80047d4007ea6002e003f530010c0070bd5800bb800ec5b0010c0075000a");
-
-    private static PdfDictionary Parms(int columns, int rows) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            ["K"] = new PdfInteger(-1),
-            ["Columns"] = new PdfInteger(columns),
-            ["Rows"] = new PdfInteger(rows),
-            ["BlackIs1"] = PdfBoolean.False
-        });
 
     [Fact]
     public void DecodeGroup4_ProducesExpectedBitmap()
@@ -645,19 +636,10 @@ public sealed class CcittFaxDecoderTests
             inverted[i].ShouldBe((byte)~normal[i]);
     }
 
-    private static PdfDictionary Parms2D(int columns, int rows, bool blackIs1 = false) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            ["K"] = new PdfInteger(4), // any K>0 selects Group 3 mixed 1D/2D
-            ["Columns"] = new PdfInteger(columns),
-            ["Rows"] = new PdfInteger(rows),
-            ["BlackIs1"] = blackIs1 ? PdfBoolean.True : PdfBoolean.False
-        });
-
     [Fact]
     public void DecodeGroup3_2D_ProducesExpectedBitmap()
     {
-        var decoded = CcittFaxDecoder.Decode(EncodedG3_2D, 4, 16, 16).ToArray();
+        var decoded = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16).ToArray();
 
         // Same figure as the Group-4 fixture. 1 = white (BlackIs1=false).
         string[] expected =
@@ -688,8 +670,8 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void DecodeGroup3_2D_BlackIs1_InvertsOutput()
     {
-        var normal = CcittFaxDecoder.Decode(EncodedG3_2D, 4, 16, 16).ToArray();
-        var inverted = CcittFaxDecoder.Decode(EncodedG3_2D, 4, 16, 16, true).ToArray();
+        var normal = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16, true).ToArray();
 
         inverted.Length.ShouldBe(normal.Length);
         for (var i = 0; i < normal.Length; i++)

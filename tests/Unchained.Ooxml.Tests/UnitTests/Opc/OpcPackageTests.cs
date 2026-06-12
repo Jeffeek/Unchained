@@ -1,4 +1,3 @@
-using System.Text;
 using Shouldly;
 using Unchained.Ooxml.Opc;
 using Xunit;
@@ -53,7 +52,7 @@ public sealed class OpcPackageTests
     public void SaveAndReopen_PreservesPart()
     {
         using var package = OpcPackage.CreateEmpty();
-        var data = Encoding.UTF8.GetBytes("<root/>");
+        var data = "<root/>"u8.ToArray();
         package.AddOrReplacePart("/doc/doc.xml", "application/xml", data);
         package.AddPackageRelationship("rId1", "http://example.com/rel", "doc/doc.xml");
 

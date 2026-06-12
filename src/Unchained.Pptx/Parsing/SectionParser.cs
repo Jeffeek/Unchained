@@ -26,6 +26,7 @@ internal static class SectionParser
         var extLst = presentationRoot.Element(pml + "extLst");
         if (extLst == null) return;
 
+        // ReSharper disable once LoopCanBePartlyConvertedToQuery
         foreach (var ext in extLst.Elements(pml + "ext"))
         {
             var uri = (string?)ext.Attribute("uri");
@@ -42,9 +43,8 @@ internal static class SectionParser
                 var sldIdLst = sec.Element(P14 + "sldIdLst");
                 if (sldIdLst != null)
                 {
-                    foreach (var sldId in sldIdLst.Elements(P14 + "sldId"))
+                    foreach (var idRaw in sldIdLst.Elements(P14 + "sldId").Select(static sldId => (string?)sldId.Attribute("id")))
                     {
-                        var idRaw = (string?)sldId.Attribute("id");
                         if (uint.TryParse(idRaw, out var id))
                             section.SlideIds.Add(id);
                     }

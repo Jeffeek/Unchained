@@ -1,7 +1,6 @@
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
-using Unchained.Pptx.Media;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Parsing;
@@ -10,7 +9,7 @@ namespace Unchained.Pptx.Parsing;
 ///     Parses a slide master OPC part into a <see cref="MasterSlide" />, including its
 ///     associated theme and all slide layouts.
 /// </summary>
-internal sealed class MasterParser(OpcPackage package, MediaStore mediaStore)
+internal sealed class MasterParser(OpcPackage package)
 {
     /// <summary>
     ///     Parses the master at <paramref name="partUri" /> and returns a fully populated
@@ -49,12 +48,12 @@ internal sealed class MasterParser(OpcPackage package, MediaStore mediaStore)
         var spTree = cSld?.Element(PmlNames.ShapeTree);
         if (spTree != null)
         {
-            var shapeParser = new ShapeParser(package, mediaStore);
+            var shapeParser = new ShapeParser();
             shapeParser.ParseTree(spTree, master.Shapes);
         }
 
         // Parse layouts
-        var layoutParser = new LayoutParser(package, mediaStore);
+        var layoutParser = new LayoutParser(package);
         foreach (var layout in from layoutRel in part.FindRelationships(PmlNames.RelTypeSlideLayout)
                                let layoutUri = part.ResolveUri(layoutRel.TargetUri)
                                select layoutParser.Parse(layoutUri, layoutRel.Id))

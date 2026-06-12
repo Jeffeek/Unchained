@@ -11,8 +11,6 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 
 public sealed class HtmlExportTests : PptxTestBase
 {
-    private static PresentationProcessor Processor() => new();
-
     // ── Output structure ──────────────────────────────────────────────────────
 
     [Fact]
@@ -22,7 +20,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir);
             files.Count.ShouldBe(1);
             File.Exists(files[0]).ShouldBeTrue();
         }
@@ -39,7 +37,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir);
             files.Count.ShouldBe(3);
         }
         finally
@@ -55,7 +53,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), "output");
         try
         {
-            await Processor().SaveAsHtmlAsync(doc, dir);
+            await Processor.SaveAsHtmlAsync(doc, dir);
             Directory.Exists(dir).ShouldBeTrue();
         }
         finally
@@ -73,7 +71,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir);
             var html = await File.ReadAllTextAsync(files[0]);
             html.ShouldContain("<!DOCTYPE html>");
         }
@@ -90,7 +88,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir);
             var html = await File.ReadAllTextAsync(files[0]);
             html.ShouldContain("class=\"slide\"");
         }
@@ -114,7 +112,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir);
             var html = await File.ReadAllTextAsync(files[0]);
             html.ShouldContain("Hello HTML World");
         }
@@ -133,7 +131,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir);
             files.Count.ShouldBe(1);
         }
         finally
@@ -151,7 +149,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc,
+            var files = await Processor.SaveAsHtmlAsync(doc,
                 dir,
                 new HtmlSaveOptions { IncludeHiddenSlides = true });
             files.Count.ShouldBe(2);
@@ -176,7 +174,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir);
             var html = await File.ReadAllTextAsync(files[0]);
             html.ShouldContain("background:rgb(0,112,192)");
         }
@@ -189,11 +187,11 @@ public sealed class HtmlExportTests : PptxTestBase
     [Fact]
     public async Task SaveAsHtml_EmptyPresentation_CreatesZeroFiles()
     {
-        var doc = Processor().CreateBlank();
+        var doc = Processor.CreateBlank();
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor().SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir);
             files.Count.ShouldBe(0);
         }
         finally

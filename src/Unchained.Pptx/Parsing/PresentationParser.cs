@@ -38,7 +38,7 @@ internal sealed class PresentationParser
             if (string.IsNullOrEmpty(options?.Password))
                 throw new PptxEncryptedException();
 
-            data = AgileEncryption.Decrypt(data, options!.Password);
+            data = AgileEncryption.Decrypt(data, options.Password);
         }
 
         OpcPackage package;
@@ -55,7 +55,7 @@ internal sealed class PresentationParser
             throw new PptxException("Failed to open the presentation package.", ex);
         }
 
-        var result = ParsePackage(package, options);
+        var result = ParsePackage(package);
         if (wasEncrypted) result.Protection.IsEncrypted = true;
         return result;
     }
@@ -64,11 +64,11 @@ internal sealed class PresentationParser
     ///     Parses an already-opened <see cref="OpcPackage" /> into the presentation model.
     ///     Takes ownership of <paramref name="package" />.
     /// </summary>
-    public static ParsedPresentation ParsePackage(OpcPackage package, OpenOptions? options = null)
+    public static ParsedPresentation ParsePackage(OpcPackage package)
     {
         // Locate the presentation part via package-level relationships
         var presentationRel = package.PackageRelationships
-            .FirstOrDefault(r => r.RelationshipType.Equals(
+            .FirstOrDefault(static r => r.RelationshipType.Equals(
                 PmlNames.RelTypePresentation,
                 StringComparison.Ordinal));
 
@@ -97,7 +97,8 @@ internal sealed class PresentationParser
         var protection = ParseProtection(root);
 
         // Parse masters (and their themes + layouts)
-        var masterParser = new MasterParser(package, mediaStore);
+        var masterParser = new MasterParser(package);
+        // ReSharper disable once LoopCanBePartlyConvertedToQuery
         foreach (var masterIdEl in root.Elements(PmlNames.SlideMasterIdList)
                      .SelectMany(static l => l.Elements(PmlNames.SlideMasterId)))
         {
@@ -142,6 +143,7 @@ internal sealed class PresentationParser
 
         // Parse slides
         var slideParser = new SlideParser(package, mediaStore, ToList(masters), commentAuthors);
+        // ReSharper disable once LoopCanBePartlyConvertedToQuery
         foreach (var slideIdEl in root.Elements(PmlNames.SlideIdList)
                      .SelectMany(static l => l.Elements(PmlNames.SlideId)))
         {
@@ -289,6 +291,7 @@ internal sealed class PresentationParser
             });
 
             if (rel.IsExternal) continue;
+
             var childUri = part.ResolveUri(rel.TargetUri);
             var childPart = package.TryGetPart(childUri);
             if (childPart != null)
@@ -351,21 +354,18 @@ internal sealed class PresentationParser
                 numberByUri[slides[i].PartUri] = i + 1;
         }
 
-        foreach (var slide in slides)
-        foreach (var shape in EnumerateAllShapes(slide.Shapes))
+        foreach (var action in from slide in slides from shape in EnumerateAllShapes(slide.Shapes) select shape.ClickAction)
         {
-            var action = shape.ClickAction;
             if (action?.TargetSlidePartUri is { } uri && numberByUri.TryGetValue(uri, out var number))
                 action.TargetSlideNumber = number;
         }
 
         // Run-level slide-jump links.
-        foreach (var slide in slides)
-        foreach (var frame in ShapeTextWalker.EnumerateTextFrames(slide.Shapes))
-        foreach (var paragraph in frame.Paragraphs)
-        foreach (var run in paragraph.Runs)
+        foreach (var link in slides.SelectMany(static slide => ShapeTextWalker.EnumerateTextFrames(slide.Shapes)
+                     .SelectMany(static frame => frame.Paragraphs
+                         .SelectMany(static paragraph => paragraph.Runs
+                             .Select(static run => run.Format.Hyperlink)))))
         {
-            var link = run.Format.Hyperlink;
             if (link?.TargetPartUri is { } uri && numberByUri.TryGetValue(uri, out var number))
                 link.TargetSlideNumber = number;
         }
@@ -376,16 +376,16 @@ internal sealed class PresentationParser
         foreach (var shape in shapes)
         {
             yield return shape;
-            if (shape is GroupShape group)
-            {
-                foreach (var child in EnumerateAllShapes(group.Children))
-                    yield return child;
-            }
+
+            if (shape is not GroupShape group) continue;
+
+            foreach (var child in EnumerateAllShapes(group.Children))
+                yield return child;
         }
     }
 
     private static void ParseEmbeddedFonts(
-        XElement root,
+        XContainer root,
         OpcPart presentationPart,
         OpcPackage package,
         MediaStore mediaStore
@@ -405,6 +405,7 @@ internal sealed class PresentationParser
             AddVariant(fontEl.Element(PmlNames.FontBold), EmbeddedFontStyle.Bold);
             AddVariant(fontEl.Element(PmlNames.FontItalic), EmbeddedFontStyle.Italic);
             AddVariant(fontEl.Element(PmlNames.FontBoldItalic), EmbeddedFontStyle.BoldItalic);
+            continue;
 
             void AddVariant(XElement? variantEl, EmbeddedFontStyle style)
             {
@@ -429,22 +430,21 @@ internal sealed class PresentationParser
         }
     }
 
-    private static ProtectionInfo ParseProtection(XElement root)
+    private static ProtectionInfo ParseProtection(XContainer root)
     {
         var protection = new ProtectionInfo();
         var pml = PmlNames.Pml;
 
         var modVerEl = root.Element(pml + "modifyVerifier");
-        if (modVerEl != null)
-        {
-            protection.WriteProtectionSaltBase64 = modVerEl.GetAttr("saltValue");
-            protection.WriteProtectionHashBase64 = modVerEl.GetAttr("hashValue");
-        }
+        if (modVerEl == null) return protection;
+
+        protection.WriteProtectionSaltBase64 = modVerEl.GetAttr("saltValue");
+        protection.WriteProtectionHashBase64 = modVerEl.GetAttr("hashValue");
 
         return protection;
     }
 
-    private static SlideSize ParseSlideSize(XElement root)
+    private static SlideSize ParseSlideSize(XContainer root)
     {
         var sldSz = root.Element(PmlNames.SlideSize);
         if (sldSz == null) return SlideSize.Widescreen;
@@ -464,12 +464,11 @@ internal sealed class PresentationParser
                 PmlNames.RelTypeCoreProperties,
                 StringComparison.Ordinal));
 
-        if (coreRel != null)
-        {
-            var corePart = package.TryGetPart("/" + coreRel.TargetUri.TrimStart('/'));
-            if (corePart != null)
-                ParseCoreProperties(corePart.Data, props);
-        }
+        if (coreRel == null) return props;
+
+        var corePart = package.TryGetPart("/" + coreRel.TargetUri.TrimStart('/'));
+        if (corePart != null)
+            ParseCoreProperties(corePart.Data, props);
 
         return props;
     }
@@ -510,11 +509,11 @@ internal sealed class PresentationParser
         }
     }
 
-    private static List<MasterSlide> ToList(MasterSlideCollection collection)
+    private static IEnumerable<MasterSlide> ToList(MasterSlideCollection collection)
     {
         var list = new List<MasterSlide>(collection.Count);
-        for (var i = 0; i < collection.Count; i++)
-            list.Add(collection[i]);
+        list.AddRange(collection);
+
         return list;
     }
 }

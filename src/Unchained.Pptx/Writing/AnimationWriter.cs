@@ -74,8 +74,8 @@ internal static class AnimationWriter
     }
 
     private static void WriteClickGroups(
-        IReadOnlyList<AnimationEffect> effects,
-        XElement parent,
+        IEnumerable<AnimationEffect> effects,
+        XContainer parent,
         IdCounter ids
     )
     {
@@ -186,14 +186,24 @@ internal static class AnimationWriter
         var children = new XElement(Pml + "childTnLst");
         ctn.Add(children);
 
-        // Visibility set (entrance → visible; exit → hidden)
-        if (effect.Category == EffectCategory.Entrance)
-            children.Add(WriteVisibilitySet(effect.TargetShapeId, "visible", ids));
-        else if (effect.Category == EffectCategory.Exit)
-            children.Add(WriteVisibilitySet(effect.TargetShapeId, "hidden", ids));
+        switch (effect.Category)
+        {
+            // Visibility set (entrance → visible; exit → hidden)
+            case EffectCategory.Entrance:
+                children.Add(WriteVisibilitySet(effect.TargetShapeId, "visible", ids));
+            break;
+            case EffectCategory.Exit:
+                children.Add(WriteVisibilitySet(effect.TargetShapeId, "hidden", ids));
+            break;
+            case EffectCategory.Emphasis:
+            case EffectCategory.Motion:
+            break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
 
         // Animation filter (for effects that have a visual filter)
-        var filter = GetAnimFilter(effect.Preset, effect.Category);
+        var filter = GetAnimFilter(effect.Preset);
         if (!string.IsNullOrEmpty(filter))
         {
             children.Add(WriteAnimEffect(
@@ -246,7 +256,7 @@ internal static class AnimationWriter
             bhvr);
     }
 
-    private static string GetAnimFilter(AnimationPreset preset, EffectCategory category) =>
+    private static string GetAnimFilter(AnimationPreset preset) =>
         // Entrance/Exit presets that use animEffect with a filter name
         preset switch
         {
@@ -258,8 +268,9 @@ internal static class AnimationWriter
             AnimationPreset.Strips => "strips(rightDown)",
             AnimationPreset.Fly => "fly",
             AnimationPreset.Zoom => "zoom",
-            AnimationPreset.Appear or AnimationPreset.GrowAndTurn => string.Empty,
-            _ => string.Empty
+            // ReSharper disable PatternIsRedundant
+            AnimationPreset.Appear or AnimationPreset.GrowAndTurn or _ => string.Empty
+            // ReSharper restore PatternIsRedundant
         };
 
     // ── Interactive sequences ─────────────────────────────────────────────────
@@ -309,18 +320,15 @@ internal static class AnimationWriter
                 grpId++;
         }
 
-        foreach (var interactive in timeline.InteractiveSequences)
+        foreach (var effect in timeline.InteractiveSequences.SelectMany(static interactive => interactive.Sequence.Effects))
         {
-            foreach (var effect in interactive.Sequence.Effects)
-            {
-                bldLst.Add(new XElement(Pml + "bldP",
-                    new XAttribute("spid", effect.TargetShapeId),
-                    new XAttribute("grpId", grpId),
-                    new XAttribute("build", "allAtOnce")));
+            bldLst.Add(new XElement(Pml + "bldP",
+                new XAttribute("spid", effect.TargetShapeId),
+                new XAttribute("grpId", grpId),
+                new XAttribute("build", "allAtOnce")));
 
-                if (effect.Trigger == EffectTrigger.OnClick)
-                    grpId++;
-            }
+            if (effect.Trigger == EffectTrigger.OnClick)
+                grpId++;
         }
 
         return bldLst;

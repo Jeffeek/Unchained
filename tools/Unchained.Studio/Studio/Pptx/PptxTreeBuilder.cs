@@ -86,11 +86,10 @@ public static class PptxTreeBuilder
         };
 
         // Groups expose nested children.
-        if (shape is GroupShape group)
-        {
-            foreach (var child in group.Children)
-                node.Children.Add(BuildShapeNode(child));
-        }
+        if (shape is not GroupShape group) return node;
+
+        foreach (var child in group.Children)
+            node.Children.Add(BuildShapeNode(child));
 
         return node;
     }

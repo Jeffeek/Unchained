@@ -83,7 +83,7 @@ internal static class OpenXmlPresentationParser
         // Masters, their themes, and layouts. layoutMap lets slides resolve their own layout
         // by SlideLayoutPart so the slide -> layout -> master chain matches the custom parser.
         var layoutMap = new Dictionary<SlideLayoutPart, SlideLayout>();
-        foreach (var master in presPart.SlideMasterParts.Select(masterPart => ReadMaster(masterPart, mediaStore, imageCache, layoutMap)))
+        foreach (var master in presPart.SlideMasterParts.Select(masterPart => ReadMaster(masterPart, layoutMap)))
             masters.Add(master);
 
         // Every slide needs a Layout whose Master resolves; fall back to the first available
@@ -162,8 +162,6 @@ internal static class OpenXmlPresentationParser
 
     private static MasterSlide ReadMaster(
         SlideMasterPart masterPart,
-        MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache,
         IDictionary<SlideLayoutPart, SlideLayout> layoutMap
     )
     {
@@ -189,12 +187,12 @@ internal static class OpenXmlPresentationParser
         // Master shape tree.
         var masterTree = masterPart.SlideMaster?.CommonSlideData?.ShapeTree;
         if (masterTree is not null)
-            ReadShapeTreeNoSlide(masterTree, master.Shapes, mediaStore, imageCache);
+            ReadShapeTreeNoSlide(masterTree, master.Shapes);
 
         // Layouts owned by this master.
         foreach (var layoutPart in masterPart.SlideLayoutParts)
         {
-            var layout = ReadLayout(layoutPart, master, mediaStore, imageCache);
+            var layout = ReadLayout(layoutPart, master);
             master.Layouts.Add(layout);
             layoutMap[layoutPart] = layout;
         }
@@ -204,9 +202,7 @@ internal static class OpenXmlPresentationParser
 
     private static SlideLayout ReadLayout(
         SlideLayoutPart layoutPart,
-        MasterSlide master,
-        MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache
+        MasterSlide master
     )
     {
         var sdkLayout = layoutPart.SlideLayout;
@@ -225,7 +221,7 @@ internal static class OpenXmlPresentationParser
 
         var tree = sdkLayout?.CommonSlideData?.ShapeTree;
         if (tree is not null)
-            ReadShapeTreeNoSlide(tree, layout.Shapes, mediaStore, imageCache);
+            ReadShapeTreeNoSlide(tree, layout.Shapes);
 
         return layout;
     }
@@ -233,10 +229,8 @@ internal static class OpenXmlPresentationParser
     // Masters/layouts have no SlidePart context for blip resolution; image parts on those parts
     // are uncommon and resolved lazily elsewhere. Reuse the shape mapping without picture bytes.
     private static void ReadShapeTreeNoSlide(
-        P.ShapeTree tree,
-        ShapeCollection target,
-        MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache
+        OpenXmlElement tree,
+        ShapeCollection target
     )
     {
         foreach (var child in tree.ChildElements)
@@ -359,11 +353,10 @@ internal static class OpenXmlPresentationParser
             ReadShapeTree(tree, slide.Shapes, slidePart, mediaStore, imageCache);
 
         // Speaker notes — reuse the shared NotesParser on the notes-slide XML.
-        if (slidePart.NotesSlidePart?.NotesSlide is { } sdkNotes)
-        {
-            var notesXml = XElement.Parse(sdkNotes.OuterXml, LoadOptions.None);
-            NotesParser.Parse(notesXml, slide.Notes);
-        }
+        if (slidePart.NotesSlidePart?.NotesSlide is not { } sdkNotes) return slide;
+
+        var notesXml = XElement.Parse(sdkNotes.OuterXml, LoadOptions.None);
+        NotesParser.Parse(notesXml, slide.Notes);
 
         return slide;
     }
@@ -423,11 +416,10 @@ internal static class OpenXmlPresentationParser
             }
         }
 
-        if (sp.TextBody is { } body)
-        {
-            shape.IsTextBox = true;
-            ReadTextBody(body, shape.TextFrame);
-        }
+        if (sp.TextBody is not { } body) return shape;
+
+        shape.IsTextBox = true;
+        ReadTextBody(body, shape.TextFrame);
 
         return shape;
     }
@@ -436,7 +428,7 @@ internal static class OpenXmlPresentationParser
         P.Picture pic,
         OpenXmlPartContainer slidePart,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache
+        IDictionary<string, EmbeddedImage> imageCache
     )
     {
         var shape = new PictureShape();
@@ -456,36 +448,37 @@ internal static class OpenXmlPresentationParser
     {
         var uri = gf.Graphic?.GraphicData?.Uri?.Value;
 
-        if (uri == DmlNames.GraphicDataTableUri)
+        switch (uri)
         {
-            var table = new TableShape();
-            ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, table);
-            ReadFrameGeometry(gf.Transform, table);
-            ReadTable(gf.Graphic?.GraphicData?.GetFirstChild<D.Table>(), table);
-            return table;
-        }
-
-        // Chart resolution needs the owning slide part; masters/layouts pass null and skip it.
-        if (uri == DmlNames.GraphicDataChartUri)
-        {
-            var chart = new ChartShape();
-            ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, chart);
-            ReadFrameGeometry(gf.Transform, chart);
-            if (slidePart is not null)
-                ReadChart(gf, slidePart, chart);
-            return chart;
-        }
-
-        // SmartArt diagram — represent the shape type so counts/sequences stay consistent with
-        // the custom parser. Full part/node resolution lives on the custom parse path.
-        if (uri == DmlNames.GraphicDataDiagramUri)
-        {
-            var smartArt = new SmartArtShape();
-            ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, smartArt);
-            ReadFrameGeometry(gf.Transform, smartArt);
-            // Preserve the frame XML (incl. <dgm:relIds>) so the SDK save path can re-emit it.
-            smartArt.RawElement = XElement.Parse(gf.OuterXml, LoadOptions.None);
-            return smartArt;
+            case DmlNames.GraphicDataTableUri:
+            {
+                var table = new TableShape();
+                ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, table);
+                ReadFrameGeometry(gf.Transform, table);
+                ReadTable(gf.Graphic?.GraphicData?.GetFirstChild<D.Table>(), table);
+                return table;
+            }
+            // Chart resolution needs the owning slide part; masters/layouts pass null and skip it.
+            case DmlNames.GraphicDataChartUri:
+            {
+                var chart = new ChartShape();
+                ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, chart);
+                ReadFrameGeometry(gf.Transform, chart);
+                if (slidePart is not null)
+                    ReadChart(gf, slidePart, chart);
+                return chart;
+            }
+            // SmartArt diagram — represent the shape type so counts/sequences stay consistent with
+            // the custom parser. Full part/node resolution lives on the custom parse path.
+            case DmlNames.GraphicDataDiagramUri:
+            {
+                var smartArt = new SmartArtShape();
+                ReadCommon(gf.NonVisualGraphicFrameProperties?.NonVisualDrawingProperties, smartArt);
+                ReadFrameGeometry(gf.Transform, smartArt);
+                // Preserve the frame XML (incl. <dgm:relIds>) so the SDK save path can re-emit it.
+                smartArt.RawElement = XElement.Parse(gf.OuterXml, LoadOptions.None);
+                return smartArt;
+            }
         }
 
         // Unknown graphic type — represent as a generic autoshape so counts stay consistent.
@@ -605,11 +598,10 @@ internal static class OpenXmlPresentationParser
             shape.Y = new Emu(off.Y ?? 0);
         }
 
-        if (xfrm?.Extents is { } ext)
-        {
-            shape.Width = new Emu(ext.Cx ?? 0);
-            shape.Height = new Emu(ext.Cy ?? 0);
-        }
+        if (xfrm?.Extents is not { } ext) return;
+
+        shape.Width = new Emu(ext.Cx ?? 0);
+        shape.Height = new Emu(ext.Cy ?? 0);
     }
 
     private static void ReadFrameGeometry(P.Transform? xfrm, Shape shape)
@@ -620,11 +612,10 @@ internal static class OpenXmlPresentationParser
             shape.Y = new Emu(off.Y ?? 0);
         }
 
-        if (xfrm?.Extents is { } ext)
-        {
-            shape.Width = new Emu(ext.Cx ?? 0);
-            shape.Height = new Emu(ext.Cy ?? 0);
-        }
+        if (xfrm?.Extents is not { } ext) return;
+
+        shape.Width = new Emu(ext.Cx ?? 0);
+        shape.Height = new Emu(ext.Cy ?? 0);
     }
 
     private static void ReadTable(D.Table? table, TableShape shape)
@@ -657,7 +648,7 @@ internal static class OpenXmlPresentationParser
     // Resolves the chart part referenced by the graphic frame and reuses the existing ChartParser
     // to populate the chart model (type/title/data/legend) — the SDK exposes the chart XML; the
     // mapping logic is shared with the custom parser to avoid divergence.
-    private static void ReadChart(P.GraphicFrame gf, SlidePart slidePart, ChartShape shape)
+    private static void ReadChart(P.GraphicFrame gf, OpenXmlPartContainer slidePart, ChartShape shape)
     {
         var chartRef = gf.Graphic?.GraphicData
             ?.GetFirstChild<ChartReference>();

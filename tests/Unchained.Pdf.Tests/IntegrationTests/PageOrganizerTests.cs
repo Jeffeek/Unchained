@@ -46,7 +46,7 @@ public sealed class PageOrganizerTests : PdfTestBase
 
     [Fact]
     public Task RotatePages_NonMultipleOf90_Throws() =>
-        Should.ThrowAsync<ArgumentException>(async () =>
+        Should.ThrowAsync<ArgumentException>(static async () =>
         {
             await using var doc = await LoadFixtureAsync(1);
             await Organizer.RotatePagesAsync(doc, [1], 45);
@@ -83,7 +83,7 @@ public sealed class PageOrganizerTests : PdfTestBase
 
     [Fact]
     public Task DeletePages_AllPages_Throws() =>
-        Should.ThrowAsync<ArgumentException>(async () =>
+        Should.ThrowAsync<ArgumentException>(static async () =>
         {
             await using var doc = await LoadFixtureAsync(2);
             await Organizer.DeletePagesAsync(doc, [1, 2]);
@@ -91,7 +91,7 @@ public sealed class PageOrganizerTests : PdfTestBase
 
     [Fact]
     public Task DeletePages_OutOfRange_Throws() =>
-        Should.ThrowAsync<ArgumentOutOfRangeException>(async () =>
+        Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
         {
             await using var doc = await LoadFixtureAsync(2);
             await Organizer.DeletePagesAsync(doc, [3]);
@@ -125,7 +125,7 @@ public sealed class PageOrganizerTests : PdfTestBase
 
     [Fact]
     public Task ReorderPages_NotAPermutation_Throws() =>
-        Should.ThrowAsync<ArgumentException>(async () =>
+        Should.ThrowAsync<ArgumentException>(static async () =>
         {
             await using var doc = await LoadFixtureAsync(3);
             await Organizer.ReorderPagesAsync(doc, [1, 1, 2]);

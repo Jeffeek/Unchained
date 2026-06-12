@@ -1,7 +1,6 @@
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
-using Unchained.Pptx.Media;
 using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Slides;
 
@@ -10,7 +9,7 @@ namespace Unchained.Pptx.Parsing;
 /// <summary>
 ///     Parses a slide layout OPC part into a <see cref="SlideLayout" />.
 /// </summary>
-internal sealed class LayoutParser(OpcPackage package, MediaStore mediaStore)
+internal sealed class LayoutParser(OpcPackage package)
 {
     /// <summary>
     ///     Parses the layout at <paramref name="partUri" /> and returns a <see cref="SlideLayout" />.
@@ -42,7 +41,7 @@ internal sealed class LayoutParser(OpcPackage package, MediaStore mediaStore)
 
         if (spTree == null) return layout;
 
-        var shapeParser = new ShapeParser(package, mediaStore);
+        var shapeParser = new ShapeParser();
         shapeParser.ParseTree(spTree, layout.Shapes);
 
         return layout;

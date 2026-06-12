@@ -59,7 +59,7 @@ public sealed class PreservedContentTests : PptxTestBase
         {
             var originUri = new Uri("/_xmlsignatures/origin.sigs", UriKind.Relative);
             var origin = pkg.CreatePart(originUri, PmlNames.ContentTypeDigitalSignatureOrigin);
-            using (var s = origin.GetStream(FileMode.Create))
+            using (origin.GetStream(FileMode.Create))
             {
                 /* empty origin marker */
             }
@@ -133,8 +133,7 @@ public sealed class PreservedContentTests : PptxTestBase
     [Fact]
     public async Task Signatures_RoundTripVerbatim()
     {
-        var sigXml = Encoding.UTF8.GetBytes(
-            "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><SignatureValue>AAAA</SignatureValue></Signature>");
+        var sigXml = "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><SignatureValue>AAAA</SignatureValue></Signature>"u8.ToArray();
         var withSig = InjectSignature(await BaseDeckAsync(), sigXml);
 
         var doc = await Processor.LoadAsync(withSig);

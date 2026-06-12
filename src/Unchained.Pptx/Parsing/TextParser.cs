@@ -142,7 +142,7 @@ internal static class TextParser
         ParseBullet(pPr, para.Bullet);
     }
 
-    private static Run ParseRun(XElement rEl)
+    private static Run ParseRun(XContainer rEl)
     {
         var run = new Run
         {
@@ -236,7 +236,7 @@ internal static class TextParser
         }
     }
 
-    private static void ParseBullet(XElement pPr, BulletFormat bullet)
+    private static void ParseBullet(XContainer pPr, BulletFormat bullet)
     {
         if (pPr.Element(DmlNames.BulletNone) != null)
         {
@@ -278,17 +278,15 @@ internal static class TextParser
         }
 
         var buSzPct = pPr.Element(DmlNames.BulletSizePercent);
-        if (buSzPct != null)
-        {
-            var val = buSzPct.GetAttrInt(DmlNames.AttributeValue);
-            if (val.HasValue)
-                bullet.SizePercent = val.Value / 1_000.0;
-        }
+
+        var val = buSzPct?.GetAttrInt(DmlNames.AttributeValue);
+        if (val.HasValue)
+            bullet.SizePercent = val.Value / 1_000.0;
     }
 
     // ── Spacing ───────────────────────────────────────────────────────────────
 
-    private static LineSpacing? ParseSpacing(XElement lnSpcEl)
+    private static LineSpacing? ParseSpacing(XContainer lnSpcEl)
     {
         var pts = lnSpcEl.Element(DmlNames.SpacingPoints);
         if (pts != null)
@@ -299,6 +297,7 @@ internal static class TextParser
         }
 
         var pct = lnSpcEl.Element(DmlNames.SpacingPercent);
+        // ReSharper disable once InvertIf
         if (pct != null)
         {
             var val = pct.GetAttrInt(DmlNames.AttributeValue);
@@ -309,16 +308,11 @@ internal static class TextParser
         return null;
     }
 
-    private static double? ParseSpacingPoints(XElement spcEl)
+    private static double? ParseSpacingPoints(XContainer spcEl)
     {
         var pts = spcEl.Element(DmlNames.SpacingPoints);
-        if (pts != null)
-        {
-            var val = pts.GetAttrInt(DmlNames.AttributeValue);
-            if (val.HasValue) return val.Value / 100.0;
-        }
-
-        return null;
+        var val = pts?.GetAttrInt(DmlNames.AttributeValue);
+        return val / 100.0;
     }
 
     // ── Enum parsers ──────────────────────────────────────────────────────────

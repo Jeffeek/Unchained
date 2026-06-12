@@ -91,6 +91,7 @@ internal static class TextWriter
             case TextAutofit.ResizeShape:
                 bodyPr.Add(new XElement(DmlNames.Dml + "spAutoFit"));
             break;
+            case TextAutofit.None:
             default:
                 bodyPr.Add(new XElement(DmlNames.Dml + "noAutofit"));
             break;
@@ -172,7 +173,7 @@ internal static class TextWriter
         return pPr;
     }
 
-    private static void WriteBullet(XElement pPr, BulletFormat bullet)
+    private static void WriteBullet(XContainer pPr, BulletFormat bullet)
     {
         switch (bullet.Type)
         {
@@ -211,6 +212,10 @@ internal static class TextWriter
                     new XAttribute("type", NumberedStyleToString(bullet.Numbered.Style)),
                     new XAttribute("startAt", bullet.Numbered.StartAt)));
             break;
+            case BulletType.Picture:
+            break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
     }
 
@@ -313,6 +318,7 @@ internal static class TextWriter
 
         // Click hyperlink (<a:hlinkClick>) follows the font elements per the rPr schema order.
         // The relationship id is assigned by PresentationWriter before this runs.
+        // ReSharper disable once InvertIf
         if (format.Hyperlink is { } link)
         {
             var hlink = new XElement(DmlNames.HyperlinkClick,
@@ -407,6 +413,7 @@ internal static class TextWriter
         FieldType.SlideNumber => "slidenum",
         FieldType.Date => "datetime1",
         FieldType.Time => "datetime",
+        // ReSharper disable once RedundantSwitchExpressionArms
         FieldType.TotalSlides => "slidenum",
         _ => "slidenum"
     };

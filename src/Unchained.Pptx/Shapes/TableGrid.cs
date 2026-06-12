@@ -45,33 +45,27 @@ public sealed class TableGrid
         grid._columnWidths.AddRange(columnWidths);
         grid._rowHeights.AddRange(rowHeights);
 
-        foreach (var _ in rowHeights)
-        {
-            var row = new List<TableCell>();
-            foreach (var __ in columnWidths)
-                row.Add(new TableCell());
+        foreach (var row in rowHeights.Select(_ => columnWidths.Select(static _ => new TableCell()).ToList()))
             grid._rows.Add(row);
-        }
 
         return grid;
     }
 
     /// <summary>Appends a row with the given height and returns its newly-created cells.</summary>
-    public IReadOnlyList<TableCell> AddRow(Emu height)
+    public void AddRow(Emu height)
     {
         _rowHeights.Add(height);
         var row = new List<TableCell>();
         for (var i = 0; i < _columnWidths.Count; i++)
             row.Add(new TableCell());
         _rows.Add(row);
-        return row;
     }
 
     /// <summary>
     ///     Inserts a row of empty cells at <paramref name="rowIndex" /> with the given height
     ///     and returns the new cells.
     /// </summary>
-    public IReadOnlyList<TableCell> InsertRow(int rowIndex, Emu height)
+    public void InsertRow(int rowIndex, Emu height)
     {
         if (rowIndex < 0 || rowIndex > _rowHeights.Count)
             throw new ArgumentOutOfRangeException(nameof(rowIndex));
@@ -81,7 +75,6 @@ public sealed class TableGrid
         for (var i = 0; i < _columnWidths.Count; i++)
             row.Add(new TableCell());
         _rows.Insert(rowIndex, row);
-        return row;
     }
 
     /// <summary>Appends a column with the given width.</summary>
@@ -108,6 +101,7 @@ public sealed class TableGrid
     {
         if (rowIndex < 0 || rowIndex >= _rowHeights.Count)
             throw new ArgumentOutOfRangeException(nameof(rowIndex));
+
         _rowHeights.RemoveAt(rowIndex);
         _rows.RemoveAt(rowIndex);
     }
@@ -117,12 +111,10 @@ public sealed class TableGrid
     {
         if (columnIndex < 0 || columnIndex >= _columnWidths.Count)
             throw new ArgumentOutOfRangeException(nameof(columnIndex));
+
         _columnWidths.RemoveAt(columnIndex);
-        foreach (var row in _rows)
-        {
-            if (columnIndex < row.Count)
-                row.RemoveAt(columnIndex);
-        }
+        foreach (var row in _rows.Where(row => columnIndex < row.Count))
+            row.RemoveAt(columnIndex);
     }
 
     /// <summary>Adds a cell to an existing row (used by the parser).</summary>

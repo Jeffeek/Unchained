@@ -106,14 +106,14 @@ internal static class CfbDocument
         for (var i = 0; i < 109 && i < numFatSectors; i++)
         {
             var s = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(76 + (i * 4)));
-            if (s == FreeSect || s == EndOfChain || s < 0) break;
+            if (s is FreeSect or EndOfChain or < 0) break;
+
             fatSectors.Add(s);
         }
 
         var allFatEntries = new List<int>();
-        foreach (var sector in fatSectors)
+        foreach (var offset in fatSectors.Select(sector => SectorOffset(sector, sectorSize)))
         {
-            var offset = SectorOffset(sector, sectorSize);
             for (var i = 0; i < sectorSize / 4; i++)
                 allFatEntries.Add(BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(offset + (i * 4))));
         }
@@ -124,17 +124,16 @@ internal static class CfbDocument
     private static int[] BuildMiniFat(
         byte[] data,
         int firstMiniFatSector,
-        int[] fat,
+        IReadOnlyList<int> fat,
         int sectorSize
     )
     {
-        if (firstMiniFatSector == FreeSect || firstMiniFatSector == EndOfChain || firstMiniFatSector < 0) return [];
+        if (firstMiniFatSector is FreeSect or EndOfChain or < 0) return [];
 
         var entries = new List<int>();
         var chain = FollowChain(fat, firstMiniFatSector);
-        foreach (var sector in chain)
+        foreach (var offset in chain.Select(sector => SectorOffset(sector, sectorSize)))
         {
-            var offset = SectorOffset(sector, sectorSize);
             for (var i = 0; i < sectorSize / 4; i++)
                 entries.Add(BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(offset + (i * 4))));
         }
@@ -145,15 +144,14 @@ internal static class CfbDocument
     private static List<DirEntry> ReadDirectory(
         byte[] data,
         int firstDirSector,
-        int[] fat,
+        IReadOnlyList<int> fat,
         int sectorSize
     )
     {
         var entries = new List<DirEntry>();
         var chain = FollowChain(fat, firstDirSector);
-        foreach (var sector in chain)
+        foreach (var offset in chain.Select(sector => SectorOffset(sector, sectorSize)))
         {
-            var offset = SectorOffset(sector, sectorSize);
             for (var i = 0; i < DirsPerSector; i++)
             {
                 var e = ParseDirEntry(data, offset + (i * DirEntrySize));
@@ -179,15 +177,15 @@ internal static class CfbDocument
         };
     }
 
-    private static List<int> FollowChain(int[] fat, int start)
+    private static List<int> FollowChain(IReadOnlyList<int> fat, int start)
     {
         var chain = new List<int>();
         var current = start;
-        while (current >= 0 && current < fat.Length)
+        while (current >= 0 && current < fat.Count)
         {
             chain.Add(current);
             current = fat[current];
-            if (chain.Count > fat.Length) break; // cycle guard
+            if (chain.Count > fat.Count) break; // cycle guard
         }
 
         return chain;
@@ -304,7 +302,6 @@ internal static class CfbDocument
 
         WriteHeader(result, fatSectorCount, hasMini);
         WriteFat(result,
-            fatSectorCount,
             miniContainerSectors,
             largeEntries,
             largeSectorStarts,
@@ -316,11 +313,10 @@ internal static class CfbDocument
             largeEntries,
             miniSectors,
             largeSectorStarts,
-            miniContainerSectors,
             totalMiniBytes,
             hasMini);
-        if (hasMini) WriteMiniStreamContainer(result, miniEntries, miniContainerSectors);
-        WriteLargeStreams(result, largeEntries, largeSectorStarts, firstDataSector);
+        if (hasMini) WriteMiniStreamContainer(result, miniEntries);
+        WriteLargeStreams(result, largeEntries, largeSectorStarts);
 
         return result;
     }
@@ -354,22 +350,16 @@ internal static class CfbDocument
 
     private static void WriteFat(
         byte[] buf,
-        int fatSectorCount,
         int miniContainerSectors,
-        IReadOnlyList<(string name, byte[] data)> largeEntries,
+        IReadOnlyCollection<(string name, byte[] data)> largeEntries,
         IReadOnlyList<int> largeSectorStarts,
         IReadOnlyList<int> largeSectorCounts,
         bool hasMini
     )
     {
-        var fatBase = SectorSize; // sector 0 starts here
-
         // Fill all entries with FREESECT
         for (var i = 0; i < FatEntriesPerSector; i++)
-            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(fatBase + (i * 4)), FreeSect);
-
-        void WriteFatEntry(int sector, int value) =>
-            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(fatBase + (sector * 4)), value);
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(SectorSize + (i * 4)), FreeSect);
 
         // Sector 0: FAT (self)
         WriteFatEntry(0, FatSect);
@@ -404,16 +394,21 @@ internal static class CfbDocument
                 WriteFatEntry(s, i == count - 1 ? EndOfChain : s + 1);
             }
         }
+
+        return;
+
+        void WriteFatEntry(int sector, int value) =>
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(SectorSize + (sector * 4)), value);
     }
 
-    private static void WriteMiniFat(byte[] buf, IReadOnlyList<(string name, byte[] data)> miniEntries)
+    private static void WriteMiniFat(byte[] buf, IEnumerable<(string name, byte[] data)> miniEntries)
     {
-        var miniFatOffset = SectorSize * 2; // sector 1
+        const int miniFatOffset = SectorSize * 2; // sector 1
         var miniFatBuf = buf.AsSpan(miniFatOffset, SectorSize);
 
         // Fill with FREESECT
         for (var i = 0; i < FatEntriesPerSector; i++)
-            BinaryPrimitives.WriteInt32LittleEndian(miniFatBuf.Slice(i * 4), FreeSect);
+            BinaryPrimitives.WriteInt32LittleEndian(miniFatBuf[(i * 4)..], FreeSect);
 
         var miniSectorIdx = 0;
         foreach (var (_, data) in miniEntries)
@@ -423,7 +418,7 @@ internal static class CfbDocument
             {
                 var isLast = i == count - 1;
                 BinaryPrimitives.WriteInt32LittleEndian(
-                    miniFatBuf.Slice(miniSectorIdx * 4),
+                    miniFatBuf[(miniSectorIdx * 4)..],
                     isLast ? EndOfChain : miniSectorIdx + 1);
                 miniSectorIdx++;
             }
@@ -436,12 +431,11 @@ internal static class CfbDocument
         IReadOnlyList<(string name, byte[] data)> largeEntries,
         IReadOnlyList<(int startMiniSector, int size)> miniSectors,
         IReadOnlyList<int> largeSectorStarts,
-        int miniContainerSectors,
         int totalMiniBytes,
         bool hasMini
     )
     {
-        var dirOffset = SectorSize * 3; // sector 2
+        const int dirOffset = SectorSize * 3; // sector 2
 
         // Fill entire directory sector with zeros first
         Array.Clear(buf, dirOffset, SectorSize);
@@ -462,8 +456,8 @@ internal static class CfbDocument
         // Determine child/sibling structure for root's subtree
         // Build a simple left-skewed binary tree sorted by name (CFB uses Unicode case-insensitive)
         var sorted = all
-            .Select((entry, idx) => (entry, idx: idx + 1)) // entry 0 = root
-            .OrderBy(x => x.entry.name, StringComparer.OrdinalIgnoreCase)
+            .Select(static (entry, idx) => (entry, idx: idx + 1)) // entry 0 = root
+            .OrderBy(static x => x.entry.name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var leftSibling = new int[all.Count + 1];
@@ -550,12 +544,11 @@ internal static class CfbDocument
 
     private static void WriteMiniStreamContainer(
         byte[] buf,
-        IReadOnlyList<(string name, byte[] data)> miniEntries,
-        int miniContainerSectors
+        IEnumerable<(string name, byte[] data)> miniEntries
     )
     {
         // Container starts at sector 3
-        var containerOffset = SectorSize * 4; // sector 3 (header + 0,1,2 + sector3 = offset 4*512)
+        const int containerOffset = SectorSize * 4; // sector 3 (header + 0,1,2 + sector3 = offset 4*512)
         var writePos = 0;
 
         foreach (var (_, data) in miniEntries)
@@ -569,8 +562,7 @@ internal static class CfbDocument
     private static void WriteLargeStreams(
         byte[] buf,
         IReadOnlyList<(string name, byte[] data)> largeEntries,
-        IReadOnlyList<int> largeSectorStarts,
-        int firstDataSector
+        IReadOnlyList<int> largeSectorStarts
     )
     {
         for (var i = 0; i < largeEntries.Count; i++)
@@ -595,9 +587,9 @@ internal static class CfbDocument
 
     private sealed class DirEntry
     {
-        public string Name { get; set; } = string.Empty;
-        public byte ObjectType { get; set; }
-        public int StartSector { get; set; }
-        public ulong Size { get; set; }
+        public string Name { get; init; } = string.Empty;
+        public byte ObjectType { get; init; }
+        public int StartSector { get; init; }
+        public ulong Size { get; init; }
     }
 }

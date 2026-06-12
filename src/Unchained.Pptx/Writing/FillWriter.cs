@@ -46,6 +46,8 @@ internal static class FillWriter
             case FillType.Group:
                 parent.Add(new XElement(DmlNames.GroupFill));
             break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
     }
 
@@ -64,13 +66,12 @@ internal static class FillWriter
 
         gradFill.Add(gsLst);
 
-        if (gradient.IsLinear)
-        {
-            var ang = OoXmlHelper.DegreesToOoxmlRotation(gradient.LinearAngleDegrees);
-            gradFill.Add(new XElement(DmlNames.LinearGradient,
-                new XAttribute(DmlNames.AttributeRotation, ang),
-                new XAttribute("scaled", "0")));
-        }
+        if (!gradient.IsLinear) return gradFill;
+
+        var ang = OoXmlHelper.DegreesToOoxmlRotation(gradient.LinearAngleDegrees);
+        gradFill.Add(new XElement(DmlNames.LinearGradient,
+            new XAttribute(DmlNames.AttributeRotation, ang),
+            new XAttribute("scaled", "0")));
 
         return gradFill;
     }

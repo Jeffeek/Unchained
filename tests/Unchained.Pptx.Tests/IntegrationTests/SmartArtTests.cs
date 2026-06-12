@@ -15,11 +15,11 @@ public sealed class SmartArtTests : PptxTestBase
     private static string SamplePath(string name) =>
         Path.Combine(AppContext.BaseDirectory, "TestFiles", "python-pptx", name);
 
-    private static async Task<byte[]> SampleBytesAsync(string name)
+    private static Task<byte[]> SampleBytesAsync(string name)
     {
         var path = SamplePath(name);
         Assert.SkipUnless(File.Exists(path), $"sample missing: {name}");
-        return await File.ReadAllBytesAsync(path);
+        return File.ReadAllBytesAsync(path);
     }
 
     [Fact]
@@ -108,6 +108,7 @@ public sealed class SmartArtTests : PptxTestBase
         foreach (var node in nodes)
         {
             if (node.Text.Contains(contains)) return node;
+
             var hit = FindNodeWithText(node.Children, contains);
             if (hit != null) return hit;
         }

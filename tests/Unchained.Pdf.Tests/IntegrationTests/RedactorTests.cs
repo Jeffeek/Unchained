@@ -60,8 +60,8 @@ public sealed class RedactorTests : PdfTestBase
 
         // The rebuilt content stream must contain a rectangle fill ('re' + 'f').
         var ops = doc.Pages[1].GetContentOperators();
-        ops.ShouldContain(o => o.Name == "re");
-        ops.ShouldContain(o => o.Name == "f");
+        ops.ShouldContain(static o => o.Name == "re");
+        ops.ShouldContain(static o => o.Name == "f");
     }
 
     [Fact]
@@ -74,13 +74,13 @@ public sealed class RedactorTests : PdfTestBase
         // Fixture draws the image with cm "(w*10) 0 0 (h*10) 0 0" → unit square maps to
         // [0,0]..[80,80]; centre ≈ (40,40). Redact a region covering it.
         var before = doc.Pages[1].GetContentOperators();
-        before.ShouldContain(o => o.Name == "Do");
+        before.ShouldContain(static o => o.Name == "Do");
 
         await Redactor.RedactAsync(doc,
             [new RedactionRegion(1, 0, 0, 80, 80)],
             TestContext.Current.CancellationToken);
 
-        doc.Pages[1].GetContentOperators().ShouldNotContain(o => o.Name == "Do");
+        doc.Pages[1].GetContentOperators().ShouldNotContain(static o => o.Name == "Do");
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public sealed class RedactorTests : PdfTestBase
 
     [Fact]
     public Task Redact_PageOutOfRange_Throws() =>
-        Should.ThrowAsync<ArgumentOutOfRangeException>(async () =>
+        Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
         {
             await using var doc = await LoadAsync(PdfFixtures.WithTextContent("X"));
             await Redactor.RedactAsync(doc, [new RedactionRegion(5, 0, 0, 10, 10)]);

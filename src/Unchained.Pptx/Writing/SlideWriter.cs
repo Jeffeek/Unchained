@@ -35,12 +35,8 @@ internal static class SlideWriter
         spTree.Add(WriteGroupShapeNonVisualProperties());
         spTree.Add(WriteGroupShapeProperties());
 
-        foreach (var shape in slide.Shapes)
-        {
-            var el = ShapeWriter.Write(shape);
-            if (el != null)
-                spTree.Add(el);
-        }
+        foreach (var el in slide.Shapes.Select(ShapeWriter.Write).OfType<XElement>())
+            spTree.Add(el);
 
         cSld.Add(spTree);
         sld.Add(cSld);

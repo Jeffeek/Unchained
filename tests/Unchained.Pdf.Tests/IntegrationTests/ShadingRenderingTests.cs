@@ -36,7 +36,7 @@ public sealed class ShadingRenderingTests : RendererTestBase
         return gray;
     }
 
-    private static uint ReadU32(byte[] d, int o) =>
+    private static uint ReadU32(IReadOnlyList<byte> d, int o) =>
         ((uint)d[o] << 24) | ((uint)d[o + 1] << 16) | ((uint)d[o + 2] << 8) | d[o + 3];
 
     private static double RowMean(int[,] g, int y)
@@ -106,7 +106,7 @@ public sealed class ShadingRenderingTests : RendererTestBase
         var p = patterns["P1"];
         p.PaintType.ShouldBe(1);
         p.XStep.ShouldBe(10, 0.01);
-        p.Operators.ShouldContain(o => o.Name == "re"); // cell draws a rectangle
+        p.Operators.ShouldContain(static o => o.Name == "re"); // cell draws a rectangle
     }
 
     [Fact]
@@ -238,7 +238,6 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         var g = DecodeGray(png);
         var h = g.GetLength(0);
-        var w = g.GetLength(1);
         var midMean = RowMean(g, h / 2);
 
         // Multiply(0.4, 0.5) = 0.2 → ~51. Should be darker than both inputs (~102, ~127).

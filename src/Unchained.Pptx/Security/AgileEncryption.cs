@@ -43,6 +43,7 @@ internal static class AgileEncryption
     public static bool IsCfb(byte[] data)
     {
         if (data.Length < 8) return false;
+
         ReadOnlySpan<byte> magic = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
         return data.AsSpan(0, 8).SequenceEqual(magic);
     }
@@ -398,10 +399,6 @@ internal static class AgileEncryption
         var encKeyEl = doc.Root?.Descendants(pwd + "encryptedKey").FirstOrDefault()
                        ?? throw new PptxEncryptedException("Missing encryptedKey element.");
 
-        static byte[] B64(XElement el, string attr) =>
-            Convert.FromBase64String((string?)el.Attribute(attr)
-                                     ?? throw new PptxEncryptedException($"Missing attribute: {attr}"));
-
         return (
             documentSalt: B64(keyDataEl, "saltValue"),
             passwordSalt: B64(encKeyEl, "saltValue"),
@@ -409,6 +406,10 @@ internal static class AgileEncryption
             encryptedKeyValue: B64(encKeyEl, "encryptedKeyValue"),
             encryptedVerifierInput: B64(encKeyEl, "encryptedVerifierHashInput"),
             encryptedVerifierHash: B64(encKeyEl, "encryptedVerifierHash"));
+
+        static byte[] B64(XElement el, string attr) =>
+            Convert.FromBase64String((string?)el.Attribute(attr)
+                                     ?? throw new PptxEncryptedException($"Missing attribute: {attr}"));
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────

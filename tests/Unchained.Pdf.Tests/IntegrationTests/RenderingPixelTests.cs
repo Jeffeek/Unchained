@@ -65,7 +65,7 @@ public sealed class RenderingPixelTests : RendererTestBase
         return nonWhite;
     }
 
-    private static uint ReadUInt32BigEndian(byte[] data, int offset) =>
+    private static uint ReadUInt32BigEndian(IReadOnlyList<byte> data, int offset) =>
         ((uint)data[offset] << 24) |
         ((uint)data[offset + 1] << 16) |
         ((uint)data[offset + 2] << 8) |
@@ -211,9 +211,6 @@ public sealed class RenderingPixelTests : RendererTestBase
     {
         using var ms = new MemoryStream();
 
-        byte[] L(string s) => Encoding.Latin1.GetBytes(s + "\n");
-        long Pos() => ms.Position;
-
         ms.Write(L("%PDF-1.7"));
         ms.Write(L("%\xE2\xE3\xCF\xD3"));
 
@@ -254,5 +251,9 @@ public sealed class RenderingPixelTests : RendererTestBase
         ms.Write(Encoding.Latin1.GetBytes("%%EOF"));
 
         return ms.ToArray();
+
+        static byte[] L(string s) => Encoding.Latin1.GetBytes(s + "\n");
+
+        long Pos() => ms.Position;
     }
 }

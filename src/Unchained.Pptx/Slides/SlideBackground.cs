@@ -10,7 +10,7 @@ public sealed class SlideBackground
 {
     /// <summary>
     ///     The fill applied to the slide background.
-    ///     By default this is <see cref="Models.Shapes.FillType.None" />, meaning the background
+    ///     By default this is <see cref="FillType.None" />, meaning the background
     ///     is inherited from the slide master.
     /// </summary>
     public FillFormat Fill { get; } = new();

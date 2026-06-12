@@ -64,8 +64,8 @@ public sealed class HyperlinkTests : PptxTestBase
         var links = reloaded.GetHyperlinks().ToList();
 
         links.Count.ShouldBe(2);
-        links.ShouldContain(l => l.Action.Url == "https://a.example");
-        links.ShouldContain(l => l.Action.TargetSlideNumber == 1);
+        links.ShouldContain(static l => l.Action.Url == "https://a.example");
+        links.ShouldContain(static l => l.Action.TargetSlideNumber == 1);
     }
 
     [Fact]

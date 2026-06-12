@@ -284,7 +284,9 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         ArgumentNullException.ThrowIfNull(shape);
         var index = _shapes.IndexOf(shape);
         if (index < 0) throw new ArgumentException("The shape does not belong to this collection.", nameof(shape));
+
         if (index == _shapes.Count - 1) return;
+
         _shapes.RemoveAt(index);
         _shapes.Add(shape);
     }
@@ -294,10 +296,17 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     {
         ArgumentNullException.ThrowIfNull(shape);
         var index = _shapes.IndexOf(shape);
-        if (index < 0) throw new ArgumentException("The shape does not belong to this collection.", nameof(shape));
-        if (index == 0) return;
-        _shapes.RemoveAt(index);
-        _shapes.Insert(0, shape);
+        switch (index)
+        {
+            case < 0:
+                throw new ArgumentException("The shape does not belong to this collection.", nameof(shape));
+            case 0:
+                return;
+            default:
+                _shapes.RemoveAt(index);
+                _shapes.Insert(0, shape);
+            break;
+        }
     }
 
     // ── Internal helpers ─────────────────────────────────────────────────────

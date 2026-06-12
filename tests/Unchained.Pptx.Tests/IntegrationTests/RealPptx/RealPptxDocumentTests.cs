@@ -24,7 +24,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("simple.pptx")) return; // skip gracefully
 
-        using var stream = File.OpenRead(FilePath("simple.pptx"));
+        await using var stream = File.OpenRead(FilePath("simple.pptx"));
         var doc = await Processor.LoadAsync(stream);
         doc.ShouldNotBeNull();
         doc.Slides.Count.ShouldBeGreaterThan(0);
@@ -35,7 +35,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("simple.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("simple.pptx"));
+        await using var stream = File.OpenRead(FilePath("simple.pptx"));
         var doc = await Processor.LoadAsync(stream);
         var count = doc.Slides.Count;
 
@@ -48,7 +48,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("multipage.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("multipage.pptx"));
+        await using var stream = File.OpenRead(FilePath("multipage.pptx"));
         var doc = await Processor.LoadAsync(stream);
         doc.Slides.Count.ShouldBeGreaterThanOrEqualTo(5);
     }
@@ -58,7 +58,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("with-tables.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("with-tables.pptx"));
+        await using var stream = File.OpenRead(FilePath("with-tables.pptx"));
         var doc = await Processor.LoadAsync(stream);
 
         var hasTable = doc.Slides
@@ -71,7 +71,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("with-images.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("with-images.pptx"));
+        await using var stream = File.OpenRead(FilePath("with-images.pptx"));
         var doc = await Processor.LoadAsync(stream);
 
         var hasPicture = doc.Slides
@@ -84,7 +84,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("simple.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("simple.pptx"));
+        await using var stream = File.OpenRead(FilePath("simple.pptx"));
         var doc = await Processor.LoadAsync(stream);
 
         foreach (var slide in doc.Slides)

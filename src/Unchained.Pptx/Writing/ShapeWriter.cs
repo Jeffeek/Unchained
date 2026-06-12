@@ -234,12 +234,8 @@ internal static class ShapeWriter
         WriteTransformToElement(grpSpPr, shape);
         grpEl.Add(grpSpPr);
 
-        foreach (var child in shape.Children)
-        {
-            var childEl = Write(child);
-            if (childEl != null)
-                grpEl.Add(childEl);
-        }
+        foreach (var childEl in shape.Children.Select(Write).OfType<XElement>())
+            grpEl.Add(childEl);
 
         return grpEl;
     }
@@ -288,7 +284,7 @@ internal static class ShapeWriter
 
     // ── SmartArt (diagram) ───────────────────────────────────────────────────────
 
-    private static XElement? WriteSmartArt(SmartArtShape shape) =>
+    private static XElement? WriteSmartArt(Shape shape) =>
         // SmartArt is only ever loaded (no programmatic authoring API yet). The preserved
         // graphic-frame element already carries the correct <dgm:relIds> references, so emit it
         // verbatim. The referenced diagram parts are written by PresentationWriter using the
@@ -368,7 +364,7 @@ internal static class ShapeWriter
         return spPr;
     }
 
-    private static void WriteTransformToElement(XElement parent, Shape shape)
+    private static void WriteTransformToElement(XContainer parent, Shape shape)
     {
         var xfrm = new XElement(DmlNames.Transform);
 

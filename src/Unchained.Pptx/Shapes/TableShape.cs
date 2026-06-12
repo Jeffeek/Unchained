@@ -55,6 +55,7 @@ public sealed class TableShape : Shape
 
         if (c0 < 0 || r0 < 0 || c1 >= Grid.ColumnCount || r1 >= Grid.RowCount)
             throw new ArgumentOutOfRangeException(nameof(firstColumn), "Merge range is outside the table.");
+
         if (c0 == c1 && r0 == r1)
             return; // single cell — nothing to merge
 
@@ -66,6 +67,7 @@ public sealed class TableShape : Shape
         for (var c = c0; c <= c1; c++)
         {
             if (c == c0 && r == r0) continue;
+
             var cell = Grid[c, r];
             // A cell to the right of the anchor in the same row continues horizontally; a cell
             // below continues vertically. Cells in the interior continue both ways.

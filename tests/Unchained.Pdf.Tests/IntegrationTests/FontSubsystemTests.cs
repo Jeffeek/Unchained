@@ -260,12 +260,11 @@ public sealed class FontUtilitiesTests : PdfTestBase
         // The method returns defaults rather than null when the input is too short.
         var metrics = TrueTypeMetrics.Read([0x00, 0x01, 0x02]);
         // Either null or default metrics — both are acceptable; the key invariant is no exception.
-        if (metrics is not null)
-        {
-            // If defaults are returned, they should be reasonable values.
-            metrics.Ascent.ShouldBe(800);
-            metrics.Descent.ShouldBe(-200);
-        }
+        if (metrics is null) return;
+
+        // If defaults are returned, they should be reasonable values.
+        metrics.Ascent.ShouldBe(800);
+        metrics.Descent.ShouldBe(-200);
     }
 
     [Fact]
@@ -276,13 +275,12 @@ public sealed class FontUtilitiesTests : PdfTestBase
         var metrics = TrueTypeMetrics.Read(fontBytes);
 
         metrics.ShouldNotBeNull();
-        metrics!.Ascent.ShouldBeGreaterThan(0, "ascent should be positive");
+        metrics.Ascent.ShouldBeGreaterThan(0, "ascent should be positive");
         metrics.Descent.ShouldBeLessThan(0, "descent should be negative for descenders");
         metrics.CapHeight.ShouldBeGreaterThan(0, "cap height should be positive");
         metrics.StemV.ShouldBeGreaterThan(0, "stem width should be positive");
         // Values should NOT all be the hardcoded defaults (800, -200, 716, 80).
-        var isAllDefault = metrics.Ascent == 800 && metrics.Descent == -200
-                                                 && metrics.CapHeight == 716 && metrics.StemV == 80;
+        var isAllDefault = metrics is { Ascent: 800, Descent: -200, CapHeight: 716, StemV: 80 };
         isAllDefault.ShouldBeFalse("real font should produce non-default metrics");
     }
 

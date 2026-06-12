@@ -78,28 +78,24 @@ internal sealed class PresentationWriter
                 slide.RelationshipId = $"rId{i + 1}";
         }
 
-        // Write media assets first so shapes can reference relationship IDs
-        var imageRelIds = WriteMedia(package, mediaStore);
-
         // Write masters + their themes + layouts
-        var masterUris = WriteMasters(package, masters, contentTypes, imageRelIds);
+        WriteMasters(package, masters, contentTypes);
 
         // Write slides (chart part index + notes/comment index shared across slides)
         var chartPartIndex = 1;
         var notesPartIndex = 1;
         var commentPartIndex = 1;
-        var slideUris = WriteSlides(
+        WriteSlides(
             package,
             slides,
             contentTypes,
-            imageRelIds,
             ref chartPartIndex,
             ref notesPartIndex,
             ref commentPartIndex);
 
         // Write comment authors (M7) — before presentation.xml so we can add relationship
         var hasAnyComments = slides.Any(static s => s.HasComments);
-        if (hasAnyComments || (commentAuthors != null && commentAuthors.Count > 0))
+        if (hasAnyComments || commentAuthors is { Count: > 0 })
         {
             var authors = commentAuthors ?? new CommentAuthorCollection();
             WriteCommentAuthors(package, authors, contentTypes);
@@ -116,8 +112,6 @@ internal sealed class PresentationWriter
         WritePresentationPart(package,
             slides,
             masters,
-            masterUris,
-            slideUris,
             slideSize,
             sections,
             protection,
@@ -143,15 +137,14 @@ internal sealed class PresentationWriter
         var zipBytes = package.Save();
 
         // Encrypt output if password was provided (M8)
-        if (!string.IsNullOrEmpty(options?.Password))
-            return AgileEncryption.Encrypt(zipBytes, options.Password);
-
-        return zipBytes;
+        return !string.IsNullOrEmpty(options?.Password) ? AgileEncryption.Encrypt(zipBytes, options.Password) : zipBytes;
     }
 
     // ── Media ─────────────────────────────────────────────────────────────────
 
+#pragma warning disable IDE0051
     private static Dictionary<string, string> WriteMedia(
+#pragma warning restore IDE0051
         OpcPackage package,
         MediaStore mediaStore
     )
@@ -172,15 +165,12 @@ internal sealed class PresentationWriter
 
     // ── Masters ───────────────────────────────────────────────────────────────
 
-    private static Dictionary<MasterSlide, string> WriteMasters(
+    private static void WriteMasters(
         OpcPackage package,
         MasterSlideCollection masters,
-        ContentTypeMap contentTypes,
-        Dictionary<string, string> imageRelIds
+        ContentTypeMap contentTypes
     )
     {
-        var masterUris = new Dictionary<MasterSlide, string>();
-
         for (var i = 0; i < masters.Count; i++)
         {
             var master = masters[i];
@@ -221,11 +211,7 @@ internal sealed class PresentationWriter
                     PmlNames.RelTypeSlideLayout,
                     RelativeUri(masterUri, layoutUri));
             }
-
-            masterUris[master] = masterUri;
         }
-
-        return masterUris;
     }
 
     private static Dictionary<SlideLayout, string> WriteLayouts(
@@ -270,18 +256,15 @@ internal sealed class PresentationWriter
 
     // ── Slides ────────────────────────────────────────────────────────────────
 
-    private static Dictionary<Slide, string> WriteSlides(
+    private static void WriteSlides(
         OpcPackage package,
         SlideCollection slides,
         ContentTypeMap contentTypes,
-        Dictionary<string, string> imageRelIds,
         ref int chartPartIndex,
         ref int notesPartIndex,
         ref int commentPartIndex
     )
     {
-        var slideUris = new Dictionary<Slide, string>();
-
         // Pre-assign every slide's part URI first, so internal slide-jump hyperlinks can resolve
         // their target (which may be a later slide) while writing each slide's relationships.
         for (var i = 0; i < slides.Count; i++)
@@ -290,9 +273,8 @@ internal sealed class PresentationWriter
                 slides[i].PartUri = $"/ppt/slides/slide{i + 1}.xml";
         }
 
-        for (var i = 0; i < slides.Count; i++)
+        foreach (var slide in slides)
         {
-            var slide = slides[i];
             var slideUri = slide.PartUri;
 
             // Pre-assign all relationship IDs before generating the slide XML,
@@ -300,11 +282,8 @@ internal sealed class PresentationWriter
             var rId = 2; // rId1 is reserved for the layout relationship
 
             foreach (var shape in slide.Shapes.OfType<PictureShape>()
-                         .Where(static p => p.Image != null && p.Image.PartUri.Length > 0))
-            {
-                if (string.IsNullOrEmpty(shape.Image!.RelationshipId))
-                    shape.Image.RelationshipId = $"rId{rId++}";
-            }
+                         .Where(static p => p.Image is { PartUri.Length: > 0 }).Where(static shape => string.IsNullOrEmpty(shape.Image!.RelationshipId)))
+                shape.Image!.RelationshipId = $"rId{rId++}";
 
             foreach (var chartShape in slide.Shapes.OfType<ChartShape>())
             {
@@ -323,11 +302,8 @@ internal sealed class PresentationWriter
             }
 
             // Assign relationship IDs for run-level hyperlinks across all text frames.
-            foreach (var link in EnumerateRunHyperlinks(slide))
-            {
-                if (RunLinkNeedsRelationship(link) && string.IsNullOrEmpty(link.RelationshipId))
-                    link.RelationshipId = $"rId{rId++}";
-            }
+            foreach (var link in EnumerateRunHyperlinks(slide).Where(static link => RunLinkNeedsRelationship(link) && string.IsNullOrEmpty(link.RelationshipId)))
+                link.RelationshipId = $"rId{rId++}";
 
             // Write slide XML (all relationship IDs now set)
             contentTypes.Register(slideUri, PmlNames.ContentTypeSlide);
@@ -343,7 +319,7 @@ internal sealed class PresentationWriter
                 RelativeUri(slideUri, slide.Layout.PartUri));
 
             foreach (var shape in slide.Shapes.OfType<PictureShape>()
-                         .Where(static p => p.Image != null && p.Image.PartUri.Length > 0))
+                         .Where(static p => p.Image is { PartUri.Length: > 0 }))
             {
                 package.AddRelationship(slideUri,
                     shape.Image!.RelationshipId,
@@ -382,11 +358,8 @@ internal sealed class PresentationWriter
             }
 
             // Run-level hyperlinks (M-G).
-            foreach (var link in EnumerateRunHyperlinks(slide))
-            {
-                if (RunLinkNeedsRelationship(link))
-                    WriteRunHyperlinkRelationship(package, slides, slideUri, link);
-            }
+            foreach (var link in EnumerateRunHyperlinks(slide).Where(RunLinkNeedsRelationship))
+                WriteRunHyperlinkRelationship(package, slides, slideUri, link);
 
             // Notes (M7)
             if (!string.IsNullOrEmpty(slide.Notes.NotesText))
@@ -407,6 +380,7 @@ internal sealed class PresentationWriter
             }
 
             // Comments (M7)
+            // ReSharper disable once InvertIf
             if (slide.HasComments)
             {
                 var comments = slide.GetComments();
@@ -417,15 +391,12 @@ internal sealed class PresentationWriter
                     cmDoc.ToUtf8Bytes());
                 contentTypes.Register(commentsUri, PmlNames.ContentTypeComments);
                 package.AddRelationship(slideUri,
+                    // ReSharper disable once RedundantAssignment
                     $"rId{rId++}",
                     PmlNames.RelTypeComments,
                     RelativeUri(slideUri, commentsUri));
             }
-
-            slideUris[slide] = slideUri;
         }
-
-        return slideUris;
     }
 
     // ── Hyperlinks (M-G) ─────────────────────────────────────────────────────────
@@ -436,11 +407,11 @@ internal sealed class PresentationWriter
         foreach (var shape in shapes)
         {
             yield return shape;
-            if (shape is GroupShape group)
-            {
-                foreach (var child in EnumerateAllShapes(group.Children))
-                    yield return child;
-            }
+
+            if (shape is not GroupShape group) continue;
+
+            foreach (var child in EnumerateAllShapes(group.Children))
+                yield return child;
         }
     }
 
@@ -465,8 +436,7 @@ internal sealed class PresentationWriter
                 action.Url,
                 true);
         }
-        else if (action.TargetSlideNumber is { } number
-                 && number >= 1 && number <= slides.Count)
+        else if (action.TargetSlideNumber is { } number and >= 1 && number <= slides.Count)
         {
             var targetUri = slides[number - 1].PartUri;
             package.AddRelationship(slideUri,
@@ -479,9 +449,7 @@ internal sealed class PresentationWriter
     /// <summary>Yields every run-level hyperlink across a slide's text frames.</summary>
     private static IEnumerable<RunHyperlink> EnumerateRunHyperlinks(Slide slide)
     {
-        foreach (var frame in ShapeTextWalker.EnumerateTextFrames(slide.Shapes))
-        foreach (var paragraph in frame.Paragraphs)
-        foreach (var run in paragraph.Runs)
+        foreach (var run in ShapeTextWalker.EnumerateTextFrames(slide.Shapes).SelectMany(static frame => frame.Paragraphs.SelectMany(static paragraph => paragraph.Runs)))
         {
             if (run.Format.Hyperlink is { } link)
                 yield return link;
@@ -508,7 +476,7 @@ internal sealed class PresentationWriter
                 link.Url,
                 true);
         }
-        else if (link.TargetSlideNumber is { } number && number >= 1 && number <= slides.Count)
+        else if (link.TargetSlideNumber is { } number and >= 1 && number <= slides.Count)
         {
             var targetUri = slides[number - 1].PartUri;
             package.AddRelationship(slideUri,
@@ -625,8 +593,6 @@ internal sealed class PresentationWriter
         OpcPackage package,
         SlideCollection slides,
         MasterSlideCollection masters,
-        Dictionary<MasterSlide, string> masterUris,
-        Dictionary<Slide, string> slideUris,
         SlideSize slideSize,
         SectionCollection? sections,
         ProtectionInfo? protection,
@@ -684,7 +650,7 @@ internal sealed class PresentationWriter
             pres.Add(WriteModifyVerifier(protection));
 
         // Sections extension (M7 — PowerPoint 2010+)
-        if (sections != null && sections.Count > 0)
+        if (sections is { Count: > 0 })
             pres.Add(WriteSectionsExtLst(sections));
 
         var presXml = new XDocument(
@@ -739,6 +705,7 @@ internal sealed class PresentationWriter
         if (hasPresProps && package.TryGetPart(PresPropsPartUri) != null)
         {
             package.AddRelationship(PresentationPartUri,
+                // ReSharper disable once RedundantAssignment
                 $"rId{rIdCounter++}",
                 PmlNames.RelTypePresProps,
                 RelativeUri(PresentationPartUri, PresPropsPartUri));

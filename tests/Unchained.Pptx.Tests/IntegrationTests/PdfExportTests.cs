@@ -147,7 +147,7 @@ public sealed class PdfExportTests : PptxTestBase
     public async Task ExportPdf_TextShape_TextAppearsInOutput()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddTextBox(
+        doc.Slides[0].Shapes.AddTextBox(
             Emu.FromInches(1),
             Emu.FromInches(1),
             Emu.FromInches(4),

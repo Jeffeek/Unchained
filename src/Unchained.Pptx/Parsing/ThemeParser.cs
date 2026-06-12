@@ -42,27 +42,28 @@ internal static class ThemeParser
 
     // ── Colour scheme ─────────────────────────────────────────────────────────
 
-    private static ColorScheme ParseColorScheme(XElement clrScheme)
+    private static ColorScheme ParseColorScheme(XContainer clrScheme)
     {
-        var scheme = new ColorScheme();
-
-        scheme.Dark1 = ParseSlot(clrScheme, DmlNames.Dark1);
-        scheme.Light1 = ParseSlot(clrScheme, DmlNames.Light1);
-        scheme.Dark2 = ParseSlot(clrScheme, DmlNames.Dark2);
-        scheme.Light2 = ParseSlot(clrScheme, DmlNames.Light2);
-        scheme.Accent1 = ParseSlot(clrScheme, DmlNames.Accent1);
-        scheme.Accent2 = ParseSlot(clrScheme, DmlNames.Accent2);
-        scheme.Accent3 = ParseSlot(clrScheme, DmlNames.Accent3);
-        scheme.Accent4 = ParseSlot(clrScheme, DmlNames.Accent4);
-        scheme.Accent5 = ParseSlot(clrScheme, DmlNames.Accent5);
-        scheme.Accent6 = ParseSlot(clrScheme, DmlNames.Accent6);
-        scheme.HyperlinkColor = ParseSlot(clrScheme, DmlNames.Hyperlink);
-        scheme.FollowedHyperlinkColor = ParseSlot(clrScheme, DmlNames.FollowedHyperlink);
+        var scheme = new ColorScheme
+        {
+            Dark1 = ParseSlot(clrScheme, DmlNames.Dark1),
+            Light1 = ParseSlot(clrScheme, DmlNames.Light1),
+            Dark2 = ParseSlot(clrScheme, DmlNames.Dark2),
+            Light2 = ParseSlot(clrScheme, DmlNames.Light2),
+            Accent1 = ParseSlot(clrScheme, DmlNames.Accent1),
+            Accent2 = ParseSlot(clrScheme, DmlNames.Accent2),
+            Accent3 = ParseSlot(clrScheme, DmlNames.Accent3),
+            Accent4 = ParseSlot(clrScheme, DmlNames.Accent4),
+            Accent5 = ParseSlot(clrScheme, DmlNames.Accent5),
+            Accent6 = ParseSlot(clrScheme, DmlNames.Accent6),
+            HyperlinkColor = ParseSlot(clrScheme, DmlNames.Hyperlink),
+            FollowedHyperlinkColor = ParseSlot(clrScheme, DmlNames.FollowedHyperlink)
+        };
 
         return scheme;
     }
 
-    private static ColorSpec ParseSlot(XElement parent, XName slotName)
+    private static ColorSpec ParseSlot(XContainer parent, XName slotName)
     {
         var slot = parent.Element(slotName);
         return slot != null ? ColorParser.Parse(slot) : ColorSpec.FromRgb(0x80, 0x80, 0x80);
@@ -86,7 +87,7 @@ internal static class ThemeParser
         return scheme;
     }
 
-    private static ThemeFontSet ParseFontSet(XElement fontSetEl)
+    private static ThemeFontSet ParseFontSet(XContainer fontSetEl)
     {
         var set = new ThemeFontSet
         {

@@ -154,13 +154,13 @@ public sealed class ShapeTests : PptxTestBase
             Emu.Zero,
             Emu.FromInches(1),
             Emu.FromInches(1));
-        var second = slide.Shapes.AddShape(AutoShapeType.Ellipse,
+        slide.Shapes.AddShape(AutoShapeType.Ellipse,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
             Emu.FromInches(1));
         slide.Shapes.BringToFront(first);
-        slide.Shapes[slide.Shapes.Count - 1].ShouldBeSameAs(first);
+        slide.Shapes[^1].ShouldBeSameAs(first);
     }
 
     [Fact]

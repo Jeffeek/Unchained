@@ -19,9 +19,7 @@ internal static class TransitionWriter
     public static XElement? Write(SlideTransition transition)
     {
         // No element needed if everything is default / no effect configured
-        if (transition.Effect == TransitionEffect.None
-            && transition.AdvanceOnClick
-            && transition.AutoAdvanceSeconds == null)
+        if (transition is { Effect: TransitionEffect.None, AdvanceOnClick: true, AutoAdvanceSeconds: null })
             return null;
 
         var pml = PmlNames.Pml;

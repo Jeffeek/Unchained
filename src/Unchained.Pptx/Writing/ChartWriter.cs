@@ -90,11 +90,10 @@ internal static class ChartWriter
         var (chartTypeEl, needsCatValAxes) = WriteChartTypeElement(model);
         plotArea.Add(chartTypeEl);
 
-        if (needsCatValAxes)
-        {
-            plotArea.Add(WriteCategoryAxis(model.Type, model.CategoryAxis));
-            plotArea.Add(WriteValueAxis(model.Type, model.ValueAxis));
-        }
+        if (!needsCatValAxes) return plotArea;
+
+        plotArea.Add(WriteCategoryAxis(model.Type, model.CategoryAxis));
+        plotArea.Add(WriteValueAxis(model.Type, model.ValueAxis));
 
         return plotArea;
     }
@@ -252,7 +251,7 @@ internal static class ChartWriter
         el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "0")));
 
         for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteScatterSeries(model.Data.Series[i], i, model.Data.Categories));
+            el.Add(WriteScatterSeries(model.Data.Series[i], i));
 
         el.Add(new XElement(CmlNames.AxisId, new XAttribute(CmlNames.AttributeValue, CategoryAxisId)));
         el.Add(new XElement(CmlNames.AxisId, new XAttribute(CmlNames.AttributeValue, ValueAxisId)));
@@ -290,7 +289,7 @@ internal static class ChartWriter
         el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "0")));
 
         for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteScatterSeries(model.Data.Series[i], i, model.Data.Categories));
+            el.Add(WriteScatterSeries(model.Data.Series[i], i));
 
         el.Add(new XElement(CmlNames.AxisId, new XAttribute(CmlNames.AttributeValue, CategoryAxisId)));
         el.Add(new XElement(CmlNames.AxisId, new XAttribute(CmlNames.AttributeValue, ValueAxisId)));
@@ -388,8 +387,7 @@ internal static class ChartWriter
 
     private static XElement WriteScatterSeries(
         ChartSeries series,
-        int index,
-        IReadOnlyList<string> categories
+        int index
     )
     {
         var ser = new XElement(CmlNames.Series);
@@ -462,7 +460,7 @@ internal static class ChartWriter
     private static XElement WriteCategoryAxis(ChartType type, ChartAxis axis)
     {
         // Horizontal bar charts swap the axis positions
-        var (catPos, valPos) = type is ChartType.BarClustered or ChartType.BarStacked or ChartType.BarFullStacked
+        var (catPos, _) = type is ChartType.BarClustered or ChartType.BarStacked or ChartType.BarFullStacked
             ? ("l", "b")
             : ("b", "l");
 

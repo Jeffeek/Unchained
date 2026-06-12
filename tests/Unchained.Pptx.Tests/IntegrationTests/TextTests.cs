@@ -99,7 +99,7 @@ public sealed class TextTests : PptxTestBase
     public async Task TextContent_RoundTrips()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var tb = doc.Slides[0].Shapes.AddTextBox(
+        doc.Slides[0].Shapes.AddTextBox(
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(3),
@@ -109,7 +109,7 @@ public sealed class TextTests : PptxTestBase
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
         var reloadedShape = reloaded.Slides[0].Shapes
             .OfType<AutoShape>()
-            .FirstOrDefault(s => s.IsTextBox);
+            .FirstOrDefault(static s => s.IsTextBox);
 
         reloadedShape.ShouldNotBeNull();
         reloadedShape.TextFrame.PlainText.ShouldBe("Round-trip text");

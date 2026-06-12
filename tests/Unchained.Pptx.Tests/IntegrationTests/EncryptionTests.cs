@@ -1,4 +1,3 @@
-using System.Text;
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Core;
@@ -17,7 +16,7 @@ public sealed class EncryptionTests : PptxTestBase
     [Fact]
     public void Cfb_WriteRead_SmallStreamRoundTrip()
     {
-        var smallData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><root>hello world</root>");
+        var smallData = "<?xml version=\"1.0\"?><root>hello world</root>"u8.ToArray();
         var largeData = new byte[8192];
         new Random(42).NextBytes(largeData);
 
@@ -68,7 +67,7 @@ public sealed class EncryptionTests : PptxTestBase
     public async Task RoundTrip_EncryptDecrypt_SlideContentPreserved()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddTextBox(
+        doc.Slides[0].Shapes.AddTextBox(
             Emu.FromInches(1),
             Emu.FromInches(1),
             Emu.FromInches(4),

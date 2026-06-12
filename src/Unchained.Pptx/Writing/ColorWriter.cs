@@ -21,7 +21,7 @@ internal static class ColorWriter
             var schemeEl = new XElement(DmlNames.SchemeColor,
                 new XAttribute(DmlNames.AttributeValue, slotName));
 
-            if (color.LuminanceModifier != 1.0)
+            if (Math.Abs(color.LuminanceModifier - 1.0) > 0.05)
             {
                 schemeEl.Add(new XElement(DmlNames.LuminanceModifier,
                     new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceModifier * OoxmlScaling.PercentScale))));

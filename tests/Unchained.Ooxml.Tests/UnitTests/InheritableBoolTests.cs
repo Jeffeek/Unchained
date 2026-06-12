@@ -40,6 +40,7 @@ public sealed class InheritableBoolTests
 
     [Fact]
     public void Equality_SameInstance_IsEqual() =>
+        // ReSharper disable once EqualExpressionComparison
         (InheritableBool.True == InheritableBool.True).ShouldBeTrue();
 
     [Fact]

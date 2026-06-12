@@ -42,15 +42,15 @@
 @code {
 
     [Parameter]
-    public PresentationDocument Document { get; set; } = default!;
+    public PresentationDocument Document { get; set; } = null!;
 
     private readonly List<(string Label, string Value, string Icon)> _stats = [];
     private readonly List<(string Label, string Value)> _props = [];
 
     protected override void OnParametersSet()
     {
-        var hidden = Document.Slides.Count(s => s.IsHidden);
-        var layouts = Document.Masters.Sum(m => m.Layouts.Count);
+        var hidden = Document.Slides.Count(static s => s.IsHidden);
+        var layouts = Document.Masters.Sum(static m => m.Layouts.Count);
         var hyperlinks = Document.GetHyperlinks().Count();
 
         _stats.Clear();

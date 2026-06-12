@@ -179,9 +179,7 @@ public sealed class Slide
         bool includeNotes = false
     )
     {
-        var count = 0;
-        foreach (var frame in ShapeTextWalker.EnumerateTextFrames(Shapes))
-            count += frame.ReplaceText(oldText, newText, comparison);
+        var count = ShapeTextWalker.EnumerateTextFrames(Shapes).Sum(frame => frame.ReplaceText(oldText, newText, comparison));
 
         if (includeNotes && Notes.NotesTextFrame is { } notesFrame)
             count += notesFrame.ReplaceText(oldText, newText, comparison);
@@ -201,16 +199,18 @@ public sealed class Slide
                 yield return new HyperlinkReference(this, shape, action);
         }
 
+        yield break;
+
         static IEnumerable<Shape> EnumerateShapes(IEnumerable<Shape> shapes)
         {
             foreach (var shape in shapes)
             {
                 yield return shape;
-                if (shape is GroupShape group)
-                {
-                    foreach (var child in EnumerateShapes(group.Children))
-                        yield return child;
-                }
+
+                if (shape is not GroupShape group) continue;
+
+                foreach (var child in EnumerateShapes(group.Children))
+                    yield return child;
             }
         }
     }

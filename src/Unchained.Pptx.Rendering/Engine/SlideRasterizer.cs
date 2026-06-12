@@ -1,4 +1,3 @@
-using System.Text;
 using Unchained.Drawing;
 using Unchained.Drawing.Decoders;
 using Unchained.Drawing.Extensions;
@@ -38,8 +37,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var buffer = new RasterBuffer(options.WidthPx, options.HeightPx);
 
         // Resolve the colour scheme and font scheme for this slide (slide → layout → master).
-        var colorScheme = slide.Master?.Theme?.Colors;
-        var fontScheme = slide.Master?.Theme?.Fonts;
+        var colorScheme = slide.Master.Theme.Colors;
+        var fontScheme = slide.Master.Theme.Fonts;
 
         // Scale factor: EMU → pixels
         var scaleX = (double)options.WidthPx / slideSize.Width.Value;
@@ -54,37 +53,31 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var layoutPlaceholders = BuildLayoutPlaceholderMap(slide);
 
         // Composite inherited backdrop shapes from the master and layout BENEATH the slide's own shapes.
-        if (slide.Layout?.Master is { } master)
+        if (slide.Layout.Master is { } master)
         {
-            foreach (var shape in master.Shapes)
+            foreach (var shape in master.Shapes.Where(static shape => !shape.IsPlaceholder))
             {
-                if (!shape.IsPlaceholder)
-                {
-                    RenderShape(buffer,
-                        shape,
-                        root,
-                        options.Dpi,
-                        colorScheme,
-                        layoutPlaceholders,
-                        fontScheme);
-                }
+                RenderShape(buffer,
+                    shape,
+                    root,
+                    options.Dpi,
+                    colorScheme,
+                    layoutPlaceholders,
+                    fontScheme);
             }
         }
 
         if (slide.Layout is { } layout)
         {
-            foreach (var shape in layout.Shapes)
+            foreach (var shape in layout.Shapes.Where(static shape => !shape.IsPlaceholder))
             {
-                if (!shape.IsPlaceholder)
-                {
-                    RenderShape(buffer,
-                        shape,
-                        root,
-                        options.Dpi,
-                        colorScheme,
-                        layoutPlaceholders,
-                        fontScheme);
-                }
+                RenderShape(buffer,
+                    shape,
+                    root,
+                    options.Dpi,
+                    colorScheme,
+                    layoutPlaceholders,
+                    fontScheme);
             }
         }
 
@@ -108,38 +101,30 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     private static Dictionary<int, Shape> BuildLayoutPlaceholderMap(Slide slide)
     {
         var map = new Dictionary<int, Shape>();
-        if (slide.Layout?.Master is not null)
+        foreach (var s in slide.Layout.Master.Shapes)
         {
-            foreach (var s in slide.Layout.Master.Shapes)
-            {
-                if (s.PlaceholderIndex.HasValue && !map.ContainsKey(s.PlaceholderIndex.Value))
-                    map[s.PlaceholderIndex.Value] = s;
-            }
+            if (s.PlaceholderIndex.HasValue)
+                map.TryAdd(s.PlaceholderIndex.Value, s);
         }
 
-        if (slide.Layout is not null)
+        foreach (var s in slide.Layout.Shapes)
         {
-            foreach (var s in slide.Layout.Shapes)
-            {
-                if (s.PlaceholderIndex.HasValue)
-                    map[s.PlaceholderIndex.Value] = s;
-            }
+            if (s.PlaceholderIndex.HasValue)
+                map[s.PlaceholderIndex.Value] = s;
         }
 
         return map;
     }
 
     // Resolves the effective background fill by walking slide → layout → master.
-    private static FillFormat? ResolveBackground(Slide slide)
-    {
-        if (slide.Background.Fill.Type != FillType.None)
-            return slide.Background.Fill;
-        if (slide.Layout?.Background.Fill.Type != FillType.None)
-            return slide.Layout!.Background.Fill;
-        if (slide.Master?.Background.Fill.Type != FillType.None)
-            return slide.Master!.Background.Fill;
-        return null;
-    }
+    private static FillFormat? ResolveBackground(Slide slide) =>
+        slide.Background.Fill.Type != FillType.None
+            ? slide.Background.Fill
+            : slide.Layout.Background.Fill.Type != FillType.None
+                ? slide.Layout.Background.Fill
+                : slide.Master.Background.Fill.Type != FillType.None
+                    ? slide.Master.Background.Fill
+                    : null;
 
     private static void PaintBackground(RasterBuffer buffer, Slide slide, ColorScheme? colorScheme)
     {
@@ -184,6 +169,10 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
                 break;
             }
+            case FillType.None:
+            case FillType.Pattern:
+            case FillType.Picture:
+            case FillType.Group:
             default:
                 buffer.Clear();
             break;
@@ -203,10 +192,10 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         // Resolve geometry: if this shape is a zero-size placeholder, inherit from layout.
         if (shape.Width.Value <= 0 || shape.Height.Value <= 0)
         {
-            if (shape is GroupShape)
+            if (shape is GroupShape groupShape)
             {
                 RenderGroup(buffer,
-                    (GroupShape)shape,
+                    groupShape,
                     transform,
                     dpi,
                     colorScheme,
@@ -295,8 +284,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                     y,
                     width,
                     height,
-                    dpi,
-                    colorScheme);
+                    dpi);
             break;
 
             case SmartArtShape smartArt when width > 0 && height > 0:
@@ -386,7 +374,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             shape.StyleFillColor);
 
         // 3-D bevel — edge highlights/shadows after fill, before text.
-        if (!shape.ThreeD.IsEmpty && shape.ThreeD.TopBevel is not null)
+        if (shape.ThreeD is { IsEmpty: false, TopBevel: not null })
         {
             RenderBevel(buffer,
                 shape.ThreeD,
@@ -394,8 +382,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 y,
                 width,
                 height,
-                dpi,
-                colorScheme);
+                dpi);
         }
 
         // WordArt warp: render text to offscreen buffer then blit with curve displacement.
@@ -458,11 +445,10 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             {
                 var (r, g, b) = textBuffer.GetPixelRgb(col, row);
                 // Only blit non-white pixels (text ink).
-                if (r < 250 || g < 250 || b < 250)
-                {
-                    var destRow = row + yOffset;
-                    buffer.BlitImagePixel(x + col, y + destRow, r, g, b);
-                }
+                if (r >= 250 && g >= 250 && b >= 250) continue;
+
+                var destRow = row + yOffset;
+                buffer.BlitImagePixel(x + col, y + destRow, r, g, b);
             }
         }
     }
@@ -502,8 +488,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         int y,
         int width,
         int height,
-        double dpi,
-        ColorScheme? colorScheme
+        double dpi
     )
     {
         var bevel = threeD.TopBevel!;
@@ -585,14 +570,13 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var layers = blurPx == 0 ? 1 : 3;
         for (var layer = 0; layer < layers; layer++)
         {
-            var expand = layer;
             var alpha = (byte)(baseA * (layers - layer) / layers);
             if (alpha == 0) continue;
 
-            var sx = x + offX - expand;
-            var sy = y + offY - expand;
-            var sw = width + (expand * 2);
-            var sh = height + (expand * 2);
+            var sx = x + offX - layer;
+            var sy = y + offY - layer;
+            var sw = width + (layer * 2);
+            var sh = height + (layer * 2);
             buffer.FillRect(sx,
                 sy,
                 sw,
@@ -707,7 +691,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     // ── Connector ────────────────────────────────────────────────────────────
     private static void RenderConnector(
         RasterBuffer buffer,
-        ConnectorShape shape,
+        Shape shape,
         int x,
         int y,
         int width,
@@ -723,7 +707,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         if (shape.FlipVertical) (y0, y1) = (y1, y0);
 
         byte r = 0, g = 0, b = 0;
-        if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid is not null)
+        if (shape.Line.Fill is { Type: FillType.Solid, Solid: not null })
             ExtractArgb(shape.Line.Fill.Solid.Color.Resolve(colorScheme), out _, out r, out g, out b);
 
         var thickness = Math.Max(1, (int)Math.Round((shape.Line.WidthPoints ?? 1.0) * 1.333));
@@ -806,15 +790,14 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var ux = dx / len;
         var uy = dy / len;
         var px = -uy;
-        var py = ux;
 
         // Base of the arrowhead triangle (opposite the tip).
         var bx = tipX - (int)(ux * size);
         var by = tipY - (int)(uy * size);
         var lx = bx + (int)(px * halfWidth);
-        var ly = by + (int)(py * halfWidth);
+        var ly = by + (int)(ux * halfWidth);
         var rx2 = bx - (int)(px * halfWidth);
-        var ry2 = by - (int)(py * halfWidth);
+        var ry2 = by - (int)(ux * halfWidth);
 
         DrawFilledTriangle(buffer,
             tipX,
@@ -904,8 +887,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         int y,
         int width,
         int height,
-        double dpi,
-        ColorScheme? colorScheme
+        double dpi
     )
     {
         buffer.FillRect(x,
@@ -1108,6 +1090,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             160);
 
         // Category labels (up to 8 to avoid crowding).
+        // ReSharper disable once InvertIf
         if (categories.Count > 0)
         {
             var maxLabels = Math.Min(8, categories.Count);
@@ -1186,13 +1169,13 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         }
     }
 
-    private static string FormatAxisValue(double val)
-    {
-        if (Math.Abs(val) >= 1_000_000) return $"{val / 1_000_000:G3}M";
-        if (Math.Abs(val) >= 1_000) return $"{val / 1_000:G3}K";
-        if (val == Math.Floor(val)) return ((int)val).ToString();
-        return $"{val:G3}";
-    }
+    private static string FormatAxisValue(double val) =>
+        Math.Abs(val) switch
+        {
+            >= 1_000_000 => $"{val / 1_000_000:G3}M",
+            >= 1_000 => $"{val / 1_000:G3}K",
+            _ => Math.Abs(val - Math.Floor(val)) < 0.05 ? ((int)val).ToString() : $"{val:G3}"
+        };
 
     private static string TruncateLabel(string s, int maxChars) =>
         s.Length <= maxChars ? s : s[..maxChars];
@@ -1212,7 +1195,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var categories = series.Max(static s => s.Values.Count);
         if (categories == 0) return;
 
-        var groupGap = 4;
+        const int groupGap = 4;
         var groupSpan = (horizontal ? h : w) / categories;
         var barSpan = Math.Max(1, (groupSpan - groupGap) / Math.Max(1, series.Count));
 
@@ -1221,6 +1204,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             for (var s = 0; s < series.Count; s++)
             {
                 if (c >= series[s].Values.Count) continue;
+
                 var val = series[s].Values[c];
                 var color = SeriesPalette[s % SeriesPalette.Length];
 
@@ -1314,16 +1298,16 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         for (var px = -radius; px <= radius; px++)
         {
             if ((px * px) + (py * py) > radius * radius) continue;
+
             var angle = Math.Atan2(py, px);
             var frac = (angle + Math.PI) / (2 * Math.PI);
             var slice = 0;
             for (var i = 0; i < series.Values.Count; i++)
             {
-                if (frac >= bounds[i] && frac < bounds[i + 1])
-                {
-                    slice = i;
-                    break;
-                }
+                if (!(frac >= bounds[i]) || !(frac < bounds[i + 1])) continue;
+
+                slice = i;
+                break;
             }
 
             var color = SeriesPalette[slice % SeriesPalette.Length];
@@ -1381,7 +1365,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 height,
                 dpi);
         }
-        else if (roots.Count >= 3 && roots.Count <= 6 && !hasChildren)
+        else if (roots.Count is >= 3 and <= 6 && !hasChildren)
         {
             RenderSmartArtCycle(buffer,
                 flatTexts,
@@ -1454,7 +1438,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     // Cycle: nodes arranged in a circle with colored circles.
     private void RenderSmartArtCycle(
         RasterBuffer buffer,
-        List<string> nodes,
+        IReadOnlyList<string> nodes,
         int x,
         int y,
         int width,
@@ -2032,7 +2016,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
                 var fontSizePt = (run.Format.FontSizePoints ?? defaultFontSize) * fontScale;
                 byte textR, textG, textB;
-                if (run.Format.Fill?.Type == FillType.Solid && run.Format.Fill.Solid is not null)
+                if (run.Format.Fill is { Type: FillType.Solid, Solid: not null })
                 {
                     var argb = run.Format.Fill.Solid.Color.Resolve(colorScheme);
                     ExtractArgb(argb, out _, out textR, out textG, out textB);
@@ -2359,11 +2343,11 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     )
     {
         // Explicit zero-width border means "no border".
-        if (border.WidthPoints.HasValue && border.WidthPoints.Value <= 0)
+        if (border.WidthPoints is <= 0)
             return;
 
         byte r, g, b;
-        if (border.Fill.Type == FillType.Solid && border.Fill.Solid is not null)
+        if (border.Fill is { Type: FillType.Solid, Solid: not null })
         {
             var argb = border.Fill.Solid.Color.Resolve(colorScheme);
             ExtractArgb(argb, out _, out r, out g, out b);

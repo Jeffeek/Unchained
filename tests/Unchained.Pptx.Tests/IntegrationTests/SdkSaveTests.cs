@@ -84,8 +84,8 @@ public sealed class SdkSaveTests
         doc.Slides.AddBlank(doc.Masters[0].Layouts[0]);
 
         using var ms = new MemoryStream();
-        await Should.NotThrowAsync(async () =>
-            await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }));
+        await Should.NotThrowAsync(() =>
+            processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }));
         ms.Length.ShouldBeGreaterThan(0);
 
         doc.Dispose();
