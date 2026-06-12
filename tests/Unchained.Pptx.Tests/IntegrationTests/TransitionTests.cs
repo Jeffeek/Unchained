@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Ooxml;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;

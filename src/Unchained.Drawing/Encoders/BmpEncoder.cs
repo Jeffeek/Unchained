@@ -1,11 +1,11 @@
 using System.Buffers.Binary;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Encoders;
 
 /// <summary>
-/// Encodes a <see cref="RasterBuffer"/> to an uncompressed 24-bit BMP using only BCL APIs.
-/// The buffer stores pixels as RGBA (4 bytes per pixel); BMP stores them as BGR rows written
-/// bottom-up with each row padded to a 4-byte boundary.
+///     Encodes a <see cref="RasterBuffer" /> to an uncompressed 24-bit BMP using only BCL APIs.
+///     The buffer stores pixels as RGBA (4 bytes per pixel); BMP stores them as BGR rows written
+///     bottom-up with each row padded to a 4-byte boundary.
 /// </summary>
 internal static class BmpEncoder
 {
@@ -40,7 +40,7 @@ internal static class BmpEncoder
         BinaryPrimitives.WriteInt32LittleEndian(info[20..], pixelDataSize);
 
         // ── Pixel data (bottom-up, BGR) ──
-        var dataOffset = FileHeaderSize + InfoHeaderSize;
+        const int dataOffset = FileHeaderSize + InfoHeaderSize;
         for (var y = 0; y < height; y++)
         {
             var srcRow = (height - 1 - y) * width * 4;
@@ -49,7 +49,7 @@ internal static class BmpEncoder
             {
                 var src = srcRow + (x * 4);
                 var dest = destRow + (x * 3);
-                output[dest]     = source[src + 2]; // B
+                output[dest] = source[src + 2];     // B
                 output[dest + 1] = source[src + 1]; // G
                 output[dest + 2] = source[src];     // R
             }

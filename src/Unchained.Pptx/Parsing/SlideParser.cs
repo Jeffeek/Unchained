@@ -1,44 +1,31 @@
-using Unchained.Pptx.Core.Xml;
-using System.Xml.Linq;
-using Unchained.Ooxml.Opc;
-using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Animations;
-using Unchained.Pptx.Comments;
-using Unchained.Pptx.Media;
+using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Media;
+using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Text;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Comments;
+using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Media;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a single slide OPC part into a <see cref="Slide"/>.
+///     Parses a single slide OPC part into a <see cref="Slide" />.
 /// </summary>
-internal sealed class SlideParser
+internal sealed class SlideParser(OpcPackage package,
+    MediaStore mediaStore,
+    IEnumerable<MasterSlide> masters,
+    CommentAuthorCollection commentAuthors
+)
 {
-    private readonly OpcPackage _package;
-    private readonly MediaStore _mediaStore;
-    private readonly IReadOnlyList<MasterSlide> _masters;
-    private readonly CommentAuthorCollection _commentAuthors;
-
-    public SlideParser(
-        OpcPackage package,
-        MediaStore mediaStore,
-        IReadOnlyList<MasterSlide> masters,
-        CommentAuthorCollection commentAuthors)
-    {
-        _package = package;
-        _mediaStore = mediaStore;
-        _masters = masters;
-        _commentAuthors = commentAuthors;
-    }
-
     /// <summary>
-    /// Parses the slide at <paramref name="partUri"/> and returns a <see cref="Slide"/>.
+    ///     Parses the slide at <paramref name="partUri" /> and returns a <see cref="Slide" />.
     /// </summary>
     public Slide Parse(string partUri, string relationshipId, uint slideId)
     {
-        var part = _package.TryGetPart(partUri);
+        var part = package.TryGetPart(partUri);
         if (part == null)
         {
             return new Slide
@@ -85,7 +72,7 @@ internal sealed class SlideParser
         var spTree = cSld?.Element(PmlNames.ShapeTree);
         if (spTree != null)
         {
-            var shapeParser = new ShapeParser(_package, _mediaStore);
+            var shapeParser = new ShapeParser();
             shapeParser.ParseTree(spTree, slide.Shapes);
         }
 
@@ -123,7 +110,7 @@ internal sealed class SlideParser
         if (notesRel != null)
         {
             var notesUri = part.ResolveUri(notesRel.TargetUri);
-            var notesPart = _package.TryGetPart(notesUri);
+            var notesPart = package.TryGetPart(notesUri);
             if (notesPart != null)
             {
                 var notesDoc = OoXmlHelper.ParseXml(notesPart.Data);
@@ -134,35 +121,31 @@ internal sealed class SlideParser
 
         // Comments (M7)
         var commentsRel = part.FindRelationship(PmlNames.RelTypeComments);
-        if (commentsRel != null)
-        {
-            var commentsUri = part.ResolveUri(commentsRel.TargetUri);
-            var commentsPart = _package.TryGetPart(commentsUri);
-            if (commentsPart != null)
-            {
-                var cmDoc = OoXmlHelper.ParseXml(commentsPart.Data);
-                if (cmDoc.Root != null)
-                    CommentParser.Parse(cmDoc.Root, slide, _commentAuthors);
-            }
-        }
+        if (commentsRel == null) return slide;
+
+        var commentsUri = part.ResolveUri(commentsRel.TargetUri);
+        var commentsPart = package.TryGetPart(commentsUri);
+        if (commentsPart == null) return slide;
+
+        var cmDoc = OoXmlHelper.ParseXml(commentsPart.Data);
+        if (cmDoc.Root != null)
+            CommentParser.Parse(cmDoc.Root, slide, commentAuthors);
 
         return slide;
     }
 
     // ── Image resolution ──────────────────────────────────────────────────────
 
-    private void ResolveImages(OpcPart slidePart, Slide slide)
-    {
+    private void ResolveImages(OpcPart slidePart, Slide slide) =>
         // Walk all shapes and resolve picture fills and PictureShape images.
         ResolveImagesInCollection(slidePart, slide.Shapes);
-    }
 
     private void ResolveImagesInCollection(OpcPart slidePart, ShapeCollection shapes)
     {
         foreach (var shape in shapes)
         {
             // Resolve PictureShape blipFill (p:pic/p:blipFill/a:blip r:embed)
-            if (shape is Shapes.PictureShape pictureShape && pictureShape.Image == null)
+            if (shape is PictureShape { Image: null } pictureShape)
             {
                 var rawEl = pictureShape.RawElement;
                 if (rawEl != null)
@@ -177,7 +160,7 @@ internal sealed class SlideParser
             }
 
             // Resolve spPr blipFill on any shape type (e.g. AutoShape background images)
-            if (shape.Fill.Type == Unchained.Ooxml.Drawing.FillType.Picture &&
+            if (shape.Fill.Type == FillType.Picture &&
                 shape.Fill.Picture?.Image == null &&
                 shape.Fill.Picture?.RelationshipId != null)
             {
@@ -186,7 +169,7 @@ internal sealed class SlideParser
             }
 
             // Recurse into groups
-            if (shape is Shapes.GroupShape group)
+            if (shape is GroupShape group)
                 ResolveImagesInCollection(slidePart, group.Children);
         }
     }
@@ -199,11 +182,11 @@ internal sealed class SlideParser
         if (rel == null) return null;
 
         var imageUri = sourcePart.ResolveUri(rel.TargetUri);
-        var imagePart = _package.TryGetPart(imageUri);
+        var imagePart = package.TryGetPart(imageUri);
         if (imagePart == null) return null;
 
         // Check if already in the media store (dedup by URI)
-        var existing = _mediaStore.Images.FirstOrDefault(img =>
+        var existing = mediaStore.Images.FirstOrDefault(img =>
             img.PartUri.Equals(imageUri, StringComparison.OrdinalIgnoreCase));
 
         if (existing != null) return existing;
@@ -213,18 +196,15 @@ internal sealed class SlideParser
             PartUri = imageUri,
             RelationshipId = relationshipId
         };
-        return _mediaStore.AddImage(image);
+        return mediaStore.AddImage(image);
     }
 
     // ── Chart resolution ──────────────────────────────────────────────────────
 
     private void ResolveCharts(OpcPart slidePart, Slide slide)
     {
-        foreach (var shape in slide.Shapes.OfType<ChartShape>())
-        {
-            if (!string.IsNullOrEmpty(shape.RelationshipId))
-                LoadChartPart(slidePart, shape);
-        }
+        foreach (var shape in slide.Shapes.OfType<ChartShape>().Where(static shape => !string.IsNullOrEmpty(shape.RelationshipId)))
+            LoadChartPart(slidePart, shape);
     }
 
     private void LoadChartPart(OpcPart slidePart, ChartShape shape)
@@ -236,7 +216,7 @@ internal sealed class SlideParser
         var chartUri = slidePart.ResolveUri(rel.TargetUri);
         shape.PartUri = chartUri;
 
-        var chartPart = _package.TryGetPart(chartUri);
+        var chartPart = package.TryGetPart(chartUri);
         if (chartPart == null) return;
 
         // Preserve raw bytes for lossless round-trip
@@ -252,14 +232,15 @@ internal sealed class SlideParser
 
     private void ResolveSmartArt(OpcPart slidePart, Slide slide)
     {
-        foreach (var shape in slide.Shapes.OfType<Shapes.SmartArtShape>())
+        foreach (var shape in slide.Shapes.OfType<SmartArtShape>())
             LoadSmartArtParts(slidePart, shape);
     }
 
-    private void LoadSmartArtParts(OpcPart slidePart, Shapes.SmartArtShape shape)
+    private void LoadSmartArtParts(OpcPart slidePart, SmartArtShape shape)
     {
         // Data part (r:dm) — also carries the node text model and a reference to the drawing part.
-        var dataPart = ResolveDiagramPart(slidePart, shape.DataRelationshipId,
+        var dataPart = ResolveDiagramPart(slidePart,
+            shape.DataRelationshipId,
             uri => shape.DataPartUri = uri);
         if (dataPart != null)
         {
@@ -281,7 +262,8 @@ internal sealed class SlideParser
                 if (!string.IsNullOrEmpty(drawingRelId))
                 {
                     shape.DrawingRelationshipId = drawingRelId;
-                    var drawingPart = ResolveDiagramPart(slidePart, drawingRelId,
+                    var drawingPart = ResolveDiagramPart(slidePart,
+                        drawingRelId,
                         uri => shape.DrawingPartUri = uri);
                     if (drawingPart != null)
                         shape.DrawingPartData = drawingPart.Data;
@@ -289,15 +271,18 @@ internal sealed class SlideParser
             }
         }
 
-        var layoutPart = ResolveDiagramPart(slidePart, shape.LayoutRelationshipId,
+        var layoutPart = ResolveDiagramPart(slidePart,
+            shape.LayoutRelationshipId,
             uri => shape.LayoutPartUri = uri);
         if (layoutPart != null) shape.LayoutPartData = layoutPart.Data;
 
-        var quickStylePart = ResolveDiagramPart(slidePart, shape.QuickStyleRelationshipId,
+        var quickStylePart = ResolveDiagramPart(slidePart,
+            shape.QuickStyleRelationshipId,
             uri => shape.QuickStylePartUri = uri);
         if (quickStylePart != null) shape.QuickStylePartData = quickStylePart.Data;
 
-        var colorsPart = ResolveDiagramPart(slidePart, shape.ColorsRelationshipId,
+        var colorsPart = ResolveDiagramPart(slidePart,
+            shape.ColorsRelationshipId,
             uri => shape.ColorsPartUri = uri);
         if (colorsPart != null) shape.ColorsPartData = colorsPart.Data;
     }
@@ -312,12 +297,12 @@ internal sealed class SlideParser
 
         var uri = sourcePart.ResolveUri(rel.TargetUri);
         setUri(uri);
-        return _package.TryGetPart(uri);
+        return package.TryGetPart(uri);
     }
 
     // ── Hyperlink resolution ─────────────────────────────────────────────────────
 
-    private void ResolveHyperlinks(OpcPart slidePart, Slide slide)
+    private static void ResolveHyperlinks(OpcPart slidePart, Slide slide)
     {
         foreach (var shape in EnumerateAllShapes(slide.Shapes))
         {
@@ -326,27 +311,27 @@ internal sealed class SlideParser
         }
 
         // Run-level hyperlinks across every text frame on the slide.
-        foreach (var frame in ShapeTextWalker.EnumerateTextFrames(slide.Shapes))
-        foreach (var paragraph in frame.Paragraphs)
-        foreach (var run in paragraph.Runs)
+        foreach (var run in from frame in ShapeTextWalker.EnumerateTextFrames(slide.Shapes) from paragraph in frame.Paragraphs from run in paragraph.Runs select run)
         {
             if (run.Format.Hyperlink is { } link)
                 ResolveRunHyperlinkTarget(slidePart, link);
         }
     }
 
-    private static IEnumerable<Shapes.Shape> EnumerateAllShapes(IEnumerable<Shapes.Shape> shapes)
+    private static IEnumerable<Shape> EnumerateAllShapes(IEnumerable<Shape> shapes)
     {
         foreach (var shape in shapes)
         {
             yield return shape;
-            if (shape is Shapes.GroupShape group)
-                foreach (var child in EnumerateAllShapes(group.Children))
-                    yield return child;
+
+            if (shape is not GroupShape group) continue;
+
+            foreach (var child in EnumerateAllShapes(group.Children))
+                yield return child;
         }
     }
 
-    private void ResolveHyperlinkTarget(OpcPart slidePart, HyperlinkAction action)
+    private static void ResolveHyperlinkTarget(OpcPart slidePart, HyperlinkAction action)
     {
         if (string.IsNullOrEmpty(action.RelationshipId)) return; // e.g. action-only links
 
@@ -355,9 +340,7 @@ internal sealed class SlideParser
         if (rel == null) return;
 
         if (rel.IsExternal)
-        {
             action.Url = rel.TargetUri;
-        }
         else
         {
             // Internal jump to another slide; capture the part URI now and turn it into a
@@ -366,7 +349,7 @@ internal sealed class SlideParser
         }
     }
 
-    private void ResolveRunHyperlinkTarget(OpcPart slidePart, Ooxml.Text.RunHyperlink link)
+    private static void ResolveRunHyperlinkTarget(OpcPart slidePart, RunHyperlink link)
     {
         if (string.IsNullOrEmpty(link.RelationshipId)) return;
 
@@ -387,8 +370,8 @@ internal sealed class SlideParser
         // Gather candidate placeholder definitions from the layout, then the master, so a
         // slide placeholder with no geometry of its own can inherit it.
         var layout = slide.Layout;
-        var layoutPlaceholders = layout?.Shapes is { } ls ? CollectPlaceholders(ls) : [];
-        var masterPlaceholders = layout?.Master?.Shapes is { } ms ? CollectPlaceholders(ms) : [];
+        var layoutPlaceholders = layout.Shapes is { } ls ? CollectPlaceholders(ls) : [];
+        var masterPlaceholders = layout.Master.Shapes is { } ms ? CollectPlaceholders(ms) : [];
 
         foreach (var shape in EnumerateAllShapes(slide.Shapes))
         {
@@ -396,7 +379,7 @@ internal sealed class SlideParser
             if (shape.Width.Value > 0 && shape.Height.Value > 0) continue; // already positioned
 
             var source = MatchPlaceholder(shape, layoutPlaceholders)
-                      ?? MatchPlaceholder(shape, masterPlaceholders);
+                         ?? MatchPlaceholder(shape, masterPlaceholders);
             if (source is null) continue;
 
             shape.X = source.X;
@@ -406,18 +389,12 @@ internal sealed class SlideParser
         }
     }
 
-    private static List<Shapes.Shape> CollectPlaceholders(IEnumerable<Shapes.Shape> shapes)
-    {
-        var result = new List<Shapes.Shape>();
-        foreach (var s in EnumerateAllShapes(shapes))
-            if (s.IsPlaceholder)
-                result.Add(s);
-        return result;
-    }
+    private static List<Shape> CollectPlaceholders(IEnumerable<Shape> shapes) =>
+        EnumerateAllShapes(shapes).Where(static s => s.IsPlaceholder).ToList();
 
     // Matches a slide placeholder to its layout/master definition: prefer an exact index match,
     // then a type match, then (for the common single-body case) a compatible body/content/object.
-    private static Shapes.Shape? MatchPlaceholder(Shapes.Shape target, List<Shapes.Shape> candidates)
+    private static Shape? MatchPlaceholder(Shape target, IReadOnlyCollection<Shape> candidates)
     {
         if (candidates.Count == 0) return null;
 
@@ -434,32 +411,40 @@ internal sealed class SlideParser
 
         // Title family and body/content/object family are interchangeable across slide↔layout.
         if (IsTitle(target.PlaceholderType))
-            return candidates.FirstOrDefault(c => IsTitle(c.PlaceholderType)
-                                                  && c.Width.Value > 0 && c.Height.Value > 0);
+        {
+            return candidates.FirstOrDefault(static c => IsTitle(c.PlaceholderType)
+                                                         && c.Width.Value > 0 && c.Height.Value > 0);
+        }
+
+#pragma warning disable IDE0046
         if (IsBodyLike(target.PlaceholderType))
-            return candidates.FirstOrDefault(c => IsBodyLike(c.PlaceholderType)
-                                                  && c.Width.Value > 0 && c.Height.Value > 0);
+#pragma warning restore IDE0046
+        {
+            return candidates.FirstOrDefault(static c => IsBodyLike(c.PlaceholderType)
+                                                         && c.Width.Value > 0 && c.Height.Value > 0);
+        }
+
         return null;
     }
 
-    private static bool IsTitle(Shapes.PlaceholderType t) =>
-        t is Shapes.PlaceholderType.Title or Shapes.PlaceholderType.CenteredTitle;
+    private static bool IsTitle(PlaceholderType t) =>
+        t is PlaceholderType.Title or PlaceholderType.CenteredTitle;
 
-    private static bool IsBodyLike(Shapes.PlaceholderType t) =>
-        t is Shapes.PlaceholderType.Body or Shapes.PlaceholderType.Content
-          or Shapes.PlaceholderType.Object or Shapes.PlaceholderType.Subtitle;
+    private static bool IsBodyLike(PlaceholderType t) =>
+        t is PlaceholderType.Body or PlaceholderType.Content
+            or PlaceholderType.Object or PlaceholderType.Subtitle;
 
     // ── Layout resolution ─────────────────────────────────────────────────────
 
     private SlideLayout? FindLayout(string partUri) =>
-        _masters
+        masters
             .SelectMany(static m => m.Layouts)
             .FirstOrDefault(l =>
                 l.PartUri.Equals(partUri, StringComparison.OrdinalIgnoreCase));
 
     private SlideLayout GetFallbackLayout()
     {
-        var layout = _masters.FirstOrDefault()?.Layouts.FirstOrDefault();
+        var layout = masters.FirstOrDefault()?.Layouts.FirstOrDefault();
         if (layout != null) return layout;
 
         // Minimal fallback layout used when no masters have been parsed yet

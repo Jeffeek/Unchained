@@ -1,7 +1,7 @@
 namespace Unchained.Ooxml.Charts;
 
 /// <summary>
-/// Identifies the visual type of an OOXML chart (§21.2).
+///     Identifies the visual type of an OOXML chart (§21.2).
 /// </summary>
 public enum ChartType
 {
@@ -83,5 +83,5 @@ public enum ChartType
     /// <summary>Radar chart with data point markers.</summary>
     RadarWithMarkers,
     /// <summary>Filled radar chart.</summary>
-    RadarFilled,
+    RadarFilled
 }

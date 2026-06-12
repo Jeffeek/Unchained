@@ -1,3 +1,4 @@
+using System.Text;
 using Moq;
 using Shouldly;
 using Unchained.Pdf.Abstractions;
@@ -18,7 +19,7 @@ public sealed class DocumentProcessorLoadTests : IDisposable
     public async Task LoadAsync_Stream_SinglePage_PageCountIsOne()
     {
         var stream = new MemoryStream(PdfFixtures.SinglePage());
-        await using var doc = await _processor.LoadAsync(stream, ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(stream, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -26,7 +27,7 @@ public sealed class DocumentProcessorLoadTests : IDisposable
     public async Task LoadAsync_Stream_MultiPage_PageCountMatches()
     {
         var stream = new MemoryStream(PdfFixtures.MultiPage(5));
-        await using var doc = await _processor.LoadAsync(stream, ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(stream, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(5);
     }
 
@@ -34,7 +35,7 @@ public sealed class DocumentProcessorLoadTests : IDisposable
     public async Task LoadAsync_Stream_NotDisposedOnReturn()
     {
         var stream = new MemoryStream(PdfFixtures.SinglePage());
-        await using var doc = await _processor.LoadAsync(stream, ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(stream, TestContext.Current.CancellationToken);
         doc.IsDisposed.ShouldBeFalse();
     }
 
@@ -45,7 +46,7 @@ public sealed class DocumentProcessorLoadTests : IDisposable
         try
         {
             await File.WriteAllBytesAsync(path, PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
-            await using var doc = await _processor.LoadAsync(path, ct: TestContext.Current.CancellationToken);
+            await using var doc = await _processor.LoadAsync(path, TestContext.Current.CancellationToken);
             doc.PageCount.ShouldBe(1);
         }
         finally
@@ -78,7 +79,7 @@ public sealed class DocumentProcessorLoadTests : IDisposable
     {
         var bytes = PdfFixtures.SinglePage();
         var nonSeekable = new NonSeekableStream(bytes);
-        await using var doc = await _processor.LoadAsync(nonSeekable, ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(nonSeekable, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -105,7 +106,7 @@ public sealed class DocumentProcessorSaveTests : IDisposable
     [Fact]
     public async Task SaveAsync_ToStream_WritesNonEmptyBytes()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
         var output = new MemoryStream();
         await _processor.SaveAsync(doc, output, ct: TestContext.Current.CancellationToken);
         output.Length.ShouldBeGreaterThan(0);
@@ -114,10 +115,10 @@ public sealed class DocumentProcessorSaveTests : IDisposable
     [Fact]
     public async Task SaveAsync_ToStream_OutputStartsWithPdfHeader()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
         var output = new MemoryStream();
         await _processor.SaveAsync(doc, output, ct: TestContext.Current.CancellationToken);
-        var header = System.Text.Encoding.Latin1.GetString(output.ToArray(), 0, 7);
+        var header = Encoding.Latin1.GetString(output.ToArray(), 0, 7);
         header.ShouldBe("%PDF-1.");
     }
 
@@ -127,7 +128,7 @@ public sealed class DocumentProcessorSaveTests : IDisposable
         var path = Path.GetTempFileName();
         try
         {
-            await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), ct: TestContext.Current.CancellationToken);
+            await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
             await _processor.SaveAsync(doc, path, ct: TestContext.Current.CancellationToken);
             new FileInfo(path).Length.ShouldBeGreaterThan(0);
         }
@@ -145,7 +146,7 @@ public sealed class DocumentProcessorSaveTests : IDisposable
     [Fact]
     public async Task SaveAsync_WithNullStream_Throws()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), ct: TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
         await Should.ThrowAsync<ArgumentNullException>(() =>
             _processor.SaveAsync(doc, (Stream)null!));
     }
@@ -176,7 +177,7 @@ public sealed class DocumentProcessorLifetimeTests
     public void Constructor_CustomConcurrency_Accepted() =>
         Should.NotThrow(static () =>
         {
-            using var p = new DocumentProcessor(maxConcurrency: 2);
+            using var p = new DocumentProcessor(2);
         });
 }
 

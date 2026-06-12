@@ -8,22 +8,17 @@ Slide rasterization for `Unchained.Pptx`. Renders PPTX slides to PNG (or other i
 <PackageReference Include="Unchained.Pptx.Rendering" />
 ```
 
-Before building or running, fetch the FreeType2 native library for your platform:
+The FreeType2 native library is supplied automatically — by the FreeTypeSharp package on
+Windows, macOS, and linux-x64, and by `Unchained.Drawing.Runtimes` on linux-arm64. No
+manual fetch step is needed to consume the package.
+
+Building the repo from source on **linux-arm64** is the one case that needs a fetch (the
+binary is not committed):
 
 ```bash
-# Linux / macOS / Windows (Git Bash) — auto-detects host RID
-bash scripts/FetchNatives/fetch-natives.sh
-
-# Or target a specific RID
-bash scripts/FetchNatives/fetch-natives.sh --rid win-x64
-
-# Windows (PowerShell)
-pwsh scripts/FetchNatives/fetch-natives.ps1
+# linux-arm64 host only — every other platform is a no-op
+bash scripts/FetchNatives/fetch-natives.sh --rid linux-arm64
 ```
-
-If the native library is missing, rendering calls throw `DllNotFoundException`
-(`Unable to load DLL 'freetype6'`). The fetch script copies FreeType into
-`Unchained.Drawing.Runtimes`, which the rendering stack depends on transitively.
 
 ## Quick start
 
@@ -63,10 +58,10 @@ Runs are rendered with FreeType2 + HarfBuzz. Font resolution order per run:
 2. **Bundled substitute** — Standard-14 names map to DejaVu; everything else falls
    back to NotoSans-Regular.
 
-Glyphs are blitted via `BlitGlyphFromFace`, which reads the FreeType glyph slot at
-correct native struct offsets — necessary on Windows x64, where SharpFont's managed
-`Face.Glyph` accessor uses a wrong offset and yields empty bitmaps (this was the cause
-of missing text in slide renders).
+Glyphs are blitted via `BlitGlyphFromFace`, which reads the FreeType glyph slot through
+FreeTypeSharp's typed structs. Marshaling is correct on every platform — including
+Windows x64, where the previous SharpFont binding used a wrong `Face.Glyph` offset and
+yielded empty bitmaps (the old cause of missing text in slide renders).
 
 ## Output formats
 
@@ -92,7 +87,7 @@ fills always render.
 | Library | License | Purpose |
 |---|---|---|
 | HarfBuzzSharp | MIT | Unicode text shaping |
-| SharpFont | MIT | FreeType2 managed bindings |
+| FreeTypeSharp | MIT | FreeType2 managed bindings + bundled native binaries |
 | FreeType2 (native) | FTL (BSD-like) | Font rasterization |
 
 Bundled fonts: DejaVu (Bitstream Vera / SIL OFL) · NotoSans-Regular (SIL OFL)

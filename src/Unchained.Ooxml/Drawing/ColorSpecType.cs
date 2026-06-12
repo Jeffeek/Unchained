@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// Indicates whether a <see cref="ColorSpec"/> references an absolute RGB value
-/// or a slot in the presentation theme's colour scheme.
+///     Indicates whether a <see cref="ColorSpec" /> references an absolute RGB value
+///     or a slot in the presentation theme's colour scheme.
 /// </summary>
 public enum ColorSpecType
 {

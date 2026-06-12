@@ -1,8 +1,13 @@
 using System.IO.Compression;
+using System.Text;
 using Shouldly;
+using Unchained.Drawing.Constants;
 using Unchained.Ooxml;
-using Unchained.Pptx.Rendering;
+using Unchained.Ooxml.Drawing;
+using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Rendering.Engine;
+using Unchained.Pptx.Rendering.Models;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
@@ -16,13 +21,15 @@ public sealed class ShapeRenderTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var table = doc.Slides[0].Shapes.AddTable(
-            Emu.FromInches(1), Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(1),
             [Emu.FromInches(2), Emu.FromInches(2)],
             [Emu.FromInches(1), Emu.FromInches(1)]);
-        table[0, 0].Fill.SetSolid(Unchained.Ooxml.Drawing.ColorSpec.FromRgb(0, 112, 192));
+        table[0, 0].Fill.SetSolid(ColorSpec.FromRgb(0, 112, 192));
 
         var image = await SlideRenderer.RenderAsync(
-            doc.Slides[0], doc.SlideSize,
+            doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 640, HeightPx = 360 });
 
         // The blue cell fill must appear (non-background ink present).
@@ -34,19 +41,20 @@ public sealed class ShapeRenderTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var group = doc.Slides[0].Shapes.AddGroup();
-        var child = new Unchained.Pptx.Shapes.AutoShape
+        var child = new AutoShape
         {
-            ShapeType = Unchained.Pptx.Models.Shapes.AutoShapeType.Rectangle,
+            ShapeType = AutoShapeType.Rectangle,
             X = Emu.FromInches(1),
             Y = Emu.FromInches(1),
             Width = Emu.FromInches(3),
             Height = Emu.FromInches(2)
         };
-        child.Fill.SetSolid(Unchained.Ooxml.Drawing.ColorSpec.FromRgb(0, 200, 0));
+        child.Fill.SetSolid(ColorSpec.FromRgb(0, 200, 0));
         group.Children.AddParsed(child);
 
         var image = await SlideRenderer.RenderAsync(
-            doc.Slides[0], doc.SlideSize,
+            doc.Slides[0],
+            doc.SlideSize,
             new RenderOptions { WidthPx = 640, HeightPx = 360 });
 
         CountColoredPixels(image.Data.ToArray(), 640, 360).ShouldBeGreaterThan(100);
@@ -74,6 +82,7 @@ public sealed class ShapeRenderTests : PptxTestBase
                     count++;
             }
         }
+
         return count;
     }
 
@@ -84,12 +93,13 @@ public sealed class ShapeRenderTests : PptxTestBase
         while (pos + 8 <= png.Length)
         {
             var len = (png[pos] << 24) | (png[pos + 1] << 16) | (png[pos + 2] << 8) | png[pos + 3];
-            var type = System.Text.Encoding.ASCII.GetString(png, pos + 4, 4);
+            var type = Encoding.ASCII.GetString(png, pos + 4, 4);
             var dataStart = pos + 8;
-            if (type == "IDAT") output.Write(png, dataStart, len);
+            if (type == PngConstants.IDAT) output.Write(png, dataStart, len);
             pos = dataStart + len + 4;
-            if (type == "IEND") break;
+            if (type == PngConstants.IEND) break;
         }
+
         return output.ToArray();
     }
 }

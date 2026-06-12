@@ -1,8 +1,8 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.RegularExpressions;
 using Shouldly;
 using Unchained.Ooxml;
-using Unchained.Pptx.Export;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
@@ -10,7 +10,7 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// OpenDocument Presentation (.odp) export and import (M-H): structural round-trip through ODF.
+///     OpenDocument Presentation (.odp) export and import (M-H): structural round-trip through ODF.
 /// </summary>
 public sealed class OdpTests : PptxTestBase
 {
@@ -22,6 +22,7 @@ public sealed class OdpTests : PptxTestBase
         using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
         var entry = archive.GetEntry(name);
         if (entry == null) return [];
+
         using var s = entry.Open();
         using var outMs = new MemoryStream();
         s.CopyTo(outMs);
@@ -56,7 +57,7 @@ public sealed class OdpTests : PptxTestBase
         var odp = await Processor.ExportOdpAsync(doc);
         var content = Encoding.UTF8.GetString(EntryBytes(odp, "content.xml"));
 
-        System.Text.RegularExpressions.Regex.Matches(content, "<draw:page").Count.ShouldBe(3);
+        Regex.Matches(content, "<draw:page").Count.ShouldBe(3);
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public sealed class OdpTests : PptxTestBase
 
         reloaded.Slides.Count.ShouldBe(2);
         reloaded.Slides[0].Shapes.OfType<AutoShape>()
-            .Any(s => s.TextFrame.PlainText.Contains("Slide one text")).ShouldBeTrue();
+            .Any(static s => s.TextFrame.PlainText.Contains("Slide one text")).ShouldBeTrue();
     }
 
     [Fact]

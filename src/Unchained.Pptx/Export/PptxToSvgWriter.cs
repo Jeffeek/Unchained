@@ -1,4 +1,5 @@
 using System.Text;
+using Unchained.Drawing;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Text;
@@ -10,9 +11,9 @@ using Unchained.Pptx.Slides;
 namespace Unchained.Pptx.Export;
 
 /// <summary>
-/// Exports presentation slides to SVG — one SVG document per slide.
-/// Shapes are rendered as SVG elements; text is embedded as
-/// <c>&lt;text&gt;</c>; images are optionally inlined as Base64 data URIs.
+///     Exports presentation slides to SVG — one SVG document per slide.
+///     Shapes are rendered as SVG elements; text is embedded as
+///     <c>&lt;text&gt;</c>; images are optionally inlined as Base64 data URIs.
 /// </summary>
 internal static class PptxToSvgWriter
 {
@@ -20,13 +21,13 @@ internal static class PptxToSvgWriter
     private const double EmuToPt = EmuConversions.EmuToPoints;
 
     /// <summary>
-    /// Returns the SVG bytes for a single slide.
+    ///     Returns the SVG bytes for a single slide.
     /// </summary>
     public static byte[] WriteSlide(Slide slide, SlideSize slideSize, SvgSaveOptions options)
     {
         var w = slideSize.Width.Value * EmuToPt;
         var h = slideSize.Height.Value * EmuToPt;
-        var colorScheme = slide.Master?.Theme?.Colors;
+        var colorScheme = slide.Master.Theme.Colors;
 
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
@@ -55,40 +56,49 @@ internal static class PptxToSvgWriter
     }
 
     /// <summary>
-    /// Returns SVG bytes for every non-hidden slide in the document.
+    ///     Returns SVG bytes for every non-hidden slide in the document.
     /// </summary>
     public static byte[][] WriteAll(PresentationDocument document, SvgSaveOptions options)
     {
         var slides = document.Slides;
-        var result = new List<byte[]>();
-        for (var i = 0; i < slides.Count; i++)
-        {
-            if (slides[i].IsHidden && !options.IncludeHiddenSlides) continue;
-            result.Add(WriteSlide(slides[i], document.SlideSize, options));
-        }
+        var result = (from t in slides
+                      where !t.IsHidden || options.IncludeHiddenSlides
+                      select WriteSlide(t, document.SlideSize, options)).ToList();
+
         return [.. result];
     }
 
     private static void WriteBackground(
-        StringBuilder sb, Slide slide, double w, double h, ColorScheme? colorScheme)
+        StringBuilder sb,
+        Slide slide,
+        double w,
+        double h,
+        ColorScheme? colorScheme
+    )
     {
         var fill = ResolveBackground(slide);
         if (fill is null || fill.Type != FillType.Solid || fill.Solid == null) return;
+
         var color = ToSvgColor(fill.Solid.Color.Resolve(colorScheme));
         sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" fill=\"{color}\"/>");
     }
 
     // Resolves background fill walking slide → layout → master.
-    private static FillFormat? ResolveBackground(Slide slide)
-    {
-        if (slide.Background.Fill.Type != FillType.None) return slide.Background.Fill;
-        if (slide.Layout?.Background.Fill.Type != FillType.None) return slide.Layout!.Background.Fill;
-        if (slide.Master?.Background.Fill.Type != FillType.None) return slide.Master!.Background.Fill;
-        return null;
-    }
+    private static FillFormat? ResolveBackground(Slide slide) =>
+        slide.Background.Fill.Type != FillType.None
+            ? slide.Background.Fill
+            : slide.Layout.Background.Fill.Type != FillType.None
+                ? slide.Layout.Background.Fill
+                : slide.Master.Background.Fill.Type != FillType.None
+                    ? slide.Master.Background.Fill
+                    : null;
 
     private static void WriteShape(
-        StringBuilder sb, Shape shape, SvgSaveOptions options, ColorScheme? colorScheme)
+        StringBuilder sb,
+        Shape shape,
+        SvgSaveOptions options,
+        ColorScheme? colorScheme
+    )
     {
         var x = shape.X.Value * EmuToPt;
         var y = shape.Y.Value * EmuToPt;
@@ -96,18 +106,19 @@ internal static class PptxToSvgWriter
         var h = shape.Height.Value * EmuToPt;
 
         // Resolve fill — spPr solid → style fill → noFill.
-        string fillAttr;
-        if (shape.Fill.Type == FillType.Solid && shape.Fill.Solid != null)
-            fillAttr = $"fill=\"{ToSvgColor(shape.Fill.Solid.Color.Resolve(colorScheme))}\"";
-        else if (shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue)
-            fillAttr = $"fill=\"{ToSvgColor(shape.StyleFillColor.Value.Resolve(colorScheme))}\"";
-        else if (shape.Fill.Type == FillType.None)
-            fillAttr = "fill=\"none\"";
-        else
-            fillAttr = "fill=\"#f0f0f0\"";
+        var fillAttr = shape.Fill switch
+        {
+            { Type: FillType.Solid, Solid: not null } => $"fill=\"{ToSvgColor(shape.Fill.Solid.Color.Resolve(colorScheme))}\"",
+            _ => shape.Fill.Type switch
+            {
+                FillType.None when shape.StyleFillColor.HasValue => $"fill=\"{ToSvgColor(shape.StyleFillColor.Value.Resolve(colorScheme))}\"",
+                FillType.None => "fill=\"none\"",
+                _ => "fill=\"#f0f0f0\""
+            }
+        };
 
         var strokeAttr = string.Empty;
-        if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid != null)
+        if (shape.Line.Fill is { Type: FillType.Solid, Solid: not null })
         {
             var lw = shape.Line.WidthPoints ?? 1.0;
             strokeAttr = $"stroke=\"{ToSvgColor(shape.Line.Fill.Solid.Color.Resolve(colorScheme))}\" stroke-width=\"{lw:F2}\"";
@@ -121,22 +132,27 @@ internal static class PptxToSvgWriter
         // Shape content
         switch (shape)
         {
-            case AutoShape auto when auto.TextFrame.Paragraphs.Count > 0:
+            case AutoShape { TextFrame.Paragraphs.Count: > 0 } auto:
                 WriteTextFrame(sb, auto, w, h, colorScheme);
-                break;
-            case PictureShape pic when pic.Image != null && options.EmbedImages:
+            break;
+            case PictureShape { Image: not null } pic when options.EmbedImages:
                 WritePicture(sb, pic, w, h);
-                break;
+            break;
         }
 
         sb.AppendLine("</g>");
     }
 
     private static void WriteTextFrame(
-        StringBuilder sb, AutoShape shape, double w, double h, ColorScheme? colorScheme)
+        StringBuilder sb,
+        AutoShape shape,
+        double w,
+        double h,
+        ColorScheme? colorScheme
+    )
     {
-        const double PaddingPt = 4.0;
-        var cursorY = PaddingPt;
+        const double paddingPt = 4.0;
+        var cursorY = paddingPt;
 
         // Default text color: StyleTextColor → dk1 → black.
         string defaultColor;
@@ -155,24 +171,24 @@ internal static class PptxToSvgWriter
                 continue;
             }
 
-            var maxSize = para.Runs.Max(r => r.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt);
+            var maxSize = para.Runs.Max(static r => r.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt);
             var lineHeight = maxSize * TextConstants.DefaultLineHeightFactor;
             cursorY += maxSize; // advance to baseline
 
-            if (cursorY > h - PaddingPt) break;
+            if (cursorY > h - paddingPt) break;
 
             var anchor = para.Alignment switch
             {
-                Unchained.Ooxml.Text.TextAlignment.Center => "middle",
-                Unchained.Ooxml.Text.TextAlignment.Right => "end",
+                TextAlignment.Center => "middle",
+                TextAlignment.Right => "end",
                 _ => "start"
             };
 
             var textX = para.Alignment switch
             {
-                Unchained.Ooxml.Text.TextAlignment.Center => w / 2,
-                Unchained.Ooxml.Text.TextAlignment.Right => w - PaddingPt,
-                _ => PaddingPt
+                TextAlignment.Center => w / 2,
+                TextAlignment.Right => w - paddingPt,
+                _ => paddingPt
             };
 
             sb.Append($"<text x=\"{textX:F4}\" y=\"{cursorY:F4}\" text-anchor=\"{anchor}\">");
@@ -180,6 +196,7 @@ internal static class PptxToSvgWriter
             foreach (var run in para.Runs)
             {
                 if (string.IsNullOrEmpty(run.Text)) continue;
+
                 var fs = run.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt;
                 var weight = run.Format.Bold.Value == true ? "bold" : "normal";
                 var style = run.Format.Italic.Value == true ? "italic" : "normal";
@@ -188,8 +205,8 @@ internal static class PptxToSvgWriter
                     : defaultColor;
 
                 sb.Append($"<tspan font-size=\"{fs:F1}\" font-weight=\"{weight}\" " +
-                           $"font-style=\"{style}\" fill=\"{fill}\">" +
-                           $"{EscapeSvg(run.Text)}</tspan>");
+                          $"font-style=\"{style}\" fill=\"{fill}\">" +
+                          $"{EscapeSvg(run.Text)}</tspan>");
             }
 
             sb.AppendLine("</text>");
@@ -197,7 +214,12 @@ internal static class PptxToSvgWriter
         }
     }
 
-    private static void WritePicture(StringBuilder sb, PictureShape pic, double w, double h)
+    private static void WritePicture(
+        StringBuilder sb,
+        PictureShape pic,
+        double w,
+        double h
+    )
     {
         var data = pic.Image!.Data;
         var contentType = pic.Image.ContentType;
@@ -209,10 +231,7 @@ internal static class PptxToSvgWriter
 
     private static string ToSvgColor(uint argb)
     {
-        var a = (argb >> 24) & 0xFF;
-        var r = (argb >> 16) & 0xFF;
-        var g = (argb >> 8) & 0xFF;
-        var b = argb & 0xFF;
+        var (a, r, g, b) = ColorMath.UnpackArgb(argb);
         return a < 255
             ? $"rgba({r},{g},{b},{a / 255.0:F3})"
             : $"#{r:X2}{g:X2}{b:X2}";

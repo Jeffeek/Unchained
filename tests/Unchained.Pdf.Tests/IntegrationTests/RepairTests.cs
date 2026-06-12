@@ -1,6 +1,7 @@
 using Shouldly;
-using Xunit;
+using Unchained.Pdf.Core;
 using Unchained.Pdf.Tests.Helpers;
+using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
@@ -10,8 +11,8 @@ public sealed class RepairTests : PdfTestBase
     public async Task RepairAsync_ValidPdf_LoadsNormally()
     {
         // A healthy PDF should load via the normal path.
-        var bytes = PdfFixtures.MultiPage(count: 3);
-        await using var doc = await Processor.RepairAsync(bytes, ct: TestContext.Current.CancellationToken);
+        var bytes = PdfFixtures.MultiPage(3);
+        await using var doc = await Processor.RepairAsync(bytes, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(3);
     }
 
@@ -19,16 +20,16 @@ public sealed class RepairTests : PdfTestBase
     public async Task RepairAsync_TruncatedXref_StillReadsPages()
     {
         // Truncate the xref section to simulate corruption.
-        var bytes = PdfFixtures.MultiPage(count: 2);
+        var bytes = PdfFixtures.MultiPage(2);
         // Remove the last 100 bytes (xref + trailer area).
         var truncated = bytes[..Math.Max(0, bytes.Length - 100)];
         // Repair should either succeed or throw PdfException — not crash unhandled.
         try
         {
-            await using var doc = await Processor.RepairAsync(truncated, ct: TestContext.Current.CancellationToken);
+            await using var doc = await Processor.RepairAsync(truncated, TestContext.Current.CancellationToken);
             doc.PageCount.ShouldBeGreaterThan(0);
         }
-        catch (Core.PdfException)
+        catch (PdfException)
         {
             // Acceptable outcome — repair attempted but could not recover.
         }

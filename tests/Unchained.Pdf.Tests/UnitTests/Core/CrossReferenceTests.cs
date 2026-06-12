@@ -34,7 +34,7 @@ public sealed class CrossReferenceTableTests
     {
         var d = new Dictionary<int, CrossReferenceEntry>();
         foreach (var (n, e) in entries) d[n] = e;
-        return new CrossReferenceTable(d, trailerOffset: 0);
+        return new CrossReferenceTable(d, 0);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class CrossReferenceTableTests
     [Fact]
     public void TrailerOffset_StoredCorrectly()
     {
-        var table = new CrossReferenceTable(new Dictionary<int, CrossReferenceEntry>(), trailerOffset: 512L);
+        var table = new CrossReferenceTable(new Dictionary<int, CrossReferenceEntry>(), 512L);
         table.TrailerOffset.ShouldBe(512L);
     }
 }

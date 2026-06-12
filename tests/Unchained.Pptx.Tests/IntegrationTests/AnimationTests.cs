@@ -33,8 +33,10 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(3), Emu.FromInches(2));
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(3),
+            Emu.FromInches(2));
 
         slide.Animations.MainSequence.AddEffect(shape.ShapeId);
 
@@ -47,8 +49,10 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(3), Emu.FromInches(2));
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(3),
+            Emu.FromInches(2));
 
         var effect = slide.Animations.MainSequence.AddEffect(shape.ShapeId);
 
@@ -61,7 +65,10 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         var effect = slide.Animations.MainSequence.AddEffect(shape.ShapeId);
 
@@ -76,13 +83,16 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         var effect = slide.Animations.MainSequence.AddEffect(
             shape.ShapeId,
-            preset: AnimationPreset.Appear,
-            category: EffectCategory.Entrance,
-            trigger: EffectTrigger.WithPrevious);
+            AnimationPreset.Appear,
+            EffectCategory.Entrance,
+            EffectTrigger.WithPrevious);
 
         effect.Preset.ShouldBe(AnimationPreset.Appear);
         effect.Trigger.ShouldBe(EffectTrigger.WithPrevious);
@@ -94,9 +104,15 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var s1 = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         var s2 = slide.Shapes.AddShape(AutoShapeType.Ellipse,
-            Emu.FromInches(3), Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.FromInches(3),
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         slide.Animations.MainSequence.AddEffect(s1.ShapeId);
         slide.Animations.MainSequence.AddEffect(s2.ShapeId,
@@ -112,7 +128,10 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         slide.Animations.MainSequence.AddEffect(shape.ShapeId);
 
@@ -125,7 +144,10 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         var effect = slide.Animations.MainSequence.AddEffect(shape.ShapeId);
         slide.Animations.MainSequence.Remove(effect);
@@ -139,7 +161,10 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         slide.Animations.MainSequence.AddEffect(shape.ShapeId);
         slide.Animations.MainSequence.AddEffect(shape.ShapeId);
@@ -156,7 +181,10 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         var effect = slide.Animations.MainSequence.AddEffect(shape.ShapeId);
         effect.Timing.DurationSeconds.ShouldBe(0.5);
@@ -168,7 +196,10 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         var effect = slide.Animations.MainSequence.AddEffect(shape.ShapeId,
             delaySeconds: 1.5);
@@ -184,10 +215,12 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(3), Emu.FromInches(2));
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(3),
+            Emu.FromInches(2));
         slide.Animations.MainSequence.AddEffect(
-            shape.ShapeId, AnimationPreset.Fade, EffectCategory.Entrance);
+            shape.ShapeId);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
         var timeline = reloaded.Slides[0].Animations;
@@ -203,14 +236,16 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(3), Emu.FromInches(2));
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(3),
+            Emu.FromInches(2));
         slide.Animations.MainSequence.AddEffect(shape.ShapeId);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
 
         reloaded.Slides[0].Animations.MainSequence.Effects[0]
-                .TargetShapeId.ShouldBe(shape.ShapeId);
+            .TargetShapeId.ShouldBe(shape.ShapeId);
     }
 
     [Fact]
@@ -219,14 +254,18 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         slide.Animations.MainSequence.AddEffect(
-            shape.ShapeId, trigger: EffectTrigger.OnClick);
+            shape.ShapeId,
+            trigger: EffectTrigger.OnClick);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
 
         reloaded.Slides[0].Animations.MainSequence.Effects[0]
-                .Trigger.ShouldBe(EffectTrigger.OnClick);
+            .Trigger.ShouldBe(EffectTrigger.OnClick);
     }
 
     [Fact]
@@ -235,9 +274,15 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var s1 = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         var s2 = slide.Shapes.AddShape(AutoShapeType.Ellipse,
-            Emu.FromInches(3), Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.FromInches(3),
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
 
         slide.Animations.MainSequence.AddEffect(s1.ShapeId);
         slide.Animations.MainSequence.AddEffect(s2.ShapeId,
@@ -253,14 +298,18 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         slide.Animations.MainSequence.AddEffect(
-            shape.ShapeId, AnimationPreset.Appear, EffectCategory.Entrance);
+            shape.ShapeId,
+            AnimationPreset.Appear);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
 
         reloaded.Slides[0].Animations.MainSequence.Effects[0]
-                .Preset.ShouldBe(AnimationPreset.Appear);
+            .Preset.ShouldBe(AnimationPreset.Appear);
     }
 
     [Fact]
@@ -269,14 +318,19 @@ public sealed class AnimationTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
         var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         slide.Animations.MainSequence.AddEffect(
-            shape.ShapeId, AnimationPreset.Fade, EffectCategory.Exit);
+            shape.ShapeId,
+            AnimationPreset.Fade,
+            EffectCategory.Exit);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
 
         reloaded.Slides[0].Animations.MainSequence.Effects[0]
-                .Category.ShouldBe(EffectCategory.Exit);
+            .Category.ShouldBe(EffectCategory.Exit);
     }
 
     [Fact]
@@ -294,7 +348,10 @@ public sealed class AnimationTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(2);
         var shape = doc.Slides[1].Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         doc.Slides[1].Animations.MainSequence.AddEffect(shape.ShapeId);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);

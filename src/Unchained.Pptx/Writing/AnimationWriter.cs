@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml;
 using Unchained.Pptx.Animations;
@@ -6,16 +7,16 @@ using Unchained.Pptx.Core.Xml;
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes an <see cref="AnimationTimeline"/> into a <c>&lt;p:timing&gt;</c> element.
-/// Uses the standard OOXML click-group nesting required by PowerPoint.
+///     Serializes an <see cref="AnimationTimeline" /> into a <c>&lt;p:timing&gt;</c> element.
+///     Uses the standard OOXML click-group nesting required by PowerPoint.
 /// </summary>
 internal static class AnimationWriter
 {
     private static readonly XNamespace Pml = PmlNames.Pml;
 
     /// <summary>
-    /// Writes the animation timeline to XML. Returns <see langword="null"/> when there are no
-    /// animations and no element needs to be written.
+    ///     Writes the animation timeline to XML. Returns <see langword="null" /> when there are no
+    ///     animations and no element needs to be written.
     /// </summary>
     public static XElement? Write(AnimationTimeline timeline)
     {
@@ -73,9 +74,10 @@ internal static class AnimationWriter
     }
 
     private static void WriteClickGroups(
-        IReadOnlyList<AnimationEffect> effects,
-        XElement parent,
-        IdCounter ids)
+        IEnumerable<AnimationEffect> effects,
+        XContainer parent,
+        IdCounter ids
+    )
     {
         // Group effects by click group: OnClick starts a new group
         var groups = new List<List<AnimationEffect>>();
@@ -88,6 +90,7 @@ internal static class AnimationWriter
                 current = [];
                 groups.Add(current);
             }
+
             current.Add(effect);
         }
 
@@ -102,7 +105,8 @@ internal static class AnimationWriter
     private static XElement WriteClickGroup(
         IReadOnlyList<AnimationEffect> effects,
         int groupIndex,
-        IdCounter ids)
+        IdCounter ids
+    )
     {
         var outerCtn = new XElement(Pml + "cTn",
             new XAttribute("id", ids.Next()),
@@ -138,7 +142,8 @@ internal static class AnimationWriter
         string nodeType,
         int delayMs,
         int grpId,
-        IdCounter ids)
+        IdCounter ids
+    )
     {
         var durMs = Math.Max(1, (int)(effect.Timing.DurationSeconds * 1000));
         var presetClass = effect.Category switch
@@ -146,7 +151,7 @@ internal static class AnimationWriter
             EffectCategory.Exit => "exit",
             EffectCategory.Emphasis => "emph",
             EffectCategory.Motion => "path",
-            _ => "entr",
+            _ => "entr"
         };
 
         var ctn = new XElement(Pml + "cTn",
@@ -167,9 +172,12 @@ internal static class AnimationWriter
         if (effect.Timing.AutoReverse)
             ctn.SetAttributeValue("autoRev", "1");
         if (effect.Timing.RepeatCount != 0)
+        {
             ctn.SetAttributeValue("repeatCount",
-                effect.Timing.RepeatCount < 0 ? "indefinite"
-                    : (effect.Timing.RepeatCount * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                effect.Timing.RepeatCount < 0
+                    ? "indefinite"
+                    : (effect.Timing.RepeatCount * 1000).ToString(CultureInfo.InvariantCulture));
+        }
 
         ctn.Add(new XElement(Pml + "stCondLst",
             new XElement(Pml + "cond",
@@ -178,14 +186,24 @@ internal static class AnimationWriter
         var children = new XElement(Pml + "childTnLst");
         ctn.Add(children);
 
-        // Visibility set (entrance → visible; exit → hidden)
-        if (effect.Category == EffectCategory.Entrance)
-            children.Add(WriteVisibilitySet(effect.TargetShapeId, "visible", ids));
-        else if (effect.Category == EffectCategory.Exit)
-            children.Add(WriteVisibilitySet(effect.TargetShapeId, "hidden", ids));
+        switch (effect.Category)
+        {
+            // Visibility set (entrance → visible; exit → hidden)
+            case EffectCategory.Entrance:
+                children.Add(WriteVisibilitySet(effect.TargetShapeId, "visible", ids));
+            break;
+            case EffectCategory.Exit:
+                children.Add(WriteVisibilitySet(effect.TargetShapeId, "hidden", ids));
+            break;
+            case EffectCategory.Emphasis:
+            case EffectCategory.Motion:
+            break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
 
         // Animation filter (for effects that have a visual filter)
-        var filter = GetAnimFilter(effect.Preset, effect.Category);
+        var filter = GetAnimFilter(effect.Preset);
         if (!string.IsNullOrEmpty(filter))
         {
             children.Add(WriteAnimEffect(
@@ -222,7 +240,8 @@ internal static class AnimationWriter
         string transition,
         string filter,
         int durMs,
-        IdCounter ids)
+        IdCounter ids
+    )
     {
         var bhvr = new XElement(Pml + "cBhvr",
             new XElement(Pml + "cTn",
@@ -237,10 +256,9 @@ internal static class AnimationWriter
             bhvr);
     }
 
-    private static string GetAnimFilter(AnimationPreset preset, EffectCategory category)
-    {
+    private static string GetAnimFilter(AnimationPreset preset) =>
         // Entrance/Exit presets that use animEffect with a filter name
-        return preset switch
+        preset switch
         {
             AnimationPreset.Fade or AnimationPreset.Dissolve => "fade",
             AnimationPreset.Wipe => "wipe(right)",
@@ -250,10 +268,10 @@ internal static class AnimationWriter
             AnimationPreset.Strips => "strips(rightDown)",
             AnimationPreset.Fly => "fly",
             AnimationPreset.Zoom => "zoom",
-            AnimationPreset.Appear or AnimationPreset.GrowAndTurn => string.Empty,
-            _ => string.Empty,
+            // ReSharper disable PatternIsRedundant
+            AnimationPreset.Appear or AnimationPreset.GrowAndTurn or _ => string.Empty
+            // ReSharper restore PatternIsRedundant
         };
-    }
 
     // ── Interactive sequences ─────────────────────────────────────────────────
 
@@ -302,18 +320,15 @@ internal static class AnimationWriter
                 grpId++;
         }
 
-        foreach (var interactive in timeline.InteractiveSequences)
+        foreach (var effect in timeline.InteractiveSequences.SelectMany(static interactive => interactive.Sequence.Effects))
         {
-            foreach (var effect in interactive.Sequence.Effects)
-            {
-                bldLst.Add(new XElement(Pml + "bldP",
-                    new XAttribute("spid", effect.TargetShapeId),
-                    new XAttribute("grpId", grpId),
-                    new XAttribute("build", "allAtOnce")));
+            bldLst.Add(new XElement(Pml + "bldP",
+                new XAttribute("spid", effect.TargetShapeId),
+                new XAttribute("grpId", grpId),
+                new XAttribute("build", "allAtOnce")));
 
-                if (effect.Trigger == EffectTrigger.OnClick)
-                    grpId++;
-            }
+            if (effect.Trigger == EffectTrigger.OnClick)
+                grpId++;
         }
 
         return bldLst;

@@ -1,63 +1,50 @@
-using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Opc;
-using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Media;
 using Unchained.Ooxml.Media;
-using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a PresentationML shape tree (<c>&lt;p:spTree&gt;</c>) into
-/// <see cref="ShapeCollection"/> objects.
+///     Parses a PresentationML shape tree (<c>&lt;p:spTree&gt;</c>) into
+///     <see cref="ShapeCollection" /> objects.
 /// </summary>
 internal sealed class ShapeParser
 {
-    private readonly OpcPackage _package;
-    private readonly MediaStore _mediaStore;
-
-    public ShapeParser(OpcPackage package, MediaStore mediaStore)
-    {
-        _package = package;
-        _mediaStore = mediaStore;
-    }
-
     /// <summary>
-    /// Reads all shapes from a <c>&lt;p:spTree&gt;</c> element and adds them to
-    /// <paramref name="collection"/>.
+    ///     Reads all shapes from a <c>&lt;p:spTree&gt;</c> element and adds them to
+    ///     <paramref name="collection" />.
     /// </summary>
     public void ParseTree(XElement spTree, ShapeCollection collection)
     {
         ArgumentNullException.ThrowIfNull(spTree);
         ArgumentNullException.ThrowIfNull(collection);
 
-        foreach (var child in spTree.Elements())
-        {
-            var shape = TryParseShape(child);
-            if (shape != null)
-                collection.AddParsed(shape);
-        }
+        foreach (var shape in spTree.Elements().Select(TryParseShape).OfType<Shape>())
+            collection.AddParsed(shape);
     }
 
     // ── Shape dispatch ────────────────────────────────────────────────────────
 
-    private Shape? TryParseShape(XElement element)
-    {
-        if (element.Name == PmlNames.Shape)       return ParseAutoShape(element);
-        if (element.Name == PmlNames.Picture)     return ParsePicture(element);
-        if (element.Name == PmlNames.GraphicFrame) return ParseGraphicFrame(element);
-        if (element.Name == PmlNames.GroupShape)  return ParseGroup(element);
-        if (element.Name == PmlNames.Connector)   return ParseConnector(element);
-        return null; // skip unknown elements (e.g. p:nvGrpSpPr, p:grpSpPr)
-    }
+    private Shape? TryParseShape(XElement element) =>
+        element.Name == PmlNames.Shape
+            ? ParseAutoShape(element)
+            : element.Name == PmlNames.Picture
+                ? ParsePicture(element)
+                : element.Name == PmlNames.GraphicFrame
+                    ? ParseGraphicFrame(element)
+                    : element.Name == PmlNames.GroupShape
+                        ? ParseGroup(element)
+                        : element.Name == PmlNames.Connector
+                            ? ParseConnector(element)
+                            : null; // skip unknown elements (e.g. p:nvGrpSpPr, p:grpSpPr)
 
     // ── AutoShape / TextBox ───────────────────────────────────────────────────
 
-    private AutoShape ParseAutoShape(XElement spEl)
+    private static AutoShape ParseAutoShape(XElement spEl)
     {
         var shape = new AutoShape();
         ReadNonVisualProperties(spEl.Element(PmlNames.NonVisualShapeProperties), shape);
@@ -67,8 +54,8 @@ internal sealed class ShapeParser
 
         // Detect text box (cNvSpPr/@txBox="1")
         var cNvSpPr = spEl.Element(PmlNames.NonVisualShapeProperties)
-                          ?.Elements()
-                          .FirstOrDefault(static e => e.Name.LocalName == "cNvSpPr");
+            ?.Elements()
+            .FirstOrDefault(static e => e.Name.LocalName == "cNvSpPr");
         shape.IsTextBox = cNvSpPr?.GetAttrBool("txBox") == true;
 
         // Text body
@@ -86,7 +73,7 @@ internal sealed class ShapeParser
 
     // ── Picture ───────────────────────────────────────────────────────────────
 
-    private PictureShape ParsePicture(XElement picEl)
+    private static PictureShape ParsePicture(XElement picEl)
     {
         var shape = new PictureShape();
         ReadNonVisualProperties(picEl.Element(PmlNames.NonVisualPictureProperties), shape);
@@ -109,30 +96,34 @@ internal sealed class ShapeParser
 
     // ── Graphic frame (table, chart, SmartArt) ────────────────────────────────
 
-    private Shape ParseGraphicFrame(XElement frameEl)
+    private static Shape ParseGraphicFrame(XElement frameEl)
     {
         var graphic = frameEl.Element(DmlNames.Graphic);
         var graphicData = graphic?.Element(DmlNames.GraphicData);
         var uri = graphicData?.GetAttr(DmlNames.AttributeUri);
 
-        if (uri == DmlNames.GraphicDataTableUri)
-            return ParseTable(frameEl, graphicData!);
-
-        if (uri == DmlNames.GraphicDataChartUri)
-            return ParseChart(frameEl, graphicData!);
-
-        if (uri == DmlNames.GraphicDataDiagramUri)
-            return ParseSmartArt(frameEl, graphicData!);
+        switch (uri)
+        {
+            case DmlNames.GraphicDataTableUri:
+                return ParseTable(frameEl, graphicData!);
+            case DmlNames.GraphicDataChartUri:
+                return ParseChart(frameEl, graphicData!);
+            case DmlNames.GraphicDataDiagramUri:
+                return ParseSmartArt(frameEl, graphicData!);
+        }
 
         // Unknown graphic type — return generic AutoShape stub
-        var stub = new AutoShape { ShapeType = AutoShapeType.Rectangle };
-        stub.RawElement = frameEl;
+        var stub = new AutoShape
+        {
+            ShapeType = AutoShapeType.Rectangle,
+            RawElement = frameEl
+        };
         ReadNonVisualProperties(frameEl.Element(PmlNames.NonVisualGraphicFrameProperties), stub);
         ReadFrameTransform(frameEl, stub);
         return stub;
     }
 
-    private TableShape ParseTable(XElement frameEl, XElement graphicData)
+    private static TableShape ParseTable(XElement frameEl, XContainer graphicData)
     {
         var shape = new TableShape();
         ReadNonVisualProperties(frameEl.Element(PmlNames.NonVisualGraphicFrameProperties), shape);
@@ -146,7 +137,7 @@ internal sealed class ShapeParser
         return shape;
     }
 
-    private void ParseTableContent(XElement tbl, TableShape shape)
+    private static void ParseTableContent(XContainer tbl, TableShape shape)
     {
         var tblPr = tbl.Element(DmlNames.TableProperties);
         if (tblPr != null)
@@ -160,11 +151,8 @@ internal sealed class ShapeParser
         }
 
         var grid = tbl.Element(DmlNames.TableGrid);
-        foreach (var col in grid?.Elements(DmlNames.GridColumn) ?? [])
-        {
-            var w = col.GetAttrLong(DmlNames.AttributeWidth, 0);
+        foreach (var w in from col in grid?.Elements(DmlNames.GridColumn) ?? [] select col.GetAttrLong(DmlNames.AttributeWidth, 0))
             shape.Grid.AddColumnWidth(new Emu(w));
-        }
 
         foreach (var tr in tbl.Elements(DmlNames.TableRow))
         {
@@ -176,11 +164,13 @@ internal sealed class ShapeParser
 
     private static TableCell ParseTableCell(XElement tcEl)
     {
-        var cell = new TableCell();
-        cell.ColumnSpan = tcEl.GetAttrInt("gridSpan", 1);
-        cell.RowSpan = tcEl.GetAttrInt("rowSpan", 1);
-        cell.IsHorizontalMergeContinuation = tcEl.GetAttrBool("hMerge") ?? false;
-        cell.IsVerticalMergeContinuation = tcEl.GetAttrBool("vMerge") ?? false;
+        var cell = new TableCell
+        {
+            ColumnSpan = tcEl.GetAttrInt("gridSpan", 1),
+            RowSpan = tcEl.GetAttrInt("rowSpan", 1),
+            IsHorizontalMergeContinuation = tcEl.GetAttrBool("hMerge") ?? false,
+            IsVerticalMergeContinuation = tcEl.GetAttrBool("vMerge") ?? false
+        };
 
         var txBody = tcEl.Element(DmlNames.TextBody);
         if (txBody != null)
@@ -191,24 +181,24 @@ internal sealed class ShapeParser
         }
 
         var tcPr = tcEl.Element(DmlNames.TableCellProperties);
-        if (tcPr != null)
-        {
-            FillParser.Parse(tcPr, cell.Fill);
-            // Cell border lines: lnL, lnR, lnT, lnB
-            var lnL = tcPr.Element(DmlNames.Dml + "lnL");
-            if (lnL != null) LineParser.ParseElement(lnL, cell.LeftBorder);
-            var lnR = tcPr.Element(DmlNames.Dml + "lnR");
-            if (lnR != null) LineParser.ParseElement(lnR, cell.RightBorder);
-            var lnT = tcPr.Element(DmlNames.Dml + "lnT");
-            if (lnT != null) LineParser.ParseElement(lnT, cell.TopBorder);
-            var lnB = tcPr.Element(DmlNames.Dml + "lnB");
-            if (lnB != null) LineParser.ParseElement(lnB, cell.BottomBorder);
-        }
+
+        if (tcPr == null) return cell;
+
+        FillParser.Parse(tcPr, cell.Fill);
+        // Cell border lines: lnL, lnR, lnT, lnB
+        var lnL = tcPr.Element(DmlNames.Dml + "lnL");
+        if (lnL != null) LineParser.ParseElement(lnL, cell.LeftBorder);
+        var lnR = tcPr.Element(DmlNames.Dml + "lnR");
+        if (lnR != null) LineParser.ParseElement(lnR, cell.RightBorder);
+        var lnT = tcPr.Element(DmlNames.Dml + "lnT");
+        if (lnT != null) LineParser.ParseElement(lnT, cell.TopBorder);
+        var lnB = tcPr.Element(DmlNames.Dml + "lnB");
+        if (lnB != null) LineParser.ParseElement(lnB, cell.BottomBorder);
 
         return cell;
     }
 
-    private ChartShape ParseChart(XElement frameEl, XElement graphicData)
+    private static ChartShape ParseChart(XElement frameEl, XContainer graphicData)
     {
         var shape = new ChartShape();
         ReadNonVisualProperties(frameEl.Element(PmlNames.NonVisualGraphicFrameProperties), shape);
@@ -216,7 +206,7 @@ internal sealed class ShapeParser
 
         // Find the chart relationship and preserve the part data for round-trip
         var chartRef = graphicData.Element(DmlNames.Chart + "chart")
-                    ?? graphicData.Elements().FirstOrDefault(static e => e.Name.LocalName == "chart");
+                       ?? graphicData.Elements().FirstOrDefault(static e => e.Name.LocalName == "chart");
         var rId = (string?)chartRef?.Attribute(PmlNames.RelationshipId);
         if (rId != null)
         {
@@ -231,7 +221,7 @@ internal sealed class ShapeParser
 
     // ── SmartArt (diagram) ──────────────────────────────────────────────────────
 
-    private SmartArtShape ParseSmartArt(XElement frameEl, XElement graphicData)
+    private static SmartArtShape ParseSmartArt(XElement frameEl, XContainer graphicData)
     {
         var shape = new SmartArtShape();
         ReadNonVisualProperties(frameEl.Element(PmlNames.NonVisualGraphicFrameProperties), shape);
@@ -239,7 +229,7 @@ internal sealed class ShapeParser
 
         // <dgm:relIds r:dm=".." r:lo=".." r:qs=".." r:cs=".."/> references the four diagram parts.
         var relIds = graphicData.Element(DmlNames.DiagramRelIds)
-                  ?? graphicData.Elements().FirstOrDefault(static e => e.Name.LocalName == "relIds");
+                     ?? graphicData.Elements().FirstOrDefault(static e => e.Name.LocalName == "relIds");
         if (relIds != null)
         {
             var r = PmlNames.Relationships;
@@ -266,15 +256,11 @@ internal sealed class ShapeParser
         if (grpSpPr != null)
             ReadGroupTransform(grpSpPr, shape);
 
-        var innerTree = grpEl; // group's children are direct children
-        foreach (var child in innerTree.Elements())
-        {
-            if (child.Name == PmlNames.NonVisualGroupShapeProperties) continue;
-            if (child.Name == PmlNames.GroupShapeProperties) continue;
-            var child2 = TryParseShape(child);
-            if (child2 != null)
-                shape.Children.AddParsed(child2);
-        }
+        foreach (var child2 in from child in grpEl.Elements()
+                               where child.Name != PmlNames.NonVisualGroupShapeProperties
+                               where child.Name != PmlNames.GroupShapeProperties
+                               select TryParseShape(child))
+            shape.Children.AddParsed(child2);
 
         shape.RawElement = grpEl;
         return shape;
@@ -282,7 +268,7 @@ internal sealed class ShapeParser
 
     // ── Connector ─────────────────────────────────────────────────────────────
 
-    private ConnectorShape ParseConnector(XElement cxnEl)
+    private static ConnectorShape ParseConnector(XElement cxnEl)
     {
         var shape = new ConnectorShape();
         ReadNonVisualProperties(cxnEl.Element(PmlNames.NonVisualConnectorProperties), shape);
@@ -290,16 +276,16 @@ internal sealed class ShapeParser
         ReadFillAndLine(cxnEl.Element(PmlNames.ShapeProperties), shape);
 
         var prst = cxnEl.Element(PmlNames.ShapeProperties)
-                        ?.Element(DmlNames.PresetGeometry)
-                        ?.GetAttr(DmlNames.AttributePreset, string.Empty);
+            ?.Element(DmlNames.PresetGeometry)
+            ?.GetAttr(DmlNames.AttributePreset, string.Empty);
 
         shape.ConnectorType = prst switch
         {
             "bentConnector2" or "bentConnector3" or "bentConnector4" or "bentConnector5"
-                => Models.Shapes.ConnectorType.Bent,
+                => ConnectorType.Bent,
             "curvedConnector2" or "curvedConnector3" or "curvedConnector4" or "curvedConnector5"
-                => Models.Shapes.ConnectorType.Curved,
-            _ => Models.Shapes.ConnectorType.Straight
+                => ConnectorType.Curved,
+            _ => ConnectorType.Straight
         };
 
         shape.RawElement = cxnEl;
@@ -308,10 +294,9 @@ internal sealed class ShapeParser
 
     // ── Shared read helpers ───────────────────────────────────────────────────
 
-    private static void ReadNonVisualProperties(XElement? nvPrContainer, Shape shape)
+    private static void ReadNonVisualProperties(XContainer? nvPrContainer, Shape shape)
     {
-        if (nvPrContainer == null) return;
-        var cNvPr = nvPrContainer.Element(PmlNames.CommonNonVisualProperties);
+        var cNvPr = nvPrContainer?.Element(PmlNames.CommonNonVisualProperties);
         if (cNvPr == null) return;
 
         var id = cNvPr.GetAttrInt(PmlNames.AttributeId);
@@ -327,16 +312,11 @@ internal sealed class ShapeParser
         var extLst = cNvPr.Element(DmlNames.Dml + "extLst");
         if (extLst is not null)
         {
-            foreach (var ext in extLst.Elements(DmlNames.Dml + "ext"))
+            foreach (var decorative in extLst.Elements(DmlNames.Dml + "ext")
+                         .Select(static ext => ext.Elements().FirstOrDefault(static e => e.Name.LocalName == "decorative")).OfType<XElement>())
             {
-                // a16:decorative val="1" marks the shape as purely decorative.
-                var decorative = ext.Elements()
-                    .FirstOrDefault(static e => e.Name.LocalName == "decorative");
-                if (decorative is not null)
-                {
-                    shape.IsDecorative = decorative.GetAttrBool("val") ?? false;
-                    break;
-                }
+                shape.IsDecorative = decorative.GetAttrBool("val") ?? false;
+                break;
             }
         }
 
@@ -348,17 +328,15 @@ internal sealed class ShapeParser
 
         // Placeholder reference (<p:nvPr>/<p:ph>) — captures the role + index so the slide
         // parser can inherit geometry/formatting from the matching layout placeholder.
-        var ph = nvPrContainer.Element(PmlNames.ApplicationNonVisualProperties)
-                              ?.Element(PmlNames.Placeholder);
-        if (ph != null)
-        {
-            shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr("type"));
-            var idx = ph.GetAttrInt("idx");
-            if (idx.HasValue) shape.PlaceholderIndex = idx.Value;
-        }
+        var ph = nvPrContainer?.Element(PmlNames.ApplicationNonVisualProperties)?.Element(PmlNames.Placeholder);
+        if (ph == null) return;
+
+        shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr("type"));
+        var idx = ph.GetAttrInt("idx");
+        if (idx.HasValue) shape.PlaceholderIndex = idx.Value;
     }
 
-    /// <summary>Maps a <c>p:ph/@type</c> value to <see cref="PlaceholderType"/>. Absent = Content.</summary>
+    /// <summary>Maps a <c>p:ph/@type</c> value to <see cref="PlaceholderType" />. Absent = Content.</summary>
     private static PlaceholderType ParsePlaceholderType(string? type) => type switch
     {
         null or "" => PlaceholderType.Content,
@@ -372,14 +350,14 @@ internal sealed class ShapeParser
         "sldNum" => PlaceholderType.SlideNumber,
         "hdr" => PlaceholderType.Header,
         "chart" or "tbl" or "pic" or "media" or "clipArt" or "dgm" => PlaceholderType.Media,
-        _ => PlaceholderType.Content,
+        _ => PlaceholderType.Content
     };
 
     /// <summary>
-    /// Reads a <c>&lt;a:hlinkClick&gt;</c> (or hover) element into a <see cref="HyperlinkAction"/>
-    /// with its relationship id and tooltip captured. URL/slide resolution happens later.
+    ///     Reads a <c>&lt;a:hlinkClick&gt;</c> (or hover) element into a <see cref="HyperlinkAction" />
+    ///     with its relationship id and tooltip captured. URL/slide resolution happens later.
     /// </summary>
-    internal static HyperlinkAction ReadHyperlink(XElement hlinkEl)
+    private static HyperlinkAction ReadHyperlink(XElement hlinkEl)
     {
         var action = new HyperlinkAction
         {
@@ -389,15 +367,15 @@ internal sealed class ShapeParser
         return action;
     }
 
-    private static void ReadTransform(XElement? spPr, Shape shape)
+    private static void ReadTransform(XContainer? spPr, Shape shape)
     {
-        if (spPr == null) return;
-        var xfrm = spPr.Element(DmlNames.Transform);
+        var xfrm = spPr?.Element(DmlNames.Transform);
         if (xfrm == null) return;
+
         ReadTransformFromXfrm(xfrm, shape);
     }
 
-    private static void ReadFrameTransform(XElement frameEl, Shape shape)
+    private static void ReadFrameTransform(XContainer frameEl, Shape shape)
     {
         var xfrm = frameEl.Element(DmlNames.Transform)
                    ?? frameEl.Element(PmlNames.Pml + "xfrm");
@@ -405,7 +383,7 @@ internal sealed class ShapeParser
             ReadTransformFromXfrm(xfrm, shape);
     }
 
-    private static void ReadGroupTransform(XElement grpSpPr, Shape shape)
+    private static void ReadGroupTransform(XContainer grpSpPr, Shape shape)
     {
         var xfrm = grpSpPr.Element(DmlNames.Transform);
         if (xfrm == null) return;
@@ -422,11 +400,10 @@ internal sealed class ShapeParser
         }
 
         var chExt = xfrm.Element(DmlNames.ChildExtent);
-        if (chExt != null)
-        {
-            group.ChildExtentWidth = new Emu(chExt.GetAttrLong(DmlNames.AttributeWidth, 0));
-            group.ChildExtentHeight = new Emu(chExt.GetAttrLong(DmlNames.AttributeHeight, 0));
-        }
+        if (chExt == null) return;
+
+        group.ChildExtentWidth = new Emu(chExt.GetAttrLong(DmlNames.AttributeWidth, 0));
+        group.ChildExtentHeight = new Emu(chExt.GetAttrLong(DmlNames.AttributeHeight, 0));
     }
 
     private static void ReadTransformFromXfrm(XElement xfrm, Shape shape)
@@ -453,7 +430,7 @@ internal sealed class ShapeParser
         shape.FlipVertical = xfrm.GetAttrBool(DmlNames.AttributeFlipVertical) ?? false;
     }
 
-    private static void ReadGeometry(XElement? spPr, AutoShape shape)
+    private static void ReadGeometry(XContainer? spPr, AutoShape shape)
     {
         if (spPr == null) return;
 
@@ -471,6 +448,7 @@ internal sealed class ShapeParser
     private static void ReadFillAndLine(XElement? spPr, Shape shape)
     {
         if (spPr == null) return;
+
         FillParser.Parse(spPr, shape.Fill);
         LineParser.Parse(spPr, shape.Line);
         EffectParser.Parse(spPr, shape.Effects);
@@ -479,7 +457,7 @@ internal sealed class ShapeParser
 
     // Reads p:style/a:fillRef and a:fontRef to get theme-driven style fill and text colors.
     // These apply when spPr has no explicit fill (FillType.None) or runs have no explicit color.
-    private static void ReadStyleFill(XElement shapeEl, Shape shape)
+    private static void ReadStyleFill(XContainer shapeEl, Shape shape)
     {
         var styleEl = shapeEl.Element(PmlNames.Pml + "style");
         if (styleEl is null) return;
@@ -493,13 +471,13 @@ internal sealed class ShapeParser
             shape.StyleTextColor = ColorParser.Parse(fontRef);
     }
 
-    private EmbeddedImage? ResolveImage(string relationshipId, XElement shapeElement)
-    {
+    // ReSharper disable UnusedParameter.Local
+    private static EmbeddedImage? ResolveImage(string relationshipId, XElement shapeElement) =>
+        // ReSharper restore UnusedParameter.Local
         // Image resolution uses the slide's OPC part — stored in RawElement context.
         // The SlideParser will call PostProcessImages after initial parse.
         // For now return null; images are resolved in a second pass.
-        return null;
-    }
+        null;
 
     // ── Preset geometry map ───────────────────────────────────────────────────
 

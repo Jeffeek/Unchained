@@ -1,3 +1,4 @@
+using System.Text;
 using Shouldly;
 using Unchained.Pdf.Core;
 using Xunit;
@@ -81,7 +82,7 @@ public sealed class PdfStringTests
     [Fact]
     public void IsHex_TrueWhenSet()
     {
-        var s = new PdfString("Hi"u8.ToArray(), isHex: true);
+        var s = new PdfString("Hi"u8.ToArray(), true);
         s.IsHex.ShouldBeTrue();
     }
 
@@ -97,7 +98,7 @@ public sealed class PdfStringTests
     public void FromLatin1_EncodesCorrectly()
     {
         var s = PdfString.FromLatin1("Hello");
-        System.Text.Encoding.Latin1.GetString(s.Bytes.Span).ShouldBe("Hello");
+        Encoding.Latin1.GetString(s.Bytes.Span).ShouldBe("Hello");
         s.IsHex.ShouldBeFalse();
     }
 

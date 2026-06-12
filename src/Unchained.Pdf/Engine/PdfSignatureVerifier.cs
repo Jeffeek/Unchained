@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -8,8 +9,8 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Reads and cryptographically verifies digital signatures embedded in a PDF document.
-/// Supports <c>adbe.pkcs7.detached</c> signatures per ISO 32000-1 §12.8.3.
+///     Reads and cryptographically verifies digital signatures embedded in a PDF document.
+///     Supports <c>adbe.pkcs7.detached</c> signatures per ISO 32000-1 §12.8.3.
 /// </summary>
 internal static class PdfSignatureVerifier
 {
@@ -103,7 +104,7 @@ internal static class PdfSignatureVerifier
         try
         {
             var contentInfo = new ContentInfo(signedContent);
-            var cms = new SignedCms(contentInfo, detached: true);
+            var cms = new SignedCms(contentInfo, true);
             cms.Decode(contentsBytes);
 
             // GetNameInfo(SimpleName) returns empty on macOS with MachineKeySet certs in .NET 9.
@@ -117,13 +118,13 @@ internal static class PdfSignatureVerifier
             // as ComputeSignature. A separate manual hash check would use the raw byte array
             // directly, which can disagree with how ContentInfo encodes the content internally
             // on certain platforms (arm64/net9), causing spurious verification failures.
-            cms.CheckSignature(verifySignatureOnly: true);
+            cms.CheckSignature(true);
 
             // Step 3: verify the certificate chain (separately — failure here is not a document integrity failure)
             bool certValid;
             try
             {
-                cms.CheckSignature(verifySignatureOnly: false);
+                cms.CheckSignature(false);
                 certValid = true;
             }
             catch
@@ -165,13 +166,12 @@ internal static class PdfSignatureVerifier
     private static string ExtractCN(X509Certificate2 cert)
     {
         var dn = cert.SubjectName.Name;
-        foreach (var part in dn.Split(','))
-        {
-            var trimmed = part.Trim();
-            if (trimmed.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
-                return trimmed[3..].Trim();
-        }
-        return cert.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
+        foreach (var trimmed in dn.Split(',')
+                     .Select(static part => part.Trim())
+                     .Where(static trimmed => trimmed.StartsWith("CN=", StringComparison.OrdinalIgnoreCase)))
+            return trimmed[3..].Trim();
+
+        return cert.GetNameInfo(X509NameType.SimpleName, false);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -249,8 +249,8 @@ internal static class PdfSignatureVerifier
         if (DateTimeOffset.TryParseExact(
                 s[..14],
                 "yyyyMMddHHmmss",
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal,
                 out var result))
             return result;
 

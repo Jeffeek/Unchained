@@ -1,8 +1,8 @@
-@using Unchained.Pptx.Engine
-@using Unchained.Pptx.Slides
-@using Unchained.Pptx.Rendering
-@using Unchained.Pptx.Rendering.Engine
 @inject ISnackbar Snackbar
+@using Unchained.Pptx.Engine
+@using Unchained.Pptx.Rendering.Engine
+@using Unchained.Pptx.Rendering.Models
+@using Unchained.Pptx.Slides
 @implements IDisposable
 
 <div class="preview-panel">
@@ -11,40 +11,40 @@
                        Size="Size.Small"
                        Disabled="@(CurrentSlide <= 1)"
                        OnClick="PreviousSlide"
-                       title="Previous slide (←)" />
+                       title="Previous slide (←)"/>
         <span class="preview-page-label">
             <MudText Typo="Typo.body2" Style="white-space:nowrap;">Slide</MudText>
             <input class="preview-page-input"
                    type="number"
                    min="1" max="@SlideCount"
                    value="@CurrentSlide"
-                   @onchange="OnSlideInputChanged" />
+                   @onchange="OnSlideInputChanged"/>
             <MudText Typo="Typo.body2" Style="white-space:nowrap;">/ @SlideCount</MudText>
         </span>
         <MudIconButton Icon="@Icons.Material.Outlined.NavigateNext"
                        Size="Size.Small"
                        Disabled="@(CurrentSlide >= SlideCount)"
                        OnClick="NextSlide"
-                       title="Next slide (→)" />
+                       title="Next slide (→)"/>
 
-        <MudDivider Vertical="true" Class="mx-1" Style="height:24px;" />
+        <MudDivider Vertical="true" Class="mx-1" Style="height:24px;"/>
 
-        <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" OnClick="ZoomOut" title="Zoom out" />
+        <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" OnClick="ZoomOut" title="Zoom out"/>
         <MudText Typo="Typo.caption" Class="mx-1" Style="min-width:36px;text-align:center;">@(_zoom)%</MudText>
-        <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" OnClick="ZoomIn" title="Zoom in" />
+        <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" OnClick="ZoomIn" title="Zoom in"/>
 
-        <MudSpacer />
+        <MudSpacer/>
 
         @if (slide is not null && slide.IsHidden)
         {
-            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="Hidden" />
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="Hidden"/>
         }
     </div>
 
     <div class="preview-canvas">
         @if (_busy)
         {
-            <MudProgressCircular Indeterminate="true" Size="Size.Medium" Color="Color.Primary" />
+            <MudProgressCircular Indeterminate="true" Size="Size.Medium" Color="Color.Primary"/>
         }
         else if (_renderError is not null)
         {
@@ -57,15 +57,21 @@
             <img src="data:image/png;base64,@Convert.ToBase64String(_slideBytes)"
                  class="preview-page-img"
                  style="width:@(_zoom)%;"
-                 alt="Slide @CurrentSlide" />
+                 alt="Slide @CurrentSlide"/>
         }
     </div>
 </div>
 
 @code {
-    [Parameter] public PresentationDocument? Document { get; set; }
-    [Parameter] public int CurrentSlide { get; set; } = 1;
-    [Parameter] public EventCallback<int> CurrentSlideChanged { get; set; }
+
+    [Parameter]
+    public PresentationDocument? Document { get; set; }
+
+    [Parameter]
+    public int CurrentSlide { get; set; } = 1;
+
+    [Parameter]
+    public EventCallback<int> CurrentSlideChanged { get; set; }
 
     private byte[]? _slideBytes;
     private string? _renderError;
@@ -75,19 +81,22 @@
     private PresentationDocument? _lastDocument;
 
     private int SlideCount => Document?.Slides.Count ?? 0;
+
     private Slide? slide =>
         Document is not null && CurrentSlide >= 1 && CurrentSlide <= SlideCount
             ? Document.Slides[CurrentSlide - 1]
             : null;
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync()
     {
         // Re-render when the document or selected slide changes.
         if (Document != _lastDocument || CurrentSlide != _lastRendered)
         {
             _lastDocument = Document;
-            await RenderCurrentSlideAsync();
-        }
+        return RenderCurrentSlideAsync();
+    }
+
+        return Task.CompletedTask;
     }
 
     private async Task RenderCurrentSlideAsync()
@@ -130,24 +139,24 @@
         }
     }
 
-    private async Task PreviousSlide()
+    private Task PreviousSlide()
     {
-        if (CurrentSlide <= 1) return;
-        await CurrentSlideChanged.InvokeAsync(CurrentSlide - 1);
+        if (CurrentSlide <= 1) return Task.CompletedTask;
+        return CurrentSlideChanged.InvokeAsync(CurrentSlide - 1);
     }
 
-    private async Task NextSlide()
+    private Task NextSlide()
     {
-        if (CurrentSlide >= SlideCount) return;
-        await CurrentSlideChanged.InvokeAsync(CurrentSlide + 1);
+        if (CurrentSlide >= SlideCount) return Task.CompletedTask;
+        return CurrentSlideChanged.InvokeAsync(CurrentSlide + 1);
     }
 
-    private async Task OnSlideInputChanged(ChangeEventArgs e)
+    private Task OnSlideInputChanged(ChangeEventArgs e)
     {
         if (!int.TryParse(e.Value?.ToString(), out var n))
-            return;
+            return Task.CompletedTask;
         n = Math.Clamp(n, 1, Math.Max(1, SlideCount));
-        await CurrentSlideChanged.InvokeAsync(n);
+        return CurrentSlideChanged.InvokeAsync(n);
     }
 
     private void ZoomIn() => _zoom = Math.Min(200, _zoom + 25);
@@ -157,4 +166,5 @@
     {
         // No unmanaged resources held directly; slide bytes are GC-managed.
     }
+
 }

@@ -6,27 +6,27 @@ using Unchained.Pdf.Rendering.Engine;
 namespace Unchained.Studio.Services;
 
 /// <summary>
-/// Wraps <see cref="PdfRenderer"/> with a simple in-memory cache.
-/// Registered as Scoped — one instance per Blazor circuit.
-/// Uses <see cref="ConcurrentDictionary"/> instead of MemoryCache to avoid
-/// the IDisposable / async-teardown race that MemoryCache introduces.
+///     Wraps <see cref="PdfRenderer" /> with a simple in-memory cache.
+///     Registered as Scoped — one instance per Blazor circuit.
+///     Uses <see cref="ConcurrentDictionary" /> instead of MemoryCache to avoid
+///     the IDisposable / async-teardown race that MemoryCache introduces.
 /// </summary>
 public sealed class RenderingService(PdfRenderer renderer)
 {
-    // Key: (document identity hash, 1-based page number, dpi)
-    // Value: rendered PNG bytes
-    private readonly ConcurrentDictionary<(int DocId, int Page, int Dpi), byte[]> _cache = new();
-
     // Soft cap: when the cache grows beyond this, clear the oldest half.
     // For a dev tool rendering at most a handful of documents this is never reached,
     // but it prevents unbounded growth during a long session.
     private const int MaxEntries = 60;
+    // Key: (document identity hash, 1-based page number, dpi)
+    // Value: rendered PNG bytes
+    private readonly ConcurrentDictionary<(int DocId, int Page, int Dpi), byte[]> _cache = new();
 
     public async Task<byte[]?> RenderPdfPageAsync(
         IPdfDocument document,
         int pageNumber,
         int dpi = 96,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var key = (RuntimeHelpers.GetHashCode(document), pageNumber, dpi);
 
@@ -39,7 +39,7 @@ public sealed class RenderingService(PdfRenderer renderer)
             if (page is null)
                 return null;
 
-            var options = new RenderOptions(Dpi: dpi);
+            var options = new RenderOptions(dpi);
             var bytes = await renderer.RenderPageAsync(page, options, ct).ConfigureAwait(false);
 
             // Evict if the cache grew too large before writing the new entry
@@ -60,9 +60,9 @@ public sealed class RenderingService(PdfRenderer renderer)
     }
 
     /// <summary>
-    /// Removes all cached entries for the given document.
-    /// Call this after a document is mutated (Optimize, Repair, etc.) so the
-    /// new bytes are rendered fresh instead of showing the old cached pages.
+    ///     Removes all cached entries for the given document.
+    ///     Call this after a document is mutated (Optimize, Repair, etc.) so the
+    ///     new bytes are rendered fresh instead of showing the old cached pages.
     /// </summary>
     public void InvalidateDocument(IPdfDocument document)
     {

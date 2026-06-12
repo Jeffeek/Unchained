@@ -1,17 +1,16 @@
 using Shouldly;
 using Unchained.Ooxml;
-using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
-using Unchained.Pptx.Models.Shapes;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Verifies the Phase 2 OpenXML-SDK-backed reader (OpenOptions.UseOpenXmlEngine) produces a
-/// model consistent with the legacy custom parser for the vocabulary it currently maps:
-/// slide count, slide size, hidden flag, shape geometry, and text.
+///     Verifies the Phase 2 OpenXML-SDK-backed reader (OpenOptions.UseOpenXmlEngine) produces a
+///     model consistent with the legacy custom parser for the vocabulary it currently maps:
+///     slide count, slide size, hidden flag, shape geometry, and text.
 /// </summary>
 public sealed class OpenXmlParserParityTests : PptxTestBase
 {
@@ -29,7 +28,10 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         // with both parsers and compare what the SDK reader currently maps.
         var doc = PptxFixtures.WithSlides(2);
         doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(5), Emu.FromInches(2),
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(5),
+            Emu.FromInches(2),
             "Hello Parity");
         doc.Slides[1].IsHidden = true;
 
@@ -99,22 +101,29 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
             sm.Theme.Colors.Accent1.ShouldBe(cm.Theme.Colors.Accent1, $"{fileName}: master {m + 1} theme accent1");
 
             for (var l = 0; l < cm.Layouts.Count; l++)
+            {
                 sm.Layouts[l].LayoutType.ShouldBe(cm.Layouts[l].LayoutType,
                     $"{fileName}: master {m + 1} layout {l + 1} type");
+            }
         }
 
         // Each slide resolves to a layout whose type matches the custom parser's.
         for (var i = 0; i < custom.Slides.Count; i++)
+        {
             sdk.Slides[i].Layout.LayoutType.ShouldBe(custom.Slides[i].Layout.LayoutType,
                 $"{fileName}: slide {i + 1} layout type");
+        }
 
         for (var i = 0; i < custom.Slides.Count; i++)
             sdk.Slides[i].IsHidden.ShouldBe(custom.Slides[i].IsHidden, $"{fileName}: slide {i + 1} hidden flag");
 
         // Notes / sections / comment authors parity (M4).
         for (var i = 0; i < custom.Slides.Count; i++)
+        {
             sdk.Slides[i].Notes.NotesText.ShouldBe(custom.Slides[i].Notes.NotesText,
                 $"{fileName}: slide {i + 1} notes text");
+        }
+
         sdk.Sections.Count.ShouldBe(custom.Sections.Count, $"{fileName}: section count");
         sdk.CommentAuthors.Count.ShouldBe(custom.CommentAuthors.Count, $"{fileName}: comment author count");
 
@@ -139,19 +148,21 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
                 ss.Line.DashStyle.ShouldBe(cs.Line.DashStyle, $"{fileName}: s{i + 1} sh{j + 1} line dash");
 
                 // Pictures must resolve their embedded image bytes identically.
-                if (cs is Unchained.Pptx.Shapes.PictureShape cp
-                    && ss is Unchained.Pptx.Shapes.PictureShape sp)
+                if (cs is PictureShape cp
+                    && ss is PictureShape sp)
                 {
                     (sp.Image is not null).ShouldBe(cp.Image is not null,
                         $"{fileName}: slide {i + 1} shape {j + 1} image presence");
                     if (cp.Image is not null && sp.Image is not null)
+                    {
                         sp.Image.Data.Length.ShouldBe(cp.Image.Data.Length,
                             $"{fileName}: slide {i + 1} shape {j + 1} image byte length");
+                    }
                 }
 
                 // Charts must resolve the same model (type + series count) from the chart part.
-                if (cs is Unchained.Pptx.Shapes.ChartShape cc
-                    && ss is Unchained.Pptx.Shapes.ChartShape sc)
+                if (cs is ChartShape cc
+                    && ss is ChartShape sc)
                 {
                     sc.Chart.Type.ShouldBe(cc.Chart.Type,
                         $"{fileName}: slide {i + 1} shape {j + 1} chart type");
@@ -161,8 +172,8 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
 
                 // Text runs must carry identical formatting (M1): plain text, bold/italic,
                 // font size, font name, paragraph alignment.
-                if (cs is Unchained.Pptx.Shapes.AutoShape ca
-                    && ss is Unchained.Pptx.Shapes.AutoShape sa)
+                if (cs is AutoShape ca
+                    && ss is AutoShape sa)
                 {
                     var cParas = ca.TextFrame.Paragraphs;
                     var sParas = sa.TextFrame.Paragraphs;

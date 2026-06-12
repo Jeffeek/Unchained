@@ -7,8 +7,8 @@ public enum ConnectorType
     Straight,
 
     /// <summary>
-    /// A connector with one or more right-angle bends (elbow connector).
-    /// The exact path is calculated automatically.
+    ///     A connector with one or more right-angle bends (elbow connector).
+    ///     The exact path is calculated automatically.
     /// </summary>
     Bent,
 

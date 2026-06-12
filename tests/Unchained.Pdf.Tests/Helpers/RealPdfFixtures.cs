@@ -3,11 +3,64 @@ using Xunit;
 namespace Unchained.Pdf.Tests.Helpers;
 
 /// <summary>
-/// Locates real-world PDF files dropped into the <c>TestFiles/</c> folder.
-/// Tests call <see cref="TryLoad"/> and skip gracefully when a file is absent.
+///     Locates real-world PDF files dropped into the <c>TestFiles/</c> folder.
+///     Tests call <see cref="TryLoad" /> and skip gracefully when a file is absent.
 /// </summary>
 public static class RealPdfFixtures
 {
+    private static readonly string TestFilesDir =
+        Path.Combine(AppContext.BaseDirectory, "TestFiles");
+
+    /// <summary>
+    ///     Returns the full path to <paramref name="fileName" /> if the file exists in
+    ///     <c>TestFiles/</c>, otherwise <see langword="null" />.
+    /// </summary>
+    public static string? TryGetPath(string fileName)
+    {
+        var path = Path.Combine(TestFilesDir, fileName);
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>
+    ///     Reads <paramref name="fileName" /> from <c>TestFiles/</c> and returns the bytes,
+    ///     or <see langword="null" /> if the file does not exist.
+    /// </summary>
+    public static byte[]? TryLoad(string fileName)
+    {
+        var path = TryGetPath(fileName);
+        return path is null ? null : File.ReadAllBytes(path);
+    }
+
+    /// <summary>Returns <see langword="true" /> when <paramref name="fileName" /> exists.</summary>
+    /// <summary>Returns <see langword="true" /> when <paramref name="fileName" /> exists.</summary>
+    public static bool Exists(string fileName) => TryGetPath(fileName) is not null;
+
+    /// <summary>
+    ///     Loads <paramref name="fileName" /> from <c>TestFiles/</c> and returns the bytes.
+    ///     Skips the calling test (marks it as <em>Skipped</em>, not <em>Passed</em>) when the
+    ///     file is absent. Use instead of <c>if (bytes is null) return;</c>.
+    /// </summary>
+    public static byte[] LoadOrSkip(string fileName)
+    {
+        var bytes = TryLoad(fileName);
+        Assert.SkipWhen(bytes is null, $"TestFiles/{fileName} not found — drop the file into TestFiles/ to run this test.");
+
+        return bytes;
+    }
+
+    /// <summary>
+    ///     Enumerates all <c>*.pdf</c> files present in <c>TestFiles/</c>, returning their
+    ///     full paths. Used by smoke tests to drive a loop over every file.
+    ///     Returns an empty sequence when the folder is absent or empty.
+    /// </summary>
+    public static IEnumerable<object[]> AllPdfFilePaths() =>
+        Directory.Exists(TestFilesDir)
+            ? Directory
+                .GetFiles(TestFilesDir, "*.pdf")
+                .OrderBy(static p => p, StringComparer.OrdinalIgnoreCase)
+                .Select(static p => new object[] { p })
+            : [];
+
     /// <summary>Canonical file names expected in the <c>TestFiles/</c> folder.</summary>
     public static class Files
     {
@@ -70,57 +123,4 @@ public static class RealPdfFixtures
         /// <summary>PDF with internally inconsistent XObject references — tests error recovery.</summary>
         public const string WrongReferences = "wrong-references.pdf";
     }
-
-    private static readonly string TestFilesDir =
-        Path.Combine(AppContext.BaseDirectory, "TestFiles");
-
-    /// <summary>
-    /// Returns the full path to <paramref name="fileName"/> if the file exists in
-    /// <c>TestFiles/</c>, otherwise <see langword="null"/>.
-    /// </summary>
-    public static string? TryGetPath(string fileName)
-    {
-        var path = Path.Combine(TestFilesDir, fileName);
-        return File.Exists(path) ? path : null;
-    }
-
-    /// <summary>
-    /// Reads <paramref name="fileName"/> from <c>TestFiles/</c> and returns the bytes,
-    /// or <see langword="null"/> if the file does not exist.
-    /// </summary>
-    public static byte[]? TryLoad(string fileName)
-    {
-        var path = TryGetPath(fileName);
-        return path is null ? null : File.ReadAllBytes(path);
-    }
-
-    /// <summary>Returns <see langword="true"/> when <paramref name="fileName"/> exists.</summary>
-    /// <summary>Returns <see langword="true"/> when <paramref name="fileName"/> exists.</summary>
-    public static bool Exists(string fileName) => TryGetPath(fileName) is not null;
-
-    /// <summary>
-    /// Loads <paramref name="fileName"/> from <c>TestFiles/</c> and returns the bytes.
-    /// Skips the calling test (marks it as <em>Skipped</em>, not <em>Passed</em>) when the
-    /// file is absent. Use instead of <c>if (bytes is null) return;</c>.
-    /// </summary>
-    public static byte[] LoadOrSkip(string fileName)
-    {
-        var bytes = TryLoad(fileName);
-        Assert.SkipWhen(bytes is null, $"TestFiles/{fileName} not found — drop the file into TestFiles/ to run this test.");
-
-        return bytes;
-    }
-
-    /// <summary>
-    /// Enumerates all <c>*.pdf</c> files present in <c>TestFiles/</c>, returning their
-    /// full paths. Used by smoke tests to drive a loop over every file.
-    /// Returns an empty sequence when the folder is absent or empty.
-    /// </summary>
-    public static IEnumerable<object[]> AllPdfFilePaths() =>
-        Directory.Exists(TestFilesDir)
-            ? Directory
-                .GetFiles(TestFilesDir, "*.pdf")
-                .OrderBy(static p => p, StringComparer.OrdinalIgnoreCase)
-                .Select(static p => new object[] { p })
-            : [];
 }

@@ -1,17 +1,18 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
+using Unchained.Drawing.Constants;
+using Unchained.Drawing.Extensions;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Encoders;
 
 /// <summary>
-/// Encodes a <see cref="RasterBuffer"/> to PNG bytes using only BCL APIs
-/// (ZLibStream for DEFLATE, CRC32 computed from a look-up table).
-/// No external image library is required.
+///     Encodes a <see cref="RasterBuffer" /> to PNG bytes using only BCL APIs
+///     (ZLibStream for DEFLATE, CRC32 computed from a look-up table).
+///     No external image library is required.
 /// </summary>
 internal static class PngEncoder
 {
     private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
-    private static readonly uint[] Crc32Table = BuildCrcTable();
 
     internal static byte[] Encode(RasterBuffer buffer)
     {
@@ -19,7 +20,7 @@ internal static class PngEncoder
         ms.Write(PngSignature);
         WriteIHDR(ms, buffer.Width, buffer.Height);
         WriteIDAT(ms, buffer);
-        WriteChunk(ms, "IEND"u8, ReadOnlySpan<byte>.Empty);
+        WriteChunk(ms, PngConstants.IEND.ToUtf8Span(), ReadOnlySpan<byte>.Empty);
 
         return ms.ToArray();
     }
@@ -30,12 +31,13 @@ internal static class PngEncoder
         Span<byte> data = stackalloc byte[13];
         BinaryPrimitives.WriteInt32BigEndian(data[..], width);
         BinaryPrimitives.WriteInt32BigEndian(data[4..], height);
-        data[8] = 8;   // bit depth
-        data[9] = 6;   // colour type: RGBA
-        data[10] = 0;  // compression method
-        data[11] = 0;  // filter method
-        data[12] = 0;  // interlace: none
-        WriteChunk(stream, "IHDR"u8, data);
+        // ReSharper disable once GrammarMistakeInComment
+        data[8] = 8;  // bit depth
+        data[9] = 6;  // colour type: RGBA
+        data[10] = 0; // compression method
+        data[11] = 0; // filter method
+        data[12] = 0; // interlace: none
+        WriteChunk(stream, PngConstants.IHDR.ToUtf8Span(), data);
     }
 
     // ReSharper disable once InconsistentNaming
@@ -56,10 +58,10 @@ internal static class PngEncoder
         }
 
         using var compressedMs = new MemoryStream();
-        using (var zlib = new ZLibStream(compressedMs, CompressionLevel.Optimal, leaveOpen: true))
+        using (var zlib = new ZLibStream(compressedMs, CompressionLevel.Optimal, true))
             zlib.Write(raw);
 
-        WriteChunk(stream, "IDAT"u8, compressedMs.ToArray());
+        WriteChunk(stream, PngConstants.IDAT.ToUtf8Span(), compressedMs.ToArray());
     }
 
     private static void WriteChunk(Stream stream, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
@@ -70,9 +72,9 @@ internal static class PngEncoder
         stream.Write(type);
         if (data.Length > 0) stream.Write(data);
 
-        var crc = UpdateCrc(0xffffffff, type);
+        var crc = UpdateCrc(PngConstants.Crc32Init, type);
         crc = UpdateCrc(crc, data);
-        crc ^= 0xffffffff;
+        crc ^= PngConstants.Crc32Init;
 
         Span<byte> crcBuf = stackalloc byte[4];
         BinaryPrimitives.WriteUInt32BigEndian(crcBuf, crc);
@@ -82,22 +84,8 @@ internal static class PngEncoder
     private static uint UpdateCrc(uint crc, ReadOnlySpan<byte> data)
     {
         foreach (var b in data)
-            crc = Crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
+            crc = PngConstants.CtcTable[(crc ^ b) & JpegConstants.MarkerPrefix] ^ (crc >> 8);
 
         return crc;
-    }
-
-    private static uint[] BuildCrcTable()
-    {
-        var table = new uint[256];
-        for (var n = 0u; n < 256u; n++)
-        {
-            var c = n;
-            for (var k = 0; k < 8; k++)
-                c = (c & 1) != 0 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
-            table[n] = c;
-        }
-
-        return table;
     }
 }

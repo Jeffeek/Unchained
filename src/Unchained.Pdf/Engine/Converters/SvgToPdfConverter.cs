@@ -3,23 +3,24 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Pdf.Abstractions;
+using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine.Converters;
 
 /// <summary>
-/// Converts SVG markup to a single-page PDF document.
-/// <para>
-/// Supported elements: <c>rect</c>, <c>circle</c>, <c>ellipse</c>, <c>line</c>,
-/// <c>polyline</c>, <c>polygon</c>, <c>path</c>, <c>text</c>, <c>g</c>.
-/// Coordinate system: SVG uses top-left origin (Y↓); converted to PDF bottom-left (Y↑)
-/// using a <c>cm</c> transform that flips and scales the Y axis.
-/// </para>
-/// <para>
-/// When <see cref="SvgLoadOptions.Tagged"/> is <see langword="true"/>, the entire SVG
-/// content is wrapped in a <c>/Figure</c> marked-content sequence with an <c>/Alt</c>
-/// entry taken from <see cref="SvgLoadOptions.AltText"/>.
-/// </para>
+///     Converts SVG markup to a single-page PDF document.
+///     <para>
+///         Supported elements: <c>rect</c>, <c>circle</c>, <c>ellipse</c>, <c>line</c>,
+///         <c>polyline</c>, <c>polygon</c>, <c>path</c>, <c>text</c>, <c>g</c>.
+///         Coordinate system: SVG uses top-left origin (Y↓); converted to PDF bottom-left (Y↑)
+///         using a <c>cm</c> transform that flips and scales the Y axis.
+///     </para>
+///     <para>
+///         When <see cref="SvgLoadOptions.Tagged" /> is <see langword="true" />, the entire SVG
+///         content is wrapped in a <c>/Figure</c> marked-content sequence with an <c>/Alt</c>
+///         entry taken from <see cref="SvgLoadOptions.AltText" />.
+///     </para>
 /// </summary>
 internal static class SvgToPdfConverter
 {
@@ -82,11 +83,18 @@ internal static class SvgToPdfConverter
 
         var acc = new PdfPageAccumulator();
         var fontRef = acc.AddFont("Helvetica");
-        var fontMap = new Dictionary<string, Core.PdfIndirectReference> { ["F1"] = fontRef };
+        var fontMap = new Dictionary<string, PdfIndirectReference> { ["F1"] = fontRef };
 
         if (options.Tagged && taggedItems is not null)
             // ReSharper disable once BadListLineBreaks
-            acc.AddPage(options.PageWidthPt, options.PageHeightPt, buf.WrittenMemory.Span, fontMap, taggedItems, options.Language);
+        {
+            acc.AddPage(options.PageWidthPt,
+                options.PageHeightPt,
+                buf.WrittenMemory.Span,
+                fontMap,
+                taggedItems,
+                options.Language);
+        }
         else
             acc.AddPage(options.PageWidthPt, options.PageHeightPt, buf.WrittenMemory.Span, fontMap);
 
@@ -107,8 +115,8 @@ internal static class SvgToPdfConverter
                 case "circle": EmitCircle(child, w); break;
                 case "ellipse": EmitEllipse(child, w); break;
                 case "line": EmitLine(child, w); break;
-                case "polyline": EmitPolyline(child, w, close: false); break;
-                case "polygon": EmitPolyline(child, w, close: true); break;
+                case "polyline": EmitPolyline(child, w, false); break;
+                case "polygon": EmitPolyline(child, w, true); break;
                 case "path": EmitPath(child, w); break;
                 case "text": EmitText(child, w); break;
             }
@@ -180,7 +188,13 @@ internal static class SvgToPdfConverter
 
     // Approximate ellipse/circle with four cubic Bézier curves (kappa = 0.5523).
     [SuppressMessage("ReSharper", "BadListLineBreaks")]
-    private static void EmitEllipsePath(float cx, float cy, float rx, float ry, ContentStreamWriter w)
+    private static void EmitEllipsePath(
+        float cx,
+        float cy,
+        float rx,
+        float ry,
+        ContentStreamWriter w
+    )
     {
         const float k = 0.5523f;
         w.Float(cx + rx);
@@ -310,11 +324,11 @@ internal static class SvgToPdfConverter
     {
         var fill = el.Attribute("fill")?.Value ?? "black";
         if (fill != "none")
-            EmitColor(fill, w, stroke: false);
+            EmitColor(fill, w, false);
 
         var stroke = el.Attribute("stroke")?.Value;
         if (stroke is not null && stroke != "none")
-            EmitColor(stroke, w, stroke: true);
+            EmitColor(stroke, w, true);
     }
 
     private static void EmitColor(string color, ContentStreamWriter w, bool stroke)

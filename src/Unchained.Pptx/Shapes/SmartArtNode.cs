@@ -1,9 +1,9 @@
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
-/// A node in a SmartArt diagram — carries the text and a model identifier, with child nodes
-/// forming the diagram hierarchy. Editing the text is reflected back on save; structural layout
-/// is governed by the diagram's layout part (preserved verbatim).
+///     A node in a SmartArt diagram — carries the text and a model identifier, with child nodes
+///     forming the diagram hierarchy. Editing the text is reflected back on save; structural layout
+///     is governed by the diagram's layout part (preserved verbatim).
 /// </summary>
 public sealed class SmartArtNode
 {

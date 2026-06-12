@@ -1,15 +1,32 @@
+using System.Collections;
+using Unchained.Pptx.Models.Themes;
+
 namespace Unchained.Pptx.Slides;
 
 /// <summary>
-/// An ordered, mutable collection of <see cref="SlideLayout"/> objects belonging
-/// to a <see cref="MasterSlide"/>.
+///     An ordered, mutable collection of <see cref="SlideLayout" /> objects belonging
+///     to a <see cref="MasterSlide" />.
 /// </summary>
 public sealed class SlideLayoutCollection : IReadOnlyList<SlideLayout>
 {
     private readonly List<SlideLayout> _layouts = [];
 
-    /// <summary>The master that owns this collection. Set by <see cref="MasterSlide"/>.</summary>
+    /// <summary>The master that owns this collection. Set by <see cref="MasterSlide" />.</summary>
     internal MasterSlide? Owner { get; set; }
+
+    // ── IReadOnlyList<SlideLayout> ────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public int Count => _layouts.Count;
+
+    /// <inheritdoc cref="IReadOnlyList{T}.this" />
+    public SlideLayout this[int index] => _layouts[index];
+
+    /// <inheritdoc />
+    public IEnumerator<SlideLayout> GetEnumerator() => _layouts.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() =>
+        _layouts.GetEnumerator();
 
     // ── Mutation ─────────────────────────────────────────────────────────────
 
@@ -20,12 +37,12 @@ public sealed class SlideLayoutCollection : IReadOnlyList<SlideLayout>
     public void Remove(SlideLayout layout) => _layouts.Remove(layout);
 
     /// <summary>
-    /// Creates a new, empty slide layout, attaches it to the owning master, and returns it.
-    /// The layout starts with no placeholder shapes; add shapes via <see cref="SlideLayout.Shapes"/>.
+    ///     Creates a new, empty slide layout, attaches it to the owning master, and returns it.
+    ///     The layout starts with no placeholder shapes; add shapes via <see cref="SlideLayout.Shapes" />.
     /// </summary>
     /// <param name="name">The display name of the new layout.</param>
-    /// <param name="type">The layout type. Defaults to <see cref="Models.Themes.LayoutType.Custom"/>.</param>
-    public SlideLayout AddLayout(string name, Models.Themes.LayoutType type = Models.Themes.LayoutType.Custom)
+    /// <param name="type">The layout type. Defaults to <see cref="Models.Themes.LayoutType.Custom" />.</param>
+    public SlideLayout AddLayout(string name, LayoutType type = LayoutType.Custom)
     {
         var layout = new SlideLayout
         {
@@ -38,10 +55,10 @@ public sealed class SlideLayoutCollection : IReadOnlyList<SlideLayout>
     }
 
     /// <summary>
-    /// Creates a deep-ish copy of <paramref name="source"/> (its name, type, and shape list),
-    /// attaches it to the owning master, and returns it. The new layout gets fresh part/relationship
-    /// identity so it is written as a distinct part. Shapes are shared by reference, matching the
-    /// slide-clone semantics elsewhere in the API.
+    ///     Creates a deep-ish copy of <paramref name="source" /> (its name, type, and shape list),
+    ///     attaches it to the owning master, and returns it. The new layout gets fresh part/relationship
+    ///     identity so it is written as a distinct part. Shapes are shared by reference, matching the
+    ///     slide-clone semantics elsewhere in the API.
     /// </summary>
     public SlideLayout AddClone(SlideLayout source, string? newName = null)
     {
@@ -60,29 +77,15 @@ public sealed class SlideLayoutCollection : IReadOnlyList<SlideLayout>
     // ── Lookup ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the first layout whose name matches the given string (case-insensitive),
-    /// or <see langword="null"/> if none is found.
+    ///     Returns the first layout whose name matches the given string (case-insensitive),
+    ///     or <see langword="null" /> if none is found.
     /// </summary>
     public SlideLayout? FindByName(string name) =>
         _layouts.FirstOrDefault(l => l.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Returns the first layout with the given type, or <see langword="null"/> if none exists.
+    ///     Returns the first layout with the given type, or <see langword="null" /> if none exists.
     /// </summary>
-    public SlideLayout? FindByType(Models.Themes.LayoutType type) =>
+    public SlideLayout? FindByType(LayoutType type) =>
         _layouts.FirstOrDefault(l => l.LayoutType == type);
-
-    // ── IReadOnlyList<SlideLayout> ────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public int Count => _layouts.Count;
-
-    /// <inheritdoc cref="IReadOnlyList{T}.this" />
-    public SlideLayout this[int index] => _layouts[index];
-
-    /// <inheritdoc />
-    public IEnumerator<SlideLayout> GetEnumerator() => _layouts.GetEnumerator();
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
-        _layouts.GetEnumerator();
 }

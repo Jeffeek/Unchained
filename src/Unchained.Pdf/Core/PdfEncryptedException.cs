@@ -1,8 +1,8 @@
 namespace Unchained.Pdf.Core;
 
 /// <summary>
-/// Thrown when a PDF document is encrypted and cannot be opened without a valid password,
-/// or when the supplied password is incorrect.
+///     Thrown when a PDF document is encrypted and cannot be opened without a valid password,
+///     or when the supplied password is incorrect.
 /// </summary>
 public sealed class PdfEncryptedException : Exception
 {

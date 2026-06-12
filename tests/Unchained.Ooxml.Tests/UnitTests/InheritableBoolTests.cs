@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Ooxml;
 using Xunit;
 
 namespace Unchained.Ooxml.Tests.UnitTests;
@@ -41,6 +40,7 @@ public sealed class InheritableBoolTests
 
     [Fact]
     public void Equality_SameInstance_IsEqual() =>
+        // ReSharper disable once EqualExpressionComparison
         (InheritableBool.True == InheritableBool.True).ShouldBeTrue();
 
     [Fact]

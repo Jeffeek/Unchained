@@ -6,7 +6,7 @@ using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="IPageLabelEditor"/> implementation.</summary>
+/// <summary>Default <see cref="IPageLabelEditor" /> implementation.</summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class PageLabelEditor : IPageLabelEditor
 {

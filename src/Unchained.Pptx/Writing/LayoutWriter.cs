@@ -1,12 +1,13 @@
-using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes a <see cref="SlideLayout"/> to a PresentationML <c>&lt;p:sldLayout&gt;</c> element.
+///     Serializes a <see cref="SlideLayout" /> to a PresentationML <c>&lt;p:sldLayout&gt;</c> element.
 /// </summary>
 internal static class LayoutWriter
 {
@@ -54,11 +55,8 @@ internal static class LayoutWriter
                     new XAttribute(DmlNames.AttributeWidth, 0),
                     new XAttribute(DmlNames.AttributeHeight, 0)))));
 
-        foreach (var shape in layout.Shapes)
-        {
-            var el = ShapeWriter.Write(shape);
-            if (el != null) spTree.Add(el);
-        }
+        foreach (var el in layout.Shapes.Select(static shape => ShapeWriter.Write(shape)).OfType<XElement>())
+            spTree.Add(el);
 
         cSld.Add(spTree);
         sldLayout.Add(cSld);
@@ -69,18 +67,18 @@ internal static class LayoutWriter
         return sldLayout;
     }
 
-    private static string LayoutTypeToString(Models.Themes.LayoutType type) => type switch
+    private static string LayoutTypeToString(LayoutType type) => type switch
     {
-        Models.Themes.LayoutType.Blank => "blank",
-        Models.Themes.LayoutType.Title => "title",
-        Models.Themes.LayoutType.TitleAndContent => "obj",
-        Models.Themes.LayoutType.TitleAndTwoContent => "twoObj",
-        Models.Themes.LayoutType.TitleOnly => "titleOnly",
-        Models.Themes.LayoutType.SectionHeader => "secHead",
-        Models.Themes.LayoutType.TitleSlide => "ctrTitle",
-        Models.Themes.LayoutType.TwoTextColumns => "twoTx",
-        Models.Themes.LayoutType.TitleAndVerticalText => "vertTx",
-        Models.Themes.LayoutType.PictureWithCaption => "picTx",
+        LayoutType.Blank => "blank",
+        LayoutType.Title => "title",
+        LayoutType.TitleAndContent => "obj",
+        LayoutType.TitleAndTwoContent => "twoObj",
+        LayoutType.TitleOnly => "titleOnly",
+        LayoutType.SectionHeader => "secHead",
+        LayoutType.TitleSlide => "ctrTitle",
+        LayoutType.TwoTextColumns => "twoTx",
+        LayoutType.TitleAndVerticalText => "vertTx",
+        LayoutType.PictureWithCaption => "picTx",
         _ => string.Empty
     };
 }

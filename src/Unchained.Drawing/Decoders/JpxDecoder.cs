@@ -1,19 +1,19 @@
 using CoreJ2K;
 using CoreJ2K.Configuration;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes JPEG 2000-compressed data using CoreJ2K, producing a flat RGB byte array.
-/// Used by PDF /JPXDecode (ISO 32000-1 §7.4.9).
-/// Grayscale (1-component) images are expanded to R=G=B=Y.
+///     Decodes JPEG 2000-compressed data using CoreJ2K, producing a flat RGB byte array.
+///     Used by PDF /JPXDecode (ISO 32000-1 §7.4.9).
+///     Grayscale (1-component) images are expanded to R=G=B=Y.
 /// </summary>
 internal static class JpxDecoder
 {
     private static readonly J2KDecoderConfiguration DefaultConfig = new();
 
     /// <exception cref="NotSupportedException">
-    /// Image has an unsupported number of components (not 1 or 3).
+    ///     Image has an unsupported number of components (not 1 or 3).
     /// </exception>
     /// <exception cref="InvalidOperationException">JPEG 2000 data is malformed.</exception>
     internal static ReadOnlyMemory<byte> Decode(ReadOnlyMemory<byte> data)

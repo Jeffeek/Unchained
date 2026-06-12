@@ -1,6 +1,6 @@
 # Unchained.Pptx
 
-Free, MIT-licensed .NET library for reading, writing, and exporting PowerPoint (PPTX) presentations. Built from scratch against ECMA-376 (OpenXML), zero GPL/LGPL dependencies, async-first API.
+Free, MIT-licensed .NET library for reading, writing, and exporting PowerPoint (PPTX) presentations. Its core is implemented directly against ECMA-376 (OpenXML); all dependencies are permissively licensed (no GPL/LGPL), async-first API.
 
 ## Installation
 

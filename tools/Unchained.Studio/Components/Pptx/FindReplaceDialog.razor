@@ -4,7 +4,7 @@
 <MudDialog Style="min-width:460px; max-width:560px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Outlined.FindReplace" Class="mr-2" Style="vertical-align:middle;" />
+            <MudIcon Icon="@Icons.Material.Outlined.FindReplace" Class="mr-2" Style="vertical-align:middle;"/>
             Find &amp; Replace
         </MudText>
     </TitleContent>
@@ -17,9 +17,9 @@
             </MudText>
 
             <MudTextField @bind-Value="_find" Label="Find" Variant="Variant.Outlined"
-                          Margin="Margin.Dense" Immediate="true" />
+                          Margin="Margin.Dense" Immediate="true"/>
             <MudTextField @bind-Value="_replace" Label="Replace with" Variant="Variant.Outlined"
-                          Margin="Margin.Dense" Immediate="true" />
+                          Margin="Margin.Dense" Immediate="true"/>
 
             <div>
                 <MudCheckBox @bind-Value="_matchCase" Color="Color.Primary" Dense="true">
@@ -52,12 +52,16 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
-    [Parameter] public PresentationDocument Document { get; set; } = default!;
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = default!;
 
     /// <summary>Invoked after a successful replace so the host can refresh the session/tree.</summary>
-    [Parameter] public EventCallback OnReplaced { get; set; }
+    [Parameter]
+    public EventCallback OnReplaced { get; set; }
 
     private string _find = string.Empty;
     private string _replace = string.Empty;

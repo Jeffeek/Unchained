@@ -7,8 +7,8 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for PDF linearization (ISO 32000-1 Annex F / web-optimized output).
-/// Verifies structural constraints without requiring an external PDF tool.
+///     Tests for PDF linearization (ISO 32000-1 Annex F / web-optimized output).
+///     Verifies structural constraints without requiring an external PDF tool.
 /// </summary>
 public sealed class LinearizationTests : PdfTestBase
 {
@@ -103,14 +103,14 @@ public sealed class LinearizationTests : PdfTestBase
 
         // Extract /L value.
         var lIndex = preamble.IndexOf("/L ", StringComparison.Ordinal);
-        lIndex.ShouldBeGreaterThanOrEqualTo(0, customMessage: "/L entry must be present.");
+        lIndex.ShouldBeGreaterThanOrEqualTo(0, "/L entry must be present.");
 
         var afterL = preamble[(lIndex + 3)..].TrimStart();
         var end = afterL.IndexOfAny([' ', '\n', '\r', '>']);
         var lValueStr = end >= 0 ? afterL[..end] : afterL;
         long.TryParse(lValueStr, out var lValue).ShouldBeTrue($"Could not parse /L value from '{lValueStr}'.");
 
-        lValue.ShouldBe(bytes.Length, customMessage: "/L must equal the actual file length.");
+        lValue.ShouldBe(bytes.Length, "/L must equal the actual file length.");
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public sealed class LinearizationTests : PdfTestBase
         var text = Encoding.Latin1.GetString(bytes);
 
         var count = CountOccurrences(text, "xref\n");
-        count.ShouldBeGreaterThanOrEqualTo(2, customMessage: "A linearized PDF must have at least two xref sections.");
+        count.ShouldBeGreaterThanOrEqualTo(2, "A linearized PDF must have at least two xref sections.");
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public sealed class LinearizationTests : PdfTestBase
         var text = Encoding.Latin1.GetString(bytes);
 
         var count = CountOccurrences(text, "%%EOF");
-        count.ShouldBeGreaterThanOrEqualTo(2, customMessage: "A linearized PDF must have %%EOF after the first-page section and at the end.");
+        count.ShouldBeGreaterThanOrEqualTo(2, "A linearized PDF must have %%EOF after the first-page section and at the end.");
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public sealed class LinearizationTests : PdfTestBase
 
         doc.PageCount.ShouldBe(4);
         for (var i = 1; i <= 4; i++)
-            doc.Pages[i].ShouldNotBeNull(customMessage: $"Page {i} must be accessible after linearization.");
+            doc.Pages[i].ShouldNotBeNull($"Page {i} must be accessible after linearization.");
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────

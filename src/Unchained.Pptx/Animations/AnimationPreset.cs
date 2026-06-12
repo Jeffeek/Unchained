@@ -1,9 +1,9 @@
 namespace Unchained.Pptx.Animations;
 
 /// <summary>
-/// Common animation preset identifiers, matching the OOXML <c>presetID</c> attribute.
-/// The numeric value is the <c>presetID</c> used in the XML. The same ID number has
-/// different meanings for Entrance vs Exit vs Emphasis effects.
+///     Common animation preset identifiers, matching the OOXML <c>presetID</c> attribute.
+///     The numeric value is the <c>presetID</c> used in the XML. The same ID number has
+///     different meanings for Entrance vs Exit vs Emphasis effects.
 /// </summary>
 public enum AnimationPreset
 {
@@ -78,5 +78,5 @@ public enum AnimationPreset
     Spin = 5,
 
     /// <summary>Grow/shrink emphasis. presetID=6.</summary>
-    GrowShrink = 6,
+    GrowShrink = 6
 }

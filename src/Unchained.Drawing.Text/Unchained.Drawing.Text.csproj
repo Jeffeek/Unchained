@@ -1,4 +1,3 @@
-<!--EXTERNAL_PROPERTIES: AssetTargetFallback-->
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -7,8 +6,6 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- SharpFont 4.0.1 targets net45; enable fallback so the DLL resolves. -->
-    <AssetTargetFallback>$(AssetTargetFallback);net45</AssetTargetFallback>
     <PackageTags>drawing;text;freetype;harfbuzz;fonts;dotnet;csharp;document-processing</PackageTags>
     <IsPackable>true</IsPackable>
     <PackageId>Unchained.Drawing.Text</PackageId>
@@ -20,86 +17,21 @@
     <ProjectReference Include="..\Unchained.Drawing.Runtimes\Unchained.Drawing.Runtimes.csproj" />
   </ItemGroup>
 
-  <!-- Copy FreeType2 native libraries into runtimes/{rid}/native/ in the output. -->
+  <!-- FreeTypeSharp bundles win-x64/arm64/x86, linux-x64, and macOS. We only supply
+       linux-arm64 (FreeTypeSharp omits it). FreeTypeSharp's resolver probes
+       runtimes/linux-arm64/native/libfreetype.so, so the file is named without a version suffix. -->
   <Choose>
-    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-x64\native\freetype6.dll')">
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so')">
       <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-x64\native\freetype6.dll"
-              Link="runtimes\win-x64\native\freetype6.dll"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-arm64\native\freetype6.dll')">
-      <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\win-arm64\native\freetype6.dll"
-              Link="runtimes\win-arm64\native\freetype6.dll"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-x64\native\libfreetype.so.6')">
-      <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-x64\native\libfreetype.so.6"
-              Link="runtimes\linux-x64\native\libfreetype.so.6"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6')">
-      <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so.6"
-              Link="runtimes\linux-arm64\native\libfreetype.so.6"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-x64\native\libfreetype.so.6')">
-      <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-x64\native\libfreetype.so.6"
-              Link="runtimes\linux-musl-x64\native\libfreetype.so.6"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-arm64\native\libfreetype.so.6')">
-      <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-musl-arm64\native\libfreetype.so.6"
-              Link="runtimes\linux-musl-arm64\native\libfreetype.so.6"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib')">
-      <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-x64\native\libfreetype.6.dylib"
-              Link="runtimes\osx-x64\native\libfreetype.6.dylib"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="Exists('$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib')">
-      <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\osx-arm64\native\libfreetype.6.dylib"
-              Link="runtimes\osx-arm64\native\libfreetype.6.dylib"
-              CopyToOutputDirectory="PreserveNewest" Visible="false" />
+        <None Include="$(MSBuildThisFileDirectory)..\Unchained.Drawing.Runtimes\runtimes\linux-arm64\native\libfreetype.so" Link="runtimes\linux-arm64\native\libfreetype.so" CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>
   </Choose>
 
-  <!-- SharpFont 4.0.1 (MIT) — managed P/Invoke wrapper for FreeType2. -->
+  <!-- FreeTypeSharp (MIT) — FreeType2 binding with bundled native binaries.
+       Correct struct marshaling on every platform (no SharpFont Windows-x64 FT_Long bug). -->
   <ItemGroup>
-    <Reference Include="SharpFont">
-      <HintPath>libs\SharpFont.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
+    <PackageReference Include="FreeTypeSharp" />
   </ItemGroup>
 
   <!-- HarfBuzz (MIT) — text shaping for complex scripts. -->

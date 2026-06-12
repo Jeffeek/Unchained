@@ -1,19 +1,22 @@
 using System.Buffers;
 using System.Text;
 using System.Xml.Linq;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
+using Unchained.Pdf.Parsing.Filters;
 using Unchained.Pdf.Writing;
+using SaveOptions = System.Xml.Linq.SaveOptions;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Converts a document to a PDF/X-conformant structure (ISO 15930): adds an
-/// <c>/OutputIntents</c> array describing the target print condition with a
-/// <c>/GTS_PDFX</c> subtype, a <c>GTS_PDFXVersion</c> marker, and pdfxid XMP metadata.
-/// This applies the required structural markers; it does not perform colour conversion
-/// (e.g. RGB→CMYK), which would require an ICC colour-management engine.
+///     Converts a document to a PDF/X-conformant structure (ISO 15930): adds an
+///     <c>/OutputIntents</c> array describing the target print condition with a
+///     <c>/GTS_PDFX</c> subtype, a <c>GTS_PDFXVersion</c> marker, and pdfxid XMP metadata.
+///     This applies the required structural markers; it does not perform colour conversion
+///     (e.g. RGB→CMYK), which would require an ICC colour-management engine.
 /// </summary>
 internal static class PdfXConverter
 {
@@ -30,7 +33,7 @@ internal static class PdfXConverter
         if (catalogIdx < 0)
             throw new InvalidOperationException("Cannot locate catalog object.");
 
-        var catalogDict = (objects[catalogIdx].Value as PdfDictionary) ?? throw new InvalidOperationException("Catalog is not a dictionary.");
+        var catalogDict = objects[catalogIdx].Value as PdfDictionary ?? throw new InvalidOperationException("Catalog is not a dictionary.");
         var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries);
 
         // ── 1. /OutputIntents with a GTS_PDFX intent ──────────────────────────
@@ -55,19 +58,19 @@ internal static class PdfXConverter
             ["Subtype"] = PdfName.Get("XML"),
             ["Length"] = new PdfInteger(xmpBytes.Length)
         });
-        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes)));
+        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
         catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
 
         // ── 3. Info dict needs GTS_PDFXVersion + a Title (PDF/X requires both) ──
         var infoRef = core.Trailer[PdfName.Info] as PdfIndirectReference;
-        var infoObjNum = infoRef?.ObjectNumber ?? maxObj + 3;
+        var infoObjNum = infoRef?.ObjectNumber ?? (maxObj + 3);
         var infoEntries = new Dictionary<string, PdfObject>();
         if (infoRef is not null)
         {
-            var existingInfo = core.ResolveIndirect(infoRef.ObjectNumber).Value as PdfDictionary;
-            if (existingInfo is not null)
+            if (core.ResolveIndirect(infoRef.ObjectNumber).Value is PdfDictionary existingInfo)
                 infoEntries = new Dictionary<string, PdfObject>(existingInfo.Entries);
         }
+
         infoEntries["GTS_PDFXVersion"] = PdfString.FromLatin1(VersionString(profile));
         if (!infoEntries.ContainsKey("Title"))
             infoEntries["Title"] = PdfString.FromLatin1("Untitled");
@@ -94,8 +97,10 @@ internal static class PdfXConverter
         else
         {
             var hex = new string('0', 32);
-            trailerEntries["ID"] = new PdfArray([new PdfString(Encoding.Latin1.GetBytes(hex), isHex: true),
-                                                 new PdfString(Encoding.Latin1.GetBytes(hex), isHex: true)]);
+            trailerEntries["ID"] = new PdfArray([
+                new PdfString(Encoding.Latin1.GetBytes(hex), true),
+                new PdfString(Encoding.Latin1.GetBytes(hex), true)
+            ]);
         }
 
         var buf = new ArrayBufferWriter<byte>();
@@ -108,13 +113,13 @@ internal static class PdfXConverter
     {
         PdfXProfile.PdfX1A2001 => "PDF/X-1a:2001",
         PdfXProfile.PdfX1A2003 => "PDF/X-1a:2003",
-        PdfXProfile.PdfX3_2002 => "PDF/X-3:2002",
-        PdfXProfile.PdfX3_2003 => "PDF/X-3:2003",
+        PdfXProfile.PdfX32002 => "PDF/X-3:2002",
+        PdfXProfile.PdfX32003 => "PDF/X-3:2003",
         PdfXProfile.PdfX4 => "PDF/X-4",
         _ => "PDF/X-1a:2001"
     };
 
-    private static byte[] BuildPdfXXmp(PdfXProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
+    private static ReadOnlySpan<byte> BuildPdfXXmp(PdfXProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
     {
         var existing = ReadExistingXmp(catalogEntries, core);
         var xmpDoc = (existing is not null ? TryParse(existing) : null) ?? CreateMinimalXmp();
@@ -122,6 +127,8 @@ internal static class PdfXConverter
         XNamespace rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
         XNamespace pdfxid = "http://www.npes.org/pdfx/ns/id/";
         var rdfRoot = xmpDoc.Descendants(rdf + "RDF").FirstOrDefault();
+
+        // ReSharper disable once InvertIf
         if (rdfRoot is not null)
         {
             var desc = rdfRoot.Elements(rdf + "Description").FirstOrDefault(d => d.Attribute(rdf + "about") is not null)
@@ -133,7 +140,7 @@ internal static class PdfXConverter
             SetOrAdd(desc, pdfxid + "GTS_PDFXVersion", VersionString(profile));
         }
 
-        return Encoding.UTF8.GetBytes(xmpDoc.ToString(System.Xml.Linq.SaveOptions.OmitDuplicateNamespaces));
+        return xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces).ToUtf8Span();
     }
 
     private static string? ReadExistingXmp(IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
@@ -145,9 +152,17 @@ internal static class PdfXConverter
             PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
             _ => null
         };
-        if (stream is null) return null;
-        try { return Encoding.UTF8.GetString(Parsing.Filters.StreamFilters.Decode(stream).Span); }
-        catch { return null; }
+        if (stream is null)
+            return null;
+
+        try
+        {
+            return StreamFilters.Decode(stream).Span.FromUtf8Span();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static XDocument? TryParse(string xml)

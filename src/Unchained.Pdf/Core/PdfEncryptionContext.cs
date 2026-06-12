@@ -3,13 +3,13 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Core;
 
 /// <summary>
-/// Holds the active encryption key and algorithm for a PDF document.
-/// Used both during reading (transparent decryption) and writing (transparent encryption).
+///     Holds the active encryption key and algorithm for a PDF document.
+///     Used both during reading (transparent decryption) and writing (transparent encryption).
 /// </summary>
 internal sealed class PdfEncryptionContext
 {
-    private readonly byte[] _fileKey;
     private readonly PdfEncryptionAlgorithm _algorithm;
+    private readonly byte[] _fileKey;
 
     internal PdfEncryptionContext(byte[] fileKey, PdfEncryptionAlgorithm algorithm, PdfPermissions permissions = PdfPermissions.All)
     {
@@ -23,8 +23,8 @@ internal sealed class PdfEncryptionContext
     internal PdfEncryptionAlgorithm Algorithm { get; }
 
     /// <summary>
-    /// Operations permitted when the document is opened with the user password.
-    /// Always <see cref="PdfPermissions.All"/> on the write path (owner has full access).
+    ///     Operations permitted when the document is opened with the user password.
+    ///     Always <see cref="PdfPermissions.All" /> on the write path (owner has full access).
     /// </summary>
     internal PdfPermissions Permissions { get; }
 
@@ -36,7 +36,7 @@ internal sealed class PdfEncryptionContext
         if (_algorithm == PdfEncryptionAlgorithm.Aes256)
             return PdfEncryption.AesEncryptCbcWithIv(_fileKey, data.ToArray());
 
-        var key = PdfEncryption.DeriveObjectKey(_fileKey, objNum, genNum, isAes: _algorithm == PdfEncryptionAlgorithm.Aes128);
+        var key = PdfEncryption.DeriveObjectKey(_fileKey, objNum, genNum, _algorithm == PdfEncryptionAlgorithm.Aes128);
 
         return _algorithm == PdfEncryptionAlgorithm.Aes128
             ? PdfEncryption.AesEncryptCbcWithIv(key, data.ToArray())
@@ -55,7 +55,7 @@ internal sealed class PdfEncryptionContext
                 : PdfEncryption.AesDecryptCbc(_fileKey, data[..16].ToArray(), data[16..].ToArray());
         }
 
-        var key = PdfEncryption.DeriveObjectKey(_fileKey, objNum, genNum, isAes: _algorithm == PdfEncryptionAlgorithm.Aes128);
+        var key = PdfEncryption.DeriveObjectKey(_fileKey, objNum, genNum, _algorithm == PdfEncryptionAlgorithm.Aes128);
 
         return _algorithm != PdfEncryptionAlgorithm.Aes128
             ? PdfEncryption.Rc4(key, data.ToArray())
@@ -77,9 +77,9 @@ internal sealed class PdfEncryptionContext
     // ── Object-tree walk: decrypt all strings and streams ────────────────────
 
     /// <summary>
-    /// Returns a new <see cref="PdfIndirectObject"/> with all <see cref="PdfString"/> values
-    /// and <see cref="PdfStream"/> data decrypted. The object number and generation are used
-    /// to derive the per-object key for V≤4 algorithms.
+    ///     Returns a new <see cref="PdfIndirectObject" /> with all <see cref="PdfString" /> values
+    ///     and <see cref="PdfStream" /> data decrypted. The object number and generation are used
+    ///     to derive the per-object key for V≤4 algorithms.
     /// </summary>
     internal PdfIndirectObject DecryptObject(PdfIndirectObject obj)
     {
@@ -89,8 +89,8 @@ internal sealed class PdfEncryptionContext
     }
 
     /// <summary>
-    /// Returns a new <see cref="PdfIndirectObject"/> with all <see cref="PdfString"/> values
-    /// and <see cref="PdfStream"/> data encrypted. Used during the write path.
+    ///     Returns a new <see cref="PdfIndirectObject" /> with all <see cref="PdfString" /> values
+    ///     and <see cref="PdfStream" /> data encrypted. Used during the write path.
     /// </summary>
     internal PdfIndirectObject EncryptObject(PdfIndirectObject obj)
     {
@@ -112,7 +112,7 @@ internal sealed class PdfEncryptionContext
     {
         // Always use hex encoding for encrypted strings: binary AES output is not safe
         // in literal (parenthesis) strings due to potential null-byte and escape issues.
-        PdfString s => new PdfString(EncryptString(s.Bytes.Span, objNum, gen), isHex: true),
+        PdfString s => new PdfString(EncryptString(s.Bytes.Span, objNum, gen), true),
         PdfStream st => EncryptPdfStream(st, objNum, gen),
         PdfDictionary d => EncryptDictionary(d, objNum, gen),
         PdfArray a => EncryptArray(a, objNum, gen),

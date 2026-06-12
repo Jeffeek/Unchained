@@ -6,8 +6,8 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for <see cref="Abstractions.IDocumentProcessor.SetMetadataAsync"/> —
-/// writing the PDF /Info dictionary (ISO 32000-1 §14.3.3).
+///     Tests for <see cref="Abstractions.IDocumentProcessor.SetMetadataAsync" /> —
+///     writing the PDF /Info dictionary (ISO 32000-1 §14.3.3).
 /// </summary>
 public sealed class InfoWriteTests : PdfTestBase
 {
@@ -21,7 +21,14 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: "My Title", null, null, null, null, null, null, null),
+            new DocumentMetadata("My Title",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
@@ -36,7 +43,14 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(null, Author: "Alice", null, null, null, null, null, null),
+            new DocumentMetadata(null,
+                "Alice",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
@@ -51,14 +65,14 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             new DocumentMetadata(
-                Title: "Report",
-                Author: "Bob",
-                Subject: "Monthly summary",
-                Keywords: "pdf test",
-                Creator: "Unchained",
-                Producer: "Unchained.Pdf",
-                CreationDate: null,
-                ModificationDate: null),
+                "Report",
+                "Bob",
+                "Monthly summary",
+                "pdf test",
+                "Unchained",
+                "Unchained.Pdf",
+                null,
+                null),
             TestContext.Current.CancellationToken);
 
         doc.Metadata.Title.ShouldBe("Report");
@@ -80,7 +94,14 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: "Original", null, null, null, null, null, null, null),
+            new DocumentMetadata("Original",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
@@ -88,11 +109,18 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(null, Author: "Alice", null, null, null, null, null, null),
+            new DocumentMetadata(null,
+                "Alice",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
-        doc.Metadata.Title.ShouldBe("Original", customMessage: "Title must not be overwritten when null is passed.");
+        doc.Metadata.Title.ShouldBe("Original", "Title must not be overwritten when null is passed.");
         doc.Metadata.Author.ShouldBe("Alice");
     }
 
@@ -106,7 +134,14 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: "Persisted", Author: "Carol", null, null, null, null, null, null),
+            new DocumentMetadata("Persisted",
+                "Carol",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
@@ -124,14 +159,28 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: "First", null, null, null, null, null, null, null),
+            new DocumentMetadata("First",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: "Second", null, null, null, null, null, null, null),
+            new DocumentMetadata("Second",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
@@ -150,7 +199,14 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: "From Txt", null, null, null, null, null, null, null),
+            new DocumentMetadata("From Txt",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
@@ -165,14 +221,28 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: "Initial", null, null, null, null, null, null, null),
+            new DocumentMetadata("Initial",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: string.Empty, null, null, null, null, null, null, null),
+            new DocumentMetadata(string.Empty,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 
@@ -191,7 +261,14 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(Title: "Three Pages", null, null, null, null, null, null, null),
+            new DocumentMetadata("Three Pages",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null),
             // ReSharper restore BadListLineBreaks
             TestContext.Current.CancellationToken);
 

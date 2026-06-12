@@ -1,5 +1,8 @@
-@using Unchained.Studio.Enums
-@inject Unchained.Pdf.Engine.DocumentProcessor Processor
+@using System.IO.Compression
+@using System.Text
+@using Unchained.Pdf.Abstractions
+@using Unchained.Pdf.Engine
+@inject DocumentProcessor Processor
 @inject RenderingService Renderer
 @inject PdfiumReferenceRenderer PdfiumRenderer
 @inject FileExportService Exporter
@@ -9,7 +12,7 @@
 <MudDialog Style="min-width:520px; max-width:680px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Outlined.BatchPrediction" Class="mr-2" Style="vertical-align:middle;" />
+            <MudIcon Icon="@Icons.Material.Outlined.BatchPrediction" Class="mr-2" Style="vertical-align:middle;"/>
             Batch Comparison Export
         </MudText>
     </TitleContent>
@@ -35,7 +38,7 @@
                     {
                         <div class="batch-drop-hint" @onclick="TriggerFilePicker">
                             <MudIcon Icon="@Icons.Material.Outlined.UploadFile"
-                                     Style="font-size:2.5rem;opacity:.35;" />
+                                     Style="font-size:2.5rem;opacity:.35;"/>
                             <MudText Typo="Typo.body2" Style="opacity:.5;margin-top:8px;">
                                 Click to select PDF files
                             </MudText>
@@ -48,7 +51,7 @@
                             {
                                 <div class="batch-file-row">
                                     <MudIcon Icon="@Icons.Material.Outlined.PictureAsPdf"
-                                             Size="Size.Small" Style="opacity:.5;flex-shrink:0;" />
+                                             Size="Size.Small" Style="opacity:.5;flex-shrink:0;"/>
                                     <MudText Typo="Typo.body2"
                                              Class="batch-file-name"
                                              title="@f.FileName">
@@ -59,7 +62,7 @@
                                     </MudText>
                                     <MudIconButton Icon="@Icons.Material.Outlined.Close"
                                                    Size="Size.Small"
-                                                   OnClick="() => RemoveFile(f)" />
+                                                   OnClick="() => RemoveFile(f)"/>
                                 </div>
                             }
                             <div style="padding:4px 0 0 4px;">
@@ -76,7 +79,7 @@
                                OnChange="OnFilesSelected"
                                accept=".pdf"
                                multiple
-                               style="display:none;" />
+                               style="display:none;"/>
                 </div>
 
                 <!-- Options row -->
@@ -96,7 +99,7 @@
                                               Variant="Variant.Text" Margin="Margin.Dense"
                                               Style="width:40px;display:inline-block;margin:0 4px;"
                                               Min="1" Max="999"
-                                              Disabled="@(_pageScope != PageScope.FirstN)" />
+                                              Disabled="@(_pageScope != PageScope.FirstN)"/>
                                 pages
                             </MudRadio>
                         </MudRadioGroup>
@@ -114,7 +117,7 @@
                         <MudText Typo="Typo.subtitle2" Class="mb-1 mt-3">ZIP filename</MudText>
                         <MudTextField @bind-Value="_zipName"
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
-                                      Adornment="Adornment.End" AdornmentText=".zip" />
+                                      Adornment="Adornment.End" AdornmentText=".zip"/>
                     </MudItem>
                 </MudGrid>
 
@@ -140,7 +143,7 @@
                         </MudText>
                     </div>
                     <MudProgressLinear Value="@OverallPercent"
-                                       Color="Color.Primary" Rounded="true" />
+                                       Color="Color.Primary" Rounded="true"/>
                 </div>
 
                 <!-- Current file detail -->
@@ -154,7 +157,7 @@
                         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
                             <MudProgressLinear Value="@PagePercent"
                                                Color="Color.Secondary" Rounded="true"
-                                               Style="flex:1;" />
+                                               Style="flex:1;"/>
                             <MudText Typo="Typo.caption" Style="opacity:.6;white-space:nowrap;">
                                 @_pageMessage
                             </MudText>
@@ -171,20 +174,20 @@
                             {
                                 case BatchStatus.Waiting:
                                     <MudIcon Icon="@Icons.Material.Outlined.HourglassEmpty"
-                                             Size="Size.Small" Style="opacity:.3;" />
-                                    break;
+                                             Size="Size.Small" Style="opacity:.3;"/>
+                                break;
                                 case BatchStatus.Processing:
                                     <MudProgressCircular Size="Size.Small" Indeterminate="true"
-                                                         Color="Color.Primary" />
-                                    break;
+                                                         Color="Color.Primary"/>
+                                break;
                                 case BatchStatus.Done:
                                     <MudIcon Icon="@Icons.Material.Outlined.CheckCircle"
-                                             Size="Size.Small" Color="Color.Success" />
-                                    break;
+                                             Size="Size.Small" Color="Color.Success"/>
+                                break;
                                 case BatchStatus.Failed:
                                     <MudIcon Icon="@Icons.Material.Outlined.Error"
-                                             Size="Size.Small" Color="Color.Error" />
-                                    break;
+                                             Size="Size.Small" Color="Color.Error"/>
+                                break;
                             }
                             <MudText Typo="Typo.body2" Class="batch-file-name"
                                      title="@f.FileName">
@@ -235,7 +238,9 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
 
     // ── State ──────────────────────────────────────────────────────────────────
 
@@ -255,10 +260,12 @@
     private int _currentPageDone;
     private int _currentPageTotal;
 
-    private double OverallPercent => _files.Count == 0 ? 0
+    private double OverallPercent => _files.Count == 0
+        ? 0
         : _filesProcessed * 100.0 / _files.Count;
 
-    private double PagePercent => _currentPageTotal == 0 ? 0
+    private double PagePercent => _currentPageTotal == 0
+        ? 0
         : _currentPageDone * 100.0 / _currentPageTotal;
 
     private CancellationTokenSource? _cts;
@@ -266,8 +273,8 @@
 
     // Timeouts — tuned conservatively; native FreeType crashes kill the process
     // regardless of timeout, but these prevent indefinite hangs for stuck pages.
-    private static readonly TimeSpan DocTimeout  = TimeSpan.FromSeconds(120); // per document
-    private static readonly TimeSpan PageTimeout = TimeSpan.FromSeconds(30);  // Unchained + Pdfium per page
+    private static readonly TimeSpan DocTimeout = TimeSpan.FromSeconds(120); // per document
+    private static readonly TimeSpan PageTimeout = TimeSpan.FromSeconds(30); // Unchained + Pdfium per page
 
     // ── File management ────────────────────────────────────────────────────────
 
@@ -337,13 +344,13 @@
             _overallMessage = $"Processing {entry.FileName}…";
             StateHasChanged();
 
-            var folderName = $"{(_filesProcessed + 1):D3}_{SanitizeName(Path.GetFileNameWithoutExtension(entry.FileName))}";
+            var folderName = $"{_filesProcessed + 1:D3}_{SanitizeName(Path.GetFileNameWithoutExtension(entry.FileName))}";
             var pageErrors = new List<string>();
 
             try
             {
                 // ── Load document ──────────────────────────────────────────
-                Unchained.Pdf.Abstractions.IPdfDocument? doc = null;
+                IPdfDocument? doc = null;
                 try
                 {
                     using var ms = new MemoryStream(entry.Bytes);
@@ -419,7 +426,7 @@
                         pdfiumCts.CancelAfter(PageTimeout);
                         try
                         {
-                            var pdfiumPng = await PdfiumRenderer.RenderPageAsync(entry.Bytes, page, _dpi, pdfiumCts.Token);
+                            var pdfiumPng = await PdfiumReferenceRenderer.RenderPageAsync(entry.Bytes, page, _dpi, pdfiumCts.Token);
                             if (pdfiumPng is not null)
                             {
                                 zipEntries.Add(($"{folderName}/pdfium/page_{page:D3}.png", pdfiumPng));
@@ -509,22 +516,22 @@
     private List<int> ResolvePagesForEntry(int pageCount) => _pageScope switch
     {
         PageScope.FirstOnly => [1],
-        PageScope.FirstN    => Enumerable.Range(1, Math.Min(_firstN, pageCount)).ToList(),
-        _                   => Enumerable.Range(1, pageCount).ToList()
+        PageScope.FirstN => Enumerable.Range(1, Math.Min(_firstN, pageCount)).ToList(),
+        _ => Enumerable.Range(1, pageCount).ToList()
     };
 
     private static string SanitizeName(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
         return new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray())
-               .TrimEnd('.', ' ');
+            .TrimEnd('.', ' ');
     }
 
     private static string FormatBytes(long bytes) => bytes switch
     {
-        < 1024       => $"{bytes} B",
+        < 1024 => $"{bytes} B",
         < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
-        _             => $"{bytes / 1024.0 / 1024.0:F1} MB"
+        _ => $"{bytes / 1024.0 / 1024.0:F1} MB"
     };
 
     private string EstimateLabel()
@@ -532,8 +539,8 @@
         var totalPages = _pageScope switch
         {
             PageScope.FirstOnly => _files.Count,
-            PageScope.FirstN    => _files.Count * _firstN,
-            _                   => 0  // unknown until loaded
+            PageScope.FirstN => _files.Count * _firstN,
+            _ => 0 // unknown until loaded
         };
 
         var pageText = _pageScope == PageScope.All
@@ -545,20 +552,20 @@
 
     private string StatusLabel(BatchEntry f) => f.Status switch
     {
-        BatchStatus.Waiting    => "waiting",
+        BatchStatus.Waiting => "waiting",
         BatchStatus.Processing => _pageMessage,
-        BatchStatus.Done       => f.LoadError is null
-                                   ? $"{f.PagesOkUnchained}/{f.TotalPages} p. Unchained · {f.PagesOkPdfJs}/{f.TotalPages} Pdfium"
-                                   : $"load error",
-        BatchStatus.Failed     => f.LoadError ?? "failed",
-        _                      => string.Empty
+        BatchStatus.Done => f.LoadError is null
+            ? $"{f.PagesOkUnchained}/{f.TotalPages} p. Unchained · {f.PagesOkPdfJs}/{f.TotalPages} Pdfium"
+            : "load error",
+        BatchStatus.Failed => f.LoadError ?? "failed",
+        _ => string.Empty
     };
 
     // ── Markdown builders ──────────────────────────────────────────────────────
 
     private static byte[] BuildFileReadme(BatchEntry f, int dpi, DateTime utc)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine($"# {f.FileName}");
         sb.AppendLine();
         sb.AppendLine("| Property | Value |");
@@ -568,8 +575,8 @@
         sb.AppendLine($"| Pages (PDF) | {f.TotalPages} |");
         sb.AppendLine($"| Resolution | {dpi} DPI |");
         sb.AppendLine($"| Rendered at | {utc:yyyy-MM-dd HH:mm:ss} UTC |");
-        sb.AppendLine($"| Unchained.Pdf | v0.1.0 |");
-        sb.AppendLine($"| Pdfium | 3.11.174 |");
+        sb.AppendLine("| Unchained.Pdf | v0.1.0 |");
+        sb.AppendLine("| Pdfium | 3.11.174 |");
 
         if (f.LoadError is not null)
         {
@@ -587,7 +594,7 @@
                 sb.AppendLine($"- {e}");
         }
 
-        return System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+        return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
     private static string BuildSummaryRow(int index, BatchEntry f, string folder)
@@ -604,18 +611,19 @@
         List<BatchEntry> files,
         List<string> summaryRows,
         int dpi,
-        DateTime utc)
+        DateTime utc
+    )
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine("# Batch Comparison Report");
         sb.AppendLine();
-        sb.AppendLine($"| Property | Value |");
-        sb.AppendLine($"|---|---|");
+        sb.AppendLine("| Property | Value |");
+        sb.AppendLine("|---|---|");
         sb.AppendLine($"| Generated | {utc:yyyy-MM-dd HH:mm:ss} UTC |");
         sb.AppendLine($"| Files | {files.Count} |");
         sb.AppendLine($"| Resolution | {dpi} DPI |");
-        sb.AppendLine($"| Unchained.Pdf | v0.1.0 |");
-        sb.AppendLine($"| Pdfium | 3.11.174 |");
+        sb.AppendLine("| Unchained.Pdf | v0.1.0 |");
+        sb.AppendLine("| Pdfium | 3.11.174 |");
         sb.AppendLine();
         sb.AppendLine("## Files");
         sb.AppendLine();
@@ -624,24 +632,26 @@
         foreach (var row in summaryRows)
             sb.AppendLine(row);
 
-        return System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+        return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
     private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
     {
         using var ms = new MemoryStream();
-        using (var zip = new System.IO.Compression.ZipArchive(
+        using (var zip = new ZipArchive(
                    ms,
-                   System.IO.Compression.ZipArchiveMode.Create,
-                   leaveOpen: true))
+                   ZipArchiveMode.Create,
+                   true))
         {
             foreach (var (path, data) in entries)
             {
-                var entry = zip.CreateEntry(path, System.IO.Compression.CompressionLevel.Optimal);
+                var entry = zip.CreateEntry(path, CompressionLevel.Optimal);
                 using var stream = entry.Open();
                 stream.Write(data);
             }
         }
+
         return ms.ToArray();
     }
+
 }

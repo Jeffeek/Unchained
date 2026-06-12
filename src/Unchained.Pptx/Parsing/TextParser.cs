@@ -1,21 +1,22 @@
 using System.Xml.Linq;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Xml;
-using Unchained.Ooxml.Text;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Text;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses DrawingML text body elements (<c>&lt;a:txBody&gt;</c> / <c>&lt;p:txBody&gt;</c>)
-/// into <see cref="TextFrame"/> objects.
+///     Parses DrawingML text body elements (<c>&lt;a:txBody&gt;</c> / <c>&lt;p:txBody&gt;</c>)
+///     into <see cref="TextFrame" /> objects.
 /// </summary>
 internal static class TextParser
 {
     /// <summary>
-    /// Reads a <c>&lt;p:txBody&gt;</c> or <c>&lt;a:txBody&gt;</c> element and returns
-    /// a populated <see cref="TextFrame"/>. Returns <see langword="null"/> when the element
-    /// is absent.
+    ///     Reads a <c>&lt;p:txBody&gt;</c> or <c>&lt;a:txBody&gt;</c> element and returns
+    ///     a populated <see cref="TextFrame" />. Returns <see langword="null" /> when the element
+    ///     is absent.
     /// </summary>
     public static TextFrame? Parse(XElement parent, XName textBodyName)
     {
@@ -29,11 +30,8 @@ internal static class TextParser
         var frame = new TextFrame();
         ParseBodyProperties(txBody.Element(DmlNames.BodyProperties), frame.Format);
 
-        foreach (var pEl in txBody.Elements(DmlNames.Paragraph))
-        {
-            var para = ParseParagraph(pEl);
+        foreach (var para in txBody.Elements(DmlNames.Paragraph).Select(ParseParagraph))
             frame.Paragraphs.Add(para);
-        }
 
         return frame;
     }
@@ -85,7 +83,7 @@ internal static class TextParser
         var warp = bodyPr.Element(DmlNames.Dml + "prstTxWarp");
         var warpPreset = warp?.GetAttr("prst");
         if (!string.IsNullOrEmpty(warpPreset))
-            format.Warp = new Unchained.Ooxml.Drawing.TextWarpFormat { Preset = warpPreset };
+            format.Warp = new TextWarpFormat { Preset = warpPreset };
     }
 
     private static Paragraph ParseParagraph(XElement pEl)
@@ -103,7 +101,7 @@ internal static class TextParser
             else if (child.Name == DmlNames.Field)
                 para.Runs.Add(ParseField(child));
             else if (child.Name == DmlNames.LineBreak)
-                para.Runs.Add(new Run { Text = "\n" } );
+                para.Runs.Add(new Run { Text = "\n" });
         }
 
         return para;
@@ -144,7 +142,7 @@ internal static class TextParser
         ParseBullet(pPr, para.Bullet);
     }
 
-    private static Run ParseRun(XElement rEl)
+    private static Run ParseRun(XContainer rEl)
     {
         var run = new Run
         {
@@ -222,6 +220,7 @@ internal static class TextParser
             LineParser.Parse(rPr, outline);
             format.Outline = outline;
         }
+
         EffectParser.Parse(rPr, format.Effects);
 
         // Click hyperlink (<a:hlinkClick>) — capture relationship id + tooltip; the URL/slide
@@ -231,13 +230,13 @@ internal static class TextParser
         {
             format.Hyperlink = new RunHyperlink
             {
-                RelationshipId = (string?)hlink.Attribute(Core.Xml.PmlNames.Relationships + "id") ?? string.Empty,
-                Tooltip = (string?)hlink.Attribute("tooltip"),
+                RelationshipId = (string?)hlink.Attribute(PmlNames.Relationships + "id") ?? string.Empty,
+                Tooltip = (string?)hlink.Attribute("tooltip")
             };
         }
     }
 
-    private static void ParseBullet(XElement pPr, BulletFormat bullet)
+    private static void ParseBullet(XContainer pPr, BulletFormat bullet)
     {
         if (pPr.Element(DmlNames.BulletNone) != null)
         {
@@ -279,17 +278,15 @@ internal static class TextParser
         }
 
         var buSzPct = pPr.Element(DmlNames.BulletSizePercent);
-        if (buSzPct != null)
-        {
-            var val = buSzPct.GetAttrInt(DmlNames.AttributeValue);
-            if (val.HasValue)
-                bullet.SizePercent = val.Value / 1_000.0;
-        }
+
+        var val = buSzPct?.GetAttrInt(DmlNames.AttributeValue);
+        if (val.HasValue)
+            bullet.SizePercent = val.Value / 1_000.0;
     }
 
     // ── Spacing ───────────────────────────────────────────────────────────────
 
-    private static LineSpacing? ParseSpacing(XElement lnSpcEl)
+    private static LineSpacing? ParseSpacing(XContainer lnSpcEl)
     {
         var pts = lnSpcEl.Element(DmlNames.SpacingPoints);
         if (pts != null)
@@ -300,6 +297,7 @@ internal static class TextParser
         }
 
         var pct = lnSpcEl.Element(DmlNames.SpacingPercent);
+        // ReSharper disable once InvertIf
         if (pct != null)
         {
             var val = pct.GetAttrInt(DmlNames.AttributeValue);
@@ -310,16 +308,11 @@ internal static class TextParser
         return null;
     }
 
-    private static double? ParseSpacingPoints(XElement spcEl)
+    private static double? ParseSpacingPoints(XContainer spcEl)
     {
         var pts = spcEl.Element(DmlNames.SpacingPoints);
-        if (pts != null)
-        {
-            var val = pts.GetAttrInt(DmlNames.AttributeValue);
-            if (val.HasValue) return val.Value / 100.0;
-        }
-
-        return null;
+        var val = pts?.GetAttrInt(DmlNames.AttributeValue);
+        return val / 100.0;
     }
 
     // ── Enum parsers ──────────────────────────────────────────────────────────

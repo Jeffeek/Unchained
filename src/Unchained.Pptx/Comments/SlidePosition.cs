@@ -3,7 +3,7 @@ using Unchained.Ooxml;
 namespace Unchained.Pptx.Comments;
 
 /// <summary>
-/// A position on a slide in EMU coordinates, used to anchor comments.
+///     A position on a slide in EMU coordinates, used to anchor comments.
 /// </summary>
 public readonly struct SlidePosition
 {
@@ -22,5 +22,9 @@ public readonly struct SlidePosition
     }
 
     /// <summary>Deconstructs the position into its components.</summary>
-    public void Deconstruct(out Emu x, out Emu y) { x = X; y = Y; }
+    public void Deconstruct(out Emu x, out Emu y)
+    {
+        x = X;
+        y = Y;
+    }
 }

@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// Defines the font families used for headings (major font) and body text (minor font)
-/// in a presentation theme.
+///     Defines the font families used for headings (major font) and body text (minor font)
+///     in a presentation theme.
 /// </summary>
 public sealed class FontScheme
 {

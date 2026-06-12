@@ -6,8 +6,6 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- SharpFont targets net45; enable fallback so the transitive DLL reference resolves. -->
-    <AssetTargetFallback>$(AssetTargetFallback);net45</AssetTargetFallback>
     <IsPackable>true</IsPackable>
     <PackageId>Unchained.Pdf.Rendering</PackageId>
     <IsUserFacingPackage>true</IsUserFacingPackage>
@@ -20,21 +18,11 @@
   <!--
     Unchained.Drawing provides RasterBuffer + PngEncoder (pure managed).
     Unchained.Drawing.Text provides FontCache + glyph blitting (FreeType2 + HarfBuzz).
-    All native DLLs, font resources, and SharpFont are pulled in transitively.
+    All native DLLs and font resources are pulled in transitively.
   -->
   <ItemGroup>
     <ProjectReference Include="..\Unchained.Pdf\Unchained.Pdf.csproj" />
     <ProjectReference Include="..\Unchained.Drawing.Text\Unchained.Drawing.Text.csproj" />
-  </ItemGroup>
-
-  <!-- SharpFont is referenced via Drawing.Text but its types are used directly in
-       PageRenderer (LoadFlags, LoadTarget, etc.). Reference the same DLL so the
-       compiler resolves the types without duplicating the binary. -->
-  <ItemGroup>
-    <Reference Include="SharpFont">
-      <HintPath>..\Unchained.Drawing.Text\libs\SharpFont.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
   </ItemGroup>
 
 </Project>

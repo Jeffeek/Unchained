@@ -1,17 +1,17 @@
 using System.Xml.Linq;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes <see cref="ColorSpec"/> values to DrawingML colour XML elements.
+///     Serializes <see cref="ColorSpec" /> values to DrawingML colour XML elements.
 /// </summary>
 internal static class ColorWriter
 {
     /// <summary>
-    /// Returns the appropriate DrawingML colour element for <paramref name="color"/>.
+    ///     Returns the appropriate DrawingML colour element for <paramref name="color" />.
     /// </summary>
     public static XElement Write(ColorSpec color)
     {
@@ -21,13 +21,17 @@ internal static class ColorWriter
             var schemeEl = new XElement(DmlNames.SchemeColor,
                 new XAttribute(DmlNames.AttributeValue, slotName));
 
-            if (color.LuminanceModifier != 1.0)
+            if (Math.Abs(color.LuminanceModifier - 1.0) > 0.05)
+            {
                 schemeEl.Add(new XElement(DmlNames.LuminanceModifier,
                     new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceModifier * OoxmlScaling.PercentScale))));
+            }
 
             if (color.LuminanceOffset != 0.0)
+            {
                 schemeEl.Add(new XElement(DmlNames.LuminanceOffset,
                     new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceOffset * OoxmlScaling.PercentScale))));
+            }
 
             return schemeEl;
         }
@@ -35,13 +39,15 @@ internal static class ColorWriter
         // RGB — emit as sRGB hex (strip alpha for the val attribute, keep as separate alpha child if < 255)
         var argb = color.Rgb;
         var alpha = (argb >> 24) & 0xFF;
-        var hex = $"{(argb & 0x00FFFFFF):X6}";
+        var hex = $"{argb & 0x00FFFFFF:X6}";
         var srgbEl = new XElement(DmlNames.SrgbColor,
             new XAttribute(DmlNames.AttributeValue, hex));
 
         if (alpha < 255)
+        {
             srgbEl.Add(new XElement(DmlNames.Alpha,
                 new XAttribute(DmlNames.AttributeValue, (int)Math.Round(alpha / 255.0 * OoxmlScaling.PercentScale))));
+        }
 
         return srgbEl;
     }

@@ -11,10 +11,10 @@ public enum PdfAViolationSeverity
 }
 
 /// <summary>
-/// A single PDF/A rule violation found during conformance validation.
+///     A single PDF/A rule violation found during conformance validation.
 /// </summary>
 /// <param name="RuleId">
-/// ISO 19005 clause identifier, e.g. <c>6.3.3</c> for the font-embedding rule.
+///     ISO 19005 clause identifier, e.g. <c>6.3.3</c> for the font-embedding rule.
 /// </param>
 /// <param name="Description">Human-readable description of the violation.</param>
 /// <param name="Severity">Whether this is a hard error or a warning.</param>

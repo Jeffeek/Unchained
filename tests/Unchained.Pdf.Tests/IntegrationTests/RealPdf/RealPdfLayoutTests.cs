@@ -5,8 +5,8 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
 
 /// <summary>
-/// Targeted tests for table-formatted and multi-column PDFs.
-/// Tests skip gracefully when the required file is absent from TestFiles/.
+///     Targeted tests for table-formatted and multi-column PDFs.
+///     Tests skip gracefully when the required file is absent from TestFiles/.
 /// </summary>
 public sealed class RealPdfLayoutTests : PdfTestBase
 {
@@ -145,7 +145,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes);
         var before = doc.PageCount;
-        await using var reloaded = await SaveAndReloadAsync(doc, ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(before);
     }
 }

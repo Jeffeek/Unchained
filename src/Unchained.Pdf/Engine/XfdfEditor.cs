@@ -1,12 +1,14 @@
+using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
+using SaveOptions = System.Xml.Linq.SaveOptions;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IXfdfEditor"/> implementation.
-/// Serialises/deserialises annotations using XFDF (XML Forms Data Format, ISO 19444-1).
+///     Default <see cref="IXfdfEditor" /> implementation.
+///     Serialises/deserialises annotations using XFDF (XML Forms Data Format, ISO 19444-1).
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class XfdfEditor : IXfdfEditor
@@ -31,7 +33,7 @@ public sealed class XfdfEditor : IXfdfEditor
                 new XAttribute(XNamespace.Xml + "space", "preserve"),
                 annots));
 
-        return xfdf.ToString(System.Xml.Linq.SaveOptions.None);
+        return xfdf.ToString(SaveOptions.None);
     }
 
     /// <inheritdoc />
@@ -125,10 +127,10 @@ public sealed class XfdfEditor : IXfdfEditor
 
         var parts = rectStr.Split(',');
         if (parts.Length < 4) return null;
-        if (!float.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x) ||
-            !float.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y) ||
-            !float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x2) ||
-            !float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y2))
+        if (!float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x) ||
+            !float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y) ||
+            !float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var x2) ||
+            !float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var y2))
             return null;
 
         return (x, y, x2 - x, y2 - y);
@@ -139,9 +141,9 @@ public sealed class XfdfEditor : IXfdfEditor
         if (string.IsNullOrEmpty(hex) || hex.Length < 7 || hex[0] != '#')
             return null;
 
-        if (!int.TryParse(hex[1..3], System.Globalization.NumberStyles.HexNumber, null, out var r) ||
-            !int.TryParse(hex[3..5], System.Globalization.NumberStyles.HexNumber, null, out var g) ||
-            !int.TryParse(hex[5..7], System.Globalization.NumberStyles.HexNumber, null, out var b))
+        if (!int.TryParse(hex[1..3], NumberStyles.HexNumber, null, out var r) ||
+            !int.TryParse(hex[3..5], NumberStyles.HexNumber, null, out var g) ||
+            !int.TryParse(hex[5..7], NumberStyles.HexNumber, null, out var b))
             return null;
 
         return [r / 255f, g / 255f, b / 255f];

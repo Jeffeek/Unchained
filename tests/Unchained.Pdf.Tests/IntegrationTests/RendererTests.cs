@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Drawing.Constants;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
@@ -7,8 +8,8 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Integration tests for <see cref="Unchained.Pdf.Rendering.Engine.PdfRenderer"/>.
-/// Tests call <c>SkipIfNoFreeType()</c> so absent FreeType2 shows as Skipped, not Passed.
+///     Integration tests for <see cref="Unchained.Pdf.Rendering.Engine.PdfRenderer" />.
+///     Tests call <c>SkipIfNoFreeType()</c> so absent FreeType2 shows as Skipped, not Passed.
 /// </summary>
 public sealed class RendererTests : RendererTestBase
 {
@@ -19,8 +20,8 @@ public sealed class RendererTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -29,8 +30,8 @@ public sealed class RendererTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(text: "Hello"), ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("Hello"), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -41,9 +42,9 @@ public sealed class RendererTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         var page = doc.Pages[1];
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150), ct: TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(), TestContext.Current.CancellationToken);
         // Expected pixel width ≈ pageWidthPt * 150 / 72. The renderer truncates the
         // point×scale product to match common rasterizers (e.g. Pdfium); allow ±1 px so
         // the test honours the "approximates" contract regardless of the rounding mode.
@@ -57,9 +58,9 @@ public sealed class RendererTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
-        var png150 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150), ct: TestContext.Current.CancellationToken);
-        var png300 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 300), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        var png150 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(), TestContext.Current.CancellationToken);
+        var png300 = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(300), TestContext.Current.CancellationToken);
         var w150 = PdfTestConstants.PngWidth(png150);
         var w300 = PdfTestConstants.PngWidth(png300);
         w300.ShouldBeGreaterThan(w150);
@@ -78,8 +79,8 @@ public sealed class RendererTests : RendererTestBase
             Headers = ["Name", "Value"],
             Rows = [["Alice", "42"], ["Bob", "17"]]
         };
-        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await gen.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..8].ShouldBe(PdfTestConstants.PngSignature);
     }
 
@@ -90,8 +91,8 @@ public sealed class RendererTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 3), ct: TestContext.Current.CancellationToken);
-        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(3), TestContext.Current.CancellationToken);
+        var pages = await Renderer!.RenderDocumentAsync(doc, RenderOptions.Default, TestContext.Current.CancellationToken);
         pages.Count.ShouldBe(3);
         foreach (var p in pages)
             p[..8].ShouldBe(PdfTestConstants.PngSignature);
@@ -104,7 +105,7 @@ public sealed class RendererTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, cts.Token));
@@ -117,8 +118,8 @@ public sealed class RendererTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(), ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png.Length.ShouldBeGreaterThan(100);
     }
 
@@ -128,28 +129,28 @@ public sealed class RendererTests : RendererTestBase
     public async Task RenderPage_JpegFormat_ProducesJpegBytes()
     {
         SkipIfNoFreeType();
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         var jpeg = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72, Format: OutputFormat.Jpeg),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72, OutputFormat.Jpeg),
+            TestContext.Current.CancellationToken);
 
         // JPEG starts with FF D8 FF
         jpeg.Length.ShouldBeGreaterThan(3);
-        jpeg[0].ShouldBe((byte)0xFF);
-        jpeg[1].ShouldBe((byte)0xD8);
-        jpeg[2].ShouldBe((byte)0xFF);
+        jpeg[0].ShouldBe(JpegConstants.MarkerPrefix);
+        jpeg[1].ShouldBe(JpegConstants.Soi);
+        jpeg[2].ShouldBe(JpegConstants.MarkerPrefix);
     }
 
     [Fact]
     public async Task RenderPage_BmpFormat_ProducesBmpBytes()
     {
         SkipIfNoFreeType();
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         var bmp = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72, Format: OutputFormat.Bmp),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72, OutputFormat.Bmp),
+            TestContext.Current.CancellationToken);
 
         // BMP starts with 'BM'
         bmp.Length.ShouldBeGreaterThan(2);
@@ -161,16 +162,16 @@ public sealed class RendererTests : RendererTestBase
     public async Task RenderPage_JpegQuality_LowerQualityProducesSmallerFile()
     {
         SkipIfNoFreeType();
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent(), TestContext.Current.CancellationToken);
 
         var highQ = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72, Format: OutputFormat.Jpeg, JpegQuality: 95),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72, OutputFormat.Jpeg, 95),
+            TestContext.Current.CancellationToken);
         var lowQ = await Renderer.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72, Format: OutputFormat.Jpeg, JpegQuality: 10),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72, OutputFormat.Jpeg, 10),
+            TestContext.Current.CancellationToken);
 
         lowQ.Length.ShouldBeLessThan(highQ.Length,
             "Lower JPEG quality should produce a smaller file");

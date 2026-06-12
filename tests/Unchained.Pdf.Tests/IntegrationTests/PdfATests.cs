@@ -1,3 +1,4 @@
+using System.Text;
 using Shouldly;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
@@ -6,8 +7,8 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for PDF/A conformance validation and conversion.
-/// Uses both synthetic PDFs and the veraPDF test corpus where available.
+///     Tests for PDF/A conformance validation and conversion.
+///     Uses both synthetic PDFs and the veraPDF test corpus where available.
 /// </summary>
 public sealed class PdfATests : PdfTestBase
 {
@@ -25,14 +26,15 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task Validate_EncryptedPdf_ReportsEncryptionViolation()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw")), ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, new SaveOptions(Encryption: new EncryptionOptions("pw")), TestContext.Current.CancellationToken);
 
         var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
         // ReSharper disable once StringLiteralTypo
-        result.Errors.ShouldContain(static v => v.RuleId == "6.1.3" && v.Description.Contains("ncrypt"), "Encryption must be reported as a §6.1.3 violation.");
+        result.Errors.ShouldContain(static v => v.RuleId == "6.1.3" && v.Description.Contains("ncrypt"),
+            "Encryption must be reported as a §6.1.3 violation.");
     }
 
     [Fact]
@@ -66,35 +68,35 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_ProducesLoadablePdf()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
-        await using var reloaded = await LoadAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
     }
 
     [Fact]
     public async Task ConvertToPdfA_AddsXmpWithPdfaidProperties()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
-        await using var reloaded = await LoadAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         var xmp = reloaded.GetXmpMetadata();
         xmp.ShouldNotBeNull("Converted document must have XMP metadata.");
-        xmp.ShouldContain("pdfaid", caseSensitivity: Case.Insensitive);
+        xmp.ShouldContain("pdfaid");
     }
 
     [Fact]
     public async Task ConvertToPdfA_AddsPdfaidPart1AndConformanceB()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(doc, ms, profile: PdfAProfile.PdfA1B, ct: TestContext.Current.CancellationToken);
+        await Processor.ConvertToPdfAAsync(doc, ms, PdfAProfile.PdfA1B, TestContext.Current.CancellationToken);
 
-        var result = await Processor.ValidatePdfAAsync(ms.ToArray(), profile: PdfAProfile.PdfA1B, ct: TestContext.Current.CancellationToken);
+        var result = await Processor.ValidatePdfAAsync(ms.ToArray(), PdfAProfile.PdfA1B, TestContext.Current.CancellationToken);
 
         // After conversion, the XMP violation should be resolved
         result.Errors.ShouldNotContain(static v => v.RuleId == "6.7.2", "pdfaid XMP properties should be present after conversion.");
@@ -103,7 +105,7 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_AddsFileId()
     {
-        await using var doc = await LoadAsync(PdfFixtures.MultiPage(count: 2), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
@@ -118,7 +120,7 @@ public sealed class PdfATests : PdfTestBase
         var original = PdfFixtures.SinglePage();
         var originalResult = await Processor.ValidatePdfAAsync(original, ct: TestContext.Current.CancellationToken);
 
-        await using var doc = await LoadAsync(original, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(original, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         var convertedResult = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
@@ -129,11 +131,11 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_IsIdempotent()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms1 = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms1, ct: TestContext.Current.CancellationToken);
 
-        await using var doc2 = await LoadAsync(ms1.ToArray(), ct: TestContext.Current.CancellationToken);
+        await using var doc2 = await LoadAsync(ms1.ToArray(), TestContext.Current.CancellationToken);
         using var ms2 = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc2, ms2, ct: TestContext.Current.CancellationToken);
 
@@ -145,11 +147,11 @@ public sealed class PdfATests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfA_Encrypted_Throws()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var encMs = new MemoryStream();
-        await Processor.SaveAsync(doc, encMs, new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw")), ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, encMs, new SaveOptions(Encryption: new EncryptionOptions("pw")), TestContext.Current.CancellationToken);
 
-        await using var encDoc = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "pw", ct: TestContext.Current.CancellationToken);
+        await using var encDoc = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "pw", TestContext.Current.CancellationToken);
         using var outMs = new MemoryStream();
 
         await Should.ThrowAsync<InvalidOperationException>(() => Processor.ConvertToPdfAAsync(encDoc, outMs));
@@ -167,7 +169,7 @@ public sealed class PdfATests : PdfTestBase
     ]
     public async Task Validate_DifferentProfiles_ResultCarriesRequestedProfile(PdfAProfile profile)
     {
-        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), profile: profile, ct: TestContext.Current.CancellationToken);
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), profile, TestContext.Current.CancellationToken);
 
         result.ShouldNotBeNull();
         result.Profile.ShouldBe(profile, $"Result.Profile must equal the requested {profile}.");
@@ -177,7 +179,7 @@ public sealed class PdfATests : PdfTestBase
     public async Task Validate_Pdf14Version_PassesVersionCheckForPdfA1()
     {
         // PDF 1.7 exceeds the 1.4 max for PDF/A-1; confirm a version violation is reported.
-        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), profile: PdfAProfile.PdfA1B, ct: TestContext.Current.CancellationToken);
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), PdfAProfile.PdfA1B, TestContext.Current.CancellationToken);
 
         result.Violations.ShouldContain(static v => v.RuleId == "6.1.2",
             "PDF 1.7 header must trigger a §6.1.2 version violation for PDF/A-1B.");
@@ -187,7 +189,7 @@ public sealed class PdfATests : PdfTestBase
     public async Task Validate_Pdf17Version_PassesVersionCheckForPdfA2()
     {
         // PDF 1.7 is within the 1.7 max for PDF/A-2; no version violation should be reported.
-        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), profile: PdfAProfile.PdfA2B, ct: TestContext.Current.CancellationToken);
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), PdfAProfile.PdfA2B, TestContext.Current.CancellationToken);
 
         result.Violations.ShouldNotContain(static v => v.RuleId == "6.1.2",
             "PDF 1.7 header must not trigger a §6.1.2 version violation for PDF/A-2B.");
@@ -212,15 +214,15 @@ public sealed class PdfATests : PdfTestBase
     {
         // Valid XML but missing pdfaid:part element.
         const string xmp = """
-            <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-            <x:xmpmeta xmlns:x="adobe:ns:meta/">
-              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-                <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-                </rdf:Description>
-              </rdf:RDF>
-            </x:xmpmeta>
-            <?xpacket end="w"?>
-            """;
+                           <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+                           <x:xmpmeta xmlns:x="adobe:ns:meta/">
+                             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                               <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+                               </rdf:Description>
+                             </rdf:RDF>
+                           </x:xmpmeta>
+                           <?xpacket end="w"?>
+                           """;
 
         var pdfBytes = BuildPdfWithRawMetadata(xmp);
 
@@ -236,22 +238,22 @@ public sealed class PdfATests : PdfTestBase
     {
         // pdfaid:part says "2" but we validate as PDF/A-1B.
         const string xmp = """
-            <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-            <x:xmpmeta xmlns:x="adobe:ns:meta/">
-              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-                <rdf:Description rdf:about=""
-                    xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-                  <pdfaid:part>2</pdfaid:part>
-                  <pdfaid:conformance>B</pdfaid:conformance>
-                </rdf:Description>
-              </rdf:RDF>
-            </x:xmpmeta>
-            <?xpacket end="w"?>
-            """;
+                           <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+                           <x:xmpmeta xmlns:x="adobe:ns:meta/">
+                             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                               <rdf:Description rdf:about=""
+                                   xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+                                 <pdfaid:part>2</pdfaid:part>
+                                 <pdfaid:conformance>B</pdfaid:conformance>
+                               </rdf:Description>
+                             </rdf:RDF>
+                           </x:xmpmeta>
+                           <?xpacket end="w"?>
+                           """;
 
         var pdfBytes = BuildPdfWithRawMetadata(xmp);
 
-        var result = await Processor.ValidatePdfAAsync(pdfBytes, profile: PdfAProfile.PdfA1B, ct: TestContext.Current.CancellationToken);
+        var result = await Processor.ValidatePdfAAsync(pdfBytes, PdfAProfile.PdfA1B, TestContext.Current.CancellationToken);
 
         result.Violations.ShouldContain(
             static v => v.RuleId == "6.7.2" && v.Description.Contains("pdfaid:part"),
@@ -280,7 +282,7 @@ public sealed class PdfATests : PdfTestBase
         var fontBytes = new byte[256]; // minimal dummy bytes; font metrics not exercised here
         var original = PdfFixtures.WithEmbeddedFont(fontBytes);
 
-        await using var doc = await LoadAsync(original, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(original, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
@@ -322,7 +324,7 @@ public sealed class PdfATests : PdfTestBase
     public async Task ConvertToPdfA_DocumentWithoutMetadata_AddsMetadataStream()
     {
         // SinglePage() has no /Metadata — after conversion it must have one.
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
@@ -346,11 +348,11 @@ public sealed class PdfATests : PdfTestBase
 
         foreach (var (profile, expectedPart, expectedConf) in cases)
         {
-            await using var doc = await LoadAsync(PdfFixtures.SinglePage(), ct: TestContext.Current.CancellationToken);
+            await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
             using var ms = new MemoryStream();
-            await Processor.ConvertToPdfAAsync(doc, ms, profile: profile, ct: TestContext.Current.CancellationToken);
+            await Processor.ConvertToPdfAAsync(doc, ms, profile, TestContext.Current.CancellationToken);
 
-            var xmp = (await LoadAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken)).GetXmpMetadata();
+            var xmp = (await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken)).GetXmpMetadata();
             xmp.ShouldNotBeNull($"Profile {profile} must produce XMP metadata.");
             xmp.ShouldContain($">{expectedPart}<", customMessage: $"pdfaid:part must be {expectedPart} for {profile}.");
             xmp.ShouldContain($">{expectedConf}<", customMessage: $"pdfaid:conformance must be {expectedConf} for {profile}.");
@@ -365,7 +367,7 @@ public sealed class PdfATests : PdfTestBase
         var fontBytes = new byte[256];
         var original = PdfFixtures.WithEmbeddedFont(fontBytes);
 
-        await using var doc = await LoadAsync(original, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(original, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
@@ -408,7 +410,7 @@ public sealed class PdfATests : PdfTestBase
         // Build a PDF with /AA in the catalog, then convert.
         var pdfBytes = BuildPdfWithCatalogAa();
 
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
@@ -425,7 +427,7 @@ public sealed class PdfATests : PdfTestBase
         // After conversion the Print flag must be set, removing the §6.5.3 error.
         var pdfBytes = PdfFixtures.WithAnnotation("test note");
 
-        await using var doc = await LoadAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
+        await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.ConvertToPdfAAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
@@ -438,38 +440,38 @@ public sealed class PdfATests : PdfTestBase
     // ── Local fixture builders ─────────────────────────────────────────────────
 
     /// <summary>
-    /// Produces a minimal PDF 1.4 document whose /Metadata stream contains
-    /// <paramref name="rawXmpContent"/> verbatim (not filtered).
+    ///     Produces a minimal PDF 1.4 document whose /Metadata stream contains
+    ///     <paramref name="rawXmpContent" /> verbatim (not filtered).
     /// </summary>
     private static byte[] BuildPdfWithRawMetadata(string rawXmpContent)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         var offsets = new List<int>();
 
         Ln(sb, "%PDF-1.4");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog (references /Metadata at obj 4)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "1 0 obj");
         Ln(sb, "<< /Type /Catalog /Pages 2 0 R /Metadata 4 0 R >>");
         Ln(sb, "endobj");
 
         // Object 2 — Pages
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "2 0 obj");
         Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         Ln(sb, "endobj");
 
         // Object 3 — Page
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
         Ln(sb, "endobj");
 
         // Object 4 — Metadata stream
-        var metaBytes = System.Text.Encoding.UTF8.GetBytes(rawXmpContent);
-        offsets.Add(ByteLen(sb));
+        var metaBytes = Encoding.UTF8.GetBytes(rawXmpContent);
+        offsets.Add(ByteLength(sb));
         Ln(sb, "4 0 obj");
         Ln(sb, $"<< /Type /Metadata /Subtype /XML /Length {metaBytes.Length} >>");
         sb.Append("stream\n");
@@ -478,7 +480,7 @@ public sealed class PdfATests : PdfTestBase
         Ln(sb, "\nendstream");
         Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         Ln(sb, "xref");
         Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
@@ -489,50 +491,50 @@ public sealed class PdfATests : PdfTestBase
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
-        return System.Text.Encoding.Latin1.GetBytes(sb.ToString());
+        return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static void Ln(System.Text.StringBuilder b, string line) =>
+        static void Ln(StringBuilder b, string line) =>
             b.Append(line).Append('\n');
 
-        static int ByteLen(System.Text.StringBuilder b) =>
-            System.Text.Encoding.Latin1.GetByteCount(b.ToString());
+        static int ByteLength(StringBuilder b) =>
+            Encoding.Latin1.GetByteCount(b.ToString());
     }
 
     /// <summary>
-    /// Produces a minimal PDF with a stream whose /Filter is /LZWDecode (prohibited in PDF/A).
-    /// The stream data is a single null byte; actual LZW decoding is not attempted by the validator.
+    ///     Produces a minimal PDF with a stream whose /Filter is /LZWDecode (prohibited in PDF/A).
+    ///     The stream data is a single null byte; actual LZW decoding is not attempted by the validator.
     /// </summary>
     private static byte[] BuildPdfWithLzwStream()
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         var offsets = new List<int>();
 
         Ln(sb, "%PDF-1.4");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "1 0 obj");
         Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
         Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "2 0 obj");
         Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R >>");
         Ln(sb, "endobj");
 
         // Object 4 — stream with /LZWDecode filter (1 dummy byte)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "4 0 obj");
         Ln(sb, "<< /Length 1 /Filter /LZWDecode >>");
         sb.Append("stream\n\0\nendstream\n");
         Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         Ln(sb, "xref");
         Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
@@ -546,49 +548,49 @@ public sealed class PdfATests : PdfTestBase
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
-        return System.Text.Encoding.Latin1.GetBytes(sb.ToString());
+        return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static void Ln(System.Text.StringBuilder b, string line) =>
+        static void Ln(StringBuilder b, string line) =>
             b.Append(line).Append('\n');
 
-        static int ByteLen(System.Text.StringBuilder b) =>
-            System.Text.Encoding.Latin1.GetByteCount(b.ToString());
+        static int ByteLength(StringBuilder b) =>
+            Encoding.Latin1.GetByteCount(b.ToString());
     }
 
     /// <summary>
-    /// Produces a minimal PDF with a /Font dict that has no /FontDescriptor entry,
-    /// which is a §6.3.3 violation.
+    ///     Produces a minimal PDF with a /Font dict that has no /FontDescriptor entry,
+    ///     which is a §6.3.3 violation.
     /// </summary>
     private static byte[] BuildPdfWithUnembeddedFont()
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         var offsets = new List<int>();
 
         Ln(sb, "%PDF-1.4");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "1 0 obj");
         Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
         Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "2 0 obj");
         Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
         Ln(sb, "endobj");
 
         // Object 4 — Font with no /FontDescriptor (nor FontFile*)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "4 0 obj");
         Ln(sb, "<< /Type /Font /Subtype /TrueType /BaseFont /Helvetica >>");
         Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         Ln(sb, "xref");
         Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
@@ -599,43 +601,43 @@ public sealed class PdfATests : PdfTestBase
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
-        return System.Text.Encoding.Latin1.GetBytes(sb.ToString());
+        return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static void Ln(System.Text.StringBuilder b, string line) =>
+        static void Ln(StringBuilder b, string line) =>
             b.Append(line).Append('\n');
 
-        static int ByteLen(System.Text.StringBuilder b) =>
-            System.Text.Encoding.Latin1.GetByteCount(b.ToString());
+        static int ByteLength(StringBuilder b) =>
+            Encoding.Latin1.GetByteCount(b.ToString());
     }
 
     /// <summary>
-    /// Produces a minimal PDF whose catalog contains an /AA (additional actions) entry,
-    /// which is a §6.6.1 violation.
+    ///     Produces a minimal PDF whose catalog contains an /AA (additional actions) entry,
+    ///     which is a §6.6.1 violation.
     /// </summary>
     private static byte[] BuildPdfWithCatalogAa()
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         var offsets = new List<int>();
 
         Ln(sb, "%PDF-1.4");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "1 0 obj");
         Ln(sb, @"<< /Type /Catalog /Pages 2 0 R /AA << /WC << /S /JavaScript /JS (app.alert\('hi'\)) >> >> >>");
         Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "2 0 obj");
         Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
         Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         Ln(sb, "xref");
         Ln(sb, "0 4");
         Ln(sb, "0000000000 65535 f ");
@@ -648,13 +650,13 @@ public sealed class PdfATests : PdfTestBase
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
-        return System.Text.Encoding.Latin1.GetBytes(sb.ToString());
+        return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static void Ln(System.Text.StringBuilder b, string line) =>
+        static void Ln(StringBuilder b, string line) =>
             b.Append(line).Append('\n');
 
-        static int ByteLen(System.Text.StringBuilder b) =>
-            System.Text.Encoding.Latin1.GetByteCount(b.ToString());
+        static int ByteLength(StringBuilder b) =>
+            Encoding.Latin1.GetByteCount(b.ToString());
     }
 
     // ── veraPDF corpus ────────────────────────────────────────────────────────

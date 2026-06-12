@@ -1,20 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Native-binary carrier for FreeType2 — shared across all Unchained rendering packages.
-    No C# code is produced; this project only carries the native files.
+    Native-binary carrier for the one platform FreeTypeSharp does not bundle: linux-arm64.
+    FreeTypeSharp ships FreeType2 for win-x64/arm64/x86, linux-x64, and macOS; this package
+    supplies linux-arm64 only. No C# code is produced.
 
-    Run scripts/FetchNatives/fetch-drawing-natives.{ps1,sh} to populate the
-    runtimes/ folders before building a rendering package.
+    Run scripts/FetchNatives/fetch-natives.{ps1,sh} with the linux-arm64 RID to populate
+    runtimes/linux-arm64/native/ before packing. The file is named libfreetype.so
+    (no version suffix) to match FreeTypeSharp's DllImport resolver.
 
-    Consolidates what used to be split across Unchained.Pdf.Runtimes and
-    Unchained.Pptx.Runtimes into a single, format-neutral package.
-
-    Each <Choose> block is unconditionally evaluated; the inner Exists() guard
-    silently skips missing files. This works correctly for:
-      • Local dev  — only the current platform's file is present (after fetch).
-      • CI build   — same; each runner fetches its own file.
-      • NuGet pack — all files are present (after staging artifacts from all runners).
+    The Exists() guard silently skips the file when absent, so the package builds on
+    any host; the linux-arm64 binary is staged in CI before NuGet pack.
   -->
 
   <PropertyGroup>
@@ -28,105 +24,14 @@
     <IsUserFacingPackage>true</IsUserFacingPackage>
   </PropertyGroup>
 
-  <!-- ── Windows x64 ──────────────────────────────────────────────────────── -->
+  <!-- ── Linux arm64 (the only RID FreeTypeSharp omits) ───────────────────── -->
   <Choose>
-    <When Condition="Exists('runtimes\win-x64\native\freetype6.dll')">
+    <When Condition="Exists('runtimes\linux-arm64\native\libfreetype.so')">
       <ItemGroup>
-        <Content Include="runtimes\win-x64\native\freetype6.dll"
-                 Link="runtimes\win-x64\native\freetype6.dll"
+        <Content Include="runtimes\linux-arm64\native\libfreetype.so"
+                 Link="runtimes\linux-arm64\native\libfreetype.so"
                  Pack="true"
-                 PackagePath="runtimes/win-x64/native/freetype6.dll"
-                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-
-  <!-- ── Windows arm64 ────────────────────────────────────────────────────── -->
-  <Choose>
-    <When Condition="Exists('runtimes\win-arm64\native\freetype6.dll')">
-      <ItemGroup>
-        <Content Include="runtimes\win-arm64\native\freetype6.dll"
-                 Link="runtimes\win-arm64\native\freetype6.dll"
-                 Pack="true"
-                 PackagePath="runtimes/win-arm64/native/freetype6.dll"
-                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-
-  <!-- ── Linux x64 ────────────────────────────────────────────────────────── -->
-  <Choose>
-    <When Condition="Exists('runtimes\linux-x64\native\libfreetype.so.6')">
-      <ItemGroup>
-        <Content Include="runtimes\linux-x64\native\libfreetype.so.6"
-                 Link="runtimes\linux-x64\native\libfreetype.so.6"
-                 Pack="true"
-                 PackagePath="runtimes/linux-x64/native/libfreetype.so.6"
-                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-
-  <!-- ── Linux arm64 ──────────────────────────────────────────────────────── -->
-  <Choose>
-    <When Condition="Exists('runtimes\linux-arm64\native\libfreetype.so.6')">
-      <ItemGroup>
-        <Content Include="runtimes\linux-arm64\native\libfreetype.so.6"
-                 Link="runtimes\linux-arm64\native\libfreetype.so.6"
-                 Pack="true"
-                 PackagePath="runtimes/linux-arm64/native/libfreetype.so.6"
-                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-
-  <!-- ── Linux musl x64 (Alpine) ─────────────────────────────────────────── -->
-  <Choose>
-    <When Condition="Exists('runtimes\linux-musl-x64\native\libfreetype.so.6')">
-      <ItemGroup>
-        <Content Include="runtimes\linux-musl-x64\native\libfreetype.so.6"
-                 Link="runtimes\linux-musl-x64\native\libfreetype.so.6"
-                 Pack="true"
-                 PackagePath="runtimes/linux-musl-x64/native/libfreetype.so.6"
-                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-
-  <!-- ── Linux musl arm64 (Alpine) ────────────────────────────────────────── -->
-  <Choose>
-    <When Condition="Exists('runtimes\linux-musl-arm64\native\libfreetype.so.6')">
-      <ItemGroup>
-        <Content Include="runtimes\linux-musl-arm64\native\libfreetype.so.6"
-                 Link="runtimes\linux-musl-arm64\native\libfreetype.so.6"
-                 Pack="true"
-                 PackagePath="runtimes/linux-musl-arm64/native/libfreetype.so.6"
-                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-
-  <!-- ── macOS x64 ────────────────────────────────────────────────────────── -->
-  <Choose>
-    <When Condition="Exists('runtimes\osx-x64\native\libfreetype.6.dylib')">
-      <ItemGroup>
-        <Content Include="runtimes\osx-x64\native\libfreetype.6.dylib"
-                 Link="runtimes\osx-x64\native\libfreetype.6.dylib"
-                 Pack="true"
-                 PackagePath="runtimes/osx-x64/native/libfreetype.6.dylib"
-                 CopyToOutputDirectory="PreserveNewest" Visible="false" />
-      </ItemGroup>
-    </When>
-  </Choose>
-
-  <!-- ── macOS arm64 (Apple Silicon) ─────────────────────────────────────── -->
-  <Choose>
-    <When Condition="Exists('runtimes\osx-arm64\native\libfreetype.6.dylib')">
-      <ItemGroup>
-        <Content Include="runtimes\osx-arm64\native\libfreetype.6.dylib"
-                 Link="runtimes\osx-arm64\native\libfreetype.6.dylib"
-                 Pack="true"
-                 PackagePath="runtimes/osx-arm64/native/libfreetype.6.dylib"
+                 PackagePath="runtimes/linux-arm64/native/libfreetype.so"
                  CopyToOutputDirectory="PreserveNewest" Visible="false" />
       </ItemGroup>
     </When>

@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using Shouldly;
-using Unchained.Drawing;
+using Unchained.Drawing.Decoders;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 using Xunit;
@@ -46,7 +46,7 @@ public sealed class FlateDecoderTests
     private static ReadOnlyMemory<byte> Compress(byte[] data)
     {
         using var output = new MemoryStream();
-        using (var zlib = new ZLibStream(output, CompressionMode.Compress, leaveOpen: true))
+        using (var zlib = new ZLibStream(output, CompressionMode.Compress, true))
             zlib.Write(data);
         return output.ToArray();
     }
@@ -151,7 +151,7 @@ public sealed class StreamFiltersTests
     {
         var original = "Hello from a compressed stream"u8.ToArray();
         using var ms = new MemoryStream();
-        using (var z = new ZLibStream(ms, CompressionMode.Compress, leaveOpen: true)) z.Write(original);
+        using (var z = new ZLibStream(ms, CompressionMode.Compress, true)) z.Write(original);
         var compressed = ms.ToArray();
 
         var dict = new PdfDictionary(new Dictionary<string, PdfObject>

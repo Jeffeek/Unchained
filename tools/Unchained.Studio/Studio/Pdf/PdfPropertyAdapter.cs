@@ -1,4 +1,3 @@
-using MudBlazor;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
 using Unchained.Studio.Models;
@@ -40,7 +39,7 @@ public static class PdfPropertyAdapter
                     Entry("Version", "PDF 1.x", PropertyValueKind.Text),
                     Entry("Linearized", doc.IsLinearized.ToString(), doc.IsLinearized ? PropertyValueKind.Boolean : PropertyValueKind.Text),
                     Entry("Tagged", doc.IsTagged.ToString(), PropertyValueKind.Boolean),
-                    Entry("Encrypted", doc.IsEncrypted.ToString(), PropertyValueKind.Boolean),
+                    Entry("Encrypted", doc.IsEncrypted.ToString(), PropertyValueKind.Boolean)
                 ]
             },
             new PropertyGroup
@@ -49,7 +48,7 @@ public static class PdfPropertyAdapter
                 Entries =
                 [
                     Entry("PDF/A", doc.IsPdfaCompliant.ToString(), PropertyValueKind.Boolean),
-                    Entry("PDF/UA", doc.IsPdfUaCompliant.ToString(), PropertyValueKind.Boolean),
+                    Entry("PDF/UA", doc.IsPdfUaCompliant.ToString(), PropertyValueKind.Boolean)
                 ]
             },
             new PropertyGroup
@@ -59,7 +58,7 @@ public static class PdfPropertyAdapter
                     ?
                     [
                         Entry("First", id.First, PropertyValueKind.Hex),
-                        Entry("Second", id.Second, PropertyValueKind.Hex),
+                        Entry("Second", id.Second, PropertyValueKind.Hex)
                     ]
                     : [Entry("ID", "(absent)", PropertyValueKind.Text)]
             }
@@ -85,7 +84,7 @@ public static class PdfPropertyAdapter
                         Entry("Creator", m.Creator ?? "(absent)", PropertyValueKind.Text),
                         Entry("Producer", m.Producer ?? "(absent)", PropertyValueKind.Text),
                         Entry("Created", m.CreationDate?.ToString("yyyy-MM-dd HH:mm:ss zzz") ?? "(absent)", PropertyValueKind.Date),
-                        Entry("Modified", m.ModificationDate?.ToString("yyyy-MM-dd HH:mm:ss zzz") ?? "(absent)", PropertyValueKind.Date),
+                        Entry("Modified", m.ModificationDate?.ToString("yyyy-MM-dd HH:mm:ss zzz") ?? "(absent)", PropertyValueKind.Date)
                     ]
                 }
             ]
@@ -105,7 +104,7 @@ public static class PdfPropertyAdapter
                 [
                     Entry("Width", $"{page.Width:F2} pt  ({page.Width / 72 * 25.4:F1} mm)", PropertyValueKind.Number),
                     Entry("Height", $"{page.Height:F2} pt  ({page.Height / 72 * 25.4:F1} mm)", PropertyValueKind.Number),
-                    Entry("Orientation", page.IsLandscape ? "Landscape" : "Portrait", PropertyValueKind.Text),
+                    Entry("Orientation", page.IsLandscape ? "Landscape" : "Portrait", PropertyValueKind.Text)
                 ]
             },
             new PropertyGroup
@@ -115,7 +114,7 @@ public static class PdfPropertyAdapter
                 [
                     Entry("Fonts", page.GetFontNameMap().Count.ToString(), PropertyValueKind.Number),
                     Entry("Images", page.GetImageXObjects().Count.ToString(), PropertyValueKind.Number),
-                    Entry("Annotations", page.GetAnnotations().Count.ToString(), PropertyValueKind.Number),
+                    Entry("Annotations", page.GetAnnotations().Count.ToString(), PropertyValueKind.Number)
                 ]
             }
         ]
@@ -132,7 +131,7 @@ public static class PdfPropertyAdapter
                 Entries =
                 [
                     Entry("Resource key", key, PropertyValueKind.Text),
-                    Entry("Base font", name, PropertyValueKind.Text, name),
+                    Entry("Base font", name, PropertyValueKind.Text, name)
                 ]
             }
         ]
@@ -151,7 +150,7 @@ public static class PdfPropertyAdapter
                     Entry("Resource key", key, PropertyValueKind.Text),
                     Entry("Width", $"{img.Width} px", PropertyValueKind.Number),
                     Entry("Height", $"{img.Height} px", PropertyValueKind.Number),
-                    Entry("RGB data size", $"{img.RgbData.Length:N0} bytes", PropertyValueKind.Number),
+                    Entry("RGB data size", $"{img.RgbData.Length:N0} bytes", PropertyValueKind.Number)
                 ]
             }
         ]
@@ -168,7 +167,7 @@ public static class PdfPropertyAdapter
                 [
                     Entry("Subtype", ann.Subtype.ToString(), PropertyValueKind.Text),
                     Entry("Contents", ann.Contents ?? "(none)", PropertyValueKind.Text, ann.Contents),
-                    Entry("Rect", $"x={ann.X:F1} y={ann.Y:F1} w={ann.Width:F1} h={ann.Height:F1}", PropertyValueKind.Text),
+                    Entry("Rect", $"x={ann.X:F1} y={ann.Y:F1} w={ann.Width:F1} h={ann.Height:F1}", PropertyValueKind.Text)
                 ]
             }
         ]
@@ -185,7 +184,7 @@ public static class PdfPropertyAdapter
                 [
                     Entry("Title", bm.Title, PropertyValueKind.Text, bm.Title),
                     Entry("Target page", bm.PageNumber.ToString(), PropertyValueKind.Number),
-                    Entry("Children", (bm.Children?.Count ?? 0).ToString(), PropertyValueKind.Number),
+                    Entry("Children", (bm.Children?.Count ?? 0).ToString(), PropertyValueKind.Number)
                 ]
             }
         ]
@@ -202,7 +201,7 @@ public static class PdfPropertyAdapter
                 [
                     Entry("Name", field.Name, PropertyValueKind.Text),
                     Entry("Type", field.FieldType, PropertyValueKind.Text),
-                    Entry("Value", field.Value ?? "(empty)", PropertyValueKind.Text, field.Value),
+                    Entry("Value", field.Value ?? "(empty)", PropertyValueKind.Text, field.Value)
                 ]
             }
         ]
@@ -218,7 +217,7 @@ public static class PdfPropertyAdapter
                 Entries =
                 [
                     Entry("Name", dest.Name, PropertyValueKind.Text),
-                    Entry("Target page", dest.PageNumber.ToString(), PropertyValueKind.Number),
+                    Entry("Target page", dest.PageNumber.ToString(), PropertyValueKind.Number)
                 ]
             }
         ]
@@ -238,7 +237,7 @@ public static class PdfPropertyAdapter
                     Entries =
                     [
                         Entry("Operator count", operators.Count.ToString(), PropertyValueKind.Number),
-                        Entry("Page", page.PageNumber.ToString(), PropertyValueKind.Number),
+                        Entry("Page", page.PageNumber.ToString(), PropertyValueKind.Number)
                     ]
                 }
             ]
@@ -282,7 +281,7 @@ public static class PdfPropertyAdapter
                 Entries =
                 [
                     Entry("Algorithm", doc.CryptoAlgorithm?.ToString() ?? "(unknown)", PropertyValueKind.Text),
-                    Entry("Permissions", doc.Permissions.ToString(), PropertyValueKind.Text),
+                    Entry("Permissions", doc.Permissions.ToString(), PropertyValueKind.Text)
                 ]
             }
         ]
@@ -292,7 +291,8 @@ public static class PdfPropertyAdapter
         string key,
         string value,
         PropertyValueKind kind,
-        string? copyValue = null) =>
+        string? copyValue = null
+    ) =>
         new()
         {
             Key = key,

@@ -6,8 +6,8 @@ using Unchained.Pdf.Document;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IFormFiller"/> implementation.
-/// Fields are matched by fully-qualified name (dot-separated <c>/T</c> path).
+///     Default <see cref="IFormFiller" /> implementation.
+///     Fields are matched by fully-qualified name (dot-separated <c>/T</c> path).
 /// </summary>
 public sealed class FormFiller : IFormFiller
 {
@@ -55,23 +55,23 @@ public sealed class FormFiller : IFormFiller
                     // Checkboxes / radio buttons: the value is an appearance-state NAME
                     // (e.g. the "on" state from /AP /N, or "Off"). Set both /V and /AS so
                     // viewers show the correct state. ISO 32000-1 §12.7.4.2.3.
-                    {
-                        var stateName = ResolveButtonState(fieldDict, newValue, adapter.Core);
-                        entries["V"] = PdfName.Get(stateName);
-                        entries["AS"] = PdfName.Get(stateName);
-                    }
-                    break;
+                {
+                    var stateName = ResolveButtonState(fieldDict, newValue, adapter.Core);
+                    entries["V"] = PdfName.Get(stateName);
+                    entries["AS"] = PdfName.Get(stateName);
+                }
+                break;
 
                 case "Ch":
                     // Choice fields (combo/list): /V is a text string (or array for multi-
                     // select; single value handled here). §12.7.4.4.
                     entries["V"] = PdfString.FromLatin1(newValue);
-                    break;
+                break;
 
                 default:
                     // Tx (text) and anything else: plain text string value.
                     entries["V"] = PdfString.FromLatin1(newValue);
-                    break;
+                break;
             }
 
             swaps[fieldObj.ObjectNumber] = new PdfIndirectObject(fieldObj.ObjectNumber, fieldObj.Generation, new PdfDictionary(entries));
@@ -97,7 +97,7 @@ public sealed class FormFiller : IFormFiller
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
         var fieldMap = BuildFieldMap(existing, adapter.Core);
         var swaps = new Dictionary<int, PdfIndirectObject>();
@@ -152,7 +152,7 @@ public sealed class FormFiller : IFormFiller
         }
 
         // Remove /AcroForm from catalog.
-        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.IsCatalog());
         var catDict = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catDict.Entries);
         catEntries.Remove(PdfName.AcroForm.Value);
@@ -174,7 +174,7 @@ public sealed class FormFiller : IFormFiller
         PdfDocumentCore core
     )
     {
-        var acroFormObj = existing.FirstOrDefault(static o => o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+        var acroFormObj = existing.FirstOrDefault(static o => o.Value is PdfDictionary d && d.IsCatalog());
         if (acroFormObj is null)
             return new Dictionary<string, PdfIndirectObject>();
 
@@ -188,7 +188,7 @@ public sealed class FormFiller : IFormFiller
             return new Dictionary<string, PdfIndirectObject>();
 
         var result = new Dictionary<string, PdfIndirectObject>();
-        CollectFieldMap(fields, prefix: string.Empty, existing, result);
+        CollectFieldMap(fields, string.Empty, existing, result);
 
         return result;
     }
@@ -258,9 +258,12 @@ public sealed class FormFiller : IFormFiller
         var current = field;
         for (var depth = 0; current is not null && depth < 32; depth++)
         {
-            if (current.GetName("FT") is { } ft) return ft;
+            if (current.GetName("FT") is { } ft)
+                return ft;
+
             current = ResolveDict(current["Parent"], core);
         }
+
         return null;
     }
 
@@ -291,15 +294,20 @@ public sealed class FormFiller : IFormFiller
         var ap = ResolveDict(field["AP"], core);
         // For a parent field, the appearance lives on the widget kid.
         if (ap is null && field.Get<PdfArray>(PdfName.Kids) is { Count: > 0 } kids
-            && kids[0] is PdfIndirectReference kr
-            && core.ResolveIndirect(kr.ObjectNumber).Value is PdfDictionary kidDict)
+                       && kids[0] is PdfIndirectReference kr
+                       && core.ResolveIndirect(kr.ObjectNumber).Value is PdfDictionary kidDict)
             ap = ResolveDict(kidDict["AP"], core);
 
         var normal = ap is not null ? ResolveDict(ap["N"], core) : null;
-        if (normal is null) return null;
+        if (normal is null)
+            return null;
+
         foreach (var (key, _) in normal.Entries)
+        {
             if (!string.Equals(key, "Off", StringComparison.Ordinal))
                 return key;
+        }
+
         return null;
     }
 }

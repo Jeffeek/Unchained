@@ -19,7 +19,7 @@ public enum LineDashStyle
     DashDot,
     /// <summary>Alternating long dashes and two dots.</summary>
     LongDashDotDot,
-    /// <summary>A long-dash line (alias for <see cref="Dash"/> used by some readers).</summary>
+    /// <summary>A long-dash line (alias for <see cref="Dash" /> used by some readers).</summary>
     LongDash,
     /// <summary>Alternating long and short dashes.</summary>
     LongDashDot,

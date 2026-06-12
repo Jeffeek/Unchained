@@ -5,22 +5,22 @@ using Unchained.Pdf.Document;
 namespace Unchained.Pdf.Engine.Converters;
 
 /// <summary>
-/// Builds a multi-page PDF document from scratch using <see cref="ObjectGraphBuilder"/>.
-/// Callers add pages with pre-rendered content stream bytes and per-page font maps,
-/// then call <see cref="Build"/> to get an <see cref="IPdfDocument"/>.
-/// <para>
-/// When tagged content items are supplied via the tagged overload of <c>AddPage</c>,
-/// <see cref="Build"/> automatically injects <c>/MarkInfo</c>, <c>/StructTreeRoot</c>,
-/// and <c>/Lang</c> into the document catalog so the output is a valid tagged PDF
-/// (ISO 32000-1 §14.7).
-/// </para>
+///     Builds a multi-page PDF document from scratch using <see cref="ObjectGraphBuilder" />.
+///     Callers add pages with pre-rendered content stream bytes and per-page font maps,
+///     then call <see cref="Build" /> to get an <see cref="IPdfDocument" />.
+///     <para>
+///         When tagged content items are supplied via the tagged overload of <c>AddPage</c>,
+///         <see cref="Build" /> automatically injects <c>/MarkInfo</c>, <c>/StructTreeRoot</c>,
+///         and <c>/Lang</c> into the document catalog so the output is a valid tagged PDF
+///         (ISO 32000-1 §14.7).
+///     </para>
 /// </summary>
 internal sealed class PdfPageAccumulator
 {
     private readonly ObjectGraphBuilder _builder = new();
+    private readonly List<PdfIndirectReference> _pageRefs = [];
     private readonly int _pagesNum;
     private readonly PdfIndirectReference _pagesRef;
-    private readonly List<PdfIndirectReference> _pageRefs = [];
 
     // Tagged PDF support: accumulated items from all pages.
     private readonly List<TaggedContentItem> _taggedItems = [];
@@ -34,9 +34,9 @@ internal sealed class PdfPageAccumulator
     }
 
     /// <summary>
-    /// Adds a named font (Standard 14) to the builder and returns its indirect reference.
-    /// Multiple calls with the same font name each create a separate object — callers are
-    /// responsible for sharing references across pages when appropriate.
+    ///     Adds a named font (Standard 14) to the builder and returns its indirect reference.
+    ///     Multiple calls with the same font name each create a separate object — callers are
+    ///     responsible for sharing references across pages when appropriate.
     /// </summary>
     internal PdfIndirectReference AddFont(string baseFontName, string? encoding = "WinAnsiEncoding")
     {
@@ -53,14 +53,14 @@ internal sealed class PdfPageAccumulator
     }
 
     /// <summary>
-    /// Adds a page with the given dimensions, content stream bytes, and font resource map.
+    ///     Adds a page with the given dimensions, content stream bytes, and font resource map.
     /// </summary>
     /// <param name="widthPt">Page width in points.</param>
     /// <param name="heightPt">Page height in points.</param>
     /// <param name="contentBytes">Decoded (uncompressed) content stream bytes.</param>
     /// <param name="fontMap">
-    /// Mapping from resource key (e.g. <c>"F1"</c>) to a font <see cref="PdfIndirectReference"/>
-    /// previously added via <see cref="AddFont"/>.
+    ///     Mapping from resource key (e.g. <c>"F1"</c>) to a font <see cref="PdfIndirectReference" />
+    ///     previously added via <see cref="AddFont" />.
     /// </param>
     internal void AddPage(
         float widthPt,
@@ -68,19 +68,24 @@ internal sealed class PdfPageAccumulator
         ReadOnlySpan<byte> contentBytes,
         IReadOnlyDictionary<string, PdfIndirectReference> fontMap
         // ReSharper disable once BadListLineBreaks
-    ) => AddPage(widthPt, heightPt, contentBytes, fontMap, taggedItems: null, language: null);
+    ) => AddPage(widthPt,
+        heightPt,
+        contentBytes,
+        fontMap,
+        null,
+        null);
 
     /// <summary>
-    /// Adds a tagged page. When <paramref name="taggedItems"/> is non-null and non-empty,
-    /// the accumulator switches into tagged mode and collects items for <see cref="Build"/>.
+    ///     Adds a tagged page. When <paramref name="taggedItems" /> is non-null and non-empty,
+    ///     the accumulator switches into tagged mode and collects items for <see cref="Build" />.
     /// </summary>
     /// <param name="widthPt">Page width in points.</param>
     /// <param name="heightPt">Page height in points.</param>
     /// <param name="contentBytes">Content stream bytes (must contain matching BDC/EMC pairs).</param>
     /// <param name="fontMap">Font resource map.</param>
     /// <param name="taggedItems">
-    /// Marked-content items emitted during content-stream construction for this page,
-    /// or <see langword="null"/> for untagged pages.
+    ///     Marked-content items emitted during content-stream construction for this page,
+    ///     or <see langword="null" /> for untagged pages.
     /// </param>
     /// <param name="language">BCP 47 language tag for the document (e.g. <c>"en-US"</c>).</param>
     internal void AddPage(

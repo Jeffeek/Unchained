@@ -1,3 +1,4 @@
+using System.IO.Packaging;
 using Shouldly;
 using Unchained.Ooxml.Engine;
 using Xunit;
@@ -5,10 +6,10 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Verifies the foundation of the SDK-backed write path (M5): an Open(editable) → Save() round
-/// trip through <see cref="OoxmlEngine"/> preserves every OPC part. This is why an SDK-based save
-/// avoids the part-dropping the custom writer suffers — the SDK mutates the opened package in
-/// place rather than rebuilding it from scratch.
+///     Verifies the foundation of the SDK-backed write path (M5): an Open(editable) → Save() round
+///     trip through <see cref="OoxmlEngine" /> preserves every OPC part. This is why an SDK-based save
+///     avoids the part-dropping the custom writer suffers — the SDK mutates the opened package in
+///     place rather than rebuilding it from scratch.
 /// </summary>
 public sealed class OoxmlEngineRoundTripTests
 {
@@ -31,7 +32,7 @@ public sealed class OoxmlEngineRoundTripTests
         var before = CountParts(bytes);
 
         byte[] saved;
-        using (var engine = OoxmlEngine.Open(bytes, editable: true))
+        using (var engine = OoxmlEngine.Open(bytes))
             saved = engine.Save();
 
         CountParts(saved).ShouldBe(before, $"{fileName}: part count preserved on SDK round-trip");
@@ -40,7 +41,7 @@ public sealed class OoxmlEngineRoundTripTests
     private static int CountParts(byte[] pptx)
     {
         using var ms = new MemoryStream(pptx);
-        using var pkg = System.IO.Packaging.Package.Open(ms, FileMode.Open, FileAccess.Read);
+        using var pkg = Package.Open(ms, FileMode.Open, FileAccess.Read);
         return pkg.GetParts().Count();
     }
 }

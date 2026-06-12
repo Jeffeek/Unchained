@@ -5,41 +5,43 @@ using Unchained.Pptx.Core;
 namespace Unchained.Pptx.Security;
 
 /// <summary>
-/// Minimal OLE Compound File Binary (CFB) reader/writer, tailored for the
-/// OOXML encryption use-case where the file always contains exactly two streams:
-/// <c>EncryptionInfo</c> and <c>EncryptedPackage</c>.
-/// Implements the 512-byte-sector (version 3) CFB layout per [MS-CFB].
+///     Minimal OLE Compound File Binary (CFB) reader/writer, tailored for the
+///     OOXML encryption use-case where the file always contains exactly two streams:
+///     <c>EncryptionInfo</c> and <c>EncryptedPackage</c>.
+///     Implements the 512-byte-sector (version 3) CFB layout per [MS-CFB].
 /// </summary>
 internal static class CfbDocument
 {
-    // CFB magic bytes (8)
-    private static readonly byte[] Magic =
-        [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
-
     private const int SectorSize = 512;
     private const int MiniSectorSize = 64;
     private const int MiniStreamCutoff = 4096;
     private const int DirEntrySize = 128;
-    private const int DirsPerSector = SectorSize / DirEntrySize;   // 4
-    private const int FatEntriesPerSector = SectorSize / 4;        // 128
+    private const int DirsPerSector = SectorSize / DirEntrySize; // 4
+    private const int FatEntriesPerSector = SectorSize / 4;      // 128
 
     // Special sector/stream values (stored as signed int; these are unsigned sentinel values)
     private const int FreeSect = unchecked((int)0xFFFFFFFF);   // -1
     private const int EndOfChain = unchecked((int)0xFFFFFFFE); // -2
     private const int FatSect = unchecked((int)0xFFFFFFFD);    // -3
     private const int NoStream = unchecked((int)0xFFFFFFFF);   // -1 (same as FreeSect)
+    // CFB magic bytes (8)
+    private static readonly byte[] Magic =
+        [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 
     // ── Read ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Opens a CFB byte array and returns a dictionary of stream names → bytes.
-    /// Only streams in the root storage are returned.
+    ///     Opens a CFB byte array and returns a dictionary of stream names → bytes.
+    ///     Only streams in the root storage are returned.
     /// </summary>
     public static Dictionary<string, byte[]> Read(byte[] data)
     {
         if (data.Length < SectorSize) ThrowInvalid("File too small");
         for (var i = 0; i < Magic.Length; i++)
-            if (data[i] != Magic[i]) ThrowInvalid("Missing CFB magic bytes");
+        {
+            if (data[i] != Magic[i])
+                ThrowInvalid("Missing CFB magic bytes");
+        }
 
         var sectorSize = 1 << BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(30));
         var miniSectorSize = 1 << BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(32));
@@ -62,7 +64,7 @@ internal static class CfbDocument
 
         // Read mini-stream container (from root entry)
         byte[]? miniStream = null;
-        if (rootEntry.Size > 0 && rootEntry.StartSector != (int)EndOfChain)
+        if (rootEntry.Size > 0 && rootEntry.StartSector != EndOfChain)
         {
             var chain = FollowChain(fat, rootEntry.StartSector);
             miniStream = ReadSectorChain(data, chain, sectorSize, (int)rootEntry.Size);
@@ -103,49 +105,60 @@ internal static class CfbDocument
         // First 109 FAT sectors from DIFAT in header
         for (var i = 0; i < 109 && i < numFatSectors; i++)
         {
-            var s = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(76 + i * 4));
-            if (s == FreeSect || s == EndOfChain || s < 0) break;
+            var s = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(76 + (i * 4)));
+            if (s is FreeSect or EndOfChain or < 0) break;
+
             fatSectors.Add(s);
         }
 
         var allFatEntries = new List<int>();
-        foreach (var sector in fatSectors)
+        foreach (var offset in fatSectors.Select(sector => SectorOffset(sector, sectorSize)))
         {
-            var offset = SectorOffset(sector, sectorSize);
             for (var i = 0; i < sectorSize / 4; i++)
-                allFatEntries.Add(BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(offset + i * 4)));
+                allFatEntries.Add(BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(offset + (i * 4))));
         }
+
         return [.. allFatEntries];
     }
 
-    private static int[] BuildMiniFat(byte[] data, int firstMiniFatSector, int[] fat, int sectorSize)
+    private static int[] BuildMiniFat(
+        byte[] data,
+        int firstMiniFatSector,
+        IReadOnlyList<int> fat,
+        int sectorSize
+    )
     {
-        if (firstMiniFatSector == FreeSect || firstMiniFatSector == EndOfChain || firstMiniFatSector < 0) return [];
+        if (firstMiniFatSector is FreeSect or EndOfChain or < 0) return [];
 
         var entries = new List<int>();
         var chain = FollowChain(fat, firstMiniFatSector);
-        foreach (var sector in chain)
+        foreach (var offset in chain.Select(sector => SectorOffset(sector, sectorSize)))
         {
-            var offset = SectorOffset(sector, sectorSize);
             for (var i = 0; i < sectorSize / 4; i++)
-                entries.Add(BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(offset + i * 4)));
+                entries.Add(BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(offset + (i * 4))));
         }
+
         return [.. entries];
     }
 
-    private static List<DirEntry> ReadDirectory(byte[] data, int firstDirSector, int[] fat, int sectorSize)
+    private static List<DirEntry> ReadDirectory(
+        byte[] data,
+        int firstDirSector,
+        IReadOnlyList<int> fat,
+        int sectorSize
+    )
     {
         var entries = new List<DirEntry>();
         var chain = FollowChain(fat, firstDirSector);
-        foreach (var sector in chain)
+        foreach (var offset in chain.Select(sector => SectorOffset(sector, sectorSize)))
         {
-            var offset = SectorOffset(sector, sectorSize);
             for (var i = 0; i < DirsPerSector; i++)
             {
-                var e = ParseDirEntry(data, offset + i * DirEntrySize);
+                var e = ParseDirEntry(data, offset + (i * DirEntrySize));
                 entries.Add(e);
             }
         }
+
         return entries;
     }
 
@@ -160,24 +173,30 @@ internal static class CfbDocument
             Name = name,
             ObjectType = data[offset + 66],
             StartSector = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(offset + 116)),
-            Size = BinaryPrimitives.ReadUInt64LittleEndian(data.AsSpan(offset + 120)),
+            Size = BinaryPrimitives.ReadUInt64LittleEndian(data.AsSpan(offset + 120))
         };
     }
 
-    private static List<int> FollowChain(int[] fat, int start)
+    private static List<int> FollowChain(IReadOnlyList<int> fat, int start)
     {
         var chain = new List<int>();
         var current = start;
-        while (current >= 0 && current < fat.Length)
+        while (current >= 0 && current < fat.Count)
         {
             chain.Add(current);
             current = fat[current];
-            if (chain.Count > fat.Length) break; // cycle guard
+            if (chain.Count > fat.Count) break; // cycle guard
         }
+
         return chain;
     }
 
-    private static byte[] ReadSectorChain(byte[] data, List<int> chain, int sectorSize, int size)
+    private static byte[] ReadSectorChain(
+        byte[] data,
+        List<int> chain,
+        int sectorSize,
+        int size
+    )
     {
         var result = new byte[size];
         var written = 0;
@@ -189,10 +208,16 @@ internal static class CfbDocument
             written += toCopy;
             if (written >= size) break;
         }
+
         return result;
     }
 
-    private static byte[] ReadMiniStreamChain(byte[] miniStream, List<int> chain, int miniSectorSize, int size)
+    private static byte[] ReadMiniStreamChain(
+        byte[] miniStream,
+        List<int> chain,
+        int miniSectorSize,
+        int size
+    )
     {
         var result = new byte[size];
         var written = 0;
@@ -204,17 +229,18 @@ internal static class CfbDocument
             written += toCopy;
             if (written >= size) break;
         }
+
         return result;
     }
 
-    private static int SectorOffset(int sector, int sectorSize) => SectorSize + sector * sectorSize;
+    private static int SectorOffset(int sector, int sectorSize) => SectorSize + (sector * sectorSize);
 
     // ── Write ─────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Creates a CFB byte array containing the specified named streams.
-    /// Streams below <see cref="MiniStreamCutoff"/> bytes go into the mini-stream;
-    /// all others use full sectors.
+    ///     Creates a CFB byte array containing the specified named streams.
+    ///     Streams below <see cref="MiniStreamCutoff" /> bytes go into the mini-stream;
+    ///     all others use full sectors.
     /// </summary>
     public static byte[] Write(IReadOnlyList<(string name, byte[] data)> streams)
     {
@@ -271,16 +297,26 @@ internal static class CfbDocument
         var fatSectorCount = Math.Max(1, (totalSectors + FatEntriesPerSector - 1) / FatEntriesPerSector);
 
         // Build the byte array
-        var totalFileSize = SectorSize + totalSectors * SectorSize;
+        var totalFileSize = SectorSize + (totalSectors * SectorSize);
         var result = new byte[totalFileSize];
 
         WriteHeader(result, fatSectorCount, hasMini);
-        WriteFat(result, fatSectorCount, miniContainerSectors, largeEntries, largeSectorStarts, largeSectorCounts, hasMini);
+        WriteFat(result,
+            miniContainerSectors,
+            largeEntries,
+            largeSectorStarts,
+            largeSectorCounts,
+            hasMini);
         if (hasMini) WriteMiniFat(result, miniEntries);
-        WriteDirectory(result, miniEntries, largeEntries, miniSectors, largeSectorStarts,
-                       miniContainerSectors, totalMiniBytes, hasMini);
-        if (hasMini) WriteMiniStreamContainer(result, miniEntries, miniContainerSectors);
-        WriteLargeStreams(result, largeEntries, largeSectorStarts, firstDataSector);
+        WriteDirectory(result,
+            miniEntries,
+            largeEntries,
+            miniSectors,
+            largeSectorStarts,
+            totalMiniBytes,
+            hasMini);
+        if (hasMini) WriteMiniStreamContainer(result, miniEntries);
+        WriteLargeStreams(result, largeEntries, largeSectorStarts);
 
         return result;
     }
@@ -300,33 +336,30 @@ internal static class CfbDocument
         BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(48), 2); // first dir sector = 2
         // transaction sig: 0
         BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(56), MiniStreamCutoff);
-        BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(60), hasMini ? 1 : (int)EndOfChain); // first miniFAT sector
-        BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(64), hasMini ? 1 : 0); // num miniFAT sectors
-        BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(68), (int)EndOfChain); // no DIFAT chain
+        BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(60), hasMini ? 1 : EndOfChain); // first miniFAT sector
+        BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(64), hasMini ? 1 : 0);          // num miniFAT sectors
+        BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(68), EndOfChain);               // no DIFAT chain
         // num DIFAT sectors = 0
 
         // DIFAT[0]: sector 0 is the FAT sector
         BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(76), 0);
         // remaining DIFAT entries = FREESECT
         for (var i = 1; i < 109; i++)
-            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(76 + i * 4), FreeSect);
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(76 + (i * 4)), FreeSect);
     }
 
-    private static void WriteFat(byte[] buf, int fatSectorCount,
+    private static void WriteFat(
+        byte[] buf,
         int miniContainerSectors,
-        IReadOnlyList<(string name, byte[] data)> largeEntries,
+        IReadOnlyCollection<(string name, byte[] data)> largeEntries,
         IReadOnlyList<int> largeSectorStarts,
         IReadOnlyList<int> largeSectorCounts,
-        bool hasMini)
+        bool hasMini
+    )
     {
-        var fatBase = SectorSize; // sector 0 starts here
-
         // Fill all entries with FREESECT
         for (var i = 0; i < FatEntriesPerSector; i++)
-            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(fatBase + i * 4), FreeSect);
-
-        void WriteFatEntry(int sector, int value) =>
-            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(fatBase + sector * 4), value);
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(SectorSize + (i * 4)), FreeSect);
 
         // Sector 0: FAT (self)
         WriteFatEntry(0, FatSect);
@@ -361,16 +394,21 @@ internal static class CfbDocument
                 WriteFatEntry(s, i == count - 1 ? EndOfChain : s + 1);
             }
         }
+
+        return;
+
+        void WriteFatEntry(int sector, int value) =>
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(SectorSize + (sector * 4)), value);
     }
 
-    private static void WriteMiniFat(byte[] buf, IReadOnlyList<(string name, byte[] data)> miniEntries)
+    private static void WriteMiniFat(byte[] buf, IEnumerable<(string name, byte[] data)> miniEntries)
     {
-        var miniFatOffset = SectorSize * 2; // sector 1
+        const int miniFatOffset = SectorSize * 2; // sector 1
         var miniFatBuf = buf.AsSpan(miniFatOffset, SectorSize);
 
         // Fill with FREESECT
         for (var i = 0; i < FatEntriesPerSector; i++)
-            BinaryPrimitives.WriteInt32LittleEndian(miniFatBuf.Slice(i * 4), FreeSect);
+            BinaryPrimitives.WriteInt32LittleEndian(miniFatBuf[(i * 4)..], FreeSect);
 
         var miniSectorIdx = 0;
         foreach (var (_, data) in miniEntries)
@@ -380,23 +418,24 @@ internal static class CfbDocument
             {
                 var isLast = i == count - 1;
                 BinaryPrimitives.WriteInt32LittleEndian(
-                    miniFatBuf.Slice(miniSectorIdx * 4),
+                    miniFatBuf[(miniSectorIdx * 4)..],
                     isLast ? EndOfChain : miniSectorIdx + 1);
                 miniSectorIdx++;
             }
         }
     }
 
-    private static void WriteDirectory(byte[] buf,
+    private static void WriteDirectory(
+        byte[] buf,
         IReadOnlyList<(string name, byte[] data)> miniEntries,
         IReadOnlyList<(string name, byte[] data)> largeEntries,
         IReadOnlyList<(int startMiniSector, int size)> miniSectors,
         IReadOnlyList<int> largeSectorStarts,
-        int miniContainerSectors,
         int totalMiniBytes,
-        bool hasMini)
+        bool hasMini
+    )
     {
-        var dirOffset = SectorSize * 3; // sector 2
+        const int dirOffset = SectorSize * 3; // sector 2
 
         // Fill entire directory sector with zeros first
         Array.Clear(buf, dirOffset, SectorSize);
@@ -407,6 +446,7 @@ internal static class CfbDocument
             var (name, data) = miniEntries[i];
             all.Add((name, data, isMini: true, miniSectors[i].startMiniSector, data.Length));
         }
+
         for (var i = 0; i < largeEntries.Count; i++)
         {
             var (name, data) = largeEntries[i];
@@ -416,13 +456,17 @@ internal static class CfbDocument
         // Determine child/sibling structure for root's subtree
         // Build a simple left-skewed binary tree sorted by name (CFB uses Unicode case-insensitive)
         var sorted = all
-            .Select((entry, idx) => (entry, idx: idx + 1)) // entry 0 = root
-            .OrderBy(x => x.entry.name, StringComparer.OrdinalIgnoreCase)
+            .Select(static (entry, idx) => (entry, idx: idx + 1)) // entry 0 = root
+            .OrderBy(static x => x.entry.name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var leftSibling = new int[all.Count + 1];
         var rightSibling = new int[all.Count + 1];
-        for (var i = 0; i <= all.Count; i++) { leftSibling[i] = NoStream; rightSibling[i] = NoStream; }
+        for (var i = 0; i <= all.Count; i++)
+        {
+            leftSibling[i] = NoStream;
+            rightSibling[i] = NoStream;
+        }
 
         // Build simple chain tree: sorted[0] is root of subtree
         // Each node's right sibling = next sorted node
@@ -431,38 +475,54 @@ internal static class CfbDocument
 
         // Root entry (entry 0)
         var rootChild = sorted.Count > 0 ? sorted[0].idx : NoStream;
-        WriteDirEntry(buf, dirOffset, 0,
-            name: "Root Entry",
-            objectType: 5, // root storage
-            color: 1, // black
-            left: NoStream, right: NoStream, child: rootChild,
-            startSector: hasMini ? 3 : EndOfChain,
-            size: hasMini ? (ulong)Pad(totalMiniBytes, SectorSize) : 0UL);
+        WriteDirEntry(buf,
+            dirOffset,
+            0,
+            "Root Entry",
+            5, // root storage
+            1, // black
+            NoStream,
+            NoStream,
+            rootChild,
+            hasMini ? 3 : EndOfChain,
+            hasMini ? (ulong)Pad(totalMiniBytes, SectorSize) : 0UL);
 
         // Stream entries
         for (var i = 0; i < all.Count; i++)
         {
             var (name, _, _, start, size) = all[i];
             var entryIdx = i + 1;
-            WriteDirEntry(buf, dirOffset, entryIdx,
-                name: name,
-                objectType: 2, // stream
-                color: 1, // black
-                left: leftSibling[entryIdx], right: rightSibling[entryIdx],
-                child: NoStream,
-                startSector: start,
-                size: (ulong)size);
+            WriteDirEntry(buf,
+                dirOffset,
+                entryIdx,
+                name,
+                2, // stream
+                1, // black
+                leftSibling[entryIdx],
+                rightSibling[entryIdx],
+                NoStream,
+                start,
+                (ulong)size);
         }
 
         // Mark remaining entries as free (type=0 already from Array.Clear)
     }
 
-    private static void WriteDirEntry(byte[] buf, int dirSectorOffset, int index,
-        string name, byte objectType, byte color,
-        int left, int right, int child,
-        int startSector, ulong size)
+    private static void WriteDirEntry(
+        byte[] buf,
+        int dirSectorOffset,
+        int index,
+        string name,
+        byte objectType,
+        byte color,
+        int left,
+        int right,
+        int child,
+        int startSector,
+        ulong size
+    )
     {
-        var offset = dirSectorOffset + index * DirEntrySize;
+        var offset = dirSectorOffset + (index * DirEntrySize);
 
         if (name.Length > 0)
         {
@@ -482,11 +542,13 @@ internal static class CfbDocument
         BinaryPrimitives.WriteUInt64LittleEndian(buf.AsSpan(offset + 120), size);
     }
 
-    private static void WriteMiniStreamContainer(byte[] buf,
-        IReadOnlyList<(string name, byte[] data)> miniEntries, int miniContainerSectors)
+    private static void WriteMiniStreamContainer(
+        byte[] buf,
+        IEnumerable<(string name, byte[] data)> miniEntries
+    )
     {
         // Container starts at sector 3
-        var containerOffset = SectorSize * 4; // sector 3 (header + 0,1,2 + sector3 = offset 4*512)
+        const int containerOffset = SectorSize * 4; // sector 3 (header + 0,1,2 + sector3 = offset 4*512)
         var writePos = 0;
 
         foreach (var (_, data) in miniEntries)
@@ -497,16 +559,17 @@ internal static class CfbDocument
         }
     }
 
-    private static void WriteLargeStreams(byte[] buf,
+    private static void WriteLargeStreams(
+        byte[] buf,
         IReadOnlyList<(string name, byte[] data)> largeEntries,
-        IReadOnlyList<int> largeSectorStarts,
-        int firstDataSector)
+        IReadOnlyList<int> largeSectorStarts
+    )
     {
         for (var i = 0; i < largeEntries.Count; i++)
         {
             var (_, data) = largeEntries[i];
             var startSector = largeSectorStarts[i];
-            var destOffset = SectorSize + startSector * SectorSize;
+            var destOffset = SectorSize + (startSector * SectorSize);
             data.CopyTo(buf, destOffset);
         }
     }
@@ -514,7 +577,7 @@ internal static class CfbDocument
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static int Pad(int value, int boundary) =>
-        value == 0 ? 0 : ((value + boundary - 1) / boundary) * boundary;
+        value == 0 ? 0 : (value + boundary - 1) / boundary * boundary;
 
     private static int Sectors(int byteCount) =>
         (byteCount + SectorSize - 1) / SectorSize;
@@ -524,9 +587,9 @@ internal static class CfbDocument
 
     private sealed class DirEntry
     {
-        public string Name { get; set; } = string.Empty;
-        public byte ObjectType { get; set; }
-        public int StartSector { get; set; }
-        public ulong Size { get; set; }
+        public string Name { get; init; } = string.Empty;
+        public byte ObjectType { get; init; }
+        public int StartSector { get; init; }
+        public ulong Size { get; init; }
     }
 }

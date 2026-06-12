@@ -1,6 +1,6 @@
 using Shouldly;
-using Unchained.Drawing;
-using Unchained.Pptx.Rendering.Engine;
+using Unchained.Drawing.Constants;
+using Unchained.Drawing.Decoders;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Rendering;
@@ -22,7 +22,9 @@ public sealed class JpegDecoderTests
 
     [Fact]
     public void TruncatedJpeg_ReturnsNullNotThrow() =>
-        JpegDecoder.TryDecodeToRgb([0xFF, 0xD8, 0xFF, 0xE0, 0x00], out _, out _).ShouldBeNull();
+        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.App0Jfif, JpegConstants.ByteStuff],
+            out _,
+            out _).ShouldBeNull();
 
     [Fact]
     public void BaselineJpeg_DecodesToFullRgbBuffer()
@@ -48,20 +50,25 @@ public sealed class JpegDecoderTests
 
         // Sample the centre of each quadrant. JPEG is lossy, so assert the dominant channel
         // rather than exact values.
-        var (tlR, tlG, tlB) = Pixel(rgb, w, 4, 4);   // red quadrant
+        var (tlR, tlG, tlB) = Pixel(rgb, w, 4, 4); // red quadrant
         tlR.ShouldBeGreaterThan(tlG);
         tlR.ShouldBeGreaterThan(tlB);
 
-        var (trR, trG, trB) = Pixel(rgb, w, 12, 4);  // green quadrant
+        var (trR, trG, trB) = Pixel(rgb, w, 12, 4); // green quadrant
         trG.ShouldBeGreaterThan(trR);
         trG.ShouldBeGreaterThan(trB);
 
-        var (blR, blG, blB) = Pixel(rgb, w, 4, 12);  // blue quadrant
+        var (blR, blG, blB) = Pixel(rgb, w, 4, 12); // blue quadrant
         blB.ShouldBeGreaterThan(blR);
         blB.ShouldBeGreaterThan(blG);
     }
 
-    private static (int R, int G, int B) Pixel(byte[] rgb, int width, int x, int y)
+    private static (int R, int G, int B) Pixel(
+        byte[] rgb,
+        int width,
+        int x,
+        int y
+    )
     {
         var i = ((y * width) + x) * 3;
         return (rgb[i], rgb[i + 1], rgb[i + 2]);

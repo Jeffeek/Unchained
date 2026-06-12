@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Text;
 
 /// <summary>
-/// Specifies whether a line-spacing value is expressed in points or as a percentage
-/// of the font size.
+///     Specifies whether a line-spacing value is expressed in points or as a percentage
+///     of the font size.
 /// </summary>
 public enum LineSpacingMode
 {

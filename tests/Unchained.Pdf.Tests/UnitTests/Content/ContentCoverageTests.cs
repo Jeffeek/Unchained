@@ -8,14 +8,16 @@ using Xunit;
 namespace Unchained.Pdf.Tests.UnitTests.Content;
 
 /// <summary>
-/// Covers gaps in ContentStreamParser and TextExtractor not exercised by the
-/// primary test files: inline image handling (BI/ID/EI), skipped/unknown tokens,
-/// double-quote operator, TD leading update, Tz/Tw state, empty-text guards,
-/// TJ with PdfReal kern, SpansToText adjacent-span gap logic, and
-/// multi-font resolution via the integration-level page API.
+///     Covers gaps in ContentStreamParser and TextExtractor not exercised by the
+///     primary test files: inline image handling (BI/ID/EI), skipped/unknown tokens,
+///     double-quote operator, TD leading update, Tz/Tw state, empty-text guards,
+///     TJ with PdfReal kern, SpansToText adjacent-span gap logic, and
+///     multi-font resolution via the integration-level page API.
 /// </summary>
 public sealed class ContentCoverageTests
 {
+    private static readonly IReadOnlyDictionary<string, string> HelveticaMap =
+        new Dictionary<string, string> { ["F1"] = "Helvetica", ["F2"] = "Helvetica-Bold" };
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static IReadOnlyList<ContentOperator> Parse(string stream) =>
@@ -23,9 +25,6 @@ public sealed class ContentCoverageTests
 
     private static IEnumerable<ContentOperator> Parse(byte[] data) =>
         ContentStreamParser.Parse(data);
-
-    private static readonly IReadOnlyDictionary<string, string> HelveticaMap =
-        new Dictionary<string, string> { ["F1"] = "Helvetica", ["F2"] = "Helvetica-Bold" };
 
     // ── ContentStreamParser: inline image ────────────────────────────────────
 
@@ -152,8 +151,8 @@ public sealed class ContentCoverageTests
             new ContentOperator("Td", [new PdfInteger(36), new PdfInteger(700)]),
             new ContentOperator("\"",
             [
-                new PdfReal(2.0),  // tw
-                new PdfReal(0.5),  // tc
+                new PdfReal(2.0), // tw
+                new PdfReal(0.5), // tc
                 PdfString.FromLatin1("Quoted")
             ]),
             new ContentOperator("ET", [])
@@ -177,9 +176,9 @@ public sealed class ContentCoverageTests
             new ContentOperator("Td", [new PdfInteger(0), new PdfInteger(700)]),
             new ContentOperator("\"",
             [
-                new PdfReal(5.0),  // large tw
+                new PdfReal(5.0), // large tw
                 new PdfReal(0.0),
-                PdfString.FromLatin1("A B")  // contains space, tw applies
+                PdfString.FromLatin1("A B") // contains space, tw applies
             ]),
             new ContentOperator("ET", [])
         };
@@ -214,7 +213,7 @@ public sealed class ContentCoverageTests
             new ContentOperator("Tj", [PdfString.FromLatin1("Line1")]),
             new ContentOperator("TD", [new PdfInteger(0), new PdfInteger(-16)]),
             new ContentOperator("Tj", [PdfString.FromLatin1("Line2")]),
-            new ContentOperator("T*", []),  // should now use leading=16
+            new ContentOperator("T*", []), // should now use leading=16
             new ContentOperator("Tj", [PdfString.FromLatin1("Line3")]),
             new ContentOperator("ET", [])
         };
@@ -230,7 +229,7 @@ public sealed class ContentCoverageTests
         line1.Y.ShouldBeGreaterThan(line2.Y);
         line2.Y.ShouldBeGreaterThan(line3.Y);
         // The gap between Line2 and Line3 should equal the leading set by TD (16).
-        (line2.Y - line3.Y).ShouldBe(16.0, tolerance: 0.01);
+        (line2.Y - line3.Y).ShouldBe(16.0, 0.01);
     }
 
     // ── TextExtractor: Tz (horizontal scaling) ───────────────────────────────
@@ -412,7 +411,7 @@ public sealed class ContentCoverageTests
             new ContentOperator("Tf", [PdfName.Get("F1"), new PdfInteger(10)]),
             new ContentOperator("TL", [new PdfInteger(12)]),
             new ContentOperator("Td", [new PdfInteger(0), new PdfInteger(700)]),
-            new ContentOperator("'", [new PdfInteger(42)]),  // wrong type
+            new ContentOperator("'", [new PdfInteger(42)]), // wrong type
             new ContentOperator("ET", [])
         };
 
@@ -430,8 +429,18 @@ public sealed class ContentCoverageTests
         var spans = new[]
         {
             // ReSharper disable BadListLineBreaks
-            new TextSpan("Hello", 0, 100, 25, 12, "Helvetica"),
-            new TextSpan("World", 25, 100, 25, 12, "Helvetica")  // X == prevEndX, gap == 0
+            new TextSpan("Hello",
+                0,
+                100,
+                25,
+                12,
+                "Helvetica"),
+            new TextSpan("World",
+                25,
+                100,
+                25,
+                12,
+                "Helvetica") // X == prevEndX, gap == 0
             // ReSharper restore BadListLineBreaks
         };
 
@@ -446,8 +455,18 @@ public sealed class ContentCoverageTests
         var spans = new[]
         {
             // ReSharper disable BadListLineBreaks
-            new TextSpan("Left", 0, 100, 20, 12, "Helvetica"),
-            new TextSpan("Right", 30, 100, 20, 12, "Helvetica")  // gap = 30-20 = 10 > 1.0
+            new TextSpan("Left",
+                0,
+                100,
+                20,
+                12,
+                "Helvetica"),
+            new TextSpan("Right",
+                30,
+                100,
+                20,
+                12,
+                "Helvetica") // gap = 30-20 = 10 > 1.0
             // ReSharper restore BadListLineBreaks
         };
 
@@ -462,8 +481,18 @@ public sealed class ContentCoverageTests
         var spans = new[]
         {
             // ReSharper disable BadListLineBreaks
-            new TextSpan("A", 0, 100, 10, 12, "Helvetica"),
-            new TextSpan("B", 15, 101, 10, 12, "Helvetica")  // |101-100| = 1 < 2.0
+            new TextSpan("A",
+                0,
+                100,
+                10,
+                12,
+                "Helvetica"),
+            new TextSpan("B",
+                15,
+                101,
+                10,
+                12,
+                "Helvetica") // |101-100| = 1 < 2.0
             // ReSharper restore BadListLineBreaks
         };
 
@@ -478,8 +507,18 @@ public sealed class ContentCoverageTests
         var spans = new[]
         {
             // ReSharper disable BadListLineBreaks
-            new TextSpan("Top", 0, 200, 20, 12, "Helvetica"),
-            new TextSpan("Bottom", 0, 195, 20, 12, "Helvetica")  // |200-195| = 5 > 2.0
+            new TextSpan("Top",
+                0,
+                200,
+                20,
+                12,
+                "Helvetica"),
+            new TextSpan("Bottom",
+                0,
+                195,
+                20,
+                12,
+                "Helvetica") // |200-195| = 5 > 2.0
             // ReSharper restore BadListLineBreaks
         };
 

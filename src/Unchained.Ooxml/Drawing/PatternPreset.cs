@@ -1,7 +1,7 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// Preset two-colour pattern fill types, corresponding to OOXML <c>ST_PresetPatternVal</c>.
+///     Preset two-colour pattern fill types, corresponding to OOXML <c>ST_PresetPatternVal</c>.
 /// </summary>
 public enum PatternPreset
 {

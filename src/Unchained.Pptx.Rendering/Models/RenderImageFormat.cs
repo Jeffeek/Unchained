@@ -1,4 +1,4 @@
-namespace Unchained.Pptx.Rendering;
+namespace Unchained.Pptx.Rendering.Models;
 
 /// <summary>The image format used when encoding a rendered slide.</summary>
 public enum RenderImageFormat

@@ -33,9 +33,9 @@ Every Unchained package follows the same principles:
 
 - **MIT licensed** — use freely in commercial, proprietary, and open-source projects
 - **No copyleft** — consuming Unchained never requires you to open-source your application
-- **From scratch** — implemented against open standards (ISO 32000, ECMA-376, ODF); no GPL or LGPL dependencies
+- **Standards-based core** — each format's core is implemented directly against its open standard (ISO 32000, ECMA-376, ODF); dependencies are permissively licensed (MIT / Apache-2.0 / BSD / FTL / SIL OFL), never GPL or LGPL
 - **Async-first** — all public APIs are `async Task`; safe on ASP.NET and gRPC pipelines
-- **Pure managed** where possible; native binaries only for rasterization (FreeType2, HarfBuzz) with all platforms bundled
+- **Pure managed** where the standard library suffices; focused libraries pull in image codecs, text shaping, and font rasterization, with native binaries (FreeType2, HarfBuzz) bundled for every platform
 
 ---
 

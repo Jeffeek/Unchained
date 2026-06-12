@@ -1,6 +1,7 @@
+using System.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
-using Unchained.Pptx.Media;
+using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Shapes;
@@ -11,8 +12,8 @@ using Unchained.Studio.Models;
 namespace Unchained.Studio.Studio.Pptx;
 
 /// <summary>
-/// Converts a selected <see cref="TreeNode"/> from a PPTX document tree into a
-/// <see cref="PropertyBag"/> for display in the properties panel.
+///     Converts a selected <see cref="TreeNode" /> from a PPTX document tree into a
+///     <see cref="PropertyBag" /> for display in the properties panel.
 /// </summary>
 public static class PptxPropertyAdapter
 {
@@ -99,7 +100,7 @@ public static class PptxPropertyAdapter
                         Entry("Slide ID", slide.SlideId.ToString(), PropertyValueKind.Number),
                         Entry("Hidden", slide.IsHidden.ToString(), PropertyValueKind.Boolean),
                         Entry("Shapes", slide.Shapes.Count.ToString(), PropertyValueKind.Number),
-                        Entry("Layout", slide.Layout.Name, PropertyValueKind.Text)
+                        Entry("Layout", slide.Layout.Name)
                     ]
                 }
             ],
@@ -148,15 +149,16 @@ public static class PptxPropertyAdapter
         {
             case AutoShape auto:
             {
-                groups.Insert(1, new PropertyGroup
-                {
-                    Header = "Auto Shape",
-                    Entries =
-                    [
-                        Entry("Preset", auto.ShapeType.ToString()),
-                        Entry("Is text box", auto.IsTextBox.ToString(), PropertyValueKind.Boolean)
-                    ]
-                });
+                groups.Insert(1,
+                    new PropertyGroup
+                    {
+                        Header = "Auto Shape",
+                        Entries =
+                        [
+                            Entry("Preset", auto.ShapeType.ToString()),
+                            Entry("Is text box", auto.IsTextBox.ToString(), PropertyValueKind.Boolean)
+                        ]
+                    });
                 var text = auto.TextFrame.PlainText;
                 rawText = string.IsNullOrWhiteSpace(text) ? null : text;
             }
@@ -164,49 +166,52 @@ public static class PptxPropertyAdapter
 
             case PictureShape picture:
             {
-                groups.Insert(1, new PropertyGroup
-                {
-                    Header = "Picture",
-                    Entries =
-                    [
-                        Entry("Has image", (picture.Image is not null).ToString(), PropertyValueKind.Boolean),
-                        Entry("Content type", picture.Image?.ContentType ?? "(none)"),
-                        Entry("Pixel size", picture.Image is { PixelWidth: > 0 } i ? $"{i.PixelWidth} × {i.PixelHeight}" : "(unknown)")
-                    ]
-                });
+                groups.Insert(1,
+                    new PropertyGroup
+                    {
+                        Header = "Picture",
+                        Entries =
+                        [
+                            Entry("Has image", (picture.Image is not null).ToString(), PropertyValueKind.Boolean),
+                            Entry("Content type", picture.Image?.ContentType ?? "(none)"),
+                            Entry("Pixel size", picture.Image is { PixelWidth: > 0 } i ? $"{i.PixelWidth} × {i.PixelHeight}" : "(unknown)")
+                        ]
+                    });
             }
             break;
 
             case TableShape table:
             {
-                groups.Insert(1, new PropertyGroup
-                {
-                    Header = "Table",
-                    Entries =
-                    [
-                        Entry("Header row", table.HasHeaderRow.ToString(), PropertyValueKind.Boolean),
-                        Entry("Banded rows", table.HasBandedRows.ToString(), PropertyValueKind.Boolean),
-                        Entry("Total row", table.HasTotalRow.ToString(), PropertyValueKind.Boolean)
-                    ]
-                });
+                groups.Insert(1,
+                    new PropertyGroup
+                    {
+                        Header = "Table",
+                        Entries =
+                        [
+                            Entry("Header row", table.HasHeaderRow.ToString(), PropertyValueKind.Boolean),
+                            Entry("Banded rows", table.HasBandedRows.ToString(), PropertyValueKind.Boolean),
+                            Entry("Total row", table.HasTotalRow.ToString(), PropertyValueKind.Boolean)
+                        ]
+                    });
             }
             break;
 
             case ChartShape chartShape:
             {
                 var chart = chartShape.Chart;
-                groups.Insert(1, new PropertyGroup
-                {
-                    Header = "Chart",
-                    Entries =
-                    [
-                        Entry("Type", chart.Type.ToString()),
-                        Entry("Title", chart.HasTitle ? chart.Title : "(none)"),
-                        Entry("Series", chart.Data.Series.Count.ToString(), PropertyValueKind.Number),
-                        Entry("Categories", chart.Data.Categories.Count.ToString(), PropertyValueKind.Number),
-                        Entry("Legend", chart.Legend.IsVisible ? chart.Legend.Position.ToString() : "(hidden)")
-                    ]
-                });
+                groups.Insert(1,
+                    new PropertyGroup
+                    {
+                        Header = "Chart",
+                        Entries =
+                        [
+                            Entry("Type", chart.Type.ToString()),
+                            Entry("Title", chart.HasTitle ? chart.Title : "(none)"),
+                            Entry("Series", chart.Data.Series.Count.ToString(), PropertyValueKind.Number),
+                            Entry("Categories", chart.Data.Categories.Count.ToString(), PropertyValueKind.Number),
+                            Entry("Legend", chart.Legend.IsVisible ? chart.Legend.Position.ToString() : "(hidden)")
+                        ]
+                    });
                 rawText = DescribeChart(chart);
                 rawLabel = "Chart Data";
             }
@@ -214,11 +219,12 @@ public static class PptxPropertyAdapter
 
             case GroupShape group:
             {
-                groups.Insert(1, new PropertyGroup
-                {
-                    Header = "Group",
-                    Entries = [Entry("Children", group.Children.Count.ToString(), PropertyValueKind.Number)]
-                });
+                groups.Insert(1,
+                    new PropertyGroup
+                    {
+                        Header = "Group",
+                        Entries = [Entry("Children", group.Children.Count.ToString(), PropertyValueKind.Number)]
+                    });
             }
             break;
         }
@@ -327,7 +333,7 @@ public static class PptxPropertyAdapter
 
     private static string DescribeChart(ChartModel chart)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         if (chart.Data.Categories.Count > 0)
             sb.AppendLine($"Categories: {string.Join(", ", chart.Data.Categories)}");
         foreach (var series in chart.Data.Series)
@@ -337,7 +343,7 @@ public static class PptxPropertyAdapter
 
     private static string FormatEmu(Emu emu) => $"{emu.ToInches():0.##} in ({emu.Value} EMU)";
 
-    private static string FormatColor(Unchained.Ooxml.Drawing.ColorSpec color)
+    private static string FormatColor(ColorSpec color)
     {
         var argb = color.Resolve(null);
         return $"#{argb & 0x00FFFFFF:X6}";
@@ -347,7 +353,8 @@ public static class PptxPropertyAdapter
         string key,
         string value,
         PropertyValueKind kind = PropertyValueKind.Text,
-        string? copyValue = null) =>
+        string? copyValue = null
+    ) =>
         new()
         {
             Key = key,

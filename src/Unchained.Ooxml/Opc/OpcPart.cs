@@ -1,15 +1,15 @@
 namespace Unchained.Ooxml.Opc;
 
 /// <summary>
-/// Represents a single part in an OPC package — a named byte stream with a content type
-/// and an optional set of relationships to other parts.
+///     Represents a single part in an OPC package — a named byte stream with a content type
+///     and an optional set of relationships to other parts.
 /// </summary>
 internal sealed class OpcPart
 {
     private readonly List<OpcRelationship> _relationships = [];
 
     /// <summary>
-    /// Initialises a new part with the given URI, content type, and raw byte data.
+    ///     Initialises a new part with the given URI, content type, and raw byte data.
     /// </summary>
     /// <param name="uri">Absolute part URI (e.g. <c>/ppt/slides/slide1.xml</c>).</param>
     /// <param name="contentType">MIME content type for this part.</param>
@@ -42,11 +42,11 @@ internal sealed class OpcPart
         _relationships.Add(relationship);
 
     /// <summary>
-    /// Finds the first relationship with the given type, or <see langword="null"/> if none exists.
+    ///     Finds the first relationship with the given type, or <see langword="null" /> if none exists.
     /// </summary>
     /// <param name="relationshipType">
-    /// The full relationship type URI
-    /// (e.g. <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide</c>).
+    ///     The full relationship type URI
+    ///     (e.g. <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide</c>).
     /// </param>
     public OpcRelationship? FindRelationship(string relationshipType) =>
         _relationships.FirstOrDefault(r => r.RelationshipType.Equals(relationshipType, StringComparison.Ordinal));
@@ -57,15 +57,15 @@ internal sealed class OpcPart
 
     /// <summary>Resolves a target URI relative to this part's own URI.</summary>
     /// <param name="targetUri">
-    /// The target URI from a relationship — may be relative (e.g. <c>slides/slide1.xml</c>)
-    /// or absolute (e.g. <c>/ppt/slides/slide1.xml</c>).
+    ///     The target URI from a relationship — may be relative (e.g. <c>slides/slide1.xml</c>)
+    ///     or absolute (e.g. <c>/ppt/slides/slide1.xml</c>).
     /// </param>
     public string ResolveUri(string targetUri)
     {
         if (targetUri.StartsWith('/'))
             return targetUri;
 
-        var baseDir = System.IO.Path.GetDirectoryName(Uri)?.Replace('\\', '/') ?? "/";
+        var baseDir = Path.GetDirectoryName(Uri)?.Replace('\\', '/') ?? "/";
         if (!baseDir.StartsWith('/'))
             baseDir = "/" + baseDir;
 
@@ -83,7 +83,7 @@ internal sealed class OpcPart
             switch (segment)
             {
                 case "" or ".":
-                    break;
+                break;
                 case "..":
                 {
                     if (stack.Count > 0)
@@ -92,7 +92,7 @@ internal sealed class OpcPart
                 }
                 default:
                     stack.Push(segment);
-                    break;
+                break;
             }
         }
 

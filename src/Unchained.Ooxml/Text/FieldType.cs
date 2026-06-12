@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Text;
 
 /// <summary>
-/// Identifies the type of auto-updating field inserted into a text run.
-/// Fields are automatically refreshed by the presentation viewer.
+///     Identifies the type of auto-updating field inserted into a text run.
+///     Fields are automatically refreshed by the presentation viewer.
 /// </summary>
 public enum FieldType
 {

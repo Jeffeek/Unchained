@@ -7,7 +7,7 @@
 <MudDialog Style="min-width:480px; max-width:640px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Outlined.FileDownload" Class="mr-2" Style="vertical-align:middle;" />
+            <MudIcon Icon="@Icons.Material.Outlined.FileDownload" Class="mr-2" Style="vertical-align:middle;"/>
             Export Presentation
         </MudText>
     </TitleContent>
@@ -60,7 +60,7 @@
         {
             <MudStack Spacing="3" Style="min-width:420px;">
                 <MudProgressLinear Indeterminate="@(_phase == Phase.Running)"
-                                   Value="100" Color="Color.Primary" Rounded="true" />
+                                   Value="100" Color="Color.Primary" Rounded="true"/>
                 <MudText Typo="Typo.body2">@_message</MudText>
             </MudStack>
         }
@@ -83,11 +83,18 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
-    [Parameter] public PresentationProcessor Processor { get; set; } = default!;
-    [Parameter] public PresentationDocument Document { get; set; } = default!;
-    [Parameter] public string FileName { get; set; } = "presentation.pptx";
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public PresentationProcessor Processor { get; set; } = default!;
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = default!;
+
+    [Parameter]
+    public string FileName { get; set; } = "presentation.pptx";
 
     private ExportFormat _format = ExportFormat.Pdf;
     private bool _includeHidden;
@@ -106,7 +113,7 @@
         ExportFormat.HtmlPlayer => "A single self-contained .html with keyboard/click navigation, counter, and fullscreen.",
         ExportFormat.Odp => "Structural OpenDocument export — slides, shapes, text, and images.",
         ExportFormat.HtmlPerSlide => "One .html file per slide, packaged into a ZIP.",
-        _ => string.Empty,
+        _ => string.Empty
     };
 
     private async Task StartExport()
@@ -121,16 +128,18 @@
             {
                 case ExportFormat.Pdf:
                     await ExportPdf();
-                    break;
+                break;
                 case ExportFormat.HtmlPlayer:
                     await ExportHtmlPlayer();
-                    break;
+                break;
                 case ExportFormat.Odp:
                     await ExportOdp();
-                    break;
+                break;
                 case ExportFormat.HtmlPerSlide:
                     await ExportHtmlZip();
-                    break;
+                break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             _phase = Phase.Done;
@@ -148,6 +157,7 @@
             _message = $"Export failed: {ex.Message}";
             Snackbar.Add(_message, Severity.Error);
         }
+
         StateHasChanged();
     }
 
@@ -157,7 +167,7 @@
         {
             IncludeHiddenSlides = _includeHidden,
             IncludeNotes = _includeNotes,
-            AccessiblePdf = _accessiblePdf,
+            AccessiblePdf = _accessiblePdf
         };
         using var ms = new MemoryStream();
         await Processor.SaveAsPdfAsync(Document, ms, options);
@@ -170,10 +180,10 @@
         {
             IncludeHiddenSlides = _includeHidden,
             ShowSlideCounter = _showCounter,
-            Title = BaseName,
+            Title = BaseName
         };
-        var bytes = await Processor.ExportHtmlPlayerAsync(Document, options);
-        await Exporter.TriggerDownloadAsync(bytes, $"{BaseName}-player.html", "text/html");
+        var bytes = await PresentationProcessor.ExportHtmlPlayerAsync(Document, options);
+        await Exporter.TriggerDownloadAsync(bytes.ToArray(), $"{BaseName}-player.html", "text/html");
     }
 
     private async Task ExportOdp()
@@ -181,7 +191,9 @@
         var options = new OdpSaveOptions { IncludeHiddenSlides = _includeHidden };
         var bytes = await Processor.ExportOdpAsync(Document, options);
         await Exporter.TriggerDownloadAsync(
-            bytes, $"{BaseName}.odp", "application/vnd.oasis.opendocument.presentation");
+            bytes,
+            $"{BaseName}.odp",
+            "application/vnd.oasis.opendocument.presentation");
     }
 
     private async Task ExportHtmlZip()
@@ -201,14 +213,14 @@
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
         }
     }
 
     private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
     {
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             foreach (var (path, data) in entries)
             {
@@ -217,6 +229,7 @@
                 stream.Write(data);
             }
         }
+
         return ms.ToArray();
     }
 

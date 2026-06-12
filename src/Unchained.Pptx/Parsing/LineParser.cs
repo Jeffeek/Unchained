@@ -1,19 +1,18 @@
 using System.Xml.Linq;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
-using Unchained.Pptx.Models.Shapes;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses DrawingML line property elements (<c>&lt;a:ln&gt;</c>) into <see cref="LineFormat"/> objects.
+///     Parses DrawingML line property elements (<c>&lt;a:ln&gt;</c>) into <see cref="LineFormat" /> objects.
 /// </summary>
 internal static class LineParser
 {
     /// <summary>
-    /// Reads <c>&lt;a:ln&gt;</c> from <paramref name="parent"/> and populates <paramref name="line"/>.
-    /// If no <c>&lt;a:ln&gt;</c> element is present, the line is left at its default (no outline).
+    ///     Reads <c>&lt;a:ln&gt;</c> from <paramref name="parent" /> and populates <paramref name="line" />.
+    ///     If no <c>&lt;a:ln&gt;</c> element is present, the line is left at its default (no outline).
     /// </summary>
     public static void Parse(XElement parent, LineFormat line)
     {
@@ -44,17 +43,16 @@ internal static class LineParser
 
         // Tail arrowhead
         var tail = ln.Element(DmlNames.TailEnd);
-        if (tail != null)
-        {
-            line.TailArrow.HeadType = ParseArrowType(tail.GetAttr("type", "none"));
-            line.TailArrow.Width = ParseArrowSize(tail.GetAttr("w", "med"));
-            line.TailArrow.Length = ParseArrowSize(tail.GetAttr("len", "med"));
-        }
+        if (tail == null) return;
+
+        line.TailArrow.HeadType = ParseArrowType(tail.GetAttr("type", "none"));
+        line.TailArrow.Width = ParseArrowSize(tail.GetAttr("w", "med"));
+        line.TailArrow.Length = ParseArrowSize(tail.GetAttr("len", "med"));
     }
 
     /// <summary>
-    /// Reads line properties directly from <paramref name="lineEl"/> (e.g. an <c>&lt;a:lnL&gt;</c>
-    /// table cell border element) and populates <paramref name="line"/>.
+    ///     Reads line properties directly from <paramref name="lineEl" /> (e.g. an <c>&lt;a:lnL&gt;</c>
+    ///     table cell border element) and populates <paramref name="line" />.
     /// </summary>
     public static void ParseElement(XElement lineEl, LineFormat line)
     {

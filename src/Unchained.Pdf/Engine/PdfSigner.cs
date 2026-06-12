@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -11,13 +12,13 @@ using Unchained.Pdf.Writing;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Creates digitally signed PDF documents using PKCS#7 detached signatures
-/// per ISO 32000-1 §12.8.3 (SubFilter <c>adbe.pkcs7.detached</c>).
-/// <para>
-/// Uses a two-pass approach: write the PDF with fixed-size placeholders, locate
-/// their byte offsets, compute the signature over the two byte ranges, and patch
-/// the placeholders in-place. Document size is preserved byte-for-byte.
-/// </para>
+///     Creates digitally signed PDF documents using PKCS#7 detached signatures
+///     per ISO 32000-1 §12.8.3 (SubFilter <c>adbe.pkcs7.detached</c>).
+///     <para>
+///         Uses a two-pass approach: write the PDF with fixed-size placeholders, locate
+///         their byte offsets, compute the signature over the two byte ranges, and patch
+///         the placeholders in-place. Document size is preserved byte-for-byte.
+///     </para>
 /// </summary>
 internal static class PdfSigner
 {
@@ -27,18 +28,25 @@ internal static class PdfSigner
     // Hex representation: 2 chars per byte, plus < and >
     private const int ContentsHexLen = (SignatureReservedBytes * 2) + 2; // <hex> total
 
-    // Sentinel integers for the /ByteRange array placeholder.
-    // Four different 10-digit numbers give a unique, easily searchable byte sequence.
-    private static readonly PdfArray ByteRangePlaceholder = new([
-        new PdfInteger(1111111111),
-        new PdfInteger(2222222222),
-        new PdfInteger(3333333333),
-        new PdfInteger(4444444444)
-    ]);
+    // Placeholder values written to /ByteRange before the true byte offsets are known;
+    // replaced with actual values after the document is serialized.
+    private const long ByteRangeSentinel0 = 1111111111L;
+    private const long ByteRangeSentinel1 = 2222222222L;
+    private const long ByteRangeSentinel2 = 3333333333L;
+    private const long ByteRangeSentinel3 = 4444444444L;
 
     // PdfWriter format: [1111111111 2222222222 3333333333 4444444444]
     // = 1 + 10 + 1 + 10 + 1 + 10 + 1 + 10 + 1 = 45 chars
     private const int ByteRangePlaceholderLen = 45;
+
+    // Sentinel integers for the /ByteRange array placeholder.
+    // Four different 10-digit numbers give a unique, easily searchable byte sequence.
+    private static readonly PdfArray ByteRangePlaceholder = new([
+        new PdfInteger(ByteRangeSentinel0),
+        new PdfInteger(ByteRangeSentinel1),
+        new PdfInteger(ByteRangeSentinel2),
+        new PdfInteger(ByteRangeSentinel3)
+    ]);
 
     // ── Public entry point ────────────────────────────────────────────────────
 
@@ -123,7 +131,7 @@ internal static class PdfSigner
             // Placeholder array — patched in Step 6
             ["ByteRange"] = ByteRangePlaceholder,
             // Placeholder hex-zero string — patched in Step 9
-            ["Contents"] = new PdfString(new byte[SignatureReservedBytes], isHex: true),
+            ["Contents"] = new PdfString(new byte[SignatureReservedBytes], true),
             ["M"] = PdfString.FromLatin1(FormatPdfDate(now))
         };
 
@@ -273,7 +281,13 @@ internal static class PdfSigner
 
     // Replaces the sentinel [1111111111 2222222222 3333333333 4444444444] with actual values.
     // ReSharper disable BadListLineBreaks
-    private static void PatchByteRange(byte[] buf, long off0, long len0, long off1, long len1)
+    private static void PatchByteRange(
+            byte[] buf,
+            long off0,
+            long len0,
+            long off1,
+            long len1
+        )
         // ReSharper restore BadListLineBreaks
     {
         // Build the replacement string, padded to ByteRangePlaceholderLen
@@ -282,7 +296,7 @@ internal static class PdfSigner
         var replacementBytes = Encoding.ASCII.GetBytes(replacement);
 
         // Sentinel bytes to search for
-        const string sentinel = "[1111111111 2222222222 3333333333 4444444444]";
+        var sentinel = $"[{ByteRangeSentinel0} {ByteRangeSentinel1} {ByteRangeSentinel2} {ByteRangeSentinel3}]";
         var sentinelBytes = Encoding.ASCII.GetBytes(sentinel);
 
         var idx = buf.AsSpan().IndexOf(sentinelBytes);
@@ -300,7 +314,7 @@ internal static class PdfSigner
         // contentsStart + 1 = first hex char
         var pos = contentsStart + 1;
 
-        foreach (var hex in signatureBytes.Select(static t => t.ToString("X2")))
+        foreach (var hex in signatureBytes.Select(static t => t.ToHex2()))
         {
             buf[pos++] = (byte)hex[0];
             buf[pos++] = (byte)hex[1];
@@ -310,10 +324,15 @@ internal static class PdfSigner
 
     // ── PKCS#7 / CMS ─────────────────────────────────────────────────────────
 
-    private static byte[] CreatePkcs7Signature(byte[] content, X509Certificate2 certificate, SignatureOptions opts, DateTimeOffset now)
+    private static byte[] CreatePkcs7Signature(
+        byte[] content,
+        X509Certificate2 certificate,
+        SignatureOptions opts,
+        DateTimeOffset now
+    )
     {
         var contentInfo = new ContentInfo(content);
-        var cms = new SignedCms(contentInfo, detached: true);
+        var cms = new SignedCms(contentInfo, true);
 
         var signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, certificate)
         {

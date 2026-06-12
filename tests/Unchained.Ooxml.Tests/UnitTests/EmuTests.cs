@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Ooxml;
 using Xunit;
 
 namespace Unchained.Ooxml.Tests.UnitTests;
@@ -39,7 +38,7 @@ public sealed class EmuTests
     [Fact]
     public void FromPixels_At96Dpi_ConvertsCorrectly()
     {
-        var emu = Emu.FromPixels(96, dpi: 96);
+        var emu = Emu.FromPixels(96, 96);
         emu.Value.ShouldBe(914_400);
     }
 
@@ -47,7 +46,7 @@ public sealed class EmuTests
     public void ToInches_RoundTrips()
     {
         var original = Emu.FromInches(3.0);
-        original.ToInches().ShouldBe(3.0, tolerance: 0.0001);
+        original.ToInches().ShouldBe(3.0, 0.0001);
     }
 
     [Fact]

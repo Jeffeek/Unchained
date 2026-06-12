@@ -1,12 +1,13 @@
 using Shouldly;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests.RealPptx;
 
 /// <summary>
-/// Integration tests that run against real .pptx files placed in TestFiles/.
-/// All tests skip gracefully when the file is absent.
+///     Integration tests that run against real .pptx files placed in TestFiles/.
+///     All tests skip gracefully when the file is absent.
 /// </summary>
 public sealed class RealPptxDocumentTests : PptxTestBase
 {
@@ -23,7 +24,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("simple.pptx")) return; // skip gracefully
 
-        using var stream = File.OpenRead(FilePath("simple.pptx"));
+        await using var stream = File.OpenRead(FilePath("simple.pptx"));
         var doc = await Processor.LoadAsync(stream);
         doc.ShouldNotBeNull();
         doc.Slides.Count.ShouldBeGreaterThan(0);
@@ -34,7 +35,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("simple.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("simple.pptx"));
+        await using var stream = File.OpenRead(FilePath("simple.pptx"));
         var doc = await Processor.LoadAsync(stream);
         var count = doc.Slides.Count;
 
@@ -47,7 +48,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("multipage.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("multipage.pptx"));
+        await using var stream = File.OpenRead(FilePath("multipage.pptx"));
         var doc = await Processor.LoadAsync(stream);
         doc.Slides.Count.ShouldBeGreaterThanOrEqualTo(5);
     }
@@ -57,11 +58,11 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("with-tables.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("with-tables.pptx"));
+        await using var stream = File.OpenRead(FilePath("with-tables.pptx"));
         var doc = await Processor.LoadAsync(stream);
 
         var hasTable = doc.Slides
-            .Any(s => s.Shapes.OfType<Shapes.TableShape>().Any());
+            .Any(s => s.Shapes.OfType<TableShape>().Any());
         hasTable.ShouldBeTrue();
     }
 
@@ -70,11 +71,11 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("with-images.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("with-images.pptx"));
+        await using var stream = File.OpenRead(FilePath("with-images.pptx"));
         var doc = await Processor.LoadAsync(stream);
 
         var hasPicture = doc.Slides
-            .Any(s => s.Shapes.OfType<Shapes.PictureShape>().Any());
+            .Any(s => s.Shapes.OfType<PictureShape>().Any());
         hasPicture.ShouldBeTrue();
     }
 
@@ -83,7 +84,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     {
         if (!Exists("simple.pptx")) return;
 
-        using var stream = File.OpenRead(FilePath("simple.pptx"));
+        await using var stream = File.OpenRead(FilePath("simple.pptx"));
         var doc = await Processor.LoadAsync(stream);
 
         foreach (var slide in doc.Slides)

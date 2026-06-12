@@ -1,7 +1,7 @@
 namespace Unchained.Ooxml.Engine;
 
 /// <summary>
-/// The three OOXML document families the shared core can open via the Open XML SDK.
+///     The three OOXML document families the shared core can open via the Open XML SDK.
 /// </summary>
 public enum OoxmlFormat
 {

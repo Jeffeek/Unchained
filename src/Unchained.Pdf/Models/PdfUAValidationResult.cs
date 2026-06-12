@@ -26,17 +26,17 @@ public sealed record PdfUAViolation(
 );
 
 /// <summary>
-/// Result returned by <see cref="Unchained.Pdf.Abstractions.IDocumentProcessor.ValidatePdfUAAsync"/>.
+///     Result returned by <see cref="Unchained.Pdf.Abstractions.IDocumentProcessor.ValidatePdfUAAsync" />.
 /// </summary>
 // ReSharper disable once InconsistentNaming
 public sealed class PdfUAValidationResult
 {
     /// <summary>
-    /// All violations found. Empty means the document passes all statically-verifiable
-    /// PDF/UA-1 rules checked by this validator.
+    ///     All violations found. Empty means the document passes all statically-verifiable
+    ///     PDF/UA-1 rules checked by this validator.
     /// </summary>
     public IReadOnlyList<PdfUAViolation> Violations { get; init; } = [];
 
-    /// <summary><see langword="true"/> when no error-severity violations were found.</summary>
+    /// <summary><see langword="true" /> when no error-severity violations were found.</summary>
     public bool IsConformant => Violations.All(static v => v.Severity != PdfUAViolationSeverity.Error);
 }

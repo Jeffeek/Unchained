@@ -6,8 +6,8 @@ using Unchained.Ooxml.Xml;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a DrawingML <c>&lt;a:effectLst&gt;</c> element into an <see cref="EffectFormat"/>.
-/// Angles are stored in OOXML 60,000ths of a degree; percentages in 1,000ths of a percent.
+///     Parses a DrawingML <c>&lt;a:effectLst&gt;</c> element into an <see cref="EffectFormat" />.
+///     Angles are stored in OOXML 60,000ths of a degree; percentages in 1,000ths of a percent.
 /// </summary>
 internal static class EffectParser
 {
@@ -29,11 +29,13 @@ internal static class EffectParser
         if (effectLst.Element(A + "softEdge") is { } soft)
             effects.SoftEdge = new SoftEdgeEffect { Radius = new Emu(soft.GetAttrLong("rad", 0)) };
         if (effectLst.Element(A + "blur") is { } blur)
+        {
             effects.Blur = new BlurEffect
             {
                 Radius = new Emu(blur.GetAttrLong("rad", 0)),
                 GrowBounds = blur.GetAttrBool("grow") ?? true
             };
+        }
     }
 
     private static OuterShadowEffect ParseOuterShadow(XElement el) => new()

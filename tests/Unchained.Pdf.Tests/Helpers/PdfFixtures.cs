@@ -5,18 +5,18 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Tests.Helpers;
 
 /// <summary>
-/// Produces minimal but spec-compliant PDF byte arrays for use as test fixtures.
-/// Uses explicit <c>\n</c> line endings for cross-platform byte-offset consistency.
+///     Produces minimal but spec-compliant PDF byte arrays for use as test fixtures.
+///     Uses explicit <c>\n</c> line endings for cross-platform byte-offset consistency.
 /// </summary>
 internal static class PdfFixtures
 {
-    public static byte[] SinglePage() => Build(pageCount: 1);
+    public static byte[] SinglePage() => Build(1);
 
-    public static byte[] MultiPage(int count) => Build(pageCount: count);
+    public static byte[] MultiPage(int count) => Build(count);
 
     /// <summary>
-    /// Creates a <see cref="TableData"/> with auto-generated header and cell text.
-    /// Headers are <c>Col1…ColN</c>; cells are <c>R{row}C{col}</c>.
+    ///     Creates a <see cref="TableData" /> with auto-generated header and cell text.
+    ///     Headers are <c>Col1…ColN</c>; cells are <c>R{row}C{col}</c>.
     /// </summary>
     public static TableData SimpleTableData(int rows, int cols = 3) => new()
     {
@@ -28,105 +28,105 @@ internal static class PdfFixtures
     };
 
     /// <summary>
-    /// Generates a single-page PDF whose /Font entry includes a /FontFile2 stream
-    /// containing <paramref name="fontBytes"/> (a TrueType font program).
+    ///     Generates a single-page PDF whose /Font entry includes a /FontFile2 stream
+    ///     containing <paramref name="fontBytes" /> (a TrueType font program).
     /// </summary>
     public static byte[] WithEmbeddedFont(byte[] fontBytes, string contentStream = "BT /F1 12 Tf 100 700 Td (Hello) Tj ET") =>
         BuildWithEmbeddedFont(fontBytes, contentStream);
 
     /// <summary>
-    /// Generates a single-page PDF with a small <paramref name="width"/>×<paramref name="height"/>
-    /// DeviceRGB image XObject and a <c>Do</c> operator that paints it.
+    ///     Generates a single-page PDF with a small <paramref name="width" />×<paramref name="height" />
+    ///     DeviceRGB image XObject and a <c>Do</c> operator that paints it.
     /// </summary>
     public static byte[] WithImageXObject(int width, int height, byte[] rgbData) =>
         BuildWithImageXObject(width, height, rgbData);
 
     /// <summary>
-    /// Generates a single-page PDF whose first page has one /Text annotation.
+    ///     Generates a single-page PDF whose first page has one /Text annotation.
     /// </summary>
     public static byte[] WithAnnotation(string contents = "Note") =>
         BuildWithAnnotation(contents);
 
     /// <summary>
-    /// Generates a two-page PDF with a flat /Outlines tree pointing at the pages.
+    ///     Generates a two-page PDF with a flat /Outlines tree pointing at the pages.
     /// </summary>
     public static byte[] WithOutlines(params (string title, int page)[] bookmarks) =>
         BuildWithOutlines(bookmarks);
 
     /// <summary>
-    /// Generates a single-page PDF with one AcroForm text field.
+    ///     Generates a single-page PDF with one AcroForm text field.
     /// </summary>
     public static byte[] WithAcroForm(string fieldName = "TextField", string fieldValue = "") =>
         BuildWithAcroForm(fieldName, fieldValue);
 
     /// <summary>
-    /// Generates a single-page PDF with multiple AcroForm text fields.
+    ///     Generates a single-page PDF with multiple AcroForm text fields.
     /// </summary>
     public static byte[] WithMultipleAcroFormFields(IReadOnlyList<(string name, string value)> fields) =>
         BuildWithMultipleAcroFormFields(fields);
 
     /// <summary>
-    /// Generates a single-page PDF with a hierarchical AcroForm:
-    /// a non-terminal parent group (<c>/T = "Group"</c>, no <c>/FT</c>) whose
-    /// <c>/Kids</c> array contains two child Tx fields (<c>First</c> and <c>Second</c>).
-    /// The fully-qualified names are <c>Group.First</c> and <c>Group.Second</c>.
+    ///     Generates a single-page PDF with a hierarchical AcroForm:
+    ///     a non-terminal parent group (<c>/T = "Group"</c>, no <c>/FT</c>) whose
+    ///     <c>/Kids</c> array contains two child Tx fields (<c>First</c> and <c>Second</c>).
+    ///     The fully-qualified names are <c>Group.First</c> and <c>Group.Second</c>.
     /// </summary>
     public static byte[] WithHierarchicalAcroForm() =>
         BuildWithHierarchicalAcroForm();
 
     /// <summary>
-    /// Generates a single-page PDF with one Btn (checkbox) AcroForm field.
+    ///     Generates a single-page PDF with one Btn (checkbox) AcroForm field.
     /// </summary>
     public static byte[] WithBtnAcroForm(string fieldName = "CheckBox") =>
         BuildWithBtnAcroForm(fieldName);
 
     /// <summary>
-    /// Generates a single-page PDF with a Tx AcroForm field that carries an
-    /// inline <c>/AP /N</c> appearance stream and a <c>/P</c> page reference.
-    /// Used to exercise the appearance-merging branch of <c>FlattenAsync</c>.
+    ///     Generates a single-page PDF with a Tx AcroForm field that carries an
+    ///     inline <c>/AP /N</c> appearance stream and a <c>/P</c> page reference.
+    ///     Used to exercise the appearance-merging branch of <c>FlattenAsync</c>.
     /// </summary>
     public static byte[] WithAcroFormAndAppearance(string fieldName = "Field", string fieldValue = "") =>
         BuildWithAcroFormAndAppearance(fieldName, fieldValue);
 
     public static byte[] WithInfo(string title, string author) =>
-        Build(pageCount: 1, title: title, author: author);
+        Build(1, title, author);
 
     /// <summary>
-    /// Generates a PDF 1.5-style document that uses a compressed /XRef stream
-    /// instead of a traditional xref table. Tests the cross-reference stream
-    /// parser (ISO 32000-1 §7.5.8).
-    /// W = [1, 4, 2]: 1-byte type, 4-byte offset, 2-byte generation.
+    ///     Generates a PDF 1.5-style document that uses a compressed /XRef stream
+    ///     instead of a traditional xref table. Tests the cross-reference stream
+    ///     parser (ISO 32000-1 §7.5.8).
+    ///     W = [1, 4, 2]: 1-byte type, 4-byte offset, 2-byte generation.
     /// </summary>
     public static byte[] WithCompressedXref(int pageCount = 1) =>
         BuildWithXrefStream(pageCount);
 
     /// <summary>
-    /// Generates a single-page PDF whose page content stream contains a simple
-    /// text block. Used to test content stream parsing end-to-end.
+    ///     Generates a single-page PDF whose page content stream contains a simple
+    ///     text block. Used to test content stream parsing end-to-end.
     /// </summary>
     public static byte[] WithTextContent(string text = "Hello Unchained") =>
         BuildWithContent($"BT /F1 12 Tf 100 700 Td ({EscapeString(text)}) Tj ET");
 
     /// <summary>
-    /// Generates a single-page PDF whose page content stream is exactly
-    /// <paramref name="contentStream"/>. Lets tests inject arbitrary operators
-    /// (e.g. <c>cm</c> transforms) to exercise the content/text state machine.
+    ///     Generates a single-page PDF whose page content stream is exactly
+    ///     <paramref name="contentStream" />. Lets tests inject arbitrary operators
+    ///     (e.g. <c>cm</c> transforms) to exercise the content/text state machine.
     /// </summary>
     public static byte[] WithRawContent(string contentStream) =>
         BuildWithContent(contentStream);
 
     /// <summary>
-    /// Generates a single-page PDF containing two separate image XObject stream
-    /// objects whose binary pixel data is identical. Used to exercise
-    /// <c>OptimizeResourcesAsync</c> duplicate-stream deduplication.
+    ///     Generates a single-page PDF containing two separate image XObject stream
+    ///     objects whose binary pixel data is identical. Used to exercise
+    ///     <c>OptimizeResourcesAsync</c> duplicate-stream deduplication.
     /// </summary>
     public static byte[] WithDuplicateImageStreams(int width, int height, byte[] rgbData) =>
         BuildWithDuplicateImageStreams(width, height, rgbData);
 
     /// <summary>
-    /// Generates a single-page PDF containing two separate font-program stream
-    /// objects with identical binary content. Used to exercise
-    /// <c>OptimizeResourcesAsync</c> duplicate-stream deduplication.
+    ///     Generates a single-page PDF containing two separate font-program stream
+    ///     objects with identical binary content. Used to exercise
+    ///     <c>OptimizeResourcesAsync</c> duplicate-stream deduplication.
     /// </summary>
     public static byte[] WithDuplicateFontStreams(byte[] fontData) =>
         BuildWithDuplicateFontStreams(fontData);
@@ -135,10 +135,10 @@ internal static class PdfFixtures
         s.Replace("\\", @"\\").Replace("(", "\\(").Replace(")", "\\)");
 
     /// <summary>
-    /// Generates a single-page PDF whose page paints a vertical black→white axial shading
-    /// (ShadingType 2) across the whole page via the <c>sh</c> operator. Used to exercise
-    /// gradient rendering. Domain 0..1; Coords map the gradient from the page bottom (black)
-    /// to the top (white).
+    ///     Generates a single-page PDF whose page paints a vertical black→white axial shading
+    ///     (ShadingType 2) across the whole page via the <c>sh</c> operator. Used to exercise
+    ///     gradient rendering. Domain 0..1; Coords map the gradient from the page bottom (black)
+    ///     to the top (white).
     /// </summary>
     public static byte[] WithAxialShading()
     {
@@ -147,145 +147,185 @@ internal static class PdfFixtures
         Ln(sb, "%PDF-1.7");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
         // Page with a /Shading resource named Sh1.
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
         Ln(sb, "   /Resources << /Shading << /Sh1 5 0 R >> >> >>");
         Ln(sb, "endobj");
 
         // Content stream: paint the shading over the page.
-        var content = "q 0 0 100 100 re W n /Sh1 sh Q";
+        const string content = "q 0 0 100 100 re W n /Sh1 sh Q";
         var cb = Encoding.Latin1.GetBytes(content);
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
-        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n");
+        sb.Append(content);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
         // Axial shading: black at y=0 → white at y=100, FunctionType 2 (N=1).
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "5 0 obj");
         Ln(sb, "<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [0 0 0 100] /Domain [0 1]");
         Ln(sb, "   /Function << /FunctionType 2 /Domain [0 1] /C0 [0 0 0] /C1 [1 1 1] /N 1 >>");
         Ln(sb, "   /Extend [true true] >>");
         Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref"); Ln(sb, "0 6"); Ln(sb, "0000000000 65535 f ");
+        var xrefOffset = ByteLength(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 6");
+        Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer"); Ln(sb, "<< /Size 6 /Root 1 0 R >>");
-        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 6 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
-    /// Generates a single-page PDF that fills the page with a coloured tiling pattern
-    /// (PatternType 1, PaintType 1): each 10×10 cell paints a solid red square. Used to
-    /// exercise tiling-pattern rendering.
+    ///     Generates a single-page PDF that fills the page with a coloured tiling pattern
+    ///     (PatternType 1, PaintType 1): each 10×10 cell paints a solid red square. Used to
+    ///     exercise tiling-pattern rendering.
     /// </summary>
     public static byte[] WithTilingPattern()
     {
         var sb = new StringBuilder();
         var offsets = new List<int>();
-        Ln(sb, "%PDF-1.7"); Ln(sb, "%\xE2\xE3\xCF\xD3");
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
         // Page with a /Pattern resource and a /Pattern colour space.
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
         Ln(sb, "   /Resources << /Pattern << /P1 5 0 R >> >> >>");
         Ln(sb, "endobj");
 
         // Content: set the pattern fill colour space, select /P1, fill the page rect.
-        var content = "/Pattern cs /P1 scn 0 0 100 100 re f";
+        const string content = "/Pattern cs /P1 scn 0 0 100 100 re f";
         var cb = Encoding.Latin1.GetBytes(content);
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
-        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n");
+        sb.Append(content);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
         // Tiling pattern cell: a 10×10 solid red square.
-        var cell = "1 0 0 rg 0 0 10 10 re f";
+        const string cell = "1 0 0 rg 0 0 10 10 re f";
         var cellBytes = Encoding.Latin1.GetBytes(cell);
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "5 0 obj");
         Ln(sb, "<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1");
         Ln(sb, "   /BBox [0 0 10 10] /XStep 10 /YStep 10 /Resources << >>");
         Ln(sb, $"   /Length {cellBytes.Length} >>");
-        sb.Append("stream\n"); sb.Append(cell); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        sb.Append("stream\n");
+        sb.Append(cell);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref"); Ln(sb, "0 6"); Ln(sb, "0000000000 65535 f ");
+        var xrefOffset = ByteLength(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 6");
+        Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer"); Ln(sb, "<< /Size 6 /Root 1 0 R >>");
-        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 6 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
-    /// A one-page document with two optional content groups (layers, ISO 32000-1 §8.11):
-    /// "Layer One" (obj 5, ON by default) and "Layer Two" (obj 6, OFF by default — listed in
-    /// the default configuration's <c>/OFF</c> array). <c>/OCProperties</c> lives in the catalog.
+    ///     A one-page document with two optional content groups (layers, ISO 32000-1 §8.11):
+    ///     "Layer One" (obj 5, ON by default) and "Layer Two" (obj 6, OFF by default — listed in
+    ///     the default configuration's <c>/OFF</c> array). <c>/OCProperties</c> lives in the catalog.
     /// </summary>
     public static byte[] WithOptionalContentGroups()
     {
         var sb = new StringBuilder();
         var offsets = new List<int>();
-        Ln(sb, "%PDF-1.7"); Ln(sb, "%\xE2\xE3\xCF\xD3");
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
 
         // Catalog carries /OCProperties inline: both OCGs listed, Layer Two OFF by default.
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "1 0 obj");
         Ln(sb, "<< /Type /Catalog /Pages 2 0 R");
         Ln(sb, "   /OCProperties << /OCGs [5 0 R 6 0 R] /D << /ON [5 0 R] /OFF [6 0 R] >> >> >>");
         Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
         Ln(sb, "   /Resources << /Properties << /MC0 5 0 R /MC1 6 0 R >> >> >>");
         Ln(sb, "endobj");
 
-        var content = "/OC /MC0 BDC 0 0 50 50 re f EMC /OC /MC1 BDC 50 50 50 50 re f EMC";
+        const string content = "/OC /MC0 BDC 0 0 50 50 re f EMC /OC /MC1 BDC 50 50 50 50 re f EMC";
         var cb = Encoding.Latin1.GetBytes(content);
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
-        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n");
+        sb.Append(content);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "5 0 obj"); Ln(sb, "<< /Type /OCG /Name (Layer One) >>"); Ln(sb, "endobj");
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "6 0 obj"); Ln(sb, "<< /Type /OCG /Name (Layer Two) >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "5 0 obj");
+        Ln(sb, "<< /Type /OCG /Name (Layer One) >>");
+        Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "6 0 obj");
+        Ln(sb, "<< /Type /OCG /Name (Layer Two) >>");
+        Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref"); Ln(sb, "0 7"); Ln(sb, "0000000000 65535 f ");
+        var xrefOffset = ByteLength(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 7");
+        Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer"); Ln(sb, "<< /Size 7 /Root 1 0 R >>");
-        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 7 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
@@ -356,13 +396,13 @@ internal static class PdfFixtures
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "1 0 obj");
         Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
         Ln(sb, "endobj");
 
         // Object 2 — Pages
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         var kids = string.Join(" ", Enumerable.Range(3, pageCount).Select(static n => $"{n} 0 R"));
         Ln(sb, "2 0 obj");
         Ln(sb, $"<< /Type /Pages /Kids [{kids}] /Count {pageCount} >>");
@@ -371,7 +411,7 @@ internal static class PdfFixtures
         // Objects 3..N — Page nodes
         for (var i = 0; i < pageCount; i++)
         {
-            offsets.Add(ByteLen(sb));
+            offsets.Add(ByteLength(sb));
             Ln(sb, $"{3 + i} 0 obj");
             Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
             Ln(sb, "endobj");
@@ -382,7 +422,7 @@ internal static class PdfFixtures
         if (title is not null || author is not null)
         {
             var infoObjNum = 3 + pageCount;
-            offsets.Add(ByteLen(sb));
+            offsets.Add(ByteLength(sb));
             Ln(sb, $"{infoObjNum} 0 obj");
             var titleEntry = title is not null ? $" /Title ({title})" : string.Empty;
             var authorEntry = author is not null ? $" /Author ({author})" : string.Empty;
@@ -394,7 +434,7 @@ internal static class PdfFixtures
         var totalObjects = 3 + pageCount + (infoRef.Length > 0 ? 1 : 0);
 
         // xref
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         Ln(sb, "xref");
         Ln(sb, $"0 {totalObjects}");
         Ln(sb, "0000000000 65535 f ");
@@ -413,7 +453,7 @@ internal static class PdfFixtures
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
-    private static int ByteLen(StringBuilder sb) => Encoding.Latin1.GetByteCount(sb.ToString());
+    private static int ByteLength(StringBuilder sb) => Encoding.Latin1.GetByteCount(sb.ToString());
 
     private static void AppendWithLineEnding(StringBuilder b, string line) => b.Append(line).Append('\n');
 
@@ -525,31 +565,31 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "1 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 2 — Pages
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "2 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 3 — Page (with /Annots)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "3 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 4 — Annotation
         var escaped = EscapeString(contents);
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "4 0 obj");
         AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Text /Rect [50 700 100 750] /Contents ({escaped}) >>");
         AppendWithLineEnding(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         AppendWithLineEnding(sb, "xref");
         AppendWithLineEnding(sb, "0 5");
         AppendWithLineEnding(sb, "0000000000 65535 f ");
@@ -638,19 +678,19 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "%PDF-1.7");
         AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "1 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "2 0 obj");
         AppendWithLineEnding(sb, $"<< /Type /Pages /Kids [{page1Obj} 0 R {page2Obj} 0 R] /Count 2 >>");
         AppendWithLineEnding(sb, "endobj");
 
         var first = bms.Count > 0 ? "4 0 R" : "null";
         var last = bms.Count > 0 ? $"{3 + bms.Count} 0 R" : "null";
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "3 0 obj");
         AppendWithLineEnding(sb, $"<< /Type /Outlines /Count {bms.Count} /First {first} /Last {last} >>");
         AppendWithLineEnding(sb, "endobj");
@@ -662,23 +702,23 @@ internal static class PdfFixtures
             var pageObjNum = pageNum == 1 ? page1Obj : page2Obj;
             var prev = i > 0 ? $" /Prev {num - 1} 0 R" : string.Empty;
             var next = i < bms.Count - 1 ? $" /Next {num + 1} 0 R" : string.Empty;
-            offsets.Add(ByteLen(sb));
+            offsets.Add(ByteLength(sb));
             AppendWithLineEnding(sb, $"{num} 0 obj");
             AppendWithLineEnding(sb, $"<< /Title ({EscapeString(title)}) /Parent 3 0 R /Dest [{pageObjNum} 0 R /Fit]{prev}{next} >>");
             AppendWithLineEnding(sb, "endobj");
         }
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, $"{page1Obj} 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, $"{page2Obj} 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
         AppendWithLineEnding(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         AppendWithLineEnding(sb, "xref");
         AppendWithLineEnding(sb, $"0 {totalObjects}");
         AppendWithLineEnding(sb, "0000000000 65535 f ");
@@ -701,19 +741,19 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog (with /AcroForm)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "1 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 2 — Pages
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "2 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 3 — Page
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "3 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
         AppendWithLineEnding(sb, "endobj");
@@ -721,12 +761,13 @@ internal static class PdfFixtures
         // Object 4 — Text field (also the widget annotation for it)
         var escapedName = EscapeString(fieldName);
         var escapedValue = EscapeString(fieldValue);
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "4 0 obj");
-        AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({escapedName}) /V ({escapedValue}) /Rect [50 700 300 720] /P 3 0 R >>");
+        AppendWithLineEnding(sb,
+            $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({escapedName}) /V ({escapedValue}) /Rect [50 700 300 720] /P 3 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         AppendWithLineEnding(sb, "xref");
         AppendWithLineEnding(sb, "0 5");
         AppendWithLineEnding(sb, "0000000000 65535 f ");
@@ -904,17 +945,17 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "%PDF-1.7");
         AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "1 0 obj");
         AppendWithLineEnding(sb, $"<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [{fieldRefs}] >> >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "2 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "3 0 obj");
         AppendWithLineEnding(sb, $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [{fieldRefs}] >>");
         AppendWithLineEnding(sb, "endobj");
@@ -922,14 +963,15 @@ internal static class PdfFixtures
         for (var i = 0; i < fieldCount; i++)
         {
             var (name, value) = fields[i];
-            offsets.Add(ByteLen(sb));
+            offsets.Add(ByteLength(sb));
             AppendWithLineEnding(sb, $"{4 + i} 0 obj");
-            AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(name)}) /V ({EscapeString(value)}) /Rect [50 {700 - (i * 30)} 300 {720 - (i * 30)}] /P 3 0 R >>");
+            AppendWithLineEnding(sb,
+                $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(name)}) /V ({EscapeString(value)}) /Rect [50 {700 - (i * 30)} 300 {720 - (i * 30)}] /P 3 0 R >>");
             AppendWithLineEnding(sb, "endobj");
         }
 
         var totalObjects = 4 + fieldCount;
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         AppendWithLineEnding(sb, "xref");
         AppendWithLineEnding(sb, $"0 {totalObjects}");
         AppendWithLineEnding(sb, "0000000000 65535 f ");
@@ -961,42 +1003,42 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
         // 1 — Catalog
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "1 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
         AppendWithLineEnding(sb, "endobj");
 
         // 2 — Pages
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "2 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         AppendWithLineEnding(sb, "endobj");
 
         // 3 — Page
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "3 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [5 0 R 6 0 R] >>");
         AppendWithLineEnding(sb, "endobj");
 
         // 4 — Non-terminal group node (no /FT, has /Kids)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "4 0 obj");
         AppendWithLineEnding(sb, "<< /T (Group) /Kids [5 0 R 6 0 R] >>");
         AppendWithLineEnding(sb, "endobj");
 
         // 5 — Child field "First"
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "5 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Annot /Subtype /Widget /FT /Tx /T (First) /V (v1) /Rect [50 700 300 720] /P 3 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
         // 6 — Child field "Second"
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "6 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Annot /Subtype /Widget /FT /Tx /T (Second) /V (v2) /Rect [50 660 300 680] /P 3 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         AppendWithLineEnding(sb, "xref");
         AppendWithLineEnding(sb, "0 7");
         AppendWithLineEnding(sb, "0000000000 65535 f ");
@@ -1018,27 +1060,28 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "%PDF-1.7");
         AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "1 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "2 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "3 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "4 0 obj");
-        AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Btn /T ({EscapeString(fieldName)}) /V /Off /Rect [50 700 70 720] /P 3 0 R >>");
+        AppendWithLineEnding(sb,
+            $"<< /Type /Annot /Subtype /Widget /FT /Btn /T ({EscapeString(fieldName)}) /V /Off /Rect [50 700 70 720] /P 3 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         AppendWithLineEnding(sb, "xref");
         AppendWithLineEnding(sb, "0 5");
         AppendWithLineEnding(sb, "0000000000 65535 f ");
@@ -1071,23 +1114,23 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "%PDF-1.7");
         AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "1 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [5 0 R] >> >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "2 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         AppendWithLineEnding(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "3 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [5 0 R] >>");
         AppendWithLineEnding(sb, "endobj");
 
         // 4 — Normal appearance stream (XObject Form)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "4 0 obj");
         AppendWithLineEnding(sb, $"<< /Type /XObject /Subtype /Form /BBox [0 0 250 20] /Length {apBytes.Length} >>");
         sb.Append("stream\n");
@@ -1096,12 +1139,13 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "endobj");
 
         // 5 — Text field widget with /AP referencing obj 4
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "5 0 obj");
-        AppendWithLineEnding(sb, $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(fieldName)}) /V ({EscapeString(fieldValue)}) /Rect [50 700 300 720] /P 3 0 R /AP << /N 4 0 R >> >>");
+        AppendWithLineEnding(sb,
+            $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(fieldName)}) /V ({EscapeString(fieldValue)}) /Rect [50 700 300 720] /P 3 0 R /AP << /N 4 0 R >> >>");
         AppendWithLineEnding(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         AppendWithLineEnding(sb, "xref");
         AppendWithLineEnding(sb, "0 6");
         AppendWithLineEnding(sb, "0000000000 65535 f ");
@@ -1224,63 +1268,63 @@ internal static class PdfFixtures
         AppendWithLineEnding(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "1 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Catalog /Pages 2 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 2 — Pages
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "2 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 3 — Page (uses font F1)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "3 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]");
         AppendWithLineEnding(sb, "   /Resources << /Font << /F1 6 0 R /F2 9 0 R >> >> >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 4 — first font program stream (ASCIIHexDecode)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "4 0 obj");
         AppendWithLineEnding(sb, $"<< /Length {hex1.Length} /Length1 {fontData.Length} /Filter /ASCIIHexDecode >>");
         sb.Append("stream\n").Append(hex1).Append("\nendstream\n");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 5 — first FontDescriptor
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "5 0 obj");
         AppendWithLineEnding(sb, "<< /Type /FontDescriptor /FontName /FontA /Flags 32 /FontFile2 4 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 6 — first Font
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "6 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Font /Subtype /TrueType /BaseFont /FontA /FontDescriptor 5 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 7 — second font program stream (identical bytes, different object)
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "7 0 obj");
         AppendWithLineEnding(sb, $"<< /Length {hex2.Length} /Length1 {fontData.Length} /Filter /ASCIIHexDecode >>");
         sb.Append("stream\n").Append(hex2).Append("\nendstream\n");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 8 — second FontDescriptor
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "8 0 obj");
         AppendWithLineEnding(sb, "<< /Type /FontDescriptor /FontName /FontB /Flags 32 /FontFile2 7 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
         // Object 9 — second Font
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "9 0 obj");
         AppendWithLineEnding(sb, "<< /Type /Font /Subtype /TrueType /BaseFont /FontB /FontDescriptor 8 0 R >>");
         AppendWithLineEnding(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
+        var xrefOffset = ByteLength(sb);
         AppendWithLineEnding(sb, "xref");
         AppendWithLineEnding(sb, "0 10");
         AppendWithLineEnding(sb, "0000000000 65535 f ");
@@ -1296,11 +1340,11 @@ internal static class PdfFixtures
     }
 
     /// <summary>
-    /// Generates a single-page PDF (100×100 pt) that clips a black-filled rectangle
-    /// using a right-triangle W path (vertices: bottom-left, bottom-right, top-right).
-    /// The triangle occupies the lower-right half of the page. The top-left corner of
-    /// the page bbox is OUTSIDE the triangle, so exact polygon clipping must leave it
-    /// white. An axis-aligned bbox approximation would have painted it black.
+    ///     Generates a single-page PDF (100×100 pt) that clips a black-filled rectangle
+    ///     using a right-triangle W path (vertices: bottom-left, bottom-right, top-right).
+    ///     The triangle occupies the lower-right half of the page. The top-left corner of
+    ///     the page bbox is OUTSIDE the triangle, so exact polygon clipping must leave it
+    ///     white. An axis-aligned bbox approximation would have painted it black.
     /// </summary>
     public static byte[] WithTriangularClip()
     {
@@ -1309,13 +1353,17 @@ internal static class PdfFixtures
         Ln(sb, "%PDF-1.7");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R /Resources <<>> >>");
         Ln(sb, "endobj");
@@ -1335,31 +1383,38 @@ internal static class PdfFixtures
             "W n\n" +
             "0 0 100 100 re f";
         var cb = Encoding.Latin1.GetBytes(content);
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
-        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n");
+        sb.Append(content);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref"); Ln(sb, "0 5"); Ln(sb, "0000000000 65535 f ");
+        var xrefOffset = ByteLength(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 5");
+        Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer"); Ln(sb, "<< /Size 5 /Root 1 0 R >>");
-        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 5 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
-    /// Generates a single-page PDF that tests a blend mode. The page is pre-filled white,
-    /// then a grey rectangle (128,128,128) is painted over it using the given ExtGState
-    /// blend mode. Returns the PDF bytes for rendering verification.
-    /// <para>
-    /// For <c>Multiply</c>: grey × white = grey → result darker than white.
-    /// For <c>Screen</c>:   white + grey - grey×white = white (near-white result).
-    /// For <c>Difference</c>: |white - grey| = grey → same grey as source.
-    /// </para>
+    ///     Generates a single-page PDF that tests a blend mode. The page is pre-filled white,
+    ///     then a grey rectangle (128,128,128) is painted over it using the given ExtGState
+    ///     blend mode. Returns the PDF bytes for rendering verification.
+    ///     <para>
+    ///         For <c>Multiply</c>: grey × white = grey → result darker than white.
+    ///         For <c>Screen</c>:   white + grey - grey×white = white (near-white result).
+    ///         For <c>Difference</c>: |white - grey| = grey → same grey as source.
+    ///     </para>
     /// </summary>
     public static byte[] WithBlendMode(string blendMode)
     {
@@ -1368,13 +1423,17 @@ internal static class PdfFixtures
         Ln(sb, "%PDF-1.7");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
         Ln(sb, "   /Resources << /ExtGState << /GS1 5 0 R >> >> >>");
@@ -1384,38 +1443,44 @@ internal static class PdfFixtures
         // Using 0.4 backdrop and 0.5 source keeps all blend modes in a range where the result
         // is visually distinct from both pure white and pure black, even for edge cases like
         // ColorDodge (0.4/0.5 = 0.8 ≈ 204, not white) and ColorBurn (1-0.6/0.5 = -0.2 → 0 = black).
-        var content =
-            "0.4 g 0 0 100 100 re f\n" +          // backdrop: mid-grey ~102
-            "/GS1 gs\n" +                          // apply blend mode ExtGState
-            "0.5 g 0 0 100 100 re f";              // source: mid-grey ~127
+        const string content = "0.4 g 0 0 100 100 re f\n" + // backdrop: mid-grey ~102
+                               "/GS1 gs\n" +                // apply blend mode ExtGState
+                               "0.5 g 0 0 100 100 re f";    // source: mid-grey ~127
         var cb = Encoding.Latin1.GetBytes(content);
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
-        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n");
+        sb.Append(content);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
         // ExtGState with the given blend mode.
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "5 0 obj");
         Ln(sb, $"<< /Type /ExtGState /BM /{blendMode} >>");
         Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref"); Ln(sb, "0 6"); Ln(sb, "0000000000 65535 f ");
+        var xrefOffset = ByteLength(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 6");
+        Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer"); Ln(sb, "<< /Size 6 /Root 1 0 R >>");
-        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 6 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
-    /// Generates a single-page PDF that uses an ExtGState /SMask (soft mask) to apply a
-    /// circular alpha gradient over a black rectangle. The mask Form XObject fills a white
-    /// circle in the centre of the page. Pixels inside the circle should be rendered as
-    /// black (mask = opaque); the corners outside the circle should remain white (mask = transparent).
+    ///     Generates a single-page PDF that uses an ExtGState /SMask (soft mask) to apply a
+    ///     circular alpha gradient over a black rectangle. The mask Form XObject fills a white
+    ///     circle in the centre of the page. Pixels inside the circle should be rendered as
+    ///     black (mask = opaque); the corners outside the circle should remain white (mask = transparent).
     /// </summary>
     public static byte[] WithSoftMask()
     {
@@ -1424,14 +1489,18 @@ internal static class PdfFixtures
         Ln(sb, "%PDF-1.7");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
         // Page with ExtGState resource GS1 that has /SMask referencing form object 6.
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
         Ln(sb, "   /Resources << /ExtGState << /GS1 5 0 R >> >> >>");
@@ -1439,16 +1508,20 @@ internal static class PdfFixtures
 
         // Content: white background, then black rect with soft mask applied.
         const string content =
-            "1 g 0 0 100 100 re f\n" +  // white background
-            "/GS1 gs\n" +               // activate soft mask
-            "0 g 0 0 100 100 re f";     // black fill (masked by ellipse)
+            "1 g 0 0 100 100 re f\n" + // white background
+            "/GS1 gs\n" +              // activate soft mask
+            "0 g 0 0 100 100 re f";    // black fill (masked by ellipse)
         var cb = Encoding.Latin1.GetBytes(content);
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
-        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n");
+        sb.Append(content);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
         // ExtGState with /SMask: type Alpha, mask form = object 6.
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "5 0 obj");
         Ln(sb, "<< /Type /ExtGState /SMask << /Type /Mask /S /Alpha /G 6 0 R >> >>");
         Ln(sb, "endobj");
@@ -1457,28 +1530,34 @@ internal static class PdfFixtures
         // Using a rectangle for simplicity — pixels inside the rect get mask=255, outside=0.
         const string maskContent = "1 g 25 25 50 50 re f";
         var mc = Encoding.Latin1.GetBytes(maskContent);
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "6 0 obj");
         Ln(sb, $"<< /Type /XObject /Subtype /Form /BBox [0 0 100 100] /Length {mc.Length} >>");
-        sb.Append("stream\n"); sb.Append(maskContent); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        sb.Append("stream\n");
+        sb.Append(maskContent);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref"); Ln(sb, "0 7"); Ln(sb, "0000000000 65535 f ");
+        var xrefOffset = ByteLength(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 7");
+        Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer"); Ln(sb, "<< /Size 7 /Root 1 0 R >>");
-        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 7 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
-    /// Generates a single-page PDF that uses a Separation color space (/MyCyan)
-    /// with a CMYK tint transform. A full-tint (1.0) fill covers the page.
-    /// The tint transform maps tint → (1,0,0,0) in DeviceCMYK (pure cyan).
-    /// Correct rendering should produce a cyan-ish colour rather than grey fallback.
+    ///     Generates a single-page PDF that uses a Separation color space (/MyCyan)
+    ///     with a CMYK tint transform. A full-tint (1.0) fill covers the page.
+    ///     The tint transform maps tint → (1,0,0,0) in DeviceCMYK (pure cyan).
+    ///     Correct rendering should produce a cyan-ish colour rather than grey fallback.
     /// </summary>
     public static byte[] WithSeparationColorSpace()
     {
@@ -1487,14 +1566,18 @@ internal static class PdfFixtures
         Ln(sb, "%PDF-1.7");
         Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "1 0 obj"); Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
 
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "2 0 obj"); Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
         // Page with a /ColorSpace resource named /MyCyan (Separation).
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "3 0 obj");
         Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
         Ln(sb, "   /Resources << /ColorSpace << /MyCyan 5 0 R >> >> >>");
@@ -1502,39 +1585,46 @@ internal static class PdfFixtures
 
         // Content: set fill to MyCyan separation, full tint, fill page.
         const string content =
-            "1 g 0 0 100 100 re f\n" +   // white background
-            "/MyCyan cs\n" +             // set fill colour space to Separation
-            "1 sc\n" +                   // full tint (1.0)
-            "0 0 100 100 re f";          // fill page
+            "1 g 0 0 100 100 re f\n" + // white background
+            "/MyCyan cs\n" +           // set fill colour space to Separation
+            "1 sc\n" +                 // full tint (1.0)
+            "0 0 100 100 re f";        // fill page
         var cb = Encoding.Latin1.GetBytes(content);
-        offsets.Add(ByteLen(sb));
-        Ln(sb, "4 0 obj"); Ln(sb, $"<< /Length {cb.Length} >>");
-        sb.Append("stream\n"); sb.Append(content); Ln(sb, "\nendstream"); Ln(sb, "endobj");
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n");
+        sb.Append(content);
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
 
         // Separation colour space: [/Separation /MyCyan /DeviceCMYK tintFn]
         // Tint function: Type 2, C0=[0 0 0 0], C1=[1 0 0 0] → pure cyan at full tint.
-        offsets.Add(ByteLen(sb));
+        offsets.Add(ByteLength(sb));
         Ln(sb, "5 0 obj");
         Ln(sb, "[/Separation /MyCyan /DeviceCMYK");
         Ln(sb, " << /FunctionType 2 /Domain [0 1] /C0 [0 0 0 0] /C1 [1 0 0 0] /N 1 >>]");
         Ln(sb, "endobj");
 
-        var xrefOffset = ByteLen(sb);
-        Ln(sb, "xref"); Ln(sb, "0 6"); Ln(sb, "0000000000 65535 f ");
+        var xrefOffset = ByteLength(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 6");
+        Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer"); Ln(sb, "<< /Size 6 /Root 1 0 R >>");
-        Ln(sb, "startxref"); Ln(sb, xrefOffset.ToString());
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 6 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
 
-        static int ByteLen(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
         static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     private static byte[] ZlibCompress(byte[] data)
     {
         using var ms = new MemoryStream();
-        using (var zlib = new ZLibStream(ms, CompressionMode.Compress, leaveOpen: true))
+        using (var zlib = new ZLibStream(ms, CompressionMode.Compress, true))
             zlib.Write(data);
         return ms.ToArray();
     }

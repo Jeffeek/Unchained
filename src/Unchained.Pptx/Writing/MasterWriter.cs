@@ -1,13 +1,12 @@
-using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Slides;
-using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes a <see cref="MasterSlide"/> to a PresentationML <c>&lt;p:sldMaster&gt;</c> element.
+///     Serializes a <see cref="MasterSlide" /> to a PresentationML <c>&lt;p:sldMaster&gt;</c> element.
 /// </summary>
 internal static class MasterWriter
 {
@@ -15,7 +14,8 @@ internal static class MasterWriter
     public static XElement Write(
         MasterSlide master,
         string themeUri,
-        Dictionary<SlideLayout, string> layoutUris)
+        Dictionary<SlideLayout, string> layoutUris
+    )
     {
         // Prefer round-trip fidelity if we have the original element
         if (master.RawElement != null)
@@ -51,11 +51,8 @@ internal static class MasterWriter
                     new XAttribute(DmlNames.AttributeWidth, 0),
                     new XAttribute(DmlNames.AttributeHeight, 0)))));
 
-        foreach (var shape in master.Shapes)
-        {
-            var el = ShapeWriter.Write(shape);
-            if (el != null) spTree.Add(el);
-        }
+        foreach (var el in master.Shapes.Select(static shape => ShapeWriter.Write(shape)).OfType<XElement>())
+            spTree.Add(el);
 
         cSld.Add(spTree);
         sldMaster.Add(cSld);
@@ -70,6 +67,7 @@ internal static class MasterWriter
                 new XAttribute(PmlNames.RelationshipId,
                     layout.RelationshipId.Length > 0 ? layout.RelationshipId : "rId1")));
         }
+
         sldMaster.Add(sldLayoutIdLst);
 
         sldMaster.Add(new XElement(pml + "txStyles"));

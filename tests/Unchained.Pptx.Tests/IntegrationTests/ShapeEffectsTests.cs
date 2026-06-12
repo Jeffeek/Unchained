@@ -15,21 +15,26 @@ public sealed class ShapeEffectsTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         return doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Rectangle,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
     }
 
     [Fact]
-    public void Effects_DefaultEmpty()
-    {
-        NewShape().Effects.IsEmpty.ShouldBeTrue();
-    }
+    public void Effects_DefaultEmpty() => NewShape().Effects.IsEmpty.ShouldBeTrue();
 
     [Fact]
     public async Task OuterShadow_RoundTrips()
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Rectangle,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         shape.Effects.OuterShadow = new OuterShadowEffect
         {
             Color = ColorSpec.FromRgb(0x33, 0x33, 0x33),
@@ -51,7 +56,11 @@ public sealed class ShapeEffectsTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Ellipse, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Ellipse,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         shape.Effects.Glow = new GlowEffect { Color = ColorSpec.FromRgb(0, 0xB0, 0xF0), Radius = Emu.FromPoints(6) };
         shape.Effects.Reflection = new ReflectionEffect { BlurRadius = Emu.FromPoints(2), StartOpacityPercent = 60, EndOpacityPercent = 0 };
         shape.Effects.SoftEdge = new SoftEdgeEffect { Radius = Emu.FromPoints(5) };
@@ -71,7 +80,11 @@ public sealed class ShapeEffectsTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Rectangle,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         shape.Effects.Blur = new BlurEffect { Radius = Emu.FromPoints(3), GrowBounds = true };
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);

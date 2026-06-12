@@ -5,14 +5,14 @@ using Unchained.Pptx.Shapes;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a SmartArt diagram data model (<c>dgm:dataModel</c> from <c>data*.xml</c>) into the
-/// hierarchical <see cref="SmartArtNode"/> tree carried by a <see cref="SmartArtShape"/>.
+///     Parses a SmartArt diagram data model (<c>dgm:dataModel</c> from <c>data*.xml</c>) into the
+///     hierarchical <see cref="SmartArtNode" /> tree carried by a <see cref="SmartArtShape" />.
 /// </summary>
 /// <remarks>
-/// The data model stores a flat list of points (<c>dgm:pt</c>) plus a list of connections
-/// (<c>dgm:cxn</c>). The visible node hierarchy is reconstructed from the connections whose
-/// type is the (default) <c>parOf</c> kind — those link a parent point to a child point with a
-/// sibling order (<c>srcOrd</c>). Structural points (doc / transitions / presentation) are skipped.
+///     The data model stores a flat list of points (<c>dgm:pt</c>) plus a list of connections
+///     (<c>dgm:cxn</c>). The visible node hierarchy is reconstructed from the connections whose
+///     type is the (default) <c>parOf</c> kind — those link a parent point to a child point with a
+///     sibling order (<c>srcOrd</c>). Structural points (doc / transitions / presentation) are skipped.
 /// </remarks>
 internal static class SmartArtParser
 {
@@ -28,6 +28,7 @@ internal static class SmartArtParser
         {
             var modelId = (string?)pt.Attribute("modelId");
             if (modelId == null) continue;
+
             points[modelId] = pt;
             if ((string?)pt.Attribute("type") == "doc")
                 docPoint = pt;
@@ -40,9 +41,11 @@ internal static class SmartArtParser
         foreach (var cxn in cxnLst?.Elements(DmlNames.DiagramConnection) ?? [])
         {
             if ((string?)cxn.Attribute("type") != null) continue; // skip presOf/presParOf/etc.
+
             var srcId = (string?)cxn.Attribute("srcId");
             var destId = (string?)cxn.Attribute("destId");
             if (srcId == null || destId == null) continue;
+
             var order = (int?)cxn.Attribute("srcOrd") ?? 0;
 
             if (!childLinks.TryGetValue(srcId, out var list))
@@ -59,8 +62,9 @@ internal static class SmartArtParser
 
     private static List<SmartArtNode> BuildChildren(
         string parentId,
-        Dictionary<string, XElement> points,
-        Dictionary<string, List<(int Order, string DestId)>> childLinks)
+        IReadOnlyDictionary<string, XElement> points,
+        IReadOnlyDictionary<string, List<(int Order, string DestId)>> childLinks
+    )
     {
         var result = new List<SmartArtNode>();
         if (!childLinks.TryGetValue(parentId, out var children)) return result;
@@ -84,7 +88,7 @@ internal static class SmartArtParser
     }
 
     /// <summary>Reads the visible text of a point from its <c>dgm:t</c> body (paragraphs joined by newline).</summary>
-    private static string ReadNodeText(XElement pt)
+    private static string ReadNodeText(XContainer pt)
     {
         var t = pt.Element(DmlNames.DiagramText);
         if (t == null) return string.Empty;
@@ -97,9 +101,9 @@ internal static class SmartArtParser
     }
 
     /// <summary>
-    /// Applies the current <see cref="SmartArtNode.Text"/> of each node back onto its matching
-    /// <c>dgm:pt</c> in <paramref name="dataModel"/>, so edits are reflected on save. Only the text
-    /// of the first run of the first paragraph is updated; nodes without a model id are skipped.
+    ///     Applies the current <see cref="SmartArtNode.Text" /> of each node back onto its matching
+    ///     <c>dgm:pt</c> in <paramref name="dataModel" />, so edits are reflected on save. Only the text
+    ///     of the first run of the first paragraph is updated; nodes without a model id are skipped.
     /// </summary>
     public static void ApplyTextEdits(XElement dataModel, IEnumerable<SmartArtNode> nodes)
     {
@@ -113,10 +117,10 @@ internal static class SmartArtParser
             if (modelId != null) byId[modelId] = pt;
         }
 
-        foreach (var node in Flatten(nodes))
+        foreach (var node in Flatten(nodes).Where(static node => !string.IsNullOrEmpty(node.ModelId)))
         {
-            if (string.IsNullOrEmpty(node.ModelId)) continue;
             if (!byId.TryGetValue(node.ModelId, out var pt)) continue;
+
             SetNodeText(pt, node.Text);
         }
     }
@@ -126,12 +130,13 @@ internal static class SmartArtParser
         foreach (var node in nodes)
         {
             yield return node;
+
             foreach (var child in Flatten(node.Children))
                 yield return child;
         }
     }
 
-    private static void SetNodeText(XElement pt, string text)
+    private static void SetNodeText(XContainer pt, string text)
     {
         var a = DmlNames.Dml;
         var t = pt.Element(DmlNames.DiagramText);

@@ -1,28 +1,29 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
 using JpegLibrary;
+using Unchained.Drawing.Constants;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes DCT (JPEG)-compressed data using JpegLibrary, producing a flat RGB byte array.
-/// Used by PDF /DCTDecode (ISO 32000-1 §7.4.8).
-/// Handles baseline, extended sequential, and progressive JPEG; grayscale and YCbCr.
-/// For a simpler BCL-only decoder see <see cref="JpegDecoder"/>.
+///     Decodes DCT (JPEG)-compressed data using JpegLibrary, producing a flat RGB byte array.
+///     Used by PDF /DCTDecode (ISO 32000-1 §7.4.8).
+///     Handles baseline, extended sequential, and progressive JPEG; grayscale and YCbCr.
+///     For a simpler BCL-only decoder see <see cref="JpegDecoder" />.
 /// </summary>
 internal static class DctDecoder
 {
     /// <summary>
-    /// Decompresses JPEG bytes and returns a flat RGB byte array
-    /// (<c>width × height × 3</c> bytes, row-major, no padding).
-    /// Grayscale JPEGs are expanded to 3-channel (R=G=B=Y).
+    ///     Decompresses JPEG bytes and returns a flat RGB byte array
+    ///     (<c>width × height × 3</c> bytes, row-major, no padding).
+    ///     Grayscale JPEGs are expanded to 3-channel (R=G=B=Y).
     /// </summary>
     /// <exception cref="NotSupportedException">
-    /// JPEG uses an unsupported color space (e.g. CMYK / 4-component).
+    ///     JPEG uses an unsupported color space (e.g. CMYK / 4-component).
     /// </exception>
     public static ReadOnlyMemory<byte> Decode(ReadOnlyMemory<byte> data)
     {
-        var decoder = new global::JpegLibrary.JpegDecoder();
+        var decoder = new JpegLibrary.JpegDecoder();
         decoder.SetInput(new ReadOnlySequence<byte>(data));
         decoder.Identify();
 
@@ -64,9 +65,9 @@ internal static class DctDecoder
                 var cb = cbPlane[i] - 128;
                 var cr = crPlane[i] - 128;
 
-                rgb[i * 3] = Clamp(yy + (int)(1.402f * cr));
-                rgb[(i * 3) + 1] = Clamp(yy - (int)(0.344136f * cb) - (int)(0.714136f * cr));
-                rgb[(i * 3) + 2] = Clamp(yy + (int)(1.772f * cb));
+                rgb[i * 3] = Clamp(yy + (int)((float)YCbCrConstants.CrToR * cr));
+                rgb[(i * 3) + 1] = Clamp(yy - (int)((float)YCbCrConstants.CbToGCb * cb) - (int)((float)YCbCrConstants.CrToGCr * cr));
+                rgb[(i * 3) + 2] = Clamp(yy + (int)((float)YCbCrConstants.CbToB * cb));
             }
         }
 
@@ -82,7 +83,13 @@ internal static class DctDecoder
         int componentCount
     ) : JpegBlockOutputWriter
     {
-        public override void WriteBlock(ref short blockRef, int componentIndex, int x, int y)
+        // ReSharper disable once BadListLineBreaks
+        public override void WriteBlock(
+            ref short blockRef,
+            int componentIndex,
+            int x,
+            int y
+        )
         {
             if (componentIndex >= componentCount) return;
 

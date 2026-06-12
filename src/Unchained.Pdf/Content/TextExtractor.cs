@@ -1,14 +1,15 @@
+using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Content;
 
 /// <summary>
-/// Walks a list of <see cref="ContentOperator"/> instances and extracts positioned text
-/// spans according to the PDF text object state machine (ISO 32000-1 §9.3–9.4).
-/// Tracks the CTM (via <c>q</c>/<c>Q</c>/<c>cm</c>) and maps each text origin through it, so
-/// translated / rotated / scaled coordinate systems position text correctly. Span widths and
-/// font sizes are reported in device space (scaled by the CTM's average linear scale).
+///     Walks a list of <see cref="ContentOperator" /> instances and extracts positioned text
+///     spans according to the PDF text object state machine (ISO 32000-1 §9.3–9.4).
+///     Tracks the CTM (via <c>q</c>/<c>Q</c>/<c>cm</c>) and maps each text origin through it, so
+///     translated / rotated / scaled coordinate systems position text correctly. Span widths and
+///     font sizes are reported in device space (scaled by the CTM's average linear scale).
 /// </summary>
 internal static class TextExtractor
 {
@@ -16,9 +17,9 @@ internal static class TextExtractor
     private const double LineThreshold = 2.0;
 
     /// <summary>
-    /// Extracts text spans from <paramref name="operators"/>, resolving font resource names
-    /// from <paramref name="fontNameMap"/> (resource name → base font name).
-    /// Returns spans sorted by reading order (Y descending, then X ascending).
+    ///     Extracts text spans from <paramref name="operators" />, resolving font resource names
+    ///     from <paramref name="fontNameMap" /> (resource name → base font name).
+    ///     Returns spans sorted by reading order (Y descending, then X ascending).
     /// </summary>
     internal static IReadOnlyList<TextSpan> Extract(IEnumerable<ContentOperator> operators, IReadOnlyDictionary<string, string> fontNameMap)
     {
@@ -40,10 +41,10 @@ internal static class TextExtractor
 
         var fontSize = 0.0;
         var fontName = string.Empty;
-        var tc = 0.0; // character spacing
-        var tw = 0.0; // word spacing
+        var tc = 0.0;   // character spacing
+        var tw = 0.0;   // word spacing
         var th = 100.0; // horizontal scaling (%)
-        var tl = 0.0; // leading
+        var tl = 0.0;   // leading
         var inText = false;
 
         // Current transformation matrix [a b c d e f] and its save/restore stack.
@@ -60,17 +61,17 @@ internal static class TextExtractor
                 // but NOT the text state, which we track independently.
                 case "q":
                     ctmStack.Push((double[])ctm.Clone());
-                    break;
+                break;
                 case "Q":
                     if (ctmStack.Count > 0) ctm = ctmStack.Pop();
-                    break;
+                break;
                 case "cm" when op.Operands.Count >= 6:
                 {
                     double[] m =
                     [
-                        ReadNumber(op.Operands[0]), ReadNumber(op.Operands[1]),
-                        ReadNumber(op.Operands[2]), ReadNumber(op.Operands[3]),
-                        ReadNumber(op.Operands[4]), ReadNumber(op.Operands[5])
+                        op.Operands[0].ToDouble(), op.Operands[1].ToDouble(),
+                        op.Operands[2].ToDouble(), op.Operands[3].ToDouble(),
+                        op.Operands[4].ToDouble(), op.Operands[5].ToDouble()
                     ];
                     ctm = MultiplyMatrix(m, ctm); // cm pre-concatenates: CTM = m × CTM
                     break;
@@ -106,37 +107,37 @@ internal static class TextExtractor
                 {
                     var resName = (op.Operands[0] as PdfName)?.Value ?? string.Empty;
                     fontName = fontNameMap.GetValueOrDefault(resName, resName);
-                    fontSize = ReadNumber(op.Operands[1]);
+                    fontSize = op.Operands[1].ToDouble();
                     break;
                 }
 
                 // ── Text state parameters ─────────────────────────────────────
                 case "Tc" when op.Operands.Count >= 1:
                 {
-                    tc = ReadNumber(op.Operands[0]);
+                    tc = op.Operands[0].ToDouble();
                     break;
                 }
                 case "Tw" when op.Operands.Count >= 1:
                 {
-                    tw = ReadNumber(op.Operands[0]);
+                    tw = op.Operands[0].ToDouble();
                     break;
                 }
                 case "Tz" when op.Operands.Count >= 1:
                 {
-                    th = ReadNumber(op.Operands[0]);
+                    th = op.Operands[0].ToDouble();
                     break;
                 }
                 case "TL" when op.Operands.Count >= 1:
                 {
-                    tl = ReadNumber(op.Operands[0]);
+                    tl = op.Operands[0].ToDouble();
                     break;
                 }
 
                 // ── Text positioning ──────────────────────────────────────────
                 case "Td" when inText && op.Operands.Count >= 2:
                 {
-                    var tx = ReadNumber(op.Operands[0]);
-                    var ty = ReadNumber(op.Operands[1]);
+                    var tx = op.Operands[0].ToDouble();
+                    var ty = op.Operands[1].ToDouble();
                     MoveLine(
                         tx,
                         ty,
@@ -157,8 +158,8 @@ internal static class TextExtractor
                 }
                 case "TD" when inText && op.Operands.Count >= 2:
                 {
-                    var tx = ReadNumber(op.Operands[0]);
-                    var ty = ReadNumber(op.Operands[1]);
+                    var tx = op.Operands[0].ToDouble();
+                    var ty = op.Operands[1].ToDouble();
                     tl = -ty;
                     MoveLine(
                         tx,
@@ -201,12 +202,12 @@ internal static class TextExtractor
                 case "Tm" when inText && op.Operands.Count >= 6:
                 {
                     // Tm a b c d e f — set both text and line matrix directly.
-                    tmA = ReadNumber(op.Operands[0]);
-                    tmB = ReadNumber(op.Operands[1]);
-                    tmC = ReadNumber(op.Operands[2]);
-                    tmD = ReadNumber(op.Operands[3]);
-                    tmE = ReadNumber(op.Operands[4]);
-                    tmF = ReadNumber(op.Operands[5]);
+                    tmA = op.Operands[0].ToDouble();
+                    tmB = op.Operands[1].ToDouble();
+                    tmC = op.Operands[2].ToDouble();
+                    tmD = op.Operands[3].ToDouble();
+                    tmE = op.Operands[4].ToDouble();
+                    tmF = op.Operands[5].ToDouble();
                     tlmA = tmA;
                     tlmB = tmB;
                     tlmC = tmC;
@@ -275,8 +276,8 @@ internal static class TextExtractor
                 }
                 case "\"" when inText && op.Operands.Count >= 3:
                 {
-                    tw = ReadNumber(op.Operands[0]);
-                    tc = ReadNumber(op.Operands[1]);
+                    tw = op.Operands[0].ToDouble();
+                    tc = op.Operands[1].ToDouble();
                     MoveLine(
                         0,
                         -tl,
@@ -386,14 +387,14 @@ internal static class TextExtractor
         double th,
         ref double tmE,
         ref double tmF,
-        double[] ctm,
+        IReadOnlyList<double> ctm,
         ICollection<TextSpan> spans
     )
     {
         if (bytes.IsEmpty || fontSize <= 0)
             return;
 
-        var text = System.Text.Encoding.Latin1.GetString(bytes);
+        var text = Encoding.Latin1.GetString(bytes);
         // Text origin (tmE, tmF) is in user space; map through the CTM to device space so
         // translated / rotated / scaled coordinate systems position text correctly.
         var startX = (tmE * ctm[0]) + (tmF * ctm[2]) + ctm[4];
@@ -410,20 +411,20 @@ internal static class TextExtractor
 
         tmE += totalAdvance;
 
-        if (text.Length > 0)
-        {
-            // Scale the reported width and font size by the CTM's average linear scale so
-            // downstream consumers see device-space magnitudes.
-            var ctmScale = CtmScale(ctm);
-            spans.Add(new TextSpan(
-                text,
-                startX,
-                startY,
-                totalAdvance * ctmScale,
-                fontSize * ctmScale,
-                fontName)
-            );
-        }
+        if (text.Length <= 0)
+            return;
+
+        // Scale the reported width and font size by the CTM's average linear scale so
+        // downstream consumers see device-space magnitudes.
+        var ctmScale = CtmScale(ctm);
+        spans.Add(new TextSpan(
+            text,
+            startX,
+            startY,
+            totalAdvance * ctmScale,
+            fontSize * ctmScale,
+            fontName)
+        );
     }
 
     private static void ShowArray(
@@ -435,7 +436,7 @@ internal static class TextExtractor
         double th,
         ref double tmE,
         ref double tmF,
-        double[] ctm,
+        IReadOnlyList<double> ctm,
         ICollection<TextSpan> spans
     )
     {
@@ -479,15 +480,8 @@ internal static class TextExtractor
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
-    private static double ReadNumber(PdfObject obj) => obj switch
-    {
-        PdfInteger i => i.Value,
-        PdfReal r => r.Value,
-        _ => 0
-    };
-
     // Row-major [a b c d e f] affine matrix multiply: result = m1 × m2 (apply m1 first).
-    private static double[] MultiplyMatrix(double[] m1, double[] m2) =>
+    private static double[] MultiplyMatrix(IReadOnlyList<double> m1, IReadOnlyList<double> m2) =>
     [
         (m1[0] * m2[0]) + (m1[1] * m2[2]),
         (m1[0] * m2[1]) + (m1[1] * m2[3]),
@@ -498,7 +492,7 @@ internal static class TextExtractor
     ];
 
     // Average linear scale of a CTM (geometric mean of the two basis-vector magnitudes).
-    private static double CtmScale(double[] m)
+    private static double CtmScale(IReadOnlyList<double> m)
     {
         var sx = Math.Sqrt((m[0] * m[0]) + (m[1] * m[1]));
         var sy = Math.Sqrt((m[2] * m[2]) + (m[3] * m[3]));
@@ -509,14 +503,14 @@ internal static class TextExtractor
     // ── Plain text reconstruction from sorted spans ───────────────────────────
 
     /// <summary>
-    /// Joins sorted <paramref name="spans"/> into a plain string, inserting
-    /// newlines between distinct lines and spaces between spans on the same line.
+    ///     Joins sorted <paramref name="spans" /> into a plain string, inserting
+    ///     newlines between distinct lines and spaces between spans on the same line.
     /// </summary>
     internal static string SpansToText(IReadOnlyList<TextSpan> spans)
     {
         if (spans.Count == 0) return string.Empty;
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         var prevY = spans[0].Y;
         var prevEndX = spans[0].X + spans[0].Width;
 

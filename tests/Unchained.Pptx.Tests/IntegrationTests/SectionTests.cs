@@ -125,8 +125,8 @@ public sealed class SectionTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(3);
         var ids = Enumerable.Range(0, doc.Slides.Count)
-                            .Select(i => doc.Slides[i].SlideId)
-                            .ToList();
+            .Select(i => doc.Slides[i].SlideId)
+            .ToList();
         doc.Sections.Add("Full Deck", ids);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);

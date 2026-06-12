@@ -1,19 +1,19 @@
-using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes <see cref="FillFormat"/> objects to DrawingML fill XML elements.
+///     Serializes <see cref="FillFormat" /> objects to DrawingML fill XML elements.
 /// </summary>
 internal static class FillWriter
 {
     /// <summary>
-    /// Appends the appropriate fill element(s) from <paramref name="fill"/>
-    /// to <paramref name="parent"/>.
+    ///     Appends the appropriate fill element(s) from <paramref name="fill" />
+    ///     to <paramref name="parent" />.
     /// </summary>
     public static void Write(XElement parent, FillFormat fill)
     {
@@ -21,7 +21,7 @@ internal static class FillWriter
         {
             case FillType.None:
                 parent.Add(new XElement(DmlNames.NoFill));
-                break;
+            break;
 
             case FillType.Solid when fill.Solid != null:
             {
@@ -33,23 +33,21 @@ internal static class FillWriter
 
             case FillType.Gradient when fill.Gradient != null:
                 parent.Add(WriteGradient(fill.Gradient));
-                break;
+            break;
 
             case FillType.Pattern when fill.Pattern != null:
                 parent.Add(WritePattern(fill.Pattern));
-                break;
+            break;
 
             case FillType.Picture when fill.Picture != null:
                 parent.Add(WritePicture(fill.Picture));
-                break;
+            break;
 
             case FillType.Group:
                 parent.Add(new XElement(DmlNames.GroupFill));
-                break;
-
+            break;
             default:
-                // No fill element — leave the parent unchanged (inherits from theme)
-                break;
+                throw new ArgumentOutOfRangeException();
         }
     }
 
@@ -68,13 +66,12 @@ internal static class FillWriter
 
         gradFill.Add(gsLst);
 
-        if (gradient.IsLinear)
-        {
-            var ang = OoXmlHelper.DegreesToOoxmlRotation(gradient.LinearAngleDegrees);
-            gradFill.Add(new XElement(DmlNames.LinearGradient,
-                new XAttribute(DmlNames.AttributeRotation, ang),
-                new XAttribute("scaled", "0")));
-        }
+        if (!gradient.IsLinear) return gradFill;
+
+        var ang = OoXmlHelper.DegreesToOoxmlRotation(gradient.LinearAngleDegrees);
+        gradFill.Add(new XElement(DmlNames.LinearGradient,
+            new XAttribute(DmlNames.AttributeRotation, ang),
+            new XAttribute("scaled", "0")));
 
         return gradFill;
     }

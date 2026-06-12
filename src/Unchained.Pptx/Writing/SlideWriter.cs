@@ -1,13 +1,12 @@
-using Unchained.Pptx.Core.Xml;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Animations;
 
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes a <see cref="Slide"/> to a PresentationML <c>&lt;p:sld&gt;</c> root element.
+///     Serializes a <see cref="Slide" /> to a PresentationML <c>&lt;p:sld&gt;</c> root element.
 /// </summary>
 internal static class SlideWriter
 {
@@ -36,12 +35,8 @@ internal static class SlideWriter
         spTree.Add(WriteGroupShapeNonVisualProperties());
         spTree.Add(WriteGroupShapeProperties());
 
-        foreach (var shape in slide.Shapes)
-        {
-            var el = ShapeWriter.Write(shape);
-            if (el != null)
-                spTree.Add(el);
-        }
+        foreach (var el in slide.Shapes.Select(ShapeWriter.Write).OfType<XElement>())
+            spTree.Add(el);
 
         cSld.Add(spTree);
         sld.Add(cSld);
@@ -50,8 +45,10 @@ internal static class SlideWriter
         if (slide.ColorMapOverrideElement != null)
             sld.Add(slide.ColorMapOverrideElement);
         else
+        {
             sld.Add(new XElement(PmlNames.ColorMapOverride,
                 new XElement(dml + "masterClrMapping")));
+        }
 
         // Transition (M6)
         var transitionEl = TransitionWriter.Write(slide.Transition);

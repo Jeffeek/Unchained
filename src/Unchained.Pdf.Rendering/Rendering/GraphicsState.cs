@@ -1,8 +1,10 @@
+using Unchained.Drawing;
+
 namespace Unchained.Pdf.Rendering.Rendering;
 
 /// <summary>
-/// Mutable snapshot of the PDF graphics state (ISO 32000-1 §8.4).
-/// Cloned on every <c>q</c> (save) and restored on every <c>Q</c>.
+///     Mutable snapshot of the PDF graphics state (ISO 32000-1 §8.4).
+///     Cloned on every <c>q</c> (save) and restored on every <c>Q</c>.
 /// </summary>
 internal sealed class GraphicsState
 {
@@ -13,7 +15,7 @@ internal sealed class GraphicsState
     internal byte FillR { get; set; }
     internal byte FillG { get; set; }
     internal byte FillB { get; set; }
-    internal byte FillA { get; set; } = 255;
+    internal byte FillA { get; set; } = RenderingConstants.OpaqueAlpha;
 
     // True when the current fill colour is a tiling/shading pattern (scn/SCN with a name
     // operand). We do not render patterns yet; filling them as solid colour produces large
@@ -32,7 +34,7 @@ internal sealed class GraphicsState
     internal byte StrokeR { get; set; }
     internal byte StrokeG { get; set; }
     internal byte StrokeB { get; set; }
-    internal byte StrokeA { get; set; } = 255;
+    internal byte StrokeA { get; set; } = RenderingConstants.OpaqueAlpha;
 
     internal double LineWidth { get; set; } = 1.0;
 
@@ -50,12 +52,12 @@ internal sealed class GraphicsState
     // Current fill and stroke color space names (the operand of cs/CS).
     // Default "DeviceGray" per PDF spec when no cs/CS has been issued.
     // Used by sc/SC/scn/SCN to resolve component values correctly.
-    internal string FillColorSpace { get; set; } = "DeviceGray";
-    internal string StrokeColorSpace { get; set; } = "DeviceGray";
+    internal string FillColorSpace { get; set; } = RenderingConstants.DeviceGray;
+    internal string StrokeColorSpace { get; set; } = RenderingConstants.DeviceGray;
 
     // Blend mode for compositing (ISO 32000-1 §11.3.5). PDF name string, e.g. "Normal",
     // "Multiply", "Screen". Default is "Normal" (simple alpha compositing).
-    internal string BlendMode { get; set; } = "Normal";
+    internal string BlendMode { get; set; } = RenderingConstants.BlendNormal;
 
     // Per-pixel soft mask opacity (Width × Height bytes, row-major), or null when no
     // soft mask is active. Set by the `gs` operator when an ExtGState has /SMask.
@@ -77,7 +79,9 @@ internal sealed class GraphicsState
     internal double FontSize { get; set; }
     internal double CharSpace { get; set; }
     internal double WordSpace { get; set; }
+
     internal double HorizontalScale { get; set; } = 100;
+
     // Text rise (Ts): vertical shift of the text baseline in unscaled text-space units.
     internal double TextRise { get; set; }
     internal double Leading { get; set; }
@@ -86,6 +90,23 @@ internal sealed class GraphicsState
     // 0 = fill (default), 1 = stroke, 2 = fill+stroke, 3 = invisible,
     // 4–7 = clip variants. Mode 3 suppresses visible output.
     internal int TextRenderMode { get; set; }
+
+    // Whether the current text rendering mode fills, strokes, and/or clips glyphs
+    // (ISO 32000-1 §9.3.6). A glyph may do several at once (e.g. mode 6 = fill+stroke+clip).
+    internal bool ShouldFillText => TextRenderMode is RenderingConstants.TextModeFill
+        or RenderingConstants.TextModeFillStroke
+        or RenderingConstants.TextModeFillClip
+        or RenderingConstants.TextModeFillStrokeClip;
+
+    internal bool ShouldStrokeText => TextRenderMode is RenderingConstants.TextModeStroke
+        or RenderingConstants.TextModeFillStroke
+        or RenderingConstants.TextModeStrokeClip
+        or RenderingConstants.TextModeFillStrokeClip;
+
+    internal bool ShouldClipText => TextRenderMode is RenderingConstants.TextModeFillClip
+        or RenderingConstants.TextModeStrokeClip
+        or RenderingConstants.TextModeFillStrokeClip
+        or RenderingConstants.TextModeClip;
 
     // Resource name of the current font (e.g. "F1") — distinct from FontName
     // (which is the base font name like "Helvetica").  Used to look up embedded
@@ -110,7 +131,7 @@ internal sealed class GraphicsState
             LineCap = LineCap,
             LineJoin = LineJoin,
             MiterLimit = MiterLimit,
-            SoftMask = SoftMask is null ? null : (byte[])SoftMask.Clone(),
+            SoftMask = (byte[]?)SoftMask?.Clone(),
             SoftMaskWidth = SoftMaskWidth,
             SoftMaskHeight = SoftMaskHeight,
             DashLengths = DashLengths,
@@ -127,32 +148,11 @@ internal sealed class GraphicsState
             TextRenderMode = TextRenderMode,
             FillColorSpace = FillColorSpace,
             StrokeColorSpace = StrokeColorSpace,
-            SavedClipMask = SavedClipMask is null ? null : (byte[])SavedClipMask.Clone()
+            SavedClipMask = (byte[]?)SavedClipMask?.Clone()
         };
 
     // Transform a PDF user-space point through the current CTM.
-    internal (double X, double Y) Transform(double x, double y)
-    {
-        var a = Ctm[0];
-        var b = Ctm[1];
-        var c = Ctm[2];
-        var d = Ctm[3];
-        var e = Ctm[4];
-        var f = Ctm[5];
+    internal (double X, double Y) Transform(double x, double y) => Matrix2D.Transform(Ctm, x, y);
 
-        return ((a * x) + (c * y) + e, (b * x) + (d * y) + f);
-    }
-
-    internal static double[] MultiplyMatrix(double[] m1, double[] m2) =>
-        // [a1 b1 0]   [a2 b2 0]
-        // [c1 d1 0] × [c2 d2 0]
-        // [e1 f1 1]   [e2 f2 1]
-        [
-            (m1[0] * m2[0]) + (m1[1] * m2[2]),
-            (m1[0] * m2[1]) + (m1[1] * m2[3]),
-            (m1[2] * m2[0]) + (m1[3] * m2[2]),
-            (m1[2] * m2[1]) + (m1[3] * m2[3]),
-            (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
-            (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
-        ];
+    internal static double[] MultiplyMatrix(double[] m1, double[] m2) => Matrix2D.Multiply(m1, m2);
 }

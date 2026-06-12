@@ -1,20 +1,21 @@
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace Unchained.Pdf.Core;
 
 /// <summary>
-/// Base class for all PDF object types defined in ISO 32000-1 §7.3.
-/// All derived types are immutable. Equality for primitives (<see cref="PdfBoolean"/>,
-/// <see cref="PdfInteger"/>, <see cref="PdfReal"/>, <see cref="PdfName"/>) is value-based;
-/// for containers (<see cref="PdfDictionary"/>, <see cref="PdfArray"/>, <see cref="PdfStream"/>)
-/// it is reference-based to avoid deep-comparison overhead.
+///     Base class for all PDF object types defined in ISO 32000-1 §7.3.
+///     All derived types are immutable. Equality for primitives (<see cref="PdfBoolean" />,
+///     <see cref="PdfInteger" />, <see cref="PdfReal" />, <see cref="PdfName" />) is value-based;
+///     for containers (<see cref="PdfDictionary" />, <see cref="PdfArray" />, <see cref="PdfStream" />)
+///     it is reference-based to avoid deep-comparison overhead.
 /// </summary>
 public abstract class PdfObject;
 
 /// <summary>
-/// Represents a PDF boolean object (ISO 32000-1 §7.3.2).
-/// Instances are singletons — use <see cref="True"/>, <see cref="False"/>,
-/// or <see cref="FromBool"/> instead of constructing directly.
+///     Represents a PDF boolean object (ISO 32000-1 §7.3.2).
+///     Instances are singletons — use <see cref="True" />, <see cref="False" />,
+///     or <see cref="FromBool" /> instead of constructing directly.
 /// </summary>
 public sealed class PdfBoolean : PdfObject
 {
@@ -33,7 +34,7 @@ public sealed class PdfBoolean : PdfObject
     public bool Value { get; }
 
     /// <summary>
-    /// Returns <see cref="True"/> or <see cref="False"/> without allocating.
+    ///     Returns <see cref="True" /> or <see cref="False" /> without allocating.
     /// </summary>
     public static PdfBoolean FromBool(bool value) => value ? True : False;
 
@@ -42,8 +43,8 @@ public sealed class PdfBoolean : PdfObject
 }
 
 /// <summary>
-/// Represents a PDF integer object (ISO 32000-1 §7.3.3).
-/// The value is stored as <see langword="long"/> to cover the full PDF integer range.
+///     Represents a PDF integer object (ISO 32000-1 §7.3.3).
+///     The value is stored as <see langword="long" /> to cover the full PDF integer range.
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class PdfInteger(long value) : PdfObject
@@ -57,7 +58,7 @@ public sealed class PdfInteger(long value) : PdfObject
 }
 
 /// <summary>
-/// Represents a PDF real (floating-point) number object (ISO 32000-1 §7.3.3).
+///     Represents a PDF real (floating-point) number object (ISO 32000-1 §7.3.3).
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class PdfReal(double value) : PdfObject
@@ -71,60 +72,64 @@ public sealed class PdfReal(double value) : PdfObject
 }
 
 /// <summary>
-/// Represents a PDF string object (ISO 32000-1 §7.3.4) in either literal <c>(...)</c>
-/// or hexadecimal <c>&lt;...&gt;</c> encoding.
-/// Raw bytes are stored without decoding to preserve round-trip fidelity.
-/// Use <see cref="FromLatin1"/> or <see cref="FromUtf16"/> to create strings from .NET strings.
+///     Represents a PDF string object (ISO 32000-1 §7.3.4) in either literal <c>(...)</c>
+///     or hexadecimal <c>&lt;...&gt;</c> encoding.
+///     Raw bytes are stored without decoding to preserve round-trip fidelity.
+///     Use <see cref="FromLatin1" /> or <see cref="FromUtf16" /> to create strings from .NET strings.
 /// </summary>
 public sealed class PdfString(ReadOnlyMemory<byte> bytes, bool isHex = false) : PdfObject
 {
     /// <summary>
-    /// Raw bytes of the string as they appear in the source PDF, without decoding.
-    /// For PDF text strings, the encoding is either PDFDocEncoding (Latin-1 subset)
-    /// or UTF-16 big-endian (indicated by a 0xFE 0xFF BOM prefix).
+    ///     Raw bytes of the string as they appear in the source PDF, without decoding.
+    ///     For PDF text strings, the encoding is either PDFDocEncoding (Latin-1 subset)
+    ///     or UTF-16 big-endian (indicated by a 0xFE 0xFF BOM prefix).
     /// </summary>
     // ReSharper disable once MemberCanBeInternal
     public ReadOnlyMemory<byte> Bytes { get; } = bytes;
 
     /// <summary>
-    /// <see langword="true"/> if the string originated from a <c>&lt;hex&gt;</c>
-    /// token; <see langword="false"/> for a <c>(literal)</c> token.
-    /// This flag is preserved for round-trip serialization fidelity.
+    ///     <see langword="true" /> if the string originated from a <c>&lt;hex&gt;</c>
+    ///     token; <see langword="false" /> for a <c>(literal)</c> token.
+    ///     This flag is preserved for round-trip serialization fidelity.
     /// </summary>
     // ReSharper disable once MemberCanBeInternal
     public bool IsHex { get; } = isHex;
 
     /// <summary>
-    /// Creates a PDF literal string from a .NET string using Latin-1 (ISO 8859-1) encoding.
-    /// Suitable for ASCII-range metadata fields such as author or title.
+    ///     Creates a PDF literal string from a .NET string using Latin-1 (ISO 8859-1) encoding.
+    ///     Suitable for ASCII-range metadata fields such as author or title.
     /// </summary>
     public static PdfString FromLatin1(string value) =>
-        new(System.Text.Encoding.Latin1.GetBytes(value));
+        new(Encoding.Latin1.GetBytes(value));
 
     /// <summary>
-    /// Creates a PDF string from a .NET string using UTF-16 big-endian encoding,
-    /// which is the standard encoding for Unicode text strings in PDF (§7.9.2).
-    /// The caller is responsible for prepending the BOM (0xFE 0xFF) if required.
+    ///     Creates a PDF string from a .NET string using UTF-16 big-endian encoding,
+    ///     which is the standard encoding for Unicode text strings in PDF (§7.9.2).
+    ///     The caller is responsible for prepending the BOM (0xFE 0xFF) if required.
     /// </summary>
     public static PdfString FromUtf16(string value) =>
-        new(System.Text.Encoding.BigEndianUnicode.GetBytes(value));
+        new(Encoding.BigEndianUnicode.GetBytes(value));
 
     /// <summary>
-    /// When <see cref="IsHex"/> is <see langword="true"/>, decodes the raw hex-digit
-    /// bytes (e.g. <c>{'3','0','3','1'}</c> for <c>&lt;3031&gt;</c>) into the actual
-    /// binary bytes (<c>{0x30, 0x31}</c>). Returns <see cref="Bytes"/> unchanged when
-    /// <see cref="IsHex"/> is <see langword="false"/> (literal string already binary).
+    ///     When <see cref="IsHex" /> is <see langword="true" />, decodes the raw hex-digit
+    ///     bytes (e.g. <c>{'3','0','3','1'}</c> for <c>&lt;3031&gt;</c>) into the actual
+    ///     binary bytes (<c>{0x30, 0x31}</c>). Returns <see cref="Bytes" /> unchanged when
+    ///     <see cref="IsHex" /> is <see langword="false" /> (literal string already binary).
     /// </summary>
     internal ReadOnlyMemory<byte> GetBinaryBytes()
     {
-        if (!IsHex) return Bytes;
+        if (!IsHex)
+            return Bytes;
+
         var span = Bytes.Span;
         var result = new byte[(span.Length + 1) / 2];
         var j = 0;
         var hi = -1;
         foreach (var c in span)
         {
-            if (c is (byte)' ' or (byte)'\t' or (byte)'\n' or (byte)'\r') continue;
+            if (c is (byte)' ' or (byte)'\t' or (byte)'\n' or (byte)'\r')
+                continue;
+
             var n = c switch
             {
                 >= (byte)'0' and <= (byte)'9' => c - '0',
@@ -132,38 +137,32 @@ public sealed class PdfString(ReadOnlyMemory<byte> bytes, bool isHex = false) : 
                 >= (byte)'A' and <= (byte)'F' => c - 'A' + 10,
                 _ => -1
             };
-            if (n < 0) continue;
-            if (hi < 0) { hi = n; }
-            else { result[j++] = (byte)((hi << 4) | n); hi = -1; }
+            if (n < 0)
+                continue;
+
+            if (hi < 0)
+                hi = n;
+            else
+            {
+                result[j++] = (byte)((hi << 4) | n);
+                hi = -1;
+            }
         }
+
         if (hi >= 0) result[j++] = (byte)(hi << 4);
         return result.AsMemory(0, j);
     }
 }
 
 /// <summary>
-/// Represents a PDF name object (ISO 32000-1 §7.3.5), such as <c>/Type</c> or <c>/Page</c>.
-/// All instances are interned: <see cref="Get"/> always returns the same object for the same
-/// string, so equality can be tested by reference. Common names are pre-interned as
-/// <see langword="static readonly"/> fields on this class.
+///     Represents a PDF name object (ISO 32000-1 §7.3.5), such as <c>/Type</c> or <c>/Page</c>.
+///     All instances are interned: <see cref="Get" /> always returns the same object for the same
+///     string, so equality can be tested by reference. Common names are pre-interned as
+///     <see langword="static readonly" /> fields on this class.
 /// </summary>
 public sealed class PdfName : PdfObject, IEquatable<PdfName>
 {
     private static readonly ConcurrentDictionary<string, PdfName> Intern = new();
-
-    private PdfName(string value) => Value = value;
-
-    /// <summary>The name string without the leading <c>/</c> delimiter.</summary>
-    // ReSharper disable once MemberCanBeInternal
-    public string Value { get; }
-
-    /// <summary>
-    /// Returns the interned <see cref="PdfName"/> instance for <paramref name="value"/>.
-    /// Thread-safe. The leading <c>/</c> must NOT be included in <paramref name="value"/>.
-    /// </summary>
-    // ReSharper disable once MemberCanBeInternal
-    public static PdfName Get(string value) =>
-        Intern.GetOrAdd(value, static v => new PdfName(v));
 
     // Pre-interned names for the most common PDF dictionary keys.
     /// <summary>The <c>/Type</c> name.</summary>
@@ -336,11 +335,25 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     // ReSharper disable once MemberCanBeInternal
     public static readonly PdfName Nums = Get("Nums");
 
+    private PdfName(string value) => Value = value;
+
+    /// <summary>The name string without the leading <c>/</c> delimiter.</summary>
+    // ReSharper disable once MemberCanBeInternal
+    public string Value { get; }
+
     /// <summary>
-    /// Returns <see langword="true"/> if <paramref name="other"/> is the same interned instance.
-    /// Because all <see cref="PdfName"/> values are interned, reference equality is sufficient.
+    ///     Returns <see langword="true" /> if <paramref name="other" /> is the same interned instance.
+    ///     Because all <see cref="PdfName" /> values are interned, reference equality is sufficient.
     /// </summary>
     public bool Equals(PdfName? other) => ReferenceEquals(this, other);
+
+    /// <summary>
+    ///     Returns the interned <see cref="PdfName" /> instance for <paramref name="value" />.
+    ///     Thread-safe. The leading <c>/</c> must NOT be included in <paramref name="value" />.
+    /// </summary>
+    // ReSharper disable once MemberCanBeInternal
+    public static PdfName Get(string value) =>
+        Intern.GetOrAdd(value, static v => new PdfName(v));
 
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is PdfName n && Equals(n);
@@ -353,8 +366,8 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
 }
 
 /// <summary>
-/// Represents a PDF array object (ISO 32000-1 §7.3.6).
-/// Elements are heterogeneous <see cref="PdfObject"/> instances and are stored in order.
+///     Represents a PDF array object (ISO 32000-1 §7.3.6).
+///     Elements are heterogeneous <see cref="PdfObject" /> instances and are stored in order.
 /// </summary>
 public sealed class PdfArray(IReadOnlyList<PdfObject> elements) : PdfObject
 {
@@ -369,14 +382,14 @@ public sealed class PdfArray(IReadOnlyList<PdfObject> elements) : PdfObject
     // ReSharper disable once MemberCanBeInternal
     public int Count => Elements.Count;
 
-    /// <summary>Returns the element at the given zero-based <paramref name="index"/>.</summary>
+    /// <summary>Returns the element at the given zero-based <paramref name="index" />.</summary>
     // ReSharper disable once MemberCanBeInternal
     public PdfObject this[int index] => Elements[index];
 }
 
 /// <summary>
-/// Represents a PDF dictionary object (ISO 32000-1 §7.3.7).
-/// Keys are PDF name strings (without the leading <c>/</c>); values are any <see cref="PdfObject"/>.
+///     Represents a PDF dictionary object (ISO 32000-1 §7.3.7).
+///     Keys are PDF name strings (without the leading <c>/</c>); values are any <see cref="PdfObject" />.
 /// </summary>
 public sealed class PdfDictionary(IReadOnlyDictionary<string, PdfObject> entries) : PdfObject
 {
@@ -384,15 +397,15 @@ public sealed class PdfDictionary(IReadOnlyDictionary<string, PdfObject> entries
     public PdfDictionary() : this(new Dictionary<string, PdfObject>()) { }
 
     /// <summary>
-    /// Returns the value associated with <paramref name="name"/>,
-    /// or <see langword="null"/> if the key is absent.
+    ///     Returns the value associated with <paramref name="name" />,
+    ///     or <see langword="null" /> if the key is absent.
     /// </summary>
     // ReSharper disable once MemberCanBeInternal
     public PdfObject? this[string name] => entries.GetValueOrDefault(name);
 
     /// <summary>
-    /// Returns the value associated with the given <see cref="PdfName"/>,
-    /// or <see langword="null"/> if the key is absent.
+    ///     Returns the value associated with the given <see cref="PdfName" />,
+    ///     or <see langword="null" /> if the key is absent.
     /// </summary>
     // ReSharper disable once MemberCanBeInternal
     public PdfObject? this[PdfName name] => entries.GetValueOrDefault(name.Value);
@@ -402,25 +415,25 @@ public sealed class PdfDictionary(IReadOnlyDictionary<string, PdfObject> entries
     public IReadOnlyDictionary<string, PdfObject> Entries => entries;
 
     /// <summary>
-    /// Returns the value for <paramref name="name"/> cast to <typeparamref name="T"/>,
-    /// or <see langword="null"/> if the key is absent or the value is a different type.
+    ///     Returns the value for <paramref name="name" /> cast to <typeparamref name="T" />,
+    ///     or <see langword="null" /> if the key is absent or the value is a different type.
     /// </summary>
     // ReSharper disable once MemberCanBePrivate.Global
     public T? Get<T>(string name)
         where T : PdfObject => entries.GetValueOrDefault(name) as T;
 
     /// <summary>
-    /// Returns the value for <paramref name="name"/> cast to <typeparamref name="T"/>,
-    /// or <see langword="null"/> if the key is absent or the value is a different type.
+    ///     Returns the value for <paramref name="name" /> cast to <typeparamref name="T" />,
+    ///     or <see langword="null" /> if the key is absent or the value is a different type.
     /// </summary>
     // ReSharper disable once MemberCanBeInternal
     public T? Get<T>(PdfName name)
         where T : PdfObject => Get<T>(name.Value);
 
     /// <summary>
-    /// Attempts to retrieve the value for <paramref name="name"/> as <typeparamref name="T"/>.
-    /// Returns <see langword="true"/> and sets <paramref name="value"/> on success;
-    /// returns <see langword="false"/> and sets <paramref name="value"/> to <see langword="null"/> otherwise.
+    ///     Attempts to retrieve the value for <paramref name="name" /> as <typeparamref name="T" />.
+    ///     Returns <see langword="true" /> and sets <paramref name="value" /> on success;
+    ///     returns <see langword="false" /> and sets <paramref name="value" /> to <see langword="null" /> otherwise.
     /// </summary>
     public bool TryGet<T>(string name, out T value)
         where T : PdfObject
@@ -436,18 +449,18 @@ public sealed class PdfDictionary(IReadOnlyDictionary<string, PdfObject> entries
     }
 
     /// <summary>
-    /// Returns the string value of a <see cref="PdfName"/> entry,
-    /// or <see langword="null"/> if the key is absent or is not a name.
-    /// Equivalent to <c>Get&lt;PdfName&gt;(key)?.Value</c>.
+    ///     Returns the string value of a <see cref="PdfName" /> entry,
+    ///     or <see langword="null" /> if the key is absent or is not a name.
+    ///     Equivalent to <c>Get&lt;PdfName&gt;(key)?.Value</c>.
     /// </summary>
     // ReSharper disable once MemberCanBeInternal
     public string? GetName(string key) => Get<PdfName>(key)?.Value;
 }
 
 /// <summary>
-/// Represents a PDF stream object (ISO 32000-1 §7.3.8): a dictionary followed by
-/// a sequence of bytes. The raw bytes may be compressed; callers must apply the
-/// appropriate filter (e.g. <c>FlateDecode</c>) to obtain the decoded content.
+///     Represents a PDF stream object (ISO 32000-1 §7.3.8): a dictionary followed by
+///     a sequence of bytes. The raw bytes may be compressed; callers must apply the
+///     appropriate filter (e.g. <c>FlateDecode</c>) to obtain the decoded content.
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class PdfStream(PdfDictionary dictionary, ReadOnlyMemory<byte> data) : PdfObject
@@ -457,16 +470,16 @@ public sealed class PdfStream(PdfDictionary dictionary, ReadOnlyMemory<byte> dat
     public PdfDictionary Dictionary { get; } = dictionary;
 
     /// <summary>
-    /// Raw (possibly compressed) stream bytes as they appear in the source file.
-    /// This is a zero-copy slice into the original source buffer.
-    /// Apply the filter chain declared in <c>/Filter</c> to decode.
+    ///     Raw (possibly compressed) stream bytes as they appear in the source file.
+    ///     This is a zero-copy slice into the original source buffer.
+    ///     Apply the filter chain declared in <c>/Filter</c> to decode.
     /// </summary>
     // ReSharper disable once MemberCanBeInternal
     public ReadOnlyMemory<byte> Data { get; } = data;
 
     /// <summary>
-    /// The declared byte length from the <c>/Length</c> entry in <see cref="Dictionary"/>.
-    /// Falls back to <c>Data.Length</c> if the entry is absent or malformed.
+    ///     The declared byte length from the <c>/Length</c> entry in <see cref="Dictionary" />.
+    ///     Falls back to <c>Data.Length</c> if the entry is absent or malformed.
     /// </summary>
     public int DeclaredLength =>
         (Dictionary.Get<PdfInteger>(PdfName.Length)?.Value ?? Data.Length) is var l
@@ -475,8 +488,8 @@ public sealed class PdfStream(PdfDictionary dictionary, ReadOnlyMemory<byte> dat
 }
 
 /// <summary>
-/// Represents the PDF null object (ISO 32000-1 §7.3.9).
-/// There is exactly one instance: <see cref="Instance"/>.
+///     Represents the PDF null object (ISO 32000-1 §7.3.9).
+///     There is exactly one instance: <see cref="Instance" />.
 /// </summary>
 public sealed class PdfNull : PdfObject
 {
@@ -491,10 +504,10 @@ public sealed class PdfNull : PdfObject
 }
 
 /// <summary>
-/// Represents an indirect object reference in the form <c>N G R</c>
-/// (ISO 32000-1 §7.3.10), where <c>N</c> is the object number and <c>G</c>
-/// is the generation number. The referenced object is resolved on demand
-/// by <see cref="Unchained.Pdf.Document.PdfDocumentCore"/>.
+///     Represents an indirect object reference in the form <c>N G R</c>
+///     (ISO 32000-1 §7.3.10), where <c>N</c> is the object number and <c>G</c>
+///     is the generation number. The referenced object is resolved on demand
+///     by <see cref="Unchained.Pdf.Document.PdfDocumentCore" />.
 /// </summary>
 public sealed class PdfIndirectReference(int objectNumber, int generation) : PdfObject, IEquatable<PdfIndirectReference>
 {
@@ -503,8 +516,8 @@ public sealed class PdfIndirectReference(int objectNumber, int generation) : Pdf
     public int ObjectNumber { get; } = objectNumber;
 
     /// <summary>
-    /// The generation number. Zero for all objects in non-incrementally-updated PDFs.
-    /// Increments each time an object is freed and reused (ISO 32000-1 §7.5.4).
+    ///     The generation number. Zero for all objects in non-incrementally-updated PDFs.
+    ///     Increments each time an object is freed and reused (ISO 32000-1 §7.5.4).
     /// </summary>
     // ReSharper disable once MemberCanBeInternal
     public int Generation { get; } = generation;
@@ -524,9 +537,9 @@ public sealed class PdfIndirectReference(int objectNumber, int generation) : Pdf
 }
 
 /// <summary>
-/// Represents a resolved indirect object in the form <c>N G obj ... endobj</c>
-/// (ISO 32000-1 §7.3.10). Produced by <see cref="Unchained.Pdf.Parsing.PdfParser.ReadObject"/>
-/// and cached by <see cref="Unchained.Pdf.Document.PdfDocumentCore"/>.
+///     Represents a resolved indirect object in the form <c>N G obj ... endobj</c>
+///     (ISO 32000-1 §7.3.10). Produced by <see cref="Unchained.Pdf.Parsing.PdfParser.ReadObject" />
+///     and cached by <see cref="Unchained.Pdf.Document.PdfDocumentCore" />.
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class PdfIndirectObject(int objectNumber, int generation, PdfObject value) : PdfObject
@@ -543,7 +556,7 @@ public sealed class PdfIndirectObject(int objectNumber, int generation, PdfObjec
     // ReSharper disable once MemberCanBeInternal
     public PdfObject Value { get; } = value;
 
-    /// <summary>Returns an <see cref="PdfIndirectReference"/> pointing to this object.</summary>
+    /// <summary>Returns an <see cref="PdfIndirectReference" /> pointing to this object.</summary>
     public PdfIndirectReference ToReference() => new(ObjectNumber, Generation);
 
     /// <inheritdoc />
@@ -551,19 +564,25 @@ public sealed class PdfIndirectObject(int objectNumber, int generation, PdfObjec
 }
 
 /// <summary>
-/// Carries a decoded inline image (BI…ID…EI) as a single content-operator operand.
-/// Not part of the ISO 32000 object model; used internally to pass decoded image
-/// pixels from the content-stream parser to the page renderer.
+///     Carries a decoded inline image (BI…ID…EI) as a single content-operator operand.
+///     Not part of the ISO 32000 object model; used internally to pass decoded image
+///     pixels from the content-stream parser to the page renderer.
 /// </summary>
 internal sealed class PdfInlineImage(
-    int width, int height, byte[] rgbData,
-    double userWidth, double userHeight) : PdfObject
+    int width,
+    int height,
+    byte[] rgbData,
+    double userWidth,
+    double userHeight
+) : PdfObject
 {
-    internal int     Width      { get; } = width;
-    internal int     Height     { get; } = height;
-    internal byte[]  RgbData    { get; } = rgbData;
+    internal int Width { get; } = width;
+    internal int Height { get; } = height;
+    internal byte[] RgbData { get; } = rgbData;
+
     /// <summary>Image width in PDF user-space points (from the BI /W entry × CTM scale).</summary>
-    internal double  UserWidth  { get; } = userWidth;
+    internal double UserWidth { get; } = userWidth;
+
     /// <summary>Image height in PDF user-space points (from the BI /H entry × CTM scale).</summary>
-    internal double  UserHeight { get; } = userHeight;
+    internal double UserHeight { get; } = userHeight;
 }

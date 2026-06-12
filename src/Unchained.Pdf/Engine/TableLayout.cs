@@ -4,8 +4,8 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Pre-computed geometry for a table. All fields are in PDF user space points (1 pt = 1/72 inch).
-/// Computed once before any content stream operators are emitted.
+///     Pre-computed geometry for a table. All fields are in PDF user space points (1 pt = 1/72 inch).
+///     Computed once before any content stream operators are emitted.
 /// </summary>
 internal readonly struct TableLayout
 {
@@ -38,9 +38,9 @@ internal readonly struct TableLayout
     }
 
     /// <summary>
-    /// Computes layout geometry. When <paramref name="data"/> is provided, column widths are
-    /// proportional to the widest content in each column (using Standard 14 font AFM metrics).
-    /// When <paramref name="data"/> is <see langword="null"/>, columns are distributed equally.
+    ///     Computes layout geometry. When <paramref name="data" /> is provided, column widths are
+    ///     proportional to the widest content in each column (using Standard 14 font AFM metrics).
+    ///     When <paramref name="data" /> is <see langword="null" />, columns are distributed equally.
     /// </summary>
     internal static TableLayout Compute(
         int columnCount,
@@ -66,7 +66,12 @@ internal readonly struct TableLayout
         }
 
         // ReSharper disable once BadListLineBreaks
-        return new TableLayout(cols, rowH, headerH, titleH, usableWidth, rowsPerPage);
+        return new TableLayout(cols,
+            rowH,
+            headerH,
+            titleH,
+            usableWidth,
+            rowsPerPage);
     }
 
     // Measures each column's required width (widest header or cell text + padding),

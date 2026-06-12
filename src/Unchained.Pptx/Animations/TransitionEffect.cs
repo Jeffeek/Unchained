@@ -1,10 +1,10 @@
 namespace Unchained.Pptx.Animations;
 
 /// <summary>
-/// The visual effect used when advancing from one slide to the next.
-/// Directional variants (e.g. <see cref="PushLeft"/>) encode both the base effect
-/// and the direction so that callers need only set one property.
-/// Maps to the child element inside <c>&lt;p:transition&gt;</c>.
+///     The visual effect used when advancing from one slide to the next.
+///     Directional variants (e.g. <see cref="PushLeft" />) encode both the base effect
+///     and the direction so that callers need only set one property.
+///     Maps to the child element inside <c>&lt;p:transition&gt;</c>.
 /// </summary>
 public enum TransitionEffect
 {
@@ -100,5 +100,5 @@ public enum TransitionEffect
     /// <summary>Horizontal comb effect. OOXML: <c>&lt;p:comb dir="horz"/&gt;</c></summary>
     CombHorizontal,
     /// <summary>Vertical comb effect. OOXML: <c>&lt;p:comb dir="vert"/&gt;</c></summary>
-    CombVertical,
+    CombVertical
 }

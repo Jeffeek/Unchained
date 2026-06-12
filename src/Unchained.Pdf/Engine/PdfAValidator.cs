@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
+using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -8,11 +10,25 @@ using Unchained.Pdf.Parsing.Filters;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Validates a PDF document against ISO 19005 PDF/A conformance profiles.
-/// Rule IDs correspond to ISO 19005-1 (PDF/A-1) clause numbers.
+///     Validates a PDF document against ISO 19005 PDF/A conformance profiles.
+///     Rule IDs correspond to ISO 19005-1 (PDF/A-1) clause numbers.
 /// </summary>
 internal static class PdfAValidator
 {
+    // ── §6.5 Annotations ─────────────────────────────────────────────────────
+
+    private static readonly HashSet<string> ProhibitedAnnotationTypes = new(StringComparer.Ordinal)
+    {
+        "Sound", "Movie", "Screen", "FileAttachment", "3D"
+    };
+
+    // ── §6.6 Actions ──────────────────────────────────────────────────────────
+
+    private static readonly HashSet<string> ProhibitedActionTypes = new(StringComparer.Ordinal)
+    {
+        "Launch", "Sound", "Movie", "ResetForm", "ImportData",
+        "JavaScript", "SetOCGState", "Trans", "GoTo3DView"
+    };
     // ── Entry point ───────────────────────────────────────────────────────────
 
     internal static PdfAValidationResult Validate(byte[] pdfBytes, PdfAProfile profile)
@@ -98,7 +114,7 @@ internal static class PdfAValidator
         }
 
         var verStr = header[5..];
-        if (!double.TryParse(verStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var ver))
+        if (!double.TryParse(verStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var ver))
         {
             v.Add(E("6.1.2", $"Cannot parse PDF version from header: '{verStr}'."));
             return;
@@ -152,7 +168,7 @@ internal static class PdfAValidator
             };
 
             if (names.Any(static n => n is "LZWDecode" or "LZW"))
-                v.Add(E("6.1.10", "LZWDecode filter is not permitted in PDF/A.", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.1.10", "LZWDecode filter is not permitted in PDF/A.", obj.ObjectNumber));
         }
     }
 
@@ -192,17 +208,17 @@ internal static class PdfAValidator
                 continue; // skip non-ExtGState (unless no type)
 
             if (dict[PdfName.Get("SMask")] is not null and not PdfName { Value: "None" })
-                v.Add(E("6.4", "Transparency /SMask is not permitted in PDF/A-1.", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.4", "Transparency /SMask is not permitted in PDF/A-1.", obj.ObjectNumber));
 
             var bm = dict.Get<PdfName>("BM");
             if (bm is not null && bm.Value is not ("Normal" or "Compatible"))
-                v.Add(E("6.4", $"Blend mode /{bm.Value} is not permitted in PDF/A-1 (only /Normal or /Compatible).", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.4", $"Blend mode /{bm.Value} is not permitted in PDF/A-1 (only /Normal or /Compatible).", obj.ObjectNumber));
 
             if (dict.Get<PdfReal>("CA") is { Value: < 1.0 } caStroke)
-                v.Add(E("6.4", $"Stroke opacity (/CA = {caStroke.Value:F2}) must be 1.0 in PDF/A-1.", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.4", $"Stroke opacity (/CA = {caStroke.Value:F2}) must be 1.0 in PDF/A-1.", obj.ObjectNumber));
 
             if (dict.Get<PdfReal>("ca") is { Value: < 1.0 } caFill)
-                v.Add(E("6.4", $"Fill opacity (/ca = {caFill.Value:F2}) must be 1.0 in PDF/A-1.", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.4", $"Fill opacity (/ca = {caFill.Value:F2}) must be 1.0 in PDF/A-1.", obj.ObjectNumber));
         }
     }
 
@@ -232,7 +248,7 @@ internal static class PdfAValidator
             if (descriptor is null)
             {
                 if (subtype is not ("Type3" or "Type0"))
-                    v.Add(E("6.3.3", $"Font '{baseName ?? "(unnamed)"}' (obj {obj.ObjectNumber}) is missing /FontDescriptor.", objectNumber: obj.ObjectNumber));
+                    v.Add(E("6.3.3", $"Font '{baseName ?? "(unnamed)"}' (obj {obj.ObjectNumber}) is missing /FontDescriptor.", obj.ObjectNumber));
 
                 continue;
             }
@@ -246,17 +262,10 @@ internal static class PdfAValidator
                 v.Add(E("6.3.3",
                     $"Font '{baseName ?? "(unnamed)"}' (obj {obj.ObjectNumber}) is not embedded. " +
                     "All fonts — including Standard 14 — must be embedded in PDF/A-1.",
-                    objectNumber: obj.ObjectNumber));
+                    obj.ObjectNumber));
             }
         }
     }
-
-    // ── §6.5 Annotations ─────────────────────────────────────────────────────
-
-    private static readonly HashSet<string> ProhibitedAnnotationTypes = new(StringComparer.Ordinal)
-    {
-        "Sound", "Movie", "Screen", "FileAttachment", "3D"
-    };
 
     private static void CheckAnnotations(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
@@ -303,14 +312,6 @@ internal static class PdfAValidator
             }
         }
     }
-
-    // ── §6.6 Actions ──────────────────────────────────────────────────────────
-
-    private static readonly HashSet<string> ProhibitedActionTypes = new(StringComparer.Ordinal)
-    {
-        "Launch", "Sound", "Movie", "ResetForm", "ImportData",
-        "JavaScript", "SetOCGState", "Trans", "GoTo3DView"
-    };
 
     private static void CheckActions(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
@@ -363,7 +364,7 @@ internal static class PdfAValidator
         var actionType = dict.GetName("S") ?? string.Empty;
 
         if (ProhibitedActionTypes.Contains(actionType))
-            v.Add(E("6.6.2", $"Action type /{actionType} in {location} is not permitted in PDF/A-1.", objectNumber: objNum));
+            v.Add(E("6.6.2", $"Action type /{actionType} in {location} is not permitted in PDF/A-1.", objNum));
     }
 
     // ── §6.7 Metadata ─────────────────────────────────────────────────────────
@@ -387,7 +388,7 @@ internal static class PdfAValidator
         string xmp;
         try
         {
-            xmp = Encoding.UTF8.GetString(StreamFilters.Decode(metaStream).Span);
+            xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
         }
         catch
         {
@@ -461,10 +462,20 @@ internal static class PdfAValidator
         };
 
     // ReSharper disable once BadListLineBreaks
-    private static PdfAViolation E(string ruleId, string description, int? objectNumber = null, int? pageNumber = null) =>
+    private static PdfAViolation E(
+        string ruleId,
+        string description,
+        int? objectNumber = null,
+        int? pageNumber = null
+    ) =>
         new(ruleId, description, PdfAViolationSeverity.Error, objectNumber, pageNumber);
 
     // ReSharper disable once BadListLineBreaks
-    private static PdfAViolation W(string ruleId, string description, int? objectNumber = null, int? pageNumber = null) =>
+    private static PdfAViolation W(
+        string ruleId,
+        string description,
+        int? objectNumber = null,
+        int? pageNumber = null
+    ) =>
         new(ruleId, description, PdfAViolationSeverity.Warning, objectNumber, pageNumber);
 }

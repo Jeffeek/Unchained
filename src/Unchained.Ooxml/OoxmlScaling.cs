@@ -1,15 +1,15 @@
 namespace Unchained.Ooxml;
 
 /// <summary>
-/// OOXML integer scaling factors used throughout PresentationML parsing and writing.
-/// ECMA-376 stores many values as integers scaled by a fixed factor.
+///     OOXML integer scaling factors used throughout PresentationML parsing and writing.
+///     ECMA-376 stores many values as integers scaled by a fixed factor.
 /// </summary>
 internal static class OoxmlScaling
 {
     /// <summary>
-    /// Scale factor for percentage-like values: luminance modifiers, gradient stop positions,
-    /// animation acceleration/deceleration, alpha channel values.
-    /// 100 % = 100 000; 0 % = 0. Divide by this to get a 0.0–1.0 fraction.
+    ///     Scale factor for percentage-like values: luminance modifiers, gradient stop positions,
+    ///     animation acceleration/deceleration, alpha channel values.
+    ///     100 % = 100 000; 0 % = 0. Divide by this to get a 0.0–1.0 fraction.
     /// </summary>
     internal const int PercentScale = 100_000;
 
@@ -17,8 +17,8 @@ internal static class OoxmlScaling
     internal const int AlphaScale = 100_000;
 
     /// <summary>
-    /// Grey fallback ARGB (0xFF808080) returned when a theme colour slot cannot be resolved
-    /// (e.g. the colour scheme has not been initialised).
+    ///     Grey fallback ARGB (0xFF808080) returned when a theme colour slot cannot be resolved
+    ///     (e.g. the colour scheme has not been initialised).
     /// </summary>
     internal const uint UnresolvedThemeColorArgb = 0xFF808080u;
 

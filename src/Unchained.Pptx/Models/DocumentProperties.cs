@@ -1,8 +1,8 @@
 namespace Unchained.Pptx.Models;
 
 /// <summary>
-/// Metadata properties of a presentation document, drawn from the OPC core properties
-/// (<c>docProps/core.xml</c>) and the extended app properties (<c>docProps/app.xml</c>).
+///     Metadata properties of a presentation document, drawn from the OPC core properties
+///     (<c>docProps/core.xml</c>) and the extended app properties (<c>docProps/app.xml</c>).
 /// </summary>
 public sealed class DocumentProperties
 {
@@ -71,9 +71,9 @@ public sealed class DocumentProperties
     // ── Custom properties ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Arbitrary name/value pairs stored in <c>docProps/custom.xml</c>.
-    /// Values may be <see langword="string"/>, <see langword="int"/>,
-    /// <see langword="double"/>, <see langword="bool"/>, or <see cref="DateTimeOffset"/>.
+    ///     Arbitrary name/value pairs stored in <c>docProps/custom.xml</c>.
+    ///     Values may be <see langword="string" />, <see langword="int" />,
+    ///     <see langword="double" />, <see langword="bool" />, or <see cref="DateTimeOffset" />.
     /// </summary>
     public Dictionary<string, object?> CustomProperties { get; } = new(StringComparer.Ordinal);
 }

@@ -1,7 +1,7 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// The shape of the arrowhead drawn at the end of a line.
+///     The shape of the arrowhead drawn at the end of a line.
 /// </summary>
 public enum ArrowHeadType
 {

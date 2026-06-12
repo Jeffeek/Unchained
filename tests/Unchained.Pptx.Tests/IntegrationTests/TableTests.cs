@@ -13,7 +13,8 @@ public sealed class TableTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero, Emu.Zero,
+            Emu.Zero,
+            Emu.Zero,
             [Emu.FromInches(2), Emu.FromInches(2), Emu.FromInches(2)],
             [Emu.FromInches(0.5), Emu.FromInches(0.5)]);
 
@@ -26,7 +27,8 @@ public sealed class TableTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero, Emu.Zero,
+            Emu.Zero,
+            Emu.Zero,
             [Emu.FromInches(2), Emu.FromInches(2)],
             [Emu.FromInches(0.5)]);
 
@@ -42,7 +44,8 @@ public sealed class TableTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero, Emu.Zero,
+            Emu.Zero,
+            Emu.Zero,
             [Emu.FromInches(2), Emu.FromInches(2)],
             [Emu.FromInches(0.5), Emu.FromInches(0.5)]);
 
@@ -59,7 +62,8 @@ public sealed class TableTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero, Emu.Zero,
+            Emu.Zero,
+            Emu.Zero,
             [Emu.FromInches(2)],
             [Emu.FromInches(0.5)]);
 
@@ -71,7 +75,8 @@ public sealed class TableTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero, Emu.Zero,
+            Emu.Zero,
+            Emu.Zero,
             [Emu.FromInches(2)],
             [Emu.FromInches(0.5)]);
 
@@ -84,7 +89,8 @@ public sealed class TableTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         doc.Slides[0].Shapes.AddTable(
-            Emu.Zero, Emu.Zero,
+            Emu.Zero,
+            Emu.Zero,
             [Emu.FromInches(2), Emu.FromInches(2)],
             [Emu.FromInches(0.5), Emu.FromInches(0.5), Emu.FromInches(0.5)]);
 

@@ -1,4 +1,5 @@
-@using Unchained.Studio.Enums
+@using System.IO.Compression
+@using Unchained.Pdf.Abstractions
 @inject RenderingService Renderer
 @inject FileExportService Exporter
 @inject IJSRuntime JS
@@ -7,7 +8,7 @@
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Outlined.CompareArrows" Class="mr-2" Style="vertical-align:middle;" />
+            <MudIcon Icon="@Icons.Material.Outlined.CompareArrows" Class="mr-2" Style="vertical-align:middle;"/>
             Export Comparison Images
         </MudText>
     </TitleContent>
@@ -20,7 +21,7 @@
                 <MudText Typo="Typo.body2" Class="mb-2">
                     @_progressMessage
                 </MudText>
-                <MudProgressLinear Value="_progressPercent" Color="Color.Primary" Rounded="true" Class="mb-1" />
+                <MudProgressLinear Value="_progressPercent" Color="Color.Primary" Rounded="true" Class="mb-1"/>
                 <MudText Typo="Typo.caption" Style="opacity:.6;">
                     @_progressDetail
                 </MudText>
@@ -57,7 +58,7 @@
                                       Margin="Margin.Dense"
                                       Class="mt-1"
                                       Error="@(_rangeError is not null)"
-                                      ErrorText="@_rangeError" />
+                                      ErrorText="@_rangeError"/>
                     }
                 </div>
 
@@ -128,18 +129,32 @@
 </MudDialog>
 
 @* ReSharper disable once RedundantNameQualifier *@
-@code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
-    [Parameter] public Unchained.Pdf.Abstractions.IPdfDocument Document { get; set; } = default!;
-    [Parameter] public byte[] DocumentBytes { get; set; } = default!;
-    [Parameter] public string FileName { get; set; } = "document";
-    [Parameter] public int CurrentPage { get; set; } = 1;
-    [Parameter] public int PageCount { get; set; } = 1;
-    [Parameter] public string? ExistingBlobUrl { get; set; }
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public IPdfDocument Document { get; set; } = default!;
+
+    [Parameter]
+    public byte[] DocumentBytes { get; set; } = default!;
+
+    [Parameter]
+    public string FileName { get; set; } = "document";
+
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    [Parameter]
+    public int PageCount { get; set; } = 1;
+
+    [Parameter]
+    public string? ExistingBlobUrl { get; set; }
 
     private PageMode _pageMode = PageMode.Current;
-    private Enums.OutputMode _outputMode = OutputMode.Zip;
+    private OutputMode _outputMode = OutputMode.Zip;
     private string _rangeText = string.Empty;
     private string? _rangeError;
     private int _dpi = 96;
@@ -167,6 +182,7 @@
         {
             _folderSaveSupported = false;
         }
+
         if (!_folderSaveSupported)
             _outputMode = OutputMode.Zip;
         StateHasChanged();
@@ -182,10 +198,7 @@
 
     private void Close() => MudDialog.Cancel();
 
-    private void Cancel()
-    {
-        _cts?.Cancel();
-    }
+    private void Cancel() => _cts?.Cancel();
 
     private async Task StartExport()
     {
@@ -199,8 +212,8 @@
         var ct = _cts.Token;
 
         // Ensure we have a blob URL for PDF.js (reuse if already open in compare mode)
-        string? blobUrl = ExistingBlobUrl;
-        bool ownedBlob = false;
+        var blobUrl = ExistingBlobUrl;
+        var ownedBlob = false;
         if (blobUrl is null)
         {
             _progressMessage = "Preparing PDF for browser rendering…";
@@ -215,7 +228,7 @@
         {
             var baseName = Path.GetFileNameWithoutExtension(FileName);
             var collected = new List<(string Name, byte[] Bytes)>();
-            int done = 0;
+            var done = 0;
 
             foreach (var page in pages)
             {
@@ -258,7 +271,10 @@
                         pdfjsBase64 = await JS.InvokeAsync<string>(
                             "unchainedStudio.renderPageWithPdfJs",
                             jts.Token,
-                            blobUrl, page, _dpi, 24000); // pass JS-side timeout (ms)
+                            blobUrl,
+                            page,
+                            _dpi,
+                            24000); // pass JS-side timeout (ms)
                     }
                     catch (OperationCanceledException)
                     {
@@ -327,7 +343,8 @@
     private async Task SaveToFolder(
         List<(string Name, byte[] Bytes)> files,
         string baseName,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         // Build the flat list the JS side expects: [{name, base64}]
         // We group by subfolder (unchained/ pdfjs/) but showDirectoryPicker
@@ -363,18 +380,19 @@
     private static byte[] BuildZip(List<(string Name, byte[] Bytes)> files)
     {
         using var ms = new MemoryStream();
-        using (var zip = new System.IO.Compression.ZipArchive(
+        using (var zip = new ZipArchive(
                    ms,
-                   System.IO.Compression.ZipArchiveMode.Create,
-                   leaveOpen: true))
+                   ZipArchiveMode.Create,
+                   true))
         {
             foreach (var (name, bytes) in files)
             {
-                var entry = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal);
+                var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
                 using var stream = entry.Open();
                 stream.Write(bytes);
             }
         }
+
         return ms.ToArray();
     }
 
@@ -386,9 +404,9 @@
         return _pageMode switch
         {
             PageMode.Current => [CurrentPage],
-            PageMode.All    => Enumerable.Range(1, PageCount).ToList(),
-            PageMode.Range  => ParseRange(_rangeText, PageCount),
-            _               => [CurrentPage]
+            PageMode.All => Enumerable.Range(1, PageCount).ToList(),
+            PageMode.Range => ParseRange(_rangeText, PageCount),
+            _ => [CurrentPage]
         };
     }
 
@@ -414,11 +432,13 @@
                     _rangeError = $"Invalid range: \"{token}\"";
                     return null;
                 }
+
                 if (from < 1 || to > max || from > to)
                 {
                     _rangeError = $"Range {from}-{to} is out of bounds (1-{max}).";
                     return null;
                 }
+
                 for (var p = from; p <= to; p++) pages.Add(p);
             }
             else
@@ -428,6 +448,7 @@
                     _rangeError = $"Invalid page number: \"{token}\" (1-{max}).";
                     return null;
                 }
+
                 pages.Add(p);
             }
         }
@@ -440,4 +461,5 @@
 
         return [.. pages];
     }
+
 }

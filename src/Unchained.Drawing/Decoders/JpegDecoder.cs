@@ -1,11 +1,13 @@
-namespace Unchained.Drawing;
+using Unchained.Drawing.Constants;
+
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Minimal baseline (sequential DCT, Huffman) JPEG decoder using only BCL APIs, producing
-/// packed 24-bit RGB. Supports the common case for slide imagery: baseline JFIF, 8-bit,
-/// 1-component (grayscale) or 3-component (YCbCr) with 4:4:4 / 4:2:0 / 4:2:2 subsampling.
-/// Returns <see langword="null"/> for progressive, arithmetic-coded, CMYK, or otherwise
-/// unsupported streams so the caller can skip the image rather than crash.
+///     Minimal baseline (sequential DCT, Huffman) JPEG decoder using only BCL APIs, producing
+///     packed 24-bit RGB. Supports the common case for slide imagery: baseline JFIF, 8-bit,
+///     1-component (grayscale) or 3-component (YCbCr) with 4:4:4 / 4:2:0 / 4:2:2 subsampling.
+///     Returns <see langword="null" /> for progressive, arithmetic-coded, CMYK, or otherwise
+///     unsupported streams so the caller can skip the image rather than crash.
 /// </summary>
 internal static class JpegDecoder
 {
@@ -27,74 +29,99 @@ internal static class JpegDecoder
     private sealed class Decoder(ReadOnlySpan<byte> data)
     {
         private readonly byte[] _data = data.ToArray();
-        private int _pos;
-
-        // Quantization tables [id] → 64 entries (zig-zag order stored, applied in natural order).
-        private readonly int[][] _quant = new int[4][];
 
         // Huffman tables: [class(0=DC,1=AC)][id]
         private readonly HuffTable?[,] _huff = new HuffTable?[2, 4];
 
-        private int _width, _height;
-        private Component[] _components = [];
-        private int _restartInterval;
+        // Quantization tables [id] → 64 entries (zig-zag order stored, applied in natural order).
+        private readonly int[]?[] _quant = new int[4][];
 
         // Bit reader state for entropy-coded segment.
         private int _bitBuffer;
         private int _bitCount;
+        private Component[] _components = [];
+        private int _pos;
+        private int _restartInterval;
+
+        private int _width, _height;
 
         internal byte[]? Decode(out int width, out int height)
         {
             width = 0;
             height = 0;
 
-            if (_data.Length < 2 || _data[0] != 0xFF || _data[1] != 0xD8) // SOI
+            if (_data.Length < 2 || _data[0] != JpegConstants.MarkerPrefix || _data[1] != JpegConstants.Soi) // SOI
                 return null;
+
             _pos = 2;
 
             var baseline = false;
 
             while (_pos + 1 < _data.Length)
             {
-                if (_data[_pos] != 0xFF) { _pos++; continue; }
-                // Skip fill bytes (0xFF 0xFF ...).
-                while (_pos + 1 < _data.Length && _data[_pos + 1] == 0xFF) _pos++;
+                if (_data[_pos] != JpegConstants.MarkerPrefix)
+                {
+                    _pos++;
+                    continue;
+                }
+
+                // Skip fill bytes (JpegMarkers.MarkerPrefix JpegMarkers.MarkerPrefix ...).
+                while (_pos + 1 < _data.Length && _data[_pos + 1] == JpegConstants.MarkerPrefix)
+                    _pos++;
+
                 var marker = _data[_pos + 1];
                 _pos += 2;
 
                 switch (marker)
                 {
-                    case 0x00: // stuffed byte outside scan — skip
+                    case JpegConstants.ByteStuff:                              // stuffed byte outside scan — skip
+                    case >= JpegConstants.RstFirst and <= JpegConstants.RstLast: // RSTn (no payload)
+                    {
                         break;
-                    case 0xD9: // EOI
+                    }
+                    case JpegConstants.Eoi:
+                    case JpegConstants.Sof2: // SOF2 progressive — unsupported
+                    {
                         return null;
-                    case 0xC0: // SOF0 baseline
-                    case 0xC1: // SOF1 extended sequential (same layout, Huffman) — treat as baseline
+                    }
+                    case JpegConstants.Sof0: // SOF0 baseline
+                    case JpegConstants.Sof1: // SOF1 extended sequential (same layout, Huffman) — treat as baseline
+                    {
                         baseline = true;
                         ReadStartOfFrame();
                         break;
-                    case 0xC2: // SOF2 progressive — unsupported
-                        return null;
-                    case 0xC4: // DHT
+                    }
+                    case JpegConstants.Dht:
+                    {
                         ReadHuffmanTables();
                         break;
-                    case 0xDB: // DQT
+                    }
+                    case JpegConstants.Dqt:
+                    {
                         ReadQuantTables();
                         break;
-                    case 0xDD: // DRI
+                    }
+                    case JpegConstants.Dri:
+                    {
                         ReadRestartInterval();
                         break;
-                    case 0xDA: // SOS
-                        if (!baseline) return null;
+                    }
+                    case JpegConstants.Sos:
+                    {
+                        if (!baseline)
+                            return null;
+
                         var rgb = ReadScanAndDecode();
                         width = _width;
                         height = _height;
+
                         return rgb;
-                    case >= 0xD0 and <= 0xD7: // RSTn (no payload)
-                        break;
+                    }
                     default:
+                    {
                         SkipSegment();
                         break;
+                    }
                 }
             }
 
@@ -119,11 +146,21 @@ internal static class JpegDecoder
             var len = ReadU16();
             var end = _pos + len - 2;
             var precision = _data[_pos++];
-            if (precision != 8) { _pos = end; throw new NotSupportedException("only 8-bit"); }
+            if (precision != 8)
+            {
+                _pos = end;
+                throw new NotSupportedException("only 8-bit");
+            }
+
             _height = ReadU16();
             _width = ReadU16();
+
             var count = _data[_pos++];
-            if (count != 1 && count != 3) { _pos = end; throw new NotSupportedException("components"); }
+            if (count != 1 && count != 3)
+            {
+                _pos = end;
+                throw new NotSupportedException("components");
+            }
 
             _components = new Component[count];
             for (var i = 0; i < count; i++)
@@ -135,10 +172,11 @@ internal static class JpegDecoder
                 {
                     Id = id,
                     HSamp = sampling >> 4,
-                    VSamp = sampling & 0x0F,
+                    VSamp = sampling & JpegConstants.NibbleMask,
                     QuantId = qt
                 };
             }
+
             _pos = end;
         }
 
@@ -148,14 +186,16 @@ internal static class JpegDecoder
             var end = _pos + len - 2;
             while (_pos < end)
             {
-                var pq_tq = _data[_pos++];
-                var precision = pq_tq >> 4;
-                var id = pq_tq & 0x0F;
+                var pqTq = _data[_pos++];
+                var precision = pqTq >> 4;
+                var id = pqTq & JpegConstants.NibbleMask;
                 var table = new int[64];
                 for (var i = 0; i < 64; i++)
                     table[i] = precision == 0 ? _data[_pos++] : ReadU16();
+
                 _quant[id] = table;
             }
+
             _pos = end;
         }
 
@@ -165,16 +205,24 @@ internal static class JpegDecoder
             var end = _pos + len - 2;
             while (_pos < end)
             {
-                var tc_th = _data[_pos++];
-                var cls = tc_th >> 4;   // 0 = DC, 1 = AC
-                var id = tc_th & 0x0F;
+                var tcTh = _data[_pos++];
+                var cls = tcTh >> 4; // 0 = DC, 1 = AC
+                var id = tcTh & JpegConstants.NibbleMask;
                 var counts = new byte[16];
                 var total = 0;
-                for (var i = 0; i < 16; i++) { counts[i] = _data[_pos++]; total += counts[i]; }
+                for (var i = 0; i < 16; i++)
+                {
+                    counts[i] = _data[_pos++];
+                    total += counts[i];
+                }
+
                 var symbols = new byte[total];
-                for (var i = 0; i < total; i++) symbols[i] = _data[_pos++];
+                for (var i = 0; i < total; i++)
+                    symbols[i] = _data[_pos++];
+
                 _huff[cls, id] = new HuffTable(counts, symbols);
             }
+
             _pos = end;
         }
 
@@ -190,14 +238,21 @@ internal static class JpegDecoder
             var end = _pos + len - 2;
             var ns = _data[_pos++];
             var scanComps = new (int CompIndex, int DcId, int AcId)[ns];
+
             for (var i = 0; i < ns; i++)
             {
                 var cs = _data[_pos++];
-                var td_ta = _data[_pos++];
+                var tdTa = _data[_pos++];
                 var ci = Array.FindIndex(_components, c => c.Id == cs);
-                if (ci < 0) { _pos = end; return null; }
-                scanComps[i] = (ci, td_ta >> 4, td_ta & 0x0F);
+                if (ci < 0)
+                {
+                    _pos = end;
+                    return null;
+                }
+
+                scanComps[i] = (ci, tdTa >> 4, tdTa & JpegConstants.NibbleMask);
             }
+
             // The 3 spectral-selection bytes (Ss/Se/Ah-Al) are within the segment length.
             _pos = end;
 
@@ -216,9 +271,8 @@ internal static class JpegDecoder
             foreach (var c in _components)
             {
                 c.BlocksPerLine = mcusX * c.HSamp;
-                c.BlocksPerColumn = mcusY * c.VSamp;
-                c.Pixels = new byte[(mcusX * c.HSamp * 8) * (mcusY * c.VSamp * 8)];
-                c.Pred = 0;
+                c.Pixels = new byte[mcusX * c.HSamp * 8 * mcusY * c.VSamp * 8];
+                c.Prediction = 0;
             }
 
             _bitBuffer = 0;
@@ -235,7 +289,9 @@ internal static class JpegDecoder
                     for (var bx = 0; bx < comp.HSamp; bx++)
                     {
                         var block = DecodeBlock(comp, dcId, acId);
-                        if (block is null) return null;
+                        if (block is null)
+                            return null;
+
                         var blockX = ((mx * comp.HSamp) + bx) * 8;
                         var blockY = ((my * comp.VSamp) + by) * 8;
                         var stride = comp.BlocksPerLine * 8;
@@ -258,14 +314,18 @@ internal static class JpegDecoder
             // Skip to RSTn marker.
             while (_pos + 1 < _data.Length)
             {
-                if (_data[_pos] == 0xFF && _data[_pos + 1] >= 0xD0 && _data[_pos + 1] <= 0xD7)
+                if (_data[_pos] == JpegConstants.MarkerPrefix &&
+                    _data[_pos + 1] >= JpegConstants.RstFirst &&
+                    _data[_pos + 1] <= JpegConstants.RstLast)
                 {
                     _pos += 2;
                     break;
                 }
+
                 _pos++;
             }
-            foreach (var c in _components) c.Pred = 0;
+
+            foreach (var c in _components) c.Prediction = 0;
         }
 
         private int[]? DecodeBlock(Component comp, int dcId, int acId)
@@ -273,37 +333,47 @@ internal static class JpegDecoder
             var dcTable = _huff[0, dcId];
             var acTable = _huff[1, acId];
             var quant = _quant[comp.QuantId];
+
             if (dcTable is null || acTable is null || quant is null) return null;
 
-            var coeffs = new int[64];
+            var coefficients = new int[64];
 
             var t = DecodeHuffman(dcTable);
-            if (t < 0) return null;
+            if (t < 0)
+                return null;
+
             var diff = t == 0 ? 0 : Extend(ReceiveBits(t), t);
-            comp.Pred += diff;
-            coeffs[0] = comp.Pred * quant[0];
+            comp.Prediction += diff;
+            coefficients[0] = comp.Prediction * quant[0];
 
             var k = 1;
             while (k < 64)
             {
                 var rs = DecodeHuffman(acTable);
-                if (rs < 0) return null;
+                if (rs < 0)
+                    return null;
+
                 var r = rs >> 4;
-                var s = rs & 0x0F;
+                var s = rs & JpegConstants.NibbleMask;
                 if (s == 0)
                 {
-                    if (r != 15) break; // EOB
+                    if (r != 15)
+                        break; // EOB
+
                     k += 16;
                     continue;
                 }
+
                 k += r;
-                if (k >= 64) break;
+                if (k >= 64)
+                    break;
+
                 var value = Extend(ReceiveBits(s), s);
-                coeffs[ZigZag[k]] = value * quant[ZigZag[k]];
+                coefficients[JpegConstants.ZigZag[k]] = value * quant[JpegConstants.ZigZag[k]];
                 k++;
             }
 
-            return Idct(coeffs);
+            return Idct(coefficients);
         }
 
         // ── Bit reading ──────────────────────────────────────────────────────────
@@ -312,19 +382,32 @@ internal static class JpegDecoder
         {
             if (_bitCount == 0)
             {
-                if (_pos >= _data.Length) return 0;
+                if (_pos >= _data.Length)
+                    return 0;
+
                 var b = _data[_pos++];
-                if (b == 0xFF)
+                if (b == JpegConstants.MarkerPrefix)
                 {
                     var next = _pos < _data.Length ? _data[_pos] : 0;
-                    if (next == 0x00) _pos++;            // stuffed byte
-                    else if (next >= 0xD0 && next <= 0xD7) { /* restart, handled elsewhere */ }
+
+                    switch (next)
+                    {
+                        case JpegConstants.ByteStuff:
+                            _pos++; // stuffed byte
+                        break;
+                        case >= JpegConstants.RstFirst and <= JpegConstants.RstLast:
+                            /* restart, handled elsewhere */
+                        break;
+                    }
                     // else marker — leave for caller
                 }
+
                 _bitBuffer = b;
                 _bitCount = 8;
             }
+
             _bitCount--;
+
             return (_bitBuffer >> _bitCount) & 1;
         }
 
@@ -333,11 +416,12 @@ internal static class JpegDecoder
             var v = 0;
             for (var i = 0; i < count; i++)
                 v = (v << 1) | ReadBit();
+
             return v;
         }
 
         private static int Extend(int v, int t) =>
-            v < (1 << (t - 1)) ? v - (1 << t) + 1 : v;
+            v < 1 << (t - 1) ? v - (1 << t) + 1 : v;
 
         private int DecodeHuffman(HuffTable table)
         {
@@ -350,17 +434,18 @@ internal static class JpegDecoder
                 if (table.MaxCode[len] >= 0 && code <= table.MaxCode[len])
                     return table.Symbols[table.ValPtr[len] + (code - table.MinCode[len])];
             }
+
             return -1;
         }
 
         // ── IDCT (separable, float) ────────────────────────────────────────────────
 
-        private static int[] Idct(int[] coeffs)
+        private static int[] Idct(IReadOnlyList<int> coefficients)
         {
             // Row-column separable IDCT.
             var output = new int[64];
             var block = new double[64];
-            for (var i = 0; i < 64; i++) block[i] = coeffs[i];
+            for (var i = 0; i < 64; i++) block[i] = coefficients[i];
 
             for (var row = 0; row < 8; row++)
                 Idct1D(block, row * 8, 1);
@@ -372,10 +457,11 @@ internal static class JpegDecoder
                 var v = (int)Math.Round((block[i] / 8.0) + 128);
                 output[i] = v < 0 ? 0 : v > 255 ? 255 : v;
             }
+
             return output;
         }
 
-        private static void Idct1D(double[] b, int offset, int stride)
+        private static void Idct1D(IList<double> b, int offset, int stride)
         {
             // Naive 8-point IDCT — clear and correct; performance is acceptable for slides.
             Span<double> s = stackalloc double[8];
@@ -390,12 +476,21 @@ internal static class JpegDecoder
                     var cu = u == 0 ? 1.0 / Math.Sqrt(2) : 1.0;
                     sum += cu * s[u] * Math.Cos(((2 * x) + 1) * u * Math.PI / 16.0);
                 }
+
                 o[x] = sum;
             }
-            for (var i = 0; i < 8; i++) b[offset + (i * stride)] = o[i];
+
+            for (var i = 0; i < 8; i++)
+                b[offset + (i * stride)] = o[i];
         }
 
-        private static void PlaceBlock(int[] block, byte[] dest, int x0, int y0, int stride)
+        private static void PlaceBlock(
+            IReadOnlyList<int> block,
+            IList<byte> dest,
+            int x0,
+            int y0,
+            int stride
+        )
         {
             for (var y = 0; y < 8; y++)
             {
@@ -404,7 +499,7 @@ internal static class JpegDecoder
                 {
                     var dx = x0 + x;
                     var di = (dy * stride) + dx;
-                    if (di >= 0 && di < dest.Length)
+                    if (di >= 0 && di < dest.Count)
                         dest[di] = (byte)block[(y * 8) + x];
                 }
             }
@@ -427,6 +522,7 @@ internal static class JpegDecoder
                     var d = ((y * _width) + x) * 3;
                     rgb[d] = rgb[d + 1] = rgb[d + 2] = gray;
                 }
+
                 return rgb;
             }
 
@@ -448,15 +544,16 @@ internal static class JpegDecoder
                 var cbv = cb.Pixels![(cby * cbStride) + cbx] - 128;
                 var crv = cr.Pixels![(cry * crStride) + crx] - 128;
 
-                var r = yy + (1.402 * crv);
-                var g = yy - (0.344136 * cbv) - (0.714136 * crv);
-                var b = yy + (1.772 * cbv);
+                var r = yy + (YCbCrConstants.CrToR * crv);
+                var g = yy - (YCbCrConstants.CbToGCb * cbv) - (YCbCrConstants.CrToGCr * crv);
+                var b = yy + (YCbCrConstants.CbToB * cbv);
 
                 var d = ((y * _width) + x) * 3;
                 rgb[d] = Clamp(r);
                 rgb[d + 1] = Clamp(g);
                 rgb[d + 2] = Clamp(b);
             }
+
             return rgb;
         }
 
@@ -464,24 +561,23 @@ internal static class JpegDecoder
 
         private sealed class Component
         {
-            public int Id;
-            public int HSamp;
-            public int VSamp;
-            public int QuantId;
             public int BlocksPerLine;
-            public int BlocksPerColumn;
+            public int HSamp;
+            public int Id;
             public byte[]? Pixels;
-            public int Pred;
+            public int Prediction;
+            public int QuantId;
+            public int VSamp;
         }
 
         private sealed class HuffTable
         {
-            public readonly byte[] Symbols;
-            public readonly int[] MinCode = new int[17];
             public readonly long[] MaxCode = new long[17];
+            public readonly int[] MinCode = new int[17];
+            public readonly byte[] Symbols;
             public readonly int[] ValPtr = new int[17];
 
-            public HuffTable(byte[] counts, byte[] symbols)
+            public HuffTable(IReadOnlyList<byte> counts, byte[] symbols)
             {
                 Symbols = symbols;
                 var code = 0;
@@ -489,9 +585,7 @@ internal static class JpegDecoder
                 for (var len = 1; len <= 16; len++)
                 {
                     if (counts[len - 1] == 0)
-                    {
                         MaxCode[len] = -1;
-                    }
                     else
                     {
                         ValPtr[len] = k;
@@ -500,23 +594,12 @@ internal static class JpegDecoder
                         k += counts[len - 1];
                         MaxCode[len] = code - 1;
                     }
+
                     // The code value MUST shift left for every length, including empty ones —
                     // otherwise all subsequent canonical codes are misaligned.
                     code <<= 1;
                 }
             }
         }
-
-        private static readonly int[] ZigZag =
-        [
-            0, 1, 8, 16, 9, 2, 3, 10,
-            17, 24, 32, 25, 18, 11, 4, 5,
-            12, 19, 26, 33, 40, 48, 41, 34,
-            27, 20, 13, 6, 7, 14, 21, 28,
-            35, 42, 49, 56, 57, 50, 43, 36,
-            29, 22, 15, 23, 30, 37, 44, 51,
-            58, 59, 52, 45, 38, 31, 39, 46,
-            53, 60, 61, 54, 47, 55, 62, 63
-        ];
     }
 }

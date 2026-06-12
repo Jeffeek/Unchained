@@ -1,10 +1,10 @@
-using System.IO;
+using Unchained.Drawing.Extensions;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Decoders;
 
 /// <summary>
-/// Decodes ASCII hex-encoded data.
-/// Used by PDF /ASCIIHexDecode (ISO 32000-1 §7.4.2).
+///     Decodes ASCII hex-encoded data.
+///     Used by PDF /ASCIIHexDecode (ISO 32000-1 §7.4.2).
 /// </summary>
 internal static class AsciiHexDecoder
 {
@@ -22,17 +22,25 @@ internal static class AsciiHexDecoder
             switch (b)
             {
                 case >= (byte)'0' and <= (byte)'9':
+                {
                     value = b - '0';
                     break;
+                }
                 case >= (byte)'A' and <= (byte)'F':
+                {
                     value = b - 'A' + 10;
                     break;
+                }
                 case >= (byte)'a' and <= (byte)'f':
+                {
                     value = b - 'a' + 10;
                     break;
+                }
                 default:
                 {
-                    if (IsWhitespace(b)) continue;
+                    if (b.IsWhitespace())
+                        continue;
+
                     throw new InvalidDataException($"ASCIIHexDecode: unexpected byte 0x{b:X2}.");
                 }
             }
@@ -51,7 +59,4 @@ internal static class AsciiHexDecoder
 
         return output.ToArray();
     }
-
-    private static bool IsWhitespace(byte b) =>
-        b is 0x00 or 0x09 or 0x0A or 0x0C or 0x0D or 0x20;
 }

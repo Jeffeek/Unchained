@@ -1,35 +1,23 @@
-using Unchained.Pptx.Core.Xml;
-using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Media;
-using Unchained.Ooxml.Media;
+using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a slide master OPC part into a <see cref="MasterSlide"/>, including its
-/// associated theme and all slide layouts.
+///     Parses a slide master OPC part into a <see cref="MasterSlide" />, including its
+///     associated theme and all slide layouts.
 /// </summary>
-internal sealed class MasterParser
+internal sealed class MasterParser(OpcPackage package)
 {
-    private readonly OpcPackage _package;
-    private readonly MediaStore _mediaStore;
-
-    public MasterParser(OpcPackage package, MediaStore mediaStore)
-    {
-        _package = package;
-        _mediaStore = mediaStore;
-    }
-
     /// <summary>
-    /// Parses the master at <paramref name="partUri"/> and returns a fully populated
-    /// <see cref="MasterSlide"/> with theme and layouts.
+    ///     Parses the master at <paramref name="partUri" /> and returns a fully populated
+    ///     <see cref="MasterSlide" /> with theme and layouts.
     /// </summary>
     public MasterSlide Parse(string partUri, string relationshipId)
     {
-        var part = _package.TryGetPart(partUri);
+        var part = package.TryGetPart(partUri);
         if (part == null)
             return new MasterSlide { PartUri = partUri, RelationshipId = relationshipId };
 
@@ -50,7 +38,7 @@ internal sealed class MasterParser
         if (themeRel != null)
         {
             var themeUri = part.ResolveUri(themeRel.TargetUri);
-            var themePart = _package.TryGetPart(themeUri);
+            var themePart = package.TryGetPart(themeUri);
             if (themePart != null)
                 master.Theme = ThemeParser.Parse(themePart.Data);
         }
@@ -60,16 +48,16 @@ internal sealed class MasterParser
         var spTree = cSld?.Element(PmlNames.ShapeTree);
         if (spTree != null)
         {
-            var shapeParser = new ShapeParser(_package, _mediaStore);
+            var shapeParser = new ShapeParser();
             shapeParser.ParseTree(spTree, master.Shapes);
         }
 
         // Parse layouts
-        var layoutParser = new LayoutParser(_package, _mediaStore);
-        foreach (var layoutRel in part.FindRelationships(PmlNames.RelTypeSlideLayout))
+        var layoutParser = new LayoutParser(package);
+        foreach (var layout in from layoutRel in part.FindRelationships(PmlNames.RelTypeSlideLayout)
+                               let layoutUri = part.ResolveUri(layoutRel.TargetUri)
+                               select layoutParser.Parse(layoutUri, layoutRel.Id))
         {
-            var layoutUri = part.ResolveUri(layoutRel.TargetUri);
-            var layout = layoutParser.Parse(layoutUri, layoutRel.Id);
             layout.Master = master;
             master.Layouts.Add(layout);
         }

@@ -1,20 +1,18 @@
 using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
-using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Text;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Export;
 
 /// <summary>
-/// Exports a <see cref="PresentationDocument"/> to OpenDocument Presentation (<c>.odp</c>) format.
-/// Produces a valid ODF package: an uncompressed <c>mimetype</c> entry followed by
-/// <c>content.xml</c>, <c>styles.xml</c>, <c>meta.xml</c>, and <c>META-INF/manifest.xml</c>.
-/// Slides map to <c>draw:page</c>, shapes to <c>draw:frame</c>, and text to <c>text:p</c>/<c>text:span</c>.
-/// This is a one-directional structural export; advanced effects are not translated.
+///     Exports a <see cref="PresentationDocument" /> to OpenDocument Presentation (<c>.odp</c>) format.
+///     Produces a valid ODF package: an uncompressed <c>mimetype</c> entry followed by
+///     <c>content.xml</c>, <c>styles.xml</c>, <c>meta.xml</c>, and <c>META-INF/manifest.xml</c>.
+///     Slides map to <c>draw:page</c>, shapes to <c>draw:frame</c>, and text to <c>text:p</c>/<c>text:span</c>.
+///     This is a one-directional structural export; advanced effects are not translated.
 /// </summary>
 internal static class PptxToOdpWriter
 {
@@ -27,7 +25,7 @@ internal static class PptxToOdpWriter
         var manifest = BuildManifest(images);
 
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             // The mimetype entry MUST be first and stored (uncompressed) per the ODF spec.
             WriteStored(zip, "mimetype", Encoding.ASCII.GetBytes(OdfNames.PresentationMimeType));
@@ -50,17 +48,15 @@ internal static class PptxToOdpWriter
     private static byte[] BuildContent(
         PresentationDocument document,
         OdpSaveOptions options,
-        List<(string Path, byte[] Data, string Mime)> images)
+        ICollection<(string Path, byte[] Data, string Mime)> images
+    )
     {
         var o = OdfNames.Office;
         var draw = OdfNames.Draw;
         var pres = OdfNames.Presentation;
 
         var body = new XElement(o + "presentation");
-
         var slides = document.Slides;
-        var widthCm = document.SlideSize.Width.ToCentimetres();
-        var heightCm = document.SlideSize.Height.ToCentimetres();
 
         var included = Enumerable.Range(0, slides.Count)
             .Where(i => !slides[i].IsHidden || options.IncludeHiddenSlides)
@@ -93,10 +89,11 @@ internal static class PptxToOdpWriter
     }
 
     private static void WriteShape(
-        XElement page,
+        XContainer page,
         Shape shape,
-        List<(string Path, byte[] Data, string Mime)> images,
-        OdpSaveOptions options)
+        ICollection<(string Path, byte[] Data, string Mime)> images,
+        OdpSaveOptions options
+    )
     {
         var draw = OdfNames.Draw;
 
@@ -108,7 +105,7 @@ internal static class PptxToOdpWriter
 
         switch (shape)
         {
-            case PictureShape pic when pic.Image != null && options.EmbedImages:
+            case PictureShape { Image: not null } pic when options.EmbedImages:
             {
                 var ext = MimeToExtension(pic.Image.ContentType);
                 var path = $"Pictures/image{images.Count + 1}{ext}";
@@ -144,22 +141,20 @@ internal static class PptxToOdpWriter
             case GroupShape group:
                 foreach (var child in group.Children)
                     WriteShape(page, child, images, options);
-                break;
+            break;
         }
     }
 
-    private static void WriteText(XElement container, TextFrame frame)
+    private static void WriteText(XContainer container, TextFrame frame)
     {
         var t = OdfNames.Text;
         foreach (var para in frame.Paragraphs)
         {
             var p = new XElement(t + "p");
-            foreach (var run in para.Runs)
-            {
-                if (string.IsNullOrEmpty(run.Text)) continue;
+            foreach (var run in para.Runs.Where(static run => !string.IsNullOrEmpty(run.Text)))
                 // Plain span; ODF run formatting requires automatic styles, out of scope here.
                 p.Add(new XElement(t + "span", run.Text));
-            }
+
             container.Add(p);
         }
     }
@@ -226,11 +221,6 @@ internal static class PptxToOdpWriter
             new XAttribute(XNamespace.Xmlns + "manifest", m.NamespaceName),
             new XAttribute(m + "version", "1.2"));
 
-        void Entry(string path, string mime) =>
-            root.Add(new XElement(m + "file-entry",
-                new XAttribute(m + "full-path", path),
-                new XAttribute(m + "media-type", mime)));
-
         Entry("/", OdfNames.PresentationMimeType);
         Entry("content.xml", "text/xml");
         Entry("styles.xml", "text/xml");
@@ -239,6 +229,11 @@ internal static class PptxToOdpWriter
             Entry(path, mime);
 
         return Serialize(root);
+
+        void Entry(string path, string mime) =>
+            root.Add(new XElement(m + "file-entry",
+                new XAttribute(m + "full-path", path),
+                new XAttribute(m + "media-type", mime)));
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -254,7 +249,7 @@ internal static class PptxToOdpWriter
         new(XNamespace.Xmlns + "presentation", OdfNames.Presentation.NamespaceName),
         new(XNamespace.Xmlns + "meta", OdfNames.Meta.NamespaceName),
         new(XNamespace.Xmlns + "xlink", OdfNames.XLink.NamespaceName),
-        new(XNamespace.Xmlns + "dc", OdfNames.Dc.NamespaceName),
+        new(XNamespace.Xmlns + "dc", OdfNames.Dc.NamespaceName)
     ];
 
     private static byte[] Serialize(XElement root)
@@ -285,6 +280,6 @@ internal static class PptxToOdpWriter
         "image/gif" => ".gif",
         "image/bmp" => ".bmp",
         "image/tiff" => ".tif",
-        _ => ".dat",
+        _ => ".dat"
     };
 }

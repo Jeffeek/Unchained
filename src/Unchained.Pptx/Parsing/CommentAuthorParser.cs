@@ -6,13 +6,13 @@ using Unchained.Pptx.Core.Xml;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses <c>&lt;p:cmAuthorLst&gt;</c> XML into a <see cref="CommentAuthorCollection"/>.
+///     Parses <c>&lt;p:cmAuthorLst&gt;</c> XML into a <see cref="CommentAuthorCollection" />.
 /// </summary>
 internal static class CommentAuthorParser
 {
     /// <summary>
-    /// Reads all <c>&lt;p:cmAuthor&gt;</c> elements from <paramref name="rootEl"/>
-    /// and adds them to <paramref name="authors"/>.
+    ///     Reads all <c>&lt;p:cmAuthor&gt;</c> elements from <paramref name="rootEl" />
+    ///     and adds them to <paramref name="authors" />.
     /// </summary>
     public static void Parse(XElement rootEl, CommentAuthorCollection authors)
     {
