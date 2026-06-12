@@ -28,6 +28,7 @@ internal static class NotesParser
         var spTree = notesRoot.Element(pml + "cSld")?.Element(pml + "spTree");
         if (spTree == null) return;
 
+        // ReSharper disable once LoopCanBePartlyConvertedToQuery
         foreach (var sp in spTree.Elements(pml + "sp"))
         {
             var phEl = sp.Element(pml + "nvSpPr")
@@ -44,7 +45,6 @@ internal static class NotesParser
 
             var textFrame = TextParser.ParseTextBody(txBody);
             notes.NotesTextFrame = textFrame;
-            break;
         }
     }
 }

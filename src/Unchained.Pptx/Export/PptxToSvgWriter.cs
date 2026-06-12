@@ -26,7 +26,7 @@ internal static class PptxToSvgWriter
     {
         var w = slideSize.Width.Value * EmuToPt;
         var h = slideSize.Height.Value * EmuToPt;
-        var colorScheme = slide.Master?.Theme?.Colors;
+        var colorScheme = slide.Master.Theme.Colors;
 
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
@@ -60,12 +60,9 @@ internal static class PptxToSvgWriter
     public static byte[][] WriteAll(PresentationDocument document, SvgSaveOptions options)
     {
         var slides = document.Slides;
-        var result = new List<byte[]>();
-        for (var i = 0; i < slides.Count; i++)
-        {
-            if (slides[i].IsHidden && !options.IncludeHiddenSlides) continue;
-            result.Add(WriteSlide(slides[i], document.SlideSize, options));
-        }
+        var result = (from t in slides
+                      where !t.IsHidden || options.IncludeHiddenSlides
+                      select WriteSlide(t, document.SlideSize, options)).ToList();
 
         return [.. result];
     }
@@ -80,18 +77,20 @@ internal static class PptxToSvgWriter
     {
         var fill = ResolveBackground(slide);
         if (fill is null || fill.Type != FillType.Solid || fill.Solid == null) return;
+
         var color = ToSvgColor(fill.Solid.Color.Resolve(colorScheme));
         sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" fill=\"{color}\"/>");
     }
 
     // Resolves background fill walking slide → layout → master.
-    private static FillFormat? ResolveBackground(Slide slide)
-    {
-        if (slide.Background.Fill.Type != FillType.None) return slide.Background.Fill;
-        if (slide.Layout?.Background.Fill.Type != FillType.None) return slide.Layout!.Background.Fill;
-        if (slide.Master?.Background.Fill.Type != FillType.None) return slide.Master!.Background.Fill;
-        return null;
-    }
+    private static FillFormat? ResolveBackground(Slide slide) =>
+        slide.Background.Fill.Type != FillType.None
+            ? slide.Background.Fill
+            : slide.Layout.Background.Fill.Type != FillType.None
+                ? slide.Layout.Background.Fill
+                : slide.Master.Background.Fill.Type != FillType.None
+                    ? slide.Master.Background.Fill
+                    : null;
 
     private static void WriteShape(
         StringBuilder sb,
@@ -106,18 +105,19 @@ internal static class PptxToSvgWriter
         var h = shape.Height.Value * EmuToPt;
 
         // Resolve fill — spPr solid → style fill → noFill.
-        string fillAttr;
-        if (shape.Fill.Type == FillType.Solid && shape.Fill.Solid != null)
-            fillAttr = $"fill=\"{ToSvgColor(shape.Fill.Solid.Color.Resolve(colorScheme))}\"";
-        else if (shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue)
-            fillAttr = $"fill=\"{ToSvgColor(shape.StyleFillColor.Value.Resolve(colorScheme))}\"";
-        else if (shape.Fill.Type == FillType.None)
-            fillAttr = "fill=\"none\"";
-        else
-            fillAttr = "fill=\"#f0f0f0\"";
+        var fillAttr = shape.Fill switch
+        {
+            { Type: FillType.Solid, Solid: not null } => $"fill=\"{ToSvgColor(shape.Fill.Solid.Color.Resolve(colorScheme))}\"",
+            _ => shape.Fill.Type switch
+            {
+                FillType.None when shape.StyleFillColor.HasValue => $"fill=\"{ToSvgColor(shape.StyleFillColor.Value.Resolve(colorScheme))}\"",
+                FillType.None => "fill=\"none\"",
+                _ => "fill=\"#f0f0f0\""
+            }
+        };
 
         var strokeAttr = string.Empty;
-        if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid != null)
+        if (shape.Line.Fill is { Type: FillType.Solid, Solid: not null })
         {
             var lw = shape.Line.WidthPoints ?? 1.0;
             strokeAttr = $"stroke=\"{ToSvgColor(shape.Line.Fill.Solid.Color.Resolve(colorScheme))}\" stroke-width=\"{lw:F2}\"";
@@ -131,10 +131,10 @@ internal static class PptxToSvgWriter
         // Shape content
         switch (shape)
         {
-            case AutoShape auto when auto.TextFrame.Paragraphs.Count > 0:
+            case AutoShape { TextFrame.Paragraphs.Count: > 0 } auto:
                 WriteTextFrame(sb, auto, w, h, colorScheme);
             break;
-            case PictureShape pic when pic.Image != null && options.EmbedImages:
+            case PictureShape { Image: not null } pic when options.EmbedImages:
                 WritePicture(sb, pic, w, h);
             break;
         }
@@ -150,8 +150,8 @@ internal static class PptxToSvgWriter
         ColorScheme? colorScheme
     )
     {
-        const double PaddingPt = 4.0;
-        var cursorY = PaddingPt;
+        const double paddingPt = 4.0;
+        var cursorY = paddingPt;
 
         // Default text color: StyleTextColor → dk1 → black.
         string defaultColor;
@@ -170,11 +170,11 @@ internal static class PptxToSvgWriter
                 continue;
             }
 
-            var maxSize = para.Runs.Max(r => r.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt);
+            var maxSize = para.Runs.Max(static r => r.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt);
             var lineHeight = maxSize * TextConstants.DefaultLineHeightFactor;
             cursorY += maxSize; // advance to baseline
 
-            if (cursorY > h - PaddingPt) break;
+            if (cursorY > h - paddingPt) break;
 
             var anchor = para.Alignment switch
             {
@@ -186,8 +186,8 @@ internal static class PptxToSvgWriter
             var textX = para.Alignment switch
             {
                 TextAlignment.Center => w / 2,
-                TextAlignment.Right => w - PaddingPt,
-                _ => PaddingPt
+                TextAlignment.Right => w - paddingPt,
+                _ => paddingPt
             };
 
             sb.Append($"<text x=\"{textX:F4}\" y=\"{cursorY:F4}\" text-anchor=\"{anchor}\">");
@@ -195,6 +195,7 @@ internal static class PptxToSvgWriter
             foreach (var run in para.Runs)
             {
                 if (string.IsNullOrEmpty(run.Text)) continue;
+
                 var fs = run.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt;
                 var weight = run.Format.Bold.Value == true ? "bold" : "normal";
                 var style = run.Format.Italic.Value == true ? "italic" : "normal";

@@ -61,14 +61,14 @@ internal static class OpenXmlPresentationWriter
         var idList = presPart.Presentation?.SlideIdList;
         if (idList is null)
         {
-            foreach (var sp in presPart.SlideParts) yield return sp;
+            foreach (var sp in presPart.SlideParts)
+                yield return sp;
+
             yield break;
         }
 
-        foreach (var slideId in idList.Elements<P.SlideId>())
+        foreach (var rId in idList.Elements<P.SlideId>().Select(static slideId => slideId.RelationshipId?.Value).OfType<string>())
         {
-            var rId = slideId.RelationshipId?.Value;
-            if (rId is null) continue;
             if (presPart.GetPartById(rId) is SlidePart sp)
                 yield return sp;
         }

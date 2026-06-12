@@ -30,11 +30,8 @@ internal static class TextParser
         var frame = new TextFrame();
         ParseBodyProperties(txBody.Element(DmlNames.BodyProperties), frame.Format);
 
-        foreach (var pEl in txBody.Elements(DmlNames.Paragraph))
-        {
-            var para = ParseParagraph(pEl);
+        foreach (var para in txBody.Elements(DmlNames.Paragraph).Select(ParseParagraph))
             frame.Paragraphs.Add(para);
-        }
 
         return frame;
     }

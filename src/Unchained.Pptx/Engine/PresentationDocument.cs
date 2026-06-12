@@ -135,6 +135,7 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     public void Dispose()
     {
         if (_disposed) return;
+
         _disposed = true;
         Engine?.Dispose();
     }
@@ -145,23 +146,12 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     ///     Signatures are read-only — Unchained.Pptx preserves them on round-trip but cannot
     ///     create or re-sign.
     /// </summary>
-    public IReadOnlyList<DigitalSignatureInfo> GetDigitalSignatures()
-    {
-        if (Preserved is null || Preserved.Parts.Count == 0)
-            return [];
-
-        var result = new List<DigitalSignatureInfo>();
-        foreach (var part in Preserved.Parts)
-        {
-            if (!part.ContentType.Contains("digital-signature-xmlsignature",
-                    StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            result.Add(ParseSignatureInfo(part));
-        }
-
-        return result;
-    }
+    public IReadOnlyList<DigitalSignatureInfo> GetDigitalSignatures() =>
+        Preserved is null || Preserved.Parts.Count == 0
+            ? []
+            : (from part in Preserved.Parts
+               where part.ContentType.Contains("digital-signature-xmlsignature", StringComparison.OrdinalIgnoreCase)
+               select ParseSignatureInfo(part)).ToList();
 
     private static DigitalSignatureInfo ParseSignatureInfo(PreservedPart part)
     {
@@ -180,7 +170,11 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
                 try
                 {
                     var certBytes = Convert.FromBase64String(cert.Value.Trim());
+#if NET9_0_OR_GREATER
+                    var x509 = X509CertificateLoader.LoadCertificate(certBytes);
+#else
                     var x509 = new X509Certificate2(certBytes);
+#endif
                     signerName = x509.GetNameInfo(
                         X509NameType.SimpleName,
                         false);
@@ -242,13 +236,7 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
         string newText,
         StringComparison comparison = StringComparison.Ordinal,
         bool includeNotes = false
-    )
-    {
-        var count = 0;
-        foreach (var slide in Slides)
-            count += slide.ReplaceText(oldText, newText, comparison, includeNotes);
-        return count;
-    }
+    ) => Slides.Sum(slide => slide.ReplaceText(oldText, newText, comparison, includeNotes));
 
     // ── IDisposable / IAsyncDisposable ────────────────────────────────────────
 
@@ -257,10 +245,6 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     ///     each paired with its owning slide and shape so links can be inspected, retargeted, or
     ///     removed in place. This is the hyperlink-management entry point.
     /// </summary>
-    public IEnumerable<HyperlinkReference> GetHyperlinks()
-    {
-        foreach (var slide in Slides)
-        foreach (var link in slide.GetHyperlinks())
-            yield return link;
-    }
+    public IEnumerable<HyperlinkReference> GetHyperlinks() =>
+        Slides.SelectMany(static slide => slide.GetHyperlinks());
 }

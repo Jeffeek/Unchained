@@ -50,7 +50,7 @@ internal static class FillParser
 
     // ── Sub-parsers ───────────────────────────────────────────────────────────
 
-    private static void ParseGradient(XElement gradientElement, FillFormat fill)
+    private static void ParseGradient(XContainer gradientElement, FillFormat fill)
     {
         var gf = fill.SetGradient();
 
@@ -93,7 +93,7 @@ internal static class FillParser
         };
     }
 
-    private static void ParsePicture(XElement blipElement, FillFormat fill)
+    private static void ParsePicture(XContainer blipElement, FillFormat fill)
     {
         // Image data is resolved later by the SlideParser when it has the OPC package.
         // Store the r:embed rId so the second pass can look up the image part.

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
@@ -36,12 +37,7 @@ internal static class PptxToPdfWriter
     private static List<Slide> CollectSlides(SlideCollection slides, PdfSaveOptions options)
     {
         var result = new List<Slide>(slides.Count);
-        for (var i = 0; i < slides.Count; i++)
-        {
-            var slide = slides[i];
-            if (slide.IsHidden && !options.IncludeHiddenSlides) continue;
-            result.Add(slide);
-        }
+        result.AddRange(slides.Where(slide => !slide.IsHidden || options.IncludeHiddenSlides));
 
         return result;
     }
@@ -63,7 +59,7 @@ internal static class PptxToPdfWriter
             PdfSaveOptions options
         )
         {
-            WriteRaw("%PDF-1.7\n%\xC7\xEC\x8F\xA2\n");
+            WriteRaw("%PDF-1.7\n%\u00c7\u00ec\u008f\u00a2\n");
 
             var catalogNum = AllocObj();
             var pagesNum = AllocObj();
@@ -76,7 +72,7 @@ internal static class PptxToPdfWriter
             var structTreeRootNum = AllocObj();
             // One struct element per shape per slide: pre-allocate.
             var structElemNums = slides
-                .Select(s => s.Shapes.Count(static sh => !sh.IsDecorative))
+                .Select(static s => s.Shapes.Count(static sh => !sh.IsDecorative))
                 .Select(count => Enumerable.Range(0, count).Select(_ => AllocObj()).ToList())
                 .ToList();
 
@@ -86,10 +82,10 @@ internal static class PptxToPdfWriter
                 CollectImages(slide, imageMap);
 
             var imageObjNums = imageMap.Keys
-                .ToDictionary(k => k, _ => AllocObj());
+                .ToDictionary(static k => k, _ => AllocObj());
 
             // Collect unique font keys used across all slides.
-            // Key = "TypefaceName|Style" (e.g. "Calibri|Regular"), value = PDF resource name.
+            // Key = "TypefaceName|Style" (e.g. "Calibri or Regular"), value = PDF resource name.
             var fontKeys = CollectFontKeys(slides);
             // Allocate PDF object triple per embedded font: FontFile2 + FontDescriptor + Font.
             var fontObjNums = new Dictionary<string, (int FileObj, int DescObj, int FontObj)>();
@@ -106,7 +102,7 @@ internal static class PptxToPdfWriter
                 var widthPt = slideSize.Width.Value * EmuToPoints;
                 var heightPt = slideSize.Height.Value * EmuToPoints;
 
-                var slideImages = CollectSlideImages(slide, imageMap, imageObjNums);
+                var slideImages = CollectSlideImages(slide, imageObjNums);
 
                 // Determine which fonts this slide uses.
                 var slideFontKeys = CollectSlideFontKeys(slide);
@@ -116,11 +112,8 @@ internal static class PptxToPdfWriter
                     widthPt,
                     heightPt,
                     fontObjNums,
-                    fallbackFontNum,
                     fontKeys,
                     slideImages,
-                    media,
-                    pageNums[i],
                     structElemNums[i]);
 
                 // Write page object
@@ -164,7 +157,7 @@ internal static class PptxToPdfWriter
 
             // Write image XObjects
             foreach (var slide in slides)
-                WriteSlideImages(slide, imageMap, imageObjNums);
+                WriteSlideImages(slide, imageObjNums);
 
             // Write embedded font objects
             foreach (var (key, nums) in fontObjNums)
@@ -291,24 +284,30 @@ internal static class PptxToPdfWriter
             return result;
         }
 
-        private static void CollectFontKeysFromShapes(ShapeCollection shapes, HashSet<string> keys)
+        private static void CollectFontKeysFromShapes(ShapeCollection shapes, ISet<string> keys)
         {
             foreach (var shape in shapes)
             {
-                if (shape is AutoShape auto)
-                    CollectFontKeysFromFrame(auto.TextFrame, keys);
-                else if (shape is GroupShape grp)
-                    CollectFontKeysFromShapes(grp.Children, keys);
-                else if (shape is TableShape table)
+                switch (shape)
                 {
-                    for (var r = 0; r < table.Grid.RowCount; r++)
-                    for (var c = 0; c < table.Grid.ColumnCount; c++)
-                        CollectFontKeysFromFrame(table.Grid[c, r].TextFrame, keys);
+                    case AutoShape auto:
+                        CollectFontKeysFromFrame(auto.TextFrame, keys);
+                    break;
+                    case GroupShape grp:
+                        CollectFontKeysFromShapes(grp.Children, keys);
+                    break;
+                    case TableShape table:
+                    {
+                        for (var r = 0; r < table.Grid.RowCount; r++)
+                        for (var c = 0; c < table.Grid.ColumnCount; c++)
+                            CollectFontKeysFromFrame(table.Grid[c, r].TextFrame, keys);
+                        break;
+                    }
                 }
             }
         }
 
-        private static void CollectFontKeysFromFrame(TextFrame frame, HashSet<string> keys)
+        private static void CollectFontKeysFromFrame(TextFrame frame, ISet<string> keys)
         {
             foreach (var para in frame.Paragraphs)
             foreach (var run in para.Runs)
@@ -332,17 +331,14 @@ internal static class PptxToPdfWriter
             Slide slide,
             double pageWidth,
             double pageHeight,
-            Dictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
-            int fallbackFontNum,
-            Dictionary<string, string> fontKeys,
-            Dictionary<string, int> slideImages,
-            MediaStore media,
-            int pageObjNum,
-            List<int> structElemNums
+            IReadOnlyDictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
+            IReadOnlyDictionary<string, string> fontKeys,
+            IReadOnlyDictionary<string, int> slideImages,
+            ICollection structElemNums
         )
         {
             var sb = new StringBuilder();
-            var colorScheme = slide.Master?.Theme?.Colors;
+            var colorScheme = slide.Master.Theme.Colors;
 
             // White background
             AppendLine(sb, "q");
@@ -374,9 +370,7 @@ internal static class PptxToPdfWriter
                             pageHeight,
                             colorScheme,
                             fontObjNums,
-                            fallbackFontNum,
-                            fontKeys,
-                            media);
+                            fontKeys);
                     break;
                     case PictureShape pic:
                         WritePictureShape(sb, pic, pageHeight, slideImages);
@@ -387,9 +381,7 @@ internal static class PptxToPdfWriter
                             pageHeight,
                             colorScheme,
                             fontObjNums,
-                            fallbackFontNum,
-                            fontKeys,
-                            media);
+                            fontKeys);
                     break;
                 }
 
@@ -419,10 +411,10 @@ internal static class PptxToPdfWriter
             FillFormat? fill = null;
             if (slide.Background.Fill.Type != FillType.None)
                 fill = slide.Background.Fill;
-            else if (slide.Layout?.Background.Fill.Type != FillType.None)
-                fill = slide.Layout!.Background.Fill;
-            else if (slide.Master?.Background.Fill.Type != FillType.None)
-                fill = slide.Master!.Background.Fill;
+            else if (slide.Layout.Background.Fill.Type != FillType.None)
+                fill = slide.Layout.Background.Fill;
+            else if (slide.Master.Background.Fill.Type != FillType.None)
+                fill = slide.Master.Background.Fill;
 
             if (fill is null || fill.Type != FillType.Solid || fill.Solid == null)
                 return;
@@ -439,10 +431,8 @@ internal static class PptxToPdfWriter
             AutoShape shape,
             double pageHeight,
             ColorScheme? colorScheme,
-            Dictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
-            int fallbackFontNum,
-            Dictionary<string, string> fontKeys,
-            MediaStore media
+            IReadOnlyDictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
+            IReadOnlyDictionary<string, string> fontKeys
         )
         {
             var x = shape.X.Value * EmuToPoints;
@@ -463,7 +453,7 @@ internal static class PptxToPdfWriter
             }
 
             // Stroke
-            if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid != null)
+            if (shape.Line.Fill is { Type: FillType.Solid, Solid: not null })
             {
                 var (r, g, b) = ToRgbF(shape.Line.Fill.Solid.Color.Resolve(colorScheme));
                 var lw = shape.Line.WidthPoints ?? 0.75;
@@ -478,15 +468,12 @@ internal static class PptxToPdfWriter
                 shape.TextFrame,
                 x,
                 y,
-                w,
                 h,
                 pageHeight,
                 colorScheme,
                 shape.StyleTextColor,
                 fontObjNums,
-                fallbackFontNum,
-                fontKeys,
-                media);
+                fontKeys);
         }
 
         private static void WriteTableShape(
@@ -494,10 +481,8 @@ internal static class PptxToPdfWriter
             TableShape table,
             double pageHeight,
             ColorScheme? colorScheme,
-            Dictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
-            int fallbackFontNum,
-            Dictionary<string, string> fontKeys,
-            MediaStore media
+            IReadOnlyDictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
+            IReadOnlyDictionary<string, string> fontKeys
         )
         {
             var x = table.X.Value * EmuToPoints;
@@ -545,7 +530,7 @@ internal static class PptxToPdfWriter
                 var pdfCy = pageHeight - cy - ch;
 
                 AppendLine(sb, "q");
-                if (cell.Fill.Type == FillType.Solid && cell.Fill.Solid is not null)
+                if (cell.Fill is { Type: FillType.Solid, Solid: not null })
                 {
                     var (fr, fg, fb) = ToRgbF(cell.Fill.Solid.Color.Resolve(colorScheme));
                     AppendLine(sb, $"{fr:F4} {fg:F4} {fb:F4} rg");
@@ -561,24 +546,22 @@ internal static class PptxToPdfWriter
                     cell.TextFrame,
                     cx + 2,
                     cy + 2,
-                    cw - 4,
                     ch - 4,
                     pageHeight,
                     colorScheme,
                     null,
                     fontObjNums,
-                    fallbackFontNum,
-                    fontKeys,
-                    media);
+                    fontKeys);
             }
         }
 
-        private static (double r, double g, double b)? ResolveFill(AutoShape shape, ColorScheme? colorScheme)
+        private static (double r, double g, double b)? ResolveFill(Shape shape, ColorScheme? colorScheme)
         {
-            if (shape.Fill.Type == FillType.Solid && shape.Fill.Solid != null)
+            if (shape.Fill is { Type: FillType.Solid, Solid: not null })
                 return ToRgbF(shape.Fill.Solid.Color.Resolve(colorScheme));
             if (shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue)
                 return ToRgbF(shape.StyleFillColor.Value.Resolve(colorScheme));
+
             return null;
         }
 
@@ -586,7 +569,7 @@ internal static class PptxToPdfWriter
             StringBuilder sb,
             PictureShape shape,
             double pageHeight,
-            Dictionary<string, int> slideImages
+            IReadOnlyDictionary<string, int> slideImages
         )
         {
             if (shape.Image == null || string.IsNullOrEmpty(shape.Image.PartUri)) return;
@@ -611,24 +594,21 @@ internal static class PptxToPdfWriter
             TextFrame frame,
             double shapeX,
             double shapeY,
-            double shapeW,
             double shapeH,
             double pageHeight,
             ColorScheme? colorScheme,
             ColorSpec? styleTextColor,
-            Dictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
-            int fallbackFontNum,
-            Dictionary<string, string> fontKeys,
-            MediaStore media
+            IReadOnlyDictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
+            IReadOnlyDictionary<string, string> fontKeys
         )
         {
             var paragraphs = frame.Paragraphs;
             if (paragraphs.Count == 0) return;
 
-            const double MarginPt = TextConstants.MinTextInset;
-            var cursorY = shapeY + MarginPt;
-            const double DefaultFontSize = TextConstants.DefaultFontSizePt;
-            const double LineHeightFactor = TextConstants.DefaultLineHeightFactor;
+            const double marginPt = TextConstants.MinTextInset;
+            var cursorY = shapeY + marginPt;
+            const double defaultFontSize = TextConstants.DefaultFontSizePt;
+            const double lineHeightFactor = TextConstants.DefaultLineHeightFactor;
 
             // Default text color
             (double Dr, double Dg, double Db) defaultRgb;
@@ -643,19 +623,19 @@ internal static class PptxToPdfWriter
             {
                 if (para.Runs.Count == 0)
                 {
-                    cursorY += DefaultFontSize * LineHeightFactor;
+                    cursorY += defaultFontSize * lineHeightFactor;
                     continue;
                 }
 
                 var fontSize = para.Runs
-                    .Select(static r => r.Format.FontSizePoints ?? DefaultFontSize)
-                    .DefaultIfEmpty(DefaultFontSize)
+                    .Select(static r => r.Format.FontSizePoints ?? defaultFontSize)
+                    .DefaultIfEmpty(defaultFontSize)
                     .Max();
 
-                var lineH = fontSize * LineHeightFactor;
+                var lineH = fontSize * lineHeightFactor;
                 var baselineY = cursorY + fontSize;
 
-                if (baselineY > shapeY + shapeH - MarginPt) break;
+                if (baselineY > shapeY + shapeH - marginPt) break;
 
                 var pdfBaselineY = pageHeight - baselineY;
 
@@ -663,12 +643,12 @@ internal static class PptxToPdfWriter
                 // Initial font selection: first run's font or fallback.
                 var firstRun = para.Runs.FirstOrDefault(static r => !string.IsNullOrEmpty(r.Text));
                 var initPdfFont = firstRun is not null
-                    ? ResolvePdfFontRef(firstRun.Format, fontObjNums, fallbackFontNum, fontKeys)
+                    ? ResolvePdfFontRef(firstRun.Format, fontObjNums, fontKeys)
                     : "/Fhv";
                 AppendLine(sb, $"{initPdfFont} {fontSize:F4} Tf");
                 AppendLine(sb, $"{defaultRgb.Dr:F4} {defaultRgb.Dg:F4} {defaultRgb.Db:F4} rg");
 
-                var textX = shapeX + MarginPt;
+                var textX = shapeX + marginPt;
                 var textSet = false;
                 var currentFontRef = initPdfFont;
 
@@ -680,7 +660,6 @@ internal static class PptxToPdfWriter
                     var runFontRef = ResolvePdfFontRef(
                         run.Format,
                         fontObjNums,
-                        fallbackFontNum,
                         fontKeys);
 
                     if (!textSet)
@@ -714,9 +693,8 @@ internal static class PptxToPdfWriter
         // Returns the PDF font reference string (e.g. "/F0" or "/Fhv") for a run.
         private static string ResolvePdfFontRef(
             RunFormat format,
-            Dictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
-            int fallbackFontNum,
-            Dictionary<string, string> fontKeys
+            IReadOnlyDictionary<string, (int FileObj, int DescObj, int FontObj)> fontObjNums,
+            IReadOnlyDictionary<string, string> fontKeys
         )
         {
             var typeface = format.LatinFont ?? TextConstants.FallbackLatinFont;
@@ -747,21 +725,21 @@ internal static class PptxToPdfWriter
             foreach (var shape in slide.Shapes.OfType<PictureShape>())
             {
                 if (shape.Image == null || string.IsNullOrEmpty(shape.Image.PartUri)) continue;
-                if (!imageMap.ContainsKey(shape.Image.PartUri))
-                    imageMap[shape.Image.PartUri] = 0;
+
+                imageMap.TryAdd(shape.Image.PartUri, 0);
             }
         }
 
         private static Dictionary<string, int> CollectSlideImages(
             Slide slide,
-            Dictionary<string, int> imageMap,
-            Dictionary<string, int> imageObjNums
+            IReadOnlyDictionary<string, int> imageObjNums
         )
         {
             var result = new Dictionary<string, int>();
             foreach (var shape in slide.Shapes.OfType<PictureShape>())
             {
                 if (shape.Image == null || string.IsNullOrEmpty(shape.Image.PartUri)) continue;
+
                 var name = XObjectName(shape.Image.PartUri);
                 if (imageObjNums.TryGetValue(shape.Image.PartUri, out var num))
                     result[name] = num;
@@ -772,8 +750,7 @@ internal static class PptxToPdfWriter
 
         private void WriteSlideImages(
             Slide slide,
-            Dictionary<string, int> imageMap,
-            Dictionary<string, int> imageObjNums
+            IReadOnlyDictionary<string, int> imageObjNums
         )
         {
             var written = new HashSet<string>();
@@ -841,9 +818,9 @@ internal static class PptxToPdfWriter
         // Each non-decorative shape gets one /StructElem with /MCID reference.
         private void WriteStructTree(
             int structTreeRootNum,
-            List<Slide> slides,
-            List<int> pageNums,
-            List<List<int>> structElemNums
+            IReadOnlyList<Slide> slides,
+            IReadOnlyList<int> pageNums,
+            IReadOnlyList<List<int>> structElemNums
         )
         {
             // Collect all struct element obj numbers flat.
@@ -854,10 +831,8 @@ internal static class PptxToPdfWriter
                 var pageObj = pageNums[pi];
                 var elems = structElemNums[pi];
                 var elemIdx = 0;
-                foreach (var shape in slide.Shapes)
+                foreach (var shape in slide.Shapes.Where(static shape => !shape.IsDecorative).TakeWhile(_ => elemIdx < elems.Count))
                 {
-                    if (shape.IsDecorative) continue;
-                    if (elemIdx >= elems.Count) break;
                     allElems.Add((elems[elemIdx], pageObj,
                         StructTypeForShape(shape),
                         shape is PictureShape ? (shape.AltText ?? string.Empty) : null));
@@ -917,9 +892,8 @@ internal static class PptxToPdfWriter
         private static string EscapePdfString(string text)
         {
             var sb = new StringBuilder(text.Length);
-            foreach (var c in text)
+            foreach (var c in text.Where(static c => c <= 126 && c >= 32))
             {
-                if (c > 126 || c < 32) continue;
                 switch (c)
                 {
                     case '(': sb.Append(@"\("); break;

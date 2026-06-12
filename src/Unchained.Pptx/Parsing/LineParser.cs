@@ -43,12 +43,11 @@ internal static class LineParser
 
         // Tail arrowhead
         var tail = ln.Element(DmlNames.TailEnd);
-        if (tail != null)
-        {
-            line.TailArrow.HeadType = ParseArrowType(tail.GetAttr("type", "none"));
-            line.TailArrow.Width = ParseArrowSize(tail.GetAttr("w", "med"));
-            line.TailArrow.Length = ParseArrowSize(tail.GetAttr("len", "med"));
-        }
+        if (tail == null) return;
+
+        line.TailArrow.HeadType = ParseArrowType(tail.GetAttr("type", "none"));
+        line.TailArrow.Width = ParseArrowSize(tail.GetAttr("w", "med"));
+        line.TailArrow.Length = ParseArrowSize(tail.GetAttr("len", "med"));
     }
 
     /// <summary>

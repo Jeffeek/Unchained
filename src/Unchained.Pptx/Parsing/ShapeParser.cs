@@ -14,16 +14,10 @@ namespace Unchained.Pptx.Parsing;
 ///     Parses a PresentationML shape tree (<c>&lt;p:spTree&gt;</c>) into
 ///     <see cref="ShapeCollection" /> objects.
 /// </summary>
-internal sealed class ShapeParser
+internal sealed class ShapeParser(OpcPackage package, MediaStore mediaStore)
 {
-    private readonly MediaStore _mediaStore;
-    private readonly OpcPackage _package;
-
-    public ShapeParser(OpcPackage package, MediaStore mediaStore)
-    {
-        _package = package;
-        _mediaStore = mediaStore;
-    }
+    private readonly MediaStore _mediaStore = mediaStore;
+    private readonly OpcPackage _package = package;
 
     /// <summary>
     ///     Reads all shapes from a <c>&lt;p:spTree&gt;</c> element and adds them to

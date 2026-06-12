@@ -18,7 +18,7 @@ namespace Unchained.Pptx.Engine;
 /// <remarks>
 ///     <para>
 ///         All I/O-bound methods are <see langword="async" /> and dispatch CPU-bound parse/serialize
-///         work to the thread pool via <see cref="Task.Run" />. A <see cref="SemaphoreSlim" /> limits
+///         work to the thread pool via Task.Run />. A <see cref="SemaphoreSlim" /> limits
 ///         concurrency to <see cref="Environment.ProcessorCount" /> simultaneous parse operations,
 ///         preventing thread-pool saturation on high-throughput ASP.NET or gRPC servers.
 ///     </para>
@@ -55,6 +55,7 @@ public sealed class PresentationProcessor : IDisposable
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
         _gate.Dispose();
     }
 
@@ -127,12 +128,14 @@ public sealed class PresentationProcessor : IDisposable
         var slideSize = size ?? SlideSize.Widescreen;
 
         var master = new MasterSlide { Name = "Office Theme", Theme = new PptxTheme() };
-        var layout = new SlideLayout { Name = "Blank", LayoutType = LayoutType.Blank };
-        layout.Master = master;
+        var layout = new SlideLayout
+        {
+            Name = "Blank", LayoutType = LayoutType.Blank,
+            Master = master
+        };
         master.Layouts.Add(layout);
 
-        var masters = new MasterSlideCollection();
-        masters.Add(master);
+        var masters = new MasterSlideCollection { master };
 
         var slides = new SlideCollection();
         var mediaStore = new MediaStore();
@@ -409,7 +412,7 @@ public sealed class PresentationProcessor : IDisposable
                 () => OdpParser.IsOdp(bytes)
                     ? OdpParser.Parse(bytes)
                     : options?.UseOpenXmlEngine == true
-                        ? OpenXmlPresentationParser.Parse(bytes, options)
+                        ? OpenXmlPresentationParser.Parse(bytes)
                         : PresentationParser.Parse(bytes, options),
                 cancellationToken).ConfigureAwait(false);
 
@@ -448,27 +451,24 @@ public sealed class PresentationProcessor : IDisposable
 
             // SDK-backed in-place save when requested and a live engine is attached; otherwise
             // the custom writer. The SDK path preserves unmodelled parts (Phase 2 / M5b).
-            if (options?.UseOpenXmlEngine == true && OpenXmlPresentationWriter.CanSave(document))
-            {
-                return await Task.Run(
+            return options?.UseOpenXmlEngine == true && OpenXmlPresentationWriter.CanSave(document)
+                ? await Task.Run(
                     () => OpenXmlPresentationWriter.Save(document),
+                    cancellationToken).ConfigureAwait(false)
+                : await Task.Run(() =>
+                        PresentationWriter.Write(
+                            document.Slides,
+                            document.Masters,
+                            document.Media,
+                            document.Properties,
+                            document.SlideSize,
+                            document.CommentAuthors,
+                            document.Sections,
+                            document.Protection,
+                            options,
+                            document.SlideShow,
+                            document.Preserved),
                     cancellationToken).ConfigureAwait(false);
-            }
-
-            return await Task.Run(() =>
-                    PresentationWriter.Write(
-                        document.Slides,
-                        document.Masters,
-                        document.Media,
-                        document.Properties,
-                        document.SlideSize,
-                        document.CommentAuthors,
-                        document.Sections,
-                        document.Protection,
-                        options,
-                        document.SlideShow,
-                        document.Preserved),
-                cancellationToken).ConfigureAwait(false);
         }
         finally
         {

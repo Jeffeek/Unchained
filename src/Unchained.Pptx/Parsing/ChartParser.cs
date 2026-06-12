@@ -34,7 +34,7 @@ internal static class ChartParser
 
     // ── Title ─────────────────────────────────────────────────────────────────
 
-    private static void ParseTitle(XElement? titleEl, ChartModel model)
+    private static void ParseTitle(XContainer? titleEl, ChartModel model)
     {
         if (titleEl == null)
         {
@@ -59,16 +59,16 @@ internal static class ChartParser
         var strCache = titleEl.Element(CmlNames.Text)
             ?.Element(CmlNames.StringReference)
             ?.Element(CmlNames.StringCache);
-        if (strCache != null)
-        {
-            var pt = strCache.Elements(CmlNames.Point).FirstOrDefault();
-            model.Title = pt?.Element(CmlNames.PointValue)?.Value ?? string.Empty;
-        }
+
+        if (strCache == null) return;
+
+        var pt = strCache.Elements(CmlNames.Point).FirstOrDefault();
+        model.Title = pt?.Element(CmlNames.PointValue)?.Value ?? string.Empty;
     }
 
     // ── Plot area ─────────────────────────────────────────────────────────────
 
-    private static void ParsePlotArea(XElement plotArea, ChartModel model)
+    private static void ParsePlotArea(XContainer plotArea, ChartModel model)
     {
         // Find the first recognised chart type element and parse its series.
         foreach (var child in plotArea.Elements())
@@ -88,7 +88,7 @@ internal static class ChartParser
             ParseAxis(valAx, model.ValueAxis);
     }
 
-    private static void ParseAxis(XElement axEl, ChartAxis axis)
+    private static void ParseAxis(XContainer axEl, ChartAxis axis)
     {
         var delete = axEl.Element(CmlNames.Cml + "delete")?.GetAttrInt(CmlNames.AttributeValue);
         axis.IsVisible = delete is not 1;
@@ -110,11 +110,10 @@ internal static class ChartParser
         // Axis title (c:title/c:tx/c:rich text runs).
         var titleRuns = axEl.Element(CmlNames.Title)?.Element(CmlNames.Text)?.Element(CmlNames.Rich)
             ?.Descendants(DmlNames.Dml + "t").Select(static t => t.Value);
-        if (titleRuns is not null)
-        {
-            var title = string.Concat(titleRuns);
-            if (!string.IsNullOrEmpty(title)) axis.Title = title;
-        }
+        if (titleRuns is null) return;
+
+        var title = string.Concat(titleRuns);
+        if (!string.IsNullOrEmpty(title)) axis.Title = title;
     }
 
     private static (ChartType type, bool found) MapElementToChartType(XElement element)
@@ -193,6 +192,7 @@ internal static class ChartParser
             return (type, true);
         }
 
+        // ReSharper disable once InvertIf
         if (element.Name == CmlNames.RadarChart)
         {
             var style = element.Element(CmlNames.RadarStyle)?.GetAttr(CmlNames.AttributeValue, "standard") ?? "standard";
@@ -205,15 +205,12 @@ internal static class ChartParser
             return (type, true);
         }
 
-        if (element.Name == CmlNames.BubbleChart)
-            return (ChartType.Bubble, true);
-
-        return (ChartType.ColumnClustered, false);
+        return element.Name == CmlNames.BubbleChart ? (ChartType.Bubble, true) : (ChartType.ColumnClustered, false);
     }
 
     // ── Series ────────────────────────────────────────────────────────────────
 
-    private static void ParseSeries(XElement chartTypeEl, ChartData data)
+    private static void ParseSeries(XContainer chartTypeEl, ChartData data)
     {
         var isFirstSeries = true;
         foreach (var serEl in chartTypeEl.Elements(CmlNames.Series))
@@ -234,11 +231,11 @@ internal static class ChartParser
         }
     }
 
-    private static void ParseSeriesFormatting(XElement serEl, ChartSeries series)
+    private static void ParseSeriesFormatting(XContainer serEl, ChartSeries series)
     {
         // Per-series fill (<c:spPr> with a fill child).
         var spPr = serEl.Element(DmlNames.Dml + "spPr");
-        if (spPr is not null && spPr.Element(DmlNames.SolidFill) is not null)
+        if (spPr?.Element(DmlNames.SolidFill) != null)
         {
             var fill = new FillFormat();
             FillParser.Parse(spPr, fill);
@@ -256,12 +253,9 @@ internal static class ChartParser
             series.Trendline = ParseTrendline(tl);
     }
 
-    private static ChartDataLabels ParseDataLabels(XElement dLbls)
+    private static ChartDataLabels ParseDataLabels(XContainer dLbls)
     {
         var c = CmlNames.Cml;
-
-        bool Show(string name, bool dflt) =>
-            dLbls.Element(c + name)?.GetAttrInt(CmlNames.AttributeValue) is { } v ? v == 1 : dflt;
 
         return new ChartDataLabels
         {
@@ -274,9 +268,12 @@ internal static class ChartParser
             Position = dLbls.Element(c + "dLblPos")?.GetAttr(CmlNames.AttributeValue),
             NumberFormat = dLbls.Element(c + "numFmt")?.GetAttr("formatCode")
         };
+
+        bool Show(string name, bool dflt) =>
+            dLbls.Element(c + name)?.GetAttrInt(CmlNames.AttributeValue) is { } v ? v == 1 : dflt;
     }
 
-    private static ChartTrendline ParseTrendline(XElement tl)
+    private static ChartTrendline ParseTrendline(XContainer tl)
     {
         var c = CmlNames.Cml;
         return new ChartTrendline
@@ -290,7 +287,7 @@ internal static class ChartParser
         };
     }
 
-    private static string ParseSeriesName(XElement serEl)
+    private static string ParseSeriesName(XContainer serEl)
     {
         var txEl = serEl.Element(CmlNames.Text);
         if (txEl == null) return string.Empty;
@@ -305,6 +302,7 @@ internal static class ChartParser
 
         // Reference with cache: <c:tx><c:strRef><c:strCache>...
         var strCache = txEl.Element(CmlNames.StringReference)?.Element(CmlNames.StringCache);
+        // ReSharper disable once InvertIf
         if (strCache != null)
         {
             var pt = strCache.Elements(CmlNames.Point).FirstOrDefault(static p => p.GetAttrInt(CmlNames.AttributeIndex) == 0);
@@ -314,7 +312,7 @@ internal static class ChartParser
         return string.Empty;
     }
 
-    private static void ParseCategories(XElement serEl, ChartData data)
+    private static void ParseCategories(XContainer serEl, ChartData data)
     {
         // <c:cat> for category-based charts; <c:xVal> for scatter/bubble holds numeric X values,
         // which are parsed separately into ChartSeries.XValues (see ParseXValues).
@@ -325,7 +323,7 @@ internal static class ChartParser
         data.Categories.AddRange(points);
     }
 
-    private static void ParseXValues(XElement serEl, ChartSeries series)
+    private static void ParseXValues(XContainer serEl, ChartSeries series)
     {
         // <c:xVal> holds numeric X-axis values for scatter/bubble charts.
         var xValEl = serEl.Element(CmlNames.XValues);
@@ -335,7 +333,7 @@ internal static class ChartParser
         series.XValues.AddRange(points);
     }
 
-    private static void ParseValues(XElement serEl, ChartSeries series)
+    private static void ParseValues(XContainer serEl, ChartSeries series)
     {
         // <c:val> for standard charts; <c:yVal> for scatter/bubble
         var valEl = serEl.Element(CmlNames.Values)
@@ -348,7 +346,7 @@ internal static class ChartParser
 
     // ── Legend ────────────────────────────────────────────────────────────────
 
-    private static void ParseLegend(XElement? legendEl, ChartLegend legend)
+    private static void ParseLegend(XContainer? legendEl, ChartLegend legend)
     {
         if (legendEl == null)
         {
@@ -372,7 +370,7 @@ internal static class ChartParser
 
     // ── Data point readers ────────────────────────────────────────────────────
 
-    private static List<string> ReadStringPoints(XElement containerEl)
+    private static IEnumerable<string> ReadStringPoints(XContainer containerEl)
     {
         var results = new List<string>();
 
@@ -380,8 +378,7 @@ internal static class ChartParser
         var strLit = containerEl.Element(CmlNames.StringLiteral);
         if (strLit != null)
         {
-            foreach (var pt in strLit.Elements(CmlNames.Point))
-                results.Add(pt.Element(CmlNames.PointValue)?.Value ?? string.Empty);
+            results.AddRange(strLit.Elements(CmlNames.Point).Select(static pt => pt.Element(CmlNames.PointValue)?.Value ?? string.Empty));
             return results;
         }
 
@@ -389,8 +386,7 @@ internal static class ChartParser
         var numLit = containerEl.Element(CmlNames.NumberLiteral);
         if (numLit != null)
         {
-            foreach (var pt in numLit.Elements(CmlNames.Point))
-                results.Add(pt.Element(CmlNames.PointValue)?.Value ?? string.Empty);
+            results.AddRange(numLit.Elements(CmlNames.Point).Select(static pt => pt.Element(CmlNames.PointValue)?.Value ?? string.Empty));
             return results;
         }
 
@@ -398,23 +394,19 @@ internal static class ChartParser
         var strCache = containerEl.Element(CmlNames.StringReference)?.Element(CmlNames.StringCache);
         if (strCache != null)
         {
-            foreach (var pt in strCache.Elements(CmlNames.Point))
-                results.Add(pt.Element(CmlNames.PointValue)?.Value ?? string.Empty);
+            results.AddRange(strCache.Elements(CmlNames.Point).Select(static pt => pt.Element(CmlNames.PointValue)?.Value ?? string.Empty));
             return results;
         }
 
         // Try workbook-linked cached numbers
         var numCache = containerEl.Element(CmlNames.NumberReference)?.Element(CmlNames.NumberCache);
         if (numCache != null)
-        {
-            foreach (var pt in numCache.Elements(CmlNames.Point))
-                results.Add(pt.Element(CmlNames.PointValue)?.Value ?? string.Empty);
-        }
+            results.AddRange(numCache.Elements(CmlNames.Point).Select(static pt => pt.Element(CmlNames.PointValue)?.Value ?? string.Empty));
 
         return results;
     }
 
-    private static List<double> ReadNumericPoints(XElement containerEl)
+    private static IEnumerable<double> ReadNumericPoints(XContainer containerEl)
     {
         var results = new List<double>();
 
@@ -433,6 +425,7 @@ internal static class ChartParser
 
         // Try workbook-linked cached numbers
         var numCache = containerEl.Element(CmlNames.NumberReference)?.Element(CmlNames.NumberCache);
+        // ReSharper disable once InvertIf
         if (numCache != null)
         {
             foreach (var pt in numCache.Elements(CmlNames.Point))

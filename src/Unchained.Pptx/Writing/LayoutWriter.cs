@@ -55,11 +55,8 @@ internal static class LayoutWriter
                     new XAttribute(DmlNames.AttributeWidth, 0),
                     new XAttribute(DmlNames.AttributeHeight, 0)))));
 
-        foreach (var shape in layout.Shapes)
-        {
-            var el = ShapeWriter.Write(shape);
-            if (el != null) spTree.Add(el);
-        }
+        foreach (var el in layout.Shapes.Select(static shape => ShapeWriter.Write(shape)).OfType<XElement>())
+            spTree.Add(el);
 
         cSld.Add(spTree);
         sldLayout.Add(cSld);

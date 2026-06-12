@@ -60,6 +60,7 @@ internal static class ColorParser
 
         // Preset colour — map to a neutral value for now
         var prstClr = parent.Element(DmlNames.PresetColor);
+        // ReSharper disable once InvertIf
         if (prstClr != null)
         {
             var name = prstClr.GetAttr(DmlNames.AttributeValue, "black");
@@ -71,26 +72,21 @@ internal static class ColorParser
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static byte ReadAlpha(XElement colorElement)
+    private static byte ReadAlpha(XContainer colorElement)
     {
         var alphaEl = colorElement.Element(DmlNames.Alpha);
-        if (alphaEl == null)
-            return 255;
 
-        var raw = alphaEl.GetAttrInt(DmlNames.AttributeValue);
-        if (raw == null)
-            return 255;
-
-        return (byte)Math.Clamp((int)Math.Round(raw.Value / (double)OoxmlScaling.PercentScale * 255), 0, 255);
+        var raw = alphaEl?.GetAttrInt(DmlNames.AttributeValue);
+        return raw == null ? (byte)255 : (byte)Math.Clamp((int)Math.Round(raw.Value / (double)OoxmlScaling.PercentScale * 255), 0, 255);
     }
 
-    private static double ReadTransformValue(XElement parent, XName childName)
+    private static double ReadTransformValue(XContainer parent, XName childName)
     {
         var child = parent.Element(childName);
         if (child == null) return childName == DmlNames.LuminanceModifier ? 1.0 : 0.0;
+
         var raw = child.GetAttrInt(DmlNames.AttributeValue);
-        if (raw == null) return childName == DmlNames.LuminanceModifier ? 1.0 : 0.0;
-        return raw.Value / (double)OoxmlScaling.PercentScale;
+        return raw == null ? childName == DmlNames.LuminanceModifier ? 1.0 : 0.0 : raw.Value / (double)OoxmlScaling.PercentScale;
     }
 
     private static bool TryParseHex(string hex, out uint value)
@@ -130,7 +126,8 @@ internal static class ColorParser
         "magenta" => ColorSpec.FromRgb(0xFF, 0x00, 0xFF),
         "orange" => ColorSpec.FromRgb(0xFF, 0xA5, 0x00),
         "purple" => ColorSpec.FromRgb(0x80, 0x00, 0x80),
-        "gray" or "grey" => ColorSpec.FromRgb(0x80, 0x80, 0x80),
-        _ => ColorSpec.FromRgb(0x80, 0x80, 0x80)
+        // ReSharper disable PatternIsRedundant
+        "gray" or "grey" or _ => ColorSpec.FromRgb(0x80, 0x80, 0x80)
+        // ReSharper restore PatternIsRedundant
     };
 }

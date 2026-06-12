@@ -44,6 +44,7 @@ internal static class OdpParser
             using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
             var mime = zip.GetEntry("mimetype");
             if (mime == null) return false;
+
             using var s = mime.Open();
             using var r = new StreamReader(s);
             return r.ReadToEnd().Trim().StartsWith(MimeType, StringComparison.Ordinal);
@@ -70,14 +71,12 @@ internal static class OdpParser
         var master = new MasterSlide { Name = "Default", Theme = new PptxTheme() };
         var layout = new SlideLayout { Name = "Default", LayoutType = LayoutType.Blank, Master = master };
         master.Layouts.Add(layout);
-        var masters = new MasterSlideCollection();
-        masters.Add(master);
+        var masters = new MasterSlideCollection { master };
 
         var slides = new SlideCollection();
 
         var body = content.Root?.Element(Office + "body")?.Element(Office + "presentation");
         uint slideId = 256;
-        var pageIndex = 0;
         foreach (var page in body?.Elements(Draw + "page") ?? [])
         {
             var slide = new Slide
@@ -92,7 +91,6 @@ internal static class OdpParser
                 ReadFrame(frame, slide, mediaStore, zip);
 
             slides.AddParsed(slide);
-            pageIndex++;
         }
 
         var properties = ReadProperties(zip);
@@ -139,20 +137,19 @@ internal static class OdpParser
         }
 
         var textBox = frame.Element(Draw + "text-box");
-        if (textBox != null)
+        if (textBox == null) return;
+
+        var shape = new AutoShape
         {
-            var shape = new AutoShape
-            {
-                ShapeType = AutoShapeType.Rectangle,
-                IsTextBox = true,
-                X = x, Y = y, Width = w, Height = h
-            };
-            ReadTextBox(textBox, shape);
-            slide.Shapes.AddParsed(shape);
-        }
+            ShapeType = AutoShapeType.Rectangle,
+            IsTextBox = true,
+            X = x, Y = y, Width = w, Height = h
+        };
+        ReadTextBox(textBox, shape);
+        slide.Shapes.AddParsed(shape);
     }
 
-    private static void ReadTextBox(XElement textBox, AutoShape shape)
+    private static void ReadTextBox(XContainer textBox, AutoShape shape)
     {
         foreach (var pEl in textBox.Elements(TextNs + "p"))
         {
@@ -182,6 +179,7 @@ internal static class OdpParser
     private static EmbeddedImage? LoadImage(string? href, ZipArchive zip, MediaStore mediaStore)
     {
         if (string.IsNullOrEmpty(href)) return null;
+
         var entryName = href.TrimStart('/');
         var entry = zip.GetEntry(entryName);
         if (entry == null) return null;
@@ -209,10 +207,7 @@ internal static class OdpParser
         var w = ParseLength((string?)props?.Attribute(Fo + "page-width"));
         var h = ParseLength((string?)props?.Attribute(Fo + "page-height"));
 
-        if (w.Value > 0 && h.Value > 0)
-            return new SlideSize(w, h);
-
-        return SlideSize.Widescreen;
+        return w.Value > 0 && h.Value > 0 ? new SlideSize(w, h) : SlideSize.Widescreen;
     }
 
     private static DocumentProperties ReadProperties(ZipArchive zip)
@@ -235,6 +230,7 @@ internal static class OdpParser
     {
         var entry = zip.GetEntry(entryName);
         if (entry == null) return null;
+
         using var s = entry.Open();
         return XDocument.Load(s);
     }
@@ -246,20 +242,19 @@ internal static class OdpParser
 
         var unit = value.Length >= 2 ? value[^2..] : string.Empty;
         var numberText = value[..^unit.Length];
-        if (!double.TryParse(numberText,
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out var number))
-            return Emu.Zero;
-
-        return unit switch
-        {
-            "cm" => Emu.FromCentimetres(number),
-            "mm" => Emu.FromCentimetres(number / 10.0),
-            "in" => Emu.FromInches(number),
-            "pt" => Emu.FromPoints(number),
-            _ => Emu.FromCentimetres(number)
-        };
+        return !double.TryParse(numberText,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var number)
+            ? Emu.Zero
+            : unit switch
+            {
+                "cm" => Emu.FromCentimetres(number),
+                "mm" => Emu.FromCentimetres(number / 10.0),
+                "in" => Emu.FromInches(number),
+                "pt" => Emu.FromPoints(number),
+                _ => Emu.FromCentimetres(number)
+            };
     }
 
     private static string ExtensionToMime(string ext) => ext.ToLowerInvariant() switch

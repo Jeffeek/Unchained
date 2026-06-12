@@ -10,23 +10,14 @@ namespace Unchained.Pptx.Parsing;
 /// <summary>
 ///     Parses a slide layout OPC part into a <see cref="SlideLayout" />.
 /// </summary>
-internal sealed class LayoutParser
+internal sealed class LayoutParser(OpcPackage package, MediaStore mediaStore)
 {
-    private readonly MediaStore _mediaStore;
-    private readonly OpcPackage _package;
-
-    public LayoutParser(OpcPackage package, MediaStore mediaStore)
-    {
-        _package = package;
-        _mediaStore = mediaStore;
-    }
-
     /// <summary>
     ///     Parses the layout at <paramref name="partUri" /> and returns a <see cref="SlideLayout" />.
     /// </summary>
     public SlideLayout Parse(string partUri, string relationshipId)
     {
-        var part = _package.TryGetPart(partUri);
+        var part = package.TryGetPart(partUri);
         if (part == null)
             return new SlideLayout { PartUri = partUri, RelationshipId = relationshipId };
 
@@ -48,11 +39,11 @@ internal sealed class LayoutParser
         // Parse shapes from the common slide data
         var cSld = root.Element(PmlNames.CommonSlideData);
         var spTree = cSld?.Element(PmlNames.ShapeTree);
-        if (spTree != null)
-        {
-            var shapeParser = new ShapeParser(_package, _mediaStore);
-            shapeParser.ParseTree(spTree, layout.Shapes);
-        }
+
+        if (spTree == null) return layout;
+
+        var shapeParser = new ShapeParser(package, mediaStore);
+        shapeParser.ParseTree(spTree, layout.Shapes);
 
         return layout;
     }

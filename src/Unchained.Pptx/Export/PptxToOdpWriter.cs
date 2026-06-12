@@ -48,7 +48,7 @@ internal static class PptxToOdpWriter
     private static byte[] BuildContent(
         PresentationDocument document,
         OdpSaveOptions options,
-        List<(string Path, byte[] Data, string Mime)> images
+        ICollection<(string Path, byte[] Data, string Mime)> images
     )
     {
         var o = OdfNames.Office;
@@ -56,10 +56,7 @@ internal static class PptxToOdpWriter
         var pres = OdfNames.Presentation;
 
         var body = new XElement(o + "presentation");
-
         var slides = document.Slides;
-        var widthCm = document.SlideSize.Width.ToCentimetres();
-        var heightCm = document.SlideSize.Height.ToCentimetres();
 
         var included = Enumerable.Range(0, slides.Count)
             .Where(i => !slides[i].IsHidden || options.IncludeHiddenSlides)
@@ -92,9 +89,9 @@ internal static class PptxToOdpWriter
     }
 
     private static void WriteShape(
-        XElement page,
+        XContainer page,
         Shape shape,
-        List<(string Path, byte[] Data, string Mime)> images,
+        ICollection<(string Path, byte[] Data, string Mime)> images,
         OdpSaveOptions options
     )
     {
@@ -108,7 +105,7 @@ internal static class PptxToOdpWriter
 
         switch (shape)
         {
-            case PictureShape pic when pic.Image != null && options.EmbedImages:
+            case PictureShape { Image: not null } pic when options.EmbedImages:
             {
                 var ext = MimeToExtension(pic.Image.ContentType);
                 var path = $"Pictures/image{images.Count + 1}{ext}";
@@ -148,18 +145,15 @@ internal static class PptxToOdpWriter
         }
     }
 
-    private static void WriteText(XElement container, TextFrame frame)
+    private static void WriteText(XContainer container, TextFrame frame)
     {
         var t = OdfNames.Text;
         foreach (var para in frame.Paragraphs)
         {
             var p = new XElement(t + "p");
-            foreach (var run in para.Runs)
-            {
-                if (string.IsNullOrEmpty(run.Text)) continue;
+            foreach (var run in para.Runs.Where(static run => !string.IsNullOrEmpty(run.Text)))
                 // Plain span; ODF run formatting requires automatic styles, out of scope here.
                 p.Add(new XElement(t + "span", run.Text));
-            }
 
             container.Add(p);
         }
@@ -227,11 +221,6 @@ internal static class PptxToOdpWriter
             new XAttribute(XNamespace.Xmlns + "manifest", m.NamespaceName),
             new XAttribute(m + "version", "1.2"));
 
-        void Entry(string path, string mime) =>
-            root.Add(new XElement(m + "file-entry",
-                new XAttribute(m + "full-path", path),
-                new XAttribute(m + "media-type", mime)));
-
         Entry("/", OdfNames.PresentationMimeType);
         Entry("content.xml", "text/xml");
         Entry("styles.xml", "text/xml");
@@ -240,6 +229,11 @@ internal static class PptxToOdpWriter
             Entry(path, mime);
 
         return Serialize(root);
+
+        void Entry(string path, string mime) =>
+            root.Add(new XElement(m + "file-entry",
+                new XAttribute(m + "full-path", path),
+                new XAttribute(m + "media-type", mime)));
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────

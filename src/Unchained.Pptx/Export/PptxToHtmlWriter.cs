@@ -96,7 +96,7 @@ internal static class PptxToHtmlWriter
         HtmlSaveOptions options
     )
     {
-        var colorScheme = slide.Master?.Theme?.Colors;
+        var colorScheme = slide.Master.Theme.Colors;
         WriteBackground(sb, slide, slideW, slideH, colorScheme);
         foreach (var shape in slide.Shapes)
             WriteShape(sb, shape, options, colorScheme);
@@ -112,18 +112,20 @@ internal static class PptxToHtmlWriter
     {
         var fill = ResolveBackground(slide);
         if (fill is null || fill.Type != FillType.Solid || fill.Solid == null) return;
+
         var color = ToCssColor(fill.Solid.Color.Resolve(colorScheme));
         sb.AppendLine($"<div style=\"position:absolute;left:0;top:0;width:{w:F2}px;height:{h:F2}px;background:{color}\"></div>");
     }
 
     // Resolves background fill walking slide → layout → master.
-    private static FillFormat? ResolveBackground(Slide slide)
-    {
-        if (slide.Background.Fill.Type != FillType.None) return slide.Background.Fill;
-        if (slide.Layout?.Background.Fill.Type != FillType.None) return slide.Layout!.Background.Fill;
-        if (slide.Master?.Background.Fill.Type != FillType.None) return slide.Master!.Background.Fill;
-        return null;
-    }
+    private static FillFormat? ResolveBackground(Slide slide) =>
+        slide.Background.Fill.Type != FillType.None
+            ? slide.Background.Fill
+            : slide.Layout.Background.Fill.Type != FillType.None
+                ? slide.Layout.Background.Fill
+                : slide.Master.Background.Fill.Type != FillType.None
+                    ? slide.Master.Background.Fill
+                    : null;
 
     private static void WriteShape(
         StringBuilder sb,
@@ -139,20 +141,30 @@ internal static class PptxToHtmlWriter
 
         var style = new StringBuilder($"left:{x:F2}px;top:{y:F2}px;width:{w:F2}px;height:{h:F2}px;");
 
-        // Fill
-        var effectiveFill = shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue
-            ? null // handled below via StyleFillColor
-            : shape.Fill;
-
-        if (shape.Fill.Type == FillType.Solid && shape.Fill.Solid != null)
+        if (shape.Fill is { Type: FillType.Solid, Solid: not null })
             style.Append($"background:{ToCssColor(shape.Fill.Solid.Color.Resolve(colorScheme))};");
-        else if (shape.Fill.Type == FillType.None && shape.StyleFillColor.HasValue)
-            style.Append($"background:{ToCssColor(shape.StyleFillColor.Value.Resolve(colorScheme))};");
-        else if (shape.Fill.Type == FillType.None)
-            style.Append("background:transparent;");
+        else
+        {
+            switch (shape.Fill.Type)
+            {
+                case FillType.None when shape.StyleFillColor.HasValue:
+                    style.Append($"background:{ToCssColor(shape.StyleFillColor.Value.Resolve(colorScheme))};");
+                break;
+                case FillType.None:
+                    style.Append("background:transparent;");
+                break;
+                case FillType.Solid:
+                case FillType.Gradient:
+                case FillType.Pattern:
+                case FillType.Picture:
+                case FillType.Group:
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
 
         // Border
-        if (shape.Line.Fill.Type == FillType.Solid && shape.Line.Fill.Solid != null)
+        if (shape.Line.Fill is { Type: FillType.Solid, Solid: not null })
         {
             var lw = shape.Line.WidthPoints ?? 1.0;
             style.Append($"border:{lw:F1}px solid {ToCssColor(shape.Line.Fill.Solid.Color.Resolve(colorScheme))};");
@@ -162,10 +174,10 @@ internal static class PptxToHtmlWriter
 
         switch (shape)
         {
-            case AutoShape auto when auto.TextFrame.Paragraphs.Count > 0:
+            case AutoShape { TextFrame.Paragraphs.Count: > 0 } auto:
                 WriteTextFrame(sb, auto, colorScheme);
             break;
-            case PictureShape pic when pic.Image != null && options.EmbedImages:
+            case PictureShape { Image: not null } pic when options.EmbedImages:
                 WritePicture(sb, pic);
             break;
         }
@@ -199,6 +211,7 @@ internal static class PptxToHtmlWriter
             foreach (var run in para.Runs)
             {
                 if (string.IsNullOrEmpty(run.Text)) continue;
+
                 var runStyle = new StringBuilder();
                 var fs = run.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt;
                 runStyle.Append($"font-size:{fs:F1}pt;");

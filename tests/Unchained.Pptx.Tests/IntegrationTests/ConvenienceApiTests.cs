@@ -49,7 +49,7 @@ public sealed class ConvenienceApiTests : PptxTestBase
 
     [Fact]
     public void MergeCells_OutOfRange_Throws() =>
-        Should.Throw<ArgumentOutOfRangeException>(() => NewTable(2, 2).MergeCells(0, 0, 5, 5));
+        Should.Throw<ArgumentOutOfRangeException>(static () => NewTable(2, 2).MergeCells(0, 0, 5, 5));
 
     [Fact]
     public void Grid_AddInsertRemoveRowColumn_AdjustsCounts()

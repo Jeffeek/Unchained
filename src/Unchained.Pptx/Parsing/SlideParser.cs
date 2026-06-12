@@ -14,32 +14,18 @@ namespace Unchained.Pptx.Parsing;
 /// <summary>
 ///     Parses a single slide OPC part into a <see cref="Slide" />.
 /// </summary>
-internal sealed class SlideParser
+internal sealed class SlideParser(OpcPackage package,
+    MediaStore mediaStore,
+    IEnumerable<MasterSlide> masters,
+    CommentAuthorCollection commentAuthors
+)
 {
-    private readonly CommentAuthorCollection _commentAuthors;
-    private readonly IReadOnlyList<MasterSlide> _masters;
-    private readonly MediaStore _mediaStore;
-    private readonly OpcPackage _package;
-
-    public SlideParser(
-        OpcPackage package,
-        MediaStore mediaStore,
-        IReadOnlyList<MasterSlide> masters,
-        CommentAuthorCollection commentAuthors
-    )
-    {
-        _package = package;
-        _mediaStore = mediaStore;
-        _masters = masters;
-        _commentAuthors = commentAuthors;
-    }
-
     /// <summary>
     ///     Parses the slide at <paramref name="partUri" /> and returns a <see cref="Slide" />.
     /// </summary>
     public Slide Parse(string partUri, string relationshipId, uint slideId)
     {
-        var part = _package.TryGetPart(partUri);
+        var part = package.TryGetPart(partUri);
         if (part == null)
         {
             return new Slide
@@ -86,7 +72,7 @@ internal sealed class SlideParser
         var spTree = cSld?.Element(PmlNames.ShapeTree);
         if (spTree != null)
         {
-            var shapeParser = new ShapeParser(_package, _mediaStore);
+            var shapeParser = new ShapeParser(package, mediaStore);
             shapeParser.ParseTree(spTree, slide.Shapes);
         }
 
@@ -124,7 +110,7 @@ internal sealed class SlideParser
         if (notesRel != null)
         {
             var notesUri = part.ResolveUri(notesRel.TargetUri);
-            var notesPart = _package.TryGetPart(notesUri);
+            var notesPart = package.TryGetPart(notesUri);
             if (notesPart != null)
             {
                 var notesDoc = OoXmlHelper.ParseXml(notesPart.Data);
@@ -138,12 +124,12 @@ internal sealed class SlideParser
         if (commentsRel != null)
         {
             var commentsUri = part.ResolveUri(commentsRel.TargetUri);
-            var commentsPart = _package.TryGetPart(commentsUri);
+            var commentsPart = package.TryGetPart(commentsUri);
             if (commentsPart != null)
             {
                 var cmDoc = OoXmlHelper.ParseXml(commentsPart.Data);
                 if (cmDoc.Root != null)
-                    CommentParser.Parse(cmDoc.Root, slide, _commentAuthors);
+                    CommentParser.Parse(cmDoc.Root, slide, commentAuthors);
             }
         }
 
@@ -198,11 +184,11 @@ internal sealed class SlideParser
         if (rel == null) return null;
 
         var imageUri = sourcePart.ResolveUri(rel.TargetUri);
-        var imagePart = _package.TryGetPart(imageUri);
+        var imagePart = package.TryGetPart(imageUri);
         if (imagePart == null) return null;
 
         // Check if already in the media store (dedup by URI)
-        var existing = _mediaStore.Images.FirstOrDefault(img =>
+        var existing = mediaStore.Images.FirstOrDefault(img =>
             img.PartUri.Equals(imageUri, StringComparison.OrdinalIgnoreCase));
 
         if (existing != null) return existing;
@@ -212,7 +198,7 @@ internal sealed class SlideParser
             PartUri = imageUri,
             RelationshipId = relationshipId
         };
-        return _mediaStore.AddImage(image);
+        return mediaStore.AddImage(image);
     }
 
     // ── Chart resolution ──────────────────────────────────────────────────────
@@ -235,7 +221,7 @@ internal sealed class SlideParser
         var chartUri = slidePart.ResolveUri(rel.TargetUri);
         shape.PartUri = chartUri;
 
-        var chartPart = _package.TryGetPart(chartUri);
+        var chartPart = package.TryGetPart(chartUri);
         if (chartPart == null) return;
 
         // Preserve raw bytes for lossless round-trip
@@ -316,7 +302,7 @@ internal sealed class SlideParser
 
         var uri = sourcePart.ResolveUri(rel.TargetUri);
         setUri(uri);
-        return _package.TryGetPart(uri);
+        return package.TryGetPart(uri);
     }
 
     // ── Hyperlink resolution ─────────────────────────────────────────────────────
@@ -465,14 +451,14 @@ internal sealed class SlideParser
     // ── Layout resolution ─────────────────────────────────────────────────────
 
     private SlideLayout? FindLayout(string partUri) =>
-        _masters
+        masters
             .SelectMany(static m => m.Layouts)
             .FirstOrDefault(l =>
                 l.PartUri.Equals(partUri, StringComparison.OrdinalIgnoreCase));
 
     private SlideLayout GetFallbackLayout()
     {
-        var layout = _masters.FirstOrDefault()?.Layouts.FirstOrDefault();
+        var layout = masters.FirstOrDefault()?.Layouts.FirstOrDefault();
         if (layout != null) return layout;
 
         // Minimal fallback layout used when no masters have been parsed yet

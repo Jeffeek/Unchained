@@ -38,7 +38,7 @@ namespace Unchained.Pptx.Parsing;
 /// </remarks>
 internal static class OpenXmlPresentationParser
 {
-    public static ParsedPresentation Parse(byte[] data, OpenOptions? options = null)
+    public static ParsedPresentation Parse(byte[] data)
     {
         ArgumentNullException.ThrowIfNull(data);
 
@@ -48,7 +48,7 @@ internal static class OpenXmlPresentationParser
         var engine = OoxmlEngine.Open(data);
         try
         {
-            return ParseWithEngine(engine, options);
+            return ParseWithEngine(engine);
         }
         catch
         {
@@ -57,7 +57,7 @@ internal static class OpenXmlPresentationParser
         }
     }
 
-    private static ParsedPresentation ParseWithEngine(OoxmlEngine engine, OpenOptions? options)
+    private static ParsedPresentation ParseWithEngine(OoxmlEngine engine)
     {
         if (engine.Format != OoxmlFormat.Presentation)
             throw new PptxException($"Expected a presentation package but found {engine.Format}.");
@@ -83,11 +83,8 @@ internal static class OpenXmlPresentationParser
         // Masters, their themes, and layouts. layoutMap lets slides resolve their own layout
         // by SlideLayoutPart so the slide -> layout -> master chain matches the custom parser.
         var layoutMap = new Dictionary<SlideLayoutPart, SlideLayout>();
-        foreach (var masterPart in presPart.SlideMasterParts)
-        {
-            var master = ReadMaster(masterPart, mediaStore, imageCache, layoutMap);
+        foreach (var master in presPart.SlideMasterParts.Select(masterPart => ReadMaster(masterPart, mediaStore, imageCache, layoutMap)))
             masters.Add(master);
-        }
 
         // Every slide needs a Layout whose Master resolves; fall back to the first available
         // layout (or a synthesized blank) when a slide has no layout part.
@@ -114,11 +111,27 @@ internal static class OpenXmlPresentationParser
             SectionParser.Parse(presXml, sections);
         }
 
-        if (presPart.CommentAuthorsPart?.CommentAuthorList is { } authorList)
+        if (presPart.CommentAuthorsPart?.CommentAuthorList is not { } authorList)
         {
-            var authorsXml = XElement.Parse(authorList.OuterXml, LoadOptions.None);
-            CommentAuthorParser.Parse(authorsXml, commentAuthors);
+            return new ParsedPresentation(
+                null, // the SDK engine owns the real package; not consumed downstream
+                slides,
+                masters,
+                mediaStore,
+                properties,
+                new ProtectionInfo(),
+                slideSize,
+                commentAuthors,
+                sections)
+            {
+                // Hand the still-open engine to the parsed result so the document can keep the
+                // source package alive for an in-place SDK-backed save (M5b).
+                Engine = engine
+            };
         }
+
+        var authorsXml = XElement.Parse(authorList.OuterXml, LoadOptions.None);
+        CommentAuthorParser.Parse(authorsXml, commentAuthors);
 
         return new ParsedPresentation(
             null, // the SDK engine owns the real package; not consumed downstream
@@ -142,9 +155,7 @@ internal static class OpenXmlPresentationParser
     private static SlideSize ReadSlideSize(PresentationPart presPart)
     {
         var sz = presPart.Presentation?.SlideSize;
-        if (sz?.Cx is null || sz.Cy is null)
-            return SlideSize.Widescreen;
-        return new SlideSize(new Emu(sz.Cx!.Value), new Emu(sz.Cy!.Value));
+        return sz?.Cx is null || sz.Cy is null ? SlideSize.Widescreen : new SlideSize(new Emu(sz.Cx!.Value), new Emu(sz.Cy!.Value));
     }
 
     // ── Masters / layouts / themes ─────────────────────────────────────────────────
@@ -153,7 +164,7 @@ internal static class OpenXmlPresentationParser
         SlideMasterPart masterPart,
         MediaStore mediaStore,
         Dictionary<string, EmbeddedImage> imageCache,
-        Dictionary<SlideLayoutPart, SlideLayout> layoutMap
+        IDictionary<SlideLayoutPart, SlideLayout> layoutMap
     )
     {
         var master = new MasterSlide
@@ -273,17 +284,16 @@ internal static class OpenXmlPresentationParser
         return layout;
     }
 
-    private static List<SlideLayout> ToList(SlideLayoutCollection layouts)
+    private static IEnumerable<SlideLayout> ToList(SlideLayoutCollection layouts)
     {
         var list = new List<SlideLayout>(layouts.Count);
-        for (var i = 0; i < layouts.Count; i++)
-            list.Add(layouts[i]);
+        list.AddRange(layouts);
         return list;
     }
 
     // ── Document properties ────────────────────────────────────────────────────────
 
-    private static DocumentProperties ReadProperties(PresentationDocument doc)
+    private static DocumentProperties ReadProperties(OpenXmlPackage doc)
     {
         var props = new DocumentProperties();
         var core = doc.PackageProperties;
@@ -310,7 +320,9 @@ internal static class OpenXmlPresentationParser
         if (idList is null)
         {
             uint synthetic = 256;
-            foreach (var sp in presPart.SlideParts) yield return (sp, synthetic++);
+            foreach (var sp in presPart.SlideParts)
+                yield return (sp, synthetic++);
+
             yield break;
         }
 
@@ -318,6 +330,7 @@ internal static class OpenXmlPresentationParser
         {
             var rId = slideId.RelationshipId?.Value;
             if (rId is null) continue;
+
             if (presPart.GetPartById(rId) is SlidePart sp)
                 yield return (sp, slideId.Id?.Value ?? 256);
         }
@@ -360,7 +373,7 @@ internal static class OpenXmlPresentationParser
     // Walks a shape-tree (or group) child collection in document order, mapping each element to
     // its concrete Shape subtype. Skips the non-visual group properties container.
     private static void ReadShapeTree(
-        OpenXmlCompositeElement tree,
+        OpenXmlElement tree,
         ShapeCollection target,
         SlidePart slidePart,
         MediaStore mediaStore,
@@ -421,7 +434,7 @@ internal static class OpenXmlPresentationParser
 
     private static PictureShape ReadPicture(
         P.Picture pic,
-        SlidePart slidePart,
+        OpenXmlPartContainer slidePart,
         MediaStore mediaStore,
         Dictionary<string, EmbeddedImage> imageCache
     )
@@ -483,7 +496,7 @@ internal static class OpenXmlPresentationParser
     }
 
     private static GroupShape ReadGroup(
-        P.GroupShape grp,
+        P.GroupShapeType grp,
         SlidePart slidePart,
         MediaStore mediaStore,
         Dictionary<string, EmbeddedImage> imageCache
@@ -531,8 +544,8 @@ internal static class OpenXmlPresentationParser
         var prst = cxn.ShapeProperties?.GetFirstChild<D.PresetGeometry>()?.Preset?.InnerText;
         shape.ConnectorType = prst switch
         {
-            { } p when p.StartsWith("bentConnector", StringComparison.Ordinal) => ConnectorType.Bent,
-            { } p when p.StartsWith("curvedConnector", StringComparison.Ordinal) => ConnectorType.Curved,
+            not null when prst.StartsWith("bentConnector", StringComparison.Ordinal) => ConnectorType.Bent,
+            not null when prst.StartsWith("curvedConnector", StringComparison.Ordinal) => ConnectorType.Curved,
             _ => ConnectorType.Straight
         };
         return shape;
@@ -543,6 +556,7 @@ internal static class OpenXmlPresentationParser
     private static void ReadCommon(P.NonVisualDrawingProperties? nv, Shape shape)
     {
         if (nv is null) return;
+
         shape.Name = nv.Name?.Value ?? string.Empty;
         shape.AltText = nv.Description?.Value;
     }
@@ -566,9 +580,9 @@ internal static class OpenXmlPresentationParser
     // Reads image bytes from the SDK ImagePart, de-duplicating by image-part URI so a single
     // physical image referenced by multiple pictures yields one shared EmbeddedImage.
     private static EmbeddedImage LoadImage(
-        ImagePart imagePart,
+        OpenXmlPart imagePart,
         MediaStore mediaStore,
-        Dictionary<string, EmbeddedImage> imageCache
+        IDictionary<string, EmbeddedImage> imageCache
     )
     {
         var key = imagePart.Uri.ToString();

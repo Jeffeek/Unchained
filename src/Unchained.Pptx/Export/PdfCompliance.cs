@@ -12,9 +12,9 @@ public enum PdfCompliance
     /// <summary>Standard PDF 1.7 (ISO 32000-1). Default.</summary>
     Pdf17,
     /// <summary>PDF/A-1b — long-term archiving; no encryption or transparency.</summary>
-    PdfA1b,
+    PdfA1B,
     /// <summary>PDF/A-2b — extends A-1b with transparency and JPEG 2000 support.</summary>
-    PdfA2b,
+    PdfA2B,
     /// <summary>PDF/A-3b — same as A-2b but permits embedded files of any type.</summary>
-    PdfA3b
+    PdfA3B
 }
