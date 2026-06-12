@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Unchained.Drawing;
 using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
@@ -90,12 +91,12 @@ public sealed class Redactor : IRedactor
         var sb = new StringBuilder();
 
         // Graphics state: CTM stack.
-        var ctm = Identity();
+        var ctm = Matrix2D.Identity();
         var ctmStack = new Stack<double[]>();
 
         // Text state.
-        var tm = Identity();
-        var tlm = Identity();
+        var tm = Matrix2D.Identity();
+        var tlm = Matrix2D.Identity();
         var leading = 0.0;
 
         foreach (var op in ops)
@@ -109,25 +110,25 @@ public sealed class Redactor : IRedactor
                     if (ctmStack.Count > 0) ctm = ctmStack.Pop();
                 break;
                 case "cm" when op.Operands.Count >= 6:
-                    ctm = Mul(ReadMatrix(op), ctm);
+                    ctm = Matrix2D.Multiply(ReadMatrix(op), ctm);
                 break;
                 case "BT":
-                    tm = Identity();
-                    tlm = Identity();
+                    tm = Matrix2D.Identity();
+                    tlm = Matrix2D.Identity();
                 break;
                 case "Tf" when op.Operands.Count >= 2:
-                    Num(op.Operands[1]);
+                    op.Operands[1].ToDouble();
                 break;
                 case "TL" when op.Operands.Count >= 1:
-                    leading = Num(op.Operands[0]);
+                    leading = op.Operands[0].ToDouble();
                 break;
                 case "Td" when op.Operands.Count >= 2:
-                    tlm = Mul(Translate(Num(op.Operands[0]), Num(op.Operands[1])), tlm);
+                    tlm = Matrix2D.Multiply(Matrix2D.Translate(op.Operands[0].ToDouble(), op.Operands[1].ToDouble()), tlm);
                     tm = (double[])tlm.Clone();
                 break;
                 case "TD" when op.Operands.Count >= 2:
-                    leading = -Num(op.Operands[1]);
-                    tlm = Mul(Translate(Num(op.Operands[0]), Num(op.Operands[1])), tlm);
+                    leading = -op.Operands[1].ToDouble();
+                    tlm = Matrix2D.Multiply(Matrix2D.Translate(op.Operands[0].ToDouble(), op.Operands[1].ToDouble()), tlm);
                     tm = (double[])tlm.Clone();
                 break;
                 case "Tm" when op.Operands.Count >= 6:
@@ -135,7 +136,7 @@ public sealed class Redactor : IRedactor
                     tlm = (double[])tm.Clone();
                 break;
                 case "T*":
-                    tlm = Mul(Translate(0, -leading), tlm);
+                    tlm = Matrix2D.Multiply(Matrix2D.Translate(0, -leading), tlm);
                     tm = (double[])tlm.Clone();
                 break;
             }
@@ -147,14 +148,14 @@ public sealed class Redactor : IRedactor
                 case "Tj" or "TJ" or "'" or "\"":
                 {
                     // Text-show origin = textMatrix × CTM applied to (0,0).
-                    var (x, y) = Apply(Mul(tm, ctm), 0, 0);
+                    var (x, y) = Matrix2D.Transform(Matrix2D.Multiply(tm, ctm), 0, 0);
                     if (InAnyRegion(regions, x, y)) drop = true;
                     break;
                 }
                 case "Do":
                 {
                     // Image/form placement origin = CTM applied to the unit square's centre.
-                    var (x, y) = Apply(ctm, 0.5, 0.5);
+                    var (x, y) = Matrix2D.Transform(ctm, 0.5, 0.5);
                     if (InAnyRegion(regions, x, y)) drop = true;
                     break;
                 }
@@ -167,7 +168,7 @@ public sealed class Redactor : IRedactor
             // so subsequent text keeps its position.
             if (op.Name is not ("'" or "\"")) continue;
 
-            tlm = Mul(Translate(0, -leading), tlm);
+            tlm = Matrix2D.Multiply(Matrix2D.Translate(0, -leading), tlm);
             tm = (double[])tlm.Clone();
         }
 
@@ -273,25 +274,9 @@ public sealed class Redactor : IRedactor
 
     // ── Matrix helpers (row-major [a b c d e f]) ──────────────────────────────────
 
-    private static double[] Identity() => [1, 0, 0, 1, 0, 0];
-    private static double[] Translate(double tx, double ty) => [1, 0, 0, 1, tx, ty];
-
     private static double[] ReadMatrix(ContentOperator op) =>
-        [Num(op.Operands[0]), Num(op.Operands[1]), Num(op.Operands[2]), Num(op.Operands[3]), Num(op.Operands[4]), Num(op.Operands[5])];
-
-    // m1 × m2 (apply m1 first, then m2).
-    private static double[] Mul(IReadOnlyList<double> m1, IReadOnlyList<double> m2) =>
     [
-        (m1[0] * m2[0]) + (m1[1] * m2[2]),
-        (m1[0] * m2[1]) + (m1[1] * m2[3]),
-        (m1[2] * m2[0]) + (m1[3] * m2[2]),
-        (m1[2] * m2[1]) + (m1[3] * m2[3]),
-        (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
-        (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
+        op.Operands[0].ToDouble(), op.Operands[1].ToDouble(), op.Operands[2].ToDouble(),
+        op.Operands[3].ToDouble(), op.Operands[4].ToDouble(), op.Operands[5].ToDouble()
     ];
-
-    private static (double X, double Y) Apply(IReadOnlyList<double> m, double x, double y) =>
-        ((m[0] * x) + (m[2] * y) + m[4], (m[1] * x) + (m[3] * y) + m[5]);
-
-    private static double Num(PdfObject o) => o.ToDouble();
 }

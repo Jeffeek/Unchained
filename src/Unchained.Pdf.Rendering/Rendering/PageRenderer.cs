@@ -159,7 +159,7 @@ internal sealed class PageRenderer(
             case "sc" or "SC" when op.Operands.Count >= 1:
             {
                 var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal)
-                    .Select(NumObj).ToArray();
+                    .Select(static o => o.ToDouble()).ToArray();
                 var csName = op.Name == "sc" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
                 var (r2, g2, b2) = ResolveColorComponents(nums, csName);
                 if (op.Name == "sc") SetFillRgb(r2, g2, b2);
@@ -180,7 +180,7 @@ internal sealed class PageRenderer(
                     case > 0 when !isPattern:
                     {
                         var csName = op.Name == "scn" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
-                        var components = nums.Select(NumObj).ToArray();
+                        var components = nums.Select(static o => o.ToDouble()).ToArray();
                         var (r2, g2, b2) = ResolveColorComponents(components, csName);
                         if (op.Name == "scn") SetFillRgb(r2, g2, b2);
                         else SetStrokeRgb(r2, g2, b2);
@@ -192,21 +192,21 @@ internal sealed class PageRenderer(
                         {
                             case 1:
                             {
-                                var v = NumObj(nums[0]);
+                                var v = nums[0].ToDouble();
                                 if (op.Name == "scn") SetFillGray(v);
                                 else SetStrokeGray(v);
                                 break;
                             }
                             case 3:
                             {
-                                var (r2, g2, b2) = (NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]));
+                                var (r2, g2, b2) = (nums[0].ToDouble(), nums[1].ToDouble(), nums[2].ToDouble());
                                 if (op.Name == "scn") SetFillRgb(r2, g2, b2);
                                 else SetStrokeRgb(r2, g2, b2);
                                 break;
                             }
                             case 4:
                             {
-                                var (r2, g2, b2) = CmykToRgb(NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]), NumObj(nums[3]));
+                                var (r2, g2, b2) = CmykToRgb(nums[0].ToDouble(), nums[1].ToDouble(), nums[2].ToDouble(), nums[3].ToDouble());
                                 if (op.Name == "scn") SetFillRgb(r2, g2, b2);
                                 else SetStrokeRgb(r2, g2, b2);
                                 break;
@@ -240,7 +240,7 @@ internal sealed class PageRenderer(
             {
                 // d [dashArray] dashPhase — store the on/off lengths (phase ignored).
                 _gs.DashLengths = op.Operands[0] is PdfArray da
-                    ? da.Elements.Select(NumObj).Where(static v => v >= 0).ToArray()
+                    ? da.Elements.Select(static o => o.ToDouble()).Where(static v => v >= 0).ToArray()
                     : [];
                 break;
             }
@@ -1878,8 +1878,6 @@ internal sealed class PageRenderer(
     }
 
     private static double Num(ContentOperator op, int i) => op.Operands[i].ToDouble();
-
-    private static double NumObj(PdfObject obj) => obj.ToDouble();
 
     // Maps a PDF colour component in [0,1] to an 8-bit channel value. Truncates (matches the
     // historic renderer behaviour) rather than rounding — do not change without re-baselining

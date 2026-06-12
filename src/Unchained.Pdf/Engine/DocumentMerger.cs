@@ -192,7 +192,7 @@ public sealed class DocumentMerger : IDocumentMerger
         obj.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) is "Catalog" or "Pages";
 
     private static bool IsPageLeaf(PdfIndirectObject obj) =>
-        obj.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Page";
+        obj.Value is PdfDictionary d && d.IsPage();
 
     // Returns a new PdfIndirectObject where every PdfStream's Data is an independent
     // byte array, severing the reference to the source document's backing buffer.

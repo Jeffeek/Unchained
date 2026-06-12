@@ -422,7 +422,7 @@ public sealed class PageOrganizer : IPageOrganizer
                 nextInherited[key] = v;
         }
 
-        if (node.GetName(PdfName.Type.Value) == "Page")
+        if (node.IsPage())
         {
             var entries = new Dictionary<string, PdfObject>(node.Entries);
             foreach (var key in InheritableKeys)
@@ -465,7 +465,7 @@ public sealed class PageOrganizer : IPageOrganizer
             return;
         if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node)
             return;
-        if (node.GetName(PdfName.Type.Value) == "Page")
+        if (node.IsPage())
             return;
 
         nodes.Add(nodeRef.ObjectNumber);

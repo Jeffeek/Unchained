@@ -39,7 +39,11 @@ public sealed record MdLoadOptions(
     /// <summary>Default A4 settings.</summary>
     public static readonly MdLoadOptions Default = new();
 
-    // Heading font sizes relative to body font size — h1 largest, h6 = body size.
+    /// <summary>
+    ///     Font size in points for a heading of the given <paramref name="level" /> (1–6),
+    ///     scaled relative to <see cref="BodyFontSize" />: h1 is largest, h5 equals body size,
+    ///     and any level outside 1–5 falls back to 0.9× body size.
+    /// </summary>
     internal float HeadingFontSize(int level) => level switch
     {
         1 => BodyFontSize * 2.0f,

@@ -40,7 +40,7 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
             xmpBytes.ToArray()));
 
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+            o.Value is PdfDictionary d && d.IsCatalog());
         var catEntries = new Dictionary<string, PdfObject>(((PdfDictionary)catalogObj.Value).Entries)
         {
             [PdfName.Metadata.Value] = metaStream.ToReference()
@@ -60,7 +60,7 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
         var adapter = MutationHelper.Cast(nameof(document), document);
         var existing = adapter.Core.CollectObjects();
 
-        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.IsCatalog());
         var catEntries = new Dictionary<string, PdfObject>(((PdfDictionary)catalogObj.Value).Entries);
         catEntries.Remove(PdfName.Metadata.Value);
 

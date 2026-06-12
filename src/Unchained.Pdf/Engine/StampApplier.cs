@@ -56,7 +56,7 @@ public sealed class StampApplier : IStampApplier
             if (obj.Value is not PdfDictionary pd)
                 continue;
 
-            if (pd.GetName(PdfName.Type.Value) != "Page")
+            if (!pd.IsPage())
                 continue;
 
             if (targetPageDict is not null && !ReferenceEquals(pd, targetPageDict))

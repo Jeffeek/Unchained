@@ -40,7 +40,7 @@ public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
         var existing = adapter.Core.CollectObjects();
 
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+            o.Value is PdfDictionary d && d.IsCatalog());
         var catalog = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catalog.Entries);
 

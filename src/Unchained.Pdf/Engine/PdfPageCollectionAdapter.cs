@@ -212,7 +212,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
             // the FontDescriptor of the descendant CIDFont, not the top-level font dict
             // (§9.7.4). Follow /DescendantFonts to reach it.
             var descriptorHolder = fontEntry;
-            if (fontEntry.GetName(PdfName.Subtype.Value) == "Type0")
+            if (fontEntry.IsSubtype("Type0"))
             {
                 var descendants = fontEntry[PdfName.Get("DescendantFonts")];
                 if (descendants is PdfIndirectReference dr)

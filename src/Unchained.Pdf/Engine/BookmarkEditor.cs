@@ -34,7 +34,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
 
         // Build outline tree; get catalog reference.
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+            o.Value is PdfDictionary d && d.IsCatalog());
 
         PdfObject outlinesEntry;
         if (bookmarks.Count == 0)

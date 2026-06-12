@@ -152,7 +152,7 @@ public sealed class FormFiller : IFormFiller
         }
 
         // Remove /AcroForm from catalog.
-        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.IsCatalog());
         var catDict = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catDict.Entries);
         catEntries.Remove(PdfName.AcroForm.Value);
@@ -174,7 +174,7 @@ public sealed class FormFiller : IFormFiller
         PdfDocumentCore core
     )
     {
-        var acroFormObj = existing.FirstOrDefault(static o => o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+        var acroFormObj = existing.FirstOrDefault(static o => o.Value is PdfDictionary d && d.IsCatalog());
         if (acroFormObj is null)
             return new Dictionary<string, PdfIndirectObject>();
 

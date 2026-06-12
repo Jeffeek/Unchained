@@ -105,7 +105,7 @@ internal static class LinearizedWriter
         {
             // Fallback: use the first Page object found.
             firstPageRef = objects
-                .Where(static o => o.Value is PdfDictionary d && d.GetName("Type") == "Page")
+                .Where(static o => o.Value is PdfDictionary d && d.IsPage())
                 .Select(static o => new PdfIndirectReference(o.ObjectNumber, o.Generation))
                 .FirstOrDefault();
         }
@@ -170,7 +170,7 @@ internal static class LinearizedWriter
         {
             if (obj.Value is not PdfDictionary d)
                 continue;
-            if (d.GetName("Type") != "Page")
+            if (!d.IsPage())
                 continue;
 
             return new PdfIndirectReference(obj.ObjectNumber, obj.Generation);
@@ -439,7 +439,7 @@ internal static class LinearizedWriter
             endOfFirstPage,
             firstPageObjects.Count > 0
                 ? 1 + remainingObjects.Count(static o =>
-                    o.Value is PdfDictionary d && d.GetName("Type") == "Page")
+                    o.Value is PdfDictionary d && d.IsPage())
                 : 1,
             mainXrefOffset
         );
