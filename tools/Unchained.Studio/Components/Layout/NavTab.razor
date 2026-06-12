@@ -40,10 +40,11 @@ else
 
     private string CssClass => Active ? "nav-tab nav-tab--active" : "nav-tab";
 
-    private async Task HandleClick()
+    private Task HandleClick()
     {
         if (!Disabled)
-            await OnNavigate.InvokeAsync(Path);
+            return OnNavigate.InvokeAsync(Path);
+        return Task.CompletedTask;
     }
 
 }

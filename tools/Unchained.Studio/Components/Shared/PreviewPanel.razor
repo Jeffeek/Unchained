@@ -282,13 +282,13 @@
         }
     }
 
-    private async Task OnCompareToggled(bool toggled)
+    private Task OnCompareToggled(bool toggled)
     {
         _compareMode = toggled;
         if (_compareMode)
-            await RefreshBlobUrlAsync();
+            return RefreshBlobUrlAsync();
         else
-            await RevokeBlobAsync();
+            return RevokeBlobAsync();
     }
 
     private async Task RefreshBlobUrlAsync()
@@ -342,11 +342,11 @@
         }
     }
 
-    private async Task OnDpiChanged(int dpi)
+    private Task OnDpiChanged(int dpi)
     {
         _dpi = dpi;
         _loading = true;
-        await RenderCurrentPageAsync();
+        return RenderCurrentPageAsync();
     }
 
     private async Task PreviousPage()
@@ -378,10 +378,11 @@
         }
     }
 
-    private async Task OnPageInputKeyDown(KeyboardEventArgs e)
+    private Task OnPageInputKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "ArrowLeft") await PreviousPage();
-        else if (e.Key == "ArrowRight") await NextPage();
+        if (e.Key == "ArrowLeft") return PreviousPage();
+        else if (e.Key == "ArrowRight") return NextPage();
+        return Task.CompletedTask;
     }
 
     private void ZoomIn() => _zoom = Math.Min(200, _zoom + 25);

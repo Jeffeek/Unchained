@@ -250,11 +250,11 @@
         }
     }
 
-    private async Task DownloadDocument()
+    private Task DownloadDocument()
     {
         if (Session.Pdf is null)
-            return;
-        await Exporter.TriggerDownloadAsync(
+            return Task.CompletedTask;
+        return Exporter.TriggerDownloadAsync(
             Session.Pdf.CurrentBytes,
             Session.Pdf.FileName,
             "application/pdf");
@@ -414,13 +414,13 @@
         }
     }
 
-    private async Task RotateCurrentPage()
+    private Task RotateCurrentPage()
     {
         if (Session.Pdf is null)
-            return;
+            return Task.CompletedTask;
         // Rotation is applied via page mutation — stub for now
         ShowInfo("Page rotation coming soon.");
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     private async Task OpenBatchDialog()

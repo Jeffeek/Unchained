@@ -426,7 +426,7 @@
                         pdfiumCts.CancelAfter(PageTimeout);
                         try
                         {
-                            var pdfiumPng = await PdfiumRenderer.RenderPageAsync(entry.Bytes, page, _dpi, pdfiumCts.Token);
+                            var pdfiumPng = await PdfiumReferenceRenderer.RenderPageAsync(entry.Bytes, page, _dpi, pdfiumCts.Token);
                             if (pdfiumPng is not null)
                             {
                                 zipEntries.Add(($"{folderName}/pdfium/page_{page:D3}.png", pdfiumPng));

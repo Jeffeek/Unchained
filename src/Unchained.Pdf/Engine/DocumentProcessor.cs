@@ -1,5 +1,4 @@
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Text.RegularExpressions;
 using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Abstractions;

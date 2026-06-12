@@ -50,7 +50,7 @@ public sealed class OoxmlEngineTests
 
     [Fact]
     public void Open_GarbageBytes_Throws() =>
-        Should.Throw<Exception>(() => OoxmlEngine.Open([1, 2, 3, 4], false));
+        Should.Throw<Exception>(static () => OoxmlEngine.Open([1, 2, 3, 4], false));
 
     [Fact]
     public void Save_LeavesEngineUsable()

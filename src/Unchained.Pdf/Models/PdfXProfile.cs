@@ -12,9 +12,9 @@ public enum PdfXProfile
     /// <summary>PDF/X-1a:2003 (ISO 15930-4).</summary>
     PdfX1A2003,
     /// <summary>PDF/X-3:2002 (ISO 15930-3) — allows colour-managed (ICC) workflows.</summary>
-    PdfX3_2002,
+    PdfX32002,
     /// <summary>PDF/X-3:2003 (ISO 15930-6).</summary>
-    PdfX3_2003,
+    PdfX32003,
     /// <summary>PDF/X-4 (ISO 15930-7) — allows transparency and optional content.</summary>
     PdfX4
 }

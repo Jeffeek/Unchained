@@ -209,11 +209,11 @@
         }
     }
 
-    private async Task DownloadDocument()
+    private Task DownloadDocument()
     {
         if (Session.Pptx is null)
-            return;
-        await Exporter.TriggerDownloadAsync(
+            return Task.CompletedTask;
+        return Exporter.TriggerDownloadAsync(
             Session.Pptx.CurrentBytes,
             Session.Pptx.FileName,
             "application/vnd.openxmlformats-officedocument.presentationml.presentation");

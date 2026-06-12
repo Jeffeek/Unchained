@@ -1,4 +1,3 @@
-using System.Text;
 using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;

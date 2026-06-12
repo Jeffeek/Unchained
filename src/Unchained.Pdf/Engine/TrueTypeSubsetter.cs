@@ -18,6 +18,7 @@ internal static class TrueTypeSubsetter
     {
         if (fontBytes.Length < 12 || usedGlyphIds.Count == 0)
             return fontBytes;
+
         try
         {
             return SubsetCore(fontBytes, usedGlyphIds);
@@ -29,7 +30,7 @@ internal static class TrueTypeSubsetter
         }
     }
 
-    private static byte[] SubsetCore(byte[] b, IReadOnlySet<int> usedGlyphIds)
+    private static byte[] SubsetCore(byte[] b, IEnumerable<int> usedGlyphIds)
     {
         var numTables = ReadU16(b, 4);
 
@@ -38,7 +39,9 @@ internal static class TrueTypeSubsetter
         for (var i = 0; i < numTables; i++)
         {
             var e = 12 + (i * 16);
-            if (e + 16 > b.Length) break;
+            if (e + 16 > b.Length)
+                break;
+
             var tag = ReadTag(b, e);
             var cs = ReadU32(b, e + 4);
             var offset = (int)ReadU32(b, e + 8);
@@ -69,20 +72,25 @@ internal static class TrueTypeSubsetter
         keepGlyphs.UnionWith(usedGlyphIds.Where(static g => g >= 0));
 
         // Resolve composite glyph components (TrueType composites reference other glyphs).
-        var toExpand = new Queue<int>(keepGlyphs.Where(g => g > 0));
+        var toExpand = new Queue<int>(keepGlyphs.Where(static g => g > 0));
         while (toExpand.Count > 0)
         {
             var gid = toExpand.Dequeue();
-            if (gid >= numGlyphs) continue;
+            if (gid >= numGlyphs)
+                continue;
+
             var (gStart, gLen) = GetGlyphRange(b,
                 locaOff,
                 glyfOff,
                 indexToLocFormat,
-                gid,
-                numGlyphs);
-            if (gLen < 2) continue;
+                gid);
+
+            if (gLen < 2)
+                continue;
+
             var contourCount = ReadS16(b, gStart);
-            if (contourCount >= 0) continue; // simple glyph — no components
+            if (contourCount >= 0)
+                continue; // simple glyph — no components
 
             // Composite glyph: parse component records.
             var pos = gStart + 10; // skip header
@@ -93,9 +101,8 @@ internal static class TrueTypeSubsetter
                 if (keepGlyphs.Add(compGlyph))
                     toExpand.Enqueue(compGlyph);
                 // Advance past this component record.
-                pos += 4; // flags + glyphIndex
-                if ((flags & 1) != 0) pos += 4;
-                else pos += 2;                         // ARG_1_AND_2_ARE_WORDS
+                pos += 4;                              // flags + glyphIndex
+                pos += (flags & 1) != 0 ? 4 : 2;       // ARG_1_AND_2_ARE_WORDS
                 if ((flags & 8) != 0) pos += 2;        // WE_HAVE_A_SCALE
                 else if ((flags & 64) != 0) pos += 4;  // WE_HAVE_AN_X_AND_Y_SCALE
                 else if ((flags & 128) != 0) pos += 8; // WE_HAVE_A_TWO_BY_TWO
@@ -113,21 +120,21 @@ internal static class TrueTypeSubsetter
         for (var gid = 0; gid < numGlyphs; gid++)
         {
             newLocaOffsets[gid] = newGlyfBytes.Count;
-            if (keepGlyphs.Contains(gid))
-            {
-                var (gStart, gLen) = GetGlyphRange(b,
-                    locaOff,
-                    glyfOff,
-                    indexToLocFormat,
-                    gid,
-                    numGlyphs);
-                if (gLen > 0)
-                {
-                    newGlyfBytes.AddRange(b.AsSpan(gStart, gLen).ToArray());
-                    // Pad to 4-byte boundary (TrueType requires 4-byte glyph alignment).
-                    while (newGlyfBytes.Count % 4 != 0) newGlyfBytes.Add(0);
-                }
-            }
+            if (!keepGlyphs.Contains(gid))
+                continue;
+
+            var (gStart, gLen) = GetGlyphRange(b,
+                locaOff,
+                glyfOff,
+                indexToLocFormat,
+                gid);
+
+            if (gLen <= 0)
+                continue;
+
+            newGlyfBytes.AddRange(b.AsSpan(gStart, gLen).ToArray());
+            // Pad to 4-byte boundary (TrueType requires 4-byte glyph alignment).
+            while (newGlyfBytes.Count % 4 != 0) newGlyfBytes.Add(0);
             // Unused glyphs: loca[gid] == loca[gid+1] (zero-length entry)
         }
 
@@ -162,8 +169,6 @@ internal static class TrueTypeSubsetter
         // Also update head.indexToLocFormat if we switched from short to long.
         return RebuildFont(b,
             tables,
-            numTables,
-            headOff,
             indexToLocFormat,
             newGlyf,
             newLoca);
@@ -173,8 +178,6 @@ internal static class TrueTypeSubsetter
     private static byte[] RebuildFont(
         byte[] orig,
         Dictionary<string, (uint CheckSum, int Offset, int Length)> tables,
-        int numTables,
-        int headOff,
         short indexToLocFormat,
         byte[] newGlyf,
         byte[] newLoca
@@ -193,9 +196,12 @@ internal static class TrueTypeSubsetter
         foreach (var tag in tableOrder)
         {
             newOffsets[tag] = currentOffset;
-            var len = tag == "glyf" ? newGlyf.Length
-                : tag == "loca" ? newLoca.Length
-                : tables[tag].Length;
+            var len = tag switch
+            {
+                "glyf" => newGlyf.Length,
+                "loca" => newLoca.Length,
+                _ => tables[tag].Length
+            };
             newLengths[tag] = len;
             currentOffset += len;
             // Pad to 4-byte boundary.
@@ -222,16 +228,7 @@ internal static class TrueTypeSubsetter
             var tag = tableOrder[i];
             var entry = 12 + (i * 16);
             WriteTag(result, entry, tag);
-            WriteU32(result,
-                entry + 4,
-                ComputeCheckSum(result,
-                    tag,
-                    orig,
-                    tables,
-                    newOffsets,
-                    newLengths,
-                    newGlyf,
-                    newLoca));
+            WriteU32(result, entry + 4, ComputeCheckSum(tag, tables, newGlyf, newLoca));
             WriteU32(result, entry + 8, (uint)newOffsets[tag]);
             WriteU32(result, entry + 12, (uint)newLengths[tag]);
         }
@@ -240,15 +237,21 @@ internal static class TrueTypeSubsetter
         foreach (var tag in tableOrder)
         {
             var off = newOffsets[tag];
-            if (tag == "glyf")
-                Array.Copy(newGlyf, 0, result, off, newGlyf.Length);
-            else if (tag == "loca")
-                Array.Copy(newLoca, 0, result, off, newLoca.Length);
-            else
+            switch (tag)
             {
-                var src = tables[tag];
-                var len = Math.Min(src.Length, orig.Length - src.Offset);
-                Array.Copy(orig, src.Offset, result, off, len);
+                case "glyf":
+                    Array.Copy(newGlyf, 0, result, off, newGlyf.Length);
+                break;
+                case "loca":
+                    Array.Copy(newLoca, 0, result, off, newLoca.Length);
+                break;
+                default:
+                {
+                    var src = tables[tag];
+                    var len = Math.Min(src.Length, orig.Length - src.Offset);
+                    Array.Copy(orig, src.Offset, result, off, len);
+                    break;
+                }
             }
         }
 
@@ -263,27 +266,24 @@ internal static class TrueTypeSubsetter
     }
 
     private static uint ComputeCheckSum(
-        byte[] result,
         string tag,
-        byte[] orig,
-        Dictionary<string, (uint CheckSum, int Offset, int Length)> tables,
-        Dictionary<string, int> newOffsets,
-        Dictionary<string, int> newLengths,
-        byte[] newGlyf,
-        byte[] newLoca
-    )
-    {
-        // For glyf and loca use the new data; for others reuse the original checksum.
-        if (tag == "glyf") return TableCheckSum(newGlyf);
-        if (tag == "loca") return TableCheckSum(newLoca);
-        return tables[tag].CheckSum;
-    }
+        IReadOnlyDictionary<string, (uint CheckSum, int Offset, int Length)> tables,
+        IReadOnlyList<byte> newGlyf,
+        IReadOnlyList<byte> newLoca
+    ) =>
+        tag switch
+        {
+            // For glyf and loca use the new data; for others reuse the original checksum.
+            "glyf" => TableCheckSum(newGlyf),
+            "loca" => TableCheckSum(newLoca),
+            _ => tables[tag].CheckSum
+        };
 
-    private static uint TableCheckSum(byte[] data)
+    private static uint TableCheckSum(IReadOnlyList<byte> data)
     {
         uint sum = 0;
         var i = 0;
-        while (i + 3 < data.Length)
+        while (i + 3 < data.Count)
         {
             sum += ((uint)data[i] << 24) | ((uint)data[i + 1] << 16) |
                    ((uint)data[i + 2] << 8) | data[i + 3];
@@ -291,24 +291,23 @@ internal static class TrueTypeSubsetter
         }
 
         // Handle trailing bytes.
-        if (i < data.Length)
-        {
-            uint last = 0;
-            for (var j = 0; j < data.Length - i; j++)
-                last |= (uint)data[i + j] << (24 - (j * 8));
-            sum += last;
-        }
+        if (i >= data.Count)
+            return sum;
+
+        uint last = 0;
+        for (var j = 0; j < data.Count - i; j++)
+            last |= (uint)data[i + j] << (24 - (j * 8));
+        sum += last;
 
         return sum;
     }
 
     private static (int Start, int Length) GetGlyphRange(
-        byte[] b,
+        IReadOnlyList<byte> b,
         int locaOff,
         int glyfOff,
         short indexToLocFormat,
-        int gid,
-        int numGlyphs
+        int gid
     )
     {
         int start, end;
@@ -325,43 +324,45 @@ internal static class TrueTypeSubsetter
 
         var len = Math.Max(0, end - start);
         // Sanity check against buffer bounds.
-        if (start < 0 || start + len > b.Length) return (glyfOff, 0);
+        if (start < 0 || start + len > b.Count)
+            return (glyfOff, 0);
+
         return (start, len);
     }
 
     // ── Primitive read/write helpers ────────────────────────────────────────────
 
-    private static string ReadTag(byte[] b, int o) =>
+    private static string ReadTag(IReadOnlyList<byte> b, int o) =>
         new([.. new[] { b[o], b[o + 1], b[o + 2], b[o + 3] }.Select(static c => (char)c)]);
 
-    private static void WriteTag(byte[] b, int o, string tag)
+    private static void WriteTag(IList<byte> b, int o, string tag)
     {
         for (var i = 0; i < 4 && i < tag.Length; i++)
             b[o + i] = (byte)tag[i];
     }
 
-    private static ushort ReadU16(byte[] b, int o) =>
+    private static ushort ReadU16(IReadOnlyList<byte> b, int o) =>
         (ushort)((b[o] << 8) | b[o + 1]);
 
-    private static short ReadS16(byte[] b, int o) =>
+    private static short ReadS16(IReadOnlyList<byte> b, int o) =>
         (short)((b[o] << 8) | b[o + 1]);
 
-    private static uint ReadU32(byte[] b, int o) =>
+    private static uint ReadU32(IReadOnlyList<byte> b, int o) =>
         ((uint)b[o] << 24) | ((uint)b[o + 1] << 16) | ((uint)b[o + 2] << 8) | b[o + 3];
 
-    private static void WriteU16(byte[] b, int o, ushort v)
+    private static void WriteU16(IList<byte> b, int o, ushort v)
     {
         b[o] = (byte)(v >> 8);
         b[o + 1] = (byte)v;
     }
 
-    private static void WriteS16(byte[] b, int o, short v)
+    private static void WriteS16(IList<byte> b, int o, short v)
     {
         b[o] = (byte)(v >> 8);
         b[o + 1] = (byte)v;
     }
 
-    private static void WriteU32(byte[] b, int o, uint v)
+    private static void WriteU32(IList<byte> b, int o, uint v)
     {
         b[o] = (byte)(v >> 24);
         b[o + 1] = (byte)(v >> 16);

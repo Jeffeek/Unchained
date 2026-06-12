@@ -98,7 +98,7 @@ public static class PdfTreeBuilder
                 NodeType = TreeNodeType.Page,
                 Payload = page,
                 HasLazyChildren = true,
-                LoadChildrenAsync = async () => await BuildPageChildrenAsync(page).ConfigureAwait(false)
+                LoadChildrenAsync = () => BuildPageChildrenAsync(page)
             };
             pagesNode.Children.Add(pageNode);
         }
@@ -180,7 +180,7 @@ public static class PdfTreeBuilder
             NodeType = TreeNodeType.ContentStream,
             Payload = page,
             HasLazyChildren = true,
-            LoadChildrenAsync = async () => await BuildOperatorsAsync(page).ConfigureAwait(false)
+            LoadChildrenAsync = () => BuildOperatorsAsync(page)
         });
 
         return Task.FromResult(children);

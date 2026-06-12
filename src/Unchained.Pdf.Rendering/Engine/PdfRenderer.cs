@@ -118,11 +118,10 @@ public sealed class PdfRenderer : IRenderer
     /// <inheritdoc />
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0)
-        {
-            FontsForDiagnostics.Dispose();
-            _lock.Dispose();
-        }
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        FontsForDiagnostics.Dispose();
+        _lock.Dispose();
     }
 
     private byte[] RenderPage(IPdfPage page, RenderOptions options)

@@ -48,7 +48,7 @@
                          Text="@node.Label"
                          CanExpand="@node.HasChildren"
                          Expanded="@node.IsExpanded"
-                         ExpandedChanged="@(async val => await OnExpandedChanged(node, val))"
+                         ExpandedChanged="@(val => OnExpandedChanged(node, val))"
                          OnClick="@(() => SelectNode(node))"
                          Selected="@(node == _selectedNode)"
                          Style="@(node == _selectedNode ? "background:rgba(92,107,192,0.08);" : string.Empty)">
@@ -102,11 +102,11 @@
         }
     }
 
-    private async Task SelectNode(TreeNode node)
-    {
-        _selectedNode = node;
-        await SelectedNodeChanged.InvokeAsync(node);
-    }
+    private Task SelectNode(TreeNode node)
+        {
+            _selectedNode = node;
+            return SelectedNodeChanged.InvokeAsync(node);
+        }
 
-    private async Task OnRefresh() => await OnRefreshRequested.InvokeAsync();
+    private Task OnRefresh() => OnRefreshRequested.InvokeAsync();
 }

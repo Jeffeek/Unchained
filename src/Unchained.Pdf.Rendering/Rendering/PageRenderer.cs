@@ -35,7 +35,7 @@ internal sealed class PageRenderer(
     IReadOnlyDictionary<string, Type3FontInfo>? type3Fonts = null
 )
 {
-    private static readonly Dictionary<string, string> EmptyFontMap = new();
+    private static readonly IReadOnlyDictionary<string, string> EmptyFontMap = new Dictionary<string, string>();
 
     private readonly Stack<GraphicsState> _gsStack = new();
     // Current path as a list of subpaths, each a polyline of user-space points. A new `m`
@@ -57,7 +57,7 @@ internal sealed class PageRenderer(
     private bool _pendingClip;
     private bool _pendingClipEvenOdd;
     // Nesting depth for tiling-pattern cell rendering; bounds pattern-in-pattern recursion.
-    internal int _tilingDepth;
+    private int _tilingDepth;
 
     // Count of text operators that produced no glyphs due to font-loading errors.
     internal int TextErrorCount { get; private set; }
@@ -178,41 +178,45 @@ internal sealed class PageRenderer(
                 var isPattern = op.Operands.Any(static o => o is PdfName);
 
                 var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal).ToList();
-                if (nums.Count > 0 && !isPattern)
+                switch (nums.Count)
                 {
-                    var csName = op.Name == "scn" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
-                    var components = nums.Select(NumObj).ToArray();
-                    var (r2, g2, b2) = ResolveColorComponents(components, csName);
-                    if (op.Name == "scn") SetFillRgb(r2, g2, b2);
-                    else SetStrokeRgb(r2, g2, b2);
-                }
-                else if (nums.Count > 0)
-                {
-                    // Pattern with color components — fall back to heuristic.
-                    switch (nums.Count)
+                    case > 0 when !isPattern:
                     {
-                        case 1:
-                        {
-                            var v = NumObj(nums[0]);
-                            if (op.Name == "scn") SetFillGray(v);
-                            else SetStrokeGray(v);
-                            break;
-                        }
-                        case 3:
-                        {
-                            var (r2, g2, b2) = (NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]));
-                            if (op.Name == "scn") SetFillRgb(r2, g2, b2);
-                            else SetStrokeRgb(r2, g2, b2);
-                            break;
-                        }
-                        case 4:
-                        {
-                            var (r2, g2, b2) = CmykToRgb(NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]), NumObj(nums[3]));
-                            if (op.Name == "scn") SetFillRgb(r2, g2, b2);
-                            else SetStrokeRgb(r2, g2, b2);
-                            break;
-                        }
+                        var csName = op.Name == "scn" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
+                        var components = nums.Select(NumObj).ToArray();
+                        var (r2, g2, b2) = ResolveColorComponents(components, csName);
+                        if (op.Name == "scn") SetFillRgb(r2, g2, b2);
+                        else SetStrokeRgb(r2, g2, b2);
+                        break;
                     }
+                    case > 0:
+                        // Pattern with color components — fall back to heuristic.
+                        switch (nums.Count)
+                        {
+                            case 1:
+                            {
+                                var v = NumObj(nums[0]);
+                                if (op.Name == "scn") SetFillGray(v);
+                                else SetStrokeGray(v);
+                                break;
+                            }
+                            case 3:
+                            {
+                                var (r2, g2, b2) = (NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]));
+                                if (op.Name == "scn") SetFillRgb(r2, g2, b2);
+                                else SetStrokeRgb(r2, g2, b2);
+                                break;
+                            }
+                            case 4:
+                            {
+                                var (r2, g2, b2) = CmykToRgb(NumObj(nums[0]), NumObj(nums[1]), NumObj(nums[2]), NumObj(nums[3]));
+                                if (op.Name == "scn") SetFillRgb(r2, g2, b2);
+                                else SetStrokeRgb(r2, g2, b2);
+                                break;
+                            }
+                        }
+
+                    break;
                 }
 
                 // Set after the numeric setters above (which clear the flag).
@@ -485,9 +489,7 @@ internal sealed class PageRenderer(
         var ta = _gs.TextMatrix[0];
         var tc = _gs.TextMatrix[2];
         // Horizontal text-space basis (1,0) through the text matrix linear part.
-        var hx = ta;
-        var hy = tc;
-        var mag = Math.Sqrt((hx * hx) + (hy * hy));
+        var mag = Math.Sqrt((ta * ta) + (tc * tc));
         return mag > 1e-6 ? mag : 1.0;
     }
 
@@ -598,17 +600,11 @@ internal sealed class PageRenderer(
         // char code directly through FreeType's own charmap (FT_Get_Char_Index), which
         // honours the font's builtin encoding. Composite (Type0/CID) fonts and fonts
         // with a real Unicode cmap produce non-zero glyphs and keep the HarfBuzz path.
-        var allNotdef = glyphInfos.Length > 0;
-        for (var i = 0; i < glyphInfos.Length; i++)
-        {
-            if (glyphInfos[i].Codepoint != 0)
-            {
-                allNotdef = false;
-                break;
-            }
-        }
+        var allNotDef = glyphInfos.Length > 0;
+        if (glyphInfos.Any(static t => t.Codepoint != 0))
+            allNotDef = false;
 
-        if (allNotdef)
+        if (allNotDef)
         {
             ShowStringDirect(bytes, ftFace, pixelSize);
             return;
@@ -646,7 +642,7 @@ internal sealed class PageRenderer(
 
             // Mode 1/2/5/6 (stroke variants): stroke the glyph outline.
             if (_gs.TextRenderMode is 1 or 2 or 5 or 6)
-                StrokeGlyphOutline(ftFace, (int)px, (int)py, pixelSize);
+                StrokeGlyphOutline(ftFace, (int)px, (int)py);
 
             // Mode 4/5/6/7 (clip variants): add glyph outline to clip mask.
             if (_gs.TextRenderMode is 4 or 5 or 6 or 7)
@@ -708,7 +704,7 @@ internal sealed class PageRenderer(
                 }
 
                 if (_gs.TextRenderMode is 1 or 2)
-                    StrokeGlyphOutline(ftFace, (int)px, (int)py, pixelSize);
+                    StrokeGlyphOutline(ftFace, (int)px, (int)py);
             }
 
             // Glyph advance (16.16 fixed-point pixels when scaled) → user-space points.
@@ -734,7 +730,7 @@ internal sealed class PageRenderer(
             var cid = (bytes[i] << 8) | bytes[i + 1];
 
             var gid = (uint)cid;
-            if (!info.IdentityCidToGid && info.CidToGid is not null)
+            if (info is { IdentityCidToGid: false, CidToGid: not null })
                 gid = info.CidToGid.TryGetValue(cid, out var mapped) ? (uint)mapped : 0;
 
             if (gid != 0)
@@ -763,10 +759,7 @@ internal sealed class PageRenderer(
                 }
 
                 if (_gs.TextRenderMode is 1 or 2 or 5 or 6)
-                {
-                    var ps = (uint)Math.Max(1, Math.Round(_gs.FontSize * TextMatrixVerticalScale() * scale));
-                    StrokeGlyphOutline(ftFace, (int)px, (int)py, ps);
-                }
+                    StrokeGlyphOutline(ftFace, (int)px, (int)py);
 
                 if (_gs.TextRenderMode is 4 or 5 or 6 or 7)
                     ClipGlyphOutline(ftFace, (int)px, (int)py);
@@ -866,11 +859,10 @@ internal sealed class PageRenderer(
 
     private void PathClose()
     {
-        if (_inPath && _curSub is { Count: > 0 })
-        {
-            _curSub.Add(_pathStart);
-            _currentPoint = _pathStart;
-        }
+        if (!_inPath || _curSub is not { Count: > 0 }) return;
+
+        _curSub.Add(_pathStart);
+        _currentPoint = _pathStart;
     }
 
     // Fills the current path. evenOdd selects the even-odd rule (f*/B*/b*) vs the default
@@ -946,6 +938,7 @@ internal sealed class PageRenderer(
     {
         var (minX, minY, maxX, maxY) = PathDeviceBounds();
         if (maxX < minX) return;
+
         PaintShadingRect(sh, (int)Math.Floor(minX), (int)Math.Floor(minY), (int)Math.Ceiling(maxX), (int)Math.Ceiling(maxY));
     }
 
@@ -975,6 +968,7 @@ internal sealed class PageRenderer(
     private void PaintTilingInPathBounds(TilingPatternInfo tp)
     {
         if (_tilingDepth >= 2) return; // guard against pattern-in-pattern recursion
+
         var (minX, minY, maxX, maxY) = PathDeviceBounds();
         if (maxX < minX) return;
 
@@ -1046,6 +1040,7 @@ internal sealed class PageRenderer(
             var g = tileData[o + 1];
             var b = tileData[o + 2];
             if (r >= 250 && g >= 250 && b >= 250) continue; // skip the cell's white background
+
             buffer.BlitImagePixel(px, py, r, g, b);
         }
     }
@@ -1101,6 +1096,7 @@ internal sealed class PageRenderer(
         {
             var (ux, uy) = ApplyInv(inv, px + 0.5, py + 0.5);
             if (!ShadingT(sh, ux, uy, out var t)) continue;
+
             var (r, g, b) = sh.ColorAt(t);
             if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
             else
@@ -1123,6 +1119,7 @@ internal sealed class PageRenderer(
     private void PaintMesh(ShadingInfo sh)
     {
         if (sh.Triangles is null) return;
+
         foreach (var t in sh.Triangles)
         {
             var (ax, ay) = UToPixel(t.X0, t.Y0);
@@ -1223,14 +1220,17 @@ internal sealed class PageRenderer(
         if (t < 0)
         {
             if (!sh.ExtendStart) return false;
+
             t = 0;
         }
 
-        if (t > 1)
-        {
-            if (!sh.ExtendEnd) return false;
-            t = 1;
-        }
+        if (!(t > 1))
+            return true;
+
+        if (!sh.ExtendEnd)
+            return false;
+
+        t = 1;
 
         return true;
     }
@@ -1264,7 +1264,7 @@ internal sealed class PageRenderer(
         return true;
     }
 
-    private static (double X, double Y) ApplyInv(double[] m, double px, double py) =>
+    private static (double X, double Y) ApplyInv(IReadOnlyList<double> m, double px, double py) =>
         ((m[0] * px) + (m[2] * py) + m[4], (m[1] * px) + (m[3] * py) + m[5]);
 
     // Scan-converts all current subpaths to device pixels and fills using the given winding
@@ -1283,6 +1283,7 @@ internal sealed class PageRenderer(
         foreach (var sub in _subpaths)
         {
             if (sub.Count < 2) continue;
+
             var pts = new (double X, double Y)[sub.Count];
             for (var i = 0; i < sub.Count; i++)
             {
@@ -1313,19 +1314,19 @@ internal sealed class PageRenderer(
                 for (var i = 0; i < n; i++)
                 {
                     var (ax, ay) = pts[i];
-                    var (bx, by) = pts[(i + 1) % n]; // implicit close
-                    if (ay == by) continue;          // horizontal edge contributes no crossing
+                    var (bx, by) = pts[(i + 1) % n];             // implicit close
+                    if (Math.Abs(ay - by) < 0.05) continue; // horizontal edge contributes no crossing
                     // Half-open [min,max) so shared vertices aren't double-counted.
-                    if (sy >= Math.Min(ay, by) && sy < Math.Max(ay, by))
-                    {
-                        var t = (sy - ay) / (by - ay);
-                        var cx = ax + (t * (bx - ax));
-                        xs.Add((cx, by > ay ? 1 : -1));
-                    }
+                    if (!(sy >= Math.Min(ay, by)) || !(sy < Math.Max(ay, by))) continue;
+
+                    var t = (sy - ay) / (by - ay);
+                    var cx = ax + (t * (bx - ax));
+                    xs.Add((cx, by > ay ? 1 : -1));
                 }
             }
 
             if (xs.Count < 2) continue;
+
             xs.Sort(static (p, q) => p.X.CompareTo(q.X));
 
             var wind = 0;
@@ -1334,32 +1335,32 @@ internal sealed class PageRenderer(
                 wind += xs[i].Dir;
                 var inside = evenOdd ? ((i + 1) & 1) == 1 : wind != 0;
                 if (!inside) continue;
+
                 var xStart = (int)Math.Round(xs[i].X);
                 var xEnd = (int)Math.Round(xs[i + 1].X);
-                if (xEnd > xStart)
+                if (xEnd <= xStart) continue;
+
+                if (HasSoftMask)
                 {
-                    if (HasSoftMask)
-                    {
-                        FillSpanSoftMasked(y,
-                            xStart,
-                            xEnd - 1,
-                            fr,
-                            fg,
-                            fb,
-                            _gs.FillA,
-                            _gs.BlendMode);
-                    }
-                    else
-                    {
-                        buffer.FillSpan(y,
-                            xStart,
-                            xEnd - 1,
-                            fr,
-                            fg,
-                            fb,
-                            _gs.FillA,
-                            _gs.BlendMode);
-                    }
+                    FillSpanSoftMasked(y,
+                        xStart,
+                        xEnd - 1,
+                        fr,
+                        fg,
+                        fb,
+                        _gs.FillA,
+                        _gs.BlendMode);
+                }
+                else
+                {
+                    buffer.FillSpan(y,
+                        xStart,
+                        xEnd - 1,
+                        fr,
+                        fg,
+                        fb,
+                        _gs.FillA,
+                        _gs.BlendMode);
                 }
             }
         }
@@ -1424,57 +1425,55 @@ internal sealed class PageRenderer(
                         UToPixel(sub[i - 1].X, sub[i - 1].Y),
                         (px, py),
                         UToPixel(sub[i + 1].X, sub[i + 1].Y),
-                        thickPx,
                         half);
                 }
             }
 
             // Line caps on open subpaths (cap = 1 round, 2 projecting square).
-            if (_gs.LineCap != 0 && sub.Count >= 2)
+            if (_gs.LineCap == 0 || sub.Count < 2) continue;
+
+            var capR = Math.Max(1, thickPx / 2);
+            var (ax, ay) = UToPixel(sub[0].X, sub[0].Y);
+            var (bx, by) = UToPixel(sub[^1].X, sub[^1].Y);
+            if (_gs.LineCap == 1)
             {
-                var capR = Math.Max(1, thickPx / 2);
-                var (ax, ay) = UToPixel(sub[0].X, sub[0].Y);
-                var (bx, by) = UToPixel(sub[^1].X, sub[^1].Y);
-                if (_gs.LineCap == 1)
-                {
-                    buffer.FillCircle((int)ax,
-                        (int)ay,
-                        capR,
-                        _gs.StrokeR,
-                        _gs.StrokeG,
-                        _gs.StrokeB,
-                        _gs.StrokeA,
-                        _gs.BlendMode);
-                    buffer.FillCircle((int)bx,
-                        (int)by,
-                        capR,
-                        _gs.StrokeR,
-                        _gs.StrokeG,
-                        _gs.StrokeB,
-                        _gs.StrokeA,
-                        _gs.BlendMode);
-                }
-                else
-                {
-                    buffer.FillRect((int)ax - capR,
-                        (int)ay - capR,
-                        thickPx,
-                        thickPx,
-                        _gs.StrokeR,
-                        _gs.StrokeG,
-                        _gs.StrokeB,
-                        _gs.StrokeA,
-                        _gs.BlendMode);
-                    buffer.FillRect((int)bx - capR,
-                        (int)by - capR,
-                        thickPx,
-                        thickPx,
-                        _gs.StrokeR,
-                        _gs.StrokeG,
-                        _gs.StrokeB,
-                        _gs.StrokeA,
-                        _gs.BlendMode);
-                }
+                buffer.FillCircle((int)ax,
+                    (int)ay,
+                    capR,
+                    _gs.StrokeR,
+                    _gs.StrokeG,
+                    _gs.StrokeB,
+                    _gs.StrokeA,
+                    _gs.BlendMode);
+                buffer.FillCircle((int)bx,
+                    (int)by,
+                    capR,
+                    _gs.StrokeR,
+                    _gs.StrokeG,
+                    _gs.StrokeB,
+                    _gs.StrokeA,
+                    _gs.BlendMode);
+            }
+            else
+            {
+                buffer.FillRect((int)ax - capR,
+                    (int)ay - capR,
+                    thickPx,
+                    thickPx,
+                    _gs.StrokeR,
+                    _gs.StrokeG,
+                    _gs.StrokeB,
+                    _gs.StrokeA,
+                    _gs.BlendMode);
+                buffer.FillRect((int)bx - capR,
+                    (int)by - capR,
+                    thickPx,
+                    thickPx,
+                    _gs.StrokeR,
+                    _gs.StrokeG,
+                    _gs.StrokeB,
+                    _gs.StrokeA,
+                    _gs.BlendMode);
             }
         }
     }
@@ -1485,7 +1484,6 @@ internal sealed class PageRenderer(
         (double X, double Y) a,
         (double X, double Y) b,
         (double X, double Y) c,
-        int thickPx,
         int half
     )
     {
@@ -1618,13 +1616,14 @@ internal sealed class PageRenderer(
         double x1,
         double y1,
         int thickPx,
-        double[] dashPx
+        IReadOnlyList<double> dashPx
     )
     {
         var dx = x1 - x0;
         var dy = y1 - y0;
         var len = Math.Sqrt((dx * dx) + (dy * dy));
         if (len < 1e-6) return;
+
         var ux = dx / len;
         var uy = dy / len;
 
@@ -1633,7 +1632,7 @@ internal sealed class PageRenderer(
         var on = true;
         while (pos < len)
         {
-            var seg = dashPx[idx % dashPx.Length];
+            var seg = dashPx[idx % dashPx.Count];
             if (seg <= 0)
             {
                 idx++;
@@ -1703,7 +1702,9 @@ internal sealed class PageRenderer(
         var polys = new List<(double X, double Y)[]>(_subpaths.Count);
         foreach (var sub in _subpaths)
         {
-            if (sub.Count < 2) continue;
+            if (sub.Count < 2)
+                continue;
+
             var pts = new (double X, double Y)[sub.Count];
             for (var i = 0; i < sub.Count; i++)
                 pts[i] = UToPixel(sub[i].X, sub[i].Y);
@@ -1730,16 +1731,20 @@ internal sealed class PageRenderer(
     {
         minX = minY = maxX = maxY = 0;
         if (_subpaths.Count != 1) return false;
+
         var sub = _subpaths[0];
         // 4 or 5 points (5th = explicit close back to start).
         if (sub.Count is < 4 or > 5) return false;
+
         var distinctX = sub.Select(static p => p.X).Distinct().Count();
         var distinctY = sub.Select(static p => p.Y).Distinct().Count();
         if (distinctX != 2 || distinctY != 2) return false;
+
         minX = sub.Min(static p => p.X);
         maxX = sub.Max(static p => p.X);
         minY = sub.Min(static p => p.Y);
         maxY = sub.Max(static p => p.Y);
+
         return true;
     }
 
@@ -1806,7 +1811,7 @@ internal sealed class PageRenderer(
     // When upscaling, falls back to nearest-neighbour sampling. When an alpha channel is
     // supplied (from an /SMask), pixels are composited over the background using it.
     private void BlitScaledImage(
-        byte[] rgb,
+        IReadOnlyList<byte> rgb,
         int srcW,
         int srcH,
         int dstX,
@@ -1817,6 +1822,7 @@ internal sealed class PageRenderer(
     )
     {
         if (srcW <= 0 || srcH <= 0) return;
+
         var downscale = srcW > dstW || srcH > dstH;
 
         for (var py = 0; py < dstH; py++)
@@ -1846,6 +1852,7 @@ internal sealed class PageRenderer(
                 }
 
                 if (n == 0) continue;
+
                 r = (byte)(sr / n);
                 g = (byte)(sg / n);
                 b = (byte)(sb / n);
@@ -1863,18 +1870,22 @@ internal sealed class PageRenderer(
                 a = alpha is not null ? alpha[idx] : 255;
             }
 
-            if (a <= 0) continue;
-            if (a >= 255)
-                buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
-            else
+            switch (a)
             {
-                buffer.BlendPixel(dstX + px,
-                    dstY + py,
-                    r,
-                    g,
-                    b,
-                    (byte)a,
-                    _gs.BlendMode);
+                case <= 0:
+                    continue;
+                case >= 255:
+                    buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
+                break;
+                default:
+                    buffer.BlendPixel(dstX + px,
+                        dstY + py,
+                        r,
+                        g,
+                        b,
+                        (byte)a,
+                        _gs.BlendMode);
+                break;
             }
         }
     }
@@ -1978,6 +1989,7 @@ internal sealed class PageRenderer(
     {
         if (_gs.SoftMask is not { } mask) return a;
         if ((uint)x >= (uint)_gs.SoftMaskWidth || (uint)y >= (uint)_gs.SoftMaskHeight) return 0;
+
         var maskA = mask[(y * _gs.SoftMaskWidth) + x];
         return (byte)(a * maskA / 255);
     }
@@ -2041,8 +2053,7 @@ internal sealed class PageRenderer(
     private void StrokeGlyphOutline(
         Face ftFace,
         int penX,
-        int penY,
-        uint pixelSize
+        int penY
     )
     {
         // ReSharper disable once EmptyGeneralCatchClause
@@ -2052,7 +2063,6 @@ internal sealed class PageRenderer(
             if (outline.Points == null || outline.Points.Length == 0) return;
 
             var pts = outline.Points;
-            var tags = outline.Tags;
             var contours = outline.Contours;
             if (contours == null || contours.Length == 0) return;
 
@@ -2140,26 +2150,28 @@ internal sealed class PageRenderer(
             case "DeviceCMYK":
             {
                 if (components.Length < 4) return (0, 0, 0);
+
                 var (r, g, b) = CmykToRgb(components[0], components[1], components[2], components[3]);
                 return (r, g, b);
             }
         }
 
         // Named color space from /Resources /ColorSpace.
-        if (colorSpaces is not null && colorSpaces.TryGetValue(csName, out var info))
+        if (colorSpaces is null || !colorSpaces.TryGetValue(csName, out var info))
         {
-            var (r2, g2, b2) = info.ToRgb(components);
-            return (r2 / 255.0, g2 / 255.0, b2 / 255.0);
+            return components.Length switch
+            {
+                1 => (components[0], components[0], components[0]),
+                >= 4 => CmykToRgb(components[0], components[1], components[2], components[3]),
+                >= 3 => (components[0], components[1], components[2]),
+                _ => (0, 0, 0)
+            };
         }
 
+        var (r2, g2, b2) = info.ToRgb(components);
+        return (r2 / 255.0, g2 / 255.0, b2 / 255.0);
+
         // Unknown space — fall back to component-count heuristic.
-        return components.Length switch
-        {
-            1 => (components[0], components[0], components[0]),
-            >= 4 => CmykToRgb(components[0], components[1], components[2], components[3]),
-            >= 3 => (components[0], components[1], components[2]),
-            _ => (0, 0, 0)
-        };
     }
 
     // Renders a string set in a Type3 font. Each glyph is a mini content stream
@@ -2277,7 +2289,7 @@ internal sealed class PageRenderer(
     // device dimensions as the main page buffer. For /Alpha masks the rendered brightness
     // is taken as opacity (black=transparent, white=opaque). For /Luminosity masks the
     // standard luminance coefficients are applied. ISO 32000-1 §11.6.5.
-    private byte[]? RenderSoftMask(SoftMaskInfo smInfo)
+    private byte[] RenderSoftMask(SoftMaskInfo smInfo)
     {
         try
         {

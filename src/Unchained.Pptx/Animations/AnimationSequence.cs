@@ -32,9 +32,12 @@ public sealed class AnimationSequence
             TargetShapeId = targetShapeId,
             Preset = preset,
             Category = category,
-            Trigger = trigger
+            Trigger = trigger,
+            Timing =
+            {
+                DelaySeconds = delaySeconds
+            }
         };
-        effect.Timing.DelaySeconds = delaySeconds;
         _effects.Add(effect);
         return effect;
     }

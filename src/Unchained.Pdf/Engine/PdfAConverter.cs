@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Security.Cryptography;
-using System.Text;
 using System.Xml.Linq;
 using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;

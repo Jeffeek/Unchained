@@ -76,7 +76,7 @@ internal sealed class ColorSpaceInfo
     /// </summary>
     public (byte R, byte G, byte B) ToRgb(double[] components, PdfFunction? overrideFn = null)
     {
-        byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
+        static byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
 
         switch (Kind)
         {
@@ -84,7 +84,7 @@ internal sealed class ColorSpaceInfo
             case "CalGray":
             {
                 var v = components.Length > 0 ? components[0] : 0.5;
-                if (Kind == "CalGray" && CalGrayGamma != 1.0)
+                if (Kind == "CalGray" && Math.Abs(CalGrayGamma - 1.0) > 0.05)
                     v = Math.Pow(Math.Max(0, v), CalGrayGamma);
                 var b = B255(v);
                 return (b, b, b);
@@ -98,7 +98,9 @@ internal sealed class ColorSpaceInfo
             case "DeviceCMYK":
             case "ICCBased" when AlternateSpace == "DeviceCMYK":
             {
-                if (components.Length < 4) return (128, 128, 128);
+                if (components.Length < 4)
+                    return (128, 128, 128);
+
                 var c = components[0];
                 var m = components[1];
                 var y = components[2];
@@ -127,10 +129,14 @@ internal sealed class ColorSpaceInfo
 
             case "Indexed":
             {
-                if (IndexedLookup is null || components.Length == 0) return (128, 128, 128);
-                var idx = (int)Math.Clamp(Math.Round(components[0] * 255), 0, (IndexedLookup.Length / Math.Max(1, IndexedBaseChannels)) - 1);
+                if (IndexedLookup is null || components.Length == 0)
+                    return (128, 128, 128);
+
+                var idx = (int)Math.Clamp(Math.Round(components[0] * 255), 0, (IndexedLookup.Length / Math.Max(1d, IndexedBaseChannels)) - 1);
                 var offset = idx * IndexedBaseChannels;
-                if (offset + IndexedBaseChannels > IndexedLookup.Length) return (128, 128, 128);
+                if (offset + IndexedBaseChannels > IndexedLookup.Length)
+                    return (128, 128, 128);
+
                 var palette = IndexedLookup.AsSpan(offset, IndexedBaseChannels);
                 return IndexedBaseChannels switch
                 {
@@ -170,9 +176,10 @@ internal sealed class ColorSpaceInfo
                 var lg = (-0.9692660 * xr) + (1.8760108 * yg) + (0.0415560 * zb);
                 var lb = (0.0556434 * xr) + (-0.2040259 * yg) + (1.0572252 * zb);
 
+                return (B255(Gamma(Math.Max(0, lr))), B255(Gamma(Math.Max(0, lg))), B255(Gamma(Math.Max(0, lb))));
+
                 // Gamma-compress sRGB
                 static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
-                return (B255(Gamma(Math.Max(0, lr))), B255(Gamma(Math.Max(0, lg))), B255(Gamma(Math.Max(0, lb))));
             }
 
             case "Lab":
@@ -185,15 +192,16 @@ internal sealed class ColorSpaceInfo
                 var fy = (lStar + 16) / 116.0;
                 var fx = (a / 500.0) + fy;
                 var fz = fy - (b2 / 200.0);
-                static double F(double t) => t > 0.206897 ? t * t * t : (t - (16.0 / 116.0)) / 7.787;
                 var x = 0.9505 * F(fx);
                 var y = 1.0000 * F(fy);
                 var z = 1.0890 * F(fz);
                 var lr2 = (3.2404542 * x) + (-1.5371385 * y) + (-0.4985314 * z);
                 var lg2 = (-0.9692660 * x) + (1.8760108 * y) + (0.0415560 * z);
                 var lb2 = (0.0556434 * x) + (-0.2040259 * y) + (1.0572252 * z);
-                static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
                 return (B255(Gamma(Math.Max(0, lr2))), B255(Gamma(Math.Max(0, lg2))), B255(Gamma(Math.Max(0, lb2))));
+
+                static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
+                static double F(double t) => t > 0.206897 ? t * t * t : (t - (16.0 / 116.0)) / 7.787;
             }
 
             default:

@@ -222,10 +222,13 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
 
             // Verify it's preceded by a newline
             var beforeLen = i - dataStart;
-            if (beforeLen > 0 && source[i - 1] == '\n') return beforeLen - 1; // strip LF
-            if (beforeLen > 1 && source[i - 2] == '\r' && source[i - 1] == '\n') return beforeLen - 2;
-            if (beforeLen > 0 && source[i - 1] == '\r') return beforeLen - 1;
-            return beforeLen; // endstream without newline — accept as-is
+            return beforeLen switch
+            {
+                > 0 when source[i - 1] == '\n' => beforeLen - 1,
+                > 1 when source[i - 2] == '\r' && source[i - 1] == '\n' => beforeLen - 2,
+                > 0 when source[i - 1] == '\r' => beforeLen - 1,
+                _ => beforeLen
+            };
         }
 
         return 0;

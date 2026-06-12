@@ -87,14 +87,16 @@
             ? Document.Slides[CurrentSlide - 1]
             : null;
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync()
     {
         // Re-render when the document or selected slide changes.
         if (Document != _lastDocument || CurrentSlide != _lastRendered)
         {
             _lastDocument = Document;
-            await RenderCurrentSlideAsync();
-        }
+        return RenderCurrentSlideAsync();
+    }
+
+        return Task.CompletedTask;
     }
 
     private async Task RenderCurrentSlideAsync()
@@ -137,24 +139,24 @@
         }
     }
 
-    private async Task PreviousSlide()
+    private Task PreviousSlide()
     {
-        if (CurrentSlide <= 1) return;
-        await CurrentSlideChanged.InvokeAsync(CurrentSlide - 1);
+        if (CurrentSlide <= 1) return Task.CompletedTask;
+        return CurrentSlideChanged.InvokeAsync(CurrentSlide - 1);
     }
 
-    private async Task NextSlide()
+    private Task NextSlide()
     {
-        if (CurrentSlide >= SlideCount) return;
-        await CurrentSlideChanged.InvokeAsync(CurrentSlide + 1);
+        if (CurrentSlide >= SlideCount) return Task.CompletedTask;
+        return CurrentSlideChanged.InvokeAsync(CurrentSlide + 1);
     }
 
-    private async Task OnSlideInputChanged(ChangeEventArgs e)
+    private Task OnSlideInputChanged(ChangeEventArgs e)
     {
         if (!int.TryParse(e.Value?.ToString(), out var n))
-            return;
+            return Task.CompletedTask;
         n = Math.Clamp(n, 1, Math.Max(1, SlideCount));
-        await CurrentSlideChanged.InvokeAsync(n);
+        return CurrentSlideChanged.InvokeAsync(n);
     }
 
     private void ZoomIn() => _zoom = Math.Min(200, _zoom + 25);

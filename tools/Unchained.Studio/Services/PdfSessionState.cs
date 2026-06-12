@@ -34,7 +34,7 @@ public sealed class PdfSessionState : IAsyncDisposable
     // Injected so RefreshAsync can invalidate stale render cache entries
     internal RenderingService? RenderCache { private get; set; }
 
-    public async ValueTask DisposeAsync() => await Document.DisposeAsync().ConfigureAwait(false);
+    public ValueTask DisposeAsync() => Document.DisposeAsync();
 
     /// <summary>
     ///     Raised after <see cref="RefreshAsync" /> completes so that UI components

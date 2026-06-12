@@ -26,16 +26,15 @@ public sealed class Redactor : IRedactor
     private static void Redact(IPdfDocument document, IReadOnlyList<RedactionRegion> regions)
     {
         if (regions.Count == 0) return;
+
         var adapter = MutationHelper.Cast(nameof(document), document);
         var pageCount = adapter.Core.PageCount;
-        foreach (var r in regions)
+
+        foreach (var r in regions.Where(r => r.PageNumber < 1 || r.PageNumber > pageCount))
         {
-            if (r.PageNumber < 1 || r.PageNumber > pageCount)
-            {
-                throw new ArgumentOutOfRangeException(nameof(regions),
-                    r.PageNumber,
-                    $"Region page number must be between 1 and {pageCount}.");
-            }
+            throw new ArgumentOutOfRangeException(nameof(regions),
+                r.PageNumber,
+                $"Region page number must be between 1 and {pageCount}.");
         }
 
         var existing = adapter.Core.CollectObjects();
@@ -64,7 +63,9 @@ public sealed class Redactor : IRedactor
             // Replace /Contents with the single rebuilt stream (resources are preserved).
             foreach (var obj in existing)
             {
-                if (!ReferenceEquals(obj.Value, pageDict)) continue;
+                if (!ReferenceEquals(obj.Value, pageDict))
+                    continue;
+
                 var entries = new Dictionary<string, PdfObject>(((PdfDictionary)obj.Value).Entries)
                 {
                     [PdfName.Contents.Value] = streamObj.ToReference()
@@ -83,7 +84,7 @@ public sealed class Redactor : IRedactor
 
     // Re-serializes operators, dropping text-show / image-paint ops positioned inside any
     // region, then appends opaque cover rectangles for each region.
-    private static string BuildRedactedContent(IReadOnlyList<ContentOperator> ops, List<RedactionRegion> regions)
+    private static string BuildRedactedContent(IEnumerable<ContentOperator> ops, List<RedactionRegion> regions)
     {
         var sb = new StringBuilder();
 
@@ -94,7 +95,6 @@ public sealed class Redactor : IRedactor
         // Text state.
         var tm = Identity();
         var tlm = Identity();
-        var fontSize = 0.0;
         var leading = 0.0;
 
         foreach (var op in ops)
@@ -115,7 +115,7 @@ public sealed class Redactor : IRedactor
                     tlm = Identity();
                 break;
                 case "Tf" when op.Operands.Count >= 2:
-                    fontSize = Num(op.Operands[1]);
+                    Num(op.Operands[1]);
                 break;
                 case "TL" when op.Operands.Count >= 1:
                     leading = Num(op.Operands[0]);
@@ -164,11 +164,10 @@ public sealed class Redactor : IRedactor
 
             // Advance the text line for the show-with-newline operators even if dropped,
             // so subsequent text keeps its position.
-            if (op.Name is "'" or "\"")
-            {
-                tlm = Mul(Translate(0, -leading), tlm);
-                tm = (double[])tlm.Clone();
-            }
+            if (op.Name is not ("'" or "\"")) continue;
+
+            tlm = Mul(Translate(0, -leading), tlm);
+            tm = (double[])tlm.Clone();
         }
 
         // Append opaque cover rectangles (reset to base coordinate space with q/Q).
@@ -183,16 +182,8 @@ public sealed class Redactor : IRedactor
         return sb.ToString();
     }
 
-    private static bool InAnyRegion(List<RedactionRegion> regions, double x, double y)
-    {
-        foreach (var r in regions)
-        {
-            if (r.Contains(x, y))
-                return true;
-        }
-
-        return false;
-    }
+    private static bool InAnyRegion(IEnumerable<RedactionRegion> regions, double x, double y) =>
+        regions.Any(r => r.Contains(x, y));
 
     // ── Operator serialization ────────────────────────────────────────────────────
 
@@ -251,11 +242,11 @@ public sealed class Redactor : IRedactor
         var printable = true;
         foreach (var b in bytes)
         {
-            if (b < PdfConstants.PrintableAsciiMin || b > PdfConstants.PrintableAsciiMax)
-            {
-                printable = false;
-                break;
-            }
+            if (b is >= PdfConstants.PrintableAsciiMin and <= PdfConstants.PrintableAsciiMax)
+                continue;
+
+            printable = false;
+            break;
         }
 
         if (printable)
@@ -288,7 +279,7 @@ public sealed class Redactor : IRedactor
         [Num(op.Operands[0]), Num(op.Operands[1]), Num(op.Operands[2]), Num(op.Operands[3]), Num(op.Operands[4]), Num(op.Operands[5])];
 
     // m1 × m2 (apply m1 first, then m2).
-    private static double[] Mul(double[] m1, double[] m2) =>
+    private static double[] Mul(IReadOnlyList<double> m1, IReadOnlyList<double> m2) =>
     [
         (m1[0] * m2[0]) + (m1[1] * m2[2]),
         (m1[0] * m2[1]) + (m1[1] * m2[3]),
@@ -298,7 +289,7 @@ public sealed class Redactor : IRedactor
         (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
     ];
 
-    private static (double X, double Y) Apply(double[] m, double x, double y) =>
+    private static (double X, double Y) Apply(IReadOnlyList<double> m, double x, double y) =>
         ((m[0] * x) + (m[2] * y) + m[4], (m[1] * x) + (m[3] * y) + m[5]);
 
     private static double Num(PdfObject o) => o switch

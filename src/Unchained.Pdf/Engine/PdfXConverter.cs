@@ -113,8 +113,8 @@ internal static class PdfXConverter
     {
         PdfXProfile.PdfX1A2001 => "PDF/X-1a:2001",
         PdfXProfile.PdfX1A2003 => "PDF/X-1a:2003",
-        PdfXProfile.PdfX3_2002 => "PDF/X-3:2002",
-        PdfXProfile.PdfX3_2003 => "PDF/X-3:2003",
+        PdfXProfile.PdfX32002 => "PDF/X-3:2002",
+        PdfXProfile.PdfX32003 => "PDF/X-3:2003",
         PdfXProfile.PdfX4 => "PDF/X-4",
         _ => "PDF/X-1a:2001"
     };
@@ -128,6 +128,7 @@ internal static class PdfXConverter
         XNamespace pdfxid = "http://www.npes.org/pdfx/ns/id/";
         var rdfRoot = xmpDoc.Descendants(rdf + "RDF").FirstOrDefault();
 
+        // ReSharper disable once InvertIf
         if (rdfRoot is not null)
         {
             var desc = rdfRoot.Elements(rdf + "Description").FirstOrDefault(d => d.Attribute(rdf + "about") is not null)

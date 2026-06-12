@@ -74,10 +74,11 @@
         Nav.LocationChanged += OnLocationChanged;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            await ThemeSvc.InitializeAsync();
+            return ThemeSvc.InitializeAsync();
+        return Task.CompletedTask;
     }
 
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
@@ -85,7 +86,7 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
         => InvokeAsync(StateHasChanged);
 
-    private async Task ToggleTheme() => await ThemeSvc.ToggleAsync();
+    private Task ToggleTheme() => ThemeSvc.ToggleAsync();
 
     private void RecoverFromError() => _errorBoundary?.Recover();
 

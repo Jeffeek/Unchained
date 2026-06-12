@@ -13,7 +13,7 @@ namespace Unchained.Studio.Services;
 /// </summary>
 public sealed class PdfiumReferenceRenderer
 {
-    private static readonly object InitLock = new();
+    private static readonly Lock InitLock = new();
     private static bool _initialized;
     private static bool _available;
 
@@ -23,9 +23,11 @@ public sealed class PdfiumReferenceRenderer
     private static bool EnsureInit()
     {
         if (_initialized) return _available;
-        lock (InitLock)
+
+        InitLock.Enter();
+
+        try
         {
-            if (_initialized) return _available;
             try
             {
                 fpdfview.FPDF_InitLibrary();
@@ -37,7 +39,12 @@ public sealed class PdfiumReferenceRenderer
             }
 
             _initialized = true;
+
             return _available;
+        }
+        finally
+        {
+            InitLock.Exit();
         }
     }
 
@@ -45,7 +52,7 @@ public sealed class PdfiumReferenceRenderer
     ///     Renders one page to a PNG byte array using Pdfium.
     ///     Returns <see langword="null" /> when Pdfium is unavailable or the page fails.
     /// </summary>
-    public async Task<byte[]?> RenderPageAsync(
+    public static async Task<byte[]?> RenderPageAsync(
         byte[] pdfBytes,
         int pageNumber,
         int dpi = 96,

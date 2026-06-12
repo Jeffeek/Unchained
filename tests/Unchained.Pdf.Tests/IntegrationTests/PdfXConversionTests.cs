@@ -29,7 +29,7 @@ public sealed class PdfXConversionTests : PdfTestBase
     [Fact]
     public async Task ConvertToPdfX_AddsVersionMarker()
     {
-        var converted = await ConvertAsync(PdfFixtures.SinglePage(), PdfXProfile.PdfX3_2002);
+        var converted = await ConvertAsync(PdfFixtures.SinglePage(), PdfXProfile.PdfX32002);
         var text = Encoding.Latin1.GetString(converted);
         text.ShouldContain("GTS_PDFXVersion");
         text.ShouldContain("PDF/X-3:2002");

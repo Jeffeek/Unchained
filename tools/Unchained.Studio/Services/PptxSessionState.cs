@@ -34,7 +34,7 @@ public sealed class PptxSessionState : IAsyncDisposable
     public TreeNode? SelectedNode { get; set; }
     public int CurrentSlide { get; set; } = 1;
 
-    public async ValueTask DisposeAsync() => await Document.DisposeAsync().ConfigureAwait(false);
+    public ValueTask DisposeAsync() => Document.DisposeAsync();
 
     /// <summary>
     ///     Raised after <see cref="RefreshAsync" /> completes so the UI can re-render.

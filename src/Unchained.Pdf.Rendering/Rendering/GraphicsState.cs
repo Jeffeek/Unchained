@@ -112,7 +112,7 @@ internal sealed class GraphicsState
             LineCap = LineCap,
             LineJoin = LineJoin,
             MiterLimit = MiterLimit,
-            SoftMask = SoftMask is null ? null : (byte[])SoftMask.Clone(),
+            SoftMask = (byte[]?)SoftMask?.Clone(),
             SoftMaskWidth = SoftMaskWidth,
             SoftMaskHeight = SoftMaskHeight,
             DashLengths = DashLengths,
@@ -129,7 +129,7 @@ internal sealed class GraphicsState
             TextRenderMode = TextRenderMode,
             FillColorSpace = FillColorSpace,
             StrokeColorSpace = StrokeColorSpace,
-            SavedClipMask = SavedClipMask is null ? null : (byte[])SavedClipMask.Clone()
+            SavedClipMask = (byte[]?)SavedClipMask?.Clone()
         };
 
     // Transform a PDF user-space point through the current CTM.
