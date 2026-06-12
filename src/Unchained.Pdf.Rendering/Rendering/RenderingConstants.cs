@@ -10,9 +10,6 @@ internal static class RenderingConstants
 {
     // ── Fixed-point / font scales ───────────────────────────────────────────
 
-    /// <summary>HarfBuzz reports glyph metrics in 26.6 fixed-point; divide by 64 for pixels.</summary>
-    internal const double HarfBuzzFixed = 64.0;
-
     /// <summary>FreeType <c>FT_Get_Advance</c> returns 16.16 fixed-point; divide by 65536 for pixels.</summary>
     internal const double FreeTypeFixed = 65536.0;
 

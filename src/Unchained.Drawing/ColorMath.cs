@@ -25,4 +25,13 @@ internal static class ColorMath
     /// </summary>
     internal static byte ToByteRounded(double value) =>
         (byte)Math.Clamp((int)Math.Round(value * 255), 0, 255);
+
+    /// <summary>
+    ///     Splits a packed 0xAARRGGBB value into its alpha, red, green and blue byte components.
+    /// </summary>
+    internal static (byte A, byte R, byte G, byte B) UnpackArgb(uint argb) =>
+        ((byte)((argb >> 24) & 0xFF),
+            (byte)((argb >> 16) & 0xFF),
+            (byte)((argb >> 8) & 0xFF),
+            (byte)(argb & 0xFF));
 }

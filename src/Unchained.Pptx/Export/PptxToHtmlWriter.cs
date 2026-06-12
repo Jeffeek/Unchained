@@ -1,4 +1,5 @@
 using System.Text;
+using Unchained.Drawing;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Text;
@@ -62,7 +63,7 @@ internal static class PptxToHtmlWriter
         sb.AppendLine("<head>");
         sb.AppendLine("<meta charset=\"utf-8\">");
         sb.AppendLine($"<meta name=\"viewport\" content=\"width={slideW:F0}, initial-scale=1\">");
-        sb.AppendLine($"<title>{EscapeHtml(slide.Name.Length > 0 ? slide.Name : "Slide")}</title>");
+        sb.AppendLine($"<title>{ExportText.EscapeHtml(slide.Name.Length > 0 ? slide.Name : "Slide")}</title>");
         sb.AppendLine("<style>");
         sb.AppendLine("*{box-sizing:border-box;margin:0;padding:0}");
         sb.AppendLine($".slide{{position:relative;width:{slideW:F2}px;height:{slideH:F2}px;overflow:hidden;background:white}}");
@@ -222,7 +223,7 @@ internal static class PptxToHtmlWriter
                     : defaultColor;
                 runStyle.Append($"color:{textColor};");
 
-                sb.Append($"<span style=\"{runStyle}\">{EscapeHtml(run.Text)}</span>");
+                sb.Append($"<span style=\"{runStyle}\">{ExportText.EscapeHtml(run.Text)}</span>");
             }
 
             sb.AppendLine("</p>");
@@ -237,21 +238,14 @@ internal static class PptxToHtmlWriter
         var contentType = pic.Image.ContentType;
         var b64 = Convert.ToBase64String(data.ToArray());
         sb.AppendLine(
-            $"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"data:{contentType};base64,{b64}\" alt=\"{EscapeHtml(pic.AltText ?? string.Empty)}\">");
+            $"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"data:{contentType};base64,{b64}\" alt=\"{ExportText.EscapeHtml(pic.AltText ?? string.Empty)}\">");
     }
 
     private static string ToCssColor(uint argb)
     {
-        var a = (argb >> 24) & 0xFF;
-        var r = (argb >> 16) & 0xFF;
-        var g = (argb >> 8) & 0xFF;
-        var b = argb & 0xFF;
+        var (a, r, g, b) = ColorMath.UnpackArgb(argb);
         return a < 255
             ? $"rgba({r},{g},{b},{a / 255.0:F3})"
             : $"rgb({r},{g},{b})";
     }
-
-    private static string EscapeHtml(string text) =>
-        text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
-            .Replace("\"", "&quot;").Replace("'", "&#39;");
 }

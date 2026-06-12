@@ -619,8 +619,8 @@ internal sealed class PageRenderer(
 
             GlyphsAttempted++;
 
-            var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / RenderingConstants.HarfBuzzFixed / scale);
-            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / RenderingConstants.HarfBuzzFixed / scale) + _gs.TextRise;
+            var originX = _gs.TextMatrix[4] + (glyphPositions[i].XOffset / (double)TextShapingConstants.HarfBuzzFixed / scale);
+            var originY = _gs.TextMatrix[5] + (glyphPositions[i].YOffset / (double)TextShapingConstants.HarfBuzzFixed / scale) + _gs.TextRise;
             var (px, py) = UToPixel(originX, originY);
 
             // Mode 0 (fill) and 2/4/6 (fill variants): blit the bitmap.
@@ -643,7 +643,7 @@ internal sealed class PageRenderer(
             if (_gs.ShouldClipText)
                 ClipGlyphOutline(ftFace, (int)px, (int)py);
 
-            var advance = ((glyphPositions[i].XAdvance / RenderingConstants.HarfBuzzFixed / scale) + _gs.CharSpace)
+            var advance = ((glyphPositions[i].XAdvance / (double)TextShapingConstants.HarfBuzzFixed / scale) + _gs.CharSpace)
                           * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
             _gs.TextMatrix[4] += advance;
         }

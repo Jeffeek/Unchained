@@ -34,7 +34,7 @@ internal static class PptxToHtmlPlayerWriter
         sb.AppendLine("<head>");
         sb.AppendLine("<meta charset=\"utf-8\">");
         sb.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-        sb.AppendLine($"<title>{EscapeHtml(options.Title ?? "Presentation")}</title>");
+        sb.AppendLine($"<title>{ExportText.EscapeHtml(options.Title ?? "Presentation")}</title>");
         WriteStyle(sb, slideW, slideH, options);
         sb.AppendLine("</head>");
         sb.AppendLine("<body>");
@@ -128,8 +128,4 @@ internal static class PptxToHtmlPlayerWriter
         sb.AppendLine("})();");
         sb.AppendLine("</script>");
     }
-
-    private static string EscapeHtml(string text) =>
-        text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
-            .Replace("\"", "&quot;").Replace("'", "&#39;");
 }

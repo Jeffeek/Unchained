@@ -1,4 +1,5 @@
 using System.Text;
+using Unchained.Drawing;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Text;
@@ -230,10 +231,7 @@ internal static class PptxToSvgWriter
 
     private static string ToSvgColor(uint argb)
     {
-        var a = (argb >> 24) & 0xFF;
-        var r = (argb >> 16) & 0xFF;
-        var g = (argb >> 8) & 0xFF;
-        var b = argb & 0xFF;
+        var (a, r, g, b) = ColorMath.UnpackArgb(argb);
         return a < 255
             ? $"rgba({r},{g},{b},{a / 255.0:F3})"
             : $"#{r:X2}{g:X2}{b:X2}";

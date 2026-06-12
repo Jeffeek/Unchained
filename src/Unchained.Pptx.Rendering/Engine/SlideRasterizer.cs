@@ -1735,6 +1735,21 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         if (rawPixels is null || imgWidth <= 0 || imgHeight <= 0)
             return;
 
+        BlitScaledRgb(buffer, rawPixels, imgWidth, imgHeight, x, y, width, height);
+    }
+
+    // Nearest-neighbour blit of a packed RGB source into the destination rect.
+    private static void BlitScaledRgb(
+        RasterBuffer buffer,
+        byte[] rawPixels,
+        int imgWidth,
+        int imgHeight,
+        int x,
+        int y,
+        int width,
+        int height
+    )
+    {
         for (var py = 0; py < height; py++)
         {
             var srcY = py * imgHeight / height;
@@ -1807,22 +1822,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         }
 
         // Nearest-neighbour blit with scaling to destination rect.
-        for (var py = 0; py < height; py++)
-        {
-            var srcY = py * imgHeight / height;
-            for (var px = 0; px < width; px++)
-            {
-                var srcX = px * imgWidth / width;
-                var srcOffset = ((srcY * imgWidth) + srcX) * 3;
-                buffer.BlitImagePixel(
-                    x + px,
-                    y + py,
-                    rawPixels[srcOffset],
-                    rawPixels[srcOffset + 1],
-                    rawPixels[srcOffset + 2]
-                );
-            }
-        }
+        BlitScaledRgb(buffer, rawPixels, imgWidth, imgHeight, x, y, width, height);
     }
 
     // ── Text ──────────────────────────────────────────────────────────────────
@@ -2141,7 +2141,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         {
             var (ftFace, hbFont) = fonts.GetFonts(fontName, embeddedBytes);
             ftFace.SetPixelSize(pixelSize);
-            var hbScale = (int)(pixelSize * 64);
+            var hbScale = (int)(pixelSize * TextShapingConstants.HarfBuzzFixed);
             hbFont.SetScale(hbScale, hbScale);
 
             using var hbBuffer = new Buffer();
@@ -2149,7 +2149,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             hbBuffer.GuessSegmentProperties();
             hbFont.Shape(hbBuffer);
 
-            return hbBuffer.GlyphPositions.Sum(static p => p.XAdvance) / 64;
+            return hbBuffer.GlyphPositions.Sum(static p => p.XAdvance) / TextShapingConstants.HarfBuzzFixed;
         }
         catch
         {
@@ -2185,7 +2185,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             if (lineHeight < (int)pixelSize)
                 lineHeight = (int)pixelSize;
 
-            var hbScale = (int)(pixelSize * 64);
+            var hbScale = (int)(pixelSize * TextShapingConstants.HarfBuzzFixed);
             hbFont.SetScale(hbScale, hbScale);
 
             using var hbBuffer = new Buffer();
@@ -2203,8 +2203,8 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 if (!ftFace.TryLoadGlyph(glyphId))
                     continue;
 
-                var penX = cursorX + (glyphPositions[i].XOffset / 64);
-                var penY = startY + (int)pixelSize + (glyphPositions[i].YOffset / 64);
+                var penX = cursorX + (glyphPositions[i].XOffset / TextShapingConstants.HarfBuzzFixed);
+                var penY = startY + (int)pixelSize + (glyphPositions[i].YOffset / TextShapingConstants.HarfBuzzFixed);
 
                 buffer.BlitGlyphFromFace(penX,
                     penY,
@@ -2213,7 +2213,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                     g,
                     b);
 
-                cursorX += glyphPositions[i].XAdvance / 64;
+                cursorX += glyphPositions[i].XAdvance / TextShapingConstants.HarfBuzzFixed;
 
                 if (cursorX >= maxX)
                     break;

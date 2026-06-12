@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Text;
+using Unchained.Drawing;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Media;
@@ -174,14 +175,7 @@ internal static class PptxToPdfWriter
                 var metrics = fontBytes is not null
                     ? TrueTypeMetrics.Read(fontBytes)
                     : null;
-                metrics ??= new FontMetrics(-166,
-                    -225,
-                    1000,
-                    931,
-                    800,
-                    -200,
-                    716,
-                    80);
+                metrics ??= TrueTypeMetrics.HelveticaFallback;
 
                 if (fontBytes is not null && fontBytes.Length > 0)
                 {
@@ -911,10 +905,8 @@ internal static class PptxToPdfWriter
 
         private static (double r, double g, double b) ToRgbF(uint argb)
         {
-            var r = ((argb >> 16) & 0xFF) / 255.0;
-            var g = ((argb >> 8) & 0xFF) / 255.0;
-            var b = (argb & 0xFF) / 255.0;
-            return (r, g, b);
+            var (_, r, g, b) = ColorMath.UnpackArgb(argb);
+            return (r / 255.0, g / 255.0, b / 255.0);
         }
 
         private static string XObjectName(string partUri) =>

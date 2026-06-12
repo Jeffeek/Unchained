@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace Unchained.Pdf.Engine;
+namespace Unchained.Drawing;
 
 /// <summary>
 ///     Reads font metrics from a TrueType or OpenType font file by parsing the minimal set
@@ -11,14 +11,23 @@ namespace Unchained.Pdf.Engine;
 /// </summary>
 internal static class TrueTypeMetrics
 {
+    /// <summary>Target units-per-em after normalisation; widths and bounding boxes use a 1000-unit em square.</summary>
+    private const int NormalizedUnitsPerEm = 1000;
+
+    /// <summary><see cref="NormalizedUnitsPerEm" /> as <see langword="double" /> for scale calculations.</summary>
+    private const double NormalizedUnitsPerEmDouble = 1000.0;
+
+    /// <summary>Estimated cap-height as a fraction of the ascender when the OS/2 table is absent (≈72%).</summary>
+    private const double CapHeightAscentRatio = 0.72;
+
     /// <summary>
-    ///     Helvetica/Arial fallback metrics used when FreeType cannot extract real metrics,
+    ///     Helvetica/Arial fallback metrics used when real metrics cannot be extracted,
     ///     expressed in 1000-unit glyph space.
     /// </summary>
     internal static readonly FontMetrics HelveticaFallback =
         new(-166,
             -225,
-            FontConstants.NormalizedUnitsPerEm,
+            NormalizedUnitsPerEm,
             931,
             800,
             -200,
@@ -47,7 +56,7 @@ internal static class TrueTypeMetrics
         // TrueType/OpenType offset table starts at byte 0.
         // Bytes 0–3: sfVersion (0x00010000 for TrueType, 'OTTO' for CFF).
         // Bytes 4–5: numTables.
-        if (b.Length < 12) return Default();
+        if (b.Length < 12) return HelveticaFallback;
 
         var numTables = ReadU16(b, 4);
         // Table directory entries start at offset 12; each is 16 bytes.
@@ -71,14 +80,14 @@ internal static class TrueTypeMetrics
         // head table: units per em (at offset 18).
         var unitsPerEm = headOff is { } ho && ho + 54 <= b.Length
             ? ReadU16(b, ho + 18)
-            : FontConstants.NormalizedUnitsPerEm;
-        if (unitsPerEm == 0) unitsPerEm = FontConstants.NormalizedUnitsPerEm;
-        var scale = FontConstants.NormalizedUnitsPerEmDouble / unitsPerEm;
+            : NormalizedUnitsPerEm;
+        if (unitsPerEm == 0) unitsPerEm = NormalizedUnitsPerEm;
+        var scale = NormalizedUnitsPerEmDouble / unitsPerEm;
 
         // head table: font bounding box (at offsets 36–43, signed shorts).
         var xMin = headOff is { } ho2 && ho2 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho2 + 36), scale) : -166;
         var yMin = headOff is { } ho3 && ho3 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho3 + 38), scale) : -225;
-        var xMax = headOff is { } ho4 && ho4 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho4 + 40), scale) : FontConstants.NormalizedUnitsPerEm;
+        var xMax = headOff is { } ho4 && ho4 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho4 + 40), scale) : NormalizedUnitsPerEm;
         var yMax = headOff is { } ho5 && ho5 + 44 <= b.Length ? (int)Scale(ReadS16(b, ho5 + 42), scale) : 931;
 
         // OS/2 table (preferred source for typographic metrics):
@@ -92,17 +101,17 @@ internal static class TrueTypeMetrics
             var os2Version = ReadU16(b, oo);
             capHeight = os2Version >= 2 && oo + 90 <= b.Length
                 ? (int)Scale(ReadS16(b, oo + 88), scale)
-                : (int)(ascent * FontConstants.CapHeightAscentRatio);
+                : (int)(ascent * CapHeightAscentRatio);
         }
         else if (hheaOff is { } hh && hh + 36 <= b.Length)
         {
             // Fallback to hhea ascender/descender.
             ascent = (int)Scale(ReadS16(b, hh + 4), scale);
             descent = (int)Scale(ReadS16(b, hh + 6), scale);
-            capHeight = (int)(ascent * FontConstants.CapHeightAscentRatio);
+            capHeight = (int)(ascent * CapHeightAscentRatio);
         }
         else
-            return Default();
+            return HelveticaFallback;
 
         // StemV: approximate from OS/2 usWeightClass if available.
         // Common formula: StemV ≈ (usWeightClass/65)^2 + 50.
@@ -125,8 +134,6 @@ internal static class TrueTypeMetrics
             capHeight,
             stemV);
     }
-
-    private static FontMetrics Default() => HelveticaFallback;
 
     private static string ReadTag(byte[] b, int o) =>
         new([.. new[] { b[o], b[o + 1], b[o + 2], b[o + 3] }.Select(static c => (char)c)]);

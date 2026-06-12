@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
+using Unchained.Drawing;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Xml;
@@ -25,11 +26,8 @@ internal static class ColorParser
             var hex = srgb.GetAttr(DmlNames.AttributeValue, "000000");
             if (TryParseHex(hex, out var argb))
             {
-                return ColorSpec.FromArgb(
-                    ReadAlpha(srgb),
-                    (byte)((argb >> 16) & 0xFF),
-                    (byte)((argb >> 8) & 0xFF),
-                    (byte)(argb & 0xFF));
+                var (_, r, g, b) = ColorMath.UnpackArgb(argb);
+                return ColorSpec.FromArgb(ReadAlpha(srgb), r, g, b);
             }
         }
 
@@ -51,10 +49,8 @@ internal static class ColorParser
             var lastClr = sysClr.GetAttr("lastClr", "000000");
             if (TryParseHex(lastClr, out var argb))
             {
-                return ColorSpec.FromRgb(
-                    (byte)((argb >> 16) & 0xFF),
-                    (byte)((argb >> 8) & 0xFF),
-                    (byte)(argb & 0xFF));
+                var (_, r, g, b) = ColorMath.UnpackArgb(argb);
+                return ColorSpec.FromRgb(r, g, b);
             }
         }
 
