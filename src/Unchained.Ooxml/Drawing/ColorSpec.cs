@@ -1,3 +1,5 @@
+using Unchained.Drawing;
+
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
@@ -164,10 +166,7 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
 
     private static uint ApplyLuminanceTransform(uint argb, double modifier, double offset)
     {
-        var alpha = (argb >> 24) & 0xFF;
-        var red = (argb >> 16) & 0xFF;
-        var green = (argb >> 8) & 0xFF;
-        var blue = argb & 0xFF;
+        var (alpha, red, green, blue) = ColorMath.UnpackArgb(argb);
 
         RgbToHls(red / 255.0,
             green / 255.0,
@@ -185,7 +184,7 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
             out var g,
             out var b);
 
-        return (alpha << 24) |
+        return ((uint)alpha << 24) |
                ((uint)Math.Round(r * 255) << 16) |
                ((uint)Math.Round(g * 255) << 8) |
                (uint)Math.Round(b * 255);

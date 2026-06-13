@@ -18,4 +18,8 @@
     <PackageReference Include="CoreJ2K" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Unchained.Drawing.Primitives\Unchained.Drawing.Primitives.csproj" />
+  </ItemGroup>
+
 </Project>

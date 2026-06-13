@@ -34,6 +34,7 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Drawing/">
+    <Project Path="src/Unchained.Drawing.Primitives/Unchained.Drawing.Primitives.csproj" />
     <Project Path="src/Unchained.Drawing.Runtimes/Unchained.Drawing.Runtimes.csproj" />
     <Project Path="src/Unchained.Drawing.Text/Unchained.Drawing.Text.csproj" />
     <Project Path="src/Unchained.Drawing/Unchained.Drawing.csproj" />

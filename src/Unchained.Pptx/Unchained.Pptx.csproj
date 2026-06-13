@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Unchained.Ooxml/Unchained.Ooxml.csproj" />
-    <ProjectReference Include="..\Unchained.Drawing\Unchained.Drawing.csproj" />
+    <ProjectReference Include="..\Unchained.Drawing.Primitives\Unchained.Drawing.Primitives.csproj" />
   </ItemGroup>
 
   <ItemGroup>
