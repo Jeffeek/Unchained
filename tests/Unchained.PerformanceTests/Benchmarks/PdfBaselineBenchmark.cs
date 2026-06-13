@@ -11,9 +11,9 @@ namespace Unchained.PerformanceTests.Benchmarks;
 ///     produced by <see cref="MinimalPdfFactory" /> — no external library dependency.
 /// </summary>
 [
-    MemoryDiagnoser(),
+    MemoryDiagnoser,
     ThreadingDiagnoser,
-    GcServer(),
+    GcServer,
     HideColumns("StdDev", "RatioSD", "Median")
 ]
 // ReSharper disable once ClassCanBeSealed.Global

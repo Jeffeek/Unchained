@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Text;
 using Unchained.Drawing;
+using Unchained.Drawing.Fonts;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Media;

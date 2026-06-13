@@ -54,10 +54,10 @@
 @code {
 
     [CascadingParameter]
-    IMudDialogInstance MudDialog { get; set; } = default!;
+    IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter]
-    public PresentationDocument Document { get; set; } = default!;
+    public PresentationDocument Document { get; set; } = null!;
 
     /// <summary>Invoked after a successful replace so the host can refresh the session/tree.</summary>
     [Parameter]

@@ -19,7 +19,7 @@ namespace Unchained.Pdf.Tests.IntegrationTests;
 public sealed class RenderingDiagnosticTests : RendererTestBase
 {
     // xUnit v3 uses TestContext.Current for output instead of ITestOutputHelper constructor injection
-    private void Log(string msg) => TestContext.Current.TestOutputHelper?.WriteLine(msg);
+    private static void Log(string msg) => TestContext.Current.TestOutputHelper?.WriteLine(msg);
 
     // ── Stage 1: does HarfBuzz produce any glyph infos? ──────────────────────
     // We access FontCache and HarfBuzz directly through a minimal shim PDF.
@@ -35,9 +35,9 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
 
         var ops = doc.Pages[1].GetContentOperators();
-        Log($"Operators: {string.Join(", ", ops.Select(o => o.Name))}");
+        Log($"Operators: {string.Join(", ", ops.Select(static o => o.Name))}");
 
-        var tjOp = ops.FirstOrDefault(o => o.Name == "Tj");
+        var tjOp = ops.FirstOrDefault(static o => o.Name == "Tj");
         tjOp.ShouldNotBeNull("Tj operator must be present in content stream");
         tjOp.Operands.Count.ShouldBe(1, "Tj must have exactly 1 operand (the string)");
 
@@ -70,7 +70,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         embMap.ContainsKey("F1").ShouldBeTrue("F1 must be in embedded bytes map");
         var embBytes = embMap["F1"];
         embBytes.ShouldNotBeNull("Embedded font bytes for F1 must not be null");
-        embBytes!.Length.ShouldBeGreaterThan(1000, "Embedded font data should be substantial");
+        embBytes.Length.ShouldBeGreaterThan(1000, "Embedded font data should be substantial");
         Log($"Embedded font bytes length: {embBytes.Length}");
     }
 
@@ -249,7 +249,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
 
         Log($"DiagnoseGlyphRender result: {diagnosis}");
 
-        diagnosis.StartsWith("OK:").ShouldBeTrue(
+        diagnosis.StartsWith("OK:", StringComparison.Ordinal).ShouldBeTrue(
             $"glyph render pipeline should complete successfully; got: {diagnosis}");
     }
 
@@ -290,6 +290,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         return count;
     }
 
-    private static uint ReadUInt32BE(byte[] d, int o) =>
+    // ReSharper disable once InconsistentNaming
+    private static uint ReadUInt32BE(IReadOnlyList<byte> d, int o) =>
         ((uint)d[o] << 24) | ((uint)d[o + 1] << 16) | ((uint)d[o + 2] << 8) | d[o + 3];
 }

@@ -102,7 +102,7 @@
                 <!-- File naming preview -->
                 <MudPaper Elevation="0" Class="pa-3" Style="background:#f5f5f5;border-radius:6px;">
                     <MudText Typo="Typo.caption" Style="font-family:monospace;line-height:1.8;">
-                        @_fileNamePreview
+                        @FileNamePreview
                     </MudText>
                 </MudPaper>
             </MudStack>
@@ -133,13 +133,13 @@
 @code {
 
     [CascadingParameter]
-    IMudDialogInstance MudDialog { get; set; } = default!;
+    IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter]
-    public IPdfDocument Document { get; set; } = default!;
+    public IPdfDocument Document { get; set; } = null!;
 
     [Parameter]
-    public byte[] DocumentBytes { get; set; } = default!;
+    public byte[] DocumentBytes { get; set; } = null!;
 
     [Parameter]
     public string FileName { get; set; } = "document";
@@ -167,13 +167,14 @@
     private readonly List<string> _errors = [];
     private CancellationTokenSource? _cts;
 
-    private string _fileNamePreview => BuildFileNamePreview();
+    private string FileNamePreview => BuildFileNamePreview();
 
     // JS interop is only available after the interactive SignalR circuit is established,
     // so folder-save detection must run in OnAfterRenderAsync, not OnInitializedAsync.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+
         try
         {
             _folderSaveSupported = await JS.InvokeAsync<bool>("unchainedStudio.isFolderSaveSupported");
@@ -220,6 +221,7 @@
             StateHasChanged();
             blobUrl = await JS.InvokeAsync<string>(
                 "unchainedStudio.createPdfBlobUrl",
+                ct,
                 Convert.ToBase64String(DocumentBytes));
             ownedBlob = true;
         }
@@ -230,10 +232,8 @@
             var collected = new List<(string Name, byte[] Bytes)>();
             var done = 0;
 
-            foreach (var page in pages)
+            foreach (var page in pages.TakeWhile(_ => !ct.IsCancellationRequested))
             {
-                if (ct.IsCancellationRequested) break;
-
                 _progressMessage = $"Rendering page {page} of {pages.Count}…";
                 _progressDetail = string.Empty;
                 StateHasChanged();
@@ -302,7 +302,7 @@
             {
                 _progressMessage = "Export cancelled.";
                 StateHasChanged();
-                await Task.Delay(1200);
+                await Task.Delay(1200, ct);
                 MudDialog.Cancel();
                 return;
             }
@@ -333,15 +333,15 @@
         }
         finally
         {
-            if (ownedBlob && blobUrl is not null)
-                await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", blobUrl);
+            if (ownedBlob)
+                await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", ct, blobUrl);
             _cts?.Dispose();
             _cts = null;
         }
     }
 
     private async Task SaveToFolder(
-        List<(string Name, byte[] Bytes)> files,
+        IReadOnlyCollection<(string Name, byte[] Bytes)> files,
         string baseName,
         CancellationToken ct
     )
@@ -350,11 +350,11 @@
         // We group by subfolder (unchained/ pdfjs/) but showDirectoryPicker
         // doesn't create sub-directories automatically — so we flatten the
         // name with a prefix and use underscores instead of slashes.
-        var flat = files.Select(f => new
+        var flat = files.Select(static f => new
         {
             name = f.Name.Replace('/', '_'),
             base64 = Convert.ToBase64String(f.Bytes)
-        }).ToArray();
+        }).ToArray<object?>();
 
         try
         {
@@ -453,13 +453,10 @@
             }
         }
 
-        if (pages.Count == 0)
-        {
-            _rangeError = "No valid pages found.";
-            return null;
-        }
+        if (pages.Count != 0) return [.. pages];
 
-        return [.. pages];
+        _rangeError = "No valid pages found.";
+        return null;
     }
 
 }

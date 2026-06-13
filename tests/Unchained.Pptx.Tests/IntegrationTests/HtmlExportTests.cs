@@ -1,7 +1,6 @@
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
-using Unchained.Pptx.Engine;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Tests.Helpers;

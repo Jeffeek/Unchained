@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Fonts;
 
 /// <summary>
 ///     Reads font metrics from a TrueType or OpenType font file by parsing the minimal set
@@ -135,7 +135,7 @@ internal static class TrueTypeMetrics
             stemV);
     }
 
-    private static string ReadTag(byte[] b, int o) =>
+    private static string ReadTag(IReadOnlyList<byte> b, int o) =>
         new([.. new[] { b[o], b[o + 1], b[o + 2], b[o + 3] }.Select(static c => (char)c)]);
 
     private static ushort ReadU16(byte[] b, int o) =>

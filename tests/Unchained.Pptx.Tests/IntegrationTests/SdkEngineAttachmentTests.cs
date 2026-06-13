@@ -40,8 +40,8 @@ public sealed class SdkEngineAttachmentTests : PptxTestBase
         custom.Engine.ShouldBeNull("custom path must not hold an SDK engine");
         sdk.Engine.ShouldNotBeNull("SDK path must keep its engine open for in-place save");
 
-        custom.Dispose();
-        sdk.Dispose();
+        await custom.DisposeAsync();
+        await sdk.DisposeAsync();
     }
 
     [Fact]

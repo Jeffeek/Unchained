@@ -28,7 +28,6 @@ public sealed class TextExtractionTests : PdfTestBase
     [Fact]
     public async Task GetTextSpans_PageWithTextContent_ContainsExpectedText()
     {
-        const string text = "Hello Unchained";
         var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent());
         var spans = page.GetTextSpans();
         var allText = string.Concat(spans.Select(static s => s.Text));
@@ -90,7 +89,6 @@ public sealed class TextExtractionTests : PdfTestBase
     [Fact]
     public async Task ExtractText_PageWithTextContent_ContainsOriginalWords()
     {
-        const string original = "Hello Unchained";
         var page = await LoadFirstPageAsync(PdfFixtures.WithTextContent());
         var text = page.ExtractText();
         text.ShouldContain("Hello");

@@ -221,12 +221,10 @@ internal static class PptxToSvgWriter
         double h
     )
     {
-        var data = pic.Image!.Data;
-        var contentType = pic.Image.ContentType;
-        var b64 = Convert.ToBase64String(data.ToArray());
+        var dataUri = ExportText.ToBase64DataUri(pic.Image!.Data, pic.Image.ContentType);
         sb.AppendLine($"<image x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" " +
                       $"preserveAspectRatio=\"none\" " +
-                      $"href=\"data:{contentType};base64,{b64}\"/>");
+                      $"href=\"{dataUri}\"/>");
     }
 
     private static string ToSvgColor(uint argb)

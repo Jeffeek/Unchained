@@ -149,6 +149,7 @@
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender) return;
+
         if (Session.Pptx is not null)
             Session.Pptx.Refreshed += OnSessionRefreshed;
     }
@@ -198,6 +199,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         SetBusy("Refreshing…");
         try
         {
@@ -209,20 +211,20 @@
         }
     }
 
-    private Task DownloadDocument()
-    {
-        if (Session.Pptx is null)
-            return Task.CompletedTask;
-        return Exporter.TriggerDownloadAsync(
-            Session.Pptx.CurrentBytes,
-            Session.Pptx.FileName,
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation");
-    }
+    private Task DownloadDocument() =>
+        Session.Pptx is null
+            ? Task.CompletedTask
+            : Exporter.TriggerDownloadAsync(
+                Session.Pptx.CurrentBytes,
+                Session.Pptx.FileName,
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            );
 
-    private async Task ExtractText()
+    private void ExtractText()
     {
         if (Session.Pptx is null)
             return;
+
         SetBusy("Extracting text…");
         try
         {
@@ -302,6 +304,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         var parameters = new DialogParameters
         {
             { nameof(SlideExportDialog.Document), Session.Pptx.Document },
@@ -321,6 +324,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         var parameters = new DialogParameters
         {
             { nameof(PptxExportDialog.Processor), Session.Pptx.Processor },
@@ -340,6 +344,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         var parameters = new DialogParameters
         {
             { nameof(FindReplaceDialog.Document), Session.Pptx.Document },
@@ -358,6 +363,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         var parameters = new DialogParameters
         {
             { nameof(HyperlinkBrowserDialog.Document), Session.Pptx.Document },
@@ -379,6 +385,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         Session.Pptx.CurrentSlide = Math.Clamp(slideNumber, 1, Session.Pptx.Document.Slides.Count);
         StateHasChanged();
     }

@@ -7,15 +7,18 @@ namespace Unchained.Pdf.Core;
 /// </summary>
 internal static class PdfDictionaryExtensions
 {
-    /// <summary>Whether the dictionary's <c>/Type</c> entry equals <paramref name="type" />.</summary>
-    internal static bool IsType(this PdfDictionary? dict, string type) => dict?.GetName("Type") == type;
+    extension(PdfDictionary? dict)
+    {
+        /// <summary>Whether the dictionary's <c>/Type</c> entry equals <paramref name="type" />.</summary>
+        internal bool IsType(string type) => dict?.GetName("Type") == type;
 
-    /// <summary>Whether the dictionary's <c>/Subtype</c> entry equals <paramref name="subtype" />.</summary>
-    internal static bool IsSubtype(this PdfDictionary? dict, string subtype) => dict?.GetName("Subtype") == subtype;
+        /// <summary>Whether the dictionary's <c>/Subtype</c> entry equals <paramref name="subtype" />.</summary>
+        internal bool IsSubtype(string subtype) => dict?.GetName("Subtype") == subtype;
 
-    /// <summary>Whether the dictionary is a page object (<c>/Type /Page</c>).</summary>
-    internal static bool IsPage(this PdfDictionary? dict) => dict.IsType("Page");
+        /// <summary>Whether the dictionary is a page object (<c>/Type /Page</c>).</summary>
+        internal bool IsPage() => dict.IsType("Page");
 
-    /// <summary>Whether the dictionary is the document catalog (<c>/Type /Catalog</c>).</summary>
-    internal static bool IsCatalog(this PdfDictionary? dict) => dict.IsType("Catalog");
+        /// <summary>Whether the dictionary is the document catalog (<c>/Type /Catalog</c>).</summary>
+        internal bool IsCatalog() => dict.IsType("Catalog");
+    }
 }

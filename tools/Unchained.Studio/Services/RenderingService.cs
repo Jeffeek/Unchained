@@ -7,10 +7,8 @@ namespace Unchained.Studio.Services;
 
 /// <summary>
 ///     Wraps <see cref="PdfRenderer" /> with a simple in-memory cache.
-///     Registered as Scoped — one instance per Blazor circuit.
-///     Uses <see cref="ConcurrentDictionary" /> instead of MemoryCache to avoid
-///     the IDisposable / async-teardown race that MemoryCache introduces.
 /// </summary>
+// ReSharper disable once SuggestBaseTypeForParameterInConstructor
 public sealed class RenderingService(PdfRenderer renderer)
 {
     // Soft cap: when the cache grows beyond this, clear the oldest half.
@@ -36,9 +34,6 @@ public sealed class RenderingService(PdfRenderer renderer)
         try
         {
             var page = document.Pages[pageNumber];
-            if (page is null)
-                return null;
-
             var options = new RenderOptions(dpi);
             var bytes = await renderer.RenderPageAsync(page, options, ct).ConfigureAwait(false);
 

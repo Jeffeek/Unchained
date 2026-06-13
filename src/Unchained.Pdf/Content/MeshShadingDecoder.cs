@@ -338,6 +338,7 @@ internal static class MeshShadingDecoder
 
         static byte B255(double v) => ColorMath.ToByteRounded(v);
 
+        // ReSharper disable once BadListLineBreaks
         static (byte R, byte G, byte B) CmykToBytes(double c, double m, double y, double k)
         {
             var (r, g, b) = ColorMath.CmykToRgb(c, m, y, k);

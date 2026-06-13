@@ -64,7 +64,7 @@ public sealed class JpegDecoderTests
     }
 
     private static (int R, int G, int B) Pixel(
-        byte[] rgb,
+        IReadOnlyList<byte> rgb,
         int width,
         int x,
         int y

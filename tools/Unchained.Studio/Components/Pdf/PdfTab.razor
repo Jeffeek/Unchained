@@ -239,6 +239,7 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Refreshing…");
         try
         {
@@ -250,20 +251,20 @@
         }
     }
 
-    private Task DownloadDocument()
-    {
-        if (Session.Pdf is null)
-            return Task.CompletedTask;
-        return Exporter.TriggerDownloadAsync(
-            Session.Pdf.CurrentBytes,
-            Session.Pdf.FileName,
-            "application/pdf");
-    }
+    private Task DownloadDocument() =>
+        Session.Pdf is null
+            ? Task.CompletedTask
+            : Exporter.TriggerDownloadAsync(
+                Session.Pdf.CurrentBytes,
+                Session.Pdf.FileName,
+                "application/pdf"
+            );
 
-    private async Task ExtractText()
+    private void ExtractText()
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Extracting text…");
         try
         {
@@ -288,6 +289,7 @@
     {
         if (_extractedText is null)
             return;
+
         try
         {
             await Exporter.TriggerDownloadAsync(
@@ -305,6 +307,7 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Optimizing…");
         try
         {
@@ -331,6 +334,7 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Repairing…");
         try
         {
@@ -355,6 +359,7 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Linearizing…");
         try
         {
@@ -380,6 +385,7 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Validating PDF/A…");
         try
         {
@@ -399,6 +405,7 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Validating PDF/UA…");
         try
         {

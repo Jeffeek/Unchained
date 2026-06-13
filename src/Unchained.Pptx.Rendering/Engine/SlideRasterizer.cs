@@ -1250,6 +1250,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         {
             var vals = series[s].Values;
             if (vals.Count < 2) continue;
+
             var color = SeriesPalette[s % SeriesPalette.Length];
             var stepX = (double)w / (vals.Count - 1);
 
@@ -1353,52 +1354,54 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 height,
                 dpi);
         }
-        else if (roots.Count == 4 && width >= height)
-        {
-            RenderSmartArtMatrix(buffer,
-                flatTexts,
-                x,
-                y,
-                width,
-                height,
-                dpi);
-        }
-        else if (roots.Count is >= 3 and <= 6 && !hasChildren)
-        {
-            RenderSmartArtCycle(buffer,
-                flatTexts,
-                x,
-                y,
-                width,
-                height,
-                dpi);
-        }
-        else if (roots.Count >= 3 && height > width)
-        {
-            RenderSmartArtPyramid(buffer,
-                flatTexts,
-                x,
-                y,
-                width,
-                height,
-                dpi);
-        }
         else
         {
-            RenderSmartArtLinear(buffer,
-                flatTexts,
-                x,
-                y,
-                width,
-                height,
-                dpi);
+            switch (roots.Count)
+            {
+                case 4 when width >= height:
+                    RenderSmartArtMatrix(buffer,
+                        flatTexts,
+                        x,
+                        y,
+                        width,
+                        height,
+                        dpi);
+                break;
+                case >= 3 and <= 6 when !hasChildren:
+                    RenderSmartArtCycle(buffer,
+                        flatTexts,
+                        x,
+                        y,
+                        width,
+                        height,
+                        dpi);
+                break;
+                case >= 3 when height > width:
+                    RenderSmartArtPyramid(buffer,
+                        flatTexts,
+                        x,
+                        y,
+                        width,
+                        height,
+                        dpi);
+                break;
+                default:
+                    RenderSmartArtLinear(buffer,
+                        flatTexts,
+                        x,
+                        y,
+                        width,
+                        height,
+                        dpi);
+                break;
+            }
         }
     }
 
     // Linear list: stacked colored boxes top-to-bottom.
     private void RenderSmartArtLinear(
         RasterBuffer buffer,
-        List<string> nodes,
+        IReadOnlyList<string> nodes,
         int x,
         int y,
         int width,
@@ -1480,7 +1483,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     // Hierarchy: root node at top, children in a row below.
     private void RenderSmartArtHierarchy(
         RasterBuffer buffer,
-        List<SmartArtNode> roots,
+        IReadOnlyList<SmartArtNode> roots,
         int x,
         int y,
         int width,
@@ -1491,6 +1494,12 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         var boxW = Math.Max(40, Math.Min(120, (width / Math.Max(1, roots.Count)) - 8));
         var boxH = Math.Max(20, Math.Min(40, (height / 3) - 8));
         var levelH = boxH + 16;
+
+        var nodeSpacing = Math.Max(boxW + 8, width / Math.Max(1, roots.Count));
+        for (var i = 0; i < roots.Count; i++)
+            DrawNode(roots[i], x + (i * nodeSpacing) + 4, y + 4, i);
+
+        return;
 
         void DrawNode(
             SmartArtNode node,
@@ -1519,9 +1528,11 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 255);
 
             if (node.Children.Count == 0) return;
+
             var childW = Math.Max(30, (width - 8) / Math.Max(1, node.Children.Count));
             var childY = ny + levelH;
             if (childY > y + height) return;
+
             for (var ci = 0; ci < node.Children.Count; ci++)
             {
                 var childX = x + (ci * childW) + 4;
@@ -1536,16 +1547,12 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 DrawNode(node.Children[ci], childX, childY, colorIdx + ci + 1);
             }
         }
-
-        var nodeSpacing = Math.Max(boxW + 8, width / Math.Max(1, roots.Count));
-        for (var i = 0; i < roots.Count; i++)
-            DrawNode(roots[i], x + (i * nodeSpacing) + 4, y + 4, i);
     }
 
     // Matrix: 2×2 grid of colored boxes.
     private void RenderSmartArtMatrix(
         RasterBuffer buffer,
-        List<string> nodes,
+        IReadOnlyList<string> nodes,
         int x,
         int y,
         int width,
@@ -1585,7 +1592,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     // Pyramid: stacked trapezoids narrowing to the top.
     private void RenderSmartArtPyramid(
         RasterBuffer buffer,
-        List<string> nodes,
+        IReadOnlyList<string> nodes,
         int x,
         int y,
         int width,
@@ -1628,6 +1635,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         foreach (var node in nodes)
         {
             yield return node.Text;
+
             foreach (var child in FlattenSmartArt(node.Children))
                 yield return child;
         }
@@ -1718,6 +1726,11 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
 
                 break;
             }
+            case FillType.Pattern:
+            case FillType.Group:
+            break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
     }
 
@@ -1735,13 +1748,22 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         if (rawPixels is null || imgWidth <= 0 || imgHeight <= 0)
             return;
 
-        BlitScaledRgb(buffer, rawPixels, imgWidth, imgHeight, x, y, width, height);
+        BlitScaledRgb(
+            buffer,
+            rawPixels,
+            imgWidth,
+            imgHeight,
+            x,
+            y,
+            width,
+            height
+        );
     }
 
     // Nearest-neighbour blit of a packed RGB source into the destination rect.
     private static void BlitScaledRgb(
         RasterBuffer buffer,
-        byte[] rawPixels,
+        IReadOnlyList<byte> rawPixels,
         int imgWidth,
         int imgHeight,
         int x,
@@ -1822,7 +1844,16 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         }
 
         // Nearest-neighbour blit with scaling to destination rect.
-        BlitScaledRgb(buffer, rawPixels, imgWidth, imgHeight, x, y, width, height);
+        BlitScaledRgb(
+            buffer,
+            rawPixels,
+            imgWidth,
+            imgHeight,
+            x,
+            y,
+            width,
+            height
+        );
     }
 
     // ── Text ──────────────────────────────────────────────────────────────────
@@ -1898,13 +1929,18 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                     if (start >= end) break;
 
                     // Build a temporary TextFrame with just this column's paragraphs.
-                    var colFrame = new TextFrame();
-                    colFrame.Format.VerticalAnchor = textFrame.Format.VerticalAnchor;
-                    colFrame.Format.Autofit = textFrame.Format.Autofit;
-                    colFrame.Format.MarginLeft = textFrame.Format.MarginLeft;
-                    colFrame.Format.MarginTop = textFrame.Format.MarginTop;
-                    colFrame.Format.MarginBottom = textFrame.Format.MarginBottom;
-                    colFrame.Format.MarginRight = textFrame.Format.MarginRight;
+                    var colFrame = new TextFrame
+                    {
+                        Format =
+                        {
+                            VerticalAnchor = textFrame.Format.VerticalAnchor,
+                            Autofit = textFrame.Format.Autofit,
+                            MarginLeft = textFrame.Format.MarginLeft,
+                            MarginTop = textFrame.Format.MarginTop,
+                            MarginBottom = textFrame.Format.MarginBottom,
+                            MarginRight = textFrame.Format.MarginRight
+                        }
+                    };
                     for (var pi = start; pi < end; pi++)
                         colFrame.Paragraphs.Add(textFrame.Paragraphs[pi]);
 
@@ -1960,9 +1996,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             var totalTextH = MeasureTotalTextHeight(
                 textFrame,
                 scale,
-                defaultFontSize,
-                fontScheme,
-                shapeWidth);
+                defaultFontSize);
             var availH = shapeHeight - marginTop - marginBottom;
             var offset = availH - totalTextH;
             if (anchor is TextAnchor.Middle
@@ -1986,7 +2020,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 for (var iter = 0; iter < 8; iter++)
                 {
                     var mid = (lo + hi) / 2;
-                    var h = MeasureTotalTextHeight(textFrame, scale * mid, defaultFontSize * mid, fontScheme, shapeWidth);
+                    var h = MeasureTotalTextHeight(textFrame, scale * mid, defaultFontSize * mid);
                     if (h <= availH) lo = mid;
                     else hi = mid;
                 }
@@ -2003,6 +2037,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             {
                 cursorY += (int)(defaultFontSize * fontScale * scale) + 2;
                 if (cursorY > maxY) return;
+
                 continue;
             }
 
@@ -2029,8 +2064,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
                 var fontName = ResolveFont(run.Format.LatinFont ?? SelectFontName(run), fontScheme);
                 var embeddedBytes = ResolveEmbeddedFont(run, fontName, out var cacheKey);
 
-                foreach (var word in SplitIntoWords(run.Text))
-                    tokens.Add((word, cacheKey, embeddedBytes, fontSizePt, textR, textG, textB));
+                tokens.AddRange(SplitIntoWords(run.Text).Select(word => (word, cacheKey, embeddedBytes, fontSizePt, textR, textG, textB)));
             }
 
             var lineX = innerLeft;
@@ -2078,6 +2112,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     private static string ResolveFont(string fontName, FontScheme? fontScheme)
     {
         if (fontScheme is null) return fontName;
+
         return fontName switch
         {
             OoxmlScaling.ThemeMajorLatinFont => fontScheme.MajorFont.LatinFont is { Length: > 0 } mj ? mj : fontName,
@@ -2087,12 +2122,10 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     }
 
     // Estimates the total pixel height of all paragraphs in a text frame for vertical anchor.
-    private int MeasureTotalTextHeight(
+    private static int MeasureTotalTextHeight(
         TextFrame textFrame,
         double scale,
-        double defaultFontSize,
-        FontScheme? fontScheme,
-        int shapeWidth
+        double defaultFontSize
     )
     {
         var total = 0;
@@ -2112,7 +2145,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     }
 
     // Splits text into words, keeping trailing spaces attached to each word.
-    private static List<string> SplitIntoWords(string text)
+    private static IEnumerable<string> SplitIntoWords(string text)
     {
         var result = new List<string>();
         var i = 0;
@@ -2137,6 +2170,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     )
     {
         if (string.IsNullOrEmpty(text)) return 0;
+
         try
         {
             var (ftFace, hbFont) = fonts.GetFonts(fontName, embeddedBytes);
@@ -2239,14 +2273,15 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             return PngDecoder.TryDecodeToRgb(bytes, out width, out height);
         if (IsJpeg(bytes))
             return JpegDecoder.TryDecodeToRgb(bytes, out width, out height);
+
         if (IsSvg(bytes))
         {
             // Render SVG at a reasonable fixed resolution; caller scales to dest rect.
-            const int SvgRenderSize = 256;
+            const int svgRenderSize = 256;
             var pixels = SvgDecoder.TryDecodeToRgb(
                 bytes,
-                SvgRenderSize,
-                SvgRenderSize,
+                svgRenderSize,
+                svgRenderSize,
                 out width,
                 out height);
             return pixels;
@@ -2377,6 +2412,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
     {
         if (run.Format.Bold == InheritableBool.True)
             return TextConstants.FallbackLatinFontBold;
+
         return TextConstants.FallbackLatinFont;
     }
 
@@ -2414,13 +2450,7 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
         out byte r,
         out byte g,
         out byte b
-    )
-    {
-        a = (byte)((argb >> 24) & 0xFF);
-        r = (byte)((argb >> 16) & 0xFF);
-        g = (byte)((argb >> 8) & 0xFF);
-        b = (byte)(argb & 0xFF);
-    }
+    ) => (a, r, g, b) = ColorMath.UnpackArgb(argb);
 
     // Maps a coordinate-space EMU point to device pixels: px = (Scale * emu) + Offset.
     // The slide root uses Scale = px/EMU, Offset = 0; each group composes a child transform

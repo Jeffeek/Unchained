@@ -67,7 +67,7 @@ public sealed class SampleRenderingTests : PptxTestBase
         Walk(slide.Shapes, parts);
         return parts.Count == 0 ? null : string.Join(", ", parts);
 
-        static void Walk(IEnumerable<Shape> shapes, List<string> parts)
+        static void Walk(IEnumerable<Shape> shapes, ICollection<string> parts)
         {
             foreach (var s in shapes)
             {
@@ -85,7 +85,7 @@ public sealed class SampleRenderingTests : PptxTestBase
                     case ChartShape c when c.Chart.Data.Series.Count > 0:
                         parts.Add($"chart{Geom(s)}");
                     break;
-                    case SmartArtShape sa when sa.Nodes.Count > 0:
+                    case SmartArtShape { Nodes.Count: > 0 }:
                         parts.Add($"smartart{Geom(s)}");
                     break;
                     case GroupShape g:
@@ -118,6 +118,7 @@ public sealed class SampleRenderingTests : PptxTestBase
     {
         var rgb = DecodePng(image.Data.ToArray(), out var w, out var h);
         if (rgb is null) return 0;
+
         var counts = new Dictionary<int, int>();
         var pixels = w * h;
         for (var i = 0; i < pixels; i++)
@@ -165,6 +166,7 @@ public sealed class SampleRenderingTests : PptxTestBase
         }
 
         if (width <= 0 || height <= 0 || bitDepth != 8) return null;
+
         var channels = colorType switch { 2 => 3, 6 => 4, _ => 0 };
         if (channels == 0) return null;
 
@@ -184,6 +186,7 @@ public sealed class SampleRenderingTests : PptxTestBase
         for (var y = 0; y < height; y++)
         {
             if (srcPos >= data.Length) break;
+
             var filter = data[srcPos++];
             Array.Copy(data, srcPos, cur, 0, Math.Min(stride, data.Length - srcPos));
             srcPos += stride;
@@ -206,8 +209,8 @@ public sealed class SampleRenderingTests : PptxTestBase
 
     private static void Unfilter(
         int filter,
-        byte[] cur,
-        byte[] prev,
+        IList<byte> cur,
+        IReadOnlyList<byte> prev,
         int bpp,
         int stride
     )

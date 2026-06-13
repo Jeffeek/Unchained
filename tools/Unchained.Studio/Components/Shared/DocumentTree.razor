@@ -52,7 +52,7 @@
                          OnClick="@(() => SelectNode(node))"
                          Selected="@(node == _selectedNode)"
                          Style="@(node == _selectedNode ? "background:rgba(92,107,192,0.08);" : string.Empty)">
-            @if (node.IsExpanded && node.Children.Count > 0)
+            @if (node is { IsExpanded: true, Children.Count: > 0 })
             {
                 @foreach (var child in VisibleChildren(node.Children))
                 {
@@ -78,14 +78,10 @@
         return selfMatches || childMatches;
     }
 
-    private IEnumerable<TreeNode> VisibleChildren(List<TreeNode> nodes)
-    {
-        if (string.IsNullOrWhiteSpace(_filter))
-            return nodes;
-        return nodes.Where(NodeOrChildMatchesFilter);
-    }
+    private IEnumerable<TreeNode> VisibleChildren(IEnumerable<TreeNode> nodes) =>
+        string.IsNullOrWhiteSpace(_filter) ? nodes : nodes.Where(NodeOrChildMatchesFilter);
 
-    private async Task OnExpandedChanged(TreeNode node, bool expanded)
+        private async Task OnExpandedChanged(TreeNode node, bool expanded)
     {
         node.IsExpanded = expanded;
 
@@ -93,7 +89,7 @@
             return;
 
         // Lazy-load children on first expand
-        if (node.HasLazyChildren && !node.LazyChildrenLoaded && node.LoadChildrenAsync is not null)
+        if (node is { HasLazyChildren: true, LazyChildrenLoaded: false, LoadChildrenAsync: not null })
         {
             node.LazyChildrenLoaded = true; // set before await to guard against re-entry
             var children = await node.LoadChildrenAsync();

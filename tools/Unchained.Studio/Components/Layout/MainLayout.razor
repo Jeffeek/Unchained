@@ -1,5 +1,4 @@
 @inherits LayoutComponentBase
-@inject ISnackbar Snackbar
 @inject NavigationManager Nav
 @inject ThemeService ThemeSvc
 @implements IDisposable
@@ -74,12 +73,7 @@
         Nav.LocationChanged += OnLocationChanged;
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-            return ThemeSvc.InitializeAsync();
-        return Task.CompletedTask;
-    }
+    protected override Task OnAfterRenderAsync(bool firstRender) => firstRender ? ThemeSvc.InitializeAsync() : Task.CompletedTask;
 
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
 

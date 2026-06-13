@@ -52,8 +52,8 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         sdkText.ShouldContain("Hello Parity");
         customText.ShouldContain("Hello Parity");
 
-        custom.Dispose();
-        sdk.Dispose();
+        await custom.DisposeAsync();
+        await sdk.DisposeAsync();
     }
 
     [
@@ -147,57 +147,60 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
                 ss.Line.WidthPoints.ShouldBe(cs.Line.WidthPoints, $"{fileName}: s{i + 1} sh{j + 1} line width");
                 ss.Line.DashStyle.ShouldBe(cs.Line.DashStyle, $"{fileName}: s{i + 1} sh{j + 1} line dash");
 
-                // Pictures must resolve their embedded image bytes identically.
-                if (cs is PictureShape cp
-                    && ss is PictureShape sp)
+                switch (cs)
                 {
-                    (sp.Image is not null).ShouldBe(cp.Image is not null,
-                        $"{fileName}: slide {i + 1} shape {j + 1} image presence");
-                    if (cp.Image is not null && sp.Image is not null)
+                    // Pictures must resolve their embedded image bytes identically.
+                    case PictureShape cp when ss is PictureShape sp:
                     {
-                        sp.Image.Data.Length.ShouldBe(cp.Image.Data.Length,
-                            $"{fileName}: slide {i + 1} shape {j + 1} image byte length");
-                    }
-                }
-
-                // Charts must resolve the same model (type + series count) from the chart part.
-                if (cs is ChartShape cc
-                    && ss is ChartShape sc)
-                {
-                    sc.Chart.Type.ShouldBe(cc.Chart.Type,
-                        $"{fileName}: slide {i + 1} shape {j + 1} chart type");
-                    sc.Chart.Data.Series.Count.ShouldBe(cc.Chart.Data.Series.Count,
-                        $"{fileName}: slide {i + 1} shape {j + 1} chart series count");
-                }
-
-                // Text runs must carry identical formatting (M1): plain text, bold/italic,
-                // font size, font name, paragraph alignment.
-                if (cs is AutoShape ca
-                    && ss is AutoShape sa)
-                {
-                    var cParas = ca.TextFrame.Paragraphs;
-                    var sParas = sa.TextFrame.Paragraphs;
-                    sParas.Count.ShouldBe(cParas.Count,
-                        $"{fileName}: slide {i + 1} shape {j + 1} paragraph count");
-
-                    for (var pi = 0; pi < cParas.Count; pi++)
-                    {
-                        sParas[pi].Alignment.ShouldBe(cParas[pi].Alignment,
-                            $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} alignment");
-                        sParas[pi].Runs.Count.ShouldBe(cParas[pi].Runs.Count,
-                            $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} run count");
-
-                        for (var ri = 0; ri < cParas[pi].Runs.Count; ri++)
+                        (sp.Image is not null).ShouldBe(cp.Image is not null,
+                            $"{fileName}: slide {i + 1} shape {j + 1} image presence");
+                        if (cp.Image is not null && sp.Image is not null)
                         {
-                            var cr = cParas[pi].Runs[ri];
-                            var sr = sParas[pi].Runs[ri];
-                            sr.Text.ShouldBe(cr.Text, $"{fileName}: s{i + 1} sh{j + 1} p{pi + 1} run {ri + 1} text");
-                            sr.Format.Bold.ShouldBe(cr.Format.Bold, $"{fileName}: …run {ri + 1} bold");
-                            sr.Format.Italic.ShouldBe(cr.Format.Italic, $"{fileName}: …run {ri + 1} italic");
-                            sr.Format.FontSizePoints.ShouldBe(cr.Format.FontSizePoints, $"{fileName}: …run {ri + 1} size");
-                            sr.Format.LatinFont.ShouldBe(cr.Format.LatinFont, $"{fileName}: …run {ri + 1} font");
-                            sr.Format.Underline.ShouldBe(cr.Format.Underline, $"{fileName}: …run {ri + 1} underline");
+                            sp.Image.Data.Length.ShouldBe(cp.Image.Data.Length,
+                                $"{fileName}: slide {i + 1} shape {j + 1} image byte length");
                         }
+
+                        break;
+                    }
+                    // Charts must resolve the same model (type + series count) from the chart part.
+                    case ChartShape cc
+                        when ss is ChartShape sc:
+                        sc.Chart.Type.ShouldBe(cc.Chart.Type,
+                            $"{fileName}: slide {i + 1} shape {j + 1} chart type");
+                        sc.Chart.Data.Series.Count.ShouldBe(cc.Chart.Data.Series.Count,
+                            $"{fileName}: slide {i + 1} shape {j + 1} chart series count");
+                    break;
+                    // Text runs must carry identical formatting (M1): plain text, bold/italic,
+                    // font size, font name, paragraph alignment.
+                    case AutoShape ca
+                        when ss is AutoShape sa:
+                    {
+                        var cParas = ca.TextFrame.Paragraphs;
+                        var sParas = sa.TextFrame.Paragraphs;
+                        sParas.Count.ShouldBe(cParas.Count,
+                            $"{fileName}: slide {i + 1} shape {j + 1} paragraph count");
+
+                        for (var pi = 0; pi < cParas.Count; pi++)
+                        {
+                            sParas[pi].Alignment.ShouldBe(cParas[pi].Alignment,
+                                $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} alignment");
+                            sParas[pi].Runs.Count.ShouldBe(cParas[pi].Runs.Count,
+                                $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} run count");
+
+                            for (var ri = 0; ri < cParas[pi].Runs.Count; ri++)
+                            {
+                                var cr = cParas[pi].Runs[ri];
+                                var sr = sParas[pi].Runs[ri];
+                                sr.Text.ShouldBe(cr.Text, $"{fileName}: s{i + 1} sh{j + 1} p{pi + 1} run {ri + 1} text");
+                                sr.Format.Bold.ShouldBe(cr.Format.Bold, $"{fileName}: …run {ri + 1} bold");
+                                sr.Format.Italic.ShouldBe(cr.Format.Italic, $"{fileName}: …run {ri + 1} italic");
+                                sr.Format.FontSizePoints.ShouldBe(cr.Format.FontSizePoints, $"{fileName}: …run {ri + 1} size");
+                                sr.Format.LatinFont.ShouldBe(cr.Format.LatinFont, $"{fileName}: …run {ri + 1} font");
+                                sr.Format.Underline.ShouldBe(cr.Format.Underline, $"{fileName}: …run {ri + 1} underline");
+                            }
+                        }
+
+                        break;
                     }
                 }
             }
@@ -206,7 +209,7 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         // Resolved media image count should match.
         sdk.Media.Images.Count.ShouldBe(custom.Media.Images.Count, $"{fileName}: media image count");
 
-        custom.Dispose();
-        sdk.Dispose();
+        await custom.DisposeAsync();
+        await sdk.DisposeAsync();
     }
 }

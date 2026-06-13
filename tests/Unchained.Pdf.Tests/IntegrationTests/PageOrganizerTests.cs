@@ -163,7 +163,7 @@ public sealed class PageOrganizerTests : PdfTestBase
 
     [Fact]
     public Task InsertPages_OutOfRange_Throws() =>
-        Should.ThrowAsync<ArgumentOutOfRangeException>(async () =>
+        Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
         {
             await using var dest = await LoadFixtureAsync(2);
             await using var src = await LoadFixtureAsync(1);
@@ -199,7 +199,7 @@ public sealed class PageOrganizerTests : PdfTestBase
 
     [Fact]
     public Task Split_InvalidRange_Throws() =>
-        Should.ThrowAsync<ArgumentOutOfRangeException>(async () =>
+        Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
         {
             await using var doc = await LoadFixtureAsync(3);
             await Organizer.SplitAsync(doc, [(2, 1)]);
@@ -207,7 +207,7 @@ public sealed class PageOrganizerTests : PdfTestBase
 
     [Fact]
     public Task Split_EmptyRanges_Throws() =>
-        Should.ThrowAsync<ArgumentException>(async () =>
+        Should.ThrowAsync<ArgumentException>(static async () =>
         {
             await using var doc = await LoadFixtureAsync(3);
             await Organizer.SplitAsync(doc, []);

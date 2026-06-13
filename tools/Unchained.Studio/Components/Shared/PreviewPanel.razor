@@ -263,12 +263,9 @@
             if (_pageBytes is not null)
             {
                 var page = Document.Pages[CurrentPage];
-                if (page is not null)
-                {
-                    _pageWidthPt = page.Width;
-                    _pageHeightPt = page.Height;
-                    _textSpans = _showText ? page.GetTextSpans() : null;
-                }
+                _pageWidthPt = page.Width;
+                _pageHeightPt = page.Height;
+                _textSpans = _showText ? page.GetTextSpans() : null;
             }
 
             _lastDocument = Document;
@@ -285,10 +282,7 @@
     private Task OnCompareToggled(bool toggled)
     {
         _compareMode = toggled;
-        if (_compareMode)
-            return RefreshBlobUrlAsync();
-        else
-            return RevokeBlobAsync();
+        return _compareMode ? RefreshBlobUrlAsync() : RevokeBlobAsync();
     }
 
     private async Task RefreshBlobUrlAsync()
@@ -315,6 +309,7 @@
     {
         if (_blobUrl is null)
             return;
+
         try
         {
             await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", _blobUrl);
@@ -334,7 +329,7 @@
         if (_showText && _pageBytes is not null && Document is not null)
         {
             var page = Document.Pages[CurrentPage];
-            _textSpans = page?.GetTextSpans();
+            _textSpans = page.GetTextSpans();
         }
         else
         {
@@ -352,6 +347,7 @@
     private async Task PreviousPage()
     {
         if (CurrentPage <= 1) return;
+
         CurrentPage--;
         _loading = true;
         await CurrentPageChanged.InvokeAsync(CurrentPage);
@@ -361,6 +357,7 @@
     private async Task NextPage()
     {
         if (CurrentPage >= PageCount) return;
+
         CurrentPage++;
         _loading = true;
         await CurrentPageChanged.InvokeAsync(CurrentPage);
@@ -378,12 +375,13 @@
         }
     }
 
-    private Task OnPageInputKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "ArrowLeft") return PreviousPage();
-        else if (e.Key == "ArrowRight") return NextPage();
-        return Task.CompletedTask;
-    }
+    private Task OnPageInputKeyDown(KeyboardEventArgs e) =>
+        e.Key switch
+        {
+            "ArrowLeft" => PreviousPage(),
+            "ArrowRight" => NextPage(),
+            _ => Task.CompletedTask
+        };
 
     private void ZoomIn() => _zoom = Math.Min(200, _zoom + 25);
     private void ZoomOut() => _zoom = Math.Max(25, _zoom - 25);

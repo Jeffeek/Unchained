@@ -234,11 +234,9 @@ internal static class PptxToHtmlWriter
 
     private static void WritePicture(StringBuilder sb, PictureShape pic)
     {
-        var data = pic.Image!.Data;
-        var contentType = pic.Image.ContentType;
-        var b64 = Convert.ToBase64String(data.ToArray());
+        var dataUri = ExportText.ToBase64DataUri(pic.Image!.Data, pic.Image.ContentType);
         sb.AppendLine(
-            $"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"data:{contentType};base64,{b64}\" alt=\"{ExportText.EscapeHtml(pic.AltText ?? string.Empty)}\">");
+            $"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"{dataUri}\" alt=\"{ExportText.EscapeHtml(pic.AltText ?? string.Empty)}\">");
     }
 
     private static string ToCssColor(uint argb)

@@ -1,10 +1,10 @@
+@using System.Collections
 @using System.IO.Compression
 @using System.Text
 @using Unchained.Pdf.Abstractions
 @using Unchained.Pdf.Engine
 @inject DocumentProcessor Processor
 @inject RenderingService Renderer
-@inject PdfiumReferenceRenderer PdfiumRenderer
 @inject FileExportService Exporter
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
@@ -188,6 +188,8 @@
                                     <MudIcon Icon="@Icons.Material.Outlined.Error"
                                              Size="Size.Small" Color="Color.Error"/>
                                 break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
                             }
                             <MudText Typo="Typo.body2" Class="batch-file-name"
                                      title="@f.FileName">
@@ -212,27 +214,29 @@
     </DialogContent>
 
     <DialogActions>
-        @if (_phase == Phase.Configure)
+        @switch (_phase)
         {
-            <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
-            <MudButton OnClick="StartBatch"
-                       Color="Color.Primary" Variant="Variant.Filled"
-                       Disabled="@(_files.Count == 0)"
-                       StartIcon="@Icons.Material.Outlined.FileDownload">
-                Export ZIP
-            </MudButton>
-        }
-        else if (_phase == Phase.Running)
-        {
-            <MudButton OnClick="RequestCancel" Color="Color.Error" Variant="Variant.Text">
-                Cancel
-            </MudButton>
-        }
-        else // Done
-        {
-            <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">
-                Close
-            </MudButton>
+            case Phase.Configure:
+                <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+                <MudButton OnClick="StartBatch"
+                           Color="Color.Primary" Variant="Variant.Filled"
+                           Disabled="@(_files.Count == 0)"
+                           StartIcon="@Icons.Material.Outlined.FileDownload">
+                    Export ZIP
+                </MudButton>
+            break;
+            case Phase.Running:
+                <MudButton OnClick="RequestCancel" Color="Color.Error" Variant="Variant.Text">
+                    Cancel
+                </MudButton>
+            break;
+            // Done
+            case Phase.Done:
+            default:
+                <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">
+                    Close
+                </MudButton>
+            break;
         }
     </DialogActions>
 </MudDialog>
@@ -240,7 +244,7 @@
 @code {
 
     [CascadingParameter]
-    IMudDialogInstance MudDialog { get; set; } = default!;
+    IMudDialogInstance MudDialog { get; set; } = null!;
 
     // ── State ──────────────────────────────────────────────────────────────────
 
@@ -289,10 +293,8 @@
     {
         const long maxBytes = 200L * 1024 * 1024;
 
-        foreach (var file in e.GetMultipleFiles(200))
+        foreach (var file in e.GetMultipleFiles(200).Where(file => _files.All(f => f.FileName != file.Name)))
         {
-            if (_files.Any(f => f.FileName == file.Name)) continue; // deduplicate by name
-
             try
             {
                 using var ms = new MemoryStream();
@@ -335,10 +337,8 @@
         var batchSummaryRows = new List<string>();
         var utcNow = DateTime.UtcNow;
 
-        foreach (var entry in _files)
+        foreach (var entry in _files.TakeWhile(_ => !_cancelRequested))
         {
-            if (_cancelRequested) break;
-
             _currentEntry = entry;
             entry.Status = BatchStatus.Processing;
             _overallMessage = $"Processing {entry.FileName}…";
@@ -350,7 +350,7 @@
             try
             {
                 // ── Load document ──────────────────────────────────────────
-                IPdfDocument? doc = null;
+                IPdfDocument? doc;
                 try
                 {
                     using var ms = new MemoryStream(entry.Bytes);
@@ -381,10 +381,8 @@
                 var docCt = docCts.Token;
 
                 // ── Render each page ───────────────────────────────────────
-                foreach (var page in pages)
+                foreach (var page in pages.TakeWhile(_ => !_cancelRequested && !docCt.IsCancellationRequested))
                 {
-                    if (_cancelRequested || docCt.IsCancellationRequested) break;
-
                     // ── Unchained render (server-side, per-page timeout) ────
                     _pageMessage = $"Page {page}/{entry.TotalPages} — Unchained";
                     StateHasChanged();
@@ -457,7 +455,7 @@
                 await doc.DisposeAsync();
 
                 entry.RenderErrors.AddRange(pageErrors);
-                entry.Status = pageErrors.Count == 0 ? BatchStatus.Done : BatchStatus.Done;
+                entry.Status = BatchStatus.Done;
             }
             catch (OperationCanceledException)
             {
@@ -608,7 +606,7 @@
     }
 
     private static byte[] BuildBatchReadme(
-        List<BatchEntry> files,
+        ICollection files,
         List<string> summaryRows,
         int dpi,
         DateTime utc

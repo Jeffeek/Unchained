@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 using FreeTypeSharp;
 using HarfBuzzSharp;
@@ -84,13 +83,13 @@ internal sealed class FontCache : IDisposable
     public GlyphFace GetFace(string fontName, byte[]? embeddedBytes = null) =>
         GetFonts(fontName, embeddedBytes).Face;
 
-    private (GlyphFace Face, Font HbFont, GCHandle Pin) CreatePair(byte[] fontBytes)
+    private (GlyphFace Face, Font HbFont, GCHandle Pin) CreatePair(IReadOnlyCollection<byte> fontBytes)
     {
         // Pin fontBytes for the lifetime of the GlyphFace. FreeType's FT_New_Memory_Face keeps
         // a raw pointer into this buffer; if GC moves the array, FreeType reads stale memory and
         // bitmap data becomes corrupt. Freed in Dispose.
         var pin = GCHandle.Alloc(fontBytes, GCHandleType.Pinned);
-        var face = new GlyphFace(_ftLibrary, pin.AddrOfPinnedObject(), fontBytes.Length);
+        var face = new GlyphFace(_ftLibrary, pin.AddrOfPinnedObject(), fontBytes.Count);
 
         // HarfBuzz needs its own copy (MemoryMode.Duplicate); the temporary pin is released
         // immediately after the blob is built.
@@ -98,7 +97,7 @@ internal sealed class FontCache : IDisposable
         Font hbFont;
         try
         {
-            using var blob = new Blob(gch.AddrOfPinnedObject(), fontBytes.Length, MemoryMode.Duplicate);
+            using var blob = new Blob(gch.AddrOfPinnedObject(), fontBytes.Count, MemoryMode.Duplicate);
             using var hbFace = new Face(blob, 0);
             hbFont = new Font(hbFace);
             hbFont.SetScale(face.UnitsPerEm, face.UnitsPerEm);

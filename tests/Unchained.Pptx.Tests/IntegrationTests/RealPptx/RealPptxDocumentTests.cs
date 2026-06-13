@@ -62,7 +62,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
         var doc = await Processor.LoadAsync(stream);
 
         var hasTable = doc.Slides
-            .Any(s => s.Shapes.OfType<TableShape>().Any());
+            .Any(static s => s.Shapes.OfType<TableShape>().Any());
         hasTable.ShouldBeTrue();
     }
 
@@ -75,7 +75,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
         var doc = await Processor.LoadAsync(stream);
 
         var hasPicture = doc.Slides
-            .Any(s => s.Shapes.OfType<PictureShape>().Any());
+            .Any(static s => s.Shapes.OfType<PictureShape>().Any());
         hasPicture.ShouldBeTrue();
     }
 
@@ -87,10 +87,6 @@ public sealed class RealPptxDocumentTests : PptxTestBase
         await using var stream = File.OpenRead(FilePath("simple.pptx"));
         var doc = await Processor.LoadAsync(stream);
 
-        foreach (var slide in doc.Slides)
-        {
-            var text = slide.GetAllText();
-            text.ShouldNotBeNull();
-        }
+        foreach (var text in doc.Slides.Select(static slide => slide.GetAllText())) text.ShouldNotBeNull();
     }
 }

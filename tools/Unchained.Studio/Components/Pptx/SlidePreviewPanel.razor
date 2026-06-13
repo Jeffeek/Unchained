@@ -1,4 +1,3 @@
-@inject ISnackbar Snackbar
 @using Unchained.Pptx.Engine
 @using Unchained.Pptx.Rendering.Engine
 @using Unchained.Pptx.Rendering.Models
@@ -35,7 +34,7 @@
 
         <MudSpacer/>
 
-        @if (slide is not null && slide.IsHidden)
+        @if (Slide is not null && Slide.IsHidden)
         {
             <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="Hidden"/>
         }
@@ -82,7 +81,7 @@
 
     private int SlideCount => Document?.Slides.Count ?? 0;
 
-    private Slide? slide =>
+    private Slide? Slide =>
         Document is not null && CurrentSlide >= 1 && CurrentSlide <= SlideCount
             ? Document.Slides[CurrentSlide - 1]
             : null;
@@ -90,18 +89,16 @@
     protected override Task OnParametersSetAsync()
     {
         // Re-render when the document or selected slide changes.
-        if (Document != _lastDocument || CurrentSlide != _lastRendered)
-        {
-            _lastDocument = Document;
-        return RenderCurrentSlideAsync();
-    }
+        if (Document == _lastDocument && CurrentSlide == _lastRendered)
+            return Task.CompletedTask;
 
-        return Task.CompletedTask;
+        _lastDocument = Document;
+        return RenderCurrentSlideAsync();
     }
 
     private async Task RenderCurrentSlideAsync()
     {
-        var current = slide;
+        var current = Slide;
         if (Document is null || current is null)
         {
             _slideBytes = null;
@@ -139,22 +136,15 @@
         }
     }
 
-    private Task PreviousSlide()
-    {
-        if (CurrentSlide <= 1) return Task.CompletedTask;
-        return CurrentSlideChanged.InvokeAsync(CurrentSlide - 1);
-    }
+    private Task PreviousSlide() => CurrentSlide <= 1 ? Task.CompletedTask : CurrentSlideChanged.InvokeAsync(CurrentSlide - 1);
 
-    private Task NextSlide()
-    {
-        if (CurrentSlide >= SlideCount) return Task.CompletedTask;
-        return CurrentSlideChanged.InvokeAsync(CurrentSlide + 1);
-    }
+    private Task NextSlide() => CurrentSlide >= SlideCount ? Task.CompletedTask : CurrentSlideChanged.InvokeAsync(CurrentSlide + 1);
 
     private Task OnSlideInputChanged(ChangeEventArgs e)
     {
         if (!int.TryParse(e.Value?.ToString(), out var n))
             return Task.CompletedTask;
+
         n = Math.Clamp(n, 1, Math.Max(1, SlideCount));
         return CurrentSlideChanged.InvokeAsync(n);
     }

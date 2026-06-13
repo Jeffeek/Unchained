@@ -30,7 +30,7 @@ public static class PdfTreeBuilder
         };
 
         // Remove nodes that have no content
-        root.Children.RemoveAll(static n => n.Children.Count == 0 && n.Label.EndsWith(" (none)"));
+        root.Children.RemoveAll(static n => n.Children.Count == 0 && n.Label.EndsWith(" (none)", StringComparison.Ordinal));
 
         return root;
     }
@@ -231,11 +231,10 @@ public static class PdfTreeBuilder
             NodeType = TreeNodeType.Bookmark,
             Payload = bm
         };
-        if (bm.Children is { Count: > 0 } children)
-        {
-            foreach (var child in children)
-                node.Children.Add(BuildBookmarkNode(child));
-        }
+        if (bm.Children is not { Count: > 0 } children) return node;
+
+        foreach (var child in children)
+            node.Children.Add(BuildBookmarkNode(child));
 
         return node;
     }
@@ -314,40 +313,36 @@ public static class PdfTreeBuilder
     private static TreeNode BuildXmpNode(IPdfDocument document)
     {
         var xmp = document.GetXmpMetadata();
-        if (xmp is null)
-            return EmptyNode("XMP Metadata (none)");
-
-        return new TreeNode
-        {
-            Label = "XMP Metadata",
-            Icon = Icons.Material.Outlined.Description,
-            NodeType = TreeNodeType.XmpMetadata,
-            Payload = xmp,
-            Children =
-            [
-                Leaf($"{xmp.Length:N0} bytes", Icons.Material.Outlined.DataObject, TreeNodeType.Generic)
-            ]
-        };
+        return xmp is null
+            ? EmptyNode("XMP Metadata (none)")
+            : new TreeNode
+            {
+                Label = "XMP Metadata",
+                Icon = Icons.Material.Outlined.Description,
+                NodeType = TreeNodeType.XmpMetadata,
+                Payload = xmp,
+                Children =
+                [
+                    Leaf($"{xmp.Length:N0} bytes", Icons.Material.Outlined.DataObject, TreeNodeType.Generic)
+                ]
+            };
     }
 
-    private static TreeNode BuildEncryptionNode(IPdfDocument document)
-    {
-        if (!document.IsEncrypted)
-            return EmptyNode("Encryption (none)");
-
-        return new TreeNode
-        {
-            Label = "Encryption",
-            Icon = Icons.Material.Outlined.Lock,
-            NodeType = TreeNodeType.Encryption,
-            Payload = document,
-            Children =
-            [
-                Leaf($"Algorithm: {document.CryptoAlgorithm}", Icons.Material.Outlined.Security, TreeNodeType.Generic),
-                Leaf($"Permissions: {document.Permissions}", Icons.Material.Outlined.AdminPanelSettings, TreeNodeType.Generic)
-            ]
-        };
-    }
+    private static TreeNode BuildEncryptionNode(IPdfDocument document) =>
+        !document.IsEncrypted
+            ? EmptyNode("Encryption (none)")
+            : new TreeNode
+            {
+                Label = "Encryption",
+                Icon = Icons.Material.Outlined.Lock,
+                NodeType = TreeNodeType.Encryption,
+                Payload = document,
+                Children =
+                [
+                    Leaf($"Algorithm: {document.CryptoAlgorithm}", Icons.Material.Outlined.Security, TreeNodeType.Generic),
+                    Leaf($"Permissions: {document.Permissions}", Icons.Material.Outlined.AdminPanelSettings, TreeNodeType.Generic)
+                ]
+            };
 
     private static TreeNode Leaf(
         string label,

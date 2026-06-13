@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Shouldly;
-using Unchained.Drawing;
+using Unchained.Drawing.Fonts;
 using Unchained.Drawing.Text;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;

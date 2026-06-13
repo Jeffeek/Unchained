@@ -1,7 +1,6 @@
 using FreeTypeSharp;
 using static FreeTypeSharp.FT;
 using static FreeTypeSharp.FT_LOAD;
-using static FreeTypeSharp.FT_Render_Mode_;
 
 namespace Unchained.Drawing.Text;
 
@@ -34,7 +33,7 @@ internal sealed unsafe class GlyphFace : IDisposable
     public void SetPixelSize(uint pixelSize) => FT_Set_Pixel_Sizes(_face, 0, pixelSize);
 
     /// <summary>Maps a Unicode character code to a glyph index via the font's charmap.</summary>
-    public uint GetCharIndex(uint charCode) => FT_Get_Char_Index(_face, (UIntPtr)charCode);
+    public uint GetCharIndex(uint charCode) => FT_Get_Char_Index(_face, charCode);
 
     /// <summary>
     ///     Loads and rasterizes the glyph at <paramref name="glyphIndex" />.
@@ -42,6 +41,7 @@ internal sealed unsafe class GlyphFace : IDisposable
     /// </summary>
     public bool TryLoadGlyph(uint glyphIndex, bool hinting = false)
     {
+        // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
         var flags = FT_LOAD_RENDER | (hinting ? FT_LOAD_DEFAULT : FT_LOAD_NO_HINTING);
         return FT_Load_Glyph(_face, glyphIndex, flags) == FT_Error.FT_Err_Ok;
     }
@@ -52,7 +52,8 @@ internal sealed unsafe class GlyphFace : IDisposable
     /// </summary>
     public bool TryLoadGlyphOutline(uint glyphIndex)
     {
-        var flags = FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING;
+        // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+        const FT_LOAD flags = FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING;
         return FT_Load_Glyph(_face, glyphIndex, flags) == FT_Error.FT_Err_Ok;
     }
 
@@ -112,7 +113,7 @@ internal sealed unsafe class GlyphFace : IDisposable
                 for (var j = 0; j < count; j++)
                 {
                     var point = outline.points[start + j];
-                    poly[j] = ((long)point.x / 64.0, (long)point.y / 64.0);
+                    poly[j] = (point.x / 64.0, point.y / 64.0);
                 }
 
                 result.Add(poly);
@@ -130,11 +131,10 @@ internal sealed unsafe class GlyphFace : IDisposable
             return;
 
         _disposed = true;
-        if (_face != null)
-        {
-            FT_Done_Face(_face);
-            _face = null;
-        }
+        if (_face == null) return;
+
+        FT_Done_Face(_face);
+        _face = null;
     }
 }
 

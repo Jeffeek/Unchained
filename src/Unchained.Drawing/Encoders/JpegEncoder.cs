@@ -276,10 +276,10 @@ internal static class JpegEncoder
             var r = row * 8;
             for (var u = 0; u < 8; u++)
             {
-                var sum = 0.0;
+                var sum = 0d;
                 for (var x = 0; x < 8; x++)
-                    sum += block[r + x] * Math.Cos(((2 * x) + 1) * u * Math.PI / 16.0);
-                tmp[r + u] = (u == 0 ? 1.0 / Math.Sqrt(2) : 1.0) * sum;
+                    sum += block[r + x] * Math.Cos(((2 * x) + 1) * (double)u * Math.PI / 16d);
+                tmp[r + u] = (u == 0 ? 1.0 / Math.Sqrt(2) : 1d) * sum;
             }
         }
 
@@ -287,10 +287,10 @@ internal static class JpegEncoder
         for (var col = 0; col < 8; col++)
         for (var v = 0; v < 8; v++)
         {
-            var sum = 0.0;
+            var sum = 0d;
             for (var y = 0; y < 8; y++)
-                sum += tmp[(y * 8) + col] * Math.Cos(((2 * y) + 1) * v * Math.PI / 16.0);
-            out2[(v * 8) + col] = 0.25 * (v == 0 ? 1.0 / Math.Sqrt(2) : 1.0) * sum;
+                sum += tmp[(y * 8) + col] * Math.Cos(((2 * y) + 1) * (double)v * Math.PI / 16d);
+            out2[(v * 8) + col] = 0.25 * (v == 0 ? 1d / Math.Sqrt(2) : 1d) * sum;
         }
 
         return out2;

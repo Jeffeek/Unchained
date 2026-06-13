@@ -48,7 +48,7 @@ public sealed class SdkSaveTests
         // The SDK save must not drop parts (the custom writer does).
         CountParts(saved).ShouldBe(beforeParts, $"{fileName}: SDK save must preserve all parts");
 
-        doc.Dispose();
+        await doc.DisposeAsync();
     }
 
     [Fact]
@@ -70,8 +70,8 @@ public sealed class SdkSaveTests
         reloaded.Slides.Select(static s => s.Shapes.Count).ToArray()
             .ShouldBe(originalShapeCounts, "per-slide shape count after SDK save round-trip");
 
-        doc.Dispose();
-        reloaded.Dispose();
+        await doc.DisposeAsync();
+        await reloaded.DisposeAsync();
     }
 
     [Fact]
@@ -88,6 +88,6 @@ public sealed class SdkSaveTests
             processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }));
         ms.Length.ShouldBeGreaterThan(0);
 
-        doc.Dispose();
+        await doc.DisposeAsync();
     }
 }

@@ -57,15 +57,14 @@ public sealed class PdfiumReferenceRenderer
         int pageNumber,
         int dpi = 96,
         CancellationToken ct = default
-    )
-    {
-        if (!EnsureInit()) return null;
-        return await Task.Run(() => RenderPage(pdfBytes, pageNumber, dpi), ct).ConfigureAwait(false);
-    }
+    ) =>
+        !EnsureInit()
+            ? null
+            : await Task.Run(() => RenderPage(pdfBytes, pageNumber, dpi), ct).ConfigureAwait(false);
 
     // ── Core render path ──────────────────────────────────────────────────────
 
-    private static byte[]? RenderPage(byte[] pdfBytes, int pageNumber, int dpi)
+    private static byte[]? RenderPage(IReadOnlyCollection<byte> pdfBytes, int pageNumber, int dpi)
     {
         FpdfDocumentT? doc = null;
         FpdfPageT? page = null;
@@ -76,7 +75,7 @@ public sealed class PdfiumReferenceRenderer
         try
         {
             // Load document from memory — requires pinned IntPtr
-            doc = fpdfview.FPDF_LoadMemDocument(gch.AddrOfPinnedObject(), pdfBytes.Length, null);
+            doc = fpdfview.FPDF_LoadMemDocument(gch.AddrOfPinnedObject(), pdfBytes.Count, null);
             gch.Free(); // document is now loaded; we no longer need the pin
             if (doc is null) return null;
 

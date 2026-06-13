@@ -18,8 +18,8 @@ namespace Unchained.PerformanceTests.Benchmarks;
 ///     to Unchained: pure-managed .NET, targets the same ISO 32000 parsing + text-extraction use cases.
 /// </remarks>
 [
-    MemoryDiagnoser(),
-    GcServer(),
+    MemoryDiagnoser,
+    GcServer,
     HideColumns("StdDev", "RatioSD", "Median"),
     BenchmarkCategory("Comparison")
 ]

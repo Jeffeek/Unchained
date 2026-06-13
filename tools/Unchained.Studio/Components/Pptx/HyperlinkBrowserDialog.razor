@@ -55,10 +55,10 @@
 @code {
 
     [CascadingParameter]
-    IMudDialogInstance MudDialog { get; set; } = default!;
+    IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter]
-    public PresentationDocument Document { get; set; } = default!;
+    public PresentationDocument Document { get; set; } = null!;
 
     /// <summary>Invoked with a 1-based slide number when a row is clicked.</summary>
     [Parameter]
@@ -83,7 +83,7 @@
                     : ("(no target)", Icons.Material.Outlined.LinkOff);
 
             _links.Add(new LinkRow(
-                numberBySlide.TryGetValue(link.Slide, out var num) ? num : 0,
+                numberBySlide.GetValueOrDefault(link.Slide, 0),
                 link.Shape.Name,
                 target,
                 action.Tooltip ?? string.Empty,

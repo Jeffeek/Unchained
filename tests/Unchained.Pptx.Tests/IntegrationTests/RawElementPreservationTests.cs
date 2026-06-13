@@ -22,6 +22,7 @@ public sealed class RawElementPreservationTests
         using var pkg = Package.Open(ms, FileMode.Open, FileAccess.Read);
         var part = pkg.GetParts().FirstOrDefault(p => p.Uri.ToString().Contains(uriContains));
         if (part is null) return string.Empty;
+
         using var r = new StreamReader(part.GetStream());
         return r.ReadToEnd();
     }
@@ -44,7 +45,7 @@ public sealed class RawElementPreservationTests
         masterXml.Contains("txStyles").ShouldBeTrue("master text-style hierarchy must survive");
         masterXml.Contains("clrMap").ShouldBeTrue("master colour map must survive");
 
-        doc.Dispose();
+        await doc.DisposeAsync();
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public sealed class RawElementPreservationTests
             .FirstOrDefault(static s => !string.IsNullOrWhiteSpace(s.Notes.NotesText))?.Notes.NotesText;
         reloadedNotes.ShouldBe(originalNotes, "notes text must survive a custom-writer round-trip");
 
-        doc.Dispose();
-        reloaded.Dispose();
+        await doc.DisposeAsync();
+        await reloaded.DisposeAsync();
     }
 }
