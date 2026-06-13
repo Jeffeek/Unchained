@@ -81,72 +81,10 @@ public sealed class GlyphRenderTests : PptxTestBase
     }
 
     // Decodes a filter-None RGBA PNG produced by PngEncoder and counts near-black pixels.
-    private static int CountDarkPixels(byte[] png, int width, int height)
-    {
-        var idat = ExtractIdat(png);
-        using var input = new MemoryStream(idat);
-        using var zlib = new ZLibStream(input, CompressionMode.Decompress);
-        using var raw = new MemoryStream();
-        zlib.CopyTo(raw);
-        var bytes = raw.ToArray();
+    private static int CountDarkPixels(byte[] png, int width, int height) =>
+        PngTestUtils.CountPixels(png, width, height, static (r, g, b) => r < 80 && g < 80 && b < 80);
 
-        var stride = 1 + (width * 4);
-        var dark = 0;
-        for (var y = 0; y < height; y++)
-        {
-            var rowStart = (y * stride) + 1; // skip filter byte
-            for (var x = 0; x < width; x++)
-            {
-                var p = rowStart + (x * 4);
-                if (bytes[p] < 80 && bytes[p + 1] < 80 && bytes[p + 2] < 80)
-                    dark++;
-            }
-        }
-
-        return dark;
-    }
-
-    private static int CountMagentaPixels(byte[] png, int width, int height)
-    {
-        var idat = ExtractIdat(png);
-        using var input = new MemoryStream(idat);
-        using var zlib = new ZLibStream(input, CompressionMode.Decompress);
-        using var raw = new MemoryStream();
-        zlib.CopyTo(raw);
-        var bytes = raw.ToArray();
-
-        var stride = 1 + (width * 4);
-        var count = 0;
-        for (var y = 0; y < height; y++)
-        {
-            var rowStart = (y * stride) + 1;
-            for (var x = 0; x < width; x++)
-            {
-                var p = rowStart + (x * 4);
-                // Magenta: high R, low G, high B.
-                if (bytes[p] > 200 && bytes[p + 1] < 80 && bytes[p + 2] > 200)
-                    count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static byte[] ExtractIdat(byte[] png)
-    {
-        using var output = new MemoryStream();
-        var pos = 8; // skip signature
-        while (pos + 8 <= png.Length)
-        {
-            var len = (png[pos] << 24) | (png[pos + 1] << 16) | (png[pos + 2] << 8) | png[pos + 3];
-            var type = Encoding.ASCII.GetString(png, pos + 4, 4);
-            var dataStart = pos + 8;
-            if (type == PngConstants.IDAT)
-                output.Write(png, dataStart, len);
-            pos = dataStart + len + 4; // data + CRC
-            if (type == PngConstants.IEND) break;
-        }
-
-        return output.ToArray();
-    }
+    // Magenta: high R, low G, high B.
+    private static int CountMagentaPixels(byte[] png, int width, int height) =>
+        PngTestUtils.CountPixels(png, width, height, static (r, g, b) => r > 200 && g < 80 && b > 200);
 }

@@ -30,7 +30,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         // Verify the content stream is parsed and Tj is present with a PdfString operand.
         SkipIfNoFreeType();
 
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 24 Tf 100 600 Td (H) Tj ET");
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
 
@@ -53,7 +53,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         // Verify GetFontNameMap() and GetEmbeddedFontBytes() return usable data.
         SkipIfNoFreeType();
 
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 24 Tf 100 600 Td (H) Tj ET");
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
 
@@ -87,15 +87,15 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
             Enumerable.Repeat((byte)0, 200 * 50 * 3).ToArray()); // all-black image
         await using var rectDoc = await LoadAsync(rectPdf, TestContext.Current.CancellationToken);
         var rectPng = await Renderer!.RenderPageAsync(rectDoc.Pages[1], new RenderOptions(72), TestContext.Current.CancellationToken);
-        var rectPixels = CountNonWhitePixels(rectPng);
+        var rectPixels = PdfTestConstants.CountNonWhitePixels(rectPng);
         Log($"Black rect non-white pixels: {rectPixels}");
 
         // Text only
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
         var textPdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 24 Tf 100 600 Td (H) Tj ET");
         await using var textDoc = await LoadAsync(textPdf, TestContext.Current.CancellationToken);
         var textPng = await Renderer!.RenderPageAsync(textDoc.Pages[1], new RenderOptions(72), TestContext.Current.CancellationToken);
-        var textPixels = CountNonWhitePixels(textPng);
+        var textPixels = PdfTestConstants.CountNonWhitePixels(textPng);
         Log($"Text 'H' non-white pixels: {textPixels}");
 
         rectPixels.ShouldBeGreaterThan(100, "black rectangle must produce non-white pixels (sanity check)");
@@ -108,7 +108,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
     {
         // Try multiple font sizes to rule out a size-specific rendering issue.
         SkipIfNoFreeType();
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
 
         foreach (var fontSize in new[] { 8, 12, 24, 48, 72 })
         {
@@ -116,7 +116,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
                 $"BT /F1 {fontSize} Tf 72 600 Td (HELLO) Tj ET");
             await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
             var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
-            var nonWhite = CountNonWhitePixels(png);
+            var nonWhite = PdfTestConstants.CountNonWhitePixels(png);
             Log($"Font size {fontSize}pt → {nonWhite} non-white pixels");
         }
 
@@ -125,7 +125,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
             "BT /F1 72 Tf 50 500 Td (H) Tj ET");
         await using var bigDoc = await LoadAsync(bigPdf, TestContext.Current.CancellationToken);
         var bigPng = await Renderer!.RenderPageAsync(bigDoc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
-        var bigPixels = CountNonWhitePixels(bigPng);
+        var bigPixels = PdfTestConstants.CountNonWhitePixels(bigPng);
 
         bigPixels.ShouldBeGreaterThan(100,
             $"'H' at 72pt should be very visible. Got {bigPixels} non-white pixels.");
@@ -137,7 +137,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         // Test HarfBuzz shaping in isolation: confirm it produces glyph IDs.
         SkipIfNoFreeType();
 
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
 
         var gch = GCHandle.Alloc(fontData,
             GCHandleType.Pinned);
@@ -180,7 +180,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         // >0 = ShowString threw, which is why text is blank.
         SkipIfNoFreeType();
 
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData,
             "BT /F1 24 Tf 100 600 Td (Hello) Tj ET");
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
@@ -205,7 +205,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         // (C) loop runs and LoadGlyph succeeds (GlyphsAttempted > 0) but BlitGlyphBitmap produces no pixels.
         SkipIfNoFreeType();
 
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData,
             "BT /F1 24 Tf 100 600 Td (Hello) Tj ET");
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
@@ -238,7 +238,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         // Output pinpoints which step fails.
         SkipIfNoFreeType();
 
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
 
         // Use PdfRenderer's FontCache (same instance ShowString uses).
         var diagnosis = Renderer!.FontsForDiagnostics.DiagnoseGlyphRender(
@@ -252,45 +252,4 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         diagnosis.StartsWith("OK:", StringComparison.Ordinal).ShouldBeTrue(
             $"glyph render pipeline should complete successfully; got: {diagnosis}");
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static byte[] LoadDejaVuBytes()
-    {
-        var asm = typeof(FontCache).Assembly;
-        using var s = asm.GetManifestResourceStream(
-            "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")!;
-        using var ms = new MemoryStream();
-        s.CopyTo(ms);
-        return ms.ToArray();
-    }
-
-    private static int CountNonWhitePixels(byte[] png)
-    {
-        var width = (int)ReadUInt32BE(png, 16);
-        var height = (int)ReadUInt32BE(png, 20);
-        var idatLen = (int)ReadUInt32BE(png, 33);
-        var idat = png.AsSpan(33 + 8, idatLen).ToArray();
-        using var cms = new MemoryStream(idat);
-        using var dec = new MemoryStream();
-        using (var z = new ZLibStream(cms, CompressionMode.Decompress)) z.CopyTo(dec);
-        var raw = dec.ToArray();
-        var stride = 1 + (width * 4); // RGBA color type 6
-        var count = 0;
-        for (var y = 0; y < height; y++)
-        {
-            var row = (y * stride) + 1;
-            for (var x = 0; x < width; x++)
-            {
-                if (raw[row + (x * 4)] < 255 || raw[row + (x * 4) + 1] < 255 || raw[row + (x * 4) + 2] < 255)
-                    count++;
-            }
-        }
-
-        return count;
-    }
-
-    // ReSharper disable once InconsistentNaming
-    private static uint ReadUInt32BE(IReadOnlyList<byte> d, int o) =>
-        ((uint)d[o] << 24) | ((uint)d[o + 1] << 16) | ((uint)d[o + 2] << 8) | d[o + 3];
 }

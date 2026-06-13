@@ -1,3 +1,4 @@
+using Unchained.Drawing.Text;
 using Unchained.Pdf.Rendering.Engine;
 using Xunit;
 
@@ -36,4 +37,16 @@ public abstract class RendererTestBase : PdfTestBase, IDisposable
     /// </summary>
     protected void SkipIfNoFreeType() =>
         Assert.SkipUnless(FreeTypeAvailable, "FreeType2 native library not available at runtime.");
+
+    /// <summary>Loads the embedded DejaVu Sans Regular TrueType font bytes from the Drawing.Text assembly.</summary>
+    protected static byte[] LoadDejaVuSansRegular()
+    {
+        var asm = typeof(FontCache).Assembly;
+        using var stream = asm.GetManifestResourceStream(
+                               "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
+                           ?? throw new InvalidOperationException("DejaVuSans-Regular not found");
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        return ms.ToArray();
+    }
 }

@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!--
+    Dependency-free shared primitives (pure managed math, byte/string helpers, font metrics).
+    NOTE: types here intentionally keep the `Unchained.Drawing[.Extensions/.Fonts]` namespaces
+    rather than a `.Primitives` namespace, so the ~30 consumer files need no `using` churn after
+    the extraction out of Unchained.Drawing. As a result two assemblies contribute to the
+    `Unchained.Drawing` namespace; this is deliberate. This project MUST stay package-reference
+    free so Ooxml/Pptx can use it without inheriting the image-codec dependencies in Unchained.Drawing.
+  -->
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -15,62 +15,6 @@ namespace Unchained.Pdf.Tests.IntegrationTests;
 /// </summary>
 public sealed class RenderingPixelTests : RendererTestBase
 {
-    // ── Pixel helpers ─────────────────────────────────────────────────────────
-
-    /// <summary>
-    ///     Decodes a PNG produced by PdfPngEncoder (RGBA, filter=None, ZLib IDAT)
-    ///     and returns the count of pixels that are not pure white.
-    /// </summary>
-    private static int CountNonWhitePixels(byte[] png)
-    {
-        // PNG: 8-byte signature + chunks
-        // IHDR: 4(len)+4("IHDR")+13(data)+4(crc) = 25 bytes
-        // IDAT: next chunk
-
-        // Read width and height from IHDR
-        var width = (int)ReadUInt32BigEndian(png, 16);
-        var height = (int)ReadUInt32BigEndian(png, 20);
-
-        // Find IDAT chunk — it starts right after IHDR (offset 33)
-        // Chunk format: 4(length) + 4(type) + data + 4(crc)
-        var idatLength = (int)ReadUInt32BigEndian(png, 33);
-        var idatData = png.AsSpan(33 + 8, idatLength).ToArray();
-
-        // Decompress ZLib (ZLibStream handles the ZLib header)
-        using var compressed = new MemoryStream(idatData);
-        using var decompressed = new MemoryStream();
-        using (var zlib = new ZLibStream(compressed, CompressionMode.Decompress))
-            zlib.CopyTo(decompressed);
-
-        var raw = decompressed.ToArray();
-
-        // PdfPngEncoder uses color type 6 (RGBA), filter=0 (None)
-        // Scanline layout: 1 filter byte + width * 4 bytes (R,G,B,A)
-        var stride = 1 + (width * 4);
-        var nonWhite = 0;
-
-        for (var y = 0; y < height; y++)
-        {
-            var rowStart = (y * stride) + 1; // +1 to skip filter byte
-            for (var x = 0; x < width; x++)
-            {
-                var r = raw[rowStart + (x * 4)];
-                var g = raw[rowStart + (x * 4) + 1];
-                var b = raw[rowStart + (x * 4) + 2];
-                if (r < 255 || g < 255 || b < 255)
-                    nonWhite++;
-            }
-        }
-
-        return nonWhite;
-    }
-
-    private static uint ReadUInt32BigEndian(IReadOnlyList<byte> data, int offset) =>
-        ((uint)data[offset] << 24) |
-        ((uint)data[offset + 1] << 16) |
-        ((uint)data[offset + 2] << 8) |
-        data[offset + 3];
-
     // ── Blank-page baseline ───────────────────────────────────────────────────
 
     [Fact]
@@ -81,7 +25,7 @@ public sealed class RenderingPixelTests : RendererTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
 
-        var nonWhite = CountNonWhitePixels(png);
+        var nonWhite = PdfTestConstants.CountNonWhitePixels(png);
         nonWhite.ShouldBe(0, "blank page should have zero non-white pixels");
     }
 
@@ -93,12 +37,12 @@ public sealed class RenderingPixelTests : RendererTestBase
         SkipIfNoFreeType();
 
         // "H" rendered with embedded DejaVu font — should produce visible dark pixels.
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 24 Tf 100 600 Td (H) Tj ET");
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
 
-        var nonWhite = CountNonWhitePixels(png);
+        var nonWhite = PdfTestConstants.CountNonWhitePixels(png);
         nonWhite.ShouldBeGreaterThan(50,
             $"rendering 'H' with embedded DejaVu at 24pt should produce at least 50 non-white pixels; got {nonWhite}");
     }
@@ -112,14 +56,14 @@ public sealed class RenderingPixelTests : RendererTestBase
         await using var blank = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         var blankPng = await Renderer!.RenderPageAsync(blank.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
 
-        var fontData = LoadDejaVuBytes();
+        var fontData = LoadDejaVuSansRegular();
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData,
             "BT /F1 14 Tf 50 700 Td (Hello, World!) Tj ET");
         await using var textDoc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var textPng = await Renderer!.RenderPageAsync(textDoc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
 
-        var blankNonWhite = CountNonWhitePixels(blankPng);
-        var textNonWhite = CountNonWhitePixels(textPng);
+        var blankNonWhite = PdfTestConstants.CountNonWhitePixels(blankPng);
+        var textNonWhite = PdfTestConstants.CountNonWhitePixels(textPng);
 
         blankNonWhite.ShouldBe(0, "blank page should have zero non-white pixels");
         textNonWhite.ShouldBeGreaterThan(blankNonWhite + 100,
@@ -139,7 +83,7 @@ public sealed class RenderingPixelTests : RendererTestBase
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
 
-        var nonWhite = CountNonWhitePixels(png);
+        var nonWhite = PdfTestConstants.CountNonWhitePixels(png);
         nonWhite.ShouldBeGreaterThan(50,
             $"Standard 14 font (Helvetica) substituted with DejaVu should render visible text. " +
             $"Got {nonWhite} non-white pixels — expected > 50");
@@ -155,7 +99,7 @@ public sealed class RenderingPixelTests : RendererTestBase
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
 
-        var nonWhite = CountNonWhitePixels(png);
+        var nonWhite = PdfTestConstants.CountNonWhitePixels(png);
         nonWhite.ShouldBeGreaterThan(50,
             $"Times-Roman should substitute to DejaVuSerif and produce visible text. " +
             $"Got {nonWhite} non-white pixels");
@@ -181,23 +125,12 @@ public sealed class RenderingPixelTests : RendererTestBase
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
 
-        var nonWhite = CountNonWhitePixels(png);
+        var nonWhite = PdfTestConstants.CountNonWhitePixels(png);
         nonWhite.ShouldBeGreaterThan(0,
             "image XObject with red pixels should produce non-white output");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static byte[] LoadDejaVuBytes()
-    {
-        var asm = typeof(FontCache).Assembly;
-        using var stream = asm.GetManifestResourceStream(
-                               "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
-                           ?? throw new InvalidOperationException("DejaVuSans-Regular not found");
-        using var ms = new MemoryStream();
-        stream.CopyTo(ms);
-        return ms.ToArray();
-    }
 
     /// <summary>Builds a page with Helvetica declared in the font dict (not embedded).</summary>
     private static byte[] BuildPageWithHelvetica(string contentStream) =>
