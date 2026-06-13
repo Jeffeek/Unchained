@@ -1728,9 +1728,11 @@ internal sealed class SlideRasterizer(FontCache fonts, MediaStore? media = null)
             }
             case FillType.Pattern:
             case FillType.Group:
-            break;
             default:
-                throw new ArgumentOutOfRangeException();
+                // Nothing to paint: unsupported fill types, or a guarded case whose
+                // condition was not met (e.g. Solid with no colour, None with no style
+                // fallback, Gradient with fewer than two stops).
+            break;
         }
     }
 
