@@ -1,12 +1,28 @@
+using System.Collections;
+
 namespace Unchained.Ooxml.Text;
 
 /// <summary>
-/// An ordered, mutable collection of <see cref="Run"/> objects within a <see cref="Paragraph"/>.
-/// Implements <see cref="IReadOnlyList{T}"/> for forward-compatible enumeration.
+///     An ordered, mutable collection of <see cref="Run" /> objects within a <see cref="Paragraph" />.
+///     Implements <see cref="IReadOnlyList{T}" /> for forward-compatible enumeration.
 /// </summary>
 public sealed class RunCollection : IReadOnlyList<Run>
 {
     private readonly List<Run> _runs = [];
+
+    // ── IReadOnlyList<Run> ───────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public int Count => _runs.Count;
+
+    /// <inheritdoc cref="IReadOnlyList{T}.this" />
+    public Run this[int index] => _runs[index];
+
+    /// <inheritdoc />
+    public IEnumerator<Run> GetEnumerator() => _runs.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() =>
+        _runs.GetEnumerator();
 
     // ── Mutation ─────────────────────────────────────────────────────────────
 
@@ -20,7 +36,7 @@ public sealed class RunCollection : IReadOnlyList<Run>
     }
 
     /// <summary>
-    /// Inserts a new run at the given zero-based position and returns it.
+    ///     Inserts a new run at the given zero-based position and returns it.
     /// </summary>
     /// <param name="index">Zero-based insertion position.</param>
     /// <param name="text">The text content of the new run.</param>
@@ -39,18 +55,4 @@ public sealed class RunCollection : IReadOnlyList<Run>
 
     /// <summary>Removes all runs.</summary>
     public void Clear() => _runs.Clear();
-
-    // ── IReadOnlyList<Run> ───────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public int Count => _runs.Count;
-
-    /// <inheritdoc cref="IReadOnlyList{T}.this" />
-    public Run this[int index] => _runs[index];
-
-    /// <inheritdoc />
-    public IEnumerator<Run> GetEnumerator() => _runs.GetEnumerator();
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
-        _runs.GetEnumerator();
 }

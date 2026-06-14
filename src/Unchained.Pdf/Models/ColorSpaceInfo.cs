@@ -1,11 +1,12 @@
+using Unchained.Drawing.Primitives;
 using Unchained.Pdf.Content;
 
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// A resolved color space from a PDF /Resources /ColorSpace entry.
-/// Carries enough information for the renderer to convert component values to sRGB.
-/// ISO 32000-1 §8.6.
+///     A resolved color space from a PDF /Resources /ColorSpace entry.
+///     Carries enough information for the renderer to convert component values to sRGB.
+///     ISO 32000-1 §8.6.
 /// </summary>
 internal sealed class ColorSpaceInfo
 {
@@ -13,19 +14,19 @@ internal sealed class ColorSpaceInfo
     public string Kind { get; init; } = "DeviceRGB";
 
     /// <summary>
-    /// For Separation and DeviceN: the tint transform function that maps component
-    /// values (0–1 each) to the alternate color space. Null for Device/Cal/ICC spaces.
+    ///     For Separation and DeviceN: the tint transform function that maps component
+    ///     values (0–1 each) to the alternate color space. Null for Device/Cal/ICC spaces.
     /// </summary>
     public PdfFunction? TintTransform { get; init; }
 
     /// <summary>
-    /// For Separation and DeviceN: the alternate color space name after tint transform
-    /// (e.g. "DeviceCMYK", "DeviceRGB"). Used to interpret the function output.
+    ///     For Separation and DeviceN: the alternate color space name after tint transform
+    ///     (e.g. "DeviceCMYK", "DeviceRGB"). Used to interpret the function output.
     /// </summary>
     public string AlternateSpace { get; init; } = "DeviceRGB";
 
     /// <summary>
-    /// For Indexed: the palette lookup table (one entry per index, BaseChannels bytes each).
+    ///     For Indexed: the palette lookup table (one entry per index, BaseChannels bytes each).
     /// </summary>
     public byte[]? IndexedLookup { get; init; }
 
@@ -71,12 +72,12 @@ internal sealed class ColorSpaceInfo
     // ── Conversion ────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Converts component values (0–1 range) in this color space to sRGB bytes.
-    /// Falls back to grey 128 when the conversion cannot be performed.
+    ///     Converts component values (0–1 range) in this color space to sRGB bytes.
+    ///     Falls back to grey 128 when the conversion cannot be performed.
     /// </summary>
     public (byte R, byte G, byte B) ToRgb(double[] components, PdfFunction? overrideFn = null)
     {
-        byte B255(double v) => (byte)Math.Clamp((int)Math.Round(v * 255), 0, 255);
+        static byte B255(double v) => ColorMath.ToByteRounded(v);
 
         switch (Kind)
         {
@@ -84,7 +85,7 @@ internal sealed class ColorSpaceInfo
             case "CalGray":
             {
                 var v = components.Length > 0 ? components[0] : 0.5;
-                if (Kind == "CalGray" && CalGrayGamma != 1.0)
+                if (Kind == "CalGray" && Math.Abs(CalGrayGamma - 1.0) > 0.05)
                     v = Math.Pow(Math.Max(0, v), CalGrayGamma);
                 var b = B255(v);
                 return (b, b, b);
@@ -98,10 +99,15 @@ internal sealed class ColorSpaceInfo
             case "DeviceCMYK":
             case "ICCBased" when AlternateSpace == "DeviceCMYK":
             {
-                if (components.Length < 4) return (128, 128, 128);
-                var c = components[0]; var m = components[1];
-                var y = components[2]; var k = components[3];
-                return (B255((1 - c) * (1 - k)), B255((1 - m) * (1 - k)), B255((1 - y) * (1 - k)));
+                if (components.Length < 4)
+                    return (128, 128, 128);
+
+                var c = components[0];
+                var m = components[1];
+                var y = components[2];
+                var k = components[3];
+                var (r, g, b) = ColorMath.CmykToRgb(c, m, y, k);
+                return (B255(r), B255(g), B255(b));
             }
 
             case "ICCBased":
@@ -125,18 +131,22 @@ internal sealed class ColorSpaceInfo
 
             case "Indexed":
             {
-                if (IndexedLookup is null || components.Length == 0) return (128, 128, 128);
-                var idx = (int)Math.Clamp(Math.Round(components[0] * 255), 0, (IndexedLookup.Length / Math.Max(1, IndexedBaseChannels)) - 1);
+                if (IndexedLookup is null || components.Length == 0)
+                    return (128, 128, 128);
+
+                var idx = (int)Math.Clamp(Math.Round(components[0] * 255), 0, (IndexedLookup.Length / Math.Max(1d, IndexedBaseChannels)) - 1);
                 var offset = idx * IndexedBaseChannels;
-                if (offset + IndexedBaseChannels > IndexedLookup.Length) return (128, 128, 128);
+                if (offset + IndexedBaseChannels > IndexedLookup.Length)
+                    return (128, 128, 128);
+
                 var palette = IndexedLookup.AsSpan(offset, IndexedBaseChannels);
                 return IndexedBaseChannels switch
                 {
                     1 => (palette[0], palette[0], palette[0]),
                     3 => (palette[0], palette[1], palette[2]),
-                    4 => (B255((1 - palette[0] / 255.0) * (1 - palette[3] / 255.0)),
-                          B255((1 - palette[1] / 255.0) * (1 - palette[3] / 255.0)),
-                          B255((1 - palette[2] / 255.0) * (1 - palette[3] / 255.0))),
+                    4 => (B255((1 - (palette[0] / 255.0)) * (1 - (palette[3] / 255.0))),
+                        B255((1 - (palette[1] / 255.0)) * (1 - (palette[3] / 255.0))),
+                        B255((1 - (palette[2] / 255.0)) * (1 - (palette[3] / 255.0)))),
                     _ => (128, 128, 128)
                 };
             }
@@ -156,31 +166,44 @@ internal sealed class ColorSpaceInfo
                     yg = (m[1] * ar) + (m[4] * ag) + (m[7] * ab);
                     zb = (m[2] * ar) + (m[5] * ag) + (m[8] * ab);
                 }
-                else { xr = ar; yg = ag; zb = ab; }
+                else
+                {
+                    xr = ar;
+                    yg = ag;
+                    zb = ab;
+                }
+
                 // D65 XYZ → linear sRGB (IEC 61966-2-1)
-                var lr = ( 3.2404542 * xr) + (-1.5371385 * yg) + (-0.4985314 * zb);
-                var lg = (-0.9692660 * xr) + ( 1.8760108 * yg) + ( 0.0415560 * zb);
-                var lb = ( 0.0556434 * xr) + (-0.2040259 * yg) + ( 1.0572252 * zb);
+                var lr = (3.2404542 * xr) + (-1.5371385 * yg) + (-0.4985314 * zb);
+                var lg = (-0.9692660 * xr) + (1.8760108 * yg) + (0.0415560 * zb);
+                var lb = (0.0556434 * xr) + (-0.2040259 * yg) + (1.0572252 * zb);
+
+                return (B255(Gamma(Math.Max(0, lr))), B255(Gamma(Math.Max(0, lg))), B255(Gamma(Math.Max(0, lb))));
+
                 // Gamma-compress sRGB
                 static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
-                return (B255(Gamma(Math.Max(0, lr))), B255(Gamma(Math.Max(0, lg))), B255(Gamma(Math.Max(0, lb))));
             }
 
             case "Lab":
             {
                 if (components.Length < 3) return (128, 128, 128);
                 // L*a*b* → XYZ D50 → linear sRGB (approximate)
-                var lStar = components[0]; var a = components[1]; var b2 = components[2];
+                var lStar = components[0];
+                var a = components[1];
+                var b2 = components[2];
                 var fy = (lStar + 16) / 116.0;
                 var fx = (a / 500.0) + fy;
                 var fz = fy - (b2 / 200.0);
-                static double F(double t) => t > 0.206897 ? t * t * t : (t - (16.0 / 116.0)) / 7.787;
-                var x = 0.9505 * F(fx); var y = 1.0000 * F(fy); var z = 1.0890 * F(fz);
-                var lr2 = ( 3.2404542 * x) + (-1.5371385 * y) + (-0.4985314 * z);
-                var lg2 = (-0.9692660 * x) + ( 1.8760108 * y) + ( 0.0415560 * z);
-                var lb2 = ( 0.0556434 * x) + (-0.2040259 * y) + ( 1.0572252 * z);
-                static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
+                var x = 0.9505 * F(fx);
+                var y = 1.0000 * F(fy);
+                var z = 1.0890 * F(fz);
+                var lr2 = (3.2404542 * x) + (-1.5371385 * y) + (-0.4985314 * z);
+                var lg2 = (-0.9692660 * x) + (1.8760108 * y) + (0.0415560 * z);
+                var lb2 = (0.0556434 * x) + (-0.2040259 * y) + (1.0572252 * z);
                 return (B255(Gamma(Math.Max(0, lr2))), B255(Gamma(Math.Max(0, lg2))), B255(Gamma(Math.Max(0, lb2))));
+
+                static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
+                static double F(double t) => t > 0.206897 ? t * t * t : (t - (16.0 / 116.0)) / 7.787;
             }
 
             default:

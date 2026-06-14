@@ -1,143 +1,26 @@
 using System.IO.Compression;
 using System.Text;
 using Shouldly;
-using Unchained.Drawing;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Parsing;
 
-public sealed class FlateDecoderTests
-{
-    [Fact]
-    public void Decode_ValidZlibData_ReturnsOriginalBytes()
-    {
-        var original = "Hello, Unchained!"u8.ToArray();
-        var compressed = Compress(original);
-
-        var result = FlateDecoder.Decode(compressed);
-
-        result.ToArray().ShouldBe(original);
-    }
-
-    [Fact]
-    public void Decode_EmptyStream_ReturnsEmptyBytes()
-    {
-        var compressed = Compress([]);
-        FlateDecoder.Decode(compressed).Length.ShouldBe(0);
-    }
-
-    [Fact]
-    public void Decode_CorruptData_ThrowsPdfException()
-    {
-        var garbage = new byte[] { 0x00, 0x01, 0x02, 0x03 };
-        Should.Throw<InvalidDataException>(() => FlateDecoder.Decode(garbage));
-    }
-
-    [Fact]
-    public void Decode_LargePayload_RoundTrips()
-    {
-        var original = Encoding.UTF8.GetBytes(string.Concat(Enumerable.Repeat("PDF stream data. ", 500)));
-        var result = FlateDecoder.Decode(Compress(original));
-        result.ToArray().ShouldBe(original);
-    }
-
-    private static ReadOnlyMemory<byte> Compress(byte[] data)
-    {
-        using var output = new MemoryStream();
-        using (var zlib = new ZLibStream(output, CompressionMode.Compress, leaveOpen: true))
-            zlib.Write(data);
-        return output.ToArray();
-    }
-}
-
-public sealed class AsciiHexDecoderTests
-{
-    [
-        Theory,
-        InlineData("48656C6C6F>", "Hello"),
-        InlineData("68 65 6C 6C 6F>", "hello"),
-        InlineData(">", "")
-    ]
-    public void Decode_ValidInput_ReturnsCorrectBytes(string input, string expected)
-    {
-        var result = AsciiHexDecoder.Decode(Encoding.ASCII.GetBytes(input));
-        Encoding.ASCII.GetString(result.Span).ShouldBe(expected);
-    }
-
-    [Fact]
-    public void Decode_OddNibble_PadsWithZeroOnRight()
-    {
-        // "4" → 0x40 (padded to "40")
-        var result = AsciiHexDecoder.Decode("4>"u8.ToArray());
-        result.Span[0].ShouldBe((byte)0x40);
-    }
-
-    [Fact]
-    public void Decode_LowercaseHex_Works()
-    {
-        var result = AsciiHexDecoder.Decode("ff>"u8.ToArray());
-        result.Span[0].ShouldBe((byte)0xFF);
-    }
-}
-
-public sealed class Ascii85DecoderTests
-{
-    [Fact]
-    public void Decode_HelloWorld_ReturnsCorrectBytes()
-    {
-        // "Man" in ASCII85 is "9jqo~>"
-        var encoded = "9jqo~>"u8.ToArray();
-        var result = Ascii85Decoder.Decode(encoded);
-        result.Span[0].ShouldBe((byte)'M');
-        result.Span[1].ShouldBe((byte)'a');
-        result.Span[2].ShouldBe((byte)'n');
-    }
-
-    [Fact]
-    public void Decode_ZShorthand_ProducesFourZeroBytes()
-    {
-        var result = Ascii85Decoder.Decode("z~>"u8.ToArray());
-        result.Length.ShouldBe(4);
-        result.Span.ToArray().ShouldAllBe(static b => b == 0);
-    }
-
-    [Fact]
-    public void Decode_EmptyInput_ReturnsEmpty() => Ascii85Decoder.Decode("~>"u8.ToArray()).Length.ShouldBe(0);
-}
-
-public sealed class RunLengthDecoderTests
-{
-    [Fact]
-    public void Decode_LiteralRun_CopiesVerbatim()
-    {
-        // Length=2 → copy 3 bytes: 'A','B','C'; EOD
-        var input = new byte[] { 2, (byte)'A', (byte)'B', (byte)'C', 128 };
-        var result = RunLengthDecoder.Decode(input);
-        Encoding.ASCII.GetString(result.Span).ShouldBe("ABC");
-    }
-
-    [Fact]
-    public void Decode_RepeatRun_RepeatsCorrectly()
-    {
-        // Length=253 → 257-253=4 copies of 'X'; EOD
-        var input = new byte[] { 253, (byte)'X', 128 };
-        var result = RunLengthDecoder.Decode(input);
-        result.Length.ShouldBe(4);
-        result.Span.ToArray().ShouldAllBe(static b => b == (byte)'X');
-    }
-
-    [Fact]
-    public void Decode_EodMarker_StopsDecoding()
-    {
-        var input = new byte[] { 128, 0, (byte)'A' }; // EOD immediately, trailing data ignored
-        RunLengthDecoder.Decode(input).Length.ShouldBe(0);
-    }
-}
-
 public sealed class StreamFiltersTests
 {
+    private static PdfStream MakeStream(string filterName, byte[] data, PdfDictionary? parms = null)
+    {
+        var entries = new Dictionary<string, PdfObject>
+        {
+            [PdfName.Filter.Value] = PdfName.Get(filterName),
+            [PdfName.Length.Value] = new PdfInteger(data.Length)
+        };
+        if (parms is not null)
+            entries["DecodeParms"] = parms;
+        return new PdfStream(new PdfDictionary(entries), data);
+    }
+
     [Fact]
     public void Decode_NoFilter_ReturnsDataUnchanged()
     {
@@ -151,7 +34,7 @@ public sealed class StreamFiltersTests
     {
         var original = "Hello from a compressed stream"u8.ToArray();
         using var ms = new MemoryStream();
-        using (var z = new ZLibStream(ms, CompressionMode.Compress, leaveOpen: true)) z.Write(original);
+        using (var z = new ZLibStream(ms, CompressionMode.Compress, true)) z.Write(original);
         var compressed = ms.ToArray();
 
         var dict = new PdfDictionary(new Dictionary<string, PdfObject>
@@ -194,4 +77,209 @@ public sealed class StreamFiltersTests
             });
             StreamFilters.Decode(new PdfStream(dict, ReadOnlyMemory<byte>.Empty));
         });
+
+    [Fact]
+    public async Task Decode_AsciiHexDecodeAlias_AHx_Works()
+    {
+        var data = "41>"u8.ToArray(); // 'A'
+        var stream = MakeStream("AHx", data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Span[0].ShouldBe((byte)'A');
+    }
+
+    [Fact]
+    public async Task Decode_Ascii85DecodeAlias_A85_Works()
+    {
+        var data = "9jqo~>"u8.ToArray(); // "Man"
+        var stream = MakeStream("A85", data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Span[0].ShouldBe((byte)'M');
+    }
+
+    [Fact]
+    public async Task Decode_RunLengthDecodeAlias_RL_Works()
+    {
+        // literal run: length=0 → 1 byte 'X'; EOD
+        var data = new byte[] { 0, (byte)'X', 128 };
+        var stream = MakeStream("RL", data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Length.ShouldBe(1);
+        result.Span[0].ShouldBe((byte)'X');
+    }
+
+    [Fact]
+    public async Task Decode_LZWDecodeAlias_LZW_Works()
+    {
+        // Build a minimal LZW stream: Clear(256) + 'A'(65) + EOD(257), 9-bit MSB
+        var bits = new List<bool>();
+        foreach (var code in new[] { 256, 65, 257 })
+        {
+            for (var i = 8; i >= 0; i--)
+                bits.Add(((code >> i) & 1) == 1);
+        }
+
+        while (bits.Count % 8 != 0) bits.Add(false);
+        var bytes = new byte[bits.Count / 8];
+        for (var i = 0; i < bits.Count; i++)
+        {
+            if (bits[i])
+                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
+        }
+
+        var stream = MakeStream("LZW", bytes);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Span[0].ShouldBe((byte)'A');
+    }
+
+    [Fact]
+    public async Task Decode_FlateDecode_ShortAlias_Fl_Works()
+    {
+        var original = "test"u8.ToArray();
+        using var ms = new MemoryStream();
+        await using (var z = new ZLibStream(ms, CompressionMode.Compress, true))
+            z.Write(original);
+        var compressed = ms.ToArray();
+
+        var stream = MakeStream("Fl", compressed);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.ToArray().ShouldBe(original);
+    }
+
+    [Fact]
+    public async Task Decode_CryptFilter_PassesThroughUnchanged()
+    {
+        var data = new byte[] { 1, 2, 3, 4, 5 };
+        var stream = MakeStream("Crypt", data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.ToArray().ShouldBe(data);
+    }
+
+    [Fact]
+    public async Task Decode_ASCIIHexDecode_FullName_Works()
+    {
+        var data = "48656C6C6F>"u8.ToArray(); // "Hello"
+        var stream = MakeStream("ASCIIHexDecode", data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        Encoding.ASCII.GetString(result.Span).ShouldBe("Hello");
+    }
+
+    [Fact]
+    public async Task Decode_RunLengthDecode_FullName_Works()
+    {
+        var data = new byte[] { 0, (byte)'Q', 128 };
+        var stream = MakeStream("RunLengthDecode", data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Span[0].ShouldBe((byte)'Q');
+    }
+
+    [Fact]
+    public async Task Decode_ASCII85Decode_FullName_Works()
+    {
+        var data = "9jqo~>"u8.ToArray();
+        var stream = MakeStream("ASCII85Decode", data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Span[0].ShouldBe((byte)'M');
+    }
+
+    [Fact]
+    public async Task Decode_LZWDecode_FullName_WithDecodeParms_Works()
+    {
+        var bits = new List<bool>();
+        foreach (var code in new[] { 256, 66, 257 })
+        {
+            for (var i = 8; i >= 0; i--)
+                bits.Add(((code >> i) & 1) == 1);
+        }
+
+        while (bits.Count % 8 != 0) bits.Add(false);
+        var bytes = new byte[bits.Count / 8];
+        for (var i = 0; i < bits.Count; i++)
+        {
+            if (bits[i])
+                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
+        }
+
+        var parms = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            ["EarlyChange"] = new PdfInteger(1)
+        });
+        var stream = MakeStream("LZWDecode", bytes, parms);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Span[0].ShouldBe((byte)'B');
+    }
+
+    [Fact]
+    public async Task Decode_InvalidFilterType_ThrowsPdfException()
+    {
+        // /Filter set to an integer (not a name or array) — should throw.
+        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            [PdfName.Filter.Value] = new PdfInteger(42)
+        });
+        var stream = new PdfStream(dict, new byte[] { 1 });
+        await Should.ThrowAsync<PdfException>(() =>
+            Task.Run(() => StreamFilters.Decode(stream)));
+    }
+
+    [Fact]
+    public async Task Decode_ArrayFilter_WithDecodeParms_Array_PassesParms()
+    {
+        // One filter with one DecodeParms dict in an array — Crypt pass-through.
+        var data = new byte[] { 9, 8, 7 };
+        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            [PdfName.Filter.Value] = new PdfArray([PdfName.Get("Crypt")]),
+            ["DecodeParms"] = new PdfArray([new PdfDictionary()])
+        });
+        var stream = new PdfStream(dict, data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.ToArray().ShouldBe(data);
+    }
+
+    [Fact]
+    public async Task Decode_ArrayFilter_DecodeParms_NullElement_DoesNotThrow()
+    {
+        // DecodeParms array with a PdfNull element (treated as null dict).
+        var data = new byte[] { 0, (byte)'P', 128 };
+        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            [PdfName.Filter.Value] = new PdfArray([PdfName.Get("RunLengthDecode")]),
+            ["DecodeParms"] = new PdfArray([PdfNull.Instance])
+        });
+        var stream = new PdfStream(dict, data);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Span[0].ShouldBe((byte)'P');
+    }
+
+    [Fact]
+    public async Task Decode_SingleDecodeParms_Dict_NotArray_Works()
+    {
+        // DecodeParms as a single PdfDictionary (not array) for a single LZW filter.
+        var bits = new List<bool>();
+        foreach (var code in new[] { 256, 67, 257 })
+        {
+            for (var i = 8; i >= 0; i--)
+                bits.Add(((code >> i) & 1) == 1);
+        }
+
+        while (bits.Count % 8 != 0) bits.Add(false);
+        var bytes = new byte[bits.Count / 8];
+        for (var i = 0; i < bits.Count; i++)
+        {
+            if (bits[i])
+                bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
+        }
+
+        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            [PdfName.Filter.Value] = PdfName.Get("LZWDecode"),
+            ["DecodeParms"] = new PdfDictionary(new Dictionary<string, PdfObject>
+            {
+                ["EarlyChange"] = new PdfInteger(1)
+            })
+        });
+        var stream = new PdfStream(dict, bytes);
+        var result = await Task.Run(() => StreamFilters.Decode(stream));
+        result.Span[0].ShouldBe((byte)'C');
+    }
 }

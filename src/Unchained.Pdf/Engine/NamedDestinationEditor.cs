@@ -1,10 +1,12 @@
+using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="INamedDestinationEditor"/> implementation.</summary>
+/// <summary>Default <see cref="INamedDestinationEditor" /> implementation.</summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class NamedDestinationEditor : INamedDestinationEditor
 {
@@ -21,7 +23,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
         IPdfDocument document,
         string name,
         CancellationToken ct = default
-    ) => Task.Run(() => Mutate(document, name, pageNumber: 0), ct);
+    ) => Task.Run(() => Mutate(document, name, 0), ct);
 
     private static void Mutate(IPdfDocument document, string name, int pageNumber)
     {
@@ -39,7 +41,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
         }
 
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+            o.Value is PdfDictionary d && d.IsCatalog());
         var catDict = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catDict.Entries);
 
@@ -48,7 +50,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
         if (pageNumber <= 0)
             existingDests.Remove(name);
         else if (pageRef is not null)
-            existingDests[name] = new PdfArray([pageRef, PdfName.Get("Fit")]);
+            existingDests[name] = new PdfArray([pageRef, PdfName.Fit]);
 
         // Rebuild /Names /Dests as a flat name dict (simple structure).
         var namesEntries = new Dictionary<string, PdfObject>();
@@ -63,7 +65,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
 
             namesEntries[PdfName.Dests.Value] = new PdfDictionary(new Dictionary<string, PdfObject>
             {
-                [PdfName.Get("Names").Value] = new PdfArray(namesList.ToArray())
+                [PdfName.Names.Value] = new PdfArray(namesList.ToArray())
             });
         }
 
@@ -85,26 +87,16 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
     {
         var result = new Dictionary<string, PdfObject>(StringComparer.Ordinal);
         var namesObj = catalog[PdfName.Names];
-        var namesDict = namesObj switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
+        var namesDict = core.ResolveDict(namesObj);
         var destsObj = namesDict?[PdfName.Dests];
-        var destsDict = destsObj switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
-        var namesArr = destsDict?.Get<PdfArray>(PdfName.Get("Names"));
+        var destsDict = core.ResolveDict(destsObj);
+        var namesArr = destsDict?.Get<PdfArray>(PdfName.Names);
         if (namesArr is null) return result;
 
         for (var i = 0; i + 1 < namesArr.Count; i += 2)
         {
             var key = namesArr[i] is PdfString ks
-                ? System.Text.Encoding.Latin1.GetString(ks.Bytes.Span)
+                ? Encoding.Latin1.GetString(ks.Bytes.Span)
                 : (namesArr[i] as PdfName)?.Value ?? string.Empty;
             if (key.Length > 0)
                 result[key] = namesArr[i + 1];

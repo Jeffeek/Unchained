@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using System.IO.Packaging;
+using System.Text;
 using Shouldly;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Tests.Helpers;
@@ -7,8 +9,8 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Verbatim round-trip of content Unchained does not model: the VBA macro project
-/// (<c>vbaProject.bin</c>) and digital-signature parts (M-G).
+///     Verbatim round-trip of content Unchained does not model: the VBA macro project
+///     (<c>vbaProject.bin</c>) and digital-signature parts (M-G).
 /// </summary>
 public sealed class PreservedContentTests : PptxTestBase
 {
@@ -38,7 +40,9 @@ public sealed class PreservedContentTests : PptxTestBase
             var presUri = new Uri("/ppt/presentation.xml", UriKind.Relative);
             var pres = pkg.GetPart(presUri);
             pres.CreateRelationship(
-                new Uri("vbaProject.bin", UriKind.Relative), TargetMode.Internal, PmlNames.RelTypeVbaProject);
+                new Uri("vbaProject.bin", UriKind.Relative),
+                TargetMode.Internal,
+                PmlNames.RelTypeVbaProject);
         }
 
         return ms.ToArray();
@@ -55,7 +59,10 @@ public sealed class PreservedContentTests : PptxTestBase
         {
             var originUri = new Uri("/_xmlsignatures/origin.sigs", UriKind.Relative);
             var origin = pkg.CreatePart(originUri, PmlNames.ContentTypeDigitalSignatureOrigin);
-            using (var s = origin.GetStream(FileMode.Create)) { /* empty origin marker */ }
+            using (origin.GetStream(FileMode.Create))
+            {
+                /* empty origin marker */
+            }
 
             pkg.CreateRelationship(originUri, TargetMode.Internal, PmlNames.RelTypeDigitalSignatureOrigin);
 
@@ -65,7 +72,9 @@ public sealed class PreservedContentTests : PptxTestBase
                 s.Write(signatureXml, 0, signatureXml.Length);
 
             origin.CreateRelationship(
-                new Uri("sig1.xml", UriKind.Relative), TargetMode.Internal, PmlNames.RelTypeDigitalSignature);
+                new Uri("sig1.xml", UriKind.Relative),
+                TargetMode.Internal,
+                PmlNames.RelTypeDigitalSignature);
         }
 
         return ms.ToArray();
@@ -74,14 +83,14 @@ public sealed class PreservedContentTests : PptxTestBase
     private static bool PartExists(byte[] pptx, string partName)
     {
         using var ms = new MemoryStream(pptx);
-        using var archive = new System.IO.Compression.ZipArchive(ms);
+        using var archive = new ZipArchive(ms);
         return archive.GetEntry(partName) != null;
     }
 
     private static byte[] PartBytes(byte[] pptx, string partName)
     {
         using var ms = new MemoryStream(pptx);
-        using var archive = new System.IO.Compression.ZipArchive(ms);
+        using var archive = new ZipArchive(ms);
         var entry = archive.GetEntry(partName)!;
         using var s = entry.Open();
         using var outMs = new MemoryStream();
@@ -116,7 +125,7 @@ public sealed class PreservedContentTests : PptxTestBase
         await Processor.SaveAsync(doc, outMs);
         var saved = outMs.ToArray();
 
-        var ct = System.Text.Encoding.UTF8.GetString(PartBytes(saved, "[Content_Types].xml"));
+        var ct = Encoding.UTF8.GetString(PartBytes(saved, "[Content_Types].xml"));
         ct.ShouldContain("presentation.macroEnabled.main+xml",
             customMessage: "a deck with macros must declare the macro-enabled content type");
     }
@@ -124,8 +133,7 @@ public sealed class PreservedContentTests : PptxTestBase
     [Fact]
     public async Task Signatures_RoundTripVerbatim()
     {
-        var sigXml = System.Text.Encoding.UTF8.GetBytes(
-            "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><SignatureValue>AAAA</SignatureValue></Signature>");
+        var sigXml = "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><SignatureValue>AAAA</SignatureValue></Signature>"u8.ToArray();
         var withSig = InjectSignature(await BaseDeckAsync(), sigXml);
 
         var doc = await Processor.LoadAsync(withSig);

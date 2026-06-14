@@ -8,13 +8,13 @@ using Unchained.Pptx.Slides;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses <c>&lt;p:cmLst&gt;</c> XML into a list of <see cref="Comment"/> objects.
+///     Parses <c>&lt;p:cmLst&gt;</c> XML into a list of <see cref="Comment" /> objects.
 /// </summary>
 internal static class CommentParser
 {
     /// <summary>
-    /// Parses all <c>&lt;p:cm&gt;</c> elements from <paramref name="cmLstRoot"/>
-    /// and adds them to <paramref name="slide"/>.
+    ///     Parses all <c>&lt;p:cm&gt;</c> elements from <paramref name="cmLstRoot" />
+    ///     and adds them to <paramref name="slide" />.
     /// </summary>
     public static void Parse(XElement cmLstRoot, Slide slide, CommentAuthorCollection authors)
     {

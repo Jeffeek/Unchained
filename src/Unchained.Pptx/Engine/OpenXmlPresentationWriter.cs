@@ -1,6 +1,7 @@
+using System.Xml.Linq;
 using DocumentFormat.OpenXml.Packaging;
 using Unchained.Ooxml.Engine;
-using Unchained.Pptx.Slides;
+using Unchained.Pptx.Core;
 using Unchained.Pptx.Writing;
 using P = DocumentFormat.OpenXml.Presentation;
 using SdkPresentationDocument = DocumentFormat.OpenXml.Packaging.PresentationDocument;
@@ -8,26 +9,26 @@ using SdkPresentationDocument = DocumentFormat.OpenXml.Packaging.PresentationDoc
 namespace Unchained.Pptx.Engine;
 
 /// <summary>
-/// Phase 2 (M5b) SDK-backed save. Re-emits the modelled slide content onto the document's held
-/// <see cref="OoxmlEngine"/> package and saves through it, so every OPC part the model does not
-/// own (chart styles, embeddings, tags, presProps, etc.) passes through unchanged — fixing the
-/// part-dropping the custom writer suffers.
+///     Phase 2 (M5b) SDK-backed save. Re-emits the modelled slide content onto the document's held
+///     <see cref="OoxmlEngine" /> package and saves through it, so every OPC part the model does not
+///     own (chart styles, embeddings, tags, presProps, etc.) passes through unchanged — fixing the
+///     part-dropping the custom writer suffers.
 /// </summary>
 /// <remarks>
-/// First slice: slides only. Each model slide's shape tree is regenerated with the existing
-/// <see cref="SlideWriter"/> and set as the corresponding SDK slide part's root element (flushed
-/// via the part's own Save). Masters, layouts, themes, notes, charts, and media are left as the
-/// SDK loaded them — round-trip-preserved — pending later slices. Requires the document to carry
-/// a live engine (SDK load path); callers must check <see cref="CanSave"/> first.
+///     First slice: slides only. Each model slide's shape tree is regenerated with the existing
+///     <see cref="SlideWriter" /> and set as the corresponding SDK slide part's root element (flushed
+///     via the part's own Save). Masters, layouts, themes, notes, charts, and media are left as the
+///     SDK loaded them — round-trip-preserved — pending later slices. Requires the document to carry
+///     a live engine (SDK load path); callers must check <see cref="CanSave" /> first.
 /// </remarks>
 internal static class OpenXmlPresentationWriter
 {
-    /// <summary>Whether <paramref name="document"/> can be saved through the SDK engine.</summary>
+    /// <summary>Whether <paramref name="document" /> can be saved through the SDK engine.</summary>
     public static bool CanSave(PresentationDocument document) => document.Engine is not null;
 
     /// <summary>
-    /// Re-emits modelled content onto the held SDK package and returns the saved bytes.
-    /// Throws when the document has no attached engine.
+    ///     Re-emits modelled content onto the held SDK package and returns the saved bytes.
+    ///     Throws when the document has no attached engine.
     /// </summary>
     public static byte[] Save(PresentationDocument document)
     {
@@ -37,7 +38,7 @@ internal static class OpenXmlPresentationWriter
 
         var sdkDoc = (SdkPresentationDocument)engine.Package;
         var presPart = sdkDoc.PresentationPart
-                       ?? throw new Core.PptxException("The held package has no presentation part.");
+                       ?? throw new PptxException("The held package has no presentation part.");
 
         // SDK slide parts in presentation (SlideIdList) order — the same order as model slides.
         var slideParts = OrderedSlideParts(presPart).ToList();
@@ -46,7 +47,7 @@ internal static class OpenXmlPresentationWriter
         var count = Math.Min(slideParts.Count, modelSlides.Count);
         for (var i = 0; i < count; i++)
         {
-            var xml = SlideWriter.Write(modelSlides[i]).ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+            var xml = SlideWriter.Write(modelSlides[i]).ToString(SaveOptions.DisableFormatting);
             var part = slideParts[i];
             part.Slide = new P.Slide(xml);
             part.Slide.Save(); // flush the regenerated DOM to the part stream
@@ -60,14 +61,14 @@ internal static class OpenXmlPresentationWriter
         var idList = presPart.Presentation?.SlideIdList;
         if (idList is null)
         {
-            foreach (var sp in presPart.SlideParts) yield return sp;
+            foreach (var sp in presPart.SlideParts)
+                yield return sp;
+
             yield break;
         }
 
-        foreach (var slideId in idList.Elements<P.SlideId>())
+        foreach (var rId in idList.Elements<P.SlideId>().Select(static slideId => slideId.RelationshipId?.Value).OfType<string>())
         {
-            var rId = slideId.RelationshipId?.Value;
-            if (rId is null) continue;
             if (presPart.GetPartById(rId) is SlidePart sp)
                 yield return sp;
         }

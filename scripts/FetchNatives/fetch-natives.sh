@@ -1,24 +1,29 @@
 #!/usr/bin/env bash
-# Fetch native binaries required by each Unchained runtime package.
+# Fetch native binaries required by Unchained.Drawing.Runtimes.
 #
 # Usage:
-#   bash scripts/FetchNatives/fetch-natives.sh [--rid <rid>]
+#   bash scripts/FetchNatives/fetch-natives.sh [--rid <rid>] [--pin]
 #
 #   If --rid is omitted the script auto-detects the current host RID.
+#   --pin records the SHA-256 of the materialized binary into checksums.sha256
+#         (run on a trusted host, then commit + review the diff).
 #
-# Supported RIDs:
-#   win-x64 / win-arm64       (downloaded from GitHub; works on any host)
-#   linux-x64 / linux-arm64   (copied from system libfreetype via apt)
-#   linux-musl-x64 / linux-musl-arm64  (copied from Alpine libfreetype via apk)
-#   osx-x64 / osx-arm64       (copied from Homebrew freetype)
+# Every fetched binary's SHA-256 is computed and printed. If checksums.sha256 has a
+# pinned hash for the RID, the binary is verified against it and the script FAILS on
+# mismatch. If no pin exists, the script warns and prints the value to pin.
 #
-# To add a new library: add a fetch_<library> function below.
-# To add a new package: add a fetch_<package>_runtimes function that calls the
-#   relevant library fetchers with the package's runtimes/ directory.
+# The FreeType2 native library is supplied by the FreeTypeSharp NuGet package for
+# Windows (x64/arm64/x86), macOS, and linux-x64. The ONLY platform FreeTypeSharp does
+# not bundle is linux-arm64, so that is the only binary this script fetches.
+#
+# The file is named libfreetype.so (no version suffix) to match FreeTypeSharp's
+# DllImport resolver, which probes runtimes/linux-arm64/native/libfreetype.so.
+#
+# For any RID other than linux-arm64 the script is a no-op (FreeTypeSharp already
+# provides it; on linux-arm64 a system-installed FreeType2 also works as a fallback).
 #
 # Examples:
 #   bash scripts/FetchNatives/fetch-natives.sh
-#   bash scripts/FetchNatives/fetch-natives.sh --rid win-x64
 #   bash scripts/FetchNatives/fetch-natives.sh --rid linux-arm64
 
 set -euo pipefail
@@ -26,10 +31,12 @@ set -euo pipefail
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
 RID=""
+PIN=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --rid) RID="$2"; shift 2 ;;
+        --pin) PIN=1; shift ;;
         -h|--help)
             grep -E '^#' "$0" | sed 's/^# \{0,1\}//'
             exit 0 ;;
@@ -41,6 +48,7 @@ done
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/../.." && pwd)"
+checksums_file="${script_dir}/checksums.sha256"
 
 detect_host_rid() {
     local os arch
@@ -61,132 +69,93 @@ detect_host_rid() {
     echo "${os}-${arch}"
 }
 
-download() {
-    local url="$1" dest="$2"
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$url" -o "$dest"
+# ── Checksum helpers ────────────────────────────────────────────────────────────
+#
+# Compute the SHA-256 of a file, look up its pinned value in checksums.sha256, and
+# either verify (fail on mismatch), warn (no pin), or record it (--pin).
+
+compute_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{print $1}'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{print $1}'
     else
-        wget -q -O "$dest" "$url"
+        echo "ERROR: neither sha256sum nor shasum is available." >&2; exit 1
     fi
 }
 
-verify_output() {
-    local rid="$1" native_dir="$2"
-    local count
-    count=$(find "${native_dir}" -not -name ".gitkeep" -type f 2>/dev/null | wc -l | tr -d ' ')
-    if [[ "${count}" -eq 0 ]]; then
-        echo "[${rid}] ERROR: no binary produced under ${native_dir}" >&2
+lookup_pin() {
+    # echoes the pinned hash for $1 (rid), or nothing if unpinned.
+    # '|| true' guards against grep/awk exiting 1 (no match) under 'set -e -o pipefail'.
+    [[ -f "$checksums_file" ]] || return 0
+    { grep -vE '^[[:space:]]*#' "$checksums_file" || true; } | awk -v rid="$1" '$1 == rid {print $2; exit}'
+}
+
+record_pin() {
+    # upsert "<rid>  <hash>" in checksums.sha256
+    local rid="$1" hash="$2" tmp
+    tmp="$(mktemp)"
+    if [[ -f "$checksums_file" ]]; then
+        grep -vE "^[[:space:]]*${rid}[[:space:]]" "$checksums_file" > "$tmp" || true
+    fi
+    printf '%-16s %s\n' "$rid" "$hash" >> "$tmp"
+    mv "$tmp" "$checksums_file"
+    echo "[${rid}] pinned SHA-256 recorded in ${checksums_file}"
+}
+
+verify_or_pin() {
+    # $1 = rid, $2 = path to materialized binary
+    local rid="$1" path="$2" actual pinned
+    actual="$(compute_sha256 "$path")"
+    echo "[${rid}] SHA-256: ${actual}"
+
+    if [[ "$PIN" -eq 1 ]]; then
+        record_pin "$rid" "$actual"
+        return 0
+    fi
+
+    pinned="$(lookup_pin "$rid")"
+    if [[ -z "$pinned" ]]; then
+        echo "[${rid}] WARNING: no pinned checksum. To pin, run with --pin on a trusted host." >&2
+    elif [[ "$pinned" != "$actual" ]]; then
+        echo "[${rid}] ERROR: checksum mismatch!" >&2
+        echo "         expected ${pinned}" >&2
+        echo "         actual   ${actual}" >&2
         exit 1
-    fi
-}
-
-# ── Library: FreeType2 ────────────────────────────────────────────────────────
-#
-# fetch_freetype <rid> <runtimes_dir>
-#   Downloads / copies libfreetype into <runtimes_dir>/<rid>/native/.
-
-# Pinned commit — ubawurinna/freetype-windows-binaries (MIT).
-# Update this SHA when upgrading FreeType.
-_FT_WIN_SHA="2fd97db170b19a9dda26131a784707611b9a4da1"
-_FT_WIN_BASE="https://github.com/ubawurinna/freetype-windows-binaries/raw/${_FT_WIN_SHA}"
-
-_ft_windows() {
-    local rid="$1" runtimes="$2"
-    local arch="${rid#win-}"
-    local dest="${runtimes}/${rid}/native"
-    mkdir -p "$dest"
-    local url="${_FT_WIN_BASE}/release%20dll/${arch}/freetype.dll"
-    echo "[${rid}] downloading ${url}"
-    download "$url" "${dest}/freetype6.dll"
-    echo "[${rid}] -> ${dest}/freetype6.dll"
-}
-
-_ft_linux() {
-    local rid="$1" runtimes="$2"
-    local dest="${runtimes}/${rid}/native"
-    mkdir -p "$dest"
-    if [[ "$(uname -s)" != "Linux" ]]; then
-        echo "[${rid}] ERROR: Linux libraries require a Linux host." >&2; exit 1
-    fi
-    local src=""
-    if [[ "${rid}" == linux-musl-* ]]; then
-        command -v apk >/dev/null 2>&1 && apk add --no-cache freetype 2>/dev/null || true
-        for cand in /usr/lib/libfreetype.so.6 /lib/libfreetype.so.6; do
-            [[ -f "$cand" ]] && src="$cand" && break
-        done
     else
-        local triplet
-        case "${rid}" in
-            linux-x64)   triplet="x86_64-linux-gnu"  ;;
-            linux-arm64) triplet="aarch64-linux-gnu" ;;
-        esac
-        command -v apt-get >/dev/null 2>&1 && \
-            apt-get install -y --no-install-recommends libfreetype6 2>/dev/null || true
-        for cand in \
-                "/usr/lib/${triplet}/libfreetype.so.6" \
-                "/usr/lib64/libfreetype.so.6" \
-                "/usr/lib/libfreetype.so.6"; do
-            [[ -f "$cand" ]] && src="$cand" && break
-        done
+        echo "[${rid}] checksum verified against pin."
     fi
-    [[ -z "$src" ]] && { echo "[${rid}] ERROR: libfreetype.so.6 not found." >&2; exit 1; }
-    cp -f "$src" "${dest}/libfreetype.so.6"
-    echo "[${rid}] -> ${dest}/libfreetype.so.6  (from ${src})"
 }
 
-_ft_osx() {
-    local rid="$1" runtimes="$2"
-    local dest="${runtimes}/${rid}/native"
-    mkdir -p "$dest"
-    if [[ "$(uname -s)" != "Darwin" ]]; then
-        echo "[${rid}] ERROR: macOS libraries require a macOS host." >&2; exit 1
-    fi
-    command -v brew >/dev/null 2>&1 || { echo "[${rid}] ERROR: Homebrew not found." >&2; exit 1; }
-    local prefix
-    prefix="$(brew --prefix freetype 2>/dev/null || true)"
-    if [[ -z "$prefix" || ! -f "${prefix}/lib/libfreetype.6.dylib" ]]; then
-        echo "[${rid}] freetype not installed — running: brew install freetype" >&2
-        brew install freetype
-        prefix="$(brew --prefix freetype)"
-    fi
-    cp -f "${prefix}/lib/libfreetype.6.dylib" "${dest}/libfreetype.6.dylib"
-    echo "[${rid}] -> ${dest}/libfreetype.6.dylib  (from ${prefix}/lib/)"
-}
-
-fetch_freetype() {
-    local rid="$1" runtimes="$2"
-    case "$rid" in
-        win-x64|win-arm64)               _ft_windows "$rid" "$runtimes" ;;
-        linux-x64|linux-arm64)           _ft_linux   "$rid" "$runtimes" ;;
-        linux-musl-x64|linux-musl-arm64) _ft_linux   "$rid" "$runtimes" ;;
-        osx-x64|osx-arm64)              _ft_osx     "$rid" "$runtimes" ;;
-        *) echo "Unknown RID: '${rid}'" >&2; exit 1 ;;
-    esac
-}
-
-# ── Package fetch functions ───────────────────────────────────────────────────
+# ── Library: FreeType2 (linux-arm64 only) ──────────────────────────────────────
 #
-# Each function fetches everything a specific runtime package needs.
-# Add new library fetcher calls here when a package gains a new dependency.
+# FreeTypeSharp bundles every other platform. Only linux-arm64 must be supplied by
+# Unchained.Drawing.Runtimes, named libfreetype.so to match FreeTypeSharp's resolver.
 
-fetch_drawing_runtimes() {
-    local rid="$1"
-    local runtimes="${repo_root}/src/Unchained.Drawing.Runtimes/runtimes"
-    fetch_freetype "$rid" "$runtimes"
-    verify_output  "$rid" "${runtimes}/${rid}/native"
+_ft_linux_arm64() {
+    local runtimes="$1"
+    local dest="${runtimes}/linux-arm64/native"
+    if [[ "$(uname -s)" != "Linux" ]]; then
+        echo "[linux-arm64] ERROR: Linux libraries require a Linux host." >&2; exit 1
+    fi
+    mkdir -p "$dest"
+
+    command -v apt-get >/dev/null 2>&1 && \
+        apt-get install -y --no-install-recommends libfreetype6 2>/dev/null || true
+    local src=""
+    for cand in \
+            "/usr/lib/aarch64-linux-gnu/libfreetype.so.6" \
+            "/usr/lib64/libfreetype.so.6" \
+            "/usr/lib/libfreetype.so.6"; do
+        [[ -f "$cand" ]] && src="$cand" && break
+    done
+    [[ -z "$src" ]] && { echo "[linux-arm64] ERROR: libfreetype.so.6 not found." >&2; exit 1; }
+
+    # FreeTypeSharp's resolver looks for libfreetype.so (no version suffix).
+    cp -f "$src" "${dest}/libfreetype.so"
+    echo "[linux-arm64] -> ${dest}/libfreetype.so  (from ${src})"
+    verify_or_pin "linux-arm64" "${dest}/libfreetype.so"
 }
-
-# fetch_pdf_runtimes() {
-#     local rid="$1"
-#     local runtimes="${repo_root}/src/Unchained.Pdf.Runtimes/runtimes"
-#     # Add library fetchers here if Pdf.Runtimes ever needs its own binaries.
-# }
-
-# fetch_pptx_runtimes() {
-#     local rid="$1"
-#     local runtimes="${repo_root}/src/Unchained.Pptx.Runtimes/runtimes"
-#     # Add library fetchers here if Pptx.Runtimes ever needs its own binaries.
-# }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -195,7 +164,11 @@ if [[ -z "$RID" ]]; then
     echo "Auto-detected RID: ${RID}"
 fi
 
-fetch_drawing_runtimes "$RID"
+if [[ "$RID" == "linux-arm64" ]]; then
+    _ft_linux_arm64 "${repo_root}/src/Unchained.Drawing.Runtimes/runtimes"
+else
+    echo "[${RID}] FreeType2 is provided by the FreeTypeSharp package — nothing to fetch."
+fi
 
 echo
 echo "Done."

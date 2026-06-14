@@ -1,4 +1,7 @@
 @page "/pptx"
+@using System.Text
+@using Unchained.Pptx.Rendering.Engine
+@using Unchained.Pptx.Rendering.Models
 @inject SessionStateService Session
 @inject FileExportService Exporter
 @inject IDialogService Dialogs
@@ -13,7 +16,7 @@
                           Icon="@Icons.Material.Outlined.Slideshow"
                           Accept=".pptx,.ppt"
                           OnFileLoaded="LoadPptx"
-                          OnError="ShowError" />
+                          OnError="ShowError"/>
         </div>
     }
     else
@@ -25,7 +28,7 @@
             <div class="panel-tree">
                 <DocumentTree Root="state.Tree"
                               SelectedNodeChanged="OnNodeSelected"
-                              OnRefreshRequested="RefreshTree" />
+                              OnRefreshRequested="RefreshTree"/>
             </div>
 
             <!-- CENTRE: slide preview -->
@@ -33,17 +36,17 @@
                 @if (_showInfo)
                 {
                     <div class="pptx-info-strip">
-                        <PptxInfoPanel Document="state.Document" />
+                        <PptxInfoPanel Document="state.Document"/>
                     </div>
                 }
                 <SlidePreviewPanel Document="state.Document"
                                    CurrentSlide="state.CurrentSlide"
-                                   CurrentSlideChanged="s => state.CurrentSlide = s" />
+                                   CurrentSlideChanged="s => state.CurrentSlide = s"/>
             </div>
 
             <!-- RIGHT: properties -->
             <div class="panel-properties">
-                <PropertiesPanel Bag="_selectedProperties" />
+                <PropertiesPanel Bag="_selectedProperties"/>
             </div>
         </div>
 
@@ -52,42 +55,58 @@
             <div class="ops-group">
                 <MudButton StartIcon="@Icons.Material.Outlined.FileDownload"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenExportDialog">Export…</MudButton>
+                           OnClick="OpenExportDialog">
+                    Export…
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Image"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="ExportCurrentSlideImage">Slide PNG</MudButton>
+                           OnClick="ExportCurrentSlideImage">
+                    Slide PNG
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.FolderZip"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenExportZipDialog">Slides ZIP…</MudButton>
+                           OnClick="OpenExportZipDialog">
+                    Slides ZIP…
+                </MudButton>
             </div>
-            <MudDivider Vertical="true" Class="ops-divider" />
+            <MudDivider Vertical="true" Class="ops-divider"/>
             <div class="ops-group">
                 <MudButton StartIcon="@Icons.Material.Outlined.FindReplace"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenFindReplaceDialog">Find &amp; Replace…</MudButton>
+                           OnClick="OpenFindReplaceDialog">
+                    Find &amp; Replace…
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Link"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenHyperlinkDialog">Hyperlinks…</MudButton>
+                           OnClick="OpenHyperlinkDialog">
+                    Hyperlinks…
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.TextFields"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="ExtractText">Extract text</MudButton>
+                           OnClick="ExtractText">
+                    Extract text
+                </MudButton>
                 <MudToggleIconButton @bind-Toggled="_showInfo"
                                      Icon="@Icons.Material.Outlined.Info"
                                      ToggledIcon="@Icons.Material.Filled.Info"
                                      Size="Size.Small"
-                                     title="Toggle presentation info" />
+                                     title="Toggle presentation info"/>
             </div>
-            <MudDivider Vertical="true" Class="ops-divider" />
+            <MudDivider Vertical="true" Class="ops-divider"/>
             <div class="ops-group ops-group--right">
                 <MudButton StartIcon="@Icons.Material.Outlined.Download"
                            Variant="Variant.Filled"
                            Color="Color.Primary"
                            Size="Size.Small"
-                           OnClick="DownloadDocument">Download</MudButton>
+                           OnClick="DownloadDocument">
+                    Download
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Close"
                            Variant="Variant.Text" Size="Size.Small"
                            Color="Color.Error"
-                           OnClick="CloseDocument">Close</MudButton>
+                           OnClick="CloseDocument">
+                    Close
+                </MudButton>
             </div>
         </div>
 
@@ -96,14 +115,14 @@
             <div class="text-panel">
                 <div class="text-panel-toolbar">
                     <MudText Typo="Typo.subtitle2">Extracted Text</MudText>
-                    <MudSpacer />
+                    <MudSpacer/>
                     <MudIconButton Icon="@Icons.Material.Outlined.Download"
                                    Size="Size.Small"
                                    OnClick="DownloadText"
-                                   title="Download as .txt" />
+                                   title="Download as .txt"/>
                     <MudIconButton Icon="@Icons.Material.Outlined.Close"
                                    Size="Size.Small"
-                                   OnClick="() => _showTextPanel = false" />
+                                   OnClick="() => _showTextPanel = false"/>
                 </div>
                 <textarea class="text-content" readonly>@_extractedText</textarea>
             </div>
@@ -113,7 +132,7 @@
     @if (_busy)
     {
         <div class="loading-overlay">
-            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary"/>
             <MudText Typo="Typo.body1" Class="mt-3">@_busyMessage</MudText>
         </div>
     }
@@ -130,6 +149,7 @@
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender) return;
+
         if (Session.Pptx is not null)
             Session.Pptx.Refreshed += OnSessionRefreshed;
     }
@@ -170,17 +190,16 @@
         }
     }
 
-    private void OnNodeSelected(TreeNode? node)
-    {
+    private void OnNodeSelected(TreeNode? node) =>
         _selectedProperties = node is null
             ? null
             : PptxPropertyAdapter.Build(node);
-    }
 
     private async Task RefreshTree()
     {
         if (Session.Pptx is null)
             return;
+
         SetBusy("Refreshing…");
         try
         {
@@ -192,24 +211,24 @@
         }
     }
 
-    private async Task DownloadDocument()
-    {
-        if (Session.Pptx is null)
-            return;
-        await Exporter.TriggerDownloadAsync(
-            Session.Pptx.CurrentBytes,
-            Session.Pptx.FileName,
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation");
-    }
+    private Task DownloadDocument() =>
+        Session.Pptx is null
+            ? Task.CompletedTask
+            : Exporter.TriggerDownloadAsync(
+                Session.Pptx.CurrentBytes,
+                Session.Pptx.FileName,
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            );
 
-    private async Task ExtractText()
+    private void ExtractText()
     {
         if (Session.Pptx is null)
             return;
+
         SetBusy("Extracting text…");
         try
         {
-            var sb = new System.Text.StringBuilder();
+            var sb = new StringBuilder();
             var slides = Session.Pptx.Document.Slides;
             for (var i = 0; i < slides.Count; i++)
             {
@@ -217,6 +236,7 @@
                 sb.AppendLine(slides[i].GetAllText());
                 sb.AppendLine();
             }
+
             _extractedText = sb.ToString();
             _showTextPanel = true;
         }
@@ -230,10 +250,11 @@
     {
         if (_extractedText is null)
             return;
+
         try
         {
             await Exporter.TriggerDownloadAsync(
-                System.Text.Encoding.UTF8.GetBytes(_extractedText),
+                Encoding.UTF8.GetBytes(_extractedText),
                 Path.ChangeExtension(Session.Pptx?.FileName ?? "presentation", ".txt"),
                 "text/plain");
         }
@@ -247,16 +268,17 @@
     {
         if (Session.Pptx is null)
             return;
+
         SetBusy("Rendering slide…");
         try
         {
             var state = Session.Pptx;
             var index = Math.Clamp(state.CurrentSlide, 1, state.Document.Slides.Count) - 1;
             var slide = state.Document.Slides[index];
-            var image = await Unchained.Pptx.Rendering.Engine.SlideRenderer.RenderAsync(
+            var image = await SlideRenderer.RenderAsync(
                 slide,
                 state.Document.SlideSize,
-                new Unchained.Pptx.Rendering.RenderOptions { WidthPx = 1920, HeightPx = 1080 });
+                new RenderOptions { WidthPx = 1920, HeightPx = 1080 });
 
             var baseName = Path.GetFileNameWithoutExtension(state.FileName);
             await Exporter.TriggerDownloadAsync(
@@ -282,6 +304,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         var parameters = new DialogParameters
         {
             { nameof(SlideExportDialog.Document), Session.Pptx.Document },
@@ -301,6 +324,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         var parameters = new DialogParameters
         {
             { nameof(PptxExportDialog.Processor), Session.Pptx.Processor },
@@ -320,6 +344,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         var parameters = new DialogParameters
         {
             { nameof(FindReplaceDialog.Document), Session.Pptx.Document },
@@ -338,11 +363,14 @@
     {
         if (Session.Pptx is null)
             return;
+
         var parameters = new DialogParameters
         {
             { nameof(HyperlinkBrowserDialog.Document), Session.Pptx.Document },
-            { nameof(HyperlinkBrowserDialog.OnNavigate),
-              EventCallback.Factory.Create<int>(this, NavigateToSlide) }
+            {
+                nameof(HyperlinkBrowserDialog.OnNavigate),
+                EventCallback.Factory.Create<int>(this, NavigateToSlide)
+            }
         };
         var options = new DialogOptions
         {
@@ -357,6 +385,7 @@
     {
         if (Session.Pptx is null)
             return;
+
         Session.Pptx.CurrentSlide = Math.Clamp(slideNumber, 1, Session.Pptx.Document.Slides.Count);
         StateHasChanged();
     }
@@ -389,4 +418,5 @@
 
     private void ShowError(string message) =>
         Snackbar.Add(message, Severity.Error);
+
 }

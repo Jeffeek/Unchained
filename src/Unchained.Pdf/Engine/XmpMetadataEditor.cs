@@ -1,11 +1,11 @@
-using System.Text;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="IXmpMetadataEditor"/> implementation.</summary>
+/// <summary>Default <see cref="IXmpMetadataEditor" /> implementation.</summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class XmpMetadataEditor : IXmpMetadataEditor
 {
@@ -27,20 +27,20 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
         var adapter = MutationHelper.Cast(nameof(document), document);
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
-        var xmpBytes = Encoding.UTF8.GetBytes(xmpXml);
+        var xmpBytes = xmpXml.ToUtf8Span();
         var metaStream = builder.Add(new PdfStream(
             new PdfDictionary(new Dictionary<string, PdfObject>
             {
-                [PdfName.Type.Value] = PdfName.Get("Metadata"),
-                [PdfName.Subtype.Value] = PdfName.Get("XML"),
+                [PdfName.Type.Value] = PdfName.Metadata,
+                [PdfName.Subtype.Value] = PdfName.XML,
                 [PdfName.Length.Value] = new PdfInteger(xmpBytes.Length)
             }),
-            xmpBytes));
+            xmpBytes.ToArray()));
 
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+            o.Value is PdfDictionary d && d.IsCatalog());
         var catEntries = new Dictionary<string, PdfObject>(((PdfDictionary)catalogObj.Value).Entries)
         {
             [PdfName.Metadata.Value] = metaStream.ToReference()
@@ -60,7 +60,7 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
         var adapter = MutationHelper.Cast(nameof(document), document);
         var existing = adapter.Core.CollectObjects();
 
-        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+        var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.IsCatalog());
         var catEntries = new Dictionary<string, PdfObject>(((PdfDictionary)catalogObj.Value).Entries);
         catEntries.Remove(PdfName.Metadata.Value);
 

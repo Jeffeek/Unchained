@@ -1,3 +1,4 @@
+using System.IO.Packaging;
 using Shouldly;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
@@ -6,9 +7,9 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Model-enrichment parity: SDK-loaded documents now preserve the full master/layout/notes XML
-/// via RawElement, so a custom-writer save keeps content the typed model does not capture
-/// (master txStyles/clrMap, notes-master reference). Previously these were rebuilt minimally.
+///     Model-enrichment parity: SDK-loaded documents now preserve the full master/layout/notes XML
+///     via RawElement, so a custom-writer save keeps content the typed model does not capture
+///     (master txStyles/clrMap, notes-master reference). Previously these were rebuilt minimally.
 /// </summary>
 public sealed class RawElementPreservationTests
 {
@@ -18,9 +19,10 @@ public sealed class RawElementPreservationTests
     private static string ReadPart(byte[] pptx, string uriContains)
     {
         using var ms = new MemoryStream(pptx);
-        using var pkg = System.IO.Packaging.Package.Open(ms, FileMode.Open, FileAccess.Read);
+        using var pkg = Package.Open(ms, FileMode.Open, FileAccess.Read);
         var part = pkg.GetParts().FirstOrDefault(p => p.Uri.ToString().Contains(uriContains));
         if (part is null) return string.Empty;
+
         using var r = new StreamReader(part.GetStream());
         return r.ReadToEnd();
     }
@@ -43,7 +45,7 @@ public sealed class RawElementPreservationTests
         masterXml.Contains("txStyles").ShouldBeTrue("master text-style hierarchy must survive");
         masterXml.Contains("clrMap").ShouldBeTrue("master colour map must survive");
 
-        doc.Dispose();
+        await doc.DisposeAsync();
     }
 
     [Fact]
@@ -69,7 +71,7 @@ public sealed class RawElementPreservationTests
             .FirstOrDefault(static s => !string.IsNullOrWhiteSpace(s.Notes.NotesText))?.Notes.NotesText;
         reloadedNotes.ShouldBe(originalNotes, "notes text must survive a custom-writer round-trip");
 
-        doc.Dispose();
-        reloaded.Dispose();
+        await doc.DisposeAsync();
+        await reloaded.DisposeAsync();
     }
 }

@@ -1,12 +1,11 @@
-using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
-/// A single cell within a <see cref="TableShape"/>.
-/// Each cell has its own text body and border/fill formatting.
+///     A single cell within a <see cref="TableShape" />.
+///     Each cell has its own text body and border/fill formatting.
 /// </summary>
 public sealed class TableCell
 {
@@ -35,14 +34,14 @@ public sealed class TableCell
     public int RowSpan { get; set; } = 1;
 
     /// <summary>
-    /// <see langword="true"/> when this cell is a continuation of a horizontal merge
-    /// (hidden under the spanning cell to its left).
+    ///     <see langword="true" /> when this cell is a continuation of a horizontal merge
+    ///     (hidden under the spanning cell to its left).
     /// </summary>
     public bool IsHorizontalMergeContinuation { get; set; }
 
     /// <summary>
-    /// <see langword="true"/> when this cell is a continuation of a vertical merge
-    /// (hidden under the spanning cell above it).
+    ///     <see langword="true" /> when this cell is a continuation of a vertical merge
+    ///     (hidden under the spanning cell above it).
     /// </summary>
     public bool IsVerticalMergeContinuation { get; set; }
 }

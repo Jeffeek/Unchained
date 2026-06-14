@@ -1,8 +1,8 @@
 namespace Unchained.Pptx.Models.Shapes;
 
 /// <summary>
-/// Preset shape geometries available in OOXML DrawingML.
-/// These correspond to the <c>prst</c> attribute values on <c>&lt;a:prstGeom&gt;</c>.
+///     Preset shape geometries available in OOXML DrawingML.
+///     These correspond to the <c>prst</c> attribute values on <c>&lt;a:prstGeom&gt;</c>.
 /// </summary>
 public enum AutoShapeType
 {
@@ -272,8 +272,8 @@ public enum AutoShapeType
     MathNotEqual,
 
     /// <summary>
-    /// A custom geometry defined by the author. The OOXML element will contain
-    /// a <c>&lt;a:custGeom&gt;</c> child instead of <c>&lt;a:prstGeom&gt;</c>.
+    ///     A custom geometry defined by the author. The OOXML element will contain
+    ///     a <c>&lt;a:custGeom&gt;</c> child instead of <c>&lt;a:prstGeom&gt;</c>.
     /// </summary>
     Custom = 0x7FFF_FFFF
 }

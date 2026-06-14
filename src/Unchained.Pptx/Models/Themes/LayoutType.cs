@@ -1,8 +1,8 @@
 namespace Unchained.Pptx.Models.Themes;
 
 /// <summary>
-/// Named layout types for slide layouts (ECMA-376 §19.7.15 <c>ST_SlideLayoutType</c>).
-/// These identify the intended purpose of a layout within a presentation.
+///     Named layout types for slide layouts (ECMA-376 §19.7.15 <c>ST_SlideLayoutType</c>).
+///     These identify the intended purpose of a layout within a presentation.
 /// </summary>
 public enum LayoutType
 {

@@ -1,20 +1,19 @@
-using Unchained.Pptx.Core.Xml;
-using Unchained.Ooxml.Drawing;
 using System.Xml.Linq;
-using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes <see cref="Shape"/> objects to PresentationML XML elements.
+///     Serializes <see cref="Shape" /> objects to PresentationML XML elements.
 /// </summary>
 internal static class ShapeWriter
 {
     /// <summary>
-    /// Returns the PresentationML element(s) for <paramref name="shape"/>.
-    /// Unknown types return <see langword="null"/> and are skipped by the caller.
+    ///     Returns the PresentationML element(s) for <paramref name="shape" />.
+    ///     Unknown types return <see langword="null" /> and are skipped by the caller.
     /// </summary>
     public static XElement? Write(Shape shape) => shape switch
     {
@@ -75,6 +74,7 @@ internal static class ShapeWriter
                 new XAttribute(PmlNames.RelationshipId, shape.Image.RelationshipId));
             blipFill.Add(blip);
         }
+
         blipFill.Add(new XElement(DmlNames.Stretch,
             new XElement(DmlNames.FillRect)));
         picEl.Add(blipFill);
@@ -141,8 +141,11 @@ internal static class ShapeWriter
         // Column grid
         var tblGrid = new XElement(DmlNames.TableGrid);
         foreach (var width in shape.Grid.ColumnWidths)
+        {
             tblGrid.Add(new XElement(DmlNames.GridColumn,
                 new XAttribute(DmlNames.AttributeWidth, width.Value)));
+        }
+
         tbl.Add(tblGrid);
 
         // Rows
@@ -201,8 +204,8 @@ internal static class ShapeWriter
 
         var prst = shape.ConnectorType switch
         {
-            Models.Shapes.ConnectorType.Bent => "bentConnector3",
-            Models.Shapes.ConnectorType.Curved => "curvedConnector3",
+            ConnectorType.Bent => "bentConnector3",
+            ConnectorType.Curved => "curvedConnector3",
             _ => "straightConnector1"
         };
         spPr.Add(new XElement(DmlNames.PresetGeometry,
@@ -231,12 +234,8 @@ internal static class ShapeWriter
         WriteTransformToElement(grpSpPr, shape);
         grpEl.Add(grpSpPr);
 
-        foreach (var child in shape.Children)
-        {
-            var childEl = Write(child);
-            if (childEl != null)
-                grpEl.Add(childEl);
-        }
+        foreach (var childEl in shape.Children.Select(Write).OfType<XElement>())
+            grpEl.Add(childEl);
 
         return grpEl;
     }
@@ -285,14 +284,12 @@ internal static class ShapeWriter
 
     // ── SmartArt (diagram) ───────────────────────────────────────────────────────
 
-    private static XElement? WriteSmartArt(SmartArtShape shape)
-    {
+    private static XElement? WriteSmartArt(Shape shape) =>
         // SmartArt is only ever loaded (no programmatic authoring API yet). The preserved
         // graphic-frame element already carries the correct <dgm:relIds> references, so emit it
         // verbatim. The referenced diagram parts are written by PresentationWriter using the
         // same relationship IDs.
-        return shape.RawElement;
-    }
+        shape.RawElement;
 
     // ── Shared helpers ─────────────────────────────────────────────────────────
 
@@ -327,10 +324,10 @@ internal static class ShapeWriter
     }
 
     /// <summary>
-    /// Builds an <c>&lt;a:hlinkClick&gt;</c>/<c>&lt;a:hlinkHover&gt;</c> element. External and
-    /// slide-jump links carry the assigned <c>r:id</c>; action-only links may carry none.
+    ///     Builds an <c>&lt;a:hlinkClick&gt;</c>/<c>&lt;a:hlinkHover&gt;</c> element. External and
+    ///     slide-jump links carry the assigned <c>r:id</c>; action-only links may carry none.
     /// </summary>
-    private static XElement WriteHyperlink(System.Xml.Linq.XName name, HyperlinkAction action)
+    private static XElement WriteHyperlink(XName name, HyperlinkAction action)
     {
         var el = new XElement(name);
 
@@ -367,13 +364,15 @@ internal static class ShapeWriter
         return spPr;
     }
 
-    private static void WriteTransformToElement(XElement parent, Shape shape)
+    private static void WriteTransformToElement(XContainer parent, Shape shape)
     {
         var xfrm = new XElement(DmlNames.Transform);
 
         if (shape.RotationDegrees != 0)
+        {
             xfrm.Add(new XAttribute(DmlNames.AttributeRotation,
                 OoXmlHelper.DegreesToOoxmlRotation(shape.RotationDegrees)));
+        }
 
         if (shape.FlipHorizontal)
             xfrm.Add(new XAttribute(DmlNames.AttributeFlipHorizontal, "1"));
@@ -392,45 +391,45 @@ internal static class ShapeWriter
         parent.Add(xfrm);
     }
 
-    private static string PresetGeometryToString(Models.Shapes.AutoShapeType type) => type switch
+    private static string PresetGeometryToString(AutoShapeType type) => type switch
     {
-        Models.Shapes.AutoShapeType.RoundedRectangle => "roundRect",
-        Models.Shapes.AutoShapeType.Ellipse => "ellipse",
-        Models.Shapes.AutoShapeType.IsoscelesTriangle => "triangle",
-        Models.Shapes.AutoShapeType.RightTriangle => "rtTriangle",
-        Models.Shapes.AutoShapeType.Diamond => "diamond",
-        Models.Shapes.AutoShapeType.Parallelogram => "parallelogram",
-        Models.Shapes.AutoShapeType.Trapezoid => "trapezoid",
-        Models.Shapes.AutoShapeType.Pentagon => "pentagon",
-        Models.Shapes.AutoShapeType.Hexagon => "hexagon",
-        Models.Shapes.AutoShapeType.Heptagon => "heptagon",
-        Models.Shapes.AutoShapeType.Octagon => "octagon",
-        Models.Shapes.AutoShapeType.Star4 => "star4",
-        Models.Shapes.AutoShapeType.Star5 => "star5",
-        Models.Shapes.AutoShapeType.Star6 => "star6",
-        Models.Shapes.AutoShapeType.Star8 => "star8",
-        Models.Shapes.AutoShapeType.RightArrow => "rightArrow",
-        Models.Shapes.AutoShapeType.LeftArrow => "leftArrow",
-        Models.Shapes.AutoShapeType.UpArrow => "upArrow",
-        Models.Shapes.AutoShapeType.DownArrow => "downArrow",
-        Models.Shapes.AutoShapeType.Plus => "plus",
-        Models.Shapes.AutoShapeType.Donut => "donut",
-        Models.Shapes.AutoShapeType.Heart => "heart",
-        Models.Shapes.AutoShapeType.LightningBolt => "lightningBolt",
-        Models.Shapes.AutoShapeType.Sun => "sun",
-        Models.Shapes.AutoShapeType.Moon => "moon",
-        Models.Shapes.AutoShapeType.Cloud => "cloud",
-        Models.Shapes.AutoShapeType.Arc => "arc",
-        Models.Shapes.AutoShapeType.Wave => "wave",
-        Models.Shapes.AutoShapeType.FlowChartProcess => "flowChartProcess",
-        Models.Shapes.AutoShapeType.FlowChartDecision => "flowChartDecision",
-        Models.Shapes.AutoShapeType.FlowChartTerminator => "flowChartTerminator",
-        Models.Shapes.AutoShapeType.MathPlus => "mathPlus",
-        Models.Shapes.AutoShapeType.MathMinus => "mathMinus",
-        Models.Shapes.AutoShapeType.MathMultiply => "mathMultiply",
-        Models.Shapes.AutoShapeType.MathDivide => "mathDivide",
-        Models.Shapes.AutoShapeType.MathEqual => "mathEqual",
-        Models.Shapes.AutoShapeType.MathNotEqual => "mathNotEqual",
+        AutoShapeType.RoundedRectangle => "roundRect",
+        AutoShapeType.Ellipse => "ellipse",
+        AutoShapeType.IsoscelesTriangle => "triangle",
+        AutoShapeType.RightTriangle => "rtTriangle",
+        AutoShapeType.Diamond => "diamond",
+        AutoShapeType.Parallelogram => "parallelogram",
+        AutoShapeType.Trapezoid => "trapezoid",
+        AutoShapeType.Pentagon => "pentagon",
+        AutoShapeType.Hexagon => "hexagon",
+        AutoShapeType.Heptagon => "heptagon",
+        AutoShapeType.Octagon => "octagon",
+        AutoShapeType.Star4 => "star4",
+        AutoShapeType.Star5 => "star5",
+        AutoShapeType.Star6 => "star6",
+        AutoShapeType.Star8 => "star8",
+        AutoShapeType.RightArrow => "rightArrow",
+        AutoShapeType.LeftArrow => "leftArrow",
+        AutoShapeType.UpArrow => "upArrow",
+        AutoShapeType.DownArrow => "downArrow",
+        AutoShapeType.Plus => "plus",
+        AutoShapeType.Donut => "donut",
+        AutoShapeType.Heart => "heart",
+        AutoShapeType.LightningBolt => "lightningBolt",
+        AutoShapeType.Sun => "sun",
+        AutoShapeType.Moon => "moon",
+        AutoShapeType.Cloud => "cloud",
+        AutoShapeType.Arc => "arc",
+        AutoShapeType.Wave => "wave",
+        AutoShapeType.FlowChartProcess => "flowChartProcess",
+        AutoShapeType.FlowChartDecision => "flowChartDecision",
+        AutoShapeType.FlowChartTerminator => "flowChartTerminator",
+        AutoShapeType.MathPlus => "mathPlus",
+        AutoShapeType.MathMinus => "mathMinus",
+        AutoShapeType.MathMultiply => "mathMultiply",
+        AutoShapeType.MathDivide => "mathDivide",
+        AutoShapeType.MathEqual => "mathEqual",
+        AutoShapeType.MathNotEqual => "mathNotEqual",
         _ => "rect"
     };
 }

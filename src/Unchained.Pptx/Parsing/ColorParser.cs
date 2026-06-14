@@ -1,19 +1,21 @@
+using System.Globalization;
 using System.Xml.Linq;
+using Unchained.Drawing.Primitives;
 using Unchained.Ooxml;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses DrawingML colour elements into <see cref="ColorSpec"/> values.
+///     Parses DrawingML colour elements into <see cref="ColorSpec" /> values.
 /// </summary>
 internal static class ColorParser
 {
     /// <summary>
-    /// Reads the first recognised colour child element from <paramref name="parent"/>
-    /// and returns the corresponding <see cref="ColorSpec"/>.
-    /// Returns a default mid-grey when no colour element is found.
+    ///     Reads the first recognised colour child element from <paramref name="parent" />
+    ///     and returns the corresponding <see cref="ColorSpec" />.
+    ///     Returns a default mid-grey when no colour element is found.
     /// </summary>
     public static ColorSpec Parse(XElement parent)
     {
@@ -23,11 +25,10 @@ internal static class ColorParser
         {
             var hex = srgb.GetAttr(DmlNames.AttributeValue, "000000");
             if (TryParseHex(hex, out var argb))
-                return ColorSpec.FromArgb(
-                    ReadAlpha(srgb),
-                    (byte)((argb >> 16) & 0xFF),
-                    (byte)((argb >> 8) & 0xFF),
-                    (byte)(argb & 0xFF));
+            {
+                var (_, r, g, b) = ColorMath.UnpackArgb(argb);
+                return ColorSpec.FromArgb(ReadAlpha(srgb), r, g, b);
+            }
         }
 
         // Theme slot reference
@@ -47,14 +48,15 @@ internal static class ColorParser
         {
             var lastClr = sysClr.GetAttr("lastClr", "000000");
             if (TryParseHex(lastClr, out var argb))
-                return ColorSpec.FromRgb(
-                    (byte)((argb >> 16) & 0xFF),
-                    (byte)((argb >> 8) & 0xFF),
-                    (byte)(argb & 0xFF));
+            {
+                var (_, r, g, b) = ColorMath.UnpackArgb(argb);
+                return ColorSpec.FromRgb(r, g, b);
+            }
         }
 
         // Preset colour — map to a neutral value for now
         var prstClr = parent.Element(DmlNames.PresetColor);
+        // ReSharper disable once InvertIf
         if (prstClr != null)
         {
             var name = prstClr.GetAttr(DmlNames.AttributeValue, "black");
@@ -66,26 +68,21 @@ internal static class ColorParser
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static byte ReadAlpha(XElement colorElement)
+    private static byte ReadAlpha(XContainer colorElement)
     {
         var alphaEl = colorElement.Element(DmlNames.Alpha);
-        if (alphaEl == null)
-            return 255;
 
-        var raw = alphaEl.GetAttrInt(DmlNames.AttributeValue);
-        if (raw == null)
-            return 255;
-
-        return (byte)Math.Clamp((int)Math.Round(raw.Value / (double)OoxmlScaling.PercentScale * 255), 0, 255);
+        var raw = alphaEl?.GetAttrInt(DmlNames.AttributeValue);
+        return raw == null ? (byte)255 : (byte)Math.Clamp((int)Math.Round(raw.Value / (double)OoxmlScaling.PercentScale * 255), 0, 255);
     }
 
-    private static double ReadTransformValue(XElement parent, XName childName)
+    private static double ReadTransformValue(XContainer parent, XName childName)
     {
         var child = parent.Element(childName);
         if (child == null) return childName == DmlNames.LuminanceModifier ? 1.0 : 0.0;
+
         var raw = child.GetAttrInt(DmlNames.AttributeValue);
-        if (raw == null) return childName == DmlNames.LuminanceModifier ? 1.0 : 0.0;
-        return raw.Value / (double)OoxmlScaling.PercentScale;
+        return raw == null ? childName == DmlNames.LuminanceModifier ? 1.0 : 0.0 : raw.Value / (double)OoxmlScaling.PercentScale;
     }
 
     private static bool TryParseHex(string hex, out uint value)
@@ -93,7 +90,7 @@ internal static class ColorParser
         hex = hex.TrimStart('#');
         if (hex.Length == 6)
             hex = "FF" + hex;
-        return uint.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out value);
+        return uint.TryParse(hex, NumberStyles.HexNumber, null, out value);
     }
 
     private static ThemeColorSlot ParseThemeSlot(string name) => name switch
@@ -125,7 +122,8 @@ internal static class ColorParser
         "magenta" => ColorSpec.FromRgb(0xFF, 0x00, 0xFF),
         "orange" => ColorSpec.FromRgb(0xFF, 0xA5, 0x00),
         "purple" => ColorSpec.FromRgb(0x80, 0x00, 0x80),
-        "gray" or "grey" => ColorSpec.FromRgb(0x80, 0x80, 0x80),
-        _ => ColorSpec.FromRgb(0x80, 0x80, 0x80)
+        // ReSharper disable PatternIsRedundant
+        "gray" or "grey" or _ => ColorSpec.FromRgb(0x80, 0x80, 0x80)
+        // ReSharper restore PatternIsRedundant
     };
 }

@@ -5,23 +5,21 @@ using Unchained.Pptx.Core.Xml;
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes a <see cref="SlideTransition"/> into a <c>&lt;p:transition&gt;</c> element.
-/// Returns <see langword="null"/> when the transition has no effect and no timing overrides
-/// (nothing needs to be written).
+///     Serializes a <see cref="SlideTransition" /> into a <c>&lt;p:transition&gt;</c> element.
+///     Returns <see langword="null" /> when the transition has no effect and no timing overrides
+///     (nothing needs to be written).
 /// </summary>
 internal static class TransitionWriter
 {
     /// <summary>
-    /// Writes the transition model to XML. Returns <see langword="null"/> if the transition
-    /// does not need a <c>&lt;p:transition&gt;</c> element (no effect, default click-advance,
-    /// no auto-advance timer).
+    ///     Writes the transition model to XML. Returns <see langword="null" /> if the transition
+    ///     does not need a <c>&lt;p:transition&gt;</c> element (no effect, default click-advance,
+    ///     no auto-advance timer).
     /// </summary>
     public static XElement? Write(SlideTransition transition)
     {
         // No element needed if everything is default / no effect configured
-        if (transition.Effect == TransitionEffect.None
-            && transition.AdvanceOnClick
-            && transition.AutoAdvanceSeconds == null)
+        if (transition is { Effect: TransitionEffect.None, AdvanceOnClick: true, AutoAdvanceSeconds: null })
             return null;
 
         var pml = PmlNames.Pml;
@@ -49,9 +47,8 @@ internal static class TransitionWriter
         return el;
     }
 
-    private static XElement? WriteEffectElement(TransitionEffect effect, XNamespace pml)
-    {
-        return effect switch
+    private static XElement? WriteEffectElement(TransitionEffect effect, XNamespace pml) =>
+        effect switch
         {
             TransitionEffect.None => null,
             TransitionEffect.Cut => new XElement(pml + "cut"),
@@ -97,5 +94,4 @@ internal static class TransitionWriter
 
             _ => null
         };
-    }
 }

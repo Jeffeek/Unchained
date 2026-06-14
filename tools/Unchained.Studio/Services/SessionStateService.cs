@@ -6,34 +6,42 @@ namespace Unchained.Studio.Services;
 public sealed class SessionStateService(
     DocumentProcessor pdfProcessor,
     PresentationProcessor pptxProcessor,
-    RenderingService renderingService) : IAsyncDisposable
+    RenderingService renderingService
+) : IAsyncDisposable
 {
+    private int _loading; // 0 = idle; 1 = loading; Interlocked flag
     private PdfSessionState? _pdf;
     private PptxSessionState? _pptx;
-    private int _loading; // 0 = idle; 1 = loading; Interlocked flag
 
     public PdfSessionState? Pdf => _pdf;
     public PptxSessionState? Pptx => _pptx;
 
+    public async ValueTask DisposeAsync()
+    {
+        await ClosePdfAsync().ConfigureAwait(false);
+        await ClosePptxAsync().ConfigureAwait(false);
+    }
+
     public async Task LoadPdfAsync(
         byte[] bytes,
         string fileName,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        if (System.Threading.Interlocked.Exchange(ref _loading, 1) == 1)
+        if (Interlocked.Exchange(ref _loading, 1) == 1)
             throw new InvalidOperationException("A document load is already in progress.");
 
         try
         {
             var newState = await PdfSessionState.CreateAsync(pdfProcessor, bytes, fileName, ct).ConfigureAwait(false);
             newState.RenderCache = renderingService;
-            var old = System.Threading.Interlocked.Exchange(ref _pdf, newState);
+            var old = Interlocked.Exchange(ref _pdf, newState);
             if (old is not null)
                 await old.DisposeAsync().ConfigureAwait(false);
         }
         finally
         {
-            System.Threading.Interlocked.Exchange(ref _loading, 0);
+            Interlocked.Exchange(ref _loading, 0);
         }
     }
 
@@ -41,28 +49,29 @@ public sealed class SessionStateService(
         byte[] bytes,
         string fileName,
         string password,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        if (System.Threading.Interlocked.Exchange(ref _loading, 1) == 1)
+        if (Interlocked.Exchange(ref _loading, 1) == 1)
             throw new InvalidOperationException("A document load is already in progress.");
 
         try
         {
             var newState = await PdfSessionState.CreateEncryptedAsync(pdfProcessor, bytes, password, fileName, ct).ConfigureAwait(false);
             newState.RenderCache = renderingService;
-            var old = System.Threading.Interlocked.Exchange(ref _pdf, newState);
+            var old = Interlocked.Exchange(ref _pdf, newState);
             if (old is not null)
                 await old.DisposeAsync().ConfigureAwait(false);
         }
         finally
         {
-            System.Threading.Interlocked.Exchange(ref _loading, 0);
+            Interlocked.Exchange(ref _loading, 0);
         }
     }
 
     public async Task ClosePdfAsync()
     {
-        var old = System.Threading.Interlocked.Exchange(ref _pdf, null);
+        var old = Interlocked.Exchange(ref _pdf, null);
         if (old is not null)
             await old.DisposeAsync().ConfigureAwait(false);
     }
@@ -70,34 +79,29 @@ public sealed class SessionStateService(
     public async Task LoadPptxAsync(
         byte[] bytes,
         string fileName,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        if (System.Threading.Interlocked.Exchange(ref _loading, 1) == 1)
+        if (Interlocked.Exchange(ref _loading, 1) == 1)
             throw new InvalidOperationException("A document load is already in progress.");
 
         try
         {
             var newState = await PptxSessionState.CreateAsync(pptxProcessor, bytes, fileName, ct).ConfigureAwait(false);
-            var old = System.Threading.Interlocked.Exchange(ref _pptx, newState);
+            var old = Interlocked.Exchange(ref _pptx, newState);
             if (old is not null)
                 await old.DisposeAsync().ConfigureAwait(false);
         }
         finally
         {
-            System.Threading.Interlocked.Exchange(ref _loading, 0);
+            Interlocked.Exchange(ref _loading, 0);
         }
     }
 
     public async Task ClosePptxAsync()
     {
-        var old = System.Threading.Interlocked.Exchange(ref _pptx, null);
+        var old = Interlocked.Exchange(ref _pptx, null);
         if (old is not null)
             await old.DisposeAsync().ConfigureAwait(false);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await ClosePdfAsync().ConfigureAwait(false);
-        await ClosePptxAsync().ConfigureAwait(false);
     }
 }

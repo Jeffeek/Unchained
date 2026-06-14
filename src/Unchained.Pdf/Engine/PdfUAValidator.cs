@@ -1,6 +1,9 @@
+using System.Globalization;
 using System.Text;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -9,16 +12,28 @@ namespace Unchained.Pdf.Engine;
 // ── Validator ─────────────────────────────────────────────────────────────────
 
 /// <summary>
-/// Validates a PDF document against ISO 14289-1 (PDF/UA-1) accessibility requirements.
-/// <para>
-/// Rules implemented correspond directly to ISO 14289-1 clause numbers.
-/// The validator checks every rule that can be verified statically from the PDF object graph;
-/// rules that require human judgment (e.g. reading-order correctness, meaningful alt text)
-/// are flagged as warnings where detectable.
-/// </para>
+///     Validates a PDF document against ISO 14289-1 (PDF/UA-1) accessibility requirements.
+///     <para>
+///         Rules implemented correspond directly to ISO 14289-1 clause numbers.
+///         The validator checks every rule that can be verified statically from the PDF object graph;
+///         rules that require human judgment (e.g. reading-order correctness, meaningful alt text)
+///         are flagged as warnings where detectable.
+///     </para>
 /// </summary>
 internal static class PdfUAValidator
 {
+    // Standard PDF structure type names from ISO 32000-1 Table 333.
+    private static readonly HashSet<string> StandardStructureTypes = new(StringComparer.Ordinal)
+    {
+        "Document", "Part", "Art", "Sect", "Div", "BlockQuote", "Caption",
+        "TOC", "TOCI", "Index", "NonStruct", "Private",
+        "H", "H1", "H2", "H3", "H4", "H5", "H6",
+        "P", "L", "LI", "LBody",
+        "Table", "TR", "TH", "TD", "THead", "TBody", "TFoot",
+        "Span", "Quote", "Note", "Reference", "BibEntry", "Code", "Link", "Annot",
+        "Ruby", "Warichu",
+        "Figure", "Formula", "Form"
+    };
     // ── Entry point ───────────────────────────────────────────────────────────
 
     internal static PdfUAValidationResult Validate(byte[] pdfBytes)
@@ -109,7 +124,7 @@ internal static class PdfUAValidator
         }
 
         var verStr = header[5..];
-        if (!double.TryParse(verStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var ver) || ver < 1.4)
+        if (!double.TryParse(verStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var ver) || ver < 1.4)
             v.Add(E("7.1", $"PDF version {verStr} is below the minimum 1.4 required for PDF/UA-1."));
     }
 
@@ -134,7 +149,7 @@ internal static class PdfUAValidator
     {
         // /ViewerPreferences /DisplayDocTitle must be true.
         var vp = Resolve<PdfDictionary>(core.Catalog[PdfName.ViewerPreferences], core);
-        if (vp?[PdfName.Get("DisplayDocTitle")] is not PdfBoolean { Value: true })
+        if (vp?[PdfName.DisplayDocTitle] is not PdfBoolean { Value: true })
             v.Add(E("7.3", "/ViewerPreferences /DisplayDocTitle must be true so the window title bar shows the document title."));
 
         // The /Info /Title or DC title in XMP must be present.
@@ -157,7 +172,7 @@ internal static class PdfUAValidator
 
         try
         {
-            var xmp = Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
+            var xmp = StreamFilters.Decode(stream).Span.FromUtf8Span();
             return xmp.Contains("dc:title", StringComparison.OrdinalIgnoreCase) ||
                    xmp.Contains("dc:Title", StringComparison.Ordinal);
         }
@@ -277,19 +292,13 @@ internal static class PdfUAValidator
             };
             if (annots is null) continue;
 
-            foreach (var elem in annots.Elements)
-            {
-                var dict = elem switch
-                {
-                    PdfDictionary d => d,
-                    PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                    _ => null
-                };
-                if (dict?.GetName("Subtype") != "Widget") continue;
-
-                if (dict[PdfName.Get("TU")] is null)
-                    v.Add(W("7.7", $"Widget annotation on page {page} is missing /TU (tooltip / accessible name).", pageNumber: page));
-            }
+            foreach (var _ in from elem in annots.Elements
+                              select core.ResolveDict(elem)
+                              into dict
+                              where dict?.GetName("Subtype") == "Widget"
+                              where dict[PdfName.TU] is null
+                              select dict)
+                v.Add(W("7.7", $"Widget annotation on page {page} is missing /TU (tooltip / accessible name).", pageNumber: page));
         }
     }
 
@@ -441,7 +450,11 @@ internal static class PdfUAValidator
             }
 
             if (pageHasContent && !pageHasMarkedContent)
-                v.Add(E("7.11", $"Page {page} contains drawing operators but no marked-content sequences (BDC/BMC). All content must be tagged.", pageNumber: page));
+            {
+                v.Add(E("7.11",
+                    $"Page {page} contains drawing operators but no marked-content sequences (BDC/BMC). All content must be tagged.",
+                    pageNumber: page));
+            }
         }
     }
 
@@ -463,12 +476,7 @@ internal static class PdfUAValidator
 
             foreach (var elem in annots.Elements)
             {
-                var dict = elem switch
-                {
-                    PdfDictionary d => d,
-                    PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                    _ => null
-                };
+                var dict = core.ResolveDict(elem);
                 if (dict is null) continue;
 
                 var subtype = dict.GetName("Subtype") ?? string.Empty;
@@ -476,16 +484,24 @@ internal static class PdfUAValidator
                 // All annotations except /Popup must have a /Contents or /TU entry (accessible name).
                 if (subtype is not ("Popup" or "Link"))
                 {
-                    var hasContents = dict[PdfName.Get("Contents")] is not null;
-                    var hasTu = dict[PdfName.Get("TU")] is not null;
+                    var hasContents = dict[PdfName.Contents] is not null;
+                    var hasTu = dict[PdfName.TU] is not null;
                     if (!hasContents && !hasTu)
-                        v.Add(W("7.13", $"/{subtype} annotation on page {page} has no /Contents or /TU — screen readers cannot describe it.", pageNumber: page));
+                    {
+                        v.Add(W("7.13",
+                            $"/{subtype} annotation on page {page} has no /Contents or /TU — screen readers cannot describe it.",
+                            pageNumber: page));
+                    }
                 }
 
                 // Tab order: pages with annotations must have /Tabs /S (structure order).
                 var tabs = pageDict.GetName("Tabs");
                 if (tabs is null)
-                    v.Add(W("7.13", $"Page {page} has annotations but no /Tabs entry. Set /Tabs /S for structure-based tab order.", pageNumber: page));
+                {
+                    v.Add(W("7.13",
+                        $"Page {page} has annotations but no /Tabs entry. Set /Tabs /S for structure-based tab order.",
+                        pageNumber: page));
+                }
             }
         }
     }
@@ -495,8 +511,11 @@ internal static class PdfUAValidator
     private static void CheckActions(PdfDocumentCore core, ICollection<PdfUAViolation> v)
     {
         // /AA (additional actions) on the document catalog must not have scripts (§7.14.2).
-        if (core.Catalog[PdfName.Get("AA")] is not null)
-            v.Add(W("7.14", "Catalog contains /AA (additional actions). Verify no JavaScript actions are present — they are not permitted in PDF/UA."));
+        if (core.Catalog[PdfName.AA] is not null)
+        {
+            v.Add(W("7.14",
+                "Catalog contains /AA (additional actions). Verify no JavaScript actions are present — they are not permitted in PDF/UA."));
+        }
 
         // OpenAction: if present, may not be a named action of type /Named (§7.14.1).
         var openAction = core.Catalog[PdfName.OpenAction];
@@ -528,7 +547,7 @@ internal static class PdfUAValidator
         string xmp;
         try
         {
-            xmp = Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
+            xmp = StreamFilters.Decode(stream).Span.FromUtf8Span();
         }
         catch
         {
@@ -583,8 +602,7 @@ internal static class PdfUAValidator
                 var resolved = kid switch
                 {
                     PdfDictionary d => d,
-                    PdfIndirectReference r when visited.Add(r.ObjectNumber) =>
-                        c.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+                    PdfIndirectReference r when visited.Add(r.ObjectNumber) => c.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
                     _ => null
                 };
 
@@ -609,17 +627,8 @@ internal static class PdfUAValidator
             _ => [kObj]
         };
 
-        foreach (var kid in kids)
-        {
-            var resolved = kid switch
-            {
-                PdfDictionary d => d,
-                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                _ => null
-            };
-
-            if (resolved is not null) visitor(resolved);
-        }
+        foreach (var resolved in kids.Select(core.ResolveDict).Where(static x => x != null))
+            visitor(resolved!);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -637,23 +646,20 @@ internal static class PdfUAValidator
         new() { Violations = [E(ruleId, message)] };
 
     // ReSharper disable once BadListLineBreaks
-    private static PdfUAViolation E(string ruleId, string description, int? objectNumber = null, int? pageNumber = null) =>
+    private static PdfUAViolation E(
+        string ruleId,
+        string description,
+        int? objectNumber = null,
+        int? pageNumber = null
+    ) =>
         new(ruleId, description, PdfUAViolationSeverity.Error, objectNumber, pageNumber);
 
     // ReSharper disable once BadListLineBreaks
-    private static PdfUAViolation W(string ruleId, string description, int? objectNumber = null, int? pageNumber = null) =>
+    private static PdfUAViolation W(
+        string ruleId,
+        string description,
+        int? objectNumber = null,
+        int? pageNumber = null
+    ) =>
         new(ruleId, description, PdfUAViolationSeverity.Warning, objectNumber, pageNumber);
-
-    // Standard PDF structure type names from ISO 32000-1 Table 333.
-    private static readonly HashSet<string> StandardStructureTypes = new(StringComparer.Ordinal)
-    {
-        "Document", "Part", "Art", "Sect", "Div", "BlockQuote", "Caption",
-        "TOC", "TOCI", "Index", "NonStruct", "Private",
-        "H", "H1", "H2", "H3", "H4", "H5", "H6",
-        "P", "L", "LI", "LBody",
-        "Table", "TR", "TH", "TD", "THead", "TBody", "TFoot",
-        "Span", "Quote", "Note", "Reference", "BibEntry", "Code", "Link", "Annot",
-        "Ruby", "Warichu",
-        "Figure", "Formula", "Form"
-    };
 }

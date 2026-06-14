@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// The twelve named colour slots of a presentation's theme colour scheme.
-/// Each slot holds a <see cref="ColorSpec"/> that defines its colour.
+///     The twelve named colour slots of a presentation's theme colour scheme.
+///     Each slot holds a <see cref="ColorSpec" /> that defines its colour.
 /// </summary>
 public sealed class ColorScheme
 {
@@ -42,7 +42,7 @@ public sealed class ColorScheme
     /// <summary>The colour used for visited (followed) hyperlink text.</summary>
     public ColorSpec FollowedHyperlinkColor { get; set; }
 
-    /// <summary>Gets or sets a colour slot by its <see cref="ThemeColorSlot"/> identifier.</summary>
+    /// <summary>Gets or sets a colour slot by its <see cref="ThemeColorSlot" /> identifier.</summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown for an unrecognised slot.</exception>
     public ColorSpec this[ThemeColorSlot slot]
     {
@@ -84,8 +84,8 @@ public sealed class ColorScheme
     }
 
     /// <summary>
-    /// Resolves a theme slot to its concrete ARGB value.
-    /// Returns a neutral mid-grey (0xFF808080) if the slot has not been initialised.
+    ///     Resolves a theme slot to its concrete ARGB value.
+    ///     Returns a neutral mid-grey (0xFF808080) if the slot has not been initialised.
     /// </summary>
     internal uint Resolve(ThemeColorSlot slot) => this[slot].Resolve(this);
 }

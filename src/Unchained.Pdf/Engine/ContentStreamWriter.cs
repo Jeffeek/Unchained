@@ -4,8 +4,8 @@ using System.Globalization;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Low-level PDF content stream builder. Writes operands and operator keywords
-/// directly into an <see cref="ArrayBufferWriter{T}"/> without intermediate allocations.
+///     Low-level PDF content stream builder. Writes operands and operator keywords
+///     directly into an <see cref="ArrayBufferWriter{T}" /> without intermediate allocations.
 /// </summary>
 internal sealed class ContentStreamWriter(IBufferWriter<byte> buffer)
 {

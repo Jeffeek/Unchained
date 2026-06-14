@@ -1,0 +1,20 @@
+# Pinned SHA-256 checksums for native binaries fetched by fetch-natives.{sh,ps1}.
+#
+# Format (one per line):   <rid>  <sha256-hex>
+# Lines starting with '#' and blank lines are ignored.
+#
+# Only RIDs that the fetch script actually materializes need an entry. Today that
+# is solely linux-arm64 (every other platform's FreeType2 is bundled by the
+# FreeTypeSharp NuGet package and never touches this script).
+#
+# Why this exists: the linux-arm64 libfreetype.so is copied from the build host's
+# system packages and then SHIPPED inside Unchained.Drawing.Runtimes. Pinning its
+# hash turns a silent "whatever the host happened to have" into a verified,
+# reproducible artifact — and fails the build if the host library ever changes
+# unexpectedly (supply-chain / reproducibility gate).
+#
+# To record or update a pin: run the fetch script with --pin (bash) / -PinChecksum
+# (pwsh) on a trusted host, then commit the change to this file and review the diff.
+#
+# rid              sha256
+# linux-arm64      <unpinned — run with --pin on a trusted linux-arm64 host>

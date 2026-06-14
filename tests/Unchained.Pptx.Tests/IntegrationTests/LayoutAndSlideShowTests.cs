@@ -1,6 +1,5 @@
 using Shouldly;
 using Unchained.Ooxml;
-using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Slides;
 using Unchained.Pptx.Tests.Helpers;
@@ -9,7 +8,7 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Programmatic slide-layout creation and presentation-level slide-show settings (M-G).
+///     Programmatic slide-layout creation and presentation-level slide-show settings (M-G).
 /// </summary>
 public sealed class LayoutAndSlideShowTests : PptxTestBase
 {

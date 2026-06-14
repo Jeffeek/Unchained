@@ -1,17 +1,16 @@
 using Shouldly;
 using Unchained.Ooxml;
-using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
-using Unchained.Pptx.Models.Shapes;
+using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Verifies the Phase 2 OpenXML-SDK-backed reader (OpenOptions.UseOpenXmlEngine) produces a
-/// model consistent with the legacy custom parser for the vocabulary it currently maps:
-/// slide count, slide size, hidden flag, shape geometry, and text.
+///     Verifies the Phase 2 OpenXML-SDK-backed reader (OpenOptions.UseOpenXmlEngine) produces a
+///     model consistent with the legacy custom parser for the vocabulary it currently maps:
+///     slide count, slide size, hidden flag, shape geometry, and text.
 /// </summary>
 public sealed class OpenXmlParserParityTests : PptxTestBase
 {
@@ -29,7 +28,10 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         // with both parsers and compare what the SDK reader currently maps.
         var doc = PptxFixtures.WithSlides(2);
         doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(5), Emu.FromInches(2),
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(5),
+            Emu.FromInches(2),
             "Hello Parity");
         doc.Slides[1].IsHidden = true;
 
@@ -50,8 +52,8 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         sdkText.ShouldContain("Hello Parity");
         customText.ShouldContain("Hello Parity");
 
-        custom.Dispose();
-        sdk.Dispose();
+        await custom.DisposeAsync();
+        await sdk.DisposeAsync();
     }
 
     [
@@ -99,22 +101,29 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
             sm.Theme.Colors.Accent1.ShouldBe(cm.Theme.Colors.Accent1, $"{fileName}: master {m + 1} theme accent1");
 
             for (var l = 0; l < cm.Layouts.Count; l++)
+            {
                 sm.Layouts[l].LayoutType.ShouldBe(cm.Layouts[l].LayoutType,
                     $"{fileName}: master {m + 1} layout {l + 1} type");
+            }
         }
 
         // Each slide resolves to a layout whose type matches the custom parser's.
         for (var i = 0; i < custom.Slides.Count; i++)
+        {
             sdk.Slides[i].Layout.LayoutType.ShouldBe(custom.Slides[i].Layout.LayoutType,
                 $"{fileName}: slide {i + 1} layout type");
+        }
 
         for (var i = 0; i < custom.Slides.Count; i++)
             sdk.Slides[i].IsHidden.ShouldBe(custom.Slides[i].IsHidden, $"{fileName}: slide {i + 1} hidden flag");
 
         // Notes / sections / comment authors parity (M4).
         for (var i = 0; i < custom.Slides.Count; i++)
+        {
             sdk.Slides[i].Notes.NotesText.ShouldBe(custom.Slides[i].Notes.NotesText,
                 $"{fileName}: slide {i + 1} notes text");
+        }
+
         sdk.Sections.Count.ShouldBe(custom.Sections.Count, $"{fileName}: section count");
         sdk.CommentAuthors.Count.ShouldBe(custom.CommentAuthors.Count, $"{fileName}: comment author count");
 
@@ -138,55 +147,60 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
                 ss.Line.WidthPoints.ShouldBe(cs.Line.WidthPoints, $"{fileName}: s{i + 1} sh{j + 1} line width");
                 ss.Line.DashStyle.ShouldBe(cs.Line.DashStyle, $"{fileName}: s{i + 1} sh{j + 1} line dash");
 
-                // Pictures must resolve their embedded image bytes identically.
-                if (cs is Unchained.Pptx.Shapes.PictureShape cp
-                    && ss is Unchained.Pptx.Shapes.PictureShape sp)
+                switch (cs)
                 {
-                    (sp.Image is not null).ShouldBe(cp.Image is not null,
-                        $"{fileName}: slide {i + 1} shape {j + 1} image presence");
-                    if (cp.Image is not null && sp.Image is not null)
-                        sp.Image.Data.Length.ShouldBe(cp.Image.Data.Length,
-                            $"{fileName}: slide {i + 1} shape {j + 1} image byte length");
-                }
-
-                // Charts must resolve the same model (type + series count) from the chart part.
-                if (cs is Unchained.Pptx.Shapes.ChartShape cc
-                    && ss is Unchained.Pptx.Shapes.ChartShape sc)
-                {
-                    sc.Chart.Type.ShouldBe(cc.Chart.Type,
-                        $"{fileName}: slide {i + 1} shape {j + 1} chart type");
-                    sc.Chart.Data.Series.Count.ShouldBe(cc.Chart.Data.Series.Count,
-                        $"{fileName}: slide {i + 1} shape {j + 1} chart series count");
-                }
-
-                // Text runs must carry identical formatting (M1): plain text, bold/italic,
-                // font size, font name, paragraph alignment.
-                if (cs is Unchained.Pptx.Shapes.AutoShape ca
-                    && ss is Unchained.Pptx.Shapes.AutoShape sa)
-                {
-                    var cParas = ca.TextFrame.Paragraphs;
-                    var sParas = sa.TextFrame.Paragraphs;
-                    sParas.Count.ShouldBe(cParas.Count,
-                        $"{fileName}: slide {i + 1} shape {j + 1} paragraph count");
-
-                    for (var pi = 0; pi < cParas.Count; pi++)
+                    // Pictures must resolve their embedded image bytes identically.
+                    case PictureShape cp when ss is PictureShape sp:
                     {
-                        sParas[pi].Alignment.ShouldBe(cParas[pi].Alignment,
-                            $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} alignment");
-                        sParas[pi].Runs.Count.ShouldBe(cParas[pi].Runs.Count,
-                            $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} run count");
-
-                        for (var ri = 0; ri < cParas[pi].Runs.Count; ri++)
+                        (sp.Image is not null).ShouldBe(cp.Image is not null,
+                            $"{fileName}: slide {i + 1} shape {j + 1} image presence");
+                        if (cp.Image is not null && sp.Image is not null)
                         {
-                            var cr = cParas[pi].Runs[ri];
-                            var sr = sParas[pi].Runs[ri];
-                            sr.Text.ShouldBe(cr.Text, $"{fileName}: s{i + 1} sh{j + 1} p{pi + 1} run {ri + 1} text");
-                            sr.Format.Bold.ShouldBe(cr.Format.Bold, $"{fileName}: …run {ri + 1} bold");
-                            sr.Format.Italic.ShouldBe(cr.Format.Italic, $"{fileName}: …run {ri + 1} italic");
-                            sr.Format.FontSizePoints.ShouldBe(cr.Format.FontSizePoints, $"{fileName}: …run {ri + 1} size");
-                            sr.Format.LatinFont.ShouldBe(cr.Format.LatinFont, $"{fileName}: …run {ri + 1} font");
-                            sr.Format.Underline.ShouldBe(cr.Format.Underline, $"{fileName}: …run {ri + 1} underline");
+                            sp.Image.Data.Length.ShouldBe(cp.Image.Data.Length,
+                                $"{fileName}: slide {i + 1} shape {j + 1} image byte length");
                         }
+
+                        break;
+                    }
+                    // Charts must resolve the same model (type + series count) from the chart part.
+                    case ChartShape cc
+                        when ss is ChartShape sc:
+                        sc.Chart.Type.ShouldBe(cc.Chart.Type,
+                            $"{fileName}: slide {i + 1} shape {j + 1} chart type");
+                        sc.Chart.Data.Series.Count.ShouldBe(cc.Chart.Data.Series.Count,
+                            $"{fileName}: slide {i + 1} shape {j + 1} chart series count");
+                    break;
+                    // Text runs must carry identical formatting (M1): plain text, bold/italic,
+                    // font size, font name, paragraph alignment.
+                    case AutoShape ca
+                        when ss is AutoShape sa:
+                    {
+                        var cParas = ca.TextFrame.Paragraphs;
+                        var sParas = sa.TextFrame.Paragraphs;
+                        sParas.Count.ShouldBe(cParas.Count,
+                            $"{fileName}: slide {i + 1} shape {j + 1} paragraph count");
+
+                        for (var pi = 0; pi < cParas.Count; pi++)
+                        {
+                            sParas[pi].Alignment.ShouldBe(cParas[pi].Alignment,
+                                $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} alignment");
+                            sParas[pi].Runs.Count.ShouldBe(cParas[pi].Runs.Count,
+                                $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} run count");
+
+                            for (var ri = 0; ri < cParas[pi].Runs.Count; ri++)
+                            {
+                                var cr = cParas[pi].Runs[ri];
+                                var sr = sParas[pi].Runs[ri];
+                                sr.Text.ShouldBe(cr.Text, $"{fileName}: s{i + 1} sh{j + 1} p{pi + 1} run {ri + 1} text");
+                                sr.Format.Bold.ShouldBe(cr.Format.Bold, $"{fileName}: …run {ri + 1} bold");
+                                sr.Format.Italic.ShouldBe(cr.Format.Italic, $"{fileName}: …run {ri + 1} italic");
+                                sr.Format.FontSizePoints.ShouldBe(cr.Format.FontSizePoints, $"{fileName}: …run {ri + 1} size");
+                                sr.Format.LatinFont.ShouldBe(cr.Format.LatinFont, $"{fileName}: …run {ri + 1} font");
+                                sr.Format.Underline.ShouldBe(cr.Format.Underline, $"{fileName}: …run {ri + 1} underline");
+                            }
+                        }
+
+                        break;
                     }
                 }
             }
@@ -195,7 +209,7 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         // Resolved media image count should match.
         sdk.Media.Images.Count.ShouldBe(custom.Media.Images.Count, $"{fileName}: media image count");
 
-        custom.Dispose();
-        sdk.Dispose();
+        await custom.DisposeAsync();
+        await sdk.DisposeAsync();
     }
 }

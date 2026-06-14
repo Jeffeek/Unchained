@@ -4,23 +4,23 @@ using MudBlazor;
 namespace Unchained.Studio.Services;
 
 /// <summary>
-/// Holds the Studio's theme state (light/dark) for one Blazor circuit and persists the user's
-/// choice to <c>localStorage</c>. The MudBlazor <see cref="MudTheme"/> is shared; only the
-/// dark-mode flag toggles. Call <see cref="InitializeAsync"/> once after first render to load the
-/// saved preference.
+///     Holds the Studio's theme state (light/dark) for one Blazor circuit and persists the user's
+///     choice to <c>localStorage</c>. The MudBlazor <see cref="MudTheme" /> is shared; only the
+///     dark-mode flag toggles. Call <see cref="InitializeAsync" /> once after first render to load the
+///     saved preference.
 /// </summary>
 public sealed class ThemeService(IJSRuntime js)
 {
     private const string StorageKey = "unchained-studio.dark-mode";
 
-    /// <summary><see langword="true"/> when dark mode is active.</summary>
+    /// <summary><see langword="true" /> when dark mode is active.</summary>
     public bool IsDarkMode { get; private set; }
-
-    /// <summary>Raised when the theme changes so the layout can re-render.</summary>
-    public event Action? Changed;
 
     /// <summary>The single theme definition (light + dark palettes).</summary>
     public MudTheme Theme { get; } = BuildTheme();
+
+    /// <summary>Raised when the theme changes so the layout can re-render.</summary>
+    public event Action? Changed;
 
     /// <summary>Loads the persisted dark-mode preference. Safe to call once after first render.</summary>
     public async Task InitializeAsync()
@@ -48,7 +48,9 @@ public sealed class ThemeService(IJSRuntime js)
         try
         {
             await js.InvokeVoidAsync(
-                "unchainedStudio.setLocalStorage", StorageKey, IsDarkMode ? "true" : "false").ConfigureAwait(false);
+                "unchainedStudio.setLocalStorage",
+                StorageKey,
+                IsDarkMode ? "true" : "false").ConfigureAwait(false);
         }
         catch
         {
@@ -65,7 +67,7 @@ public sealed class ThemeService(IJSRuntime js)
             AppbarBackground = "#5C6BC0",
             Background = "#fafafa",
             Surface = "#ffffff",
-            DrawerBackground = "#ffffff",
+            DrawerBackground = "#ffffff"
         },
         PaletteDark = new PaletteDark
         {
@@ -76,11 +78,11 @@ public sealed class ThemeService(IJSRuntime js)
             Surface = "#1e1e2a",
             DrawerBackground = "#1e1e2a",
             TextPrimary = "#e6e6ee",
-            TextSecondary = "#a0a0b5",
+            TextSecondary = "#a0a0b5"
         },
         LayoutProperties = new LayoutProperties
         {
-            DefaultBorderRadius = "8px",
-        },
+            DefaultBorderRadius = "8px"
+        }
     };
 }

@@ -1,14 +1,14 @@
 @using System.IO.Compression
+@using System.Text
 @using Unchained.Pptx.Engine
-@using Unchained.Pptx.Rendering
 @using Unchained.Pptx.Rendering.Engine
+@using Unchained.Pptx.Rendering.Models
 @inject FileExportService Exporter
-@inject ISnackbar Snackbar
 
 <MudDialog Style="min-width:480px; max-width:640px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Outlined.FolderZip" Class="mr-2" Style="vertical-align:middle;" />
+            <MudIcon Icon="@Icons.Material.Outlined.FolderZip" Class="mr-2" Style="vertical-align:middle;"/>
             Export Slides as ZIP
         </MudText>
     </TitleContent>
@@ -69,7 +69,7 @@
                             @_done / @_total
                         </MudText>
                     </div>
-                    <MudProgressLinear Value="@Percent" Color="Color.Primary" Rounded="true" />
+                    <MudProgressLinear Value="@Percent" Color="Color.Primary" Rounded="true"/>
                 </div>
                 @if (_phase == Phase.Done && _errors > 0)
                 {
@@ -82,32 +82,40 @@
     </DialogContent>
 
     <DialogActions>
-        @if (_phase == Phase.Configure)
+        @switch (_phase)
         {
-            <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
-            <MudButton OnClick="StartExport"
-                       Color="Color.Primary" Variant="Variant.Filled"
-                       StartIcon="@Icons.Material.Outlined.FileDownload">
-                Export ZIP
-            </MudButton>
-        }
-        else if (_phase == Phase.Running)
-        {
-            <MudButton OnClick="RequestCancel" Color="Color.Error" Variant="Variant.Text">Cancel</MudButton>
-        }
-        else
-        {
-            <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Close</MudButton>
+            case Phase.Configure:
+                <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+                <MudButton OnClick="StartExport"
+                           Color="Color.Primary" Variant="Variant.Filled"
+                           StartIcon="@Icons.Material.Outlined.FileDownload">
+                    Export ZIP
+                </MudButton>
+            break;
+            case Phase.Running:
+                <MudButton OnClick="RequestCancel" Color="Color.Error" Variant="Variant.Text">Cancel</MudButton>
+            break;
+            case Phase.Done:
+            default:
+                <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Close</MudButton>
+            break;
         }
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
-    [Parameter] public PresentationDocument Document { get; set; } = default!;
-    [Parameter] public string FileName { get; set; } = "presentation.pptx";
-    [Parameter] public int CurrentSlide { get; set; } = 1;
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public string FileName { get; set; } = "presentation.pptx";
+
+    [Parameter]
+    public int CurrentSlide { get; set; } = 1;
 
     private SlideScope _scope = SlideScope.All;
     private int _width = 1920;
@@ -141,10 +149,8 @@
         var entries = new List<(string Path, byte[] Data)>();
         var renderErrors = new List<string>();
 
-        foreach (var index in indices)
+        foreach (var index in indices.TakeWhile(_ => !_cancel))
         {
-            if (_cancel) break;
-
             _message = $"Rendering slide {index + 1}…";
             StateHasChanged();
 
@@ -173,7 +179,7 @@
 
         entries.Add(("README.md", BuildReadme(indices.Count, renderErrors)));
         if (_includeReferenceSlot)
-            entries.Add(("reference/PUT_PRODUCTION_PNGS_HERE.md", BuildReferenceReadme()));
+            entries.Add(("reference/PUT_PRODUCTION_PNGS_HERE.md", BuildReferenceReadme().ToArray()));
 
         _message = "Building ZIP…";
         StateHasChanged();
@@ -193,37 +199,37 @@
 
     private byte[] BuildReadme(int count, List<string> errors)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine($"# {FileName} — slide export");
         sb.AppendLine();
         sb.AppendLine($"- Slides rendered: {count - _errors}/{count}");
         sb.AppendLine($"- Resolution: {_width} × {_width * 9 / 16}");
-        sb.AppendLine($"- Renderer: Unchained.Pptx.Rendering (FreeType2 + HarfBuzz)");
+        sb.AppendLine("- Renderer: Unchained.Pptx.Rendering (FreeType2 + HarfBuzz)");
         if (_includeReferenceSlot)
         {
             sb.AppendLine();
             sb.AppendLine("Compare `unchained/slide_NNN.png` against the matching file in `reference/`.");
         }
-        if (errors.Count > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine("## Render errors");
-            sb.AppendLine();
-            foreach (var e in errors)
-                sb.AppendLine($"- {e}");
-        }
-        return System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+
+        if (errors.Count <= 0)
+            return Encoding.UTF8.GetBytes(sb.ToString());
+
+        sb.AppendLine();
+        sb.AppendLine("## Render errors");
+        sb.AppendLine();
+        foreach (var e in errors)
+            sb.AppendLine($"- {e}");
+
+        return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
-    private byte[] BuildReferenceReadme() =>
-        System.Text.Encoding.UTF8.GetBytes(
-            "Drop the production engine's slide PNGs here, named slide_001.png, slide_002.png, …\n" +
-            "so they line up with the files in ../unchained/ for visual comparison.\n");
+    private static ReadOnlySpan<byte> BuildReferenceReadme() =>
+        "Drop the production engine's slide PNGs here, named slide_001.png, slide_002.png, …\nso they line up with the files in ../unchained/ for visual comparison.\n"u8;
 
     private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
     {
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             foreach (var (path, data) in entries)
             {
@@ -232,6 +238,8 @@
                 stream.Write(data);
             }
         }
+
         return ms.ToArray();
     }
+
 }

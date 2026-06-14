@@ -1,6 +1,6 @@
 using Shouldly;
-using Unchained.Pptx.Tests.Helpers;
 using Unchained.Ooxml.Drawing;
+using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;

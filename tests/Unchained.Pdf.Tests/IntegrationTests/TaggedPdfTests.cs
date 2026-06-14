@@ -1,5 +1,6 @@
 using System.Text;
 using Shouldly;
+using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -7,15 +8,15 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for tagged PDF (ISO 32000-1 §14.7) and PDF/UA-1 (ISO 14289-1) support.
-/// Covers structure tree generation, marked-content operators, catalog entries,
-/// and the ValidatePdfUAAsync validation engine.
+///     Tests for tagged PDF (ISO 32000-1 §14.7) and PDF/UA-1 (ISO 14289-1) support.
+///     Covers structure tree generation, marked-content operators, catalog entries,
+///     and the ValidatePdfUAAsync validation engine.
 /// </summary>
 public sealed class TaggedPdfTests : PdfTestBase
 {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static async Task<byte[]> SaveBytesAsync(Abstractions.IPdfDocument doc, CancellationToken ct = default)
+    private static async Task<byte[]> SaveBytesAsync(IPdfDocument doc, CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: ct);
@@ -467,7 +468,7 @@ public sealed class TaggedPdfTests : PdfTestBase
         await Processor.SaveAsync(
             doc,
             ms,
-            new SaveOptions(Encryption: new EncryptionOptions(UserPassword: "pw")),
+            new SaveOptions(Encryption: new EncryptionOptions("pw")),
             TestContext.Current.CancellationToken);
 
         var result = await Processor.ValidatePdfUAAsync(ms.ToArray(), TestContext.Current.CancellationToken);

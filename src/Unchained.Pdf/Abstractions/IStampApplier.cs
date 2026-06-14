@@ -7,8 +7,8 @@ namespace Unchained.Pdf.Abstractions;
 public interface IStampApplier
 {
     /// <summary>
-    /// Applies <paramref name="stamp"/> to every page of <paramref name="document"/>.
-    /// The document is mutated in-place.
+    ///     Applies <paramref name="stamp" /> to every page of <paramref name="document" />.
+    ///     The document is mutated in-place.
     /// </summary>
     /// <param name="document">The document to stamp. Must not be disposed.</param>
     /// <param name="stamp">The stamp definition.</param>
@@ -20,8 +20,8 @@ public interface IStampApplier
     );
 
     /// <summary>
-    /// Applies <paramref name="stamp"/> to a single page of <paramref name="document"/>.
-    /// The document is mutated in-place.
+    ///     Applies <paramref name="stamp" /> to a single page of <paramref name="document" />.
+    ///     The document is mutated in-place.
     /// </summary>
     /// <param name="document">The document to stamp. Must not be disposed.</param>
     /// <param name="pageNumber">1-based page number.</param>

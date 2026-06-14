@@ -6,13 +6,13 @@ using Unchained.Pptx.Slides;
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes a <see cref="NotesSlide"/> into a <c>&lt;p:notes&gt;</c> XML document.
+///     Serializes a <see cref="NotesSlide" /> into a <c>&lt;p:notes&gt;</c> XML document.
 /// </summary>
 internal static class NotesWriter
 {
     /// <summary>
-    /// Generates the full <c>&lt;p:notes&gt;</c> XML for the given notes slide.
-    /// Returns <see langword="null"/> when there is no text to write.
+    ///     Generates the full <c>&lt;p:notes&gt;</c> XML for the given notes slide.
+    ///     Returns <see langword="null" /> when there is no text to write.
     /// </summary>
     public static XDocument? Write(NotesSlide notes)
     {
@@ -54,7 +54,8 @@ internal static class NotesWriter
         // Slide image placeholder (required by the spec)
         spTree.Add(new XElement(pml + "sp",
             new XElement(pml + "nvSpPr",
-                new XElement(pml + "cNvPr", new XAttribute("id", "2"),
+                new XElement(pml + "cNvPr",
+                    new XAttribute("id", "2"),
                     new XAttribute("name", "Slide Image Placeholder 1")),
                 new XElement(pml + "cNvSpPr",
                     new XElement(dml + "spLocks",
@@ -69,7 +70,8 @@ internal static class NotesWriter
         var txBody = WriteNotesTextBody(notes, dml);
         spTree.Add(new XElement(pml + "sp",
             new XElement(pml + "nvSpPr",
-                new XElement(pml + "cNvPr", new XAttribute("id", "3"),
+                new XElement(pml + "cNvPr",
+                    new XAttribute("id", "3"),
                     new XAttribute("name", "Notes Placeholder 2")),
                 new XElement(pml + "cNvSpPr",
                     new XElement(dml + "spLocks", new XAttribute("noGrp", "1"))),
@@ -111,6 +113,7 @@ internal static class NotesWriter
                 run.Add(new XElement(dml + "t", line));
                 para.Add(run);
             }
+
             txBody.Add(para);
         }
 

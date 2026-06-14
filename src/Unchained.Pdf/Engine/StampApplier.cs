@@ -2,13 +2,14 @@ using System.Buffers;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IStampApplier"/> implementation.
-/// Each stamp is a new <c>/Contents</c> stream prepended or appended to existing page content.
+///     Default <see cref="IStampApplier" /> implementation.
+///     Each stamp is a new <c>/Contents</c> stream prepended or appended to existing page content.
 /// </summary>
 public sealed class StampApplier : IStampApplier
 {
@@ -16,7 +17,7 @@ public sealed class StampApplier : IStampApplier
 
     /// <inheritdoc />
     public Task StampAsync(IPdfDocument document, TextStamp stamp, CancellationToken ct = default) =>
-        Task.Run(() => ApplyStamp(document, pageFilter: null, stamp), ct);
+        Task.Run(() => ApplyStamp(document, null, stamp), ct);
 
     /// <inheritdoc />
     public Task StampPageAsync(
@@ -24,7 +25,7 @@ public sealed class StampApplier : IStampApplier
         int pageNumber,
         TextStamp stamp,
         CancellationToken ct = default
-    ) => Task.Run(() => ApplyStamp(document, pageFilter: pageNumber, stamp), ct);
+    ) => Task.Run(() => ApplyStamp(document, pageNumber, stamp), ct);
 
     // ── Core logic ────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ public sealed class StampApplier : IStampApplier
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
         // Build one shared font object for all pages.
         var fontObj = builder.Add(MakeFontDict(stamp.FontName));
@@ -56,7 +57,7 @@ public sealed class StampApplier : IStampApplier
             if (obj.Value is not PdfDictionary pd)
                 continue;
 
-            if (pd.GetName(PdfName.Type.Value) != "Page")
+            if (!pd.IsPage())
                 continue;
 
             if (targetPageDict is not null && !ReferenceEquals(pd, targetPageDict))
@@ -100,7 +101,7 @@ public sealed class StampApplier : IStampApplier
 
     private static byte[] BuildStampBytes(TextStamp stamp)
     {
-        var buf = new ArrayBufferWriter<byte>(initialCapacity: 256);
+        var buf = new ArrayBufferWriter<byte>(256);
         var csw = new ContentStreamWriter(buf);
 
         var radians = stamp.RotationDegrees * Math.PI / 180.0;
@@ -158,13 +159,14 @@ public sealed class StampApplier : IStampApplier
         }
 
         // Merge /Resources /Font
-        var existingResources = ResolveDict(page[PdfName.Resources], core);
+        var existingResources = core.ResolveDict(page[PdfName.Resources]);
         var existingFonts = existingResources?.Get<PdfDictionary>(PdfName.Font);
         var fontEntries = existingFonts?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value) ?? new Dictionary<string, PdfObject>();
         fontEntries[StampFontKey] = fontRef;
 
         var newFontDict = new PdfDictionary(fontEntries);
-        var resourceEntries = existingResources?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value) ?? new Dictionary<string, PdfObject>();
+        var resourceEntries = existingResources?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value) ??
+                              new Dictionary<string, PdfObject>();
         resourceEntries[PdfName.Font.Value] = newFontDict;
 
         var newResources = new PdfDictionary(resourceEntries);
@@ -177,18 +179,11 @@ public sealed class StampApplier : IStampApplier
         return new PdfDictionary(entries);
     }
 
-    private static PdfDictionary? ResolveDict(PdfObject? obj, PdfDocumentCore core) => obj switch
-    {
-        PdfDictionary d => d,
-        PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-        _ => null
-    };
-
     private static PdfDictionary MakeFontDict(string baseFontName) =>
         new(new Dictionary<string, PdfObject>
         {
             [PdfName.Type.Value] = PdfName.Font,
-            [PdfName.Subtype.Value] = PdfName.Get("Type1"),
+            [PdfName.Subtype.Value] = PdfName.Type1,
             [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
         });
 }

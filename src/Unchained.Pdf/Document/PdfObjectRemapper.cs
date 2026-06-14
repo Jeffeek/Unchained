@@ -3,17 +3,17 @@ using Unchained.Pdf.Core;
 namespace Unchained.Pdf.Document;
 
 /// <summary>
-/// Recursively walks a <see cref="PdfObject"/> graph and adds offset/>
-/// to every <see cref="PdfIndirectReference.ObjectNumber"/> it encounters.
-/// Used by <see cref="Unchained.Pdf.Engine.DocumentMerger"/> to renumber objects from
-/// multiple source documents into a single non-conflicting number space.
+///     Recursively walks a <see cref="PdfObject" /> graph and adds offset/>
+///     to every <see cref="PdfIndirectReference.ObjectNumber" /> it encounters.
+///     Used by <see cref="Unchained.Pdf.Engine.DocumentMerger" /> to renumber objects from
+///     multiple source documents into a single non-conflicting number space.
 /// </summary>
 internal static class PdfObjectRemapper
 {
     /// <summary>
-    /// Walks <paramref name="obj"/> and replaces any <see cref="PdfIndirectReference"/>
-    /// whose <c>ObjectNumber</c> appears in <paramref name="remapping"/> with a reference
-    /// to the canonical object number. Used for stream deduplication.
+    ///     Walks <paramref name="obj" /> and replaces any <see cref="PdfIndirectReference" />
+    ///     whose <c>ObjectNumber</c> appears in <paramref name="remapping" /> with a reference
+    ///     to the canonical object number. Used for stream deduplication.
     /// </summary>
     internal static PdfObject RemapSelective(PdfObject obj, IReadOnlyDictionary<int, int> remapping) =>
         obj switch

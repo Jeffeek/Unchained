@@ -1,7 +1,7 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// Results of validating a PDF document against a PDF/A conformance profile.
+///     Results of validating a PDF document against a PDF/A conformance profile.
 /// </summary>
 public sealed class PdfAValidationResult
 {
@@ -9,8 +9,8 @@ public sealed class PdfAValidationResult
     public PdfAProfile Profile { get; init; }
 
     /// <summary>
-    /// <see langword="true"/> when no <see cref="PdfAViolationSeverity.Error"/> violations were found.
-    /// Warning-only documents are still considered conformant.
+    ///     <see langword="true" /> when no <see cref="PdfAViolationSeverity.Error" /> violations were found.
+    ///     Warning-only documents are still considered conformant.
     /// </summary>
     public bool IsConformant => Violations.All(static v => v.Severity != PdfAViolationSeverity.Error);
 

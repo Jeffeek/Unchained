@@ -34,6 +34,7 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/Drawing/">
+    <Project Path="src/Unchained.Drawing.Primitives/Unchained.Drawing.Primitives.csproj" />
     <Project Path="src/Unchained.Drawing.Runtimes/Unchained.Drawing.Runtimes.csproj" />
     <Project Path="src/Unchained.Drawing.Text/Unchained.Drawing.Text.csproj" />
     <Project Path="src/Unchained.Drawing/Unchained.Drawing.csproj" />
@@ -41,7 +42,7 @@
   <Folder Name="/src/Ooxml/">
     <Project Path="src/Unchained.Ooxml/Unchained.Ooxml.csproj" />
   </Folder>
-  <Folder Name="/src/Pptx/">
+  <Folder Name="/src/Ooxml/Pptx/">
     <Project Path="src/Unchained.Pptx.Rendering/Unchained.Pptx.Rendering.csproj" />
     <Project Path="src/Unchained.Pptx/Unchained.Pptx.csproj" />
   </Folder>
@@ -50,6 +51,8 @@
     <Project Path="src/Unchained.Pdf/Unchained.Pdf.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Unchained.Drawing.Primitives.Tests/Unchained.Drawing.Primitives.Tests.csproj" />
+    <Project Path="tests/Unchained.Drawing.Tests/Unchained.Drawing.Tests.csproj" />
     <Project Path="tests/Unchained.Ooxml.Tests/Unchained.Ooxml.Tests.csproj" />
     <Project Path="tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj" />
     <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />

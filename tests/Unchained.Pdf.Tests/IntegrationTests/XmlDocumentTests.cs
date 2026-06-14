@@ -5,9 +5,9 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for the XML document schema — <see cref="Abstractions.IDocumentProcessor.SaveAsXmlAsync"/>
-/// and <see cref="Abstractions.IDocumentProcessor.LoadFromXmlAsync"/>.
-/// Covers the Unchained document XML format: Document, Page, Paragraph, Heading, Table, Line.
+///     Tests for the XML document schema — <see cref="Abstractions.IDocumentProcessor.SaveAsXmlAsync" />
+///     and <see cref="Abstractions.IDocumentProcessor.LoadFromXmlAsync" />.
+///     Covers the Unchained document XML format: Document, Page, Paragraph, Heading, Table, Line.
 /// </summary>
 public sealed class XmlDocumentTests : PdfTestBase
 {
@@ -57,12 +57,12 @@ public sealed class XmlDocumentTests : PdfTestBase
     public async Task LoadFromXml_MinimalDocument_ProducesLoadablePdf()
     {
         const string xml = """
-            <Document>
-              <Page width="595" height="842">
-                <Paragraph font="Helvetica" size="12" x="72" y="700">Hello from XML</Paragraph>
-              </Page>
-            </Document>
-            """;
+                           <Document>
+                             <Page width="595" height="842">
+                               <Paragraph font="Helvetica" size="12" x="72" y="700">Hello from XML</Paragraph>
+                             </Page>
+                           </Document>
+                           """;
 
         await using var doc = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
@@ -72,15 +72,15 @@ public sealed class XmlDocumentTests : PdfTestBase
     public async Task LoadFromXml_MultiPage_CorrectPageCount()
     {
         const string xml = """
-            <Document>
-              <Page width="595" height="842">
-                <Paragraph font="Helvetica" size="12" x="72" y="700">Page 1</Paragraph>
-              </Page>
-              <Page width="595" height="842">
-                <Paragraph font="Helvetica" size="12" x="72" y="700">Page 2</Paragraph>
-              </Page>
-            </Document>
-            """;
+                           <Document>
+                             <Page width="595" height="842">
+                               <Paragraph font="Helvetica" size="12" x="72" y="700">Page 1</Paragraph>
+                             </Page>
+                             <Page width="595" height="842">
+                               <Paragraph font="Helvetica" size="12" x="72" y="700">Page 2</Paragraph>
+                             </Page>
+                           </Document>
+                           """;
 
         await using var doc = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(2);
@@ -90,13 +90,13 @@ public sealed class XmlDocumentTests : PdfTestBase
     public async Task LoadFromXml_WithHeading_ProducesLoadablePdf()
     {
         const string xml = """
-            <Document>
-              <Page width="595" height="842">
-                <Heading level="1" font="Helvetica-Bold" size="22" x="72" y="750">Title</Heading>
-                <Paragraph font="Helvetica" size="12" x="72" y="700">Body text</Paragraph>
-              </Page>
-            </Document>
-            """;
+                           <Document>
+                             <Page width="595" height="842">
+                               <Heading level="1" font="Helvetica-Bold" size="22" x="72" y="750">Title</Heading>
+                               <Paragraph font="Helvetica" size="12" x="72" y="700">Body text</Paragraph>
+                             </Page>
+                           </Document>
+                           """;
 
         await using var doc = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
@@ -106,17 +106,17 @@ public sealed class XmlDocumentTests : PdfTestBase
     public async Task LoadFromXml_WithTable_ProducesLoadablePdf()
     {
         const string xml = """
-            <Document>
-              <Page width="595" height="842">
-                <Table x="72" y="600">
-                  <Header>Name</Header>
-                  <Header>Value</Header>
-                  <Row><Cell>Alice</Cell><Cell>100</Cell></Row>
-                  <Row><Cell>Bob</Cell><Cell>200</Cell></Row>
-                </Table>
-              </Page>
-            </Document>
-            """;
+                           <Document>
+                             <Page width="595" height="842">
+                               <Table x="72" y="600">
+                                 <Header>Name</Header>
+                                 <Header>Value</Header>
+                                 <Row><Cell>Alice</Cell><Cell>100</Cell></Row>
+                                 <Row><Cell>Bob</Cell><Cell>200</Cell></Row>
+                               </Table>
+                             </Page>
+                           </Document>
+                           """;
 
         await using var doc = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
@@ -126,10 +126,10 @@ public sealed class XmlDocumentTests : PdfTestBase
     public async Task LoadFromXml_EmptyPage_ProducesLoadablePdf()
     {
         const string xml = """
-            <Document>
-              <Page width="595" height="842" />
-            </Document>
-            """;
+                           <Document>
+                             <Page width="595" height="842" />
+                           </Document>
+                           """;
 
         await using var doc = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);

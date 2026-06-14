@@ -4,7 +4,7 @@ using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
 
-/// <summary>Default <see cref="IViewerPreferencesEditor"/> implementation.</summary>
+/// <summary>Default <see cref="IViewerPreferencesEditor" /> implementation.</summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
 {
@@ -40,7 +40,7 @@ public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
         var existing = adapter.Core.CollectObjects();
 
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+            o.Value is PdfDictionary d && d.IsCatalog());
         var catalog = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catalog.Entries);
 
@@ -60,7 +60,7 @@ public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
             if (prefs.DisplayDocTitle)
                 vpEntries["DisplayDocTitle"] = PdfBoolean.True;
             if (prefs.Direction == ReadingDirection.RightToLeft)
-                vpEntries["Direction"] = PdfName.Get("R2L");
+                vpEntries["Direction"] = PdfName.R2L;
             if (prefs.Duplex != DuplexMode.None)
                 vpEntries["Duplex"] = PdfName.Get(prefs.Duplex.ToString());
             if (prefs.NonFullScreenPageMode != PageMode.Default && prefs.NonFullScreenPageMode != PageMode.UseNone)

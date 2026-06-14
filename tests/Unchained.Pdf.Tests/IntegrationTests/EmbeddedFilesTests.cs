@@ -1,5 +1,6 @@
 using System.Text;
 using Shouldly;
+using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -7,9 +8,9 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for <see cref="Engine.EmbeddedFileEditor"/> — reading and writing
-/// file attachments via the PDF <c>/Names /EmbeddedFiles</c> name tree (ISO 32000-1 §7.11.4),
-/// and PDF Portfolio (<c>/Collection</c>) support.
+///     Tests for <see cref="Engine.EmbeddedFileEditor" /> — reading and writing
+///     file attachments via the PDF <c>/Names /EmbeddedFiles</c> name tree (ISO 32000-1 §7.11.4),
+///     and PDF Portfolio (<c>/Collection</c>) support.
 /// </summary>
 public sealed class EmbeddedFilesTests : PdfTestBase
 {
@@ -18,7 +19,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task GetEmbeddedFiles_WhenNoneExist_ReturnsEmpty()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         editor.GetEmbeddedFiles(doc).ShouldBeEmpty();
     }
@@ -28,15 +29,15 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task AddEmbeddedFile_SingleFile_CanBeRetrieved()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         var file = new EmbeddedFile(
-            Name: "report",
-            FileName: "report.txt",
-            Description: "Monthly report",
-            MimeType: "text/plain",
-            Data: "Hello embedded world"u8.ToArray());
+            "report",
+            "report.txt",
+            "Monthly report",
+            "text/plain",
+            "Hello embedded world"u8.ToArray());
 
         await editor.AddEmbeddedFileAsync(doc, file, TestContext.Current.CancellationToken);
 
@@ -49,7 +50,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task AddEmbeddedFile_TwoFiles_BothRetrieved()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         await editor.AddEmbeddedFileAsync(doc,
@@ -65,7 +66,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task AddEmbeddedFile_FileData_RoundTripsAfterSaveAndReload()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         var data = "Hello from embedded file!"u8.ToArray();
@@ -84,7 +85,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task RemoveEmbeddedFile_ExistingFile_RemovesIt()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         await editor.AddEmbeddedFileAsync(doc,
@@ -98,7 +99,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task RemoveEmbeddedFile_NonExistentName_DoesNotThrow()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         // Should complete without throwing even when file doesn't exist.
@@ -110,7 +111,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task EnablePortfolioMode_AddsCollectionToCatalog()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         await editor.EnablePortfolioModeAsync(doc, TestContext.Current.CancellationToken);
@@ -123,7 +124,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task DisablePortfolioMode_RemovesCollectionFromCatalog()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         await editor.EnablePortfolioModeAsync(doc, TestContext.Current.CancellationToken);
@@ -137,7 +138,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
     [Fact]
     public async Task EnablePortfolioMode_CalledTwice_StillLoadable()
     {
-        var editor = new Engine.EmbeddedFileEditor();
+        var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         await editor.EnablePortfolioModeAsync(doc, TestContext.Current.CancellationToken);

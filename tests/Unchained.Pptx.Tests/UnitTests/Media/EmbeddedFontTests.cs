@@ -1,6 +1,6 @@
 using Shouldly;
-using Unchained.Pptx.Media;
 using Unchained.Ooxml.Media;
+using Unchained.Pptx.Media;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Media;
@@ -16,7 +16,7 @@ public sealed class EmbeddedFontTests
     }
 
     private static EmbeddedFont Font(string typeface, EmbeddedFontStyle style, byte marker) =>
-        new() { Typeface = typeface, Style = style, Data = new byte[] { marker } };
+        new() { Typeface = typeface, Style = style, Data = new[] { marker } };
 
     [Fact]
     public void FindFontData_ExactStyleMatch_ReturnsThatVariant()

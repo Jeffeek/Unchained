@@ -1,90 +1,50 @@
 namespace Unchained.Pdf.Content;
 
 /// <summary>
-/// Advance widths (in 1/1000 em units) for the 14 standard PDF fonts, as published in
-/// ISO 32000-1 Appendix D and the Adobe AFM specifications.
-/// Width 0 means "not defined"; callers should fall back to a reasonable default.
+///     Advance widths (in 1/1000 em units) for the 14 standard PDF fonts, as published in
+///     ISO 32000-1 Appendix D and the Adobe AFM specifications.
+///     Width 0 means "not defined"; callers should fall back to a reasonable default.
 /// </summary>
 internal static class Standard14Widths
 {
-    /// <summary>
-    /// Returns the advance width for <paramref name="charCode"/> in the named font,
-    /// or 500 (a reasonable average) when the font is unknown or the code is unmapped.
-    /// </summary>
-    internal static int Get(string fontName, int charCode)
-    {
-        if ((uint)charCode > 255)
-            return 0;
-
-        var table = Lookup(fontName);
-        var w = table[charCode];
-
-        return w != 0 ? w : (charCode is >= 32 and <= 126 ? 500 : 0);
-    }
-
-    private static short[] Lookup(string fontName) => fontName switch
-    {
-        "Courier" or "Courier-Bold" or "Courier-Oblique" or "Courier-BoldOblique" => CourierW,
-        "Helvetica" => HelveticaW,
-        "Helvetica-Bold" => HelveticaBoldW,
-        "Helvetica-Oblique" => HelveticaW, // same metrics as regular
-        "Helvetica-BoldOblique" => HelveticaBoldW, // same metrics as bold
-        "Times-Roman" => TimesRomanW,
-        "Times-Bold" => TimesBoldW,
-        "Times-Italic" => TimesItalicW,
-        "Times-BoldItalic" => TimesBoldItalicW,
-        "Symbol" => SymbolW,
-        "ZapfDingbats" => ZapfDingbatsW,
-        _ => HelveticaW // sensible fallback
-    };
-
     // ── Courier (monospace, all printable chars = 600) ────────────────────────
 
     private static readonly short[] CourierW = BuildCourier();
-
-    private static short[] BuildCourier()
-    {
-        var w = new short[256];
-        for (var i = 32; i <= 255; i++) w[i] = 600;
-        w[0] = 0;
-
-        return w;
-    }
 
     // ── Helvetica ─────────────────────────────────────────────────────────────
 
     private static readonly short[] HelveticaW =
     [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   //   0-15
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   //  16-31
-        278, 278, 355, 556, 556, 889, 667, 222,             //  32  !"#$%&'
-        333, 333, 389, 584, 278, 333, 278, 278,             //  40 ()*+,-./
-        556, 556, 556, 556, 556, 556, 556, 556,             //  48 01234567
-        556, 556, 278, 278, 584, 584, 584, 556,             //  56 89:;<=>?
-        1015, 667, 667, 722, 722, 667, 611, 778,            //  64 @ABCDEFG
-        722, 278, 500, 667, 556, 833, 722, 778,             //  72 HIJKLMNO
-        667, 778, 722, 667, 611, 722, 667, 944,             //  80 PQRSTUVW
-        667, 667, 611, 278, 278, 278, 469, 556,             //  88 XYZ[\]^_
-        222, 556, 556, 500, 556, 556, 278, 556,             //  96 `abcdefg
-        556, 222, 222, 500, 222, 833, 556, 556,             // 104 hijklmno
-        556, 556, 333, 500, 278, 556, 500, 722,             // 112 pqrstuvw
-        500, 500, 500, 334, 260, 334, 584, 350,             // 120 xyz{|}~DEL
-        556, 350, 222, 556, 500, 1000, 556, 556,            // 128-135
-        333, 1000, 667, 333, 1000, 350, 611, 350,           // 136-143
-        350, 222, 222, 333, 333, 350, 556, 1000,            // 144-151
-        333, 1000, 500, 333, 944, 350, 500, 667,            // 152-159
-        278, 333, 556, 556, 556, 556, 260, 556,             // 160-167
-        333, 737, 370, 556, 584, 333, 737, 333,             // 168-175
-        400, 584, 333, 333, 333, 556, 537, 278,             // 176-183
-        333, 333, 365, 556, 834, 834, 834, 611,             // 184-191
-        667, 667, 667, 667, 667, 667, 1000, 722,            // 192-199
-        667, 667, 667, 667, 278, 278, 278, 278,             // 200-207
-        722, 722, 778, 778, 778, 778, 778, 584,             // 208-215
-        778, 722, 722, 722, 722, 667, 667, 611,             // 216-223
-        556, 556, 556, 556, 556, 556, 889, 500,             // 224-231
-        556, 556, 556, 556, 278, 278, 278, 278,             // 232-239
-        556, 556, 556, 556, 556, 556, 556, 584,             // 240-247
-        611, 556, 556, 556, 556, 500, 556, 500              // 248-255
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //   0-15
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  16-31
+        278, 278, 355, 556, 556, 889, 667, 222,         //  32  !"#$%&'
+        333, 333, 389, 584, 278, 333, 278, 278,         //  40 ()*+,-./
+        556, 556, 556, 556, 556, 556, 556, 556,         //  48 01234567
+        556, 556, 278, 278, 584, 584, 584, 556,         //  56 89:;<=>?
+        1015, 667, 667, 722, 722, 667, 611, 778,        //  64 @ABCDEFG
+        722, 278, 500, 667, 556, 833, 722, 778,         //  72 HIJKLMNO
+        667, 778, 722, 667, 611, 722, 667, 944,         //  80 PQRSTUVW
+        667, 667, 611, 278, 278, 278, 469, 556,         //  88 XYZ[\]^_
+        222, 556, 556, 500, 556, 556, 278, 556,         //  96 `abcdefg
+        556, 222, 222, 500, 222, 833, 556, 556,         // 104 hijklmno
+        556, 556, 333, 500, 278, 556, 500, 722,         // 112 pqrstuvw
+        500, 500, 500, 334, 260, 334, 584, 350,         // 120 xyz{|}~DEL
+        556, 350, 222, 556, 500, 1000, 556, 556,        // 128-135
+        333, 1000, 667, 333, 1000, 350, 611, 350,       // 136-143
+        350, 222, 222, 333, 333, 350, 556, 1000,        // 144-151
+        333, 1000, 500, 333, 944, 350, 500, 667,        // 152-159
+        278, 333, 556, 556, 556, 556, 260, 556,         // 160-167
+        333, 737, 370, 556, 584, 333, 737, 333,         // 168-175
+        400, 584, 333, 333, 333, 556, 537, 278,         // 176-183
+        333, 333, 365, 556, 834, 834, 834, 611,         // 184-191
+        667, 667, 667, 667, 667, 667, 1000, 722,        // 192-199
+        667, 667, 667, 667, 278, 278, 278, 278,         // 200-207
+        722, 722, 778, 778, 778, 778, 778, 584,         // 208-215
+        778, 722, 722, 722, 722, 667, 667, 611,         // 216-223
+        556, 556, 556, 556, 556, 556, 889, 500,         // 224-231
+        556, 556, 556, 556, 278, 278, 278, 278,         // 232-239
+        556, 556, 556, 556, 556, 556, 556, 584,         // 240-247
+        611, 556, 556, 556, 556, 500, 556, 500          // 248-255
     ];
 
     // ── Helvetica-Bold ────────────────────────────────────────────────────────
@@ -334,4 +294,44 @@ internal static class Standard14Widths
         788, 788, 788, 788, 788, 788, 788, 788,
         788, 788, 788, 788, 788, 788, 788
     ];
+
+    /// <summary>
+    ///     Returns the advance width for <paramref name="charCode" /> in the named font,
+    ///     or 500 (a reasonable average) when the font is unknown or the code is unmapped.
+    /// </summary>
+    internal static int Get(string fontName, int charCode)
+    {
+        if ((uint)charCode > 255)
+            return 0;
+
+        var table = Lookup(fontName);
+        var w = table[charCode];
+
+        return w != 0 ? w : charCode is >= 32 and <= 126 ? 500 : 0;
+    }
+
+    private static short[] Lookup(string fontName) => fontName switch
+    {
+        "Courier" or "Courier-Bold" or "Courier-Oblique" or "Courier-BoldOblique" => CourierW,
+        "Helvetica" => HelveticaW,
+        "Helvetica-Bold" => HelveticaBoldW,
+        "Helvetica-Oblique" => HelveticaW,         // same metrics as regular
+        "Helvetica-BoldOblique" => HelveticaBoldW, // same metrics as bold
+        "Times-Roman" => TimesRomanW,
+        "Times-Bold" => TimesBoldW,
+        "Times-Italic" => TimesItalicW,
+        "Times-BoldItalic" => TimesBoldItalicW,
+        "Symbol" => SymbolW,
+        "ZapfDingbats" => ZapfDingbatsW,
+        _ => HelveticaW // sensible fallback
+    };
+
+    private static short[] BuildCourier()
+    {
+        var w = new short[256];
+        for (var i = 32; i <= 255; i++) w[i] = 600;
+        w[0] = 0;
+
+        return w;
+    }
 }

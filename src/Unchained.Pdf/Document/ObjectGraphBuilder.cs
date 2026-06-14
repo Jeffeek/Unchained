@@ -1,4 +1,5 @@
 using System.Buffers;
+using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Writing;
@@ -6,17 +7,21 @@ using Unchained.Pdf.Writing;
 namespace Unchained.Pdf.Document;
 
 /// <summary>
-/// Allocates sequential object numbers and accumulates a list of
-/// <see cref="PdfIndirectObject"/> instances for use with <see cref="PdfWriter"/>.
+///     Allocates sequential object numbers and accumulates a list of
+///     <see cref="PdfIndirectObject" /> instances for use with <see cref="PdfWriter" />.
 /// </summary>
 internal sealed class ObjectGraphBuilder
 {
-    private int _next;
     private readonly List<PdfIndirectObject> _objects = [];
+    private int _next;
 
     internal ObjectGraphBuilder(int startAt = 1) => _next = startAt;
 
-    /// <summary>Wraps <paramref name="value"/> with the next available object number.</summary>
+    // ReSharper disable once MemberCanBePrivate.Global
+    internal IEnumerable<PdfIndirectObject> Objects => _objects;
+    internal int MaxObjectNumber => _next - 1;
+
+    /// <summary>Wraps <paramref name="value" /> with the next available object number.</summary>
     internal PdfIndirectObject Add(PdfObject value)
     {
         var num = _next++;
@@ -27,8 +32,8 @@ internal sealed class ObjectGraphBuilder
     }
 
     /// <summary>
-    /// Reserves and returns the next available object number without adding anything to the list.
-    /// Use <see cref="AddAt"/> to fill the reserved slot later.
+    ///     Reserves and returns the next available object number without adding anything to the list.
+    ///     Use <see cref="AddAt" /> to fill the reserved slot later.
     /// </summary>
     internal int NextNumber() => _next++;
 
@@ -41,15 +46,11 @@ internal sealed class ObjectGraphBuilder
         return obj;
     }
 
-    // ReSharper disable once MemberCanBePrivate.Global
-    internal IEnumerable<PdfIndirectObject> Objects => _objects;
-    internal int MaxObjectNumber => _next - 1;
-
     /// <summary>
-    /// Builds a PDF byte stream from the builder's accumulated objects, parses it,
-    /// and returns a ready-to-use <see cref="Abstractions.IPdfDocument"/>.
+    ///     Builds a PDF byte stream from the builder's accumulated objects, parses it,
+    ///     and returns a ready-to-use <see cref="Abstractions.IPdfDocument" />.
     /// </summary>
-    internal static Abstractions.IPdfDocument Finalize(ObjectGraphBuilder builder, PdfIndirectReference rootRef)
+    internal static IPdfDocument Finalize(ObjectGraphBuilder builder, PdfIndirectReference rootRef)
     {
         var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
         {
@@ -61,10 +62,10 @@ internal sealed class ObjectGraphBuilder
     }
 
     /// <summary>
-    /// Builds a PDF byte stream from a pre-assembled object list and trailer,
-    /// parses it, and returns a ready-to-use <see cref="Abstractions.IPdfDocument"/>.
+    ///     Builds a PDF byte stream from a pre-assembled object list and trailer,
+    ///     parses it, and returns a ready-to-use <see cref="Abstractions.IPdfDocument" />.
     /// </summary>
-    internal static Abstractions.IPdfDocument SerializeToDocument(IEnumerable<PdfIndirectObject> objects, PdfDictionary trailer)
+    internal static IPdfDocument SerializeToDocument(IEnumerable<PdfIndirectObject> objects, PdfDictionary trailer)
     {
         var sorted = objects.OrderBy(static o => o.ObjectNumber).ToList();
         var buffer = new ArrayBufferWriter<byte>();

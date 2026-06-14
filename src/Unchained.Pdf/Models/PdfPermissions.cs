@@ -1,9 +1,9 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// Controls which operations are permitted when a PDF is opened with the user password.
-/// Owner-password access always grants full permissions.
-/// Corresponds to the /P bit-field in the PDF Standard Security Handler (ISO 32000-1 §7.6.3.2).
+///     Controls which operations are permitted when a PDF is opened with the user password.
+///     Owner-password access always grants full permissions.
+///     Corresponds to the /P bit-field in the PDF Standard Security Handler (ISO 32000-1 §7.6.3.2).
 /// </summary>
 [Flags]
 public enum PdfPermissions

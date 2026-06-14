@@ -4,9 +4,9 @@ using Unchained.Pdf.Document;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Shared serialisation step for all in-place document mutation operations:
-/// builds a new trailer, calls <see cref="ObjectGraphBuilder.SerializeToDocument"/>,
-/// then swaps the adapter's core via <see cref="PdfDocumentAdapter.ReplaceCore"/>.
+///     Shared serialisation step for all in-place document mutation operations:
+///     builds a new trailer, calls <see cref="ObjectGraphBuilder.SerializeToDocument" />,
+///     then swaps the adapter's core via <see cref="PdfDocumentAdapter.ReplaceCore" />.
 /// </summary>
 internal static class MutationHelper
 {

@@ -7,15 +7,18 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="ITableGenerator"/> implementation.
-/// All layout is computed in a single pre-pass before any PDF operators are emitted.
-/// When <see cref="TableData.Tagged"/> is <see langword="true"/>, each header cell is
-/// wrapped in a <c>/TH</c> marked-content sequence and each data cell in a <c>/TD</c>
-/// sequence, and a full <c>/StructTreeRoot</c> is injected into the document catalog.
+///     Default <see cref="ITableGenerator" /> implementation.
+///     All layout is computed in a single pre-pass before any PDF operators are emitted.
+///     When <see cref="TableData.Tagged" /> is <see langword="true" />, each header cell is
+///     wrapped in a <c>/TH</c> marked-content sequence and each data cell in a <c>/TD</c>
+///     sequence, and a full <c>/StructTreeRoot</c> is injected into the document catalog.
 /// </summary>
 // ReSharper disable once MemberCanBeInternal
 public sealed class TableGenerator : ITableGenerator
 {
+    private const float BorderLineAlpha = 0.85f; // alpha for table border lines
+    private const float CellFillAlpha = 0.95f;   // alpha for table cell background fill
+
     /// <inheritdoc />
     public Task<IPdfDocument> GenerateAsync(
         TableData data,
@@ -35,7 +38,7 @@ public sealed class TableGenerator : ITableGenerator
 
     private static IPdfDocument Generate(TableData data, TableStyle style)
     {
-        var layout = TableLayout.Compute(data.Headers.Count, style, hasTitle: data.Title is not null, data);
+        var layout = TableLayout.Compute(data.Headers.Count, style, data.Title is not null, data);
         var builder = new ObjectGraphBuilder();
         var resourcesRef = AddSharedResources(builder, style);
 
@@ -77,8 +80,8 @@ public sealed class TableGenerator : ITableGenerator
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
 
-        var layout = TableLayout.Compute(data.Headers.Count, style, hasTitle: data.Title is not null, data);
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var layout = TableLayout.Compute(data.Headers.Count, style, data.Title is not null, data);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
         var resourcesRef = AddSharedResources(builder, style);
 
         var pagesRef = adapter.Core.Catalog[PdfName.Pages] as PdfIndirectReference
@@ -99,7 +102,7 @@ public sealed class TableGenerator : ITableGenerator
             style,
             pagesRef,
             resourcesRef,
-            pageIndexOffset: existingPageCount
+            existingPageCount
         );
 
         var existingKids = (existingPagesDict.Get<PdfArray>(PdfName.Kids) ?? PdfArray.Empty).Elements;
@@ -219,7 +222,7 @@ public sealed class TableGenerator : ITableGenerator
         ICollection<TaggedContentItem> taggedItems
     )
     {
-        var contentBuffer = new ArrayBufferWriter<byte>(initialCapacity: 4096);
+        var contentBuffer = new ArrayBufferWriter<byte>(4096);
         var csw = new ContentStreamWriter(contentBuffer);
         EmitTablePage(
             csw,
@@ -276,7 +279,7 @@ public sealed class TableGenerator : ITableGenerator
         }
 
         // Header background (light gray).
-        csw.Float(0.85f);
+        csw.Float(BorderLineAlpha);
         csw.Op("g"u8);
         csw.Float(margin);
         csw.Float(curY - layout.HeaderRowHeight);
@@ -322,7 +325,7 @@ public sealed class TableGenerator : ITableGenerator
 
             if (style.AlternatingRowColor && rowIdx % 2 == 0)
             {
-                csw.Float(0.95f);
+                csw.Float(CellFillAlpha);
                 csw.Op("g"u8);
                 csw.Float(margin);
                 csw.Float(rowBottomY);
@@ -476,7 +479,7 @@ public sealed class TableGenerator : ITableGenerator
         new(new Dictionary<string, PdfObject>
         {
             [PdfName.Type.Value] = PdfName.Font,
-            [PdfName.Subtype.Value] = PdfName.Get("Type1"),
+            [PdfName.Subtype.Value] = PdfName.Type1,
             [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
         });
 
@@ -516,7 +519,7 @@ public sealed class TableGenerator : ITableGenerator
         return slices;
     }
 
-    /// <summary>Finds the indirect reference for the page at <paramref name="pageNumber"/> (1-based).</summary>
+    /// <summary>Finds the indirect reference for the page at <paramref name="pageNumber" /> (1-based).</summary>
     private static PdfIndirectReference FindPageRef(PdfDocumentCore core, int pageNumber)
     {
         var pageDict = core.GetPage(pageNumber);

@@ -16,7 +16,11 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(2), "Glow");
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(4),
+            Emu.FromInches(2),
+            "Glow");
         var run = shape.TextFrame.Paragraphs[0].Runs[0];
         run.Format.Effects.Glow = new GlowEffect { Color = ColorSpec.FromRgb(0, 0xB0, 0xF0), Radius = Emu.FromPoints(5) };
         run.Format.Outline = new LineFormat();
@@ -37,7 +41,11 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(2), "Arched");
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(4),
+            Emu.FromInches(2),
+            "Arched");
         shape.TextFrame.Format.Warp = new TextWarpFormat { Preset = "textArchUp" };
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
@@ -51,7 +59,11 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Rectangle,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         shape.ThreeD.ExtrusionHeight = Emu.FromPoints(10);
         shape.ThreeD.Material = "metal";
         shape.ThreeD.TopBevel = new BevelFormat { Width = Emu.FromPoints(6), Height = Emu.FromPoints(6), Preset = "circle" };

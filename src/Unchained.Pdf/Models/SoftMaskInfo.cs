@@ -1,13 +1,12 @@
 using Unchained.Pdf.Abstractions;
-using Unchained.Pdf.Core;
 
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// A decoded ExtGState soft mask (/SMask), ready for rendering by the page renderer.
-/// Carries the mask Form XObject's operators and resource page-adapter so the renderer
-/// can render the mask into an off-screen buffer and extract the per-pixel alpha map.
-/// ISO 32000-1 §11.6.5.
+///     A decoded ExtGState soft mask (/SMask), ready for rendering by the page renderer.
+///     Carries the mask Form XObject's operators and resource page-adapter so the renderer
+///     can render the mask into an off-screen buffer and extract the per-pixel alpha map.
+///     ISO 32000-1 §11.6.5.
 /// </summary>
 /// <param name="WidthPx">Device pixel width of the target page.</param>
 /// <param name="HeightPx">Device pixel height of the target page.</param>

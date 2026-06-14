@@ -3,8 +3,8 @@ using Unchained.Ooxml;
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
-/// Holds the column width and row height definitions of a <see cref="TableShape"/>,
-/// and provides indexed access to its <see cref="TableCell"/> objects.
+///     Holds the column width and row height definitions of a <see cref="TableShape" />,
+///     and provides indexed access to its <see cref="TableCell" /> objects.
 /// </summary>
 public sealed class TableGrid
 {
@@ -29,7 +29,7 @@ public sealed class TableGrid
     // ── Cell access ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the cell at the given column and row (both zero-based).
+    ///     Returns the cell at the given column and row (both zero-based).
     /// </summary>
     public TableCell this[int column, int row] => _rows[row][column];
 
@@ -45,33 +45,27 @@ public sealed class TableGrid
         grid._columnWidths.AddRange(columnWidths);
         grid._rowHeights.AddRange(rowHeights);
 
-        foreach (var _ in rowHeights)
-        {
-            var row = new List<TableCell>();
-            foreach (var __ in columnWidths)
-                row.Add(new TableCell());
+        foreach (var row in rowHeights.Select(_ => columnWidths.Select(static _ => new TableCell()).ToList()))
             grid._rows.Add(row);
-        }
 
         return grid;
     }
 
     /// <summary>Appends a row with the given height and returns its newly-created cells.</summary>
-    public IReadOnlyList<TableCell> AddRow(Emu height)
+    public void AddRow(Emu height)
     {
         _rowHeights.Add(height);
         var row = new List<TableCell>();
         for (var i = 0; i < _columnWidths.Count; i++)
             row.Add(new TableCell());
         _rows.Add(row);
-        return row;
     }
 
     /// <summary>
-    /// Inserts a row of empty cells at <paramref name="rowIndex"/> with the given height
-    /// and returns the new cells.
+    ///     Inserts a row of empty cells at <paramref name="rowIndex" /> with the given height
+    ///     and returns the new cells.
     /// </summary>
-    public IReadOnlyList<TableCell> InsertRow(int rowIndex, Emu height)
+    public void InsertRow(int rowIndex, Emu height)
     {
         if (rowIndex < 0 || rowIndex > _rowHeights.Count)
             throw new ArgumentOutOfRangeException(nameof(rowIndex));
@@ -81,7 +75,6 @@ public sealed class TableGrid
         for (var i = 0; i < _columnWidths.Count; i++)
             row.Add(new TableCell());
         _rows.Insert(rowIndex, row);
-        return row;
     }
 
     /// <summary>Appends a column with the given width.</summary>
@@ -92,7 +85,7 @@ public sealed class TableGrid
             row.Add(new TableCell());
     }
 
-    /// <summary>Inserts a column of empty cells at <paramref name="columnIndex"/>.</summary>
+    /// <summary>Inserts a column of empty cells at <paramref name="columnIndex" />.</summary>
     public void InsertColumn(int columnIndex, Emu width)
     {
         if (columnIndex < 0 || columnIndex > _columnWidths.Count)
@@ -103,24 +96,25 @@ public sealed class TableGrid
             row.Insert(columnIndex, new TableCell());
     }
 
-    /// <summary>Removes the row at <paramref name="rowIndex"/>.</summary>
+    /// <summary>Removes the row at <paramref name="rowIndex" />.</summary>
     public void RemoveRow(int rowIndex)
     {
         if (rowIndex < 0 || rowIndex >= _rowHeights.Count)
             throw new ArgumentOutOfRangeException(nameof(rowIndex));
+
         _rowHeights.RemoveAt(rowIndex);
         _rows.RemoveAt(rowIndex);
     }
 
-    /// <summary>Removes the column at <paramref name="columnIndex"/>.</summary>
+    /// <summary>Removes the column at <paramref name="columnIndex" />.</summary>
     public void RemoveColumn(int columnIndex)
     {
         if (columnIndex < 0 || columnIndex >= _columnWidths.Count)
             throw new ArgumentOutOfRangeException(nameof(columnIndex));
+
         _columnWidths.RemoveAt(columnIndex);
-        foreach (var row in _rows)
-            if (columnIndex < row.Count)
-                row.RemoveAt(columnIndex);
+        foreach (var row in _rows.Where(row => columnIndex < row.Count))
+            row.RemoveAt(columnIndex);
     }
 
     /// <summary>Adds a cell to an existing row (used by the parser).</summary>

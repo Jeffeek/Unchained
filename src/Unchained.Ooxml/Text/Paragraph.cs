@@ -1,10 +1,8 @@
-using Unchained.Ooxml;
-
 namespace Unchained.Ooxml.Text;
 
 /// <summary>
-/// A paragraph within a <see cref="TextFrame"/>, containing an ordered sequence of
-/// <see cref="Run"/> objects with shared paragraph-level formatting.
+///     A paragraph within a <see cref="TextFrame" />, containing an ordered sequence of
+///     <see cref="Run" /> objects with shared paragraph-level formatting.
 /// </summary>
 public sealed class Paragraph
 {
@@ -12,11 +10,11 @@ public sealed class Paragraph
     public RunCollection Runs { get; } = new();
 
     /// <summary>
-    /// Gets or sets the paragraph's text as a plain string.
-    /// <para>
-    /// Getter: concatenates all run texts in order.
-    /// Setter: replaces all existing runs with a single run containing the given text.
-    /// </para>
+    ///     Gets or sets the paragraph's text as a plain string.
+    ///     <para>
+    ///         Getter: concatenates all run texts in order.
+    ///         Setter: replaces all existing runs with a single run containing the given text.
+    ///     </para>
     /// </summary>
     public string PlainText
     {
@@ -30,34 +28,34 @@ public sealed class Paragraph
 
     // ── Paragraph formatting ─────────────────────────────────────────────────
 
-    /// <summary>Horizontal text alignment. <see langword="null"/> means inherit.</summary>
+    /// <summary>Horizontal text alignment. <see langword="null" /> means inherit.</summary>
     public TextAlignment? Alignment { get; set; }
 
-    /// <summary>Space before the paragraph in points. <see langword="null"/> means inherit.</summary>
+    /// <summary>Space before the paragraph in points. <see langword="null" /> means inherit.</summary>
     public double? SpaceBeforePoints { get; set; }
 
-    /// <summary>Space after the paragraph in points. <see langword="null"/> means inherit.</summary>
+    /// <summary>Space after the paragraph in points. <see langword="null" /> means inherit.</summary>
     public double? SpaceAfterPoints { get; set; }
 
-    /// <summary>Line spacing. <see langword="null"/> means inherit (typically single-spaced).</summary>
+    /// <summary>Line spacing. <see langword="null" /> means inherit (typically single-spaced).</summary>
     public LineSpacing? Spacing { get; set; }
 
-    /// <summary>Left margin in EMU. <see langword="null"/> means inherit.</summary>
+    /// <summary>Left margin in EMU. <see langword="null" /> means inherit.</summary>
     public Emu? MarginLeft { get; set; }
 
-    /// <summary>Right margin in EMU. <see langword="null"/> means inherit.</summary>
+    /// <summary>Right margin in EMU. <see langword="null" /> means inherit.</summary>
     public Emu? MarginRight { get; set; }
 
     /// <summary>
-    /// Indent (first-line indent) in EMU. A negative value creates a hanging indent.
-    /// <see langword="null"/> means inherit.
+    ///     Indent (first-line indent) in EMU. A negative value creates a hanging indent.
+    ///     <see langword="null" /> means inherit.
     /// </summary>
     public Emu? Indent { get; set; }
 
     /// <summary>Outline level (0 = top level). Used for SmartArt and outline views.</summary>
     public int OutlineLevel { get; set; }
 
-    /// <summary><see langword="true"/> when the paragraph reads right-to-left.</summary>
+    /// <summary><see langword="true" /> when the paragraph reads right-to-left.</summary>
     public bool RightToLeft { get; set; }
 
     /// <summary>Bullet / list marker settings for this paragraph.</summary>
@@ -66,15 +64,16 @@ public sealed class Paragraph
     // ── Find & replace ───────────────────────────────────────────────────────
 
     /// <summary>
-    /// Replaces every occurrence of <paramref name="oldText"/> with <paramref name="newText"/>
-    /// across this paragraph's runs, preserving the formatting of the run where each match begins.
-    /// Field runs (slide number, date, etc.) act as boundaries and are never altered.
+    ///     Replaces every occurrence of <paramref name="oldText" /> with <paramref name="newText" />
+    ///     across this paragraph's runs, preserving the formatting of the run where each match begins.
+    ///     Field runs (slide number, date, etc.) act as boundaries and are never altered.
     /// </summary>
     /// <returns>The number of occurrences replaced.</returns>
     public int ReplaceText(
         string oldText,
         string newText,
-        StringComparison comparison = StringComparison.Ordinal)
+        StringComparison comparison = StringComparison.Ordinal
+    )
     {
         ArgumentNullException.ThrowIfNull(oldText);
         ArgumentNullException.ThrowIfNull(newText);
@@ -91,24 +90,24 @@ public sealed class Paragraph
                 segment.Clear();
             }
             else
-            {
                 segment.Add(run);
-            }
         }
+
         count += ReplaceInSegment(segment, oldText, newText, comparison);
         return count;
     }
 
     /// <summary>
-    /// Replaces matches within a contiguous run segment. The match's replacement text is written
-    /// onto the run where the match starts (keeping that run's format); text belonging to other
-    /// runs spanned by the match is removed.
+    ///     Replaces matches within a contiguous run segment. The match's replacement text is written
+    ///     onto the run where the match starts (keeping that run's format); text belonging to other
+    ///     runs spanned by the match is removed.
     /// </summary>
     private static int ReplaceInSegment(
-        List<Run> runs,
+        IReadOnlyList<Run> runs,
         string oldText,
         string newText,
-        StringComparison comparison)
+        StringComparison comparison
+    )
     {
         if (runs.Count == 0) return 0;
 
@@ -132,12 +131,14 @@ public sealed class Paragraph
                     startRun = i;
                     startOffset = idx - runStart;
                 }
+
                 if (startRun != -1 && end <= runEnd)
                 {
                     endRun = i;
                     endOffset = end - runStart;
                     break;
                 }
+
                 pos = runEnd;
             }
 

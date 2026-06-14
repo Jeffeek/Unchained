@@ -5,8 +5,8 @@ using Unchained.Ooxml.Xml;
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes a <see cref="Shape3DFormat"/> to a DrawingML <c>&lt;a:sp3d&gt;</c> element, or
-/// <see langword="null"/> when no 3-D settings are present.
+///     Serializes a <see cref="Shape3DFormat" /> to a DrawingML <c>&lt;a:sp3d&gt;</c> element, or
+///     <see langword="null" /> when no 3-D settings are present.
 /// </summary>
 internal static class Shape3DWriter
 {

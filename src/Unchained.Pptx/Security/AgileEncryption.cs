@@ -7,11 +7,16 @@ using Unchained.Pptx.Core;
 namespace Unchained.Pptx.Security;
 
 /// <summary>
-/// OOXML Agile Encryption per ECMA-376 Part 4 §3.4 and [MS-OFFCRYPTO] §2.3.4.
-/// Uses AES-256-CBC with SHA-512 PBKDF key derivation. All crypto from BCL.
+///     OOXML Agile Encryption per ECMA-376 Part 4 §3.4 and [MS-OFFCRYPTO] §2.3.4.
+///     Uses AES-256-CBC with SHA-512 PBKDF key derivation. All crypto from BCL.
 /// </summary>
 internal static class AgileEncryption
 {
+    private const int SpinCount = 100_000;
+    private const int KeyBytes = 32; // AES-256
+    private const int SaltSize = 16;
+    private const int BlockSize = 16; // AES block size
+    private const int SegmentSize = 4096;
     // EncryptionInfo stream header for Agile Encryption (version 4.4)
     private static readonly byte[] EncryptionInfoHeader =
         [0x04, 0x00, 0x04, 0x00, 0x40, 0x00, 0x00, 0x00];
@@ -30,27 +35,22 @@ internal static class AgileEncryption
     private static readonly byte[] BlockKeyHmacValue =
         [0xa0, 0x67, 0x7f, 0x02, 0xb2, 0x2c, 0x84, 0x33];
 
-    private const int SpinCount = 100_000;
-    private const int KeyBytes = 32;   // AES-256
-    private const int SaltSize = 16;
-    private const int BlockSize = 16;  // AES block size
-    private const int SegmentSize = 4096;
-
     // ── Public API ────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns <see langword="true"/> when the first 8 bytes are the OLE CFB magic.
+    ///     Returns <see langword="true" /> when the first 8 bytes are the OLE CFB magic.
     /// </summary>
     public static bool IsCfb(byte[] data)
     {
         if (data.Length < 8) return false;
+
         ReadOnlySpan<byte> magic = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
         return data.AsSpan(0, 8).SequenceEqual(magic);
     }
 
     /// <summary>
-    /// Encrypts <paramref name="zipBytes"/> with Agile AES-256-CBC / SHA-512 encryption
-    /// and wraps the result in an OLE CFB document.
+    ///     Encrypts <paramref name="zipBytes" /> with Agile AES-256-CBC / SHA-512 encryption
+    ///     and wraps the result in an OLE CFB document.
     /// </summary>
     public static byte[] Encrypt(byte[] zipBytes, string password)
     {
@@ -87,9 +87,13 @@ internal static class AgileEncryption
 
         // Step 6: Build EncryptionInfo XML and wrap in CFB
         var xmlBytes = BuildEncryptionInfoXml(
-            documentSalt, passwordSalt, encryptedKeyValue,
-            encryptedVerifierInput, encryptedVerifierHash,
-            encryptedHmacKey, encryptedHmacValue);
+            documentSalt,
+            passwordSalt,
+            encryptedKeyValue,
+            encryptedVerifierInput,
+            encryptedVerifierHash,
+            encryptedHmacKey,
+            encryptedHmacValue);
 
         var encryptionInfoStream = new byte[EncryptionInfoHeader.Length + xmlBytes.Length];
         EncryptionInfoHeader.CopyTo(encryptionInfoStream, 0);
@@ -97,22 +101,24 @@ internal static class AgileEncryption
 
         return CfbDocument.Write([
             ("EncryptionInfo", encryptionInfoStream),
-            ("EncryptedPackage", encryptedPackage),
+            ("EncryptedPackage", encryptedPackage)
         ]);
     }
 
     /// <summary>
-    /// Decrypts an OOXML Agile-encrypted CFB document.
+    ///     Decrypts an OOXML Agile-encrypted CFB document.
     /// </summary>
     /// <exception cref="PptxEncryptedException">
-    /// Thrown when the password is incorrect or the file is not valid.
+    ///     Thrown when the password is incorrect or the file is not valid.
     /// </exception>
     public static byte[] Decrypt(byte[] cfbBytes, string password)
     {
         Dictionary<string, byte[]> streams;
         try { streams = CfbDocument.Read(cfbBytes); }
         catch (PptxException ex)
-        { throw new PptxEncryptedException("The file is not a valid OOXML encrypted file.", ex); }
+        {
+            throw new PptxEncryptedException("The file is not a valid OOXML encrypted file.", ex);
+        }
 
         if (!streams.TryGetValue("EncryptionInfo", out var encryptionInfoStream))
             throw new PptxEncryptedException("EncryptionInfo stream not found.");
@@ -126,7 +132,7 @@ internal static class AgileEncryption
         // Parse encryption parameters (skip 8-byte version header)
         var xmlBytes = encryptionInfoStream.AsSpan(8);
         var (documentSalt, passwordSalt, spinCount, encryptedKeyValue,
-             encryptedVerifierInput, encryptedVerifierHash) = ParseEncryptionInfo(xmlBytes);
+            encryptedVerifierInput, encryptedVerifierHash) = ParseEncryptionInfo(xmlBytes);
 
         // Derive iterated hash and block-key keys
         var iterHash = IteratedHash(password, passwordSalt, spinCount);
@@ -140,8 +146,10 @@ internal static class AgileEncryption
         var actualHash = SHA512.HashData(verifier);
 
         if (!CryptographicOperations.FixedTimeEquals(actualHash, expectedHash.AsSpan(0, Math.Min(64, expectedHash.Length))))
+        {
             throw new PptxEncryptedException(
                 "The supplied password is incorrect. Supply the correct password via OpenOptions.Password.");
+        }
 
         // Decrypt the document key and the package
         var documentKey = AesCbcDecryptTruncate(encryptedKeyValue, keyForEncryptedKey, passwordSalt, KeyBytes);
@@ -151,8 +159,8 @@ internal static class AgileEncryption
     // ── Key derivation ────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Computes the iterated hash: H_0 = SHA512(salt + pwd_utf16le), then
-    /// H_i = SHA512(i_LE4 + H_{i-1}) for i = 0..spinCount-1.
+    ///     Computes the iterated hash: H_0 = SHA512(salt + pwd_utf16le), then
+    ///     H_i = SHA512(i_LE4 + H_{i-1}) for i = 0..spinCount-1.
     /// </summary>
     private static byte[] IteratedHash(string password, byte[] salt, int spinCount)
     {
@@ -169,12 +177,13 @@ internal static class AgileEncryption
             h.CopyTo(iterBuf, 4);
             h = SHA512.HashData(iterBuf);
         }
+
         return h;
     }
 
     /// <summary>
-    /// Derives a 32-byte (AES-256) key from an iterated hash and a block key:
-    /// SHA512(iterHash || blockKey)[:32]
+    ///     Derives a 32-byte (AES-256) key from an iterated hash and a block key:
+    ///     SHA512(iterHash || blockKey)[:32]
     /// </summary>
     private static byte[] DeriveWithBlock(byte[] iterHash, byte[] blockKey)
     {
@@ -188,7 +197,7 @@ internal static class AgileEncryption
     }
 
     /// <summary>
-    /// Derives the key and IV for HMAC block encryption (using document key + block key).
+    ///     Derives the key and IV for HMAC block encryption (using document key + block key).
     /// </summary>
     private static (byte[] key, byte[] iv) DeriveHmacIv(byte[] documentKey, byte[] salt, byte[] blockKey)
     {
@@ -307,7 +316,12 @@ internal static class AgileEncryption
         return dec.TransformFinalBlock(ciphertext, 0, ciphertext.Length);
     }
 
-    private static byte[] AesCbcDecryptTruncate(byte[] ciphertext, byte[] key, byte[] iv, int expectedLength)
+    private static byte[] AesCbcDecryptTruncate(
+        byte[] ciphertext,
+        byte[] key,
+        byte[] iv,
+        int expectedLength
+    )
     {
         var padded = new byte[PadTo16(ciphertext.Length)];
         ciphertext.CopyTo(padded, 0);
@@ -320,9 +334,14 @@ internal static class AgileEncryption
     // ── EncryptionInfo XML ────────────────────────────────────────────────────
 
     private static byte[] BuildEncryptionInfoXml(
-        byte[] documentSalt, byte[] passwordSalt, byte[] encryptedKeyValue,
-        byte[] encryptedVerifierInput, byte[] encryptedVerifierHash,
-        byte[] encryptedHmacKey, byte[] encryptedHmacValue)
+        byte[] documentSalt,
+        byte[] passwordSalt,
+        byte[] encryptedKeyValue,
+        byte[] encryptedVerifierInput,
+        byte[] encryptedVerifierHash,
+        byte[] encryptedHmacKey,
+        byte[] encryptedHmacValue
+    )
     {
         var enc = XNamespace.Get("http://schemas.microsoft.com/office/2006/encryption");
         var pwd = XNamespace.Get("http://schemas.microsoft.com/office/2006/keyEncryptor/password");
@@ -367,8 +386,8 @@ internal static class AgileEncryption
     }
 
     private static (byte[] documentSalt, byte[] passwordSalt, int spinCount,
-                   byte[] encryptedKeyValue, byte[] encryptedVerifierInput,
-                   byte[] encryptedVerifierHash)
+        byte[] encryptedKeyValue, byte[] encryptedVerifierInput,
+        byte[] encryptedVerifierHash)
         ParseEncryptionInfo(ReadOnlySpan<byte> xmlSpan)
     {
         var doc = XDocument.Parse(Encoding.UTF8.GetString(xmlSpan));
@@ -376,13 +395,9 @@ internal static class AgileEncryption
         var pwd = XNamespace.Get("http://schemas.microsoft.com/office/2006/keyEncryptor/password");
 
         var keyDataEl = doc.Root?.Element(enc + "keyData")
-            ?? throw new PptxEncryptedException("Missing keyData element.");
+                        ?? throw new PptxEncryptedException("Missing keyData element.");
         var encKeyEl = doc.Root?.Descendants(pwd + "encryptedKey").FirstOrDefault()
-            ?? throw new PptxEncryptedException("Missing encryptedKey element.");
-
-        static byte[] B64(XElement el, string attr) =>
-            Convert.FromBase64String((string?)el.Attribute(attr)
-                ?? throw new PptxEncryptedException($"Missing attribute: {attr}"));
+                       ?? throw new PptxEncryptedException("Missing encryptedKey element.");
 
         return (
             documentSalt: B64(keyDataEl, "saltValue"),
@@ -391,6 +406,10 @@ internal static class AgileEncryption
             encryptedKeyValue: B64(encKeyEl, "encryptedKeyValue"),
             encryptedVerifierInput: B64(encKeyEl, "encryptedVerifierHashInput"),
             encryptedVerifierHash: B64(encKeyEl, "encryptedVerifierHash"));
+
+        static byte[] B64(XElement el, string attr) =>
+            Convert.FromBase64String((string?)el.Attribute(attr)
+                                     ?? throw new PptxEncryptedException($"Missing attribute: {attr}"));
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────

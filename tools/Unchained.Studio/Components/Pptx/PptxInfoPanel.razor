@@ -1,14 +1,13 @@
 @using Unchained.Pptx.Engine
-
 <MudPaper Class="pptx-info-panel pa-3" Elevation="0" Style="border:1px solid var(--mud-palette-divider);">
     <div class="d-flex align-center mb-2">
-        <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Class="mr-2" />
+        <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Class="mr-2"/>
         <MudText Typo="Typo.subtitle2">Presentation</MudText>
-        <MudSpacer />
+        <MudSpacer/>
         @if (Document.HasMacros)
         {
             <MudChip T="string" Size="Size.Small" Color="Color.Warning"
-                     Icon="@Icons.Material.Outlined.Code" Text="Macros" />
+                     Icon="@Icons.Material.Outlined.Code" Text="Macros"/>
         }
     </div>
 
@@ -16,7 +15,7 @@
         @foreach (var stat in _stats)
         {
             <div class="pptx-stat">
-                <MudIcon Icon="@stat.Icon" Size="Size.Small" Class="pptx-stat-icon" />
+                <MudIcon Icon="@stat.Icon" Size="Size.Small" Class="pptx-stat-icon"/>
                 <div>
                     <div class="pptx-stat-value">@stat.Value</div>
                     <div class="pptx-stat-label">@stat.Label</div>
@@ -27,7 +26,7 @@
 
     @if (_props.Count > 0)
     {
-        <MudDivider Class="my-2" />
+        <MudDivider Class="my-2"/>
         <div class="pptx-info-props">
             @foreach (var (label, value) in _props)
             {
@@ -41,15 +40,17 @@
 </MudPaper>
 
 @code {
-    [Parameter] public PresentationDocument Document { get; set; } = default!;
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = null!;
 
     private readonly List<(string Label, string Value, string Icon)> _stats = [];
     private readonly List<(string Label, string Value)> _props = [];
 
     protected override void OnParametersSet()
     {
-        var hidden = Document.Slides.Count(s => s.IsHidden);
-        var layouts = Document.Masters.Sum(m => m.Layouts.Count);
+        var hidden = Document.Slides.Count(static s => s.IsHidden);
+        var layouts = Document.Masters.Sum(static m => m.Layouts.Count);
         var hyperlinks = Document.GetHyperlinks().Count();
 
         _stats.Clear();
@@ -67,4 +68,5 @@
         if (p.Created is { } created) _props.Add(("Created", created.LocalDateTime.ToString("g")));
         if (p.Modified is { } modified) _props.Add(("Modified", modified.LocalDateTime.ToString("g")));
     }
+
 }

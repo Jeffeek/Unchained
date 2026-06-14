@@ -6,8 +6,8 @@ using Unchained.Pdf.Models;
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IBookmarkEditor"/> implementation.
-/// Builds a flat or nested <c>/Outlines</c> tree and replaces the catalog entry.
+///     Default <see cref="IBookmarkEditor" /> implementation.
+///     Builds a flat or nested <c>/Outlines</c> tree and replaces the catalog entry.
 /// </summary>
 public sealed class BookmarkEditor : IBookmarkEditor
 {
@@ -27,14 +27,14 @@ public sealed class BookmarkEditor : IBookmarkEditor
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
         // Build the page object-number lookup: page N → object number.
         var pageObjNums = BuildPageObjectNumbers(existing, adapter.Core);
 
         // Build outline tree; get catalog reference.
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) == "Catalog");
+            o.Value is PdfDictionary d && d.IsCatalog());
 
         PdfObject outlinesEntry;
         if (bookmarks.Count == 0)
@@ -104,7 +104,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
             var bm = items[i];
             var pageObjNum = pageObjNums.GetValueOrDefault(bm.PageNumber, 0);
             PdfObject destArr = pageObjNum > 0
-                ? new PdfArray([new PdfIndirectReference(pageObjNum, 0), PdfName.Get("Fit")])
+                ? new PdfArray([new PdfIndirectReference(pageObjNum, 0), PdfName.Fit])
                 : PdfNull.Instance;
 
             var dict = new Dictionary<string, PdfObject>

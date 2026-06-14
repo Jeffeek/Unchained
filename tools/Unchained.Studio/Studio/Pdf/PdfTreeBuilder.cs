@@ -1,5 +1,6 @@
 using MudBlazor;
 using Unchained.Pdf.Abstractions;
+using Unchained.Pdf.Models;
 using Unchained.Studio.Models;
 
 namespace Unchained.Studio.Studio.Pdf;
@@ -29,7 +30,7 @@ public static class PdfTreeBuilder
         };
 
         // Remove nodes that have no content
-        root.Children.RemoveAll(static n => n.Children.Count == 0 && n.Label.EndsWith(" (none)"));
+        root.Children.RemoveAll(static n => n.Children.Count == 0 && n.Label.EndsWith(" (none)", StringComparison.Ordinal));
 
         return root;
     }
@@ -97,7 +98,7 @@ public static class PdfTreeBuilder
                 NodeType = TreeNodeType.Page,
                 Payload = page,
                 HasLazyChildren = true,
-                LoadChildrenAsync = async () => await BuildPageChildrenAsync(page).ConfigureAwait(false)
+                LoadChildrenAsync = () => BuildPageChildrenAsync(page)
             };
             pagesNode.Children.Add(pageNode);
         }
@@ -121,7 +122,7 @@ public static class PdfTreeBuilder
                 Payload = fonts
             };
             foreach (var (key, name) in fonts)
-                fontsNode.Children.Add(Leaf($"{key}: {name}", Icons.Material.Outlined.FontDownload, TreeNodeType.Font, payload: (key, name)));
+                fontsNode.Children.Add(Leaf($"{key}: {name}", Icons.Material.Outlined.FontDownload, TreeNodeType.Font, (key, name)));
             children.Add(fontsNode);
         }
 
@@ -137,11 +138,14 @@ public static class PdfTreeBuilder
                 Payload = images
             };
             foreach (var (key, img) in images)
+            {
                 imagesNode.Children.Add(Leaf(
                     $"{key}: {img.Width}×{img.Height} px",
                     Icons.Material.Outlined.PhotoLibrary,
                     TreeNodeType.Image,
-                    payload: (key, img)));
+                    (key, img)));
+            }
+
             children.Add(imagesNode);
         }
 
@@ -157,11 +161,14 @@ public static class PdfTreeBuilder
                 Payload = annotations
             };
             foreach (var ann in annotations)
+            {
                 annNode.Children.Add(Leaf(
                     $"{ann.Subtype}: {TruncateLabel(ann.Contents ?? ann.Subtype.ToString(), 40)}",
                     Icons.Material.Outlined.StickyNote2,
                     TreeNodeType.Annotation,
-                    payload: ann));
+                    ann));
+            }
+
             children.Add(annNode);
         }
 
@@ -173,7 +180,7 @@ public static class PdfTreeBuilder
             NodeType = TreeNodeType.ContentStream,
             Payload = page,
             HasLazyChildren = true,
-            LoadChildrenAsync = async () => await BuildOperatorsAsync(page).ConfigureAwait(false)
+            LoadChildrenAsync = () => BuildOperatorsAsync(page)
         });
 
         return Task.FromResult(children);
@@ -188,7 +195,7 @@ public static class PdfTreeBuilder
                 $"{i + 1:D4}  {op.Name}  {string.Join(" ", op.Operands.Take(3).Select(static o => o.ToString() ?? "?"))}",
                 Icons.Material.Outlined.Terminal,
                 TreeNodeType.Operator,
-                payload: op))
+                op))
             .ToList();
 
         if (operators.Count > 500)
@@ -215,7 +222,7 @@ public static class PdfTreeBuilder
         return node;
     }
 
-    private static TreeNode BuildBookmarkNode(Unchained.Pdf.Models.Bookmark bm)
+    private static TreeNode BuildBookmarkNode(Bookmark bm)
     {
         var node = new TreeNode
         {
@@ -224,9 +231,11 @@ public static class PdfTreeBuilder
             NodeType = TreeNodeType.Bookmark,
             Payload = bm
         };
-        if (bm.Children is { Count: > 0 } children)
-            foreach (var child in children)
-                node.Children.Add(BuildBookmarkNode(child));
+        if (bm.Children is not { Count: > 0 } children) return node;
+
+        foreach (var child in children)
+            node.Children.Add(BuildBookmarkNode(child));
+
         return node;
     }
 
@@ -244,11 +253,14 @@ public static class PdfTreeBuilder
             Payload = fields
         };
         foreach (var f in fields)
+        {
             node.Children.Add(Leaf(
                 $"{f.Name} [{f.FieldType}] = {TruncateLabel(f.Value ?? "(empty)", 30)}",
                 Icons.Material.Outlined.TextFields,
                 TreeNodeType.FormField,
-                payload: f));
+                f));
+        }
+
         return node;
     }
 
@@ -266,11 +278,14 @@ public static class PdfTreeBuilder
             Payload = dests
         };
         foreach (var d in dests)
+        {
             node.Children.Add(Leaf(
                 $"{d.Name} → p.{d.PageNumber}",
                 Icons.Material.Outlined.LocationOn,
                 TreeNodeType.NamedDestination,
-                payload: d));
+                d));
+        }
+
         return node;
     }
 
@@ -290,7 +305,7 @@ public static class PdfTreeBuilder
                 Leaf($"HideMenubar: {vp.HideMenubar}", Icons.Material.Outlined.MenuOpen, TreeNodeType.Generic),
                 Leaf($"HideToolbar: {vp.HideToolbar}", Icons.Material.Outlined.ViewSidebar, TreeNodeType.Generic),
                 Leaf($"FitWindow: {vp.FitWindow}", Icons.Material.Outlined.FitScreen, TreeNodeType.Generic),
-                Leaf($"DisplayDocTitle: {vp.DisplayDocTitle}", Icons.Material.Outlined.Title, TreeNodeType.Generic),
+                Leaf($"DisplayDocTitle: {vp.DisplayDocTitle}", Icons.Material.Outlined.Title, TreeNodeType.Generic)
             ]
         };
     }
@@ -298,46 +313,43 @@ public static class PdfTreeBuilder
     private static TreeNode BuildXmpNode(IPdfDocument document)
     {
         var xmp = document.GetXmpMetadata();
-        if (xmp is null)
-            return EmptyNode("XMP Metadata (none)");
-
-        return new TreeNode
-        {
-            Label = "XMP Metadata",
-            Icon = Icons.Material.Outlined.Description,
-            NodeType = TreeNodeType.XmpMetadata,
-            Payload = xmp,
-            Children =
-            [
-                Leaf($"{xmp.Length:N0} bytes", Icons.Material.Outlined.DataObject, TreeNodeType.Generic)
-            ]
-        };
+        return xmp is null
+            ? EmptyNode("XMP Metadata (none)")
+            : new TreeNode
+            {
+                Label = "XMP Metadata",
+                Icon = Icons.Material.Outlined.Description,
+                NodeType = TreeNodeType.XmpMetadata,
+                Payload = xmp,
+                Children =
+                [
+                    Leaf($"{xmp.Length:N0} bytes", Icons.Material.Outlined.DataObject, TreeNodeType.Generic)
+                ]
+            };
     }
 
-    private static TreeNode BuildEncryptionNode(IPdfDocument document)
-    {
-        if (!document.IsEncrypted)
-            return EmptyNode("Encryption (none)");
-
-        return new TreeNode
-        {
-            Label = "Encryption",
-            Icon = Icons.Material.Outlined.Lock,
-            NodeType = TreeNodeType.Encryption,
-            Payload = document,
-            Children =
-            [
-                Leaf($"Algorithm: {document.CryptoAlgorithm}", Icons.Material.Outlined.Security, TreeNodeType.Generic),
-                Leaf($"Permissions: {document.Permissions}", Icons.Material.Outlined.AdminPanelSettings, TreeNodeType.Generic)
-            ]
-        };
-    }
+    private static TreeNode BuildEncryptionNode(IPdfDocument document) =>
+        !document.IsEncrypted
+            ? EmptyNode("Encryption (none)")
+            : new TreeNode
+            {
+                Label = "Encryption",
+                Icon = Icons.Material.Outlined.Lock,
+                NodeType = TreeNodeType.Encryption,
+                Payload = document,
+                Children =
+                [
+                    Leaf($"Algorithm: {document.CryptoAlgorithm}", Icons.Material.Outlined.Security, TreeNodeType.Generic),
+                    Leaf($"Permissions: {document.Permissions}", Icons.Material.Outlined.AdminPanelSettings, TreeNodeType.Generic)
+                ]
+            };
 
     private static TreeNode Leaf(
         string label,
         string icon,
         TreeNodeType type,
-        object? payload = null) =>
+        object? payload = null
+    ) =>
         new()
         {
             Label = label,

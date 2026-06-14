@@ -7,9 +7,9 @@ using Unchained.Studio.Models;
 namespace Unchained.Studio.Studio.Pptx;
 
 /// <summary>
-/// Builds the navigable <see cref="TreeNode"/> hierarchy for a loaded
-/// <see cref="PresentationDocument"/>: document → properties, slides (with shapes),
-/// masters/layouts, themes, and media.
+///     Builds the navigable <see cref="TreeNode" /> hierarchy for a loaded
+///     <see cref="PresentationDocument" />: document → properties, slides (with shapes),
+///     masters/layouts, themes, and media.
 /// </summary>
 public static class PptxTreeBuilder
 {
@@ -86,11 +86,10 @@ public static class PptxTreeBuilder
         };
 
         // Groups expose nested children.
-        if (shape is GroupShape group)
-        {
-            foreach (var child in group.Children)
-                node.Children.Add(BuildShapeNode(child));
-        }
+        if (shape is not GroupShape group) return node;
+
+        foreach (var child in group.Children)
+            node.Children.Add(BuildShapeNode(child));
 
         return node;
     }

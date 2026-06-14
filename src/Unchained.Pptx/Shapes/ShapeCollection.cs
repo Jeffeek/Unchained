@@ -1,21 +1,23 @@
+using System.Collections;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
-using Unchained.Pptx.Media;
 using Unchained.Ooxml.Media;
 using Unchained.Pptx.Models.Shapes;
-using Unchained.Ooxml.Drawing;
 
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
-/// An ordered, mutable collection of <see cref="Shape"/> objects on a slide, master,
-/// layout, or group. Implements <see cref="IReadOnlyList{T}"/> for enumeration and
-/// provides named factory methods for adding new shapes.
+///     An ordered, mutable collection of <see cref="Shape" /> objects on a slide, master,
+///     layout, or group. Implements <see cref="IReadOnlyList{T}" /> for enumeration and
+///     provides named factory methods for adding new shapes.
 /// </summary>
 public sealed class ShapeCollection : IReadOnlyList<Shape>
 {
     private readonly List<Shape> _shapes = [];
     private uint _nextShapeId = 2; // 1 is reserved for the group shape root (nvGrpSpPr)
+
+    /// <summary>Returns the highest shape ID currently in use (used by the writer).</summary>
+    internal uint MaxShapeId => _shapes.Count > 0 ? _shapes.Max(static s => s.ShapeId) : 1;
 
     // ── IReadOnlyList<Shape> ─────────────────────────────────────────────────
 
@@ -28,14 +30,14 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     /// <inheritdoc />
     public IEnumerator<Shape> GetEnumerator() => _shapes.GetEnumerator();
 
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+    IEnumerator IEnumerable.GetEnumerator() =>
         _shapes.GetEnumerator();
 
     // ── Factory methods ──────────────────────────────────────────────────────
 
     /// <summary>
-    /// Adds a new <see cref="AutoShape"/> of the given type at the specified position
-    /// and returns the new shape.
+    ///     Adds a new <see cref="AutoShape" /> of the given type at the specified position
+    ///     and returns the new shape.
     /// </summary>
     /// <param name="type">Preset shape geometry type.</param>
     /// <param name="x">Horizontal position of the top-left corner.</param>
@@ -47,7 +49,8 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         Emu x,
         Emu y,
         Emu width,
-        Emu height)
+        Emu height
+    )
     {
         var shape = new AutoShape
         {
@@ -62,7 +65,7 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     }
 
     /// <summary>
-    /// Adds a new text box at the specified position and returns the new shape.
+    ///     Adds a new text box at the specified position and returns the new shape.
     /// </summary>
     /// <param name="x">Horizontal position of the top-left corner.</param>
     /// <param name="y">Vertical position of the top-left corner.</param>
@@ -74,7 +77,8 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         Emu y,
         Emu width,
         Emu height,
-        string? initialText = null)
+        string? initialText = null
+    )
     {
         var shape = new AutoShape
         {
@@ -96,7 +100,7 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     }
 
     /// <summary>
-    /// Adds a new <see cref="PictureShape"/> using the supplied image and returns the new shape.
+    ///     Adds a new <see cref="PictureShape" /> using the supplied image and returns the new shape.
     /// </summary>
     /// <param name="image">The embedded image to display.</param>
     /// <param name="x">Horizontal position of the top-left corner.</param>
@@ -108,7 +112,8 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         Emu x,
         Emu y,
         Emu width,
-        Emu height)
+        Emu height
+    )
     {
         ArgumentNullException.ThrowIfNull(image);
         var shape = new PictureShape
@@ -124,8 +129,8 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     }
 
     /// <summary>
-    /// Adds a new <see cref="TableShape"/> with the given column widths and row heights
-    /// and returns the new shape.
+    ///     Adds a new <see cref="TableShape" /> with the given column widths and row heights
+    ///     and returns the new shape.
     /// </summary>
     /// <param name="x">Horizontal position of the top-left corner.</param>
     /// <param name="y">Vertical position of the top-left corner.</param>
@@ -135,7 +140,8 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         Emu x,
         Emu y,
         Emu[] columnWidths,
-        Emu[] rowHeights)
+        Emu[] rowHeights
+    )
     {
         ArgumentNullException.ThrowIfNull(columnWidths);
         ArgumentNullException.ThrowIfNull(rowHeights);
@@ -159,7 +165,7 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     }
 
     /// <summary>
-    /// Adds a new <see cref="ConnectorShape"/> at the specified position and returns the new shape.
+    ///     Adds a new <see cref="ConnectorShape" /> at the specified position and returns the new shape.
     /// </summary>
     /// <param name="type">The routing style of the connector.</param>
     /// <param name="x">Horizontal position of the start point.</param>
@@ -171,7 +177,8 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         Emu x,
         Emu y,
         Emu width,
-        Emu height)
+        Emu height
+    )
     {
         var shape = new ConnectorShape
         {
@@ -186,14 +193,19 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     }
 
     /// <summary>
-    /// Adds a straight line connector between two points and returns it. Convenience over
-    /// <see cref="AddConnector"/> using point coordinates instead of position+size.
+    ///     Adds a straight line connector between two points and returns it. Convenience over
+    ///     <see cref="AddConnector" /> using point coordinates instead of position+size.
     /// </summary>
     /// <param name="startX">Horizontal position of the start point.</param>
     /// <param name="startY">Vertical position of the start point.</param>
     /// <param name="endX">Horizontal position of the end point.</param>
     /// <param name="endY">Vertical position of the end point.</param>
-    public ConnectorShape AddLine(Emu startX, Emu startY, Emu endX, Emu endY)
+    public ConnectorShape AddLine(
+        Emu startX,
+        Emu startY,
+        Emu endX,
+        Emu endY
+    )
     {
         // OOXML connectors store an x/y/cx/cy bounding box; flipH/flipV encode direction when the
         // end point is left of / above the start. Normalise to a positive-extent box + flips.
@@ -215,6 +227,7 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         Enroll(shape);
         return shape;
     }
+
     /// <param name="type">The visual type of the chart.</param>
     /// <param name="x">Horizontal position of the top-left corner.</param>
     /// <param name="y">Vertical position of the top-left corner.</param>
@@ -225,7 +238,8 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         Emu x,
         Emu y,
         Emu width,
-        Emu height)
+        Emu height
+    )
     {
         var shape = new ChartShape
         {
@@ -240,8 +254,8 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     }
 
     /// <summary>
-    /// Adds an empty <see cref="GroupShape"/> and returns it. Add child shapes via
-    /// <see cref="GroupShape.Children"/>.
+    ///     Adds an empty <see cref="GroupShape" /> and returns it. Add child shapes via
+    ///     <see cref="GroupShape.Children" />.
     /// </summary>
     public GroupShape AddGroup()
     {
@@ -270,7 +284,9 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         ArgumentNullException.ThrowIfNull(shape);
         var index = _shapes.IndexOf(shape);
         if (index < 0) throw new ArgumentException("The shape does not belong to this collection.", nameof(shape));
+
         if (index == _shapes.Count - 1) return;
+
         _shapes.RemoveAt(index);
         _shapes.Add(shape);
     }
@@ -280,10 +296,17 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     {
         ArgumentNullException.ThrowIfNull(shape);
         var index = _shapes.IndexOf(shape);
-        if (index < 0) throw new ArgumentException("The shape does not belong to this collection.", nameof(shape));
-        if (index == 0) return;
-        _shapes.RemoveAt(index);
-        _shapes.Insert(0, shape);
+        switch (index)
+        {
+            case < 0:
+                throw new ArgumentException("The shape does not belong to this collection.", nameof(shape));
+            case 0:
+                return;
+            default:
+                _shapes.RemoveAt(index);
+                _shapes.Insert(0, shape);
+            break;
+        }
     }
 
     // ── Internal helpers ─────────────────────────────────────────────────────
@@ -302,7 +325,4 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
             _nextShapeId = shape.ShapeId + 1;
         _shapes.Add(shape);
     }
-
-    /// <summary>Returns the highest shape ID currently in use (used by the writer).</summary>
-    internal uint MaxShapeId => _shapes.Count > 0 ? _shapes.Max(static s => s.ShapeId) : 1;
 }

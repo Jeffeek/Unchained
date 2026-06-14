@@ -1,9 +1,9 @@
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
-/// A shape that embeds an OLE object (e.g. an Excel spreadsheet or a Word document)
-/// inside the presentation. The embedded data is preserved verbatim; editing the OLE
-/// object is not supported in M1–M4.
+///     A shape that embeds an OLE object (e.g. an Excel spreadsheet or a Word document)
+///     inside the presentation. The embedded data is preserved verbatim; editing the OLE
+///     object is not supported in M1–M4.
 /// </summary>
 public sealed class OleShape : Shape
 {
@@ -14,7 +14,7 @@ public sealed class OleShape : Shape
     public string ProgId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Path of the linked source file, or <see langword="null"/> for fully-embedded objects.
+    ///     Path of the linked source file, or <see langword="null" /> for fully-embedded objects.
     /// </summary>
     public string? LinkedFilePath { get; set; }
 }

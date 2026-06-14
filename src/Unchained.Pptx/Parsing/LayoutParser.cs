@@ -1,33 +1,22 @@
-using Unchained.Pptx.Core.Xml;
-using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Media;
-using Unchained.Ooxml.Media;
+using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Slides;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a slide layout OPC part into a <see cref="SlideLayout"/>.
+///     Parses a slide layout OPC part into a <see cref="SlideLayout" />.
 /// </summary>
-internal sealed class LayoutParser
+internal sealed class LayoutParser(OpcPackage package)
 {
-    private readonly OpcPackage _package;
-    private readonly MediaStore _mediaStore;
-
-    public LayoutParser(OpcPackage package, MediaStore mediaStore)
-    {
-        _package = package;
-        _mediaStore = mediaStore;
-    }
-
     /// <summary>
-    /// Parses the layout at <paramref name="partUri"/> and returns a <see cref="SlideLayout"/>.
+    ///     Parses the layout at <paramref name="partUri" /> and returns a <see cref="SlideLayout" />.
     /// </summary>
     public SlideLayout Parse(string partUri, string relationshipId)
     {
-        var part = _package.TryGetPart(partUri);
+        var part = package.TryGetPart(partUri);
         if (part == null)
             return new SlideLayout { PartUri = partUri, RelationshipId = relationshipId };
 
@@ -49,27 +38,27 @@ internal sealed class LayoutParser
         // Parse shapes from the common slide data
         var cSld = root.Element(PmlNames.CommonSlideData);
         var spTree = cSld?.Element(PmlNames.ShapeTree);
-        if (spTree != null)
-        {
-            var shapeParser = new ShapeParser(_package, _mediaStore);
-            shapeParser.ParseTree(spTree, layout.Shapes);
-        }
+
+        if (spTree == null) return layout;
+
+        var shapeParser = new ShapeParser();
+        shapeParser.ParseTree(spTree, layout.Shapes);
 
         return layout;
     }
 
-    private static Models.Themes.LayoutType ParseLayoutType(string value) => value switch
+    private static LayoutType ParseLayoutType(string value) => value switch
     {
-        "blank" => Models.Themes.LayoutType.Blank,
-        "title" => Models.Themes.LayoutType.Title,
-        "tx" or "obj" or "twoObj" => Models.Themes.LayoutType.TitleAndContent,
-        "twoTxTwoObj" => Models.Themes.LayoutType.TitleAndTwoContent,
-        "titleOnly" => Models.Themes.LayoutType.TitleOnly,
-        "secHead" => Models.Themes.LayoutType.SectionHeader,
-        "twoTx" => Models.Themes.LayoutType.TwoTextColumns,
-        "vertTx" => Models.Themes.LayoutType.TitleAndVerticalText,
-        "picTx" => Models.Themes.LayoutType.PictureWithCaption,
-        "ctrTitle" => Models.Themes.LayoutType.TitleSlide,
-        _ => Models.Themes.LayoutType.Custom
+        "blank" => LayoutType.Blank,
+        "title" => LayoutType.Title,
+        "tx" or "obj" or "twoObj" => LayoutType.TitleAndContent,
+        "twoTxTwoObj" => LayoutType.TitleAndTwoContent,
+        "titleOnly" => LayoutType.TitleOnly,
+        "secHead" => LayoutType.SectionHeader,
+        "twoTx" => LayoutType.TwoTextColumns,
+        "vertTx" => LayoutType.TitleAndVerticalText,
+        "picTx" => LayoutType.PictureWithCaption,
+        "ctrTitle" => LayoutType.TitleSlide,
+        _ => LayoutType.Custom
     };
 }

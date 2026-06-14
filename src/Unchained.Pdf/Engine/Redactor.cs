@@ -1,18 +1,21 @@
 using System.Globalization;
 using System.Text;
+using Unchained.Drawing.Primitives;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Default <see cref="IRedactor"/> implementation. For each page it walks the content
-/// operators while tracking the CTM and text matrix, drops text-show and image-paint
-/// operators whose drawing origin falls inside a redaction region, re-serializes the
-/// remaining operators as the page's new (single) content stream, and appends an opaque
-/// fill over each region so the area is both removed from the data and visually covered.
+///     Default <see cref="IRedactor" /> implementation. For each page it walks the content
+///     operators while tracking the CTM and text matrix, drops text-show and image-paint
+///     operators whose drawing origin falls inside a redaction region, re-serializes the
+///     remaining operators as the page's new (single) content stream, and appends an opaque
+///     fill over each region so the area is both removed from the data and visually covered.
 /// </summary>
 public sealed class Redactor : IRedactor
 {
@@ -26,16 +29,20 @@ public sealed class Redactor : IRedactor
     private static void Redact(IPdfDocument document, IReadOnlyList<RedactionRegion> regions)
     {
         if (regions.Count == 0) return;
+
         var adapter = MutationHelper.Cast(nameof(document), document);
         var pageCount = adapter.Core.PageCount;
-        foreach (var r in regions)
-            if (r.PageNumber < 1 || r.PageNumber > pageCount)
-                throw new ArgumentOutOfRangeException(nameof(regions), r.PageNumber,
-                    $"Region page number must be between 1 and {pageCount}.");
+
+        foreach (var r in regions.Where(r => r.PageNumber < 1 || r.PageNumber > pageCount))
+        {
+            throw new ArgumentOutOfRangeException(nameof(regions),
+                r.PageNumber,
+                $"Region page number must be between 1 and {pageCount}.");
+        }
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(startAt: maxObjNum + 1);
+        var builder = new ObjectGraphBuilder(maxObjNum + 1);
         var swaps = new Dictionary<int, PdfIndirectObject>();
 
         var byPage = regions.GroupBy(static r => r.PageNumber).ToDictionary(static g => g.Key, static g => g.ToList());
@@ -59,7 +66,9 @@ public sealed class Redactor : IRedactor
             // Replace /Contents with the single rebuilt stream (resources are preserved).
             foreach (var obj in existing)
             {
-                if (!ReferenceEquals(obj.Value, pageDict)) continue;
+                if (!ReferenceEquals(obj.Value, pageDict))
+                    continue;
+
                 var entries = new Dictionary<string, PdfObject>(((PdfDictionary)obj.Value).Entries)
                 {
                     [PdfName.Contents.Value] = streamObj.ToReference()
@@ -78,18 +87,17 @@ public sealed class Redactor : IRedactor
 
     // Re-serializes operators, dropping text-show / image-paint ops positioned inside any
     // region, then appends opaque cover rectangles for each region.
-    private static string BuildRedactedContent(IReadOnlyList<ContentOperator> ops, List<RedactionRegion> regions)
+    private static string BuildRedactedContent(IEnumerable<ContentOperator> ops, List<RedactionRegion> regions)
     {
         var sb = new StringBuilder();
 
         // Graphics state: CTM stack.
-        var ctm = Identity();
+        var ctm = Matrix2D.Identity();
         var ctmStack = new Stack<double[]>();
 
         // Text state.
-        var tm = Identity();
-        var tlm = Identity();
-        var fontSize = 0.0;
+        var tm = Matrix2D.Identity();
+        var tlm = Matrix2D.Identity();
         var leading = 0.0;
 
         foreach (var op in ops)
@@ -98,35 +106,40 @@ public sealed class Redactor : IRedactor
             {
                 case "q":
                     ctmStack.Push((double[])ctm.Clone());
-                    break;
+                break;
                 case "Q":
                     if (ctmStack.Count > 0) ctm = ctmStack.Pop();
-                    break;
+                break;
                 case "cm" when op.Operands.Count >= 6:
-                    ctm = Mul(ReadMatrix(op), ctm);
-                    break;
+                    ctm = Matrix2D.Multiply(ReadMatrix(op), ctm);
+                break;
                 case "BT":
-                    tm = Identity(); tlm = Identity();
-                    break;
+                    tm = Matrix2D.Identity();
+                    tlm = Matrix2D.Identity();
+                break;
                 case "Tf" when op.Operands.Count >= 2:
-                    fontSize = Num(op.Operands[1]);
-                    break;
+                    op.Operands[1].ReadIntOrReal();
+                break;
                 case "TL" when op.Operands.Count >= 1:
-                    leading = Num(op.Operands[0]);
-                    break;
+                    leading = op.Operands[0].ReadIntOrReal();
+                break;
                 case "Td" when op.Operands.Count >= 2:
-                    tlm = Mul(Translate(Num(op.Operands[0]), Num(op.Operands[1])), tlm); tm = (double[])tlm.Clone();
-                    break;
+                    tlm = Matrix2D.Multiply(Matrix2D.Translate(op.Operands[0].ReadIntOrReal(), op.Operands[1].ReadIntOrReal()), tlm);
+                    tm = (double[])tlm.Clone();
+                break;
                 case "TD" when op.Operands.Count >= 2:
-                    leading = -Num(op.Operands[1]);
-                    tlm = Mul(Translate(Num(op.Operands[0]), Num(op.Operands[1])), tlm); tm = (double[])tlm.Clone();
-                    break;
+                    leading = -op.Operands[1].ReadIntOrReal();
+                    tlm = Matrix2D.Multiply(Matrix2D.Translate(op.Operands[0].ReadIntOrReal(), op.Operands[1].ReadIntOrReal()), tlm);
+                    tm = (double[])tlm.Clone();
+                break;
                 case "Tm" when op.Operands.Count >= 6:
-                    tm = ReadMatrix(op); tlm = (double[])tm.Clone();
-                    break;
+                    tm = ReadMatrix(op);
+                    tlm = (double[])tm.Clone();
+                break;
                 case "T*":
-                    tlm = Mul(Translate(0, -leading), tlm); tm = (double[])tlm.Clone();
-                    break;
+                    tlm = Matrix2D.Multiply(Matrix2D.Translate(0, -leading), tlm);
+                    tm = (double[])tlm.Clone();
+                break;
             }
 
             // Decide whether to drop this operator.
@@ -136,14 +149,14 @@ public sealed class Redactor : IRedactor
                 case "Tj" or "TJ" or "'" or "\"":
                 {
                     // Text-show origin = textMatrix × CTM applied to (0,0).
-                    var (x, y) = Apply(Mul(tm, ctm), 0, 0);
+                    var (x, y) = Matrix2D.Transform(Matrix2D.Multiply(tm, ctm), 0, 0);
                     if (InAnyRegion(regions, x, y)) drop = true;
                     break;
                 }
                 case "Do":
                 {
                     // Image/form placement origin = CTM applied to the unit square's centre.
-                    var (x, y) = Apply(ctm, 0.5, 0.5);
+                    var (x, y) = Matrix2D.Transform(ctm, 0.5, 0.5);
                     if (InAnyRegion(regions, x, y)) drop = true;
                     break;
                 }
@@ -154,10 +167,10 @@ public sealed class Redactor : IRedactor
 
             // Advance the text line for the show-with-newline operators even if dropped,
             // so subsequent text keeps its position.
-            if (op.Name is "'" or "\"")
-            {
-                tlm = Mul(Translate(0, -leading), tlm); tm = (double[])tlm.Clone();
-            }
+            if (op.Name is not ("'" or "\"")) continue;
+
+            tlm = Matrix2D.Multiply(Matrix2D.Translate(0, -leading), tlm);
+            tm = (double[])tlm.Clone();
         }
 
         // Append opaque cover rectangles (reset to base coordinate space with q/Q).
@@ -166,18 +179,14 @@ public sealed class Redactor : IRedactor
             var (cr, cg, cb) = r.FillColor;
             sb.Append("q ").Append(F(cr)).Append(' ').Append(F(cg)).Append(' ').Append(F(cb)).Append(" rg ");
             sb.Append(F(r.X)).Append(' ').Append(F(r.Y)).Append(' ')
-              .Append(F(r.Width)).Append(' ').Append(F(r.Height)).Append(" re f Q\n");
+                .Append(F(r.Width)).Append(' ').Append(F(r.Height)).Append(" re f Q\n");
         }
 
         return sb.ToString();
     }
 
-    private static bool InAnyRegion(List<RedactionRegion> regions, double x, double y)
-    {
-        foreach (var r in regions)
-            if (r.Contains(x, y)) return true;
-        return false;
-    }
+    private static bool InAnyRegion(IEnumerable<RedactionRegion> regions, double x, double y) =>
+        regions.Any(r => r.Contains(x, y));
 
     // ── Operator serialization ────────────────────────────────────────────────────
 
@@ -188,6 +197,7 @@ public sealed class Redactor : IRedactor
             WriteOperand(sb, operand);
             sb.Append(' ');
         }
+
         sb.Append(op.Name).Append('\n');
     }
 
@@ -203,14 +213,25 @@ public sealed class Redactor : IRedactor
             case PdfString s: WriteString(sb, s); break;
             case PdfArray a:
                 sb.Append('[');
-                for (var i = 0; i < a.Count; i++) { if (i > 0) sb.Append(' '); WriteOperand(sb, a[i]); }
+                for (var i = 0; i < a.Count; i++)
+                {
+                    if (i > 0) sb.Append(' ');
+                    WriteOperand(sb, a[i]);
+                }
+
                 sb.Append(']');
-                break;
+            break;
             case PdfDictionary d:
                 sb.Append("<<");
-                foreach (var (k, v) in d.Entries) { sb.Append('/').Append(k).Append(' '); WriteOperand(sb, v); sb.Append(' '); }
+                foreach (var (k, v) in d.Entries)
+                {
+                    sb.Append('/').Append(k).Append(' ');
+                    WriteOperand(sb, v);
+                    sb.Append(' ');
+                }
+
                 sb.Append(">>");
-                break;
+            break;
             default: sb.Append("null"); break;
         }
     }
@@ -223,7 +244,13 @@ public sealed class Redactor : IRedactor
         var bytes = s.GetBinaryBytes().Span;
         var printable = true;
         foreach (var b in bytes)
-            if (b < 0x20 || b > 0x7E) { printable = false; break; }
+        {
+            if (b is >= PdfConstants.PrintableAsciiMin and <= PdfConstants.PrintableAsciiMax)
+                continue;
+
+            printable = false;
+            break;
+        }
 
         if (printable)
         {
@@ -233,12 +260,13 @@ public sealed class Redactor : IRedactor
                 if (b is (byte)'(' or (byte)')' or (byte)'\\') sb.Append('\\');
                 sb.Append((char)b);
             }
+
             sb.Append(')');
         }
         else
         {
             sb.Append('<');
-            foreach (var b in bytes) sb.Append(b.ToString("X2", CultureInfo.InvariantCulture));
+            foreach (var b in bytes) sb.Append(b.ToHex2());
             sb.Append('>');
         }
     }
@@ -247,30 +275,9 @@ public sealed class Redactor : IRedactor
 
     // ── Matrix helpers (row-major [a b c d e f]) ──────────────────────────────────
 
-    private static double[] Identity() => [1, 0, 0, 1, 0, 0];
-    private static double[] Translate(double tx, double ty) => [1, 0, 0, 1, tx, ty];
-
     private static double[] ReadMatrix(ContentOperator op) =>
-        [Num(op.Operands[0]), Num(op.Operands[1]), Num(op.Operands[2]), Num(op.Operands[3]), Num(op.Operands[4]), Num(op.Operands[5])];
-
-    // m1 × m2 (apply m1 first, then m2).
-    private static double[] Mul(double[] m1, double[] m2) =>
     [
-        (m1[0] * m2[0]) + (m1[1] * m2[2]),
-        (m1[0] * m2[1]) + (m1[1] * m2[3]),
-        (m1[2] * m2[0]) + (m1[3] * m2[2]),
-        (m1[2] * m2[1]) + (m1[3] * m2[3]),
-        (m1[4] * m2[0]) + (m1[5] * m2[2]) + m2[4],
-        (m1[4] * m2[1]) + (m1[5] * m2[3]) + m2[5]
+        op.Operands[0].ReadIntOrReal(), op.Operands[1].ReadIntOrReal(), op.Operands[2].ReadIntOrReal(),
+        op.Operands[3].ReadIntOrReal(), op.Operands[4].ReadIntOrReal(), op.Operands[5].ReadIntOrReal()
     ];
-
-    private static (double X, double Y) Apply(double[] m, double x, double y) =>
-        ((m[0] * x) + (m[2] * y) + m[4], (m[1] * x) + (m[3] * y) + m[5]);
-
-    private static double Num(PdfObject o) => o switch
-    {
-        PdfInteger i => i.Value,
-        PdfReal r => r.Value,
-        _ => 0
-    };
 }

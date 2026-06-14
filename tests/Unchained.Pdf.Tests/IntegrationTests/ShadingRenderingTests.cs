@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using Shouldly;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
@@ -8,36 +7,6 @@ namespace Unchained.Pdf.Tests.IntegrationTests;
 
 public sealed class ShadingRenderingTests : RendererTestBase
 {
-    // Decodes a PdfPngEncoder PNG (RGBA, filter=None) into a grayscale [h][w] array.
-    private static int[,] DecodeGray(byte[] png)
-    {
-        var width = (int)ReadU32(png, 16);
-        var height = (int)ReadU32(png, 20);
-        var idatLen = (int)ReadU32(png, 33);
-        var idat = png.AsSpan(33 + 8, idatLen).ToArray();
-        using var comp = new MemoryStream(idat);
-        using var dec = new MemoryStream();
-        using (var z = new ZLibStream(comp, CompressionMode.Decompress)) z.CopyTo(dec);
-        var raw = dec.ToArray();
-        var stride = 1 + (width * 4);
-        var gray = new int[height, width];
-        for (var y = 0; y < height; y++)
-        {
-            var row = y * stride + 1;
-            for (var x = 0; x < width; x++)
-            {
-                var r = raw[row + (x * 4)];
-                var g = raw[row + (x * 4) + 1];
-                var b = raw[row + (x * 4) + 2];
-                gray[y, x] = (r + g + b) / 3;
-            }
-        }
-        return gray;
-    }
-
-    private static uint ReadU32(byte[] d, int o) =>
-        ((uint)d[o] << 24) | ((uint)d[o + 1] << 16) | ((uint)d[o + 2] << 8) | d[o + 3];
-
     private static double RowMean(int[,] g, int y)
     {
         var w = g.GetLength(1);
@@ -51,14 +20,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.WithAxialShading(), ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 96), ct: TestContext.Current.CancellationToken);
-        var g = DecodeGray(png);
+        await using var doc = await LoadAsync(PdfFixtures.WithAxialShading(), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
+        var g = PdfTestConstants.DecodeGrayscale(png);
 
         var h = g.GetLength(0);
-        var topMean = RowMean(g, 2);            // near page top (Coords y=100 → white)
+        var topMean = RowMean(g, 2); // near page top (Coords y=100 → white)
         var midMean = RowMean(g, h / 2);
-        var bottomMean = RowMean(g, h - 3);     // near page bottom (Coords y=0 → black)
+        var bottomMean = RowMean(g, h - 3); // near page bottom (Coords y=0 → black)
 
         // Device Y is flipped: PDF y=100 (white) is at the top of the image.
         topMean.ShouldBeGreaterThan(midMean + 20, $"top={topMean}, mid={midMean}");
@@ -70,13 +39,13 @@ public sealed class ShadingRenderingTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.WithAxialShading(), ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 96), ct: TestContext.Current.CancellationToken);
-        var g = DecodeGray(png);
+        await using var doc = await LoadAsync(PdfFixtures.WithAxialShading(), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
+        var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
 
-        RowMean(g, 2).ShouldBeGreaterThan(200);       // near-white at top
-        RowMean(g, h - 3).ShouldBeLessThan(60);       // near-black at bottom
+        RowMean(g, 2).ShouldBeGreaterThan(200); // near-white at top
+        RowMean(g, h - 3).ShouldBeLessThan(60); // near-black at bottom
     }
 
     [Fact]
@@ -89,7 +58,7 @@ public sealed class ShadingRenderingTests : RendererTestBase
         shadings.ContainsKey("Sh1").ShouldBeTrue();
         var sh = shadings["Sh1"];
         sh.ShadingType.ShouldBe(2);
-        sh.ColorAt(0.0).R.ShouldBeLessThan((byte)30);    // black end
+        sh.ColorAt(0.0).R.ShouldBeLessThan((byte)30);     // black end
         sh.ColorAt(1.0).R.ShouldBeGreaterThan((byte)225); // white end
     }
 
@@ -105,7 +74,7 @@ public sealed class ShadingRenderingTests : RendererTestBase
         var p = patterns["P1"];
         p.PaintType.ShouldBe(1);
         p.XStep.ShouldBe(10, 0.01);
-        p.Operators.ShouldContain(o => o.Name == "re"); // cell draws a rectangle
+        p.Operators.ShouldContain(static o => o.Name == "re"); // cell draws a rectangle
     }
 
     [Fact]
@@ -113,17 +82,22 @@ public sealed class ShadingRenderingTests : RendererTestBase
     {
         SkipIfNoFreeType();
 
-        await using var doc = await LoadAsync(PdfFixtures.WithTilingPattern(), ct: TestContext.Current.CancellationToken);
-        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 96), ct: TestContext.Current.CancellationToken);
-        var g = DecodeGray(png);
+        await using var doc = await LoadAsync(PdfFixtures.WithTilingPattern(), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
+        var g = PdfTestConstants.DecodeGrayscale(png);
 
         // The red-square tiling should make the page substantially non-white (not grey-160,
         // not white). Count dark-ish pixels across the image.
-        var h = g.GetLength(0); var w = g.GetLength(1);
+        var h = g.GetLength(0);
+        var w = g.GetLength(1);
         var nonWhite = 0;
         for (var y = 0; y < h; y++)
-            for (var x = 0; x < w; x++)
-                if (g[y, x] < 200) nonWhite++;
+        for (var x = 0; x < w; x++)
+        {
+            if (g[y, x] < 200)
+                nonWhite++;
+        }
+
         nonWhite.ShouldBeGreaterThan(w * h / 10); // pattern covers a meaningful fraction
     }
 
@@ -138,14 +112,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithTriangularClip(),
-            ct: TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken);
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72),
+            TestContext.Current.CancellationToken);
 
-        var g = DecodeGray(png);
+        var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
         var w = g.GetLength(1);
 
@@ -154,16 +128,20 @@ public sealed class ShadingRenderingTests : RendererTestBase
         var cornerSize = Math.Max(2, Math.Min(10, w / 10));
         for (var y = 0; y < cornerSize; y++)
         for (var x = 0; x < cornerSize; x++)
+        {
             g[y, x].ShouldBeGreaterThanOrEqualTo(
                 230,
                 $"pixel ({x},{y}) should be white (outside triangle clip) but was {g[y, x]}");
+        }
 
         // Bottom-right corner region must be black (inside the triangle).
         for (var y = h - cornerSize; y < h; y++)
         for (var x = w - cornerSize; x < w; x++)
+        {
             g[y, x].ShouldBeLessThan(
                 50,
                 $"pixel ({x},{y}) should be black (inside triangle clip) but was {g[y, x]}");
+        }
     }
 
     [
@@ -188,14 +166,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithBlendMode(blendMode),
-            ct: TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken);
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72),
+            TestContext.Current.CancellationToken);
 
-        var g = DecodeGray(png);
+        var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
         var w = g.GetLength(1);
 
@@ -219,15 +197,15 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithBlendMode("Multiply"),
-            ct: TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken);
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72),
+            TestContext.Current.CancellationToken);
 
-        var g = DecodeGray(png);
-        var h = g.GetLength(0); var w = g.GetLength(1);
+        var g = PdfTestConstants.DecodeGrayscale(png);
+        var h = g.GetLength(0);
         var midMean = RowMean(g, h / 2);
 
         // Multiply(0.4, 0.5) = 0.2 → ~51. Should be darker than both inputs (~102, ~127).
@@ -243,14 +221,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithBlendMode("Screen"),
-            ct: TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken);
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72),
+            TestContext.Current.CancellationToken);
 
-        var g = DecodeGray(png);
+        var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
         var midMean = RowMean(g, h / 2);
 
@@ -268,14 +246,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithSoftMask(),
-            ct: TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken);
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72),
+            TestContext.Current.CancellationToken);
 
-        var g = DecodeGray(png);
+        var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
         var w = g.GetLength(1);
 
@@ -305,15 +283,16 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithSeparationColorSpace(),
-            ct: TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken);
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
-            new RenderOptions(Dpi: 72),
-            ct: TestContext.Current.CancellationToken);
+            new RenderOptions(72),
+            TestContext.Current.CancellationToken);
 
-        var g = DecodeGray(png);
-        var h = g.GetLength(0); var w = g.GetLength(1);
+        var g = PdfTestConstants.DecodeGrayscale(png);
+        var h = g.GetLength(0);
+        var w = g.GetLength(1);
 
         // Centre pixel should not be white (255) and not be the grey fallback (128).
         // CMYK(1,0,0,0) → RGB(0,255,255) → grey ≈ 181. Grey-128 fallback would be 128.

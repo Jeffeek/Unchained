@@ -1,4 +1,5 @@
-@using Unchained.Studio.Enums
+@using System.IO.Compression
+@using Unchained.Pdf.Abstractions
 @inject RenderingService Renderer
 @inject FileExportService Exporter
 @inject IJSRuntime JS
@@ -7,7 +8,7 @@
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Outlined.CompareArrows" Class="mr-2" Style="vertical-align:middle;" />
+            <MudIcon Icon="@Icons.Material.Outlined.CompareArrows" Class="mr-2" Style="vertical-align:middle;"/>
             Export Comparison Images
         </MudText>
     </TitleContent>
@@ -20,7 +21,7 @@
                 <MudText Typo="Typo.body2" Class="mb-2">
                     @_progressMessage
                 </MudText>
-                <MudProgressLinear Value="_progressPercent" Color="Color.Primary" Rounded="true" Class="mb-1" />
+                <MudProgressLinear Value="_progressPercent" Color="Color.Primary" Rounded="true" Class="mb-1"/>
                 <MudText Typo="Typo.caption" Style="opacity:.6;">
                     @_progressDetail
                 </MudText>
@@ -57,7 +58,7 @@
                                       Margin="Margin.Dense"
                                       Class="mt-1"
                                       Error="@(_rangeError is not null)"
-                                      ErrorText="@_rangeError" />
+                                      ErrorText="@_rangeError"/>
                     }
                 </div>
 
@@ -80,15 +81,6 @@
                 <div>
                     <MudText Typo="Typo.subtitle2" Class="mb-1">Output</MudText>
                     <MudRadioGroup @bind-Value="_outputMode" T="OutputMode">
-                        @if (_folderSaveSupported)
-                        {
-                            <MudRadio Value="OutputMode.Folder" Color="Color.Primary">
-                                Save to folder
-                                <MudText Typo="Typo.caption" Style="opacity:.6;display:block;">
-                                    You'll choose a folder; files are written directly (Chrome / Edge only)
-                                </MudText>
-                            </MudRadio>
-                        }
                         <MudRadio Value="OutputMode.Zip" Color="Color.Primary">
                             Download as ZIP
                             <MudText Typo="Typo.caption" Style="opacity:.6;display:block;">
@@ -101,7 +93,7 @@
                 <!-- File naming preview -->
                 <MudPaper Elevation="0" Class="pa-3" Style="background:#f5f5f5;border-radius:6px;">
                     <MudText Typo="Typo.caption" Style="font-family:monospace;line-height:1.8;">
-                        @_fileNamePreview
+                        @FileNamePreview
                     </MudText>
                 </MudPaper>
             </MudStack>
@@ -128,18 +120,32 @@
 </MudDialog>
 
 @* ReSharper disable once RedundantNameQualifier *@
-@code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
-    [Parameter] public Unchained.Pdf.Abstractions.IPdfDocument Document { get; set; } = default!;
-    [Parameter] public byte[] DocumentBytes { get; set; } = default!;
-    [Parameter] public string FileName { get; set; } = "document";
-    [Parameter] public int CurrentPage { get; set; } = 1;
-    [Parameter] public int PageCount { get; set; } = 1;
-    [Parameter] public string? ExistingBlobUrl { get; set; }
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public IPdfDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public byte[] DocumentBytes { get; set; } = null!;
+
+    [Parameter]
+    public string FileName { get; set; } = "document";
+
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    [Parameter]
+    public int PageCount { get; set; } = 1;
+
+    [Parameter]
+    public string? ExistingBlobUrl { get; set; }
 
     private PageMode _pageMode = PageMode.Current;
-    private Enums.OutputMode _outputMode = OutputMode.Zip;
+    private OutputMode _outputMode = OutputMode.Zip;
     private string _rangeText = string.Empty;
     private string? _rangeError;
     private int _dpi = 96;
@@ -152,13 +158,14 @@
     private readonly List<string> _errors = [];
     private CancellationTokenSource? _cts;
 
-    private string _fileNamePreview => BuildFileNamePreview();
+    private string FileNamePreview => BuildFileNamePreview();
 
     // JS interop is only available after the interactive SignalR circuit is established,
     // so folder-save detection must run in OnAfterRenderAsync, not OnInitializedAsync.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+
         try
         {
             _folderSaveSupported = await JS.InvokeAsync<bool>("unchainedStudio.isFolderSaveSupported");
@@ -167,6 +174,7 @@
         {
             _folderSaveSupported = false;
         }
+
         if (!_folderSaveSupported)
             _outputMode = OutputMode.Zip;
         StateHasChanged();
@@ -175,17 +183,14 @@
     private string BuildFileNamePreview()
     {
         var baseName = Path.GetFileNameWithoutExtension(FileName);
-        return _outputMode == OutputMode.Folder
-            ? $"[chosen folder]/\n  {baseName}_page_001_unchained_{_dpi}dpi.png\n  {baseName}_page_001_pdfjs_{_dpi}dpi.png\n  …"
-            : $"{baseName}_comparison_{_dpi}dpi.zip\n  └ unchained/page_001.png\n  └ pdfjs/page_001.png\n  └ …";
+        return _outputMode == OutputMode.Zip
+            ? $"{baseName}_comparison_{_dpi}dpi.zip\n  └ unchained/page_001.png\n  └ pdfjs/page_001.png\n  └ …"
+            : throw new NotImplementedException();
     }
 
     private void Close() => MudDialog.Cancel();
 
-    private void Cancel()
-    {
-        _cts?.Cancel();
-    }
+    private void Cancel() => _cts?.Cancel();
 
     private async Task StartExport()
     {
@@ -199,14 +204,15 @@
         var ct = _cts.Token;
 
         // Ensure we have a blob URL for PDF.js (reuse if already open in compare mode)
-        string? blobUrl = ExistingBlobUrl;
-        bool ownedBlob = false;
+        var blobUrl = ExistingBlobUrl;
+        var ownedBlob = false;
         if (blobUrl is null)
         {
             _progressMessage = "Preparing PDF for browser rendering…";
             StateHasChanged();
             blobUrl = await JS.InvokeAsync<string>(
                 "unchainedStudio.createPdfBlobUrl",
+                ct,
                 Convert.ToBase64String(DocumentBytes));
             ownedBlob = true;
         }
@@ -215,12 +221,10 @@
         {
             var baseName = Path.GetFileNameWithoutExtension(FileName);
             var collected = new List<(string Name, byte[] Bytes)>();
-            int done = 0;
+            var done = 0;
 
-            foreach (var page in pages)
+            foreach (var page in pages.TakeWhile(_ => !ct.IsCancellationRequested))
             {
-                if (ct.IsCancellationRequested) break;
-
                 _progressMessage = $"Rendering page {page} of {pages.Count}…";
                 _progressDetail = string.Empty;
                 StateHasChanged();
@@ -258,7 +262,10 @@
                         pdfjsBase64 = await JS.InvokeAsync<string>(
                             "unchainedStudio.renderPageWithPdfJs",
                             jts.Token,
-                            blobUrl, page, _dpi, 24000); // pass JS-side timeout (ms)
+                            blobUrl,
+                            page,
+                            _dpi,
+                            24000); // pass JS-side timeout (ms)
                     }
                     catch (OperationCanceledException)
                     {
@@ -286,7 +293,7 @@
             {
                 _progressMessage = "Export cancelled.";
                 StateHasChanged();
-                await Task.Delay(1200);
+                await Task.Delay(1200, ct);
                 MudDialog.Cancel();
                 return;
             }
@@ -304,11 +311,7 @@
             _progressDetail = string.Empty;
             StateHasChanged();
 
-            if (_outputMode == OutputMode.Folder && _folderSaveSupported)
-            {
-                await SaveToFolder(collected, baseName, ct);
-            }
-            else
+            if (_outputMode == OutputMode.Zip)
             {
                 await SaveAsZip(collected, baseName);
             }
@@ -317,36 +320,10 @@
         }
         finally
         {
-            if (ownedBlob && blobUrl is not null)
-                await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", blobUrl);
+            if (ownedBlob)
+                await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", ct, blobUrl);
             _cts?.Dispose();
             _cts = null;
-        }
-    }
-
-    private async Task SaveToFolder(
-        List<(string Name, byte[] Bytes)> files,
-        string baseName,
-        CancellationToken ct)
-    {
-        // Build the flat list the JS side expects: [{name, base64}]
-        // We group by subfolder (unchained/ pdfjs/) but showDirectoryPicker
-        // doesn't create sub-directories automatically — so we flatten the
-        // name with a prefix and use underscores instead of slashes.
-        var flat = files.Select(f => new
-        {
-            name = f.Name.Replace('/', '_'),
-            base64 = Convert.ToBase64String(f.Bytes)
-        }).ToArray();
-
-        try
-        {
-            await JS.InvokeVoidAsync("unchainedStudio.saveFilesToFolder", ct, flat);
-            Snackbar.Add($"Saved {files.Count} files to folder.", Severity.Success);
-        }
-        catch (JSException ex) when (ex.Message.Contains("AbortError") || ex.Message.Contains("cancelled"))
-        {
-            Snackbar.Add("Folder save cancelled.", Severity.Info);
         }
     }
 
@@ -363,18 +340,19 @@
     private static byte[] BuildZip(List<(string Name, byte[] Bytes)> files)
     {
         using var ms = new MemoryStream();
-        using (var zip = new System.IO.Compression.ZipArchive(
+        using (var zip = new ZipArchive(
                    ms,
-                   System.IO.Compression.ZipArchiveMode.Create,
-                   leaveOpen: true))
+                   ZipArchiveMode.Create,
+                   true))
         {
             foreach (var (name, bytes) in files)
             {
-                var entry = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal);
+                var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
                 using var stream = entry.Open();
                 stream.Write(bytes);
             }
         }
+
         return ms.ToArray();
     }
 
@@ -386,9 +364,9 @@
         return _pageMode switch
         {
             PageMode.Current => [CurrentPage],
-            PageMode.All    => Enumerable.Range(1, PageCount).ToList(),
-            PageMode.Range  => ParseRange(_rangeText, PageCount),
-            _               => [CurrentPage]
+            PageMode.All => Enumerable.Range(1, PageCount).ToList(),
+            PageMode.Range => ParseRange(_rangeText, PageCount),
+            _ => [CurrentPage]
         };
     }
 
@@ -414,11 +392,13 @@
                     _rangeError = $"Invalid range: \"{token}\"";
                     return null;
                 }
+
                 if (from < 1 || to > max || from > to)
                 {
                     _rangeError = $"Range {from}-{to} is out of bounds (1-{max}).";
                     return null;
                 }
+
                 for (var p = from; p <= to; p++) pages.Add(p);
             }
             else
@@ -428,16 +408,15 @@
                     _rangeError = $"Invalid page number: \"{token}\" (1-{max}).";
                     return null;
                 }
+
                 pages.Add(p);
             }
         }
 
-        if (pages.Count == 0)
-        {
-            _rangeError = "No valid pages found.";
-            return null;
-        }
+        if (pages.Count != 0) return [.. pages];
 
-        return [.. pages];
+        _rangeError = "No valid pages found.";
+        return null;
     }
+
 }

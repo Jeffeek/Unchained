@@ -1,18 +1,35 @@
+using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Validates a PDF document against ISO 19005 PDF/A conformance profiles.
-/// Rule IDs correspond to ISO 19005-1 (PDF/A-1) clause numbers.
+///     Validates a PDF document against ISO 19005 PDF/A conformance profiles.
+///     Rule IDs correspond to ISO 19005-1 (PDF/A-1) clause numbers.
 /// </summary>
 internal static class PdfAValidator
 {
+    // ── §6.5 Annotations ─────────────────────────────────────────────────────
+
+    private static readonly HashSet<string> ProhibitedAnnotationTypes = new(StringComparer.Ordinal)
+    {
+        "Sound", "Movie", "Screen", "FileAttachment", "3D"
+    };
+
+    // ── §6.6 Actions ──────────────────────────────────────────────────────────
+
+    private static readonly HashSet<string> ProhibitedActionTypes = new(StringComparer.Ordinal)
+    {
+        "Launch", "Sound", "Movie", "ResetForm", "ImportData",
+        "JavaScript", "SetOCGState", "Trans", "GoTo3DView"
+    };
     // ── Entry point ───────────────────────────────────────────────────────────
 
     internal static PdfAValidationResult Validate(byte[] pdfBytes, PdfAProfile profile)
@@ -98,7 +115,7 @@ internal static class PdfAValidator
         }
 
         var verStr = header[5..];
-        if (!double.TryParse(verStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var ver))
+        if (!double.TryParse(verStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var ver))
         {
             v.Add(E("6.1.2", $"Cannot parse PDF version from header: '{verStr}'."));
             return;
@@ -122,7 +139,7 @@ internal static class PdfAValidator
 
     private static void CheckFileId(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
-        var id = core.Trailer.Get<PdfArray>(PdfName.Get("ID"));
+        var id = core.Trailer.Get<PdfArray>(PdfName.ID);
         if (id is null || id.Count < 2)
             v.Add(E("6.1.3", "Trailer is missing required /ID array."));
     }
@@ -152,7 +169,7 @@ internal static class PdfAValidator
             };
 
             if (names.Any(static n => n is "LZWDecode" or "LZW"))
-                v.Add(E("6.1.10", "LZWDecode filter is not permitted in PDF/A.", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.1.10", "LZWDecode filter is not permitted in PDF/A.", obj.ObjectNumber));
         }
     }
 
@@ -191,18 +208,18 @@ internal static class PdfAValidator
             if (type != "ExtGState" && type is not null)
                 continue; // skip non-ExtGState (unless no type)
 
-            if (dict[PdfName.Get("SMask")] is not null and not PdfName { Value: "None" })
-                v.Add(E("6.4", "Transparency /SMask is not permitted in PDF/A-1.", objectNumber: obj.ObjectNumber));
+            if (dict[PdfName.SMask] is not null and not PdfName { Value: "None" })
+                v.Add(E("6.4", "Transparency /SMask is not permitted in PDF/A-1.", obj.ObjectNumber));
 
             var bm = dict.Get<PdfName>("BM");
             if (bm is not null && bm.Value is not ("Normal" or "Compatible"))
-                v.Add(E("6.4", $"Blend mode /{bm.Value} is not permitted in PDF/A-1 (only /Normal or /Compatible).", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.4", $"Blend mode /{bm.Value} is not permitted in PDF/A-1 (only /Normal or /Compatible).", obj.ObjectNumber));
 
             if (dict.Get<PdfReal>("CA") is { Value: < 1.0 } caStroke)
-                v.Add(E("6.4", $"Stroke opacity (/CA = {caStroke.Value:F2}) must be 1.0 in PDF/A-1.", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.4", $"Stroke opacity (/CA = {caStroke.Value:F2}) must be 1.0 in PDF/A-1.", obj.ObjectNumber));
 
             if (dict.Get<PdfReal>("ca") is { Value: < 1.0 } caFill)
-                v.Add(E("6.4", $"Fill opacity (/ca = {caFill.Value:F2}) must be 1.0 in PDF/A-1.", objectNumber: obj.ObjectNumber));
+                v.Add(E("6.4", $"Fill opacity (/ca = {caFill.Value:F2}) must be 1.0 in PDF/A-1.", obj.ObjectNumber));
         }
     }
 
@@ -228,35 +245,28 @@ internal static class PdfAValidator
             // Standard 14 fonts MUST be embedded in PDF/A-1
             var baseName = dict.GetName("BaseFont");
 
-            var descriptor = Resolve<PdfDictionary>(dict[PdfName.Get("FontDescriptor")], core);
+            var descriptor = Resolve<PdfDictionary>(dict[PdfName.FontDescriptor], core);
             if (descriptor is null)
             {
                 if (subtype is not ("Type3" or "Type0"))
-                    v.Add(E("6.3.3", $"Font '{baseName ?? "(unnamed)"}' (obj {obj.ObjectNumber}) is missing /FontDescriptor.", objectNumber: obj.ObjectNumber));
+                    v.Add(E("6.3.3", $"Font '{baseName ?? "(unnamed)"}' (obj {obj.ObjectNumber}) is missing /FontDescriptor.", obj.ObjectNumber));
 
                 continue;
             }
 
-            var hasFile = descriptor[PdfName.Get("FontFile")] is not null ||
-                          descriptor[PdfName.Get("FontFile2")] is not null ||
-                          descriptor[PdfName.Get("FontFile3")] is not null;
+            var hasFile = descriptor[PdfName.FontFile] is not null ||
+                          descriptor[PdfName.FontFile2] is not null ||
+                          descriptor[PdfName.FontFile3] is not null;
 
             if (!hasFile)
             {
                 v.Add(E("6.3.3",
                     $"Font '{baseName ?? "(unnamed)"}' (obj {obj.ObjectNumber}) is not embedded. " +
                     "All fonts — including Standard 14 — must be embedded in PDF/A-1.",
-                    objectNumber: obj.ObjectNumber));
+                    obj.ObjectNumber));
             }
         }
     }
-
-    // ── §6.5 Annotations ─────────────────────────────────────────────────────
-
-    private static readonly HashSet<string> ProhibitedAnnotationTypes = new(StringComparer.Ordinal)
-    {
-        "Sound", "Movie", "Screen", "FileAttachment", "3D"
-    };
 
     private static void CheckAnnotations(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
@@ -276,12 +286,7 @@ internal static class PdfAValidator
 
             foreach (var elem in annots.Elements)
             {
-                var dict = elem switch
-                {
-                    PdfDictionary d => d,
-                    PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                    _ => null
-                };
+                var dict = core.ResolveDict(elem);
 
                 if (dict is null)
                     continue;
@@ -298,19 +303,11 @@ internal static class PdfAValidator
                     v.Add(E("6.5.3", $"/{subtype} annotation on page {page} does not have the Print flag (bit 3) set.", pageNumber: page));
 
                 // Widget annotations must have an appearance stream
-                if (subtype == "Widget" && dict[PdfName.Get("AP")] is null)
+                if (subtype == "Widget" && dict[PdfName.AP] is null)
                     v.Add(E("6.5.4", $"Widget annotation on page {page} is missing an appearance stream (/AP).", pageNumber: page));
             }
         }
     }
-
-    // ── §6.6 Actions ──────────────────────────────────────────────────────────
-
-    private static readonly HashSet<string> ProhibitedActionTypes = new(StringComparer.Ordinal)
-    {
-        "Launch", "Sound", "Movie", "ResetForm", "ImportData",
-        "JavaScript", "SetOCGState", "Trans", "GoTo3DView"
-    };
 
     private static void CheckActions(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
@@ -319,7 +316,7 @@ internal static class PdfAValidator
             v.Add(E("6.6.1", "Catalog contains /AA (additional actions), which is not permitted in PDF/A-1."));
 
         // Catalog /OpenAction must not be a prohibited action
-        CheckActionDict(core.Catalog[PdfName.Get("OpenAction")], core, "catalog /OpenAction", v);
+        CheckActionDict(core.Catalog[PdfName.OpenAction], core, "catalog /OpenAction", v);
 
         // Scan all objects for prohibited action dicts
         foreach (var obj in core.CollectObjects())
@@ -328,10 +325,10 @@ internal static class PdfAValidator
                 continue;
 
             // Check /A entry (action on annotations, links, etc.)
-            CheckActionDict(dict[PdfName.Get("A")], core, $"object {obj.ObjectNumber}", v, obj.ObjectNumber);
+            CheckActionDict(dict[PdfName.A], core, $"object {obj.ObjectNumber}", v, obj.ObjectNumber);
 
             // Check /AA entry (additional actions on fields/pages)
-            if (dict[PdfName.Get("AA")] is not PdfDictionary aaDict)
+            if (dict[PdfName.AA] is not PdfDictionary aaDict)
                 continue;
 
             foreach (var (_, aAction) in aaDict.Entries)
@@ -350,12 +347,7 @@ internal static class PdfAValidator
         if (actionObj is null)
             return;
 
-        var dict = actionObj switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
+        var dict = core.ResolveDict(actionObj);
 
         if (dict is null)
             return;
@@ -363,7 +355,7 @@ internal static class PdfAValidator
         var actionType = dict.GetName("S") ?? string.Empty;
 
         if (ProhibitedActionTypes.Contains(actionType))
-            v.Add(E("6.6.2", $"Action type /{actionType} in {location} is not permitted in PDF/A-1.", objectNumber: objNum));
+            v.Add(E("6.6.2", $"Action type /{actionType} in {location} is not permitted in PDF/A-1.", objNum));
     }
 
     // ── §6.7 Metadata ─────────────────────────────────────────────────────────
@@ -387,7 +379,7 @@ internal static class PdfAValidator
         string xmp;
         try
         {
-            xmp = Encoding.UTF8.GetString(StreamFilters.Decode(metaStream).Span);
+            xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
         }
         catch
         {
@@ -439,13 +431,13 @@ internal static class PdfAValidator
     {
         // /Names /EmbeddedFiles must not be present (for PDF/A-1 and PDF/A-2)
         var names = Resolve<PdfDictionary>(core.Catalog[PdfName.Names], core);
-        if (names?[PdfName.Get("EmbeddedFiles")] is not null)
+        if (names?[PdfName.EmbeddedFiles] is not null)
             v.Add(E("6.8", "Embedded file attachments (/Names /EmbeddedFiles) are not permitted in PDF/A-1/2."));
     }
 
     private static void CheckCollection(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
-        if (core.Catalog[PdfName.Get("Collection")] is not null)
+        if (core.Catalog[PdfName.Collection] is not null)
             v.Add(E("6.8", "/Collection (PDF Portfolio) is not permitted in PDF/A."));
     }
 
@@ -461,10 +453,20 @@ internal static class PdfAValidator
         };
 
     // ReSharper disable once BadListLineBreaks
-    private static PdfAViolation E(string ruleId, string description, int? objectNumber = null, int? pageNumber = null) =>
+    private static PdfAViolation E(
+        string ruleId,
+        string description,
+        int? objectNumber = null,
+        int? pageNumber = null
+    ) =>
         new(ruleId, description, PdfAViolationSeverity.Error, objectNumber, pageNumber);
 
     // ReSharper disable once BadListLineBreaks
-    private static PdfAViolation W(string ruleId, string description, int? objectNumber = null, int? pageNumber = null) =>
+    private static PdfAViolation W(
+        string ruleId,
+        string description,
+        int? objectNumber = null,
+        int? pageNumber = null
+    ) =>
         new(ruleId, description, PdfAViolationSeverity.Warning, objectNumber, pageNumber);
 }

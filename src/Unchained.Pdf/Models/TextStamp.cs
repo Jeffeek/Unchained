@@ -1,8 +1,8 @@
 namespace Unchained.Pdf.Models;
 
 /// <summary>
-/// A text overlay to be drawn on one or more PDF pages.
-/// Coordinates are in PDF user space (points, origin bottom-left).
+///     A text overlay to be drawn on one or more PDF pages.
+///     Coordinates are in PDF user space (points, origin bottom-left).
 /// </summary>
 /// <param name="Text">Text to render.</param>
 /// <param name="X">Horizontal position of the text baseline origin, in points.</param>
@@ -12,9 +12,9 @@ namespace Unchained.Pdf.Models;
 /// <param name="GrayLevel">Non-stroking gray level: 0 = black, 1 = white. Default: 0 (black).</param>
 /// <param name="RotationDegrees">Counter-clockwise rotation in degrees. Default: 0 (horizontal).</param>
 /// <param name="IsBackground">
-/// When <see langword="true"/>, the stamp is prepended to <c>/Contents</c> so it appears
-/// behind existing page content. When <see langword="false"/> (default) it is appended
-/// and appears in front.
+///     When <see langword="true" />, the stamp is prepended to <c>/Contents</c> so it appears
+///     behind existing page content. When <see langword="false" /> (default) it is appended
+///     and appears in front.
 /// </param>
 public sealed record TextStamp(
     string Text,

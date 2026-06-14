@@ -1,7 +1,9 @@
+using System.Text;
+
 namespace Unchained.Pdf.Parsing;
 
 /// <summary>
-/// Classifies a single lexical token in a PDF byte stream (ISO 32000-1 §7.2).
+///     Classifies a single lexical token in a PDF byte stream (ISO 32000-1 §7.2).
 /// </summary>
 public enum PdfTokenKind
 {
@@ -62,8 +64,8 @@ public enum PdfTokenKind
     EndObj,
 
     /// <summary>
-    /// The <c>R</c> keyword that completes an indirect reference: <c>N G R</c>.
-    /// Emitted only after two consecutive <see cref="Integer"/> tokens.
+    ///     The <c>R</c> keyword that completes an indirect reference: <c>N G R</c>.
+    ///     Emitted only after two consecutive <see cref="Integer" /> tokens.
     /// </summary>
     IndirectRef,
 
@@ -88,9 +90,9 @@ public enum PdfTokenKind
 }
 
 /// <summary>
-/// A single lexical token produced by <see cref="Lexer"/>.
-/// Stored as a <see langword="struct"/> to avoid per-token heap allocation in the hot path.
-/// <see cref="Raw"/> is a zero-copy slice into the original source buffer.
+///     A single lexical token produced by <see cref="Lexer" />.
+///     Stored as a <see langword="struct" /> to avoid per-token heap allocation in the hot path.
+///     <see cref="Raw" /> is a zero-copy slice into the original source buffer.
 /// </summary>
 internal readonly struct PdfToken(PdfTokenKind kind, ReadOnlyMemory<byte> raw, long offset)
 {
@@ -98,23 +100,23 @@ internal readonly struct PdfToken(PdfTokenKind kind, ReadOnlyMemory<byte> raw, l
     public PdfTokenKind Kind { get; } = kind;
 
     /// <summary>
-    /// The raw bytes of this token as a slice into the source buffer.
-    /// No allocation; the memory is valid as long as the source buffer is alive.
+    ///     The raw bytes of this token as a slice into the source buffer.
+    ///     No allocation; the memory is valid as long as the source buffer is alive.
     /// </summary>
     public ReadOnlyMemory<byte> Raw { get; } = raw;
 
     /// <summary>
-    /// The absolute byte offset from the start of the source buffer where this token begins.
-    /// Used to attach location information to <see cref="Unchained.Pdf.Core.PdfException"/>.
+    ///     The absolute byte offset from the start of the source buffer where this token begins.
+    ///     Used to attach location information to <see cref="Unchained.Pdf.Core.PdfException" />.
     /// </summary>
     public long Offset { get; } = offset;
 
-    /// <summary>Returns <see langword="true"/> if this token's kind matches <paramref name="kind"/>.</summary>
+    /// <summary>Returns <see langword="true" /> if this token's kind matches <paramref name="kind" />.</summary>
     public bool Is(PdfTokenKind kind) => Kind == kind;
 
     /// <summary>
-    /// Returns a diagnostic string in the form <c>Kind @ 0xOFFSET "raw-text"</c>.
+    ///     Returns a diagnostic string in the form <c>Kind @ 0xOFFSET "raw-text"</c>.
     /// </summary>
     public override string ToString() =>
-        $"{Kind} @ 0x{Offset:X} \"{System.Text.Encoding.Latin1.GetString(Raw.Span)}\"";
+        $"{Kind} @ 0x{Offset:X} \"{Encoding.Latin1.GetString(Raw.Span)}\"";
 }

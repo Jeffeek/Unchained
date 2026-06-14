@@ -4,7 +4,7 @@
     Slide rasterization for Unchained.Pptx.
     Depends on Unchained.Drawing.Text for font rendering (FreeType2 + HarfBuzz)
     and Unchained.Drawing for the pixel buffer and PNG encoder.
-    All native DLLs, fonts, and SharpFont are pulled in transitively from Drawing.Text.
+    All native DLLs and fonts are pulled in transitively from Drawing.Text.
   -->
 
   <PropertyGroup>
@@ -13,8 +13,6 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- SharpFont targets net45; enable fallback so the transitive DLL reference resolves. -->
-    <AssetTargetFallback>$(AssetTargetFallback);net45</AssetTargetFallback>
     <PackageTags>pptx;powerpoint;presentation;rendering;dotnet;csharp;document-processing</PackageTags>
     <IsPackable>true</IsPackable>
     <PackageId>Unchained.Pptx.Rendering</PackageId>
@@ -24,16 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Unchained.Pptx\Unchained.Pptx.csproj" />
     <ProjectReference Include="..\Unchained.Drawing.Text\Unchained.Drawing.Text.csproj" />
-  </ItemGroup>
-
-  <!-- SharpFont is referenced via Drawing.Text but its types are used directly in
-       SlideRasterizer (LoadFlags, LoadTarget, etc.). Reference the same DLL so the
-       compiler resolves the types without duplicating the binary. -->
-  <ItemGroup>
-    <Reference Include="SharpFont">
-      <HintPath>..\Unchained.Drawing.Text\libs\SharpFont.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
   </ItemGroup>
 
 </Project>

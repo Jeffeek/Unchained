@@ -7,15 +7,15 @@ using Unchained.Pptx.Core.Xml;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a <c>&lt;p:timing&gt;</c> element into an <see cref="AnimationTimeline"/>.
-/// Extracts preset-based effects from the main sequence and interactive sequences;
-/// complex custom animations that cannot be represented in the model are silently ignored
-/// (the raw element is preserved for round-trip by the caller).
+///     Parses a <c>&lt;p:timing&gt;</c> element into an <see cref="AnimationTimeline" />.
+///     Extracts preset-based effects from the main sequence and interactive sequences;
+///     complex custom animations that cannot be represented in the model are silently ignored
+///     (the raw element is preserved for round-trip by the caller).
 /// </summary>
 internal static class AnimationParser
 {
     /// <summary>
-    /// Populates <paramref name="timeline"/> from the <c>&lt;p:timing&gt;</c> element.
+    ///     Populates <paramref name="timeline" /> from the <c>&lt;p:timing&gt;</c> element.
     /// </summary>
     public static void Parse(XElement timingEl, AnimationTimeline timeline)
     {
@@ -49,7 +49,7 @@ internal static class AnimationParser
 
     // ── Main sequence ─────────────────────────────────────────────────────────
 
-    private static void ParseMainSequence(XElement seqEl, AnimationSequence sequence, XNamespace pml)
+    private static void ParseMainSequence(XContainer seqEl, AnimationSequence sequence, XNamespace pml)
     {
         var ctn = seqEl.Element(pml + "cTn");
         var children = ctn?.Element(pml + "childTnLst");
@@ -58,7 +58,7 @@ internal static class AnimationParser
         ParseClickGroups(children, sequence, pml);
     }
 
-    private static void ParseClickGroups(XElement childrenEl, AnimationSequence sequence, XNamespace pml)
+    private static void ParseClickGroups(XContainer childrenEl, AnimationSequence sequence, XNamespace pml)
     {
         // Each <p:par> inside children is a click group
         foreach (var clickGroup in childrenEl.Elements(pml + "par"))
@@ -81,7 +81,7 @@ internal static class AnimationParser
                 if (isFirst && isOnClick)
                     effect.Trigger = EffectTrigger.OnClick;
                 else
-                    effect.Trigger = GetTrigger(effectPar.Element(pml + "cTn"), pml);
+                    effect.Trigger = GetTrigger(effectPar.Element(pml + "cTn"));
 
                 // Add the fully-parsed effect (preserves duration, accel/decel, auto-reverse,
                 // repeat) rather than reconstructing it from a handful of fields.
@@ -91,7 +91,7 @@ internal static class AnimationParser
         }
     }
 
-    private static AnimationEffect? ParseEffect(XElement effectPar, XNamespace pml)
+    private static AnimationEffect? ParseEffect(XContainer effectPar, XNamespace pml)
     {
         var ctn = effectPar.Element(pml + "cTn");
         if (ctn == null) return null;
@@ -102,18 +102,18 @@ internal static class AnimationParser
 
         var presetClass = ctn.GetAttr("presetClass", "entr");
         var durRaw = ctn.GetAttr("dur");
-        double durationSeconds = 0.5;
+        var durationSeconds = 0.5;
         if (durRaw != null && int.TryParse(durRaw, out var durMs) && durMs > 0)
             durationSeconds = durMs / 1000.0;
 
         // Find the target shape ID from nested elements
-        var targetSpid = FindTargetShapeId(ctn, pml);
-        if (targetSpid == 0) return null;
+        var targetShapePid = FindTargetShapeId(ctn, pml);
+        if (targetShapePid == 0) return null;
 
         // Delay from the condition
         double delay = 0;
         var condDelay = ctn.Element(pml + "stCondLst")?.Element(pml + "cond")
-                           ?.GetAttr("delay");
+            ?.GetAttr("delay");
         if (condDelay != null && int.TryParse(condDelay, out var delayMs) && delayMs > 0)
             delay = delayMs / 1000.0;
 
@@ -122,20 +122,23 @@ internal static class AnimationParser
             "exit" => EffectCategory.Exit,
             "emph" => EffectCategory.Emphasis,
             "path" => EffectCategory.Motion,
-            _ => EffectCategory.Entrance,
+            _ => EffectCategory.Entrance
         };
 
         var preset = (AnimationPreset)presetId;
 
         var effect = new AnimationEffect
         {
-            TargetShapeId = targetSpid,
+            TargetShapeId = targetShapePid,
             Preset = preset,
             Category = category,
             Trigger = EffectTrigger.OnClick,
+            Timing =
+            {
+                DurationSeconds = durationSeconds,
+                DelaySeconds = delay
+            }
         };
-        effect.Timing.DurationSeconds = durationSeconds;
-        effect.Timing.DelaySeconds = delay;
 
         // Acceleration / deceleration (1000ths of a percent), auto-reverse, repeat count.
         if (ctn.GetAttrInt("accel") is { } accel)
@@ -153,7 +156,7 @@ internal static class AnimationParser
         return effect;
     }
 
-    private static uint FindTargetShapeId(XElement ctn, XNamespace pml)
+    private static uint FindTargetShapeId(XContainer ctn, XNamespace pml)
     {
         // Target shape is in a nested <p:spTgt spid="N"/> element anywhere in descendants
         var spTgt = ctn.Descendants(pml + "spTgt").FirstOrDefault();
@@ -163,15 +166,16 @@ internal static class AnimationParser
         return spid != null && uint.TryParse(spid, out var id) ? id : 0;
     }
 
-    private static bool IsClickGroup(XElement groupCtn, XNamespace pml)
+    private static bool IsClickGroup(XContainer groupCtn, XNamespace pml)
     {
         var cond = groupCtn.Element(pml + "stCondLst")?.Element(pml + "cond");
         return cond?.GetAttr("delay") == "indefinite";
     }
 
-    private static EffectTrigger GetTrigger(XElement? ctn, XNamespace pml)
+    private static EffectTrigger GetTrigger(XElement? ctn)
     {
         if (ctn == null) return EffectTrigger.WithPrevious;
+
         var nodeType = ctn.GetAttr("nodeType", string.Empty);
         return nodeType switch
         {
@@ -181,11 +185,12 @@ internal static class AnimationParser
         };
     }
 
-    private static uint GetInteractiveTriggerShapeId(XElement seqEl, XNamespace pml)
+    private static uint GetInteractiveTriggerShapeId(XContainer seqEl, XNamespace pml)
     {
         // The trigger shape ID is in the seq's prevCondLst or in a nested cond/@spid
         var prevCond = seqEl.Element(pml + "prevCondLst")?.Element(pml + "cond");
         if (prevCond == null) return 0;
+
         var spid = prevCond.GetAttr("spid");
         return spid != null && uint.TryParse(spid, out var id) ? id : 0;
     }

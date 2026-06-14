@@ -5,13 +5,13 @@ using Unchained.Pptx.Core.Xml;
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes slide comments to the <c>&lt;p:cmLst&gt;</c> format used in a
-/// <c>ppt/comments/commentN.xml</c> OPC part.
+///     Serializes slide comments to the <c>&lt;p:cmLst&gt;</c> format used in a
+///     <c>ppt/comments/commentN.xml</c> OPC part.
 /// </summary>
 internal static class CommentWriter
 {
     /// <summary>
-    /// Generates the comment part XML for a slide's comment list.
+    ///     Generates the comment part XML for a slide's comment list.
     /// </summary>
     public static XDocument Write(IReadOnlyList<Comment> comments)
     {

@@ -1,4 +1,6 @@
 @page "/pdf"
+@using System.Text
+@using Unchained.Pdf.Models
 @inject SessionStateService Session
 @inject FileExportService Exporter
 @inject ISnackbar Snackbar
@@ -13,7 +15,7 @@
                           Icon="@Icons.Material.Outlined.PictureAsPdf"
                           Accept=".pdf"
                           OnFileLoaded="LoadPdf"
-                          OnError="ShowError" />
+                          OnError="ShowError"/>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Secondary"
                        StartIcon="@Icons.Material.Outlined.BatchPrediction"
@@ -33,7 +35,7 @@
             <div class="panel-tree">
                 <DocumentTree Root="state.Tree"
                               SelectedNodeChanged="OnNodeSelected"
-                              OnRefreshRequested="RefreshTree" />
+                              OnRefreshRequested="RefreshTree"/>
             </div>
 
             <!-- CENTRE: preview -->
@@ -43,7 +45,7 @@
                               FileName="state.FileName"
                               CurrentPage="state.CurrentPage"
                               PageCount="state.Document.PageCount"
-                              CurrentPageChanged="p => state.CurrentPage = p" />
+                              CurrentPageChanged="p => state.CurrentPage = p"/>
 
                 <!-- Text extraction panel -->
                 @if (_showTextPanel)
@@ -51,14 +53,14 @@
                     <div class="text-panel">
                         <div class="text-panel-toolbar">
                             <MudText Typo="Typo.subtitle2">Extracted Text</MudText>
-                            <MudSpacer />
+                            <MudSpacer/>
                             <MudIconButton Icon="@Icons.Material.Outlined.Download"
                                            Size="Size.Small"
                                            OnClick="DownloadText"
-                                           title="Download as .txt" />
+                                           title="Download as .txt"/>
                             <MudIconButton Icon="@Icons.Material.Outlined.Close"
                                            Size="Size.Small"
-                                           OnClick="() => _showTextPanel = false" />
+                                           OnClick="() => _showTextPanel = false"/>
                         </div>
                         <textarea class="text-content" readonly>@_extractedText</textarea>
                     </div>
@@ -67,7 +69,7 @@
 
             <!-- RIGHT: properties -->
             <div class="panel-properties">
-                <PropertiesPanel Bag="_selectedProperties" />
+                <PropertiesPanel Bag="_selectedProperties"/>
             </div>
         </div>
 
@@ -76,66 +78,98 @@
             <div class="ops-group">
                 <MudButton StartIcon="@Icons.Material.Outlined.MergeType"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenMergeDialog">Merge</MudButton>
+                           OnClick="OpenMergeDialog">
+                    Merge
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.CallSplit"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenSplitDialog">Split</MudButton>
+                           OnClick="OpenSplitDialog">
+                    Split
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Delete"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenRemovePagesDialog">Remove pages</MudButton>
+                           OnClick="OpenRemovePagesDialog">
+                    Remove pages
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.RotateRight"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="RotateCurrentPage">Rotate</MudButton>
+                           OnClick="RotateCurrentPage">
+                    Rotate
+                </MudButton>
             </div>
-            <MudDivider Vertical="true" Class="ops-divider" />
+            <MudDivider Vertical="true" Class="ops-divider"/>
             <div class="ops-group">
                 <MudButton StartIcon="@Icons.Material.Outlined.Compress"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OptimizeDocument">Optimize</MudButton>
+                           OnClick="OptimizeDocument">
+                    Optimize
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Lock"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenEncryptDialog">Encrypt</MudButton>
+                           OnClick="OpenEncryptDialog">
+                    Encrypt
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.BrandingWatermark"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenWatermarkDialog">Watermark</MudButton>
+                           OnClick="OpenWatermarkDialog">
+                    Watermark
+                </MudButton>
             </div>
-            <MudDivider Vertical="true" Class="ops-divider" />
+            <MudDivider Vertical="true" Class="ops-divider"/>
             <div class="ops-group">
                 <MudButton StartIcon="@Icons.Material.Outlined.TextFields"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="ExtractText">Extract text</MudButton>
+                           OnClick="ExtractText">
+                    Extract text
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.VerifiedUser"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="ValidatePdfA">Validate PDF/A</MudButton>
+                           OnClick="ValidatePdfA">
+                    Validate PDF/A
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Accessibility"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="ValidatePdfUA">Validate PDF/UA</MudButton>
+                           OnClick="ValidatePdfUA">
+                    Validate PDF/UA
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Build"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="RepairDocument">Repair</MudButton>
+                           OnClick="RepairDocument">
+                    Repair
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Speed"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="LinearizeDocument">Linearize</MudButton>
+                           OnClick="LinearizeDocument">
+                    Linearize
+                </MudButton>
             </div>
-            <MudDivider Vertical="true" Class="ops-divider" />
+            <MudDivider Vertical="true" Class="ops-divider"/>
             <div class="ops-group ops-group--right">
                 <MudButton StartIcon="@Icons.Material.Outlined.BatchPrediction"
                            Variant="Variant.Text" Size="Size.Small"
                            Color="Color.Secondary"
-                           OnClick="OpenBatchDialog">Batch Compare</MudButton>
-                <MudDivider Vertical="true" Class="ops-divider" />
+                           OnClick="OpenBatchDialog">
+                    Batch Compare
+                </MudButton>
+                <MudDivider Vertical="true" Class="ops-divider"/>
                 <MudButton StartIcon="@Icons.Material.Outlined.Download"
                            Variant="Variant.Filled"
                            Color="Color.Primary"
                            Size="Size.Small"
-                           OnClick="DownloadDocument">Download</MudButton>
+                           OnClick="DownloadDocument">
+                    Download
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.FolderOpen"
                            Variant="Variant.Text" Size="Size.Small"
-                           OnClick="OpenNewFile">Open&hellip;</MudButton>
+                           OnClick="OpenNewFile">
+                    Open&hellip;
+                </MudButton>
                 <MudButton StartIcon="@Icons.Material.Outlined.Close"
                            Variant="Variant.Text" Size="Size.Small"
                            Color="Color.Error"
-                           OnClick="CloseDocument">Close</MudButton>
+                           OnClick="CloseDocument">
+                    Close
+                </MudButton>
             </div>
         </div>
     }
@@ -143,14 +177,14 @@
     @if (_busy)
     {
         <div class="loading-overlay">
-            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary"/>
             <MudText Typo="Typo.body1" Class="mt-3">@_busyMessage</MudText>
         </div>
     }
 </div>
 
 <!-- Hidden file input for "Open…" button -->
-<InputFile id="pdf-open-input" OnChange="OnOpenFileSelected" accept=".pdf" style="display:none;" />
+<InputFile id="pdf-open-input" OnChange="OnOpenFileSelected" accept=".pdf" style="display:none;"/>
 
 @code {
     private PropertyBag? _selectedProperties;
@@ -196,17 +230,16 @@
         }
     }
 
-    private void OnNodeSelected(TreeNode? node)
-    {
+    private void OnNodeSelected(TreeNode? node) =>
         _selectedProperties = node is null
             ? null
             : PdfPropertyAdapter.Build(node);
-    }
 
     private async Task RefreshTree()
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Refreshing…");
         try
         {
@@ -218,30 +251,31 @@
         }
     }
 
-    private async Task DownloadDocument()
-    {
-        if (Session.Pdf is null)
-            return;
-        await Exporter.TriggerDownloadAsync(
-            Session.Pdf.CurrentBytes,
-            Session.Pdf.FileName,
-            "application/pdf");
-    }
+    private Task DownloadDocument() =>
+        Session.Pdf is null
+            ? Task.CompletedTask
+            : Exporter.TriggerDownloadAsync(
+                Session.Pdf.CurrentBytes,
+                Session.Pdf.FileName,
+                "application/pdf"
+            );
 
-    private async Task ExtractText()
+    private void ExtractText()
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Extracting text…");
         try
         {
-            var sb = new System.Text.StringBuilder();
+            var sb = new StringBuilder();
             for (var i = 1; i <= Session.Pdf.Document.PageCount; i++)
             {
                 sb.AppendLine($"─── Page {i} ───");
                 sb.AppendLine(Session.Pdf.Document.Pages[i].ExtractText());
                 sb.AppendLine();
             }
+
             _extractedText = sb.ToString();
             _showTextPanel = true;
         }
@@ -255,10 +289,11 @@
     {
         if (_extractedText is null)
             return;
+
         try
         {
             await Exporter.TriggerDownloadAsync(
-                System.Text.Encoding.UTF8.GetBytes(_extractedText),
+                Encoding.UTF8.GetBytes(_extractedText),
                 Path.ChangeExtension(Session.Pdf?.FileName ?? "document", ".txt"),
                 "text/plain");
         }
@@ -272,12 +307,13 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Optimizing…");
         try
         {
             // Optimize via SaveOptions
             using var ms = new MemoryStream();
-            var options = new Unchained.Pdf.Models.SaveOptions(OptimizeSize: true);
+            var options = new SaveOptions(OptimizeSize: true);
             await Session.Pdf.Processor.SaveAsync(Session.Pdf.Document, ms, options);
             var old = Session.Pdf.CurrentBytes.Length;
             await Session.LoadPdfAsync(ms.ToArray(), Session.Pdf.FileName);
@@ -298,6 +334,7 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Repairing…");
         try
         {
@@ -322,13 +359,15 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Linearizing…");
         try
         {
             using var ms = new MemoryStream();
             await Session.Pdf.Processor.SaveAsync(
-                Session.Pdf.Document, ms,
-                Unchained.Pdf.Models.SaveOptions.WebOptimized);
+                Session.Pdf.Document,
+                ms,
+                SaveOptions.WebOptimized);
             await Session.LoadPdfAsync(ms.ToArray(), Session.Pdf.FileName);
             ShowInfo("Document linearized (web-optimized).");
         }
@@ -346,6 +385,7 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Validating PDF/A…");
         try
         {
@@ -365,12 +405,13 @@
     {
         if (Session.Pdf is null)
             return;
+
         SetBusy("Validating PDF/UA…");
         try
         {
             var result = await Session.Pdf.Processor.ValidatePdfUAAsync(Session.Pdf.CurrentBytes);
             var msg = result.IsConformant
-                ? $"✅ PDF/UA conformant"
+                ? "✅ PDF/UA conformant"
                 : $"❌ Not conformant — {result.Violations.Count} violation(s): {result.Violations.FirstOrDefault()?.Description}";
             Snackbar.Add(msg, result.IsConformant ? Severity.Success : Severity.Warning);
         }
@@ -380,13 +421,13 @@
         }
     }
 
-    private async Task RotateCurrentPage()
+    private Task RotateCurrentPage()
     {
         if (Session.Pdf is null)
-            return;
+            return Task.CompletedTask;
         // Rotation is applied via page mutation — stub for now
         ShowInfo("Page rotation coming soon.");
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     private async Task OpenBatchDialog()
@@ -401,11 +442,35 @@
         await Dialogs.ShowAsync<BatchExportDialog>("Batch Comparison Export", new DialogParameters(), options);
     }
 
-    private Task OpenMergeDialog() { ShowInfo("Merge dialog coming soon."); return Task.CompletedTask; }
-    private Task OpenSplitDialog() { ShowInfo("Split dialog coming soon."); return Task.CompletedTask; }
-    private Task OpenRemovePagesDialog() { ShowInfo("Remove pages dialog coming soon."); return Task.CompletedTask; }
-    private Task OpenEncryptDialog() { ShowInfo("Encrypt dialog coming soon."); return Task.CompletedTask; }
-    private Task OpenWatermarkDialog() { ShowInfo("Watermark dialog coming soon."); return Task.CompletedTask; }
+    private Task OpenMergeDialog()
+    {
+        ShowInfo("Merge dialog coming soon.");
+        return Task.CompletedTask;
+    }
+
+    private Task OpenSplitDialog()
+    {
+        ShowInfo("Split dialog coming soon.");
+        return Task.CompletedTask;
+    }
+
+    private Task OpenRemovePagesDialog()
+    {
+        ShowInfo("Remove pages dialog coming soon.");
+        return Task.CompletedTask;
+    }
+
+    private Task OpenEncryptDialog()
+    {
+        ShowInfo("Encrypt dialog coming soon.");
+        return Task.CompletedTask;
+    }
+
+    private Task OpenWatermarkDialog()
+    {
+        ShowInfo("Watermark dialog coming soon.");
+        return Task.CompletedTask;
+    }
 
     private async Task CloseDocument()
     {
@@ -415,11 +480,9 @@
         _extractedText = null;
     }
 
-    private Task OpenNewFile()
-    {
+    private static Task OpenNewFile() =>
         // Trigger the hidden InputFile
-        return Task.CompletedTask;
-    }
+        Task.CompletedTask;
 
     private async Task OnOpenFileSelected(InputFileChangeEventArgs e)
     {
@@ -430,6 +493,7 @@
             ShowError("File too large.");
             return;
         }
+
         using var ms = new MemoryStream();
         await using var stream = file.OpenReadStream(maxSize);
         await stream.CopyToAsync(ms);
@@ -459,4 +523,5 @@
 
     private void ShowError(string message) =>
         Snackbar.Add(message, Severity.Error);
+
 }

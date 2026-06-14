@@ -1,6 +1,8 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Shouldly;
 using Unchained.Ooxml;
+using Unchained.Pptx.Engine;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
@@ -8,7 +10,7 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// Single-file HTML5 player export (M-H): one navigable document containing all slides.
+///     Single-file HTML5 player export (M-H): one navigable document containing all slides.
 /// </summary>
 public sealed class HtmlPlayerExportTests : PptxTestBase
 {
@@ -18,20 +20,20 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
     public async Task ExportHtmlPlayer_ProducesSingleDocument()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var bytes = await Processor.ExportHtmlPlayerAsync(doc);
+        var bytes = await PresentationProcessor.ExportHtmlPlayerAsync(doc);
         var html = Html(bytes);
 
         html.ShouldContain("<!DOCTYPE html>");
         // Exactly one document, three slide pages.
-        System.Text.RegularExpressions.Regex.Matches(html, "<!DOCTYPE html>").Count.ShouldBe(1);
-        System.Text.RegularExpressions.Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(3);
+        Regex.Matches(html, "<!DOCTYPE html>").Count.ShouldBe(1);
+        Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(3);
     }
 
     [Fact]
     public async Task ExportHtmlPlayer_IncludesNavigationAndCounter()
     {
         var doc = PptxFixtures.WithSlides(2);
-        var html = Html(await Processor.ExportHtmlPlayerAsync(doc));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
 
         html.ShouldContain("id=\"next\"");
         html.ShouldContain("id=\"prev\"");
@@ -46,7 +48,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         doc.Slides[0].Shapes.AddTextBox(Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(1), "PlayerHello");
 
-        var html = Html(await Processor.ExportHtmlPlayerAsync(doc));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
         html.ShouldContain("PlayerHello");
     }
 
@@ -56,20 +58,22 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(3);
         doc.Slides[1].IsHidden = true;
 
-        var html = Html(await Processor.ExportHtmlPlayerAsync(doc));
-        System.Text.RegularExpressions.Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(2);
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
+        Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(2);
 
-        var withHidden = Html(await Processor.ExportHtmlPlayerAsync(
-            doc, new HtmlPlayerSaveOptions { IncludeHiddenSlides = true }));
-        System.Text.RegularExpressions.Regex.Matches(withHidden, "class=\"slide-page\"").Count.ShouldBe(3);
+        var withHidden = Html(await PresentationProcessor.ExportHtmlPlayerAsync(
+            doc,
+            new HtmlPlayerSaveOptions { IncludeHiddenSlides = true }));
+        Regex.Matches(withHidden, "class=\"slide-page\"").Count.ShouldBe(3);
     }
 
     [Fact]
     public async Task ExportHtmlPlayer_CounterHiddenWhenDisabled()
     {
         var doc = PptxFixtures.WithSlides(2);
-        var html = Html(await Processor.ExportHtmlPlayerAsync(
-            doc, new HtmlPlayerSaveOptions { ShowSlideCounter = false }));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(
+            doc,
+            new HtmlPlayerSaveOptions { ShowSlideCounter = false }));
         html.ShouldNotContain("id=\"counter\"");
     }
 
@@ -85,6 +89,9 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
             var html = await File.ReadAllTextAsync(path);
             html.ShouldContain("<title>My Deck</title>");
         }
-        finally { if (File.Exists(path)) File.Delete(path); }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
     }
 }

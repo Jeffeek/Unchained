@@ -7,7 +7,7 @@
      @ondrop="OnDrop"
      @ondrop:preventDefault="true">
 
-    <MudIcon Icon="@Icon" Style="font-size:3rem; opacity:0.5;" Class="mb-2" />
+    <MudIcon Icon="@Icon" Style="font-size:3rem; opacity:0.5;" Class="mb-2"/>
     <MudText Typo="Typo.h6" Class="mb-1">@Title</MudText>
     <MudText Typo="Typo.body2" Style="opacity:0.6" Class="mb-3">@Subtitle</MudText>
 
@@ -21,17 +21,31 @@
     <InputFile id="@_inputId"
                OnChange="OnFileSelected"
                accept="@Accept"
-               style="display:none;" />
+               style="display:none;"/>
 </div>
 
 @code {
-    [Parameter] public string Title { get; set; } = "Drop a file here";
-    [Parameter] public string Subtitle { get; set; } = "or click Browse";
-    [Parameter] public string Icon { get; set; } = Icons.Material.Outlined.UploadFile;
-    [Parameter] public string Accept { get; set; } = ".pdf";
-    [Parameter] public long MaxSizeBytes { get; set; } = 100 * 1024 * 1024;
-    [Parameter] public EventCallback<(byte[] Bytes, string FileName)> OnFileLoaded { get; set; }
-    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Drop a file here";
+
+    [Parameter]
+    public string Subtitle { get; set; } = "or click Browse";
+
+    [Parameter]
+    public string Icon { get; set; } = Icons.Material.Outlined.UploadFile;
+
+    [Parameter]
+    public string Accept { get; set; } = ".pdf";
+
+    [Parameter]
+    public long MaxSizeBytes { get; set; } = 100 * 1024 * 1024;
+
+    [Parameter]
+    public EventCallback<(byte[] Bytes, string FileName)> OnFileLoaded { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnError { get; set; }
 
     private readonly string _inputId = $"file-input-{Guid.NewGuid():N}";
     private bool _isDragging;
@@ -79,4 +93,5 @@
             _loading = false;
         }
     }
+
 }

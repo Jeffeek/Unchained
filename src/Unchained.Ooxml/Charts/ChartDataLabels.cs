@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Charts;
 
 /// <summary>
-/// Data-label settings for a chart or series (<c>&lt;c:dLbls&gt;</c>): which fields to show and
-/// where to place them.
+///     Data-label settings for a chart or series (<c>&lt;c:dLbls&gt;</c>): which fields to show and
+///     where to place them.
 /// </summary>
 public sealed class ChartDataLabels
 {
@@ -25,21 +25,24 @@ public sealed class ChartDataLabels
     public bool ShowLegendKey { get; set; }
 
     /// <summary>
-    /// Label position token (e.g. <c>ctr</c>, <c>inEnd</c>, <c>outEnd</c>, <c>bestFit</c>).
-    /// <see langword="null"/> = chart default.
+    ///     Label position token (e.g. <c>ctr</c>, <c>inEnd</c>, <c>outEnd</c>, <c>bestFit</c>).
+    ///     <see langword="null" /> = chart default.
     /// </summary>
     public string? Position { get; set; }
 
-    /// <summary>Number format for the label value. <see langword="null"/> = general.</summary>
+    /// <summary>Number format for the label value. <see langword="null" /> = general.</summary>
     public string? NumberFormat { get; set; }
 }
 
 /// <summary>
-/// A trendline fitted to a series (<c>&lt;c:trendline&gt;</c>): linear, exponential, etc.
+///     A trendline fitted to a series (<c>&lt;c:trendline&gt;</c>): linear, exponential, etc.
 /// </summary>
 public sealed class ChartTrendline
 {
-    /// <summary>Trendline type token (e.g. <c>linear</c>, <c>exp</c>, <c>log</c>, <c>poly</c>, <c>power</c>, <c>movingAvg</c>).</summary>
+    /// <summary>
+    ///     Trendline type token (e.g. <c>linear</c>, <c>exp</c>, <c>log</c>, <c>poly</c>, <c>power</c>, <c>movingAvg</c>
+    ///     ).
+    /// </summary>
     public string Type { get; set; } = "linear";
 
     /// <summary>Polynomial order or moving-average period, when applicable.</summary>

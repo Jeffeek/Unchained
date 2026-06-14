@@ -19,11 +19,20 @@
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
-  <!-- ── NuGet audit (warn on vulnerable deps; not errors to avoid blocking dev) ── -->
+  <!-- ── NuGet audit ──────────────────────────────────────────────────────────
+       Locally: report vulnerable dependencies as warnings (low and up) so they are
+       visible without blocking day-to-day dev work.
+       In CI (GITHUB_ACTIONS): promote HIGH (NU1903) and CRITICAL (NU1904) advisories
+       to build errors so a vulnerable transitive dep cannot merge. LOW (NU1901) and
+       MODERATE (NU1902) stay warnings. This security suite ships encryption and digital
+       signatures, so a hard gate on serious advisories is worth the friction. -->
   <PropertyGroup>
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <WarningsAsErrors>$(WarningsAsErrors);NU1903;NU1904</WarningsAsErrors>
   </PropertyGroup>
 
   <!-- ── NuGet package metadata (only applied when the project is packable) ── -->

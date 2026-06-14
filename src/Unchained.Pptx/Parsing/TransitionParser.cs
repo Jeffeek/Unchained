@@ -1,18 +1,17 @@
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Animations;
-using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a <c>&lt;p:transition&gt;</c> element into a <see cref="SlideTransition"/>.
+///     Parses a <c>&lt;p:transition&gt;</c> element into a <see cref="SlideTransition" />.
 /// </summary>
 internal static class TransitionParser
 {
     /// <summary>
-    /// Populates <paramref name="transition"/> from the <c>&lt;p:transition&gt;</c> element.
-    /// Unknown transition types are silently ignored (the object stays at its defaults).
+    ///     Populates <paramref name="transition" /> from the <c>&lt;p:transition&gt;</c> element.
+    ///     Unknown transition types are silently ignored (the object stays at its defaults).
     /// </summary>
     public static void Parse(XElement transitionEl, SlideTransition transition)
     {
@@ -28,7 +27,7 @@ internal static class TransitionParser
             {
                 "slow" => 3.0,
                 "fast" => 0.5,
-                _ => 0.75,
+                _ => 0.75
             };
         }
 
@@ -67,7 +66,7 @@ internal static class TransitionParser
                 "r" => TransitionEffect.PushRight,
                 "u" => TransitionEffect.PushUp,
                 "d" => TransitionEffect.PushDown,
-                _ => TransitionEffect.PushLeft,
+                _ => TransitionEffect.PushLeft
             },
 
             "wipe" => dir switch
@@ -75,7 +74,7 @@ internal static class TransitionParser
                 "r" => TransitionEffect.WipeRight,
                 "u" => TransitionEffect.WipeUp,
                 "d" => TransitionEffect.WipeDown,
-                _ => TransitionEffect.WipeLeft,
+                _ => TransitionEffect.WipeLeft
             },
 
             "cover" => dir switch
@@ -83,7 +82,7 @@ internal static class TransitionParser
                 "r" => TransitionEffect.CoverRight,
                 "u" => TransitionEffect.CoverUp,
                 "d" => TransitionEffect.CoverDown,
-                _ => TransitionEffect.CoverLeft,
+                _ => TransitionEffect.CoverLeft
             },
 
             "uncover" => dir switch
@@ -91,7 +90,7 @@ internal static class TransitionParser
                 "r" => TransitionEffect.UncoverRight,
                 "u" => TransitionEffect.UncoverUp,
                 "d" => TransitionEffect.UncoverDown,
-                _ => TransitionEffect.UncoverLeft,
+                _ => TransitionEffect.UncoverLeft
             },
 
             "zoom" => dir == "out" ? TransitionEffect.ZoomOut : TransitionEffect.ZoomIn,
@@ -108,7 +107,7 @@ internal static class TransitionParser
                 ? TransitionEffect.CombVertical
                 : TransitionEffect.CombHorizontal,
 
-            _ => TransitionEffect.Fade, // safe fallback for unrecognized types
+            _ => TransitionEffect.Fade // safe fallback for unrecognized types
         };
     }
 }

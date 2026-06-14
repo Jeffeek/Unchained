@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Text;
 
 /// <summary>
-/// The text body of a shape — a container for <see cref="Paragraph"/> objects and
-/// text-body-level formatting settings.
+///     The text body of a shape — a container for <see cref="Paragraph" /> objects and
+///     text-body-level formatting settings.
 /// </summary>
 public sealed class TextFrame
 {
@@ -13,11 +13,11 @@ public sealed class TextFrame
     public TextFrameFormat Format { get; } = new();
 
     /// <summary>
-    /// Gets or sets the entire text of this frame as a plain string.
-    /// <para>
-    /// Getter: concatenates the plain text of all paragraphs, separated by newlines.
-    /// Setter: replaces all content with a single paragraph containing a single run.
-    /// </para>
+    ///     Gets or sets the entire text of this frame as a plain string.
+    ///     <para>
+    ///         Getter: concatenates the plain text of all paragraphs, separated by newlines.
+    ///         Setter: replaces all content with a single paragraph containing a single run.
+    ///     </para>
     /// </summary>
     public string PlainText
     {
@@ -30,26 +30,21 @@ public sealed class TextFrame
     }
 
     /// <summary>
-    /// Replaces every occurrence of <paramref name="oldText"/> with <paramref name="newText"/>
-    /// across all paragraphs in this frame, preserving run formatting. Matches do not span
-    /// paragraph boundaries.
+    ///     Replaces every occurrence of <paramref name="oldText" /> with <paramref name="newText" />
+    ///     across all paragraphs in this frame, preserving run formatting. Matches do not span
+    ///     paragraph boundaries.
     /// </summary>
     /// <returns>The number of occurrences replaced.</returns>
     public int ReplaceText(
         string oldText,
         string newText,
-        StringComparison comparison = StringComparison.Ordinal)
-    {
-        var count = 0;
-        foreach (var paragraph in Paragraphs)
-            count += paragraph.ReplaceText(oldText, newText, comparison);
-        return count;
-    }
+        StringComparison comparison = StringComparison.Ordinal
+    ) => Paragraphs.Sum(paragraph => paragraph.ReplaceText(oldText, newText, comparison));
 
     /// <summary>
-    /// Replaces this frame's content with that of <paramref name="source"/> — copying the
-    /// format and taking over its paragraphs. Used when a frame is populated by a shared parser
-    /// into a temporary frame and the result must land on a get-only <see cref="TextFrame"/>.
+    ///     Replaces this frame's content with that of <paramref name="source" /> — copying the
+    ///     format and taking over its paragraphs. Used when a frame is populated by a shared parser
+    ///     into a temporary frame and the result must land on a get-only <see cref="TextFrame" />.
     /// </summary>
     internal void AbsorbFrom(TextFrame source)
     {

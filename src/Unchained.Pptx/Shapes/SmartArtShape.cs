@@ -1,35 +1,20 @@
+using System.Text;
 using System.Xml.Linq;
 
 namespace Unchained.Pptx.Shapes;
 
 /// <summary>
-/// A shape that contains a SmartArt diagram. The node text is surfaced through
-/// <see cref="Nodes"/> for reading and simple editing; the diagram's layout, colour, and style
-/// definitions are preserved verbatim for lossless round-trips.
+///     A shape that contains a SmartArt diagram. The node text is surfaced through
+///     <see cref="Nodes" /> for reading and simple editing; the diagram's layout, colour, and style
+///     definitions are preserved verbatim for lossless round-trips.
 /// </summary>
 public sealed class SmartArtShape : Shape
 {
     /// <summary>
-    /// The top-level diagram nodes. Each may have <see cref="SmartArtNode.Children"/> forming
-    /// the diagram hierarchy. Empty when the diagram has no text nodes.
+    ///     The top-level diagram nodes. Each may have <see cref="SmartArtNode.Children" /> forming
+    ///     the diagram hierarchy. Empty when the diagram has no text nodes.
     /// </summary>
     public List<SmartArtNode> Nodes { get; } = [];
-
-    /// <summary>
-    /// All text across the diagram, one node per line (depth-first). Convenience reader.
-    /// </summary>
-    public string GetAllText()
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var n in Nodes) Walk(n, sb);
-        return sb.ToString().TrimEnd();
-
-        static void Walk(SmartArtNode node, System.Text.StringBuilder sb)
-        {
-            if (!string.IsNullOrEmpty(node.Text)) sb.AppendLine(node.Text);
-            foreach (var child in node.Children) Walk(child, sb);
-        }
-    }
 
     // ── Round-trip part data ────────────────────────────────────────────────
     // SmartArt is backed by up to five OPC parts referenced from the slide. Their bytes are
@@ -83,4 +68,20 @@ public sealed class SmartArtShape : Shape
 
     /// <summary>Absolute OPC part URI of the drawing part. Internal.</summary>
     internal string DrawingPartUri { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     All text across the diagram, one node per line (depth-first). Convenience reader.
+    /// </summary>
+    public string GetAllText()
+    {
+        var sb = new StringBuilder();
+        foreach (var n in Nodes) Walk(n, sb);
+        return sb.ToString().TrimEnd();
+
+        static void Walk(SmartArtNode node, StringBuilder sb)
+        {
+            if (!string.IsNullOrEmpty(node.Text)) sb.AppendLine(node.Text);
+            foreach (var child in node.Children) Walk(child, sb);
+        }
+    }
 }

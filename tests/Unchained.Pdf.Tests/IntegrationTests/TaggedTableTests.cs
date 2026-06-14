@@ -1,5 +1,6 @@
 using System.Text;
 using Shouldly;
+using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -7,7 +8,7 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests;
 
 /// <summary>
-/// Tests for tagged <see cref="Engine.TableGenerator"/> output (ISO 32000-1 §14.7).
+///     Tests for tagged <see cref="Engine.TableGenerator" /> output (ISO 32000-1 §14.7).
 /// </summary>
 public sealed class TaggedTableTests : PdfTestBase
 {
@@ -35,7 +36,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_HasMarkInfo()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -46,7 +47,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_HasStructTreeRoot()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -57,7 +58,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_HasLangEntry()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -70,7 +71,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_ContentStream_HasBdcEmc()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -83,7 +84,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_HasThStructureElements()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -94,7 +95,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_HasTdStructureElements()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -105,7 +106,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_HasParentTree()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -116,7 +117,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_HasMcidProperties()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -129,7 +130,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task UntaggedTable_Generate_HasNoMarkInfo()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleUntaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -142,7 +143,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task UntaggedTable_Generate_HasNoBdcOperators()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleUntaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -155,7 +156,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_Generate_RoundTripsSuccessfully()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
 
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
@@ -167,7 +168,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_ValidatePdfUA_NoMarkInfoViolation()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -180,7 +181,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_ValidatePdfUA_NoLanguageViolation()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -193,7 +194,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_ValidatePdfUA_NoStructTreeViolation()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         await using var doc = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -206,7 +207,7 @@ public sealed class TaggedTableTests : PdfTestBase
     [Fact]
     public async Task TaggedTable_FewerPdfUAErrorsThanUntagged()
     {
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
 
         await using var tagged = await generator.GenerateAsync(SimpleTaggedTable(), TableStyle.Default, TestContext.Current.CancellationToken);
         using var taggedMs = new MemoryStream();
@@ -231,7 +232,7 @@ public sealed class TaggedTableTests : PdfTestBase
     public async Task TaggedTable_MultiPage_AllPagesHaveBdcOperators()
     {
         // Force multiple pages by using many rows.
-        var generator = new Engine.TableGenerator();
+        var generator = new TableGenerator();
         var data = new TableData
         {
             Headers = ["Col1", "Col2"],

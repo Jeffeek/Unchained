@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-/// The twelve named colour slots defined in an OOXML theme colour scheme
-/// (ECMA-376 §20.1.6.2).
+///     The twelve named colour slots defined in an OOXML theme colour scheme
+///     (ECMA-376 §20.1.6.2).
 /// </summary>
 public enum ThemeColorSlot
 {

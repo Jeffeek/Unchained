@@ -1,3 +1,3 @@
 namespace Unchained.Studio.Enums;
 
-internal enum OutputMode { Folder, Zip }
+internal enum OutputMode { Zip }

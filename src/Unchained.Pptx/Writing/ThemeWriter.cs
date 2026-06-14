@@ -1,12 +1,12 @@
-using Unchained.Pptx.Themes;
 using System.Xml.Linq;
-using Unchained.Ooxml.Xml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Themes;
 
 namespace Unchained.Pptx.Writing;
 
 /// <summary>
-/// Serializes a <see cref="PptxTheme"/> to a DrawingML <c>&lt;a:theme&gt;</c> root element.
+///     Serializes a <see cref="PptxTheme" /> to a DrawingML <c>&lt;a:theme&gt;</c> root element.
 /// </summary>
 internal static class ThemeWriter
 {
@@ -84,9 +84,11 @@ internal static class ThemeWriter
             new XAttribute(DmlNames.AttributeTypeface, fontSet.ComplexScriptFont)));
 
         foreach (var (script, typeface) in fontSet.ScriptFonts)
+        {
             el.Add(new XElement(DmlNames.Dml + "font",
                 new XAttribute("script", script),
                 new XAttribute(DmlNames.AttributeTypeface, typeface)));
+        }
 
         return el;
     }
@@ -106,7 +108,8 @@ internal static class ThemeWriter
         scheme.Add(fillStyleLst);
 
         var lnStyleLst = new XElement(dml + "lnStyleLst");
-        lnStyleLst.Add(new XElement(DmlNames.Line, new XAttribute(DmlNames.AttributeLineWidth, 6350),
+        lnStyleLst.Add(new XElement(DmlNames.Line,
+            new XAttribute(DmlNames.AttributeLineWidth, 6350),
             new XElement(DmlNames.SolidFill,
                 new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr")))));
         lnStyleLst.Add(new XElement(DmlNames.Line, new XAttribute(DmlNames.AttributeLineWidth, 12700)));

@@ -1,9 +1,10 @@
 using Unchained.Ooxml.Drawing;
+
 namespace Unchained.Pptx.Themes;
 
 /// <summary>
-/// The complete theme applied to a presentation, consisting of a colour scheme,
-/// a font scheme, and a format scheme (fill, line, and effect style tiers).
+///     The complete theme applied to a presentation, consisting of a colour scheme,
+///     a font scheme, and a format scheme (fill, line, and effect style tiers).
 /// </summary>
 public sealed class PptxTheme
 {

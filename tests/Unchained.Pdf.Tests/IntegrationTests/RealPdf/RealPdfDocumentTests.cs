@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using Shouldly;
+using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -6,9 +8,9 @@ using Xunit;
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
 
 /// <summary>
-/// Targeted tests for specific real-PDF scenarios: multi-page layout, metadata,
-/// annotations, bookmarks, form fields, and named destinations.
-/// Each test skips gracefully when its required file is absent from TestFiles/.
+///     Targeted tests for specific real-PDF scenarios: multi-page layout, metadata,
+///     annotations, bookmarks, form fields, and named destinations.
+///     Each test skips gracefully when its required file is absent from TestFiles/.
 /// </summary>
 public sealed class RealPdfDocumentTests : PdfTestBase
 {
@@ -197,8 +199,8 @@ public sealed class RealPdfDocumentTests : PdfTestBase
             await using var doc = await LoadAsync(bytes);
             doc.PageCount.ShouldBeGreaterThan(0);
         }
-        catch (Core.PdfException) { }
-        catch (Core.PdfEncryptedException) { }
+        catch (PdfException) { }
+        catch (PdfEncryptedException) { }
     }
 
     // ── large.pdf — performance sanity ────────────────────────────────────────
@@ -208,7 +210,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Large);
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
         await using var doc = await LoadAsync(bytes);
         sw.Stop();
         doc.PageCount.ShouldBeGreaterThan(0);

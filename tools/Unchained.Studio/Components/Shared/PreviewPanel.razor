@@ -1,6 +1,9 @@
 @inject RenderingService Renderer
 @inject IJSRuntime JS
 @inject IDialogService Dialogs
+@using System.Globalization
+@using Unchained.Pdf.Abstractions
+@using Unchained.Pdf.Models
 @implements IAsyncDisposable
 
 <div class="preview-panel">
@@ -10,7 +13,7 @@
                        Size="Size.Small"
                        Disabled="@(CurrentPage <= 1)"
                        OnClick="PreviousPage"
-                       title="Previous page (←)" />
+                       title="Previous page (←)"/>
         <span class="preview-page-label">
             <MudText Typo="Typo.body2" Style="white-space:nowrap;">Page</MudText>
             <input class="preview-page-input"
@@ -18,24 +21,24 @@
                    min="1" max="@PageCount"
                    value="@CurrentPage"
                    @onchange="OnPageInputChanged"
-                   @onkeydown="OnPageInputKeyDown" />
+                   @onkeydown="OnPageInputKeyDown"/>
             <MudText Typo="Typo.body2" Style="white-space:nowrap;">/ @PageCount</MudText>
         </span>
         <MudIconButton Icon="@Icons.Material.Outlined.NavigateNext"
                        Size="Size.Small"
                        Disabled="@(CurrentPage >= PageCount)"
                        OnClick="NextPage"
-                       title="Next page (→)" />
+                       title="Next page (→)"/>
 
-        <MudDivider Vertical="true" Class="mx-1" Style="height:24px;" />
+        <MudDivider Vertical="true" Class="mx-1" Style="height:24px;"/>
 
         <!-- Zoom -->
-        <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" OnClick="ZoomOut" title="Zoom out" />
+        <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" OnClick="ZoomOut" title="Zoom out"/>
         <MudText Typo="Typo.caption" Class="mx-1" Style="min-width:36px;text-align:center;">@(_zoom)%</MudText>
-        <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" OnClick="ZoomIn" title="Zoom in" />
-        <MudIconButton Icon="@Icons.Material.Outlined.FitScreen" Size="Size.Small" OnClick="ZoomFit" title="Fit" />
+        <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" OnClick="ZoomIn" title="Zoom in"/>
+        <MudIconButton Icon="@Icons.Material.Outlined.FitScreen" Size="Size.Small" OnClick="ZoomFit" title="Fit"/>
 
-        <MudDivider Vertical="true" Class="mx-1" Style="height:24px;" />
+        <MudDivider Vertical="true" Class="mx-1" Style="height:24px;"/>
 
         <!-- DPI selector (our renderer only) -->
         <MudText Typo="Typo.caption" Class="mr-1" Style="white-space:nowrap;">DPI:</MudText>
@@ -49,7 +52,7 @@
             <MudSelectItem Value="300">300</MudSelectItem>
         </MudSelect>
 
-        <MudSpacer />
+        <MudSpacer/>
 
         <!-- Text overlay: ToggledChanged so we receive the new value synchronously -->
         <MudToggleIconButton Toggled="_showText"
@@ -58,7 +61,7 @@
                              ToggledIcon="@Icons.Material.Filled.TextFields"
                              ToggledColor="Color.Primary"
                              Size="Size.Small"
-                             title="Toggle text span overlay" />
+                             title="Toggle text span overlay"/>
 
         <!-- Compare toggle: use ToggledChanged, not OnClick.
              OnClick fires before Toggled is updated; ToggledChanged carries the new value. -->
@@ -68,14 +71,14 @@
                              ToggledIcon="@Icons.Material.Filled.Compare"
                              ToggledColor="Color.Secondary"
                              Size="Size.Small"
-                             title="Compare with browser's native PDF renderer" />
+                             title="Compare with browser's native PDF renderer"/>
 
         <!-- Export comparison images -->
         <MudIconButton Icon="@Icons.Material.Outlined.FileDownload"
                        Size="Size.Small"
                        Disabled="@(Document is null || DocumentBytes is null)"
                        OnClick="OpenExportDialog"
-                       title="Export comparison images (Unchained vs PDF.js)" />
+                       title="Export comparison images (Unchained vs PDF.js)"/>
     </div>
 
     <div class="preview-content @(_compareMode ? "preview-content--compare" : string.Empty)">
@@ -89,14 +92,14 @@
             @if (_loading)
             {
                 <div class="preview-center">
-                    <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
+                    <MudProgressCircular Indeterminate="true" Size="Size.Medium"/>
                     <MudText Typo="Typo.caption" Class="mt-2" Style="opacity:.6">Rendering page @CurrentPage at @(_dpi) DPI…</MudText>
                 </div>
             }
             else if (_pageBytes is null)
             {
                 <div class="preview-center">
-                    <MudIcon Icon="@Icons.Material.Outlined.ImageNotSupported" Style="font-size:3rem;opacity:.3;" />
+                    <MudIcon Icon="@Icons.Material.Outlined.ImageNotSupported" Style="font-size:3rem;opacity:.3;"/>
                     <MudText Typo="Typo.body2" Style="opacity:.5;text-align:center;max-width:240px;margin-top:8px;">
                         Rendering unavailable — ensure native DLLs are installed.
                     </MudText>
@@ -106,10 +109,10 @@
             {
                 <div class="preview-scroll">
                     <div class="preview-image-wrap"
-                         style="transform-origin:top center;transform:scale(@((_zoom/100.0).ToString("F2",System.Globalization.CultureInfo.InvariantCulture)))">
+                         style="transform-origin:top center;transform:scale(@((_zoom / 100.0).ToString("F2", CultureInfo.InvariantCulture)))">
                         <img src="data:image/png;base64,@Convert.ToBase64String(_pageBytes)"
                              class="preview-page-img"
-                             alt="Page @CurrentPage" />
+                             alt="Page @CurrentPage"/>
 
                         @if (_showText && _textSpans is not null)
                         {
@@ -149,7 +152,7 @@
                 else
                 {
                     <div class="preview-center">
-                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small"/>
                     </div>
                 }
             </div>
@@ -158,12 +161,24 @@
 </div>
 
 @code {
-    [Parameter] public Unchained.Pdf.Abstractions.IPdfDocument? Document { get; set; }
-    [Parameter] public byte[]? DocumentBytes { get; set; }
-    [Parameter] public string FileName { get; set; } = "document";
-    [Parameter] public int CurrentPage { get; set; } = 1;
-    [Parameter] public int PageCount { get; set; } = 1;
-    [Parameter] public EventCallback<int> CurrentPageChanged { get; set; }
+
+    [Parameter]
+    public IPdfDocument? Document { get; set; }
+
+    [Parameter]
+    public byte[]? DocumentBytes { get; set; }
+
+    [Parameter]
+    public string FileName { get; set; } = "document";
+
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    [Parameter]
+    public int PageCount { get; set; } = 1;
+
+    [Parameter]
+    public EventCallback<int> CurrentPageChanged { get; set; }
 
     private byte[]? _pageBytes;
     private bool _loading;
@@ -173,12 +188,12 @@
     private int _dpi = 96;
     private string? _blobUrl;
 
-    private IReadOnlyList<Unchained.Pdf.Models.TextSpan>? _textSpans;
+    private IReadOnlyList<TextSpan>? _textSpans;
     private double _pageWidthPt = 595;
     private double _pageHeightPt = 842;
 
     // Track what we last rendered so we don't re-render on unrelated parameter changes
-    private Unchained.Pdf.Abstractions.IPdfDocument? _lastDocument;
+    private IPdfDocument? _lastDocument;
     private int _lastPage;
     private int _lastDpi;
 
@@ -248,12 +263,9 @@
             if (_pageBytes is not null)
             {
                 var page = Document.Pages[CurrentPage];
-                if (page is not null)
-                {
-                    _pageWidthPt = page.Width;
-                    _pageHeightPt = page.Height;
-                    _textSpans = _showText ? page.GetTextSpans() : null;
-                }
+                _pageWidthPt = page.Width;
+                _pageHeightPt = page.Height;
+                _textSpans = _showText ? page.GetTextSpans() : null;
             }
 
             _lastDocument = Document;
@@ -267,13 +279,10 @@
         }
     }
 
-    private async Task OnCompareToggled(bool toggled)
+    private Task OnCompareToggled(bool toggled)
     {
         _compareMode = toggled;
-        if (_compareMode)
-            await RefreshBlobUrlAsync();
-        else
-            await RevokeBlobAsync();
+        return _compareMode ? RefreshBlobUrlAsync() : RevokeBlobAsync();
     }
 
     private async Task RefreshBlobUrlAsync()
@@ -300,6 +309,7 @@
     {
         if (_blobUrl is null)
             return;
+
         try
         {
             await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", _blobUrl);
@@ -308,6 +318,7 @@
         {
             // ignore — page might already be navigating away
         }
+
         _blobUrl = null;
         _lastDocumentBytes = null;
     }
@@ -318,7 +329,7 @@
         if (_showText && _pageBytes is not null && Document is not null)
         {
             var page = Document.Pages[CurrentPage];
-            _textSpans = page?.GetTextSpans();
+            _textSpans = page.GetTextSpans();
         }
         else
         {
@@ -326,16 +337,17 @@
         }
     }
 
-    private async Task OnDpiChanged(int dpi)
+    private Task OnDpiChanged(int dpi)
     {
         _dpi = dpi;
         _loading = true;
-        await RenderCurrentPageAsync();
+        return RenderCurrentPageAsync();
     }
 
     private async Task PreviousPage()
     {
         if (CurrentPage <= 1) return;
+
         CurrentPage--;
         _loading = true;
         await CurrentPageChanged.InvokeAsync(CurrentPage);
@@ -345,6 +357,7 @@
     private async Task NextPage()
     {
         if (CurrentPage >= PageCount) return;
+
         CurrentPage++;
         _loading = true;
         await CurrentPageChanged.InvokeAsync(CurrentPage);
@@ -362,18 +375,20 @@
         }
     }
 
-    private async Task OnPageInputKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "ArrowLeft") await PreviousPage();
-        else if (e.Key == "ArrowRight") await NextPage();
-    }
+    private Task OnPageInputKeyDown(KeyboardEventArgs e) =>
+        e.Key switch
+        {
+            "ArrowLeft" => PreviousPage(),
+            "ArrowRight" => NextPage(),
+            _ => Task.CompletedTask
+        };
 
     private void ZoomIn() => _zoom = Math.Min(200, _zoom + 25);
     private void ZoomOut() => _zoom = Math.Max(25, _zoom - 25);
     private void ZoomFit() => _zoom = 100;
 
     private static string Pct(double value, double total) =>
-        total > 0 ? (value / total * 100).ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0";
+        total > 0 ? (value / total * 100).ToString("F2", CultureInfo.InvariantCulture) : "0";
 
     private async Task OpenExportDialog()
     {
@@ -381,14 +396,14 @@
 
         var parameters = new DialogParameters
         {
-            [nameof(ExportComparisonDialog.Document)]      = Document,
+            [nameof(ExportComparisonDialog.Document)] = Document,
             [nameof(ExportComparisonDialog.DocumentBytes)] = DocumentBytes,
-            [nameof(ExportComparisonDialog.FileName)]      = FileName,
-            [nameof(ExportComparisonDialog.CurrentPage)]   = CurrentPage,
-            [nameof(ExportComparisonDialog.PageCount)]     = PageCount,
+            [nameof(ExportComparisonDialog.FileName)] = FileName,
+            [nameof(ExportComparisonDialog.CurrentPage)] = CurrentPage,
+            [nameof(ExportComparisonDialog.PageCount)] = PageCount,
             // Reuse the blob URL that compare mode already created, if available.
             // This avoids encoding the PDF bytes a second time.
-            [nameof(ExportComparisonDialog.ExistingBlobUrl)] = _blobUrl,
+            [nameof(ExportComparisonDialog.ExistingBlobUrl)] = _blobUrl
         };
 
         var options = new DialogOptions

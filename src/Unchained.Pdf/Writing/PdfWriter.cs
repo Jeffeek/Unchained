@@ -1,46 +1,50 @@
 using System.Buffers;
+using System.Globalization;
 using System.Text;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 
 namespace Unchained.Pdf.Writing;
 
 /// <summary>
-/// Serializes a graph of <see cref="PdfObject"/> instances to a standards-compliant
-/// PDF byte stream (ISO 32000-1 §7.3 + §7.5).
-/// <para>
-/// Write order:
-/// <list type="number">
-///   <item>Header — <c>%PDF-1.7</c> + binary-content marker (§7.5.2).</item>
-///   <item>Body — each <see cref="PdfIndirectObject"/> at a tracked byte offset.</item>
-///   <item>Cross-reference table — maps object numbers to byte offsets (§7.5.4).</item>
-///   <item>Trailer — trailer dictionary + <c>startxref</c> + <c>%%EOF</c> (§7.5.5).</item>
-/// </list>
-/// All output is written to the <see cref="IBufferWriter{T}"/> supplied at construction,
-/// keeping the serializer allocation-free on the hot path.
-/// </para>
+///     Serializes a graph of <see cref="PdfObject" /> instances to a standards-compliant
+///     PDF byte stream (ISO 32000-1 §7.3 + §7.5).
+///     <para>
+///         Write order:
+///         <list type="number">
+///             <item>Header — <c>%PDF-1.7</c> + binary-content marker (§7.5.2).</item>
+///             <item>Body — each <see cref="PdfIndirectObject" /> at a tracked byte offset.</item>
+///             <item>Cross-reference table — maps object numbers to byte offsets (§7.5.4).</item>
+///             <item>Trailer — trailer dictionary + <c>startxref</c> + <c>%%EOF</c> (§7.5.5).</item>
+///         </list>
+///         All output is written to the <see cref="IBufferWriter{T}" /> supplied at construction,
+///         keeping the serializer allocation-free on the hot path.
+///     </para>
 /// </summary>
 internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
 {
+    // Maps object number → byte offset of the corresponding "N G obj" header.
+    private readonly Dictionary<int, long> _objectOffsets = new();
     // Tracks the current byte position so that xref offsets can be recorded accurately.
     private long _position;
 
-    // Maps object number → byte offset of the corresponding "N G obj" header.
-    private readonly Dictionary<int, long> _objectOffsets = new();
+    /// <inheritdoc />
+    public void Dispose() { }
 
     // ── High-level document write ─────────────────────────────────────────────
 
     /// <summary>
-    /// Writes a complete, structurally valid PDF document.
-    /// The caller is responsible for populating the trailer dictionary with at minimum
-    /// <c>/Size</c> and <c>/Root</c> before calling this method.
+    ///     Writes a complete, structurally valid PDF document.
+    ///     The caller is responsible for populating the trailer dictionary with at minimum
+    ///     <c>/Size</c> and <c>/Root</c> before calling this method.
     /// </summary>
     /// <param name="objects">
-    /// Ordered list of all indirect objects to include in the document body.
-    /// Object numbers must be unique and non-zero.
+    ///     Ordered list of all indirect objects to include in the document body.
+    ///     Object numbers must be unique and non-zero.
     /// </param>
     /// <param name="trailer">
-    /// The trailer dictionary. Must contain at least <c>/Size</c> (total number of
-    /// objects + 1) and <c>/Root</c> (reference to the document catalog).
+    ///     The trailer dictionary. Must contain at least <c>/Size</c> (total number of
+    ///     objects + 1) and <c>/Root</c> (reference to the document catalog).
     /// </param>
     public void Write(IReadOnlyList<PdfIndirectObject> objects, PdfDictionary trailer)
     {
@@ -68,8 +72,8 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
     // ── Object serialization ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Writes a single <c>N G obj ... endobj</c> block and records its byte offset
-    /// in the internal offset table for use in the cross-reference section.
+    ///     Writes a single <c>N G obj ... endobj</c> block and records its byte offset
+    ///     in the internal offset table for use in the cross-reference section.
     /// </summary>
     // ReSharper disable once MemberCanBePrivate.Global
     public void WriteIndirectObject(PdfIndirectObject obj)
@@ -81,12 +85,12 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
     }
 
     /// <summary>
-    /// Writes the PDF syntax representation of <paramref name="obj"/> to the output.
-    /// Supports all eight PDF object types plus <see cref="PdfIndirectReference"/>.
+    ///     Writes the PDF syntax representation of <paramref name="obj" /> to the output.
+    ///     Supports all eight PDF object types plus <see cref="PdfIndirectReference" />.
     /// </summary>
     /// <exception cref="PdfException">
-    /// Thrown when <paramref name="obj"/> is of an unrecognized type that has no
-    /// PDF syntax representation.
+    ///     Thrown when <paramref name="obj" /> is of an unrecognized type that has no
+    ///     PDF syntax representation.
     /// </exception>
     // ReSharper disable once MemberCanBePrivate.Global
     public void WriteValue(PdfObject obj)
@@ -95,7 +99,7 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
         {
             case PdfBoolean b: WriteBytes(b.Value ? "true"u8 : "false"u8); break;
             case PdfInteger i: WriteAscii(i.Value.ToString()); break;
-            case PdfReal r: WriteAscii(r.Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture)); break;
+            case PdfReal r: WriteAscii(r.Value.ToString("G", CultureInfo.InvariantCulture)); break;
             case PdfNull: WriteBytes("null"u8); break;
             case PdfName n: WriteName(n); break;
             case PdfString s: WriteString(s); break;
@@ -128,7 +132,7 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
         {
             WriteBytes("<"u8);
             foreach (var b in str.Bytes.Span)
-                WriteAscii(b.ToString("X2"));
+                WriteAscii(b.ToHex2());
             WriteBytes(">"u8);
         }
         else
@@ -236,10 +240,7 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
 
     // §7.3.5 — bytes that must be escaped with '#xx' in a name token.
     private static bool NeedsNameEscape(byte b) =>
-        b is <= 0x20 or >= 0x7F or (byte)'(' or (byte)')' or (byte)'<' or (byte)'>' or
+        b is <= PdfConstants.PrintableAsciiMin or >= 0x7F or (byte)'(' or (byte)')' or (byte)'<' or (byte)'>' or
             (byte)'[' or (byte)']' or (byte)'{' or (byte)'}' or
             (byte)'/' or (byte)'%' or (byte)'#';
-
-    /// <inheritdoc />
-    public void Dispose() { }
 }

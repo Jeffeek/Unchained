@@ -1,3 +1,4 @@
+using System.IO.Packaging;
 using Shouldly;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
@@ -6,9 +7,9 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// M5b: the SDK-backed save re-emits modelled slides while preserving every other part. Compared
-/// against the custom writer (which rebuilds the package and drops parts), the SDK save must keep
-/// the part set intact and still reload to the same slide structure.
+///     M5b: the SDK-backed save re-emits modelled slides while preserving every other part. Compared
+///     against the custom writer (which rebuilds the package and drops parts), the SDK save must keep
+///     the part set intact and still reload to the same slide structure.
 /// </summary>
 public sealed class SdkSaveTests
 {
@@ -18,7 +19,7 @@ public sealed class SdkSaveTests
     private static int CountParts(byte[] pptx)
     {
         using var ms = new MemoryStream(pptx);
-        using var pkg = System.IO.Packaging.Package.Open(ms, FileMode.Open, FileAccess.Read);
+        using var pkg = Package.Open(ms, FileMode.Open, FileAccess.Read);
         return pkg.GetParts().Count();
     }
 
@@ -47,7 +48,7 @@ public sealed class SdkSaveTests
         // The SDK save must not drop parts (the custom writer does).
         CountParts(saved).ShouldBe(beforeParts, $"{fileName}: SDK save must preserve all parts");
 
-        doc.Dispose();
+        await doc.DisposeAsync();
     }
 
     [Fact]
@@ -69,8 +70,8 @@ public sealed class SdkSaveTests
         reloaded.Slides.Select(static s => s.Shapes.Count).ToArray()
             .ShouldBe(originalShapeCounts, "per-slide shape count after SDK save round-trip");
 
-        doc.Dispose();
-        reloaded.Dispose();
+        await doc.DisposeAsync();
+        await reloaded.DisposeAsync();
     }
 
     [Fact]
@@ -83,10 +84,10 @@ public sealed class SdkSaveTests
         doc.Slides.AddBlank(doc.Masters[0].Layouts[0]);
 
         using var ms = new MemoryStream();
-        await Should.NotThrowAsync(async () =>
-            await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }));
+        await Should.NotThrowAsync(() =>
+            processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }));
         ms.Length.ShouldBeGreaterThan(0);
 
-        doc.Dispose();
+        await doc.DisposeAsync();
     }
 }

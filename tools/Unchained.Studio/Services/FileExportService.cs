@@ -8,13 +8,12 @@ public sealed class FileExportService(IJSRuntime js)
         byte[] data,
         string fileName,
         string mimeType = "application/octet-stream",
-        CancellationToken ct = default)
-    {
+        CancellationToken ct = default
+    ) =>
         await js.InvokeVoidAsync(
             "unchainedStudio.downloadFile",
             ct,
             Convert.ToBase64String(data),
             fileName,
             mimeType).ConfigureAwait(false);
-    }
 }

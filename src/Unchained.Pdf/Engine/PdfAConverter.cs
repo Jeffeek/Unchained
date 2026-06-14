@@ -1,23 +1,24 @@
 using System.Buffers;
-using System.Text;
+using System.Security.Cryptography;
 using System.Xml.Linq;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Parsing.Filters;
 using Unchained.Pdf.Writing;
+using SaveOptions = System.Xml.Linq.SaveOptions;
 
 namespace Unchained.Pdf.Engine;
 
 /// <summary>
-/// Performs structural PDF/A conformance fixes on a PDF document.
-/// <para>
-/// Handles the structural requirements that can be fixed programmatically:
-/// pdfaid XMP metadata, /ID in trailer, removing prohibited catalog entries,
-/// and setting annotation Print flags. Does NOT embed fonts, add output intents,
-/// or remove transparency — those require additional resources or content rewriting.
-/// Validate after conversion to see any remaining violations.
-/// </para>
+///     Performs structural PDF/A conformance fixes on a PDF document.
+///     <para>
+///         Handles the structural requirements that can be fixed programmatically:
+///         pdfaid XMP metadata, /ID in trailer, removing prohibited catalog entries,
+///         and setting annotation Print flags. Does NOT embed fonts, add output intents,
+///         or remove transparency — those require additional resources or content rewriting.
+///         Validate after conversion to see any remaining violations.
+///     </para>
 /// </summary>
 internal static class PdfAConverter
 {
@@ -35,7 +36,7 @@ internal static class PdfAConverter
         if (catalogIdx < 0)
             throw new InvalidOperationException("Cannot locate catalog object.");
 
-        var catalogDict = (objects[catalogIdx].Value as PdfDictionary) ?? throw new InvalidOperationException("Catalog is not a dictionary.");
+        var catalogDict = objects[catalogIdx].Value as PdfDictionary ?? throw new InvalidOperationException("Catalog is not a dictionary.");
 
         var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries);
 
@@ -44,11 +45,11 @@ internal static class PdfAConverter
         var xmpBytes = BuildPdfAXmp(profile, catalogEntries, core);
         var metaDict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Get("Metadata"),
-            ["Subtype"] = PdfName.Get("XML"),
+            ["Type"] = PdfName.Metadata,
+            ["Subtype"] = PdfName.XML,
             ["Length"] = new PdfInteger(xmpBytes.Length)
         });
-        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes)));
+        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
         catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
 
         // ── 2. Remove /AA from catalog (prohibited additional actions) ─────────
@@ -75,66 +76,17 @@ internal static class PdfAConverter
 
     // ── XMP ───────────────────────────────────────────────────────────────────
 
-    private static byte[] BuildPdfAXmp(PdfAProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
+    private static ReadOnlySpan<byte> BuildPdfAXmp(PdfAProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
     {
         // Try to preserve existing XMP
-        var existing = ReadExistingXmp(catalogEntries, core);
+        var existing = XmpDocumentHelper.ReadExistingXmp(catalogEntries, core);
         var xmpDoc = existing is not null
-            ? TryParse(existing) ?? CreateMinimalXmp()
-            : CreateMinimalXmp();
+            ? XmpDocumentHelper.TryParse(existing) ?? XmpDocumentHelper.CreateMinimalXmp()
+            : XmpDocumentHelper.CreateMinimalXmp();
 
         SetPdfaidProperties(xmpDoc, profile);
 
-        return Encoding.UTF8.GetBytes(xmpDoc.ToString(System.Xml.Linq.SaveOptions.OmitDuplicateNamespaces));
-    }
-
-    private static string? ReadExistingXmp(IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
-    {
-        var metaObj = catalogEntries.GetValueOrDefault("Metadata");
-        var stream = metaObj switch
-        {
-            PdfStream s => s,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-            _ => null
-        };
-
-        if (stream is null)
-            return null;
-
-        try
-        {
-            return Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static XDocument? TryParse(string xml)
-    {
-        try
-        {
-            return XDocument.Parse(xml);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static XDocument CreateMinimalXmp()
-    {
-        XNamespace rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-        XNamespace x = "adobe:ns:meta/";
-        return new XDocument(
-            // ReSharper disable StringLiteralTypo
-            new XProcessingInstruction("xpacket", "begin=\"﻿\" id=\"W5M0MpCehiHzreSzNTczkc9d\""),
-            // ReSharper restore StringLiteralTypo
-            new XElement(x + "xmpmeta",
-                new XAttribute(XNamespace.Xmlns + "x", x.NamespaceName),
-                new XElement(rdf + "RDF", new XAttribute(XNamespace.Xmlns + "rdf", rdf.NamespaceName))),
-            new XProcessingInstruction("xpacket", "end=\"w\""));
+        return xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces).ToUtf8Span();
     }
 
     private static void SetPdfaidProperties(XContainer xmpDoc, PdfAProfile profile)
@@ -166,18 +118,8 @@ internal static class PdfAConverter
             _ => ("1", "B")
         };
 
-        SetOrAdd(desc, pdfaid + "part", part);
-        SetOrAdd(desc, pdfaid + "conformance", conformance);
-    }
-
-    private static void SetOrAdd(XContainer parent, XName name, string value)
-    {
-        var existing = parent.Element(name);
-
-        if (existing is not null)
-            existing.Value = value;
-        else
-            parent.Add(new XElement(name, value));
+        XmpDocumentHelper.SetOrAdd(desc, pdfaid + "part", part);
+        XmpDocumentHelper.SetOrAdd(desc, pdfaid + "conformance", conformance);
     }
 
     // ── Annotation Print flag ─────────────────────────────────────────────────
@@ -241,12 +183,12 @@ internal static class PdfAConverter
             entries[PdfName.Info.Value] = info;
 
         // /ID is required by PDF/A — preserve existing or generate new
-        var existingId = core.Trailer.Get<PdfArray>(PdfName.Get("ID"));
-        entries["ID"] = existingId
-                        ?? new PdfArray([
-                            new PdfString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16), isHex: true),
-                            new PdfString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16), isHex: true)
-                        ]);
+        var existingId = core.Trailer.Get<PdfArray>(PdfName.ID);
+        entries[PdfName.ID.Value] = existingId
+                                    ?? new PdfArray([
+                                        new PdfString(RandomNumberGenerator.GetBytes(16), true),
+                                        new PdfString(RandomNumberGenerator.GetBytes(16), true)
+                                    ]);
 
         return new PdfDictionary(entries);
     }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Xml.Linq;
 using Unchained.Ooxml;
@@ -7,6 +8,7 @@ using Unchained.Pptx.Core;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Models.Shapes;
+using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Security;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
@@ -15,13 +17,14 @@ using Unchained.Pptx.Themes;
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses an OpenDocument Presentation (<c>.odp</c>) package into the Unchained presentation model.
-/// Reads <c>content.xml</c> (<c>draw:page</c> → slide, <c>draw:frame</c> → shape, <c>text:p</c>/
-/// <c>text:span</c> → paragraphs/runs) and the page geometry from <c>styles.xml</c>. This is a
-/// structural import; advanced ODF styling is not mapped.
+///     Parses an OpenDocument Presentation (<c>.odp</c>) package into the Unchained presentation model.
+///     Reads <c>content.xml</c> (<c>draw:page</c> → slide, <c>draw:frame</c> → shape, <c>text:p</c>/
+///     <c>text:span</c> → paragraphs/runs) and the page geometry from <c>styles.xml</c>. This is a
+///     structural import; advanced ODF styling is not mapped.
 /// </summary>
 internal static class OdpParser
 {
+    public const string MimeType = "application/vnd.oasis.opendocument.presentation";
     // ODF namespaces (kept local to the reader; the writer has its own copy in Export/OdfNames).
     private static readonly XNamespace Office = "urn:oasis:names:tc:opendocument:xmlns:office:1.0";
     private static readonly XNamespace Draw = "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0";
@@ -32,9 +35,7 @@ internal static class OdpParser
     private static readonly XNamespace Presentation = "urn:oasis:names:tc:opendocument:xmlns:presentation:1.0";
     private static readonly XNamespace XLink = "http://www.w3.org/1999/xlink";
 
-    public const string MimeType = "application/vnd.oasis.opendocument.presentation";
-
-    /// <summary>Returns <see langword="true"/> when <paramref name="data"/> is an ODP package.</summary>
+    /// <summary>Returns <see langword="true" /> when <paramref name="data" /> is an ODP package.</summary>
     public static bool IsOdp(byte[] data)
     {
         try
@@ -43,6 +44,7 @@ internal static class OdpParser
             using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
             var mime = zip.GetEntry("mimetype");
             if (mime == null) return false;
+
             using var s = mime.Open();
             using var r = new StreamReader(s);
             return r.ReadToEnd().Trim().StartsWith(MimeType, StringComparison.Ordinal);
@@ -59,7 +61,7 @@ internal static class OdpParser
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
 
         var content = ReadXml(zip, "content.xml")
-            ?? throw new PptxException("ODP package has no content.xml.");
+                      ?? throw new PptxException("ODP package has no content.xml.");
         var styles = ReadXml(zip, "styles.xml");
 
         var slideSize = ReadSlideSize(styles);
@@ -67,16 +69,14 @@ internal static class OdpParser
 
         // ODP has no concept of OOXML masters; synthesise one so slides have a valid layout.
         var master = new MasterSlide { Name = "Default", Theme = new PptxTheme() };
-        var layout = new SlideLayout { Name = "Default", LayoutType = Models.Themes.LayoutType.Blank, Master = master };
+        var layout = new SlideLayout { Name = "Default", LayoutType = LayoutType.Blank, Master = master };
         master.Layouts.Add(layout);
-        var masters = new MasterSlideCollection();
-        masters.Add(master);
+        var masters = new MasterSlideCollection { master };
 
         var slides = new SlideCollection();
 
         var body = content.Root?.Element(Office + "body")?.Element(Office + "presentation");
         uint slideId = 256;
-        var pageIndex = 0;
         foreach (var page in body?.Elements(Draw + "page") ?? [])
         {
             var slide = new Slide
@@ -84,14 +84,13 @@ internal static class OdpParser
                 SlideId = slideId++,
                 Layout = layout,
                 Name = (string?)page.Attribute(Draw + "name") ?? string.Empty,
-                IsHidden = (string?)page.Attribute(Presentation + "visibility") == "hidden",
+                IsHidden = (string?)page.Attribute(Presentation + "visibility") == "hidden"
             };
 
             foreach (var frame in page.Elements(Draw + "frame"))
                 ReadFrame(frame, slide, mediaStore, zip);
 
             slides.AddParsed(slide);
-            pageIndex++;
         }
 
         var properties = ReadProperties(zip);
@@ -112,7 +111,12 @@ internal static class OdpParser
 
     // ── Frame → shape ────────────────────────────────────────────────────────
 
-    private static void ReadFrame(XElement frame, Slide slide, MediaStore mediaStore, ZipArchive zip)
+    private static void ReadFrame(
+        XElement frame,
+        Slide slide,
+        MediaStore mediaStore,
+        ZipArchive zip
+    )
     {
         var x = ParseLength((string?)frame.Attribute(Svg + "x"));
         var y = ParseLength((string?)frame.Attribute(Svg + "y"));
@@ -133,20 +137,19 @@ internal static class OdpParser
         }
 
         var textBox = frame.Element(Draw + "text-box");
-        if (textBox != null)
+        if (textBox == null) return;
+
+        var shape = new AutoShape
         {
-            var shape = new AutoShape
-            {
-                ShapeType = AutoShapeType.Rectangle,
-                IsTextBox = true,
-                X = x, Y = y, Width = w, Height = h,
-            };
-            ReadTextBox(textBox, shape);
-            slide.Shapes.AddParsed(shape);
-        }
+            ShapeType = AutoShapeType.Rectangle,
+            IsTextBox = true,
+            X = x, Y = y, Width = w, Height = h
+        };
+        ReadTextBox(textBox, shape);
+        slide.Shapes.AddParsed(shape);
     }
 
-    private static void ReadTextBox(XElement textBox, AutoShape shape)
+    private static void ReadTextBox(XContainer textBox, AutoShape shape)
     {
         foreach (var pEl in textBox.Elements(TextNs + "p"))
         {
@@ -159,13 +162,14 @@ internal static class OdpParser
                     case XElement span when span.Name == TextNs + "span":
                         para.Runs.Add(span.Value);
                         hasRun = true;
-                        break;
+                    break;
                     case XText text:
                         para.Runs.Add(text.Value);
                         hasRun = true;
-                        break;
+                    break;
                 }
             }
+
             // A paragraph with text directly in <text:p> (no span) — capture it.
             if (!hasRun && !string.IsNullOrEmpty(pEl.Value))
                 para.Runs.Add(pEl.Value);
@@ -175,6 +179,7 @@ internal static class OdpParser
     private static EmbeddedImage? LoadImage(string? href, ZipArchive zip, MediaStore mediaStore)
     {
         if (string.IsNullOrEmpty(href)) return null;
+
         var entryName = href.TrimStart('/');
         var entry = zip.GetEntry(entryName);
         if (entry == null) return null;
@@ -202,10 +207,7 @@ internal static class OdpParser
         var w = ParseLength((string?)props?.Attribute(Fo + "page-width"));
         var h = ParseLength((string?)props?.Attribute(Fo + "page-height"));
 
-        if (w.Value > 0 && h.Value > 0)
-            return new SlideSize(w, h);
-
-        return SlideSize.Widescreen;
+        return w.Value > 0 && h.Value > 0 ? new SlideSize(w, h) : SlideSize.Widescreen;
     }
 
     private static DocumentProperties ReadProperties(ZipArchive zip)
@@ -228,6 +230,7 @@ internal static class OdpParser
     {
         var entry = zip.GetEntry(entryName);
         if (entry == null) return null;
+
         using var s = entry.Open();
         return XDocument.Load(s);
     }
@@ -239,18 +242,19 @@ internal static class OdpParser
 
         var unit = value.Length >= 2 ? value[^2..] : string.Empty;
         var numberText = value[..^unit.Length];
-        if (!double.TryParse(numberText, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var number))
-            return Emu.Zero;
-
-        return unit switch
-        {
-            "cm" => Emu.FromCentimetres(number),
-            "mm" => Emu.FromCentimetres(number / 10.0),
-            "in" => Emu.FromInches(number),
-            "pt" => Emu.FromPoints(number),
-            _ => Emu.FromCentimetres(number),
-        };
+        return !double.TryParse(numberText,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var number)
+            ? Emu.Zero
+            : unit switch
+            {
+                "cm" => Emu.FromCentimetres(number),
+                "mm" => Emu.FromCentimetres(number / 10.0),
+                "in" => Emu.FromInches(number),
+                "pt" => Emu.FromPoints(number),
+                _ => Emu.FromCentimetres(number)
+            };
     }
 
     private static string ExtensionToMime(string ext) => ext.ToLowerInvariant() switch
@@ -260,6 +264,6 @@ internal static class OdpParser
         ".gif" => "image/gif",
         ".bmp" => "image/bmp",
         ".tif" or ".tiff" => "image/tiff",
-        _ => "application/octet-stream",
+        _ => "application/octet-stream"
     };
 }

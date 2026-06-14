@@ -1,6 +1,5 @@
 using Shouldly;
 using Unchained.Ooxml;
-using Unchained.Pptx.Animations;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
@@ -8,8 +7,8 @@ using Xunit;
 namespace Unchained.Pptx.Tests.IntegrationTests;
 
 /// <summary>
-/// M-E: animation timing detail — acceleration/deceleration, auto-reverse, and repeat count
-/// round-trip through save/reload. (The core timeline/sequence/effect model already existed.)
+///     M-E: animation timing detail — acceleration/deceleration, auto-reverse, and repeat count
+///     round-trip through save/reload. (The core timeline/sequence/effect model already existed.)
 /// </summary>
 public sealed class AnimationTimingTests : PptxTestBase
 {
@@ -18,9 +17,13 @@ public sealed class AnimationTimingTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Rectangle,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         var effect = doc.Slides[0].Animations.MainSequence.AddEffect(
-            shape.ShapeId, AnimationPreset.Fade, EffectCategory.Entrance);
+            shape.ShapeId);
         effect.Timing.DurationSeconds = 1.0;
         effect.Timing.AccelerationPercent = 0.3;
         effect.Timing.DecelerationPercent = 0.2;
@@ -40,7 +43,11 @@ public sealed class AnimationTimingTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Ellipse, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
+            AutoShapeType.Ellipse,
+            Emu.Zero,
+            Emu.Zero,
+            Emu.FromInches(2),
+            Emu.FromInches(1));
         var effect = doc.Slides[0].Animations.MainSequence.AddEffect(shape.ShapeId);
         effect.Timing.RepeatCount = -1; // indefinite
 

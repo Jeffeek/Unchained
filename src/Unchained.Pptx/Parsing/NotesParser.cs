@@ -2,19 +2,18 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Slides;
-using Unchained.Ooxml.Text;
 
 namespace Unchained.Pptx.Parsing;
 
 /// <summary>
-/// Parses a <c>&lt;p:notes&gt;</c> XML root into a <see cref="NotesSlide"/> model.
+///     Parses a <c>&lt;p:notes&gt;</c> XML root into a <see cref="NotesSlide" /> model.
 /// </summary>
 internal static class NotesParser
 {
     /// <summary>
-    /// Extracts the speaker notes text from the notes XML root and populates
-    /// <paramref name="notes"/>. The <c>NotesText</c> shortcut and the full
-    /// <c>NotesTextFrame</c> are both populated.
+    ///     Extracts the speaker notes text from the notes XML root and populates
+    ///     <paramref name="notes" />. The <c>NotesText</c> shortcut and the full
+    ///     <c>NotesTextFrame</c> are both populated.
     /// </summary>
     public static void Parse(XElement notesRoot, NotesSlide notes)
     {
@@ -29,11 +28,12 @@ internal static class NotesParser
         var spTree = notesRoot.Element(pml + "cSld")?.Element(pml + "spTree");
         if (spTree == null) return;
 
+        // ReSharper disable once LoopCanBePartlyConvertedToQuery
         foreach (var sp in spTree.Elements(pml + "sp"))
         {
             var phEl = sp.Element(pml + "nvSpPr")
-                         ?.Element(pml + "nvPr")
-                         ?.Element(pml + "ph");
+                ?.Element(pml + "nvPr")
+                ?.Element(pml + "ph");
             if (phEl == null) continue;
 
             var phType = phEl.GetAttr("type", string.Empty);
@@ -45,7 +45,6 @@ internal static class NotesParser
 
             var textFrame = TextParser.ParseTextBody(txBody);
             notes.NotesTextFrame = textFrame;
-            break;
         }
     }
 }

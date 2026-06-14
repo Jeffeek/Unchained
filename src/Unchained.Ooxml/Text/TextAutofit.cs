@@ -1,8 +1,8 @@
 namespace Unchained.Ooxml.Text;
 
 /// <summary>
-/// Controls how a text frame resizes itself or its text when the content
-/// does not fit within the frame's current dimensions.
+///     Controls how a text frame resizes itself or its text when the content
+///     does not fit within the frame's current dimensions.
 /// </summary>
 public enum TextAutofit
 {

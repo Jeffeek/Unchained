@@ -61,8 +61,8 @@ public sealed class TxtToPdfTests : PdfTestBase
     [Fact]
     public async Task LoadFromTxt_CustomFont_CourierProducesValidPdf()
     {
-        var opts = new TxtLoadOptions(FontName: "Courier", FontSize: 10f);
-        await using var doc = await Processor.LoadFromTxtAsync("Monospace text", opts, ct: TestContext.Current.CancellationToken);
+        var opts = new TxtLoadOptions("Courier", 10f);
+        await using var doc = await Processor.LoadFromTxtAsync("Monospace text", opts, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -71,7 +71,7 @@ public sealed class TxtToPdfTests : PdfTestBase
     {
         var text = string.Join("\n", Enumerable.Range(1, 5).Select(static i => $"Page content line {i}"));
         await using var doc = await Processor.LoadFromTxtAsync(text, ct: TestContext.Current.CancellationToken);
-        await using var reloaded = await SaveAndReloadAsync(doc, ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(doc.PageCount);
     }
 }

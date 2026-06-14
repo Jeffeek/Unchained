@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
@@ -11,7 +12,7 @@ public sealed class DocumentMergerTests : PdfTestBase
     private static readonly DocumentMerger Merger = new();
 
     // Convenience wrapper that builds a MultiPage fixture and loads it.
-    private static Task<Abstractions.IPdfDocument> LoadFixtureAsync(int pages) =>
+    private static Task<IPdfDocument> LoadFixtureAsync(int pages) =>
         LoadAsync(PdfFixtures.MultiPage(pages));
 
     // ── IReadOnlyList<IPdfDocument> overload ──────────────────────────────────
@@ -21,7 +22,7 @@ public sealed class DocumentMergerTests : PdfTestBase
     {
         await using var a = await LoadFixtureAsync(2);
         await using var b = await LoadFixtureAsync(3);
-        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
         merged.PageCount.ShouldBe(5);
     }
 
@@ -31,7 +32,7 @@ public sealed class DocumentMergerTests : PdfTestBase
         await using var a = await LoadFixtureAsync(1);
         await using var b = await LoadFixtureAsync(2);
         await using var c = await LoadFixtureAsync(4);
-        await using var merged = await Merger.MergeAsync([a, b, c], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a, b, c], MergeOptions.Default, TestContext.Current.CancellationToken);
         merged.PageCount.ShouldBe(7);
     }
 
@@ -39,25 +40,25 @@ public sealed class DocumentMergerTests : PdfTestBase
     public async Task MergeAsync_SingleDocument_PageCountMatches()
     {
         await using var a = await LoadFixtureAsync(3);
-        await using var merged = await Merger.MergeAsync([a], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a], MergeOptions.Default, TestContext.Current.CancellationToken);
         merged.PageCount.ShouldBe(3);
     }
 
     [Fact]
     public Task MergeAsync_EmptyList_Throws() =>
-        Should.ThrowAsync<ArgumentException>(static () => Merger.MergeAsync(Array.Empty<Abstractions.IPdfDocument>(), MergeOptions.Default));
+        Should.ThrowAsync<ArgumentException>(static () => Merger.MergeAsync(Array.Empty<IPdfDocument>(), MergeOptions.Default));
 
     [Fact]
     public async Task MergeAsync_ProducedDocument_IsParseableAfterSave()
     {
         await using var a = await LoadFixtureAsync(2);
         await using var b = await LoadFixtureAsync(2);
-        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(merged, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
-        await using var reloaded = await LoadAsync(ms, ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
 
         reloaded.PageCount.ShouldBe(4);
     }
@@ -67,7 +68,7 @@ public sealed class DocumentMergerTests : PdfTestBase
     {
         await using var a = await LoadFixtureAsync(3);
         await using var b = await LoadFixtureAsync(5);
-        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
         merged.Pages.Count.ShouldBe(8);
     }
 
@@ -76,7 +77,7 @@ public sealed class DocumentMergerTests : PdfTestBase
     {
         await using var a = await LoadFixtureAsync(2);
         await using var b = await LoadFixtureAsync(2);
-        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         Should.NotThrow(() =>
         {
@@ -101,7 +102,7 @@ public sealed class DocumentMergerTests : PdfTestBase
     {
         var a = new MemoryStream(PdfFixtures.MultiPage(2));
         var b = new MemoryStream(PdfFixtures.MultiPage(3));
-        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
         merged.PageCount.ShouldBe(5);
     }
 
@@ -114,12 +115,12 @@ public sealed class DocumentMergerTests : PdfTestBase
     {
         var a = new MemoryStream(PdfFixtures.MultiPage(2));
         var b = new MemoryStream(PdfFixtures.MultiPage(2));
-        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(merged, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
-        await using var reloaded = await LoadAsync(ms, ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
 
         reloaded.PageCount.ShouldBe(4);
     }
@@ -130,11 +131,11 @@ public sealed class DocumentMergerTests : PdfTestBase
         const int pagesA = 2, pagesB = 3;
         await using var a = await LoadFixtureAsync(pagesA);
         await using var b = await LoadFixtureAsync(pagesB);
-        await using var mergedDocs = await Merger.MergeAsync([a, b], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var mergedDocs = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         var sa = new MemoryStream(PdfFixtures.MultiPage(pagesA));
         var sb = new MemoryStream(PdfFixtures.MultiPage(pagesB));
-        await using var mergedStreams = await Merger.MergeAsync([sa, sb], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var mergedStreams = await Merger.MergeAsync([sa, sb], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         mergedDocs.PageCount.ShouldBe(mergedStreams.PageCount);
     }
@@ -155,7 +156,7 @@ public sealed class DocumentMergerTests : PdfTestBase
     {
         await using var a = await LoadFixtureAsync(2);
         await using var b = await LoadFixtureAsync(1);
-        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Fast, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Fast, TestContext.Current.CancellationToken);
         merged.PageCount.ShouldBe(3);
     }
 
@@ -170,9 +171,9 @@ public sealed class DocumentMergerTests : PdfTestBase
             Headers = ["Name", "Value"],
             Rows = [["A", "1"], ["B", "2"]]
         };
-        await using var tableDoc = await tableGen.GenerateAsync(data, TableStyle.Default, ct: TestContext.Current.CancellationToken);
+        await using var tableDoc = await tableGen.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
         await using var plainDoc = await LoadFixtureAsync(2);
-        await using var merged = await Merger.MergeAsync([tableDoc, plainDoc], MergeOptions.Default, ct: TestContext.Current.CancellationToken);
+        await using var merged = await Merger.MergeAsync([tableDoc, plainDoc], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         merged.PageCount.ShouldBe(3);
     }

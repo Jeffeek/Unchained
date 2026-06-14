@@ -5,16 +5,16 @@ using Unchained.Pptx.Slides;
 namespace Unchained.Pptx.Media;
 
 /// <summary>
-/// The central store for all media assets (images, audio, and video) embedded in or
-/// linked from a presentation. All shapes that reference media hold a reference to an
-/// object in this store.
+///     The central store for all media assets (images, audio, and video) embedded in or
+///     linked from a presentation. All shapes that reference media hold a reference to an
+///     object in this store.
 /// </summary>
 public sealed class MediaStore
 {
-    private readonly List<EmbeddedImage> _images = [];
     private readonly List<EmbeddedAudio> _audioFiles = [];
-    private readonly List<EmbeddedVideo> _videoFiles = [];
     private readonly List<EmbeddedFont> _fonts = [];
+    private readonly List<EmbeddedImage> _images = [];
+    private readonly List<EmbeddedVideo> _videoFiles = [];
 
     /// <summary>All images currently embedded in the presentation.</summary>
     public IReadOnlyList<EmbeddedImage> Images => _images;
@@ -31,11 +31,11 @@ public sealed class MediaStore
     // ── Images ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Adds an image from raw bytes and returns the resulting <see cref="EmbeddedImage"/>.
+    ///     Adds an image from raw bytes and returns the resulting <see cref="EmbeddedImage" />.
     /// </summary>
     /// <param name="data">The raw image bytes.</param>
     /// <param name="contentType">MIME type (e.g. <c>"image/png"</c>).</param>
-    public EmbeddedImage AddImage(ReadOnlyMemory<byte> data, string contentType)
+    internal EmbeddedImage AddImage(ReadOnlyMemory<byte> data, string contentType)
     {
         ArgumentNullException.ThrowIfNull(contentType);
         var image = new EmbeddedImage(contentType, data);
@@ -43,7 +43,7 @@ public sealed class MediaStore
         return image;
     }
 
-    /// <summary>Adds an already-constructed <see cref="EmbeddedImage"/> to the store.</summary>
+    /// <summary>Adds an already-constructed <see cref="EmbeddedImage" /> to the store.</summary>
     internal EmbeddedImage AddImage(EmbeddedImage image)
     {
         _images.Add(image);
@@ -78,11 +78,11 @@ public sealed class MediaStore
     }
 
     /// <summary>
-    /// Returns the embedded font bytes best matching <paramref name="typeface"/> and the
-    /// requested style, or <see langword="null"/> when no embedded font matches. Falls back
-    /// to the regular variant of the same typeface when the exact style is absent.
+    ///     Returns the embedded font bytes best matching <paramref name="typeface" /> and the
+    ///     requested style, or <see langword="null" /> when no embedded font matches. Falls back
+    ///     to the regular variant of the same typeface when the exact style is absent.
     /// </summary>
-    public ReadOnlyMemory<byte>? FindFontData(string typeface, EmbeddedFontStyle style)
+    internal ReadOnlyMemory<byte>? FindFontData(string typeface, EmbeddedFontStyle style)
     {
         if (string.IsNullOrEmpty(typeface) || _fonts.Count == 0)
             return null;
@@ -91,39 +91,40 @@ public sealed class MediaStore
         EmbeddedFont? regular = null;
         EmbeddedFont? anyOfTypeface = null;
 
-        foreach (var font in _fonts)
+        foreach (var font in _fonts.Where(font => font.Typeface.Equals(typeface, StringComparison.OrdinalIgnoreCase)))
         {
-            if (!font.Typeface.Equals(typeface, StringComparison.OrdinalIgnoreCase))
-                continue;
             anyOfTypeface ??= font;
-            if (font.Style == style) exact = font;
-            if (font.Style == EmbeddedFontStyle.Regular) regular = font;
+            if (font.Style == style)
+                exact = font;
+            if (font.Style == EmbeddedFontStyle.Regular)
+                regular = font;
         }
 
         var chosen = exact ?? regular ?? anyOfTypeface;
+
         return chosen?.Data;
     }
 
     // ── Cleanup ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Removes all media assets that are not referenced by any shape across
-    /// all slides, masters, and layouts in the given <paramref name="slides"/> collection.
-    /// Returns the total number of items removed.
+    ///     Removes all media assets that are not referenced by any shape across
+    ///     all slides, masters, and layouts in the given <paramref name="slides" /> collection.
+    ///     Returns the total number of items removed.
     /// </summary>
     /// <param name="slides">
-    /// The slide collection to scan for live references.
-    /// Pass <see cref="Engine.PresentationDocument.Slides"/> to purge unreferenced media
-    /// after removing shapes or slides.
+    ///     The slide collection to scan for live references.
+    ///     Pass <see cref="Engine.PresentationDocument.Slides" /> to purge unreferenced media
+    ///     after removing shapes or slides.
     /// </param>
-    public int RemoveUnused(SlideCollection slides)
+    internal int RemoveUnused(SlideCollection slides)
     {
         ArgumentNullException.ThrowIfNull(slides);
 
         // Collect all EmbeddedImage instances that are reachable from any shape.
         var usedImages = new HashSet<EmbeddedImage>(ReferenceEqualityComparer.Instance);
-        for (var i = 0; i < slides.Count; i++)
-            CollectImages(slides[i].Shapes, usedImages);
+        foreach (var slide in slides)
+            CollectImages(slide.Shapes, usedImages);
 
         // Remove images that are not reachable.
         var removedCount = _images.RemoveAll(img => !usedImages.Contains(img));
@@ -131,8 +132,8 @@ public sealed class MediaStore
         // Audio and video are stored on AudioShape / VideoShape respectively.
         var usedAudio = new HashSet<EmbeddedAudio>(ReferenceEqualityComparer.Instance);
         var usedVideo = new HashSet<EmbeddedVideo>(ReferenceEqualityComparer.Instance);
-        for (var i = 0; i < slides.Count; i++)
-            CollectMedia(slides[i].Shapes, usedAudio, usedVideo);
+        foreach (var slide in slides)
+            CollectMedia(slide.Shapes, usedAudio, usedVideo);
 
         removedCount += _audioFiles.RemoveAll(a => !usedAudio.Contains(a));
         removedCount += _videoFiles.RemoveAll(v => !usedVideo.Contains(v));
@@ -142,30 +143,38 @@ public sealed class MediaStore
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    private static void CollectImages(ShapeCollection shapes, HashSet<EmbeddedImage> used)
+    private static void CollectImages(ShapeCollection shapes, ISet<EmbeddedImage> used)
     {
         foreach (var shape in shapes)
         {
-            if (shape is PictureShape pic && pic.Image != null)
-                used.Add(pic.Image);
-            else if (shape is GroupShape grp)
-                CollectImages(grp.Children, used);
+            switch (shape)
+            {
+                case PictureShape { Image: not null } pic:
+                    used.Add(pic.Image);
+                break;
+                case GroupShape grp:
+                    CollectImages(grp.Children, used);
+                break;
+            }
         }
     }
 
-    private static void CollectMedia(
-        ShapeCollection shapes,
-        HashSet<EmbeddedAudio> usedAudio,
-        HashSet<EmbeddedVideo> usedVideo)
+    private static void CollectMedia(ShapeCollection shapes, ISet<EmbeddedAudio> usedAudio, ISet<EmbeddedVideo> usedVideo)
     {
         foreach (var shape in shapes)
         {
-            if (shape is AudioShape audio && audio.Audio != null)
-                usedAudio.Add(audio.Audio);
-            else if (shape is VideoShape video && video.Video != null)
-                usedVideo.Add(video.Video);
-            else if (shape is GroupShape grp)
-                CollectMedia(grp.Children, usedAudio, usedVideo);
+            switch (shape)
+            {
+                case AudioShape { Audio: not null } audio:
+                    usedAudio.Add(audio.Audio);
+                break;
+                case VideoShape { Video: not null } video:
+                    usedVideo.Add(video.Video);
+                break;
+                case GroupShape grp:
+                    CollectMedia(grp.Children, usedAudio, usedVideo);
+                break;
+            }
         }
     }
 }

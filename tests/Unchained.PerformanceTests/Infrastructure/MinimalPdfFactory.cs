@@ -3,15 +3,15 @@ using System.Text;
 namespace Unchained.PerformanceTests.Infrastructure;
 
 /// <summary>
-/// Generates minimal but spec-compliant PDF byte arrays without any external dependency.
-/// Used as benchmark fixtures so the benchmarks have no dependency on a working
-/// Unchained write path (the write path is what we're building).
+///     Generates minimal but spec-compliant PDF byte arrays without any external dependency.
+///     Used as benchmark fixtures so the benchmarks have no dependency on a working
+///     Unchained write path (the write path is what we're building).
 /// </summary>
 internal static class MinimalPdfFactory
 {
     /// <summary>
-    /// Builds a valid single-page PDF with <paramref name="pageCount"/> blank A4 pages.
-    /// The structure is the smallest PDF that conforms to ISO 32000-1 §7.5.
+    ///     Builds a valid single-page PDF with <paramref name="pageCount" /> blank A4 pages.
+    ///     The structure is the smallest PDF that conforms to ISO 32000-1 §7.5.
     /// </summary>
     public static byte[] Build(int pageCount = 1, string pageText = "Unchained benchmark")
     {
@@ -66,9 +66,9 @@ internal static class MinimalPdfFactory
     }
 
     /// <summary>
-    /// Builds a valid PDF with <paramref name="pageCount"/> pages, each containing
-    /// the given <paramref name="text"/> rendered in Helvetica 12pt.
-    /// Used for text-extraction benchmarks where all libraries must actually find content.
+    ///     Builds a valid PDF with <paramref name="pageCount" /> pages, each containing
+    ///     the given <paramref name="text" /> rendered in Helvetica 12pt.
+    ///     Used for text-extraction benchmarks where all libraries must actually find content.
     /// </summary>
     public static byte[] BuildWithText(int pageCount = 1, string text = "Unchained benchmark text content")
         => BuildWithTextCore(pageCount, text);
