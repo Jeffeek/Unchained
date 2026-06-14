@@ -1,0 +1,87 @@
+@using Unchained.Pdf.Models
+
+<MudDialog Style="min-width:460px; max-width:560px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.BrandingWatermark" Class="mr-2" Style="vertical-align:middle;"/>
+            Add Watermark
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_text" Label="Watermark text"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"/>
+
+            <div style="display:flex; gap:12px;">
+                <MudNumericField @bind-Value="_x" Label="X (pt)" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Min="0"/>
+                <MudNumericField @bind-Value="_y" Label="Y (pt)" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Min="0"/>
+            </div>
+
+            <div style="display:flex; gap:12px;">
+                <MudNumericField @bind-Value="_fontSize" Label="Font size (pt)" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Min="1"/>
+                <MudNumericField @bind-Value="_rotation" Label="Rotation (°)" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"/>
+            </div>
+
+            <div>
+                <MudText Typo="Typo.caption" Style="opacity:.7;">Gray level: @_gray.ToString("F2") (0 = black, 1 = white)</MudText>
+                <MudSlider @bind-Value="_gray" Min="0f" Max="1f" Step="0.05f" Color="Color.Primary"/>
+            </div>
+
+            <MudCheckBox @bind-Value="_background" Color="Color.Primary" Dense="true">
+                Draw behind page content (background)
+            </MudCheckBox>
+
+            <MudRadioGroup @bind-Value="_allPages" T="bool">
+                <MudRadio Value="true" Color="Color.Primary">All pages</MudRadio>
+                <MudRadio Value="false" Color="Color.Primary">Current page only (@CurrentPage)</MudRadio>
+            </MudRadioGroup>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Confirm" Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@string.IsNullOrEmpty(_text)"
+                   StartIcon="@Icons.Material.Outlined.BrandingWatermark">
+            Apply
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    private string _text = "DRAFT";
+    private float _x = 150;
+    private float _y = 400;
+    private float _fontSize = 48;
+    private float _rotation = 45;
+    private float _gray = 0.75f;
+    private bool _background;
+    private bool _allPages = true;
+
+    private void Confirm()
+    {
+        var stamp = new TextStamp(
+            _text,
+            _x,
+            _y,
+            FontSize: _fontSize,
+            GrayLevel: _gray,
+            RotationDegrees: _rotation,
+            IsBackground: _background);
+        MudDialog.Close(DialogResult.Ok(new WatermarkResult(stamp, _allPages)));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

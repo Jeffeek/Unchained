@@ -1,0 +1,69 @@
+@using Unchained.Pdf.Models
+
+<MudDialog Style="min-width:440px; max-width:540px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Lock" Class="mr-2" Style="vertical-align:middle;"/>
+            Encrypt Document
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2" Style="opacity:.7;">
+                Re-encrypts the document with the given passwords. Leave both blank to remove
+                encryption. The user password is required to open the file; the owner password
+                controls permission changes.
+            </MudText>
+
+            <MudTextField @bind-Value="_userPassword"
+                          Label="User password (open)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          InputType="@(_show ? InputType.Text : InputType.Password)"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@(_show ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+                          OnAdornmentClick="() => _show = !_show"/>
+
+            <MudTextField @bind-Value="_ownerPassword"
+                          Label="Owner password (permissions)"
+                          HelperText="Optional — defaults to the user password."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          InputType="@(_show ? InputType.Text : InputType.Password)"/>
+
+            <MudSelect T="PdfEncryptionAlgorithm" @bind-Value="_algorithm"
+                       Label="Algorithm" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="PdfEncryptionAlgorithm.Aes256">AES-256 (recommended)</MudSelectItem>
+                <MudSelectItem Value="PdfEncryptionAlgorithm.Aes128">AES-128</MudSelectItem>
+                <MudSelectItem Value="PdfEncryptionAlgorithm.Rc4_128">RC4-128 (legacy)</MudSelectItem>
+            </MudSelect>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Confirm" Color="Color.Primary" Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Outlined.Lock">
+            @(IsRemoval ? "Remove encryption" : "Encrypt")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private string _userPassword = string.Empty;
+    private string _ownerPassword = string.Empty;
+    private PdfEncryptionAlgorithm _algorithm = PdfEncryptionAlgorithm.Aes256;
+    private bool _show;
+
+    private bool IsRemoval => _userPassword.Length == 0 && _ownerPassword.Length == 0;
+
+    private void Confirm() =>
+        MudDialog.Close(DialogResult.Ok(new EncryptResult(_userPassword, _ownerPassword, _algorithm)));
+
+    private void Cancel() => MudDialog.Cancel();
+}

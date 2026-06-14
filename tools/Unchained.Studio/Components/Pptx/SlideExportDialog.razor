@@ -1,4 +1,3 @@
-@using System.IO.Compression
 @using System.Text
 @using Unchained.Pptx.Engine
 @using Unchained.Pptx.Rendering.Engine
@@ -184,7 +183,7 @@
         _message = "Building ZIP…";
         StateHasChanged();
 
-        var zipBytes = BuildZip(entries);
+        var zipBytes = ZipBuilder.Build(entries);
         var zipName = $"{Path.GetFileNameWithoutExtension(FileName)}_slides.zip";
         await Exporter.TriggerDownloadAsync(zipBytes, zipName, "application/zip");
 
@@ -225,21 +224,4 @@
 
     private static ReadOnlySpan<byte> BuildReferenceReadme() =>
         "Drop the production engine's slide PNGs here, named slide_001.png, slide_002.png, …\nso they line up with the files in ../unchained/ for visual comparison.\n"u8;
-
-    private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
-    {
-        using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
-        {
-            foreach (var (path, data) in entries)
-            {
-                var entry = zip.CreateEntry(path, CompressionLevel.Optimal);
-                using var stream = entry.Open();
-                stream.Write(data);
-            }
-        }
-
-        return ms.ToArray();
-    }
-
 }

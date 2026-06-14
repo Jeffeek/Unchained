@@ -1,0 +1,116 @@
+@inject IJSRuntime JS
+
+<MudDialog Style="min-width:480px; max-width:600px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.MergeType" Class="mr-2" Style="vertical-align:middle;"/>
+            Merge Documents
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3" Style="min-width:440px;">
+            <MudText Typo="Typo.body2" Style="opacity:.7;">
+                Appends the pages of the selected PDFs to the end of the current document,
+                in the order listed below.
+            </MudText>
+
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.AttachFile"
+                       OnClick="TriggerFilePicker"
+                       Disabled="_busy">
+                Add PDFs…
+            </MudButton>
+
+            @if (_files.Count > 0)
+            {
+                <MudList T="string" Dense="true">
+                    @for (var i = 0; i < _files.Count; i++)
+                    {
+                        var index = i;
+                        <MudListItem T="string" Icon="@Icons.Material.Outlined.PictureAsPdf">
+                            <div style="display:flex; align-items:center; width:100%;">
+                                <MudText Typo="Typo.body2">@_files[index].Name</MudText>
+                                <MudText Typo="Typo.caption" Class="ml-2" Style="opacity:.6;">
+                                    @($"{_files[index].Bytes.Length / 1024} KB")
+                                </MudText>
+                                <MudSpacer/>
+                                <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
+                                               OnClick="() => _files.RemoveAt(index)"/>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Confirm" Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@(_files.Count == 0 || _busy)"
+                   StartIcon="@Icons.Material.Outlined.MergeType">
+            Merge @(_files.Count > 0 ? $"({_files.Count})" : string.Empty)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Hidden multi-file input, clicked from the "Add PDFs…" button via JS interop.
+     MudFileUpload's activator templates differ across MudBlazor versions, so the
+     codebase uses this hidden-InputFile pattern (see FileDropZone, BatchExportDialog). -->
+<InputFile id="merge-file-input" OnChange="OnFilesAdded" accept=".pdf" multiple style="display:none;"/>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private readonly List<(string Name, byte[] Bytes)> _files = [];
+    private string? _error;
+    private bool _busy;
+
+    private Task TriggerFilePicker() =>
+        JS.InvokeVoidAsync("unchainedStudio.clickElement", "merge-file-input").AsTask();
+
+    private async Task OnFilesAdded(InputFileChangeEventArgs e)
+    {
+        _error = null;
+        _busy = true;
+        StateHasChanged();
+        try
+        {
+            foreach (var file in e.GetMultipleFiles(maximumFileCount: 20))
+            {
+                if (file.Size > StudioConstants.MaxUploadBytes)
+                {
+                    _error = $"{file.Name} is too large (max 100 MB).";
+                    continue;
+                }
+
+                using var ms = new MemoryStream();
+                await using var stream = file.OpenReadStream(StudioConstants.MaxUploadBytes);
+                await stream.CopyToAsync(ms);
+                _files.Add((file.Name, ms.ToArray()));
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Confirm() =>
+        MudDialog.Close(DialogResult.Ok(_files.Select(static f => f.Bytes).ToList()));
+
+    private void Cancel() => MudDialog.Cancel();
+}

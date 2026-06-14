@@ -1,5 +1,6 @@
 @page "/pdf"
 @using System.Text
+@using Unchained.Pdf.Engine
 @using Unchained.Pdf.Models
 @inject SessionStateService Session
 @inject FileExportService Exporter
@@ -204,6 +205,33 @@
     private void OnSessionRefreshed() =>
         InvokeAsync(StateHasChanged);
 
+    // Reloads the session with new bytes, re-wiring the Refreshed subscription onto the
+    // new PdfSessionState. Every reload-based operation (Optimize, Repair, Linearize, Merge,
+    // Encrypt) must go through this — calling Session.LoadPdfAsync directly would leave the
+    // Refreshed event bound to the disposed old session, so later in-place ops (Rotate,
+    // Watermark, Remove) would stop re-rendering the tree.
+    private async Task ReloadAsync(byte[] bytes, string fileName)
+    {
+        if (Session.Pdf is not null)
+            Session.Pdf.Refreshed -= OnSessionRefreshed;
+
+        await Session.LoadPdfAsync(bytes, fileName);
+
+        if (Session.Pdf is not null)
+            Session.Pdf.Refreshed += OnSessionRefreshed;
+    }
+
+    private async Task ReloadAsync(byte[] bytes, string fileName, string password)
+    {
+        if (Session.Pdf is not null)
+            Session.Pdf.Refreshed -= OnSessionRefreshed;
+
+        await Session.LoadPdfAsync(bytes, fileName, password);
+
+        if (Session.Pdf is not null)
+            Session.Pdf.Refreshed += OnSessionRefreshed;
+    }
+
     private async Task LoadPdf((byte[] Bytes, string FileName) file)
     {
         SetBusy("Loading PDF…");
@@ -316,7 +344,7 @@
             var options = new SaveOptions(OptimizeSize: true);
             await Session.Pdf.Processor.SaveAsync(Session.Pdf.Document, ms, options);
             var old = Session.Pdf.CurrentBytes.Length;
-            await Session.LoadPdfAsync(ms.ToArray(), Session.Pdf.FileName);
+            await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
             var @new = Session.Pdf.CurrentBytes.Length;
             ShowInfo($"Optimized: {old / 1024} KB → {@new / 1024} KB");
         }
@@ -342,7 +370,7 @@
             using var ms = new MemoryStream();
             await Session.Pdf.Processor.SaveAsync(repaired, ms);
             await repaired.DisposeAsync();
-            await Session.LoadPdfAsync(ms.ToArray(), Session.Pdf.FileName);
+            await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
             ShowInfo("Repair complete.");
         }
         catch (Exception ex)
@@ -368,7 +396,7 @@
                 Session.Pdf.Document,
                 ms,
                 SaveOptions.WebOptimized);
-            await Session.LoadPdfAsync(ms.ToArray(), Session.Pdf.FileName);
+            await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
             ShowInfo("Document linearized (web-optimized).");
         }
         catch (Exception ex)
@@ -421,13 +449,27 @@
         }
     }
 
-    private Task RotateCurrentPage()
+    private async Task RotateCurrentPage()
     {
         if (Session.Pdf is null)
-            return Task.CompletedTask;
-        // Rotation is applied via page mutation — stub for now
-        ShowInfo("Page rotation coming soon.");
-        return Task.CompletedTask;
+            return;
+
+        SetBusy("Rotating page…");
+        try
+        {
+            var page = Session.Pdf.CurrentPage;
+            await new PageOrganizer().RotatePagesAsync(Session.Pdf.Document, [page], 90);
+            await Session.Pdf.RefreshAsync();
+            ShowInfo($"Rotated page {page} by 90°.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            ClearBusy();
+        }
     }
 
     private async Task OpenBatchDialog()
@@ -442,34 +484,188 @@
         await Dialogs.ShowAsync<BatchExportDialog>("Batch Comparison Export", new DialogParameters(), options);
     }
 
-    private Task OpenMergeDialog()
+    private async Task OpenMergeDialog()
     {
-        ShowInfo("Merge dialog coming soon.");
-        return Task.CompletedTask;
+        if (Session.Pdf is null)
+            return;
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await Dialogs.ShowAsync<MergeDialog>("Merge Documents", new DialogParameters(), options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not List<byte[]> extraDocs || extraDocs.Count == 0)
+            return;
+
+        SetBusy("Merging…");
+        try
+        {
+            // Combine the current document's bytes with the uploaded ones, in order.
+            var streams = new List<Stream> { new MemoryStream(Session.Pdf.CurrentBytes) };
+            streams.AddRange(extraDocs.Select(static Stream (b) => new MemoryStream(b)));
+
+            var merged = await new DocumentMerger().MergeAsync(streams, MergeOptions.Default);
+            foreach (var s in streams) await s.DisposeAsync();
+
+            using var ms = new MemoryStream();
+            await Session.Pdf.Processor.SaveAsync(merged, ms);
+            await merged.DisposeAsync();
+
+            await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
+            ShowInfo($"Merged {extraDocs.Count} document(s).");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            ClearBusy();
+        }
     }
 
-    private Task OpenSplitDialog()
+    private async Task OpenSplitDialog()
     {
-        ShowInfo("Split dialog coming soon.");
-        return Task.CompletedTask;
+        if (Session.Pdf is null)
+            return;
+
+        var parameters = new DialogParameters { [nameof(SplitDialog.PageCount)] = Session.Pdf.Document.PageCount };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await Dialogs.ShowAsync<SplitDialog>("Split Document", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not List<(int Start, int End)> ranges)
+            return;
+
+        SetBusy("Splitting…");
+        try
+        {
+            var parts = await new PageOrganizer().SplitAsync(Session.Pdf.Document, ranges);
+            var zipEntries = new List<(string Name, byte[] Bytes)>();
+            var baseName = Path.GetFileNameWithoutExtension(Session.Pdf.FileName);
+
+            for (var i = 0; i < parts.Count; i++)
+            {
+                using var ms = new MemoryStream();
+                await Session.Pdf.Processor.SaveAsync(parts[i], ms);
+                zipEntries.Add(($"{baseName}_part{i + 1}_p{ranges[i].Start}-{ranges[i].End}.pdf", ms.ToArray()));
+                await parts[i].DisposeAsync();
+            }
+
+            await Exporter.TriggerDownloadAsync(ZipBuilder.Build(zipEntries), $"{baseName}_split.zip", "application/zip");
+            ShowInfo($"Split into {parts.Count} file(s) — downloaded as ZIP.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            ClearBusy();
+        }
     }
 
-    private Task OpenRemovePagesDialog()
+    private async Task OpenRemovePagesDialog()
     {
-        ShowInfo("Remove pages dialog coming soon.");
-        return Task.CompletedTask;
+        if (Session.Pdf is null)
+            return;
+
+        var parameters = new DialogParameters { [nameof(RemovePagesDialog.PageCount)] = Session.Pdf.Document.PageCount };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await Dialogs.ShowAsync<RemovePagesDialog>("Remove Pages", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not List<int> pages || pages.Count == 0)
+            return;
+
+        SetBusy("Removing pages…");
+        try
+        {
+            await new PageOrganizer().DeletePagesAsync(Session.Pdf.Document, pages);
+            await Session.Pdf.RefreshAsync();
+            ShowInfo($"Removed {pages.Count} page(s).");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            ClearBusy();
+        }
     }
 
-    private Task OpenEncryptDialog()
+    private async Task OpenEncryptDialog()
     {
-        ShowInfo("Encrypt dialog coming soon.");
-        return Task.CompletedTask;
+        if (Session.Pdf is null)
+            return;
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await Dialogs.ShowAsync<EncryptDialog>("Encrypt Document", new DialogParameters(), options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not EncryptResult enc)
+            return;
+
+        SetBusy("Encrypting…");
+        try
+        {
+            using var ms = new MemoryStream();
+            await Session.Pdf.Processor.ChangePasswordsAsync(
+                Session.Pdf.Document,
+                enc.UserPassword,
+                enc.OwnerPassword,
+                ms,
+                enc.Algorithm);
+
+            // Reload the re-encrypted bytes, using the new user password when one was set.
+            var bytes = ms.ToArray();
+            if (enc.UserPassword.Length > 0)
+                await ReloadAsync(bytes, Session.Pdf.FileName, password: enc.UserPassword);
+            else
+                await ReloadAsync(bytes, Session.Pdf.FileName);
+
+            ShowInfo(enc.UserPassword.Length == 0 && enc.OwnerPassword.Length == 0
+                ? "Encryption removed."
+                : "Document encrypted.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            ClearBusy();
+        }
     }
 
-    private Task OpenWatermarkDialog()
+    private async Task OpenWatermarkDialog()
     {
-        ShowInfo("Watermark dialog coming soon.");
-        return Task.CompletedTask;
+        if (Session.Pdf is null)
+            return;
+
+        var parameters = new DialogParameters { [nameof(WatermarkDialog.CurrentPage)] = Session.Pdf.CurrentPage };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await Dialogs.ShowAsync<WatermarkDialog>("Add Watermark", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not WatermarkResult wm)
+            return;
+
+        SetBusy("Applying watermark…");
+        try
+        {
+            var applier = new StampApplier();
+            if (wm.AllPages)
+                await applier.StampAsync(Session.Pdf.Document, wm.Stamp);
+            else
+                await applier.StampPageAsync(Session.Pdf.Document, Session.Pdf.CurrentPage, wm.Stamp);
+
+            await Session.Pdf.RefreshAsync();
+            ShowInfo(wm.AllPages ? "Watermark applied to all pages." : "Watermark applied to current page.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            ClearBusy();
+        }
     }
 
     private async Task CloseDocument()
@@ -486,16 +682,15 @@
 
     private async Task OnOpenFileSelected(InputFileChangeEventArgs e)
     {
-        const long maxSize = 100 * 1024 * 1024;
         var file = e.File;
-        if (file.Size > maxSize)
+        if (file.Size > StudioConstants.MaxUploadBytes)
         {
             ShowError("File too large.");
             return;
         }
 
         using var ms = new MemoryStream();
-        await using var stream = file.OpenReadStream(maxSize);
+        await using var stream = file.OpenReadStream(StudioConstants.MaxUploadBytes);
         await stream.CopyToAsync(ms);
         await LoadPdf((ms.ToArray(), file.Name));
     }
