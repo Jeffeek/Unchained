@@ -42,7 +42,8 @@ public sealed class ShadingInfoTests
             false,
             false,
             [],
-            []);
+            []
+        );
         info.IsMesh.ShouldBeTrue();
     }
 

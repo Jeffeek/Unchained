@@ -29,9 +29,12 @@ public sealed class XfdfEditor : IXfdfEditor
 
         var xfdf = new XDocument(
             new XDeclaration("1.0", "UTF-8", null),
-            new XElement(XfdfNs + "xfdf",
+            new XElement(
+                XfdfNs + "xfdf",
                 new XAttribute(XNamespace.Xml + "space", "preserve"),
-                annots));
+                annots
+            )
+        );
 
         return xfdf.ToString(SaveOptions.None);
     }
@@ -58,7 +61,8 @@ public sealed class XfdfEditor : IXfdfEditor
             _ => "text"
         };
 
-        var elem = new XElement(XfdfNs + elemName,
+        var elem = new XElement(
+            XfdfNs + elemName,
             new XAttribute("page", zeroBasedPage),
             new XAttribute("rect", FormattableString.Invariant($"{ann.X:G},{ann.Y:G},{ann.X + ann.Width:G},{ann.Y + ann.Height:G}"))
         );

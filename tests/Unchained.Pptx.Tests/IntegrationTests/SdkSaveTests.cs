@@ -67,7 +67,8 @@ public sealed class SdkSaveTests
 
         var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
         reloaded.Slides.Count.ShouldBe(doc.Slides.Count, "slide count after SDK save round-trip");
-        reloaded.Slides.Select(static s => s.Shapes.Count).ToArray()
+        reloaded.Slides.Select(static s => s.Shapes.Count)
+            .ToArray()
             .ShouldBe(originalShapeCounts, "per-slide shape count after SDK save round-trip");
 
         await doc.DisposeAsync();
@@ -85,7 +86,8 @@ public sealed class SdkSaveTests
 
         using var ms = new MemoryStream();
         await Should.NotThrowAsync(() =>
-            processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }));
+            processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true })
+        );
         ms.Length.ShouldBeGreaterThan(0);
 
         await doc.DisposeAsync();

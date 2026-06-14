@@ -37,11 +37,13 @@ public sealed class PdfObjectRemapperTests
     [Fact]
     public void Remap_Array_AllReferencesOffset()
     {
-        var arr = new PdfArray([
-            new PdfIndirectReference(1, 0),
-            new PdfIndirectReference(2, 0),
-            new PdfInteger(42)
-        ]);
+        var arr = new PdfArray(
+            [
+                new PdfIndirectReference(1, 0),
+                new PdfIndirectReference(2, 0),
+                new PdfInteger(42)
+            ]
+        );
         var result = (PdfArray)PdfObjectRemapper.Remap(arr, 10);
         ((PdfIndirectReference)result[0]).ObjectNumber.ShouldBe(11);
         ((PdfIndirectReference)result[1]).ObjectNumber.ShouldBe(12);
@@ -51,11 +53,13 @@ public sealed class PdfObjectRemapperTests
     [Fact]
     public void Remap_Dictionary_AllReferencesOffset()
     {
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Ref"] = new PdfIndirectReference(3, 0),
-            ["Lit"] = PdfName.Get("Foo")
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Ref"] = new PdfIndirectReference(3, 0),
+                ["Lit"] = PdfName.Get("Foo")
+            }
+        );
         var result = (PdfDictionary)PdfObjectRemapper.Remap(dict, 7);
         ((PdfIndirectReference)result["Ref"]!).ObjectNumber.ShouldBe(10);
         ((PdfName)result["Lit"]!).Value.ShouldBe("Foo");
@@ -65,10 +69,12 @@ public sealed class PdfObjectRemapperTests
     public void Remap_Stream_DictionaryRemapped_DataPreserved()
     {
         var data = new byte[] { 1, 2, 3 };
-        var streamDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Length.Value] = new PdfIndirectReference(5, 0)
-        });
+        var streamDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Length.Value] = new PdfIndirectReference(5, 0)
+            }
+        );
         var stream = new PdfStream(streamDict, data);
 
         var result = (PdfStream)PdfObjectRemapper.Remap(stream, 20);
@@ -109,10 +115,12 @@ public sealed class PdfObjectRemapperTests
     [Fact]
     public void Remap_NestedDictionaryInArray_DeepRemapCorrect()
     {
-        var inner = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Ref"] = new PdfIndirectReference(1, 0)
-        });
+        var inner = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Ref"] = new PdfIndirectReference(1, 0)
+            }
+        );
         var arr = new PdfArray([inner]);
         var result = (PdfArray)PdfObjectRemapper.Remap(arr, 50);
         var resultDict = (PdfDictionary)result[0];
@@ -169,11 +177,13 @@ public sealed class PdfObjectRemapperTests
     public void RemapSelective_Array_MappedAndUnmappedReferences()
     {
         var remapping = new Dictionary<int, int> { [2] = 20 };
-        var arr = new PdfArray([
-            new PdfIndirectReference(2, 0),
-            new PdfIndirectReference(7, 0),
-            new PdfInteger(42)
-        ]);
+        var arr = new PdfArray(
+            [
+                new PdfIndirectReference(2, 0),
+                new PdfIndirectReference(7, 0),
+                new PdfInteger(42)
+            ]
+        );
         var result = (PdfArray)PdfObjectRemapper.RemapSelective(arr, remapping);
         ((PdfIndirectReference)result[0]).ObjectNumber.ShouldBe(20);
         ((PdfIndirectReference)result[1]).ObjectNumber.ShouldBe(7);
@@ -184,12 +194,14 @@ public sealed class PdfObjectRemapperTests
     public void RemapSelective_Dictionary_MappedEntryReplaced_UnmappedPreserved()
     {
         var remapping = new Dictionary<int, int> { [4] = 40 };
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Mapped"] = new PdfIndirectReference(4, 0),
-            ["Unmapped"] = new PdfIndirectReference(9, 0),
-            ["Lit"] = PdfName.Get("Bar")
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Mapped"] = new PdfIndirectReference(4, 0),
+                ["Unmapped"] = new PdfIndirectReference(9, 0),
+                ["Lit"] = PdfName.Get("Bar")
+            }
+        );
         var result = (PdfDictionary)PdfObjectRemapper.RemapSelective(dict, remapping);
         ((PdfIndirectReference)result["Mapped"]!).ObjectNumber.ShouldBe(40);
         ((PdfIndirectReference)result["Unmapped"]!).ObjectNumber.ShouldBe(9);
@@ -201,10 +213,12 @@ public sealed class PdfObjectRemapperTests
     {
         var remapping = new Dictionary<int, int> { [5] = 55 };
         var data = new byte[] { 10, 20, 30 };
-        var streamDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Length.Value] = new PdfIndirectReference(5, 0)
-        });
+        var streamDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Length.Value] = new PdfIndirectReference(5, 0)
+            }
+        );
         var stream = new PdfStream(streamDict, data);
         var result = (PdfStream)PdfObjectRemapper.RemapSelective(stream, remapping);
         ((PdfIndirectReference)result.Dictionary[PdfName.Length]!).ObjectNumber.ShouldBe(55);

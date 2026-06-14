@@ -313,7 +313,8 @@ internal sealed class ShapeParser
         if (extLst is not null)
         {
             foreach (var decorative in extLst.Elements(DmlNames.Dml + "ext")
-                         .Select(static ext => ext.Elements().FirstOrDefault(static e => e.Name.LocalName == "decorative")).OfType<XElement>())
+                         .Select(static ext => ext.Elements().FirstOrDefault(static e => e.Name.LocalName == "decorative"))
+                         .OfType<XElement>())
             {
                 shape.IsDecorative = decorative.GetAttrBool("val") ?? false;
                 break;

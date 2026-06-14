@@ -84,44 +84,52 @@ internal sealed partial class SlideRasterizer
         for (var i = 0; i < bevelPx; i++)
         {
             var alpha = (byte)(180 - (i * 20));
-            buffer.FillRect(x + i,
+            buffer.FillRect(
+                x + i,
                 y + i,
                 width - (i * 2),
                 1,
                 255,
                 255,
                 255,
-                alpha);
-            buffer.FillRect(x + i,
+                alpha
+            );
+            buffer.FillRect(
+                x + i,
                 y + i,
                 1,
                 height - (i * 2),
                 255,
                 255,
                 255,
-                alpha);
+                alpha
+            );
         }
 
         // Shadow: bottom and right edges (darker).
         for (var i = 0; i < bevelPx; i++)
         {
             var alpha = (byte)(140 - (i * 15));
-            buffer.FillRect(x + i,
+            buffer.FillRect(
+                x + i,
                 y + height - 1 - i,
                 width - (i * 2),
                 1,
                 0,
                 0,
                 0,
-                alpha);
-            buffer.FillRect(x + width - 1 - i,
+                alpha
+            );
+            buffer.FillRect(
+                x + width - 1 - i,
                 y + i,
                 1,
                 height - (i * 2),
                 0,
                 0,
                 0,
-                alpha);
+                alpha
+            );
         }
     }
 
@@ -163,14 +171,16 @@ internal sealed partial class SlideRasterizer
             var sy = y + offY - layer;
             var sw = width + (layer * 2);
             var sh = height + (layer * 2);
-            buffer.FillRect(sx,
+            buffer.FillRect(
+                sx,
                 sy,
                 sw,
                 sh,
                 sr,
                 sg,
                 sb,
-                alpha);
+                alpha
+            );
         }
     }
 
@@ -225,52 +235,64 @@ internal sealed partial class SlideRasterizer
             if (cw <= 0 || ch <= 0)
                 continue;
 
-            PaintFill(buffer,
+            PaintFill(
+                buffer,
                 cell.Fill,
                 cx,
                 cy,
                 cw,
                 ch,
-                colorScheme);
+                colorScheme
+            );
 
             // Cell borders — use explicit border colors when set, fall back to light grey grid lines.
-            DrawCellBorder(buffer,
+            DrawCellBorder(
+                buffer,
                 cell.TopBorder,
                 cx,
                 cy,
                 cw,
                 1,
-                colorScheme);
-            DrawCellBorder(buffer,
+                colorScheme
+            );
+            DrawCellBorder(
+                buffer,
                 cell.LeftBorder,
                 cx,
                 cy,
                 1,
                 ch,
-                colorScheme);
-            DrawCellBorder(buffer,
+                colorScheme
+            );
+            DrawCellBorder(
+                buffer,
                 cell.BottomBorder,
                 cx,
                 cy + ch - 1,
                 cw,
                 1,
-                colorScheme);
-            DrawCellBorder(buffer,
+                colorScheme
+            );
+            DrawCellBorder(
+                buffer,
                 cell.RightBorder,
                 cx + cw - 1,
                 cy,
                 1,
                 ch,
-                colorScheme);
+                colorScheme
+            );
 
-            RenderTextFrame(buffer,
+            RenderTextFrame(
+                buffer,
                 cell.TextFrame,
                 cx + 2,
                 cy + 2,
                 cw - 4,
                 ch - 4,
                 dpi,
-                colorScheme);
+                colorScheme
+            );
         }
     }
 
@@ -308,22 +330,26 @@ internal sealed partial class SlideRasterizer
         var thickness = border.WidthPoints.HasValue
             ? Math.Max(1, (int)Math.Round(border.WidthPoints.Value * 1.333))
             : 1;
-        buffer.FillRect(x,
+        buffer.FillRect(
+            x,
             y,
             w,
             thickness,
             r,
             g,
-            b);
+            b
+        );
         if (h > thickness)
         {
-            buffer.FillRect(x,
+            buffer.FillRect(
+                x,
                 y,
                 thickness,
                 h,
                 r,
                 g,
-                b);
+                b
+            );
         }
     }
 
@@ -346,14 +372,16 @@ internal sealed partial class SlideRasterizer
             {
                 var argb = fill.Solid.Color.Resolve(colorScheme);
                 ExtractArgb(argb, out var a, out var r, out var g, out var b);
-                buffer.FillRect(x,
+                buffer.FillRect(
+                    x,
                     y,
                     width,
                     height,
                     r,
                     g,
                     b,
-                    a);
+                    a
+                );
                 break;
             }
             case FillType.Gradient when fill.Gradient is not null && fill.Gradient.Stops.Count >= 2:
@@ -372,25 +400,29 @@ internal sealed partial class SlideRasterizer
                     var bv = (byte)(b1 + ((b2 - b1) * t));
                     var bandY = y + (int)((double)i / bands * height);
                     var bandH = (int)((double)(i + 1) / bands * height) - (bandY - y);
-                    buffer.FillRect(x,
+                    buffer.FillRect(
+                        x,
                         bandY,
                         width,
                         Math.Max(1, bandH),
                         r,
                         g,
-                        bv);
+                        bv
+                    );
                 }
 
                 break;
             }
             case FillType.Picture when fill.Picture?.Image is not null:
             {
-                BlitImage(buffer,
+                BlitImage(
+                    buffer,
                     fill.Picture.Image,
                     x,
                     y,
                     width,
-                    height);
+                    height
+                );
                 break;
             }
             case FillType.None when styleFillColor.HasValue:
@@ -399,14 +431,16 @@ internal sealed partial class SlideRasterizer
                 ExtractArgb(argb, out var a, out var r, out var g, out var b);
                 if (a > 0)
                 {
-                    buffer.FillRect(x,
+                    buffer.FillRect(
+                        x,
                         y,
                         width,
                         height,
                         r,
                         g,
                         b,
-                        a);
+                        a
+                    );
                 }
 
                 break;
@@ -467,35 +501,43 @@ internal sealed partial class SlideRasterizer
         if (rawPixels is null || imgWidth <= 0 || imgHeight <= 0)
         {
             // Undecodable format (GIF/EMF/WMF/SVG/WDP): draw a light placeholder.
-            buffer.FillRect(x,
+            buffer.FillRect(
+                x,
                 y,
                 width,
                 height,
                 235,
                 235,
-                235);
-            DrawBorder(buffer,
+                235
+            );
+            DrawBorder(
+                buffer,
                 x,
                 y,
                 width,
                 height,
                 170,
                 170,
-                170);
-            buffer.DrawLine(x,
+                170
+            );
+            buffer.DrawLine(
+                x,
                 y,
                 x + width - 1,
                 y + height - 1,
                 200,
                 200,
-                200);
-            buffer.DrawLine(x + width - 1,
+                200
+            );
+            buffer.DrawLine(
+                x + width - 1,
                 y,
                 x,
                 y + height - 1,
                 200,
                 200,
-                200);
+                200
+            );
             return;
         }
 

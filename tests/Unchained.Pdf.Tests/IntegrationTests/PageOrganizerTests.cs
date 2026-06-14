@@ -47,10 +47,11 @@ public sealed class PageOrganizerTests : PdfTestBase
     [Fact]
     public Task RotatePages_NonMultipleOf90_Throws() =>
         Should.ThrowAsync<ArgumentException>(static async () =>
-        {
-            await using var doc = await LoadFixtureAsync(1);
-            await Organizer.RotatePagesAsync(doc, [1], 45);
-        });
+            {
+                await using var doc = await LoadFixtureAsync(1);
+                await Organizer.RotatePagesAsync(doc, [1], 45);
+            }
+        );
 
     [Fact]
     public async Task RotatePages_SurvivesSaveReload()
@@ -84,18 +85,20 @@ public sealed class PageOrganizerTests : PdfTestBase
     [Fact]
     public Task DeletePages_AllPages_Throws() =>
         Should.ThrowAsync<ArgumentException>(static async () =>
-        {
-            await using var doc = await LoadFixtureAsync(2);
-            await Organizer.DeletePagesAsync(doc, [1, 2]);
-        });
+            {
+                await using var doc = await LoadFixtureAsync(2);
+                await Organizer.DeletePagesAsync(doc, [1, 2]);
+            }
+        );
 
     [Fact]
     public Task DeletePages_OutOfRange_Throws() =>
         Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
-        {
-            await using var doc = await LoadFixtureAsync(2);
-            await Organizer.DeletePagesAsync(doc, [3]);
-        });
+            {
+                await using var doc = await LoadFixtureAsync(2);
+                await Organizer.DeletePagesAsync(doc, [3]);
+            }
+        );
 
     // ── Reorder ─────────────────────────────────────────────────────────────────
 
@@ -126,10 +129,11 @@ public sealed class PageOrganizerTests : PdfTestBase
     [Fact]
     public Task ReorderPages_NotAPermutation_Throws() =>
         Should.ThrowAsync<ArgumentException>(static async () =>
-        {
-            await using var doc = await LoadFixtureAsync(3);
-            await Organizer.ReorderPagesAsync(doc, [1, 1, 2]);
-        });
+            {
+                await using var doc = await LoadFixtureAsync(3);
+                await Organizer.ReorderPagesAsync(doc, [1, 1, 2]);
+            }
+        );
 
     // ── Insert ──────────────────────────────────────────────────────────────────
 
@@ -164,11 +168,12 @@ public sealed class PageOrganizerTests : PdfTestBase
     [Fact]
     public Task InsertPages_OutOfRange_Throws() =>
         Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
-        {
-            await using var dest = await LoadFixtureAsync(2);
-            await using var src = await LoadFixtureAsync(1);
-            await Organizer.InsertPagesAsync(dest, 5, src);
-        });
+            {
+                await using var dest = await LoadFixtureAsync(2);
+                await using var src = await LoadFixtureAsync(1);
+                await Organizer.InsertPagesAsync(dest, 5, src);
+            }
+        );
 
     // ── Split ───────────────────────────────────────────────────────────────────
 
@@ -200,16 +205,18 @@ public sealed class PageOrganizerTests : PdfTestBase
     [Fact]
     public Task Split_InvalidRange_Throws() =>
         Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
-        {
-            await using var doc = await LoadFixtureAsync(3);
-            await Organizer.SplitAsync(doc, [(2, 1)]);
-        });
+            {
+                await using var doc = await LoadFixtureAsync(3);
+                await Organizer.SplitAsync(doc, [(2, 1)]);
+            }
+        );
 
     [Fact]
     public Task Split_EmptyRanges_Throws() =>
         Should.ThrowAsync<ArgumentException>(static async () =>
-        {
-            await using var doc = await LoadFixtureAsync(3);
-            await Organizer.SplitAsync(doc, []);
-        });
+            {
+                await using var doc = await LoadFixtureAsync(3);
+                await Organizer.SplitAsync(doc, []);
+            }
+        );
 }

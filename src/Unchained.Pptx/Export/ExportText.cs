@@ -8,8 +8,11 @@ internal static class ExportText
     ///     so <paramref name="text" /> can be embedded in HTML markup or attribute values.
     /// </summary>
     internal static string EscapeHtml(string text) =>
-        text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
-            .Replace("\"", "&quot;").Replace("'", "&#39;");
+        text.Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\"", "&quot;")
+            .Replace("'", "&#39;");
 
     /// <summary>
     ///     Builds an inline <c>data:</c> URI (base64-encoded) for embedding image bytes

@@ -89,16 +89,24 @@ internal sealed class ContentTypeMap
 
         foreach (var (extension, contentType) in _extensionDefaults.OrderBy(static kv => kv.Key))
         {
-            root.Add(new XElement(ns + "Default",
-                new XAttribute("Extension", extension),
-                new XAttribute("ContentType", contentType)));
+            root.Add(
+                new XElement(
+                    ns + "Default",
+                    new XAttribute("Extension", extension),
+                    new XAttribute("ContentType", contentType)
+                )
+            );
         }
 
         foreach (var (partName, contentType) in _partOverrides.OrderBy(static kv => kv.Key))
         {
-            root.Add(new XElement(ns + "Override",
-                new XAttribute("PartName", partName),
-                new XAttribute("ContentType", contentType)));
+            root.Add(
+                new XElement(
+                    ns + "Override",
+                    new XAttribute("PartName", partName),
+                    new XAttribute("ContentType", contentType)
+                )
+            );
         }
 
         using var ms = new MemoryStream();

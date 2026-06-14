@@ -33,8 +33,10 @@ public sealed class PdfATests : PdfTestBase
         var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
         // ReSharper disable once StringLiteralTypo
-        result.Errors.ShouldContain(static v => v.RuleId == "6.1.3" && v.Description.Contains("ncrypt"),
-            "Encryption must be reported as a §6.1.3 violation.");
+        result.Errors.ShouldContain(
+            static v => v.RuleId == "6.1.3" && v.Description.Contains("ncrypt"),
+            "Encryption must be reported as a §6.1.3 violation."
+        );
     }
 
     [Fact]
@@ -181,8 +183,10 @@ public sealed class PdfATests : PdfTestBase
         // PDF 1.7 exceeds the 1.4 max for PDF/A-1; confirm a version violation is reported.
         var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), PdfAProfile.PdfA1B, TestContext.Current.CancellationToken);
 
-        result.Violations.ShouldContain(static v => v.RuleId == "6.1.2",
-            "PDF 1.7 header must trigger a §6.1.2 version violation for PDF/A-1B.");
+        result.Violations.ShouldContain(
+            static v => v.RuleId == "6.1.2",
+            "PDF 1.7 header must trigger a §6.1.2 version violation for PDF/A-1B."
+        );
     }
 
     [Fact]
@@ -191,8 +195,10 @@ public sealed class PdfATests : PdfTestBase
         // PDF 1.7 is within the 1.7 max for PDF/A-2; no version violation should be reported.
         var result = await Processor.ValidatePdfAAsync(PdfFixtures.SinglePage(), PdfAProfile.PdfA2B, TestContext.Current.CancellationToken);
 
-        result.Violations.ShouldNotContain(static v => v.RuleId == "6.1.2",
-            "PDF 1.7 header must not trigger a §6.1.2 version violation for PDF/A-2B.");
+        result.Violations.ShouldNotContain(
+            static v => v.RuleId == "6.1.2",
+            "PDF 1.7 header must not trigger a §6.1.2 version violation for PDF/A-2B."
+        );
     }
 
     // ── Validation — invalid XMP ──────────────────────────────────────────────
@@ -205,8 +211,10 @@ public sealed class PdfATests : PdfTestBase
 
         var result = await Processor.ValidatePdfAAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
 
-        result.Violations.ShouldContain(static v => v.RuleId == "6.7.2",
-            "Malformed XML in /Metadata must produce a §6.7.2 violation.");
+        result.Violations.ShouldContain(
+            static v => v.RuleId == "6.7.2",
+            "Malformed XML in /Metadata must produce a §6.7.2 violation."
+        );
     }
 
     [Fact]
@@ -230,7 +238,8 @@ public sealed class PdfATests : PdfTestBase
 
         result.Violations.ShouldContain(
             static v => v.RuleId == "6.7.2" && v.Description.Contains("pdfaid:part"),
-            "Missing pdfaid:part must produce a §6.7.2 violation.");
+            "Missing pdfaid:part must produce a §6.7.2 violation."
+        );
     }
 
     [Fact]
@@ -257,7 +266,8 @@ public sealed class PdfATests : PdfTestBase
 
         result.Violations.ShouldContain(
             static v => v.RuleId == "6.7.2" && v.Description.Contains("pdfaid:part"),
-            "Wrong pdfaid:part value must produce a §6.7.2 violation.");
+            "Wrong pdfaid:part value must produce a §6.7.2 violation."
+        );
     }
 
     // ── Validation — no /Info dict ────────────────────────────────────────────
@@ -292,7 +302,8 @@ public sealed class PdfATests : PdfTestBase
         result.Errors.ShouldNotContain(static v => v.RuleId == "6.7.2", "XMP errors must be fixed by conversion.");
         result.Errors.ShouldNotContain(
             static v => v.RuleId == "6.1.3" && v.Description.Contains("ID"),
-            "/ID errors must be fixed by conversion.");
+            "/ID errors must be fixed by conversion."
+        );
     }
 
     [Fact]
@@ -314,8 +325,10 @@ public sealed class PdfATests : PdfTestBase
 
         var result = await Processor.ValidatePdfAAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
 
-        result.Violations.ShouldContain(static v => v.RuleId == "6.1.10",
-            "An LZWDecode stream must trigger a §6.1.10 violation.");
+        result.Violations.ShouldContain(
+            static v => v.RuleId == "6.1.10",
+            "An LZWDecode stream must trigger a §6.1.10 violation."
+        );
     }
 
     // ── Conversion — metadata ─────────────────────────────────────────────────
@@ -330,8 +343,10 @@ public sealed class PdfATests : PdfTestBase
 
         var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
-        result.Errors.ShouldNotContain(static v => v.RuleId == "6.7.2",
-            "Conversion must inject /Metadata and eliminate §6.7.2 errors.");
+        result.Errors.ShouldNotContain(
+            static v => v.RuleId == "6.7.2",
+            "Conversion must inject /Metadata and eliminate §6.7.2 errors."
+        );
     }
 
     [Fact]
@@ -373,8 +388,10 @@ public sealed class PdfATests : PdfTestBase
 
         var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
-        result.Errors.ShouldNotContain(static v => v.RuleId == "6.3.3",
-            "An already-embedded font must not produce §6.3.3 errors after conversion.");
+        result.Errors.ShouldNotContain(
+            static v => v.RuleId == "6.3.3",
+            "An already-embedded font must not produce §6.3.3 errors after conversion."
+        );
     }
 
     [Fact]
@@ -384,8 +401,10 @@ public sealed class PdfATests : PdfTestBase
         var fontBytes = new byte[256];
         var result = await Processor.ValidatePdfAAsync(PdfFixtures.WithEmbeddedFont(fontBytes), ct: TestContext.Current.CancellationToken);
 
-        result.Errors.ShouldNotContain(static v => v.RuleId == "6.3.3",
-            "Font with /FontFile2 must not produce §6.3.3 errors.");
+        result.Errors.ShouldNotContain(
+            static v => v.RuleId == "6.3.3",
+            "Font with /FontFile2 must not produce §6.3.3 errors."
+        );
     }
 
     [Fact]
@@ -398,8 +417,10 @@ public sealed class PdfATests : PdfTestBase
 
         var result = await Processor.ValidatePdfAAsync(pdfBytes, ct: TestContext.Current.CancellationToken);
 
-        result.Errors.ShouldContain(static v => v.RuleId == "6.3.3",
-            "A font without /FontDescriptor must produce a §6.3.3 error.");
+        result.Errors.ShouldContain(
+            static v => v.RuleId == "6.3.3",
+            "A font without /FontDescriptor must produce a §6.3.3 error."
+        );
     }
 
     // ── Conversion — subsequent validation ───────────────────────────────────
@@ -416,8 +437,10 @@ public sealed class PdfATests : PdfTestBase
 
         var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
-        result.Errors.ShouldNotContain(static v => v.RuleId == "6.6.1",
-            "Conversion must strip /AA from the catalog, eliminating §6.6.1 violations.");
+        result.Errors.ShouldNotContain(
+            static v => v.RuleId == "6.6.1",
+            "Conversion must strip /AA from the catalog, eliminating §6.6.1 violations."
+        );
     }
 
     [Fact]
@@ -433,8 +456,10 @@ public sealed class PdfATests : PdfTestBase
 
         var result = await Processor.ValidatePdfAAsync(ms.ToArray(), ct: TestContext.Current.CancellationToken);
 
-        result.Errors.ShouldNotContain(static v => v.RuleId == "6.5.3" && v.Description.Contains("Print"),
-            "Annotation Print flag must be set by conversion, removing §6.5.3 errors.");
+        result.Errors.ShouldNotContain(
+            static v => v.RuleId == "6.5.3" && v.Description.Contains("Print"),
+            "Annotation Print flag must be set by conversion, removing §6.5.3 errors."
+        );
     }
 
     // ── Local fixture builders ─────────────────────────────────────────────────

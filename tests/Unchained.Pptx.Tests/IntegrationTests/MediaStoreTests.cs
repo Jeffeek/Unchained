@@ -57,12 +57,14 @@ public sealed class MediaStoreTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var image = doc.Media.AddImage(FakePng(), "image/png");
-        doc.Slides[0].Shapes.AddPicture(
-            image,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(3),
-            Emu.FromInches(2));
+        doc.Slides[0]
+            .Shapes.AddPicture(
+                image,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(3),
+                Emu.FromInches(2)
+            );
 
         var removed = doc.Media.RemoveUnused(doc.Slides);
 
@@ -78,18 +80,22 @@ public sealed class MediaStoreTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var payload = FakePng(42);
         var image = doc.Media.AddImage(payload, "image/png");
-        doc.Slides[0].Shapes.AddPicture(
-            image,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(3),
-            Emu.FromInches(2));
+        doc.Slides[0]
+            .Shapes.AddPicture(
+                image,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(3),
+                Emu.FromInches(2)
+            );
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
 
         reloaded.Media.Images.Count.ShouldBe(1);
-        var pic = reloaded.Slides[0].Shapes
-            .OfType<PictureShape>().Single();
+        var pic = reloaded.Slides[0]
+            .Shapes
+            .OfType<PictureShape>()
+            .Single();
         pic.Image.ShouldNotBeNull();
         pic.Image.Data.ToArray().ShouldBe(payload);
     }
@@ -101,12 +107,14 @@ public sealed class MediaStoreTests : PptxTestBase
 
         // Referenced image
         var referenced = doc.Media.AddImage(FakePng(1), "image/png");
-        doc.Slides[0].Shapes.AddPicture(
-            referenced,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(3),
-            Emu.FromInches(2));
+        doc.Slides[0]
+            .Shapes.AddPicture(
+                referenced,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(3),
+                Emu.FromInches(2)
+            );
 
         // Unreferenced image
         doc.Media.AddImage(FakePng(2), "image/png");
@@ -139,12 +147,14 @@ public sealed class MediaStoreTests : PptxTestBase
 
         // Add image to slide 2 only
         var image = doc.Media.AddImage(FakePng(), "image/png");
-        doc.Slides[1].Shapes.AddPicture(
-            image,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(3),
-            Emu.FromInches(2));
+        doc.Slides[1]
+            .Shapes.AddPicture(
+                image,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(3),
+                Emu.FromInches(2)
+            );
 
         // Remove slide 2
         doc.Slides.Remove(doc.Slides[1]);

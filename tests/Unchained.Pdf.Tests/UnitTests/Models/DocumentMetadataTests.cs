@@ -61,7 +61,8 @@ public sealed class DocumentMetadataTests
             null,
             null,
             null,
-            null);
+            null
+        );
         var b = new DocumentMetadata(
             "T2",
             null,
@@ -70,7 +71,8 @@ public sealed class DocumentMetadataTests
             null,
             null,
             null,
-            null);
+            null
+        );
         a.ShouldNotBe(b);
     }
 

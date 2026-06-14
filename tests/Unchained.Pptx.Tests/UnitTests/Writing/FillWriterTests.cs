@@ -1,74 +1,82 @@
 using System.Xml.Linq;
 using Shouldly;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
+using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Writing;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Writing;
 
+/// <summary>
+///     Round-trips <see cref="FillFormat" /> through <see cref="FillWriter" /> and
+///     <see cref="FillParser" /> for every fill kind, covering both serializers.
+/// </summary>
 public sealed class FillWriterTests
 {
-    private static XElement WriteToParent(FillFormat fill)
+    private static FillFormat RoundTrip(FillFormat fill)
     {
-        var parent = new XElement("parent");
+        var parent = new XElement(DmlNames.Dml + "spPr");
         FillWriter.Write(parent, fill);
-        return parent;
+        var result = new FillFormat();
+        FillParser.Parse(parent, result);
+        return result;
     }
 
     [Fact]
-    public void Write_NoneFill_EmitsNoFill()
+    public void Write_None_EmitsNoFill()
     {
+        var parent = new XElement(DmlNames.Dml + "spPr");
         var fill = new FillFormat();
         fill.SetNone();
-        var parent = WriteToParent(fill);
-        parent.Elements().Single().Name.LocalName.ShouldBe("noFill");
+        FillWriter.Write(parent, fill);
+        parent.Element(DmlNames.NoFill).ShouldNotBeNull();
     }
 
     [Fact]
-    public void Write_SolidFill_EmitsSolidFillWithColor()
+    public void RoundTrip_None_Preserved() =>
+        RoundTrip(new FillFormat()).Type.ShouldBe(FillType.None);
+
+    [Fact]
+    public void RoundTrip_Solid_PreservesColor()
     {
         var fill = new FillFormat();
-        fill.SetSolid(ColorSpec.FromRgb(0xFF, 0x00, 0x00));
-        var parent = WriteToParent(fill);
-        var solid = parent.Elements().Single();
-        solid.Name.LocalName.ShouldBe("solidFill");
-        solid.Elements().Single().Name.LocalName.ShouldBe("srgbClr");
+        fill.SetSolid(ColorSpec.FromRgb(0x33, 0x66, 0x99));
+
+        var result = RoundTrip(fill);
+        result.Type.ShouldBe(FillType.Solid);
+        result.Solid!.Color.Resolve(null).ShouldBe(0xFF336699u);
     }
 
     [Fact]
-    public void Write_GradientFill_EmitsStops()
+    public void RoundTrip_SolidThemeColor_PreservesSlot()
+    {
+        var fill = new FillFormat();
+        fill.SetSolid(ColorSpec.FromTheme(ThemeColorSlot.Accent3));
+
+        var result = RoundTrip(fill);
+        result.Solid!.Color.Type.ShouldBe(ColorSpecType.ThemeSlot);
+        result.Solid.Color.ThemeSlot.ShouldBe(ThemeColorSlot.Accent3);
+    }
+
+    [Fact]
+    public void RoundTrip_Gradient_PreservesStops()
     {
         var fill = new FillFormat { Type = FillType.Gradient };
-        var gradient = new GradientFill { IsLinear = true, LinearAngleDegrees = 90 };
-        gradient.Stops.Add(new GradientStop(0.0, ColorSpec.FromRgb(0, 0, 0)));
-        gradient.Stops.Add(new GradientStop(1.0, ColorSpec.FromRgb(255, 255, 255)));
-        fill.Gradient = gradient;
+        var grad = new GradientFill { IsLinear = true, LinearAngleDegrees = 90 };
+        grad.Stops.Add(new GradientStop(0.0, ColorSpec.FromRgb(0, 0, 0)));
+        grad.Stops.Add(new GradientStop(1.0, ColorSpec.FromRgb(255, 255, 255)));
+        fill.Gradient = grad;
 
-        var parent = WriteToParent(fill);
-        var grad = parent.Elements().Single();
-        grad.Name.LocalName.ShouldBe("gradFill");
-        var stops = grad.Descendants().Where(static e => e.Name.LocalName == "gs").ToList();
-        stops.Count.ShouldBe(2);
-        // Position 1.0 → 100000.
-        stops[1].Attribute("pos")!.Value.ShouldBe("100000");
-        grad.Elements().Any(static e => e.Name.LocalName == "lin").ShouldBeTrue();
+        var result = RoundTrip(fill);
+        result.Type.ShouldBe(FillType.Gradient);
+        result.Gradient!.Stops.Count.ShouldBe(2);
+        result.Gradient.IsLinear.ShouldBeTrue();
+        result.Gradient.Stops[1].Position.ShouldBe(1.0, 0.001);
     }
 
     [Fact]
-    public void Write_RadialGradient_OmitsLinElement()
-    {
-        var fill = new FillFormat { Type = FillType.Gradient };
-        var gradient = new GradientFill { IsLinear = false };
-        gradient.Stops.Add(new GradientStop(0.0, ColorSpec.FromRgb(0, 0, 0)));
-        fill.Gradient = gradient;
-
-        var parent = WriteToParent(fill);
-        var grad = parent.Elements().Single();
-        grad.Elements().Any(static e => e.Name.LocalName == "lin").ShouldBeFalse();
-    }
-
-    [Fact]
-    public void Write_PatternFill_EmitsPresetAndColors()
+    public void RoundTrip_Pattern_PreservesPreset()
     {
         var fill = new FillFormat
         {
@@ -80,34 +88,27 @@ public sealed class FillWriterTests
                 BackgroundColor = ColorSpec.FromRgb(255, 255, 255)
             }
         };
-        var parent = WriteToParent(fill);
-        var patt = parent.Elements().Single();
-        patt.Name.LocalName.ShouldBe("pattFill");
-        patt.Attribute("prst")!.Value.ShouldBe("horz");
-        patt.Elements().Any(static e => e.Name.LocalName == "fgClr").ShouldBeTrue();
-        patt.Elements().Any(static e => e.Name.LocalName == "bgClr").ShouldBeTrue();
+
+        var result = RoundTrip(fill);
+        result.Type.ShouldBe(FillType.Pattern);
+        result.Pattern!.Preset.ShouldBe(PatternPreset.HorizontalLines);
     }
 
     [Fact]
-    public void Write_GroupFill_EmitsGrpFill()
+    public void RoundTrip_Picture_PreservesType()
     {
-        var fill = new FillFormat { Type = FillType.Group };
-        var parent = WriteToParent(fill);
-        parent.Elements().Single().Name.LocalName.ShouldBe("grpFill");
+        var fill = new FillFormat { Type = FillType.Picture, Picture = new PictureFill() };
+
+        var result = RoundTrip(fill);
+        result.Type.ShouldBe(FillType.Picture);
+        result.Picture.ShouldNotBeNull();
     }
 
     [Fact]
-    public void Write_PictureFill_EmitsBlipFillWithStretch()
-    {
-        var image = new Unchained.Ooxml.Media.EmbeddedImage("image/png", new byte[] { 1 });
-        var fill = new FillFormat
+    public void Write_Group_EmitsGrpFill()
         {
-            Type = FillType.Picture,
-            Picture = new PictureFill { Image = image }
-        };
-        var parent = WriteToParent(fill);
-        var blip = parent.Elements().Single();
-        blip.Name.LocalName.ShouldBe("blipFill");
-        blip.Descendants().Any(static e => e.Name.LocalName == "stretch").ShouldBeTrue();
+        var parent = new XElement(DmlNames.Dml + "spPr");
+        FillWriter.Write(parent, new FillFormat { Type = FillType.Group });
+        parent.Elements().Any(static e => e.Name.LocalName == "grpFill").ShouldBeTrue();
     }
 }

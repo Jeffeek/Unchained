@@ -20,11 +20,13 @@ public sealed class ShapeTests : PptxTestBase
     public void AddShape_IncreasesShapeCount()
     {
         var slide = FirstSlide();
-        slide.Shapes.AddShape(AutoShapeType.Rectangle,
+        slide.Shapes.AddShape(
+            AutoShapeType.Rectangle,
             Emu.FromInches(1),
             Emu.FromInches(1),
             Emu.FromInches(2),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         slide.Shapes.Count.ShouldBe(1);
     }
 
@@ -32,11 +34,13 @@ public sealed class ShapeTests : PptxTestBase
     public void AddShape_AssignsShapeId()
     {
         var slide = FirstSlide();
-        var shape = slide.Shapes.AddShape(AutoShapeType.Ellipse,
+        var shape = slide.Shapes.AddShape(
+            AutoShapeType.Ellipse,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         shape.ShapeId.ShouldBeGreaterThan(0u);
     }
 
@@ -46,11 +50,13 @@ public sealed class ShapeTests : PptxTestBase
         var slide = FirstSlide();
         var x = Emu.FromInches(2);
         var y = Emu.FromInches(3);
-        var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
+        var shape = slide.Shapes.AddShape(
+            AutoShapeType.Rectangle,
             x,
             y,
             Emu.FromInches(1),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         shape.X.ShouldBe(x);
         shape.Y.ShouldBe(y);
     }
@@ -61,11 +67,13 @@ public sealed class ShapeTests : PptxTestBase
         var slide = FirstSlide();
         var w = Emu.FromInches(3);
         var h = Emu.FromInches(2);
-        var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
+        var shape = slide.Shapes.AddShape(
+            AutoShapeType.Rectangle,
             Emu.Zero,
             Emu.Zero,
             w,
-            h);
+            h
+        );
         shape.Width.ShouldBe(w);
         shape.Height.ShouldBe(h);
     }
@@ -78,7 +86,8 @@ public sealed class ShapeTests : PptxTestBase
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(3),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         tb.IsTextBox.ShouldBeTrue();
     }
 
@@ -91,7 +100,8 @@ public sealed class ShapeTests : PptxTestBase
             Emu.Zero,
             Emu.FromInches(3),
             Emu.FromInches(1),
-            "Hello World");
+            "Hello World"
+        );
         tb.TextFrame.PlainText.ShouldBe("Hello World");
     }
 
@@ -103,7 +113,8 @@ public sealed class ShapeTests : PptxTestBase
             Emu.Zero,
             Emu.Zero,
             [Emu.FromInches(2), Emu.FromInches(2)],
-            [Emu.FromInches(0.5), Emu.FromInches(0.5)]);
+            [Emu.FromInches(0.5), Emu.FromInches(0.5)]
+        );
 
         table.ShouldBeOfType<TableShape>();
         table.Grid.ColumnCount.ShouldBe(2);
@@ -119,7 +130,8 @@ public sealed class ShapeTests : PptxTestBase
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(2),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         connector.ShouldBeOfType<ConnectorShape>();
         connector.ConnectorType.ShouldBe(ConnectorType.Straight);
     }
@@ -136,11 +148,13 @@ public sealed class ShapeTests : PptxTestBase
     public void Remove_DecreasesShapeCount()
     {
         var slide = FirstSlide();
-        var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
+        var shape = slide.Shapes.AddShape(
+            AutoShapeType.Rectangle,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         slide.Shapes.Remove(shape);
         slide.Shapes.Count.ShouldBe(0);
     }
@@ -149,16 +163,20 @@ public sealed class ShapeTests : PptxTestBase
     public void BringToFront_MovesShapeToEnd()
     {
         var slide = FirstSlide();
-        var first = slide.Shapes.AddShape(AutoShapeType.Rectangle,
+        var first = slide.Shapes.AddShape(
+            AutoShapeType.Rectangle,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
-            Emu.FromInches(1));
-        slide.Shapes.AddShape(AutoShapeType.Ellipse,
+            Emu.FromInches(1)
+        );
+        slide.Shapes.AddShape(
+            AutoShapeType.Ellipse,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         slide.Shapes.BringToFront(first);
         slide.Shapes[^1].ShouldBeSameAs(first);
     }
@@ -167,16 +185,20 @@ public sealed class ShapeTests : PptxTestBase
     public void SendToBack_MovesShapeToStart()
     {
         var slide = FirstSlide();
-        slide.Shapes.AddShape(AutoShapeType.Rectangle,
+        slide.Shapes.AddShape(
+            AutoShapeType.Rectangle,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
-            Emu.FromInches(1));
-        var second = slide.Shapes.AddShape(AutoShapeType.Ellipse,
+            Emu.FromInches(1)
+        );
+        var second = slide.Shapes.AddShape(
+            AutoShapeType.Ellipse,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         slide.Shapes.SendToBack(second);
         slide.Shapes[0].ShouldBeSameAs(second);
     }
@@ -185,11 +207,13 @@ public sealed class ShapeTests : PptxTestBase
     public void FindShapeByName_ReturnsCorrectShape()
     {
         var slide = FirstSlide();
-        var shape = slide.Shapes.AddShape(AutoShapeType.Rectangle,
+        var shape = slide.Shapes.AddShape(
+            AutoShapeType.Rectangle,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
-            Emu.FromInches(1));
+            Emu.FromInches(1)
+        );
         shape.Name = "MyShape";
         slide.FindShapeByName("MyShape").ShouldBeSameAs(shape);
     }
@@ -205,16 +229,22 @@ public sealed class ShapeTests : PptxTestBase
     public async Task Shapes_RoundTrip_PreservesCount()
     {
         var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(2),
-            Emu.FromInches(1));
-        doc.Slides[0].Shapes.AddShape(AutoShapeType.Ellipse,
-            Emu.FromInches(3),
-            Emu.Zero,
-            Emu.FromInches(2),
-            Emu.FromInches(1));
+        doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(2),
+                Emu.FromInches(1)
+            );
+        doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Ellipse,
+                Emu.FromInches(3),
+                Emu.Zero,
+                Emu.FromInches(2),
+                Emu.FromInches(1)
+            );
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
         reloaded.Slides[0].Shapes.Count.ShouldBe(2);

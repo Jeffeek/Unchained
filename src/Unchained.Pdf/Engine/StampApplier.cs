@@ -34,7 +34,8 @@ public sealed class StampApplier : IStampApplier
         var adapter = document as PdfDocumentAdapter
                       ?? throw new ArgumentException(
                           $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document));
+                          nameof(document)
+                      );
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -63,12 +64,17 @@ public sealed class StampApplier : IStampApplier
             if (targetPageDict is not null && !ReferenceEquals(pd, targetPageDict))
                 continue;
 
-            var streamObj = builder.Add(new PdfStream(
-                new PdfDictionary(new Dictionary<string, PdfObject>
-                {
-                    [PdfName.Length.Value] = new PdfInteger(contentBytes.Length)
-                }),
-                contentBytes));
+            var streamObj = builder.Add(
+                new PdfStream(
+                    new PdfDictionary(
+                        new Dictionary<string, PdfObject>
+                        {
+                            [PdfName.Length.Value] = new PdfInteger(contentBytes.Length)
+                        }
+                    ),
+                    contentBytes
+                )
+            );
 
             var rebuilt = RebuildPage(
                 pd,
@@ -87,11 +93,13 @@ public sealed class StampApplier : IStampApplier
 
         var totalMax = finalObjects.Max(static o => o.ObjectNumber);
         var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-            [PdfName.Root.Value] = rootRef
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
+                [PdfName.Root.Value] = rootRef
+            }
+        );
 
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(finalObjects, trailer);
         adapter.ReplaceCore(newDoc.Core);
@@ -180,10 +188,12 @@ public sealed class StampApplier : IStampApplier
     }
 
     private static PdfDictionary MakeFontDict(string baseFontName) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Type.Value] = PdfName.Font,
-            [PdfName.Subtype.Value] = PdfName.Type1,
-            [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
-        });
+        new(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Type.Value] = PdfName.Font,
+                [PdfName.Subtype.Value] = PdfName.Type1,
+                [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
+            }
+        );
 }

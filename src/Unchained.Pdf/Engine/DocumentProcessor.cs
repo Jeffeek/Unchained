@@ -203,12 +203,14 @@ public sealed class DocumentProcessor : IDocumentProcessor
     {
         ArgumentNullException.ThrowIfNull(pdfBytes);
 
-        return Task.Run(() =>
+        return Task.Run(
+            () =>
             {
                 var core = PdfDocumentCore.Parse(pdfBytes);
                 return PdfSignatureVerifier.Verify(pdfBytes, core);
             },
-            ct);
+            ct
+        );
     }
 
     /// <inheritdoc />
@@ -394,12 +396,14 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(document);
 
         var adapter = CastAdapter(document);
-        return Task.Run<PdfObject?>(() =>
+        return Task.Run<PdfObject?>(
+            () =>
             {
                 try { return adapter.Core.ResolveIndirect(objectNumber).Value; }
                 catch { return null; }
             },
-            ct);
+            ct
+        );
     }
 
     /// <inheritdoc />
@@ -490,10 +494,12 @@ public sealed class DocumentProcessor : IDocumentProcessor
         userPwd.Length == 0 && ownerPwd.Length == 0
             ? SaveOptions.Default
             : // strip encryption
-            new SaveOptions(Encryption: new EncryptionOptions(
-                userPwd,
-                ownerPwd,
-                algorithm)
+            new SaveOptions(
+                Encryption: new EncryptionOptions(
+                    userPwd,
+                    ownerPwd,
+                    algorithm
+                )
             );
 
     // Acquires a gate slot and parses the byte array on the thread-pool.
@@ -503,13 +509,15 @@ public sealed class DocumentProcessor : IDocumentProcessor
         try
         {
             var core = await Task.Run(
-                () =>
-                {
-                    var c = PdfDocumentCore.Parse(bytes, password);
-                    c.IgnoreCorruptedObjects = _ignoreCorruptedObjects;
-                    return c;
-                },
-                ct).ConfigureAwait(false);
+                    () =>
+                    {
+                        var c = PdfDocumentCore.Parse(bytes, password);
+                        c.IgnoreCorruptedObjects = _ignoreCorruptedObjects;
+                        return c;
+                    },
+                    ct
+                )
+                .ConfigureAwait(false);
             return new PdfDocumentAdapter(core);
         }
         finally
@@ -527,5 +535,6 @@ public sealed class DocumentProcessor : IDocumentProcessor
         document as PdfDocumentAdapter
         ?? throw new ArgumentException(
             $"Document was not created by this processor. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-            nameof(document));
+            nameof(document)
+        );
 }

@@ -66,9 +66,11 @@ internal static class PptxToOdpWriter
         {
             options.Progress?.Report(0.5 * idx / Math.Max(1, included.Count));
             var slide = slides[included[idx]];
-            var page = new XElement(draw + "page",
+            var page = new XElement(
+                draw + "page",
                 new XAttribute(draw + "name", slide.Name.Length > 0 ? slide.Name : $"page{idx + 1}"),
-                new XAttribute(draw + "master-page-name", "Default"));
+                new XAttribute(draw + "master-page-name", "Default")
+            );
 
             if (slide.IsHidden)
                 page.Add(new XAttribute(pres + "visibility", "hidden"));
@@ -79,11 +81,13 @@ internal static class PptxToOdpWriter
             body.Add(page);
         }
 
-        var root = new XElement(o + "document-content",
+        var root = new XElement(
+            o + "document-content",
             NamespaceDeclarations(),
             new XAttribute(o + "version", "1.2"),
             new XElement(o + "automatic-styles"),
-            new XElement(o + "body", body));
+            new XElement(o + "body", body)
+        );
 
         return Serialize(root);
     }
@@ -111,25 +115,31 @@ internal static class PptxToOdpWriter
                 var path = $"Pictures/image{images.Count + 1}{ext}";
                 images.Add((path, pic.Image.Data.ToArray(), pic.Image.ContentType));
 
-                var frame = new XElement(draw + "frame",
+                var frame = new XElement(
+                    draw + "frame",
                     new XAttribute(OdfNames.Svg + "x", x),
                     new XAttribute(OdfNames.Svg + "y", y),
                     new XAttribute(OdfNames.Svg + "width", w),
                     new XAttribute(OdfNames.Svg + "height", h),
-                    new XElement(draw + "image",
+                    new XElement(
+                        draw + "image",
                         new XAttribute(OdfNames.XLink + "href", path),
-                        new XAttribute(OdfNames.XLink + "type", "simple")));
+                        new XAttribute(OdfNames.XLink + "type", "simple")
+                    )
+                );
                 page.Add(frame);
                 break;
             }
 
             case AutoShape auto:
             {
-                var frame = new XElement(draw + "frame",
+                var frame = new XElement(
+                    draw + "frame",
                     new XAttribute(OdfNames.Svg + "x", x),
                     new XAttribute(OdfNames.Svg + "y", y),
                     new XAttribute(OdfNames.Svg + "width", w),
-                    new XAttribute(OdfNames.Svg + "height", h));
+                    new XAttribute(OdfNames.Svg + "height", h)
+                );
 
                 var textBox = new XElement(draw + "text-box");
                 WriteText(textBox, auto.TextFrame);
@@ -170,24 +180,34 @@ internal static class PptxToOdpWriter
         var heightCm = document.SlideSize.Height.ToCentimetres();
 
         // A single page-layout + master-page named "Default" so content.xml's references resolve.
-        var pageLayout = new XElement(style + "page-layout",
+        var pageLayout = new XElement(
+            style + "page-layout",
             new XAttribute(style + "name", "PL"),
-            new XElement(style + "page-layout-properties",
+            new XElement(
+                style + "page-layout-properties",
                 new XAttribute(OdfNames.Fo + "page-width", $"{widthCm:F3}cm"),
                 new XAttribute(OdfNames.Fo + "page-height", $"{heightCm:F3}cm"),
-                new XAttribute(style + "print-orientation",
-                    widthCm >= heightCm ? "landscape" : "portrait")));
+                new XAttribute(
+                    style + "print-orientation",
+                    widthCm >= heightCm ? "landscape" : "portrait"
+                )
+            )
+        );
 
-        var masterPage = new XElement(style + "master-page",
+        var masterPage = new XElement(
+            style + "master-page",
             new XAttribute(style + "name", "Default"),
-            new XAttribute(style + "page-layout-name", "PL"));
+            new XAttribute(style + "page-layout-name", "PL")
+        );
 
-        var root = new XElement(o + "document-styles",
+        var root = new XElement(
+            o + "document-styles",
             NamespaceDeclarations(),
             new XAttribute(o + "version", "1.2"),
             new XElement(o + "styles"),
             new XElement(o + "automatic-styles", pageLayout),
-            new XElement(o + "master-styles", masterPage));
+            new XElement(o + "master-styles", masterPage)
+        );
 
         return Serialize(root);
     }
@@ -195,8 +215,10 @@ internal static class PptxToOdpWriter
     private static byte[] BuildMeta(PresentationDocument document)
     {
         var o = OdfNames.Office;
-        var meta = new XElement(o + "meta",
-            new XElement(OdfNames.Meta + "generator", "Unchained.Pptx"));
+        var meta = new XElement(
+            o + "meta",
+            new XElement(OdfNames.Meta + "generator", "Unchained.Pptx")
+        );
 
         var title = document.Properties.Title;
         if (!string.IsNullOrEmpty(title))
@@ -205,10 +227,12 @@ internal static class PptxToOdpWriter
         if (!string.IsNullOrEmpty(author))
             meta.Add(new XElement(OdfNames.Meta + "initial-creator", author));
 
-        var root = new XElement(o + "document-meta",
+        var root = new XElement(
+            o + "document-meta",
             NamespaceDeclarations(),
             new XAttribute(o + "version", "1.2"),
-            meta);
+            meta
+        );
 
         return Serialize(root);
     }
@@ -217,9 +241,11 @@ internal static class PptxToOdpWriter
     {
         var m = OdfNames.Manifest;
 
-        var root = new XElement(m + "manifest",
+        var root = new XElement(
+            m + "manifest",
             new XAttribute(XNamespace.Xmlns + "manifest", m.NamespaceName),
-            new XAttribute(m + "version", "1.2"));
+            new XAttribute(m + "version", "1.2")
+        );
 
         Entry("/", OdfNames.PresentationMimeType);
         Entry("content.xml", "text/xml");
@@ -231,9 +257,13 @@ internal static class PptxToOdpWriter
         return Serialize(root);
 
         void Entry(string path, string mime) =>
-            root.Add(new XElement(m + "file-entry",
-                new XAttribute(m + "full-path", path),
-                new XAttribute(m + "media-type", mime)));
+            root.Add(
+                new XElement(
+                    m + "file-entry",
+                    new XAttribute(m + "full-path", path),
+                    new XAttribute(m + "media-type", mime)
+                )
+            );
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────

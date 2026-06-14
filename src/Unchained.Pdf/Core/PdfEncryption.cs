@@ -50,18 +50,22 @@ internal static class PdfEncryption
                 var ueBytes = GetStringBytes(encryptDict, "UE");
                 var oeBytes = GetStringBytes(encryptDict, "OE");
                 // ReSharper disable BadListLineBreaks
-                var fileKey = DeriveKeyV5(password,
+                var fileKey = DeriveKeyV5(
+                                  password,
                                   uBytes,
                                   ueBytes,
                                   oBytes,
                                   oeBytes,
-                                  false)
-                              ?? DeriveKeyV5(password,
+                                  false
+                              )
+                              ?? DeriveKeyV5(
+                                  password,
                                   uBytes,
                                   ueBytes,
                                   oBytes,
                                   oeBytes,
-                                  true);
+                                  true
+                              );
                 // ReSharper restore BadListLineBreaks
 
                 return fileKey is null
@@ -75,23 +79,27 @@ internal static class PdfEncryption
                 var keyLen = v == 1 ? 5 : Math.Clamp(keyBits / 8, 5, 16);
 
                 // ReSharper disable once BadListLineBreaks
-                var encKey = DeriveKeyV2V4(password,
+                var encKey = DeriveKeyV2V4(
+                    password,
                     oBytes,
                     pFlags,
                     fileId,
                     r,
-                    keyLen);
+                    keyLen
+                );
                 if (ValidateUserPasswordV2V4(encKey, uBytes, fileId, r))
                     return new PdfEncryptionContext(encKey, algo, permissions);
 
                 // Try with empty password before failing
                 // ReSharper disable once BadListLineBreaks
-                var emptyKey = DeriveKeyV2V4(string.Empty,
+                var emptyKey = DeriveKeyV2V4(
+                    string.Empty,
                     oBytes,
                     pFlags,
                     fileId,
                     r,
-                    keyLen);
+                    keyLen
+                );
 
                 return !ValidateUserPasswordV2V4(emptyKey, uBytes, fileId, r)
                     ? throw new PdfEncryptedException("Incorrect password for encrypted PDF.")
@@ -121,31 +129,37 @@ internal static class PdfEncryption
         var permsBytes = ComputePerms_V5(fileKey, (int)opts.Permissions);
 
         // All binary values in the /Encrypt dict use hex encoding for safe round-trip.
-        var encryptDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Filter"] = PdfName.Standard,
-            ["V"] = new PdfInteger(5),
-            ["R"] = new PdfInteger(6),
-            ["Length"] = new PdfInteger(256),
-            ["P"] = new PdfInteger(EncodePermissions(opts.Permissions)),
-            ["O"] = new PdfString(oBytes, true),
-            ["U"] = new PdfString(uBytes, true),
-            ["OE"] = new PdfString(oeBytes, true),
-            ["UE"] = new PdfString(ueBytes, true),
-            ["Perms"] = new PdfString(permsBytes, true),
-            ["EncryptMetadata"] = PdfBoolean.True,
-            ["StmF"] = PdfName.StdCF,
-            ["StrF"] = PdfName.StdCF,
-            ["CF"] = new PdfDictionary(new Dictionary<string, PdfObject>
+        var encryptDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
             {
-                ["StdCF"] = new PdfDictionary(new Dictionary<string, PdfObject>
-                {
-                    ["CFM"] = PdfName.AESV3,
-                    ["AuthEvent"] = PdfName.DocOpen,
-                    ["Length"] = new PdfInteger(32)
-                })
-            })
-        });
+                ["Filter"] = PdfName.Standard,
+                ["V"] = new PdfInteger(5),
+                ["R"] = new PdfInteger(6),
+                ["Length"] = new PdfInteger(256),
+                ["P"] = new PdfInteger(EncodePermissions(opts.Permissions)),
+                ["O"] = new PdfString(oBytes, true),
+                ["U"] = new PdfString(uBytes, true),
+                ["OE"] = new PdfString(oeBytes, true),
+                ["UE"] = new PdfString(ueBytes, true),
+                ["Perms"] = new PdfString(permsBytes, true),
+                ["EncryptMetadata"] = PdfBoolean.True,
+                ["StmF"] = PdfName.StdCF,
+                ["StrF"] = PdfName.StdCF,
+                ["CF"] = new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        ["StdCF"] = new PdfDictionary(
+                            new Dictionary<string, PdfObject>
+                            {
+                                ["CFM"] = PdfName.AESV3,
+                                ["AuthEvent"] = PdfName.DocOpen,
+                                ["Length"] = new PdfInteger(32)
+                            }
+                        )
+                    }
+                )
+            }
+        );
 
         var context = new PdfEncryptionContext(fileKey, PdfEncryptionAlgorithm.Aes256);
         return (context, encryptDict);

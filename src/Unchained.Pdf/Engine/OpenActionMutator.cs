@@ -15,8 +15,10 @@ internal static class OpenActionMutator
     {
         if (pageNumber > adapter.Core.PageCount)
         {
-            throw new ArgumentOutOfRangeException(nameof(pageNumber),
-                $"Page number {pageNumber} exceeds document page count {adapter.Core.PageCount}.");
+            throw new ArgumentOutOfRangeException(
+                nameof(pageNumber),
+                $"Page number {pageNumber} exceeds document page count {adapter.Core.PageCount}."
+            );
         }
 
         var existing = adapter.Core.CollectObjects().ToList();
@@ -29,19 +31,23 @@ internal static class OpenActionMutator
 
         // Build a GoTo action pointing at the target page.
         var pageRef = FindPageRef(adapter.Core, pageNumber);
-        var dest = new PdfArray([
-            pageRef,
-            PdfName.XYZ,
-            PdfNull.Instance,
-            PdfNull.Instance,
-            PdfNull.Instance
-        ]);
-        var action = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Type"] = PdfName.Action,
-            ["S"] = PdfName.GoTo,
-            ["D"] = dest
-        });
+        var dest = new PdfArray(
+            [
+                pageRef,
+                PdfName.XYZ,
+                PdfNull.Instance,
+                PdfNull.Instance,
+                PdfNull.Instance
+            ]
+        );
+        var action = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Type"] = PdfName.Action,
+                ["S"] = PdfName.GoTo,
+                ["D"] = dest
+            }
+        );
 
         var newEntries = new Dictionary<string, PdfObject>(catalogDict.Entries)
         {
@@ -77,7 +83,8 @@ internal static class OpenActionMutator
         existing[catalogIdx] = new PdfIndirectObject(
             catalogRef.ObjectNumber,
             0,
-            new PdfDictionary(newEntries));
+            new PdfDictionary(newEntries)
+        );
         MutationHelper.SerializeAndReplace(adapter, existing);
     }
 
@@ -85,39 +92,49 @@ internal static class OpenActionMutator
     {
         if (pageNumber > core.PageCount)
         {
-            throw new ArgumentOutOfRangeException(nameof(pageNumber),
-                $"Page number {pageNumber} exceeds document page count {core.PageCount}.");
+            throw new ArgumentOutOfRangeException(
+                nameof(pageNumber),
+                $"Page number {pageNumber} exceeds document page count {core.PageCount}."
+            );
         }
 
         var pageRef = FindPageRef(core, pageNumber);
-        var dest = new PdfArray([
-            pageRef,
-            PdfName.XYZ,
-            PdfNull.Instance, PdfNull.Instance, PdfNull.Instance
-        ]);
-        return new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Type"] = PdfName.Action,
-            ["S"] = PdfName.GoTo,
-            ["D"] = dest
-        });
+        var dest = new PdfArray(
+            [
+                pageRef,
+                PdfName.XYZ,
+                PdfNull.Instance, PdfNull.Instance, PdfNull.Instance
+            ]
+        );
+        return new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Type"] = PdfName.Action,
+                ["S"] = PdfName.GoTo,
+                ["D"] = dest
+            }
+        );
     }
 
     private static PdfDictionary BuildUriAction(string uri) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            ["Type"] = PdfName.Action,
-            ["S"] = PdfName.URI,
-            ["URI"] = PdfString.FromLatin1(uri)
-        });
+        new(
+            new Dictionary<string, PdfObject>
+            {
+                ["Type"] = PdfName.Action,
+                ["S"] = PdfName.URI,
+                ["URI"] = PdfString.FromLatin1(uri)
+            }
+        );
 
     private static PdfDictionary BuildNamedAction(string name) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            ["Type"] = PdfName.Action,
-            ["S"] = PdfName.Named,
-            ["N"] = PdfName.Get(name)
-        });
+        new(
+            new Dictionary<string, PdfObject>
+            {
+                ["Type"] = PdfName.Action,
+                ["S"] = PdfName.Named,
+                ["N"] = PdfName.Get(name)
+            }
+        );
 
     private static PdfIndirectReference FindPageRef(PdfDocumentCore core, int pageNumber)
     {

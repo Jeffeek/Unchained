@@ -232,7 +232,9 @@ public sealed class RealPdfExtendedTests : PdfTestBase
         if (xmp is null) return;
         // Must parse as well-formed XML (XMP is RDF/XML).
         Should.NotThrow(() => XDocument.Parse(
-            xmp.Trim().TrimStart('﻿'))); // strip BOM if present
+                xmp.Trim().TrimStart('﻿')
+            )
+        ); // strip BOM if present
     }
 
     // ── PDF/A (021) ───────────────────────────────────────────────────────────

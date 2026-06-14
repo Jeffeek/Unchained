@@ -69,8 +69,10 @@ public sealed class SerializationTests : IDisposable
     [Fact]
     public async Task SaveAndReload_MetadataPreserved()
     {
-        await using var original = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithInfo("My Title", "Jane Doe")),
-            TestContext.Current.CancellationToken);
+        await using var original = await _processor.LoadAsync(
+            new MemoryStream(PdfFixtures.WithInfo("My Title", "Jane Doe")),
+            TestContext.Current.CancellationToken
+        );
 
         var saved = await SaveToBytes(original, TestContext.Current.CancellationToken);
 

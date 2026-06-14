@@ -35,7 +35,8 @@ public sealed class OoxmlEngineTests
             presPart.Presentation = new Presentation(
                 new SlideIdList(),
                 new SlideSize { Cx = 9144000, Cy = 6858000 },
-                new NotesSize { Cx = 6858000, Cy = 9144000 });
+                new NotesSize { Cx = 6858000, Cy = 9144000 }
+            );
             presPart.Presentation.Save();
 
             bytes = engine.Save();
@@ -59,7 +60,8 @@ public sealed class OoxmlEngineTests
         var doc = (WordprocessingDocument)engine.Package;
         var main = doc.AddMainDocumentPart();
         main.Document = new Document(
-            new Body());
+            new Body()
+        );
         main.Document.Save();
 
         var first = engine.Save();
@@ -81,12 +83,50 @@ public sealed class OoxmlEngineTests
             presPart.Presentation = new Presentation(
                 new SlideIdList(),
                 new SlideSize { Cx = 9144000, Cy = 6858000 },
-                new NotesSize { Cx = 6858000, Cy = 9144000 });
+                new NotesSize { Cx = 6858000, Cy = 9144000 }
+            );
             presPart.Presentation.Save();
             bytes = writable.Save();
         }
 
         using var readOnly = OoxmlEngine.Open(bytes, false);
         Should.Throw<InvalidOperationException>(() => readOnly.Save());
+    }
+
+    [Fact]
+    public void SaveTo_WritesBytesToDestination()
+    {
+        using var engine = OoxmlEngine.Create(OoxmlFormat.Wordprocessing);
+        var doc = (WordprocessingDocument)engine.Package;
+        var main = doc.AddMainDocumentPart();
+        main.Document = new Document(new Body());
+        main.Document.Save();
+
+        using var destination = new MemoryStream();
+        engine.SaveTo(destination);
+        destination.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void SaveTo_NullDestination_Throws()
+    {
+        using var engine = OoxmlEngine.Create(OoxmlFormat.Presentation);
+        Should.Throw<ArgumentNullException>(() => engine.SaveTo(null!));
+    }
+
+    [Fact]
+    public void Dispose_IsIdempotent()
+    {
+        var engine = OoxmlEngine.Create(OoxmlFormat.Spreadsheet);
+        engine.Dispose();
+        Should.NotThrow(() => engine.Dispose());
+    }
+
+    [Fact]
+    public void Save_AfterDispose_Throws()
+    {
+        var engine = OoxmlEngine.Create(OoxmlFormat.Presentation);
+        engine.Dispose();
+        Should.Throw<ObjectDisposedException>(() => engine.Save());
     }
 }

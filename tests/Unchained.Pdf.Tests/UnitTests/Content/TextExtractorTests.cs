@@ -76,12 +76,14 @@ public sealed class TextExtractorTests
             new ContentOperator("BT", []),
             new ContentOperator("Tf", [PdfName.Get("F1"), new PdfInteger(10)]),
             new ContentOperator("Td", [new PdfInteger(999), new PdfInteger(999)]),
-            new ContentOperator("Tm",
-            [
-                new PdfInteger(1), new PdfInteger(0),
-                new PdfInteger(0), new PdfInteger(1),
-                new PdfInteger(200), new PdfInteger(500)
-            ]),
+            new ContentOperator(
+                "Tm",
+                [
+                    new PdfInteger(1), new PdfInteger(0),
+                    new PdfInteger(0), new PdfInteger(1),
+                    new PdfInteger(200), new PdfInteger(500)
+                ]
+            ),
             new ContentOperator("Tj", [PdfString.FromLatin1("X")]),
             new ContentOperator("ET", [])
         };
@@ -132,11 +134,13 @@ public sealed class TextExtractorTests
     [Fact]
     public void Extract_TJArray_ExtractsText()
     {
-        var arr = new PdfArray([
-            PdfString.FromLatin1("Hello"),
-            new PdfInteger(-100),
-            PdfString.FromLatin1(" World")
-        ]);
+        var arr = new PdfArray(
+            [
+                PdfString.FromLatin1("Hello"),
+                new PdfInteger(-100),
+                PdfString.FromLatin1(" World")
+            ]
+        );
         var ops = new[]
         {
             new ContentOperator("BT", []),
@@ -206,11 +210,15 @@ public sealed class TextExtractorTests
         {
             new ContentOperator("BT", []),
             new ContentOperator("Tf", [PdfName.Get("F1"), new PdfInteger(10)]),
-            new ContentOperator("Tm",
-                [new PdfInteger(1), new PdfInteger(0), new PdfInteger(0), new PdfInteger(1), new PdfInteger(200), new PdfInteger(300)]),
+            new ContentOperator(
+                "Tm",
+                [new PdfInteger(1), new PdfInteger(0), new PdfInteger(0), new PdfInteger(1), new PdfInteger(200), new PdfInteger(300)]
+            ),
             new ContentOperator("Tj", [PdfString.FromLatin1("Low")]),
-            new ContentOperator("Tm",
-                [new PdfInteger(1), new PdfInteger(0), new PdfInteger(0), new PdfInteger(1), new PdfInteger(50), new PdfInteger(700)]),
+            new ContentOperator(
+                "Tm",
+                [new PdfInteger(1), new PdfInteger(0), new PdfInteger(0), new PdfInteger(1), new PdfInteger(50), new PdfInteger(700)]
+            ),
             new ContentOperator("Tj", [PdfString.FromLatin1("High")]),
             new ContentOperator("ET", [])
         };
@@ -324,12 +332,14 @@ public sealed class TextExtractorTests
             new ContentOperator("Tf", [PdfName.Get("F1"), new PdfInteger(10)]),
             new ContentOperator("TL", [new PdfInteger(12)]),
             new ContentOperator("Td", [new PdfInteger(36), new PdfInteger(700)]),
-            new ContentOperator("\"",
-            [
-                new PdfReal(2.0), // tw
-                new PdfReal(0.5), // tc
-                PdfString.FromLatin1("Quoted")
-            ]),
+            new ContentOperator(
+                "\"",
+                [
+                    new PdfReal(2.0), // tw
+                    new PdfReal(0.5), // tc
+                    PdfString.FromLatin1("Quoted")
+                ]
+            ),
             new ContentOperator("ET", [])
         };
 
@@ -349,12 +359,14 @@ public sealed class TextExtractorTests
             new ContentOperator("Tf", [PdfName.Get("F1"), new PdfInteger(10)]),
             new ContentOperator("TL", [new PdfInteger(14)]),
             new ContentOperator("Td", [new PdfInteger(0), new PdfInteger(700)]),
-            new ContentOperator("\"",
-            [
-                new PdfReal(5.0), // large tw
-                new PdfReal(0.0),
-                PdfString.FromLatin1("A B") // contains space, tw applies
-            ]),
+            new ContentOperator(
+                "\"",
+                [
+                    new PdfReal(5.0), // large tw
+                    new PdfReal(0.0),
+                    PdfString.FromLatin1("A B") // contains space, tw applies
+                ]
+            ),
             new ContentOperator("ET", [])
         };
 
@@ -508,11 +520,13 @@ public sealed class TextExtractorTests
     public void Extract_TJArrayWithRealKern_AdjustsPosition()
     {
         // PdfReal element in a TJ array → tmE adjustment (same branch as PdfInteger but real).
-        var arr = new PdfArray([
-            PdfString.FromLatin1("Hello"),
-            new PdfReal(-50.0),
-            PdfString.FromLatin1("World")
-        ]);
+        var arr = new PdfArray(
+            [
+                PdfString.FromLatin1("Hello"),
+                new PdfReal(-50.0),
+                PdfString.FromLatin1("World")
+            ]
+        );
 
         var ops = new[]
         {
@@ -604,18 +618,22 @@ public sealed class TextExtractorTests
         var spans = new[]
         {
             // ReSharper disable BadListLineBreaks
-            new TextSpan("Hello",
+            new TextSpan(
+                "Hello",
                 0,
                 100,
                 25,
                 12,
-                "Helvetica"),
-            new TextSpan("World",
+                "Helvetica"
+            ),
+            new TextSpan(
+                "World",
                 25,
                 100,
                 25,
                 12,
-                "Helvetica") // X == prevEndX, gap == 0
+                "Helvetica"
+            ) // X == prevEndX, gap == 0
             // ReSharper restore BadListLineBreaks
         };
 
@@ -630,18 +648,22 @@ public sealed class TextExtractorTests
         var spans = new[]
         {
             // ReSharper disable BadListLineBreaks
-            new TextSpan("Left",
+            new TextSpan(
+                "Left",
                 0,
                 100,
                 20,
                 12,
-                "Helvetica"),
-            new TextSpan("Right",
+                "Helvetica"
+            ),
+            new TextSpan(
+                "Right",
                 30,
                 100,
                 20,
                 12,
-                "Helvetica") // gap = 30-20 = 10 > 1.0
+                "Helvetica"
+            ) // gap = 30-20 = 10 > 1.0
             // ReSharper restore BadListLineBreaks
         };
 
@@ -656,18 +678,22 @@ public sealed class TextExtractorTests
         var spans = new[]
         {
             // ReSharper disable BadListLineBreaks
-            new TextSpan("A",
+            new TextSpan(
+                "A",
                 0,
                 100,
                 10,
                 12,
-                "Helvetica"),
-            new TextSpan("B",
+                "Helvetica"
+            ),
+            new TextSpan(
+                "B",
                 15,
                 101,
                 10,
                 12,
-                "Helvetica") // |101-100| = 1 < 2.0
+                "Helvetica"
+            ) // |101-100| = 1 < 2.0
             // ReSharper restore BadListLineBreaks
         };
 
@@ -682,18 +708,22 @@ public sealed class TextExtractorTests
         var spans = new[]
         {
             // ReSharper disable BadListLineBreaks
-            new TextSpan("Top",
+            new TextSpan(
+                "Top",
                 0,
                 200,
                 20,
                 12,
-                "Helvetica"),
-            new TextSpan("Bottom",
+                "Helvetica"
+            ),
+            new TextSpan(
+                "Bottom",
                 0,
                 195,
                 20,
                 12,
-                "Helvetica") // |200-195| = 5 > 2.0
+                "Helvetica"
+            ) // |200-195| = 5 > 2.0
             // ReSharper restore BadListLineBreaks
         };
 

@@ -55,14 +55,16 @@ internal static class PageAnnotationReader
             if (dict.Get<PdfArray>(PdfName.C) is { Count: 3 } cArr)
                 color = [cArr[0].ReadFloat(), cArr[1].ReadFloat(), cArr[2].ReadFloat()];
 
-            result.Add(new Annotation(
-                subtype,
-                x,
-                y,
-                x2 - x,
-                y2 - y,
-                contents,
-                color)
+            result.Add(
+                new Annotation(
+                    subtype,
+                    x,
+                    y,
+                    x2 - x,
+                    y2 - y,
+                    contents,
+                    color
+                )
             );
         }
 

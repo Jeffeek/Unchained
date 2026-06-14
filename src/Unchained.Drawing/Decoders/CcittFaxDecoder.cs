@@ -195,12 +195,14 @@ internal static class CcittFaxDecoder
     {
         < 0 => DecodeGroup4(data, columns, rows, blackIs1, endOfBlock),
         // ReSharper disable once BadListLineBreaks
-        0 => DecodeGroup3_1D(data,
+        0 => DecodeGroup3_1D(
+            data,
             columns,
             rows,
             blackIs1,
             encodedByteAlign,
-            endOfBlock),
+            endOfBlock
+        ),
         _ => DecodeGroup3_2D(data, columns, rows, blackIs1, encodedByteAlign)
     };
 

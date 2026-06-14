@@ -23,7 +23,8 @@ public sealed class BookmarkEditor : IBookmarkEditor
         var adapter = document as PdfDocumentAdapter
                       ?? throw new ArgumentException(
                           $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document));
+                          nameof(document)
+                      );
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -34,7 +35,8 @@ public sealed class BookmarkEditor : IBookmarkEditor
 
         // Build outline tree; get catalog reference.
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.IsCatalog());
+            o.Value is PdfDictionary d && d.IsCatalog()
+        );
 
         PdfObject outlinesEntry;
         if (bookmarks.Count == 0)
@@ -49,13 +51,16 @@ public sealed class BookmarkEditor : IBookmarkEditor
             var itemRefs = BuildOutlineItems(builder, bookmarks, rootRef, pageObjNums);
             builder.AddAt(
                 rootNum,
-                new PdfDictionary(new Dictionary<string, PdfObject>
-                {
-                    [PdfName.Type.Value] = PdfName.Outlines,
-                    [PdfName.First.Value] = itemRefs[0],
-                    [PdfName.Last.Value] = itemRefs[^1],
-                    [PdfName.Count.Value] = new PdfInteger(CountAll(bookmarks))
-                }));
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Outlines,
+                        [PdfName.First.Value] = itemRefs[0],
+                        [PdfName.Last.Value] = itemRefs[^1],
+                        [PdfName.Count.Value] = new PdfInteger(CountAll(bookmarks))
+                    }
+                )
+            );
             outlinesEntry = rootRef;
         }
 
@@ -76,11 +81,13 @@ public sealed class BookmarkEditor : IBookmarkEditor
 
         var totalMax = finalObjects.Max(static o => o.ObjectNumber);
         var rootRef2 = catalogObj.ToReference();
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-            [PdfName.Root.Value] = rootRef2
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
+                [PdfName.Root.Value] = rootRef2
+            }
+        );
 
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(finalObjects, trailer);
         adapter.ReplaceCore(newDoc.Core);

@@ -45,8 +45,10 @@ public sealed class RealPdfLayoutTests : PdfTestBase
             .Select(static s => Math.Round(s.Y / 5) * 5)
             .Distinct()
             .Count();
-        distinctRows.ShouldBeGreaterThan(1,
-            "Expected text at multiple Y levels — table rows produce distinct Y positions.");
+        distinctRows.ShouldBeGreaterThan(
+            1,
+            "Expected text at multiple Y levels — table rows produce distinct Y positions."
+        );
     }
 
     [Fact]
@@ -62,8 +64,10 @@ public sealed class RealPdfLayoutTests : PdfTestBase
             .Select(static s => Math.Round(s.X / 10) * 10)
             .Distinct()
             .Count();
-        distinctCols.ShouldBeGreaterThan(1,
-            "Expected text at multiple X positions — table columns create distinct X offsets.");
+        distinctCols.ShouldBeGreaterThan(
+            1,
+            "Expected text at multiple X positions — table columns create distinct X offsets."
+        );
     }
 
     [Fact]

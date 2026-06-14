@@ -112,7 +112,8 @@ internal static class AnimationParser
 
         // Delay from the condition
         double delay = 0;
-        var condDelay = ctn.Element(pml + "stCondLst")?.Element(pml + "cond")
+        var condDelay = ctn.Element(pml + "stCondLst")
+            ?.Element(pml + "cond")
             ?.GetAttr("delay");
         if (condDelay != null && int.TryParse(condDelay, out var delayMs) && delayMs > 0)
             delay = delayMs / 1000.0;

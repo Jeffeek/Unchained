@@ -11,7 +11,8 @@ public sealed class Jbig2DecoderTests
     {
         var garbage = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04 };
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            Task.Run(() => Jbig2Decoder.Decode(garbage)));
+            Task.Run(() => Jbig2Decoder.Decode(garbage))
+        );
     }
 
     [Fact]
@@ -35,7 +36,8 @@ public sealed class Jbig2DecoderTests
     {
         // Should throw InvalidOperationException (bad data), not NullReferenceException.
         var ex = await Should.ThrowAsync<InvalidOperationException>(static () =>
-            Task.Run(static () => Jbig2Decoder.Decode(new byte[] { 0xFF, 0xFE })));
+            Task.Run(static () => Jbig2Decoder.Decode(new byte[] { 0xFF, 0xFE }))
+        );
         ex.ShouldNotBeNull();
     }
 }

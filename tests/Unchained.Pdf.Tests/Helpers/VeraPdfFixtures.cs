@@ -35,7 +35,8 @@ internal static class VeraPdfFixtures
     internal static IEnumerable<string> PassPdfFilePaths() =>
         AllPdfFilePaths()
             .Where(static o =>
-                Path.GetFileNameWithoutExtension(o).Contains("-pass-", StringComparison.OrdinalIgnoreCase));
+                Path.GetFileNameWithoutExtension(o).Contains("-pass-", StringComparison.OrdinalIgnoreCase)
+            );
 
     /// <summary>
     ///     Returns only "fail" files — PDFs that intentionally violate a spec rule.

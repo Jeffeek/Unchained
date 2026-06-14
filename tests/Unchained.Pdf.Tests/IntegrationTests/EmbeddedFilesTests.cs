@@ -37,7 +37,8 @@ public sealed class EmbeddedFilesTests : PdfTestBase
             "report.txt",
             "Monthly report",
             "text/plain",
-            "Hello embedded world"u8.ToArray());
+            "Hello embedded world"u8.ToArray()
+        );
 
         await editor.AddEmbeddedFileAsync(doc, file, TestContext.Current.CancellationToken);
 
@@ -53,12 +54,16 @@ public sealed class EmbeddedFilesTests : PdfTestBase
         var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
-        await editor.AddEmbeddedFileAsync(doc,
+        await editor.AddEmbeddedFileAsync(
+            doc,
             new EmbeddedFile("file1", "a.txt", null, null, "AAA"u8.ToArray()),
-            TestContext.Current.CancellationToken);
-        await editor.AddEmbeddedFileAsync(doc,
+            TestContext.Current.CancellationToken
+        );
+        await editor.AddEmbeddedFileAsync(
+            doc,
             new EmbeddedFile("file2", "b.txt", null, null, "BBB"u8.ToArray()),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         editor.GetEmbeddedFiles(doc).Count.ShouldBe(2);
     }
@@ -70,9 +75,11 @@ public sealed class EmbeddedFilesTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         var data = "Hello from embedded file!"u8.ToArray();
-        await editor.AddEmbeddedFileAsync(doc,
+        await editor.AddEmbeddedFileAsync(
+            doc,
             new EmbeddedFile("myfile", "hello.txt", null, "text/plain", data),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         var files = editor.GetEmbeddedFiles(reloaded);
@@ -88,9 +95,11 @@ public sealed class EmbeddedFilesTests : PdfTestBase
         var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
-        await editor.AddEmbeddedFileAsync(doc,
+        await editor.AddEmbeddedFileAsync(
+            doc,
             new EmbeddedFile("myfile", "test.txt", null, null, "data"u8.ToArray()),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         await editor.RemoveEmbeddedFileAsync(doc, "myfile", TestContext.Current.CancellationToken);
 
         editor.GetEmbeddedFiles(doc).ShouldBeEmpty();

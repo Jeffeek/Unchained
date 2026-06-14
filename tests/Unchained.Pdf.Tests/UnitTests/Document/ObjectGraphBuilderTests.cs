@@ -87,25 +87,36 @@ public sealed class ObjectGraphBuilderTests
         var builder = new ObjectGraphBuilder();
         var pagesNum = builder.NextNumber();
         var pagesRef = new PdfIndirectReference(pagesNum, 0);
-        var pageObj = builder.Add(new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Type.Value] = PdfName.Page,
-            [PdfName.Parent.Value] = pagesRef,
-            [PdfName.MediaBox.Value] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(595), new PdfInteger(842)])
-        }));
+        var pageObj = builder.Add(
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    [PdfName.Type.Value] = PdfName.Page,
+                    [PdfName.Parent.Value] = pagesRef,
+                    [PdfName.MediaBox.Value] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(595), new PdfInteger(842)])
+                }
+            )
+        );
         builder.AddAt(
             pagesNum,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Pages,
-                [PdfName.Kids.Value] = new PdfArray([pageObj.ToReference()]),
-                [PdfName.Count.Value] = new PdfInteger(1)
-            }));
-        var catalogObj = builder.Add(new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Type.Value] = PdfName.Catalog,
-            [PdfName.Pages.Value] = pagesRef
-        }));
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    [PdfName.Type.Value] = PdfName.Pages,
+                    [PdfName.Kids.Value] = new PdfArray([pageObj.ToReference()]),
+                    [PdfName.Count.Value] = new PdfInteger(1)
+                }
+            )
+        );
+        var catalogObj = builder.Add(
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    [PdfName.Type.Value] = PdfName.Catalog,
+                    [PdfName.Pages.Value] = pagesRef
+                }
+            )
+        );
 
         using var doc = ObjectGraphBuilder.Finalize(builder, catalogObj.ToReference());
 
@@ -120,35 +131,46 @@ public sealed class ObjectGraphBuilderTests
             new(
                 1,
                 0,
-                new PdfDictionary(new Dictionary<string, PdfObject>
-                {
-                    [PdfName.Type.Value] = PdfName.Catalog,
-                    [PdfName.Pages.Value] = new PdfIndirectReference(2, 0)
-                })),
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Catalog,
+                        [PdfName.Pages.Value] = new PdfIndirectReference(2, 0)
+                    }
+                )
+            ),
             new(
                 2,
                 0,
-                new PdfDictionary(new Dictionary<string, PdfObject>
-                {
-                    [PdfName.Type.Value] = PdfName.Pages,
-                    [PdfName.Kids.Value] = new PdfArray([new PdfIndirectReference(3, 0)]),
-                    [PdfName.Count.Value] = new PdfInteger(1)
-                })),
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Pages,
+                        [PdfName.Kids.Value] = new PdfArray([new PdfIndirectReference(3, 0)]),
+                        [PdfName.Count.Value] = new PdfInteger(1)
+                    }
+                )
+            ),
             new(
                 3,
                 0,
-                new PdfDictionary(new Dictionary<string, PdfObject>
-                {
-                    [PdfName.Type.Value] = PdfName.Page,
-                    [PdfName.Parent.Value] = new PdfIndirectReference(2, 0),
-                    [PdfName.MediaBox.Value] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(595), new PdfInteger(842)])
-                }))
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Page,
+                        [PdfName.Parent.Value] = new PdfIndirectReference(2, 0),
+                        [PdfName.MediaBox.Value] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(595), new PdfInteger(842)])
+                    }
+                )
+            )
         };
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(4),
-            [PdfName.Root.Value] = new PdfIndirectReference(1, 0)
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(4),
+                [PdfName.Root.Value] = new PdfIndirectReference(1, 0)
+            }
+        );
 
         using var doc = ObjectGraphBuilder.SerializeToDocument(objects, trailer);
 

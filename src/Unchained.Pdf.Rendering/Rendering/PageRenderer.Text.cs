@@ -189,13 +189,15 @@ internal sealed partial class PageRenderer
             // Mode 0 (fill) and 2/4/6 (fill variants): blit the bitmap.
             if (_gs.ShouldFillText)
             {
-                buffer.BlitGlyphFromFace((int)px,
+                buffer.BlitGlyphFromFace(
+                    (int)px,
                     (int)py,
                     ftFace,
                     _gs.FillR,
                     _gs.FillG,
                     _gs.FillB,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
             }
 
             // Mode 1/2/5/6 (stroke variants): stroke the glyph outline.
@@ -241,13 +243,15 @@ internal sealed partial class PageRenderer
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
                 if (_gs.TextRenderMode != 1)
                 {
-                    buffer.BlitGlyphFromFace((int)px,
+                    buffer.BlitGlyphFromFace(
+                        (int)px,
                         (int)py,
                         ftFace,
                         _gs.FillR,
                         _gs.FillG,
                         _gs.FillB,
-                        _gs.BlendMode);
+                        _gs.BlendMode
+                    );
                 }
 
                 if (_gs.TextRenderMode is 1 or 2)
@@ -291,13 +295,15 @@ internal sealed partial class PageRenderer
                 var (px, py) = UToPixel(_gs.TextMatrix[4], _gs.TextMatrix[5] + _gs.TextRise);
                 if (_gs.ShouldFillText)
                 {
-                    buffer.BlitGlyphFromFace((int)px,
+                    buffer.BlitGlyphFromFace(
+                        (int)px,
                         (int)py,
                         ftFace,
                         _gs.FillR,
                         _gs.FillG,
                         _gs.FillB,
-                        _gs.BlendMode);
+                        _gs.BlendMode
+                    );
                 }
 
                 if (_gs.ShouldStrokeText)
@@ -397,7 +403,8 @@ internal sealed partial class PageRenderer
                 tilingPatterns,
                 null,
                 colorSpaces,
-                type3Fonts);
+                type3Fonts
+            );
 
             glyphRenderer.Render(ops, EmptyFontMap);
 
@@ -489,7 +496,8 @@ internal sealed partial class PageRenderer
                         _gs.StrokeB,
                         thickPx,
                         _gs.StrokeA,
-                        _gs.BlendMode);
+                        _gs.BlendMode
+                    );
                 }
 
                 prevX = ptX;
@@ -512,7 +520,8 @@ internal sealed partial class PageRenderer
                 _gs.StrokeB,
                 thickPx,
                 _gs.StrokeA,
-                _gs.BlendMode);
+                _gs.BlendMode
+            );
         }
     }
 }

@@ -174,7 +174,8 @@ public sealed class StampApplierTests : PdfTestBase
         var stamp = new TextStamp("BG", 100, 400, IsBackground: true);
         await using var doc = await LoadAsync(
             PdfFixtures.WithTextContent("original text"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         await Applier.StampPageAsync(doc, 1, stamp, TestContext.Current.CancellationToken);
         var ops = doc.Pages[1].GetContentOperators();
         // Both the stamp and original content operators must be present.

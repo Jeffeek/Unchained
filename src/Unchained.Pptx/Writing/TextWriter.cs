@@ -38,8 +38,12 @@ internal static class TextWriter
         // Ensure at least one paragraph exists (required by OOXML spec)
         if (frame.Paragraphs.Count == 0)
         {
-            txBody.Add(new XElement(DmlNames.Paragraph,
-                new XElement(DmlNames.EndParagraphRunProperties, new XAttribute(DmlNames.AttributeLanguage, "en-US"))));
+            txBody.Add(
+                new XElement(
+                    DmlNames.Paragraph,
+                    new XElement(DmlNames.EndParagraphRunProperties, new XAttribute(DmlNames.AttributeLanguage, "en-US"))
+                )
+            );
         }
 
         return txBody;
@@ -77,9 +81,13 @@ internal static class TextWriter
         // WordArt warp (<a:prstTxWarp>) precedes the autofit elements per the bodyPr schema.
         if (format.Warp is { } warp && !string.IsNullOrEmpty(warp.Preset))
         {
-            bodyPr.Add(new XElement(DmlNames.Dml + "prstTxWarp",
-                new XAttribute("prst", warp.Preset),
-                new XElement(DmlNames.Dml + "avLst")));
+            bodyPr.Add(
+                new XElement(
+                    DmlNames.Dml + "prstTxWarp",
+                    new XAttribute("prst", warp.Preset),
+                    new XElement(DmlNames.Dml + "avLst")
+                )
+            );
         }
 
         // Autofit
@@ -120,9 +128,13 @@ internal static class TextWriter
                 pEl.Add(WriteRun(run));
         }
 
-        pEl.Add(new XElement(DmlNames.EndParagraphRunProperties,
-            new XAttribute(DmlNames.AttributeLanguage, "en-US"),
-            new XAttribute(DmlNames.AttributeDirty, "0")));
+        pEl.Add(
+            new XElement(
+                DmlNames.EndParagraphRunProperties,
+                new XAttribute(DmlNames.AttributeLanguage, "en-US"),
+                new XAttribute(DmlNames.AttributeDirty, "0")
+            )
+        );
 
         return pEl;
     }
@@ -152,16 +164,24 @@ internal static class TextWriter
         if (para.SpaceBeforePoints.HasValue)
         {
             var spcBef = new XElement(DmlNames.SpaceBefore);
-            spcBef.Add(new XElement(DmlNames.SpacingPoints,
-                new XAttribute(DmlNames.AttributeValue, (int)(para.SpaceBeforePoints.Value * 100))));
+            spcBef.Add(
+                new XElement(
+                    DmlNames.SpacingPoints,
+                    new XAttribute(DmlNames.AttributeValue, (int)(para.SpaceBeforePoints.Value * 100))
+                )
+            );
             pPr.Add(spcBef);
         }
 
         if (para.SpaceAfterPoints.HasValue)
         {
             var spcAft = new XElement(DmlNames.SpaceAfter);
-            spcAft.Add(new XElement(DmlNames.SpacingPoints,
-                new XAttribute(DmlNames.AttributeValue, (int)(para.SpaceAfterPoints.Value * 100))));
+            spcAft.Add(
+                new XElement(
+                    DmlNames.SpacingPoints,
+                    new XAttribute(DmlNames.AttributeValue, (int)(para.SpaceAfterPoints.Value * 100))
+                )
+            );
             pPr.Add(spcAft);
         }
 
@@ -183,14 +203,22 @@ internal static class TextWriter
             case BulletType.Character:
                 if (bullet.Character != null)
                 {
-                    pPr.Add(new XElement(DmlNames.BulletChar,
-                        new XAttribute("char", bullet.Character)));
+                    pPr.Add(
+                        new XElement(
+                            DmlNames.BulletChar,
+                            new XAttribute("char", bullet.Character)
+                        )
+                    );
                 }
 
                 if (bullet.Font != null)
                 {
-                    pPr.Add(new XElement(DmlNames.BulletFont,
-                        new XAttribute(DmlNames.AttributeTypeface, bullet.Font)));
+                    pPr.Add(
+                        new XElement(
+                            DmlNames.BulletFont,
+                            new XAttribute(DmlNames.AttributeTypeface, bullet.Font)
+                        )
+                    );
                 }
 
                 if (bullet.Color.HasValue)
@@ -202,15 +230,23 @@ internal static class TextWriter
 
                 if (bullet.SizePercent.HasValue)
                 {
-                    pPr.Add(new XElement(DmlNames.BulletSizePercent,
-                        new XAttribute(DmlNames.AttributeValue, (int)(bullet.SizePercent.Value * 1_000))));
+                    pPr.Add(
+                        new XElement(
+                            DmlNames.BulletSizePercent,
+                            new XAttribute(DmlNames.AttributeValue, (int)(bullet.SizePercent.Value * 1_000))
+                        )
+                    );
                 }
 
             break;
             case BulletType.Numbered when bullet.Numbered != null:
-                pPr.Add(new XElement(DmlNames.BulletAutoNumber,
-                    new XAttribute("type", NumberedStyleToString(bullet.Numbered.Style)),
-                    new XAttribute("startAt", bullet.Numbered.StartAt)));
+                pPr.Add(
+                    new XElement(
+                        DmlNames.BulletAutoNumber,
+                        new XAttribute("type", NumberedStyleToString(bullet.Numbered.Style)),
+                        new XAttribute("startAt", bullet.Numbered.StartAt)
+                    )
+                );
             break;
             case BulletType.Picture:
             break;
@@ -224,13 +260,21 @@ internal static class TextWriter
         var lnSpc = new XElement(DmlNames.LineSpacing);
         if (spacing.Mode == LineSpacingMode.Points)
         {
-            lnSpc.Add(new XElement(DmlNames.SpacingPoints,
-                new XAttribute(DmlNames.AttributeValue, (int)(spacing.Value * 100))));
+            lnSpc.Add(
+                new XElement(
+                    DmlNames.SpacingPoints,
+                    new XAttribute(DmlNames.AttributeValue, (int)(spacing.Value * 100))
+                )
+            );
         }
         else
         {
-            lnSpc.Add(new XElement(DmlNames.SpacingPercent,
-                new XAttribute(DmlNames.AttributeValue, (int)(spacing.Value * 1_000))));
+            lnSpc.Add(
+                new XElement(
+                    DmlNames.SpacingPercent,
+                    new XAttribute(DmlNames.AttributeValue, (int)(spacing.Value * 1_000))
+                )
+            );
         }
 
         return lnSpc;
@@ -248,9 +292,11 @@ internal static class TextWriter
 
     private static XElement WriteField(Run run)
     {
-        var fEl = new XElement(DmlNames.Field,
+        var fEl = new XElement(
+            DmlNames.Field,
             new XAttribute("id", Guid.NewGuid().ToString("B").ToUpperInvariant()),
-            new XAttribute("type", FieldTypeToString(run.Field!.Value)));
+            new XAttribute("type", FieldTypeToString(run.Field!.Value))
+        );
         fEl.Add(WriteRunProperties(run.Format));
         fEl.Add(new XElement(DmlNames.Text, run.Text));
         return fEl;
@@ -258,9 +304,11 @@ internal static class TextWriter
 
     private static XElement WriteRunProperties(RunFormat format)
     {
-        var rPr = new XElement(DmlNames.RunProperties,
+        var rPr = new XElement(
+            DmlNames.RunProperties,
             new XAttribute(DmlNames.AttributeLanguage, format.LanguageTag ?? "en-US"),
-            new XAttribute(DmlNames.AttributeDirty, "0"));
+            new XAttribute(DmlNames.AttributeDirty, "0")
+        );
 
         if (format.FontSizePoints.HasValue)
             rPr.Add(new XAttribute(DmlNames.AttributeFontSize, (int)(format.FontSizePoints.Value * 100)));
@@ -300,20 +348,32 @@ internal static class TextWriter
 
         if (format.LatinFont != null)
         {
-            rPr.Add(new XElement(DmlNames.LatinFont,
-                new XAttribute(DmlNames.AttributeTypeface, format.LatinFont)));
+            rPr.Add(
+                new XElement(
+                    DmlNames.LatinFont,
+                    new XAttribute(DmlNames.AttributeTypeface, format.LatinFont)
+                )
+            );
         }
 
         if (format.EastAsianFont != null)
         {
-            rPr.Add(new XElement(DmlNames.EastAsianFont,
-                new XAttribute(DmlNames.AttributeTypeface, format.EastAsianFont)));
+            rPr.Add(
+                new XElement(
+                    DmlNames.EastAsianFont,
+                    new XAttribute(DmlNames.AttributeTypeface, format.EastAsianFont)
+                )
+            );
         }
 
         if (format.ComplexScriptFont != null)
         {
-            rPr.Add(new XElement(DmlNames.ComplexScriptFont,
-                new XAttribute(DmlNames.AttributeTypeface, format.ComplexScriptFont)));
+            rPr.Add(
+                new XElement(
+                    DmlNames.ComplexScriptFont,
+                    new XAttribute(DmlNames.AttributeTypeface, format.ComplexScriptFont)
+                )
+            );
         }
 
         // Click hyperlink (<a:hlinkClick>) follows the font elements per the rPr schema order.
@@ -321,8 +381,10 @@ internal static class TextWriter
         // ReSharper disable once InvertIf
         if (format.Hyperlink is { } link)
         {
-            var hlink = new XElement(DmlNames.HyperlinkClick,
-                new XAttribute(PmlNames.Relationships + "id", link.RelationshipId));
+            var hlink = new XElement(
+                DmlNames.HyperlinkClick,
+                new XAttribute(PmlNames.Relationships + "id", link.RelationshipId)
+            );
             if (!string.IsNullOrEmpty(link.Tooltip))
                 hlink.Add(new XAttribute("tooltip", link.Tooltip));
             rPr.Add(hlink);

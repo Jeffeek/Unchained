@@ -84,9 +84,12 @@ public sealed class EncryptionTests : PdfTestBase
     public async Task Encrypt_WithOwnerAndUserPassword_BothWork()
     {
         await using var original = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
-        var encOpts = new SaveOptions(Encryption: new EncryptionOptions(
-            "user",
-            "owner"));
+        var encOpts = new SaveOptions(
+            Encryption: new EncryptionOptions(
+                "user",
+                "owner"
+            )
+        );
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(original, ms, encOpts, TestContext.Current.CancellationToken);
@@ -179,10 +182,12 @@ public sealed class EncryptionTests : PdfTestBase
         // Encrypt, then change password from "old" to "new"
         await using var original = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
         var firstMs = new MemoryStream();
-        await Processor.SaveAsync(original,
+        await Processor.SaveAsync(
+            original,
             firstMs,
             new SaveOptions(Encryption: new EncryptionOptions("old")),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await using var decrypted = await Processor.LoadAsync(new MemoryStream(firstMs.ToArray()), "old", TestContext.Current.CancellationToken);
         var changedMs = new MemoryStream();
@@ -190,7 +195,8 @@ public sealed class EncryptionTests : PdfTestBase
 
         // Old password no longer works
         await Should.ThrowAsync<PdfEncryptedException>(() =>
-            Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "old", TestContext.Current.CancellationToken));
+            Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "old", TestContext.Current.CancellationToken)
+        );
 
         // New password works
         await using var reopened = await Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "new", TestContext.Current.CancellationToken);
@@ -202,10 +208,12 @@ public sealed class EncryptionTests : PdfTestBase
     {
         await using var original = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         var encMs = new MemoryStream();
-        await Processor.SaveAsync(original,
+        await Processor.SaveAsync(
+            original,
             encMs,
             new SaveOptions(Encryption: new EncryptionOptions("secret")),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await using var decrypted = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "secret", TestContext.Current.CancellationToken);
         var decryptedMs = new MemoryStream();
@@ -222,10 +230,12 @@ public sealed class EncryptionTests : PdfTestBase
     {
         await using var original = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         var encMs = new MemoryStream();
-        await Processor.SaveAsync(original,
+        await Processor.SaveAsync(
+            original,
             encMs,
             new SaveOptions(Encryption: new EncryptionOptions("initial")),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await using var decrypted = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "initial", TestContext.Current.CancellationToken);
         var changedMs = new MemoryStream();
@@ -252,7 +262,8 @@ public sealed class EncryptionTests : PdfTestBase
         var bytes = ms.ToArray();
 
         await Should.ThrowAsync<PdfEncryptedException>(() =>
-            Processor.LoadAsync(new MemoryStream(bytes), "wrong", TestContext.Current.CancellationToken));
+            Processor.LoadAsync(new MemoryStream(bytes), "wrong", TestContext.Current.CancellationToken)
+        );
     }
 
     [Fact]

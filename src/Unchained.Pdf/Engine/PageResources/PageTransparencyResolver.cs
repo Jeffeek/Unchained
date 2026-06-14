@@ -89,7 +89,8 @@ internal static class PageTransparencyResolver
                     operators,
                     formAdapter,
                     bbox,
-                    matrix);
+                    matrix
+                );
             }
             // ReSharper disable once EmptyGeneralCatchClause
             catch { }

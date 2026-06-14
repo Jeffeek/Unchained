@@ -35,8 +35,10 @@ internal static class Shape3DWriter
     }
 
     private static XElement WriteBevel(string name, BevelFormat bevel) =>
-        new(A + name,
+        new(
+            A + name,
             new XAttribute("w", bevel.Width.Value),
             new XAttribute("h", bevel.Height.Value),
-            new XAttribute("prst", bevel.Preset));
+            new XAttribute("prst", bevel.Preset)
+        );
 }

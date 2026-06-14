@@ -71,7 +71,8 @@ public sealed class SignatureTests : PdfTestBase
         var opts = new SignatureOptions(
             "I approve",
             "New York",
-            "alice@example.com");
+            "alice@example.com"
+        );
 
         using var ms = new MemoryStream();
         await Processor.SignAsync(doc, cert, ms, opts, TestContext.Current.CancellationToken);
@@ -122,20 +123,23 @@ public sealed class SignatureTests : PdfTestBase
         // Pin the signing time so the test has no dependency on wall-clock calls.
         // This eliminates any cross-second-boundary flakiness between the /M entry
         // and the Pkcs9SigningTime signed attribute.
-        var pinned = new DateTimeOffset(2024,
+        var pinned = new DateTimeOffset(
+            2024,
             6,
             1,
             12,
             0,
             0,
-            TimeSpan.Zero);
+            TimeSpan.Zero
+        );
         using var ms = new MemoryStream();
         await Processor.SignAsync(
             doc,
             cert,
             ms,
             new SignatureOptions("Test", SigningTime: pinned),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         signatures[0].IsSignatureValid.ShouldBeTrue("Signature must be cryptographically valid.");
@@ -176,13 +180,15 @@ public sealed class SignatureTests : PdfTestBase
         using var cert = CreateSelfSignedCert();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         // ReSharper disable BadListLineBreaks
-        var when = new DateTimeOffset(2025,
+        var when = new DateTimeOffset(
+            2025,
             6,
             15,
             12,
             0,
             0,
-            TimeSpan.Zero);
+            TimeSpan.Zero
+        );
         // ReSharper restore BadListLineBreaks
 
         using var ms = new MemoryStream();
@@ -199,13 +205,15 @@ public sealed class SignatureTests : PdfTestBase
         using var cert = CreateSelfSignedCert("Diana Prince");
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         // ReSharper disable BadListLineBreaks
-        var when = new DateTimeOffset(2024,
+        var when = new DateTimeOffset(
+            2024,
             3,
             10,
             9,
             30,
             0,
-            TimeSpan.Zero);
+            TimeSpan.Zero
+        );
         // ReSharper restore BadListLineBreaks
         var opts = new SignatureOptions("Approved", "London", SigningTime: when);
 
@@ -230,7 +238,8 @@ public sealed class SignatureTests : PdfTestBase
         using var ms = new MemoryStream();
 
         await Should.ThrowAsync<ArgumentNullException>(() =>
-            Processor.SignAsync(doc, null!, ms, ct: TestContext.Current.CancellationToken));
+            Processor.SignAsync(doc, null!, ms, ct: TestContext.Current.CancellationToken)
+        );
     }
 
     [Fact]
@@ -238,19 +247,22 @@ public sealed class SignatureTests : PdfTestBase
     {
         using var cert = CreateSelfSignedCert("Eve Adams");
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
-        var pinned = new DateTimeOffset(2024,
+        var pinned = new DateTimeOffset(
+            2024,
             6,
             1,
             12,
             0,
             0,
-            TimeSpan.Zero);
+            TimeSpan.Zero
+        );
         var opts = new SignatureOptions(
             "Final approval",
             "Paris",
             "eve@example.com",
             FieldName: "AuthorSig",
-            SigningTime: pinned);
+            SigningTime: pinned
+        );
 
         using var ms = new MemoryStream();
         await Processor.SignAsync(doc, cert, ms, opts, TestContext.Current.CancellationToken);

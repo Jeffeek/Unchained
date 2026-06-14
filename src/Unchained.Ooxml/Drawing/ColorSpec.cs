@@ -65,11 +65,13 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
     /// <param name="green">Green channel (0–255).</param>
     /// <param name="blue">Blue channel (0–255).</param>
     public static ColorSpec FromRgb(byte red, byte green, byte blue) =>
-        new(ColorSpecType.Rgb,
+        new(
+            ColorSpecType.Rgb,
             0xFF000000 | ((uint)red << 16) | ((uint)green << 8) | blue,
             default,
             1.0,
-            0.0);
+            0.0
+        );
 
     /// <summary>Creates an ARGB colour with an explicit alpha (opacity) channel.</summary>
     /// <param name="alpha">Alpha channel (0 = fully transparent, 255 = fully opaque).</param>
@@ -82,11 +84,13 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
         byte green,
         byte blue
     ) =>
-        new(ColorSpecType.Rgb,
+        new(
+            ColorSpecType.Rgb,
             ((uint)alpha << 24) | ((uint)red << 16) | ((uint)green << 8) | blue,
             default,
             1.0,
-            0.0);
+            0.0
+        );
 
     /// <summary>
     ///     Creates a colour that references a theme colour slot, with optional luminance transforms.
@@ -167,21 +171,25 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
     {
         var (alpha, red, green, blue) = ColorMath.UnpackArgb(argb);
 
-        RgbToHls(red / 255.0,
+        RgbToHls(
+            red / 255.0,
             green / 255.0,
             blue / 255.0,
             out var hue,
             out var luminance,
-            out var saturation);
+            out var saturation
+        );
 
         luminance = Math.Clamp((luminance * modifier) + offset, 0.0, 1.0);
 
-        HlsToRgb(hue,
+        HlsToRgb(
+            hue,
             luminance,
             saturation,
             out var r,
             out var g,
-            out var b);
+            out var b
+        );
 
         return ((uint)alpha << 24) |
                ((uint)Math.Round(r * 255) << 16) |

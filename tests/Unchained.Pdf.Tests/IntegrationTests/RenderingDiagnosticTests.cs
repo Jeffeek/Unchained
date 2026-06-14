@@ -80,9 +80,11 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         SkipIfNoFreeType();
 
         // Reference: black rect only (re f) — known to produce non-white pixels
-        var rectPdf = PdfFixtures.WithImageXObject(200,
+        var rectPdf = PdfFixtures.WithImageXObject(
+            200,
             50,
-            Enumerable.Repeat((byte)0, 200 * 50 * 3).ToArray()); // all-black image
+            Enumerable.Repeat((byte)0, 200 * 50 * 3).ToArray()
+        ); // all-black image
         await using var rectDoc = await LoadAsync(rectPdf, TestContext.Current.CancellationToken);
         var rectPng = await Renderer!.RenderPageAsync(rectDoc.Pages[1], new RenderOptions(72), TestContext.Current.CancellationToken);
         var rectPixels = PdfTestConstants.CountNonWhitePixels(rectPng);
@@ -97,8 +99,10 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         Log($"Text 'H' non-white pixels: {textPixels}");
 
         rectPixels.ShouldBeGreaterThan(100, "black rectangle must produce non-white pixels (sanity check)");
-        textPixels.ShouldBeGreaterThan(20,
-            $"'H' at 24pt must produce visible pixels. rect={rectPixels}, text={textPixels}");
+        textPixels.ShouldBeGreaterThan(
+            20,
+            $"'H' at 24pt must produce visible pixels. rect={rectPixels}, text={textPixels}"
+        );
     }
 
     [Fact]
@@ -110,8 +114,10 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
 
         foreach (var fontSize in new[] { 8, 12, 24, 48, 72 })
         {
-            var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData,
-                $"BT /F1 {fontSize} Tf 72 600 Td (HELLO) Tj ET");
+            var pdfBytes = PdfFixtures.WithEmbeddedFont(
+                fontData,
+                $"BT /F1 {fontSize} Tf 72 600 Td (HELLO) Tj ET"
+            );
             await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
             var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
             var nonWhite = PdfTestConstants.CountNonWhitePixels(png);
@@ -119,14 +125,18 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         }
 
         // At 72pt we MUST see text pixels
-        var bigPdf = PdfFixtures.WithEmbeddedFont(fontData,
-            "BT /F1 72 Tf 50 500 Td (H) Tj ET");
+        var bigPdf = PdfFixtures.WithEmbeddedFont(
+            fontData,
+            "BT /F1 72 Tf 50 500 Td (H) Tj ET"
+        );
         await using var bigDoc = await LoadAsync(bigPdf, TestContext.Current.CancellationToken);
         var bigPng = await Renderer!.RenderPageAsync(bigDoc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
         var bigPixels = PdfTestConstants.CountNonWhitePixels(bigPng);
 
-        bigPixels.ShouldBeGreaterThan(100,
-            $"'H' at 72pt should be very visible. Got {bigPixels} non-white pixels.");
+        bigPixels.ShouldBeGreaterThan(
+            100,
+            $"'H' at 72pt should be very visible. Got {bigPixels} non-white pixels."
+        );
     }
 
     [Fact]
@@ -137,8 +147,10 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
 
         var fontData = LoadDejaVuSansRegular();
 
-        var gch = GCHandle.Alloc(fontData,
-            GCHandleType.Pinned);
+        var gch = GCHandle.Alloc(
+            fontData,
+            GCHandleType.Pinned
+        );
         try
         {
             using var blob = new Blob(gch.AddrOfPinnedObject(), fontData.Length, MemoryMode.Duplicate);
@@ -179,18 +191,24 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         SkipIfNoFreeType();
 
         var fontData = LoadDejaVuSansRegular();
-        var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData,
-            "BT /F1 24 Tf 100 600 Td (Hello) Tj ET");
+        var pdfBytes = PdfFixtures.WithEmbeddedFont(
+            fontData,
+            "BT /F1 24 Tf 100 600 Td (Hello) Tj ET"
+        );
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
-        await Renderer!.RenderPageAsync(doc.Pages[1],
+        await Renderer!.RenderPageAsync(
+            doc.Pages[1],
             new RenderOptions(96),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var errors = Renderer.LastTextErrors;
         Log($"Text operator errors: {errors}");
 
-        errors.ShouldBe(0,
-            "Tj operator must not throw inside ShowString; if >0 the per-operator catch swallowed an exception");
+        errors.ShouldBe(
+            0,
+            "Tj operator must not throw inside ShowString; if >0 the per-operator catch swallowed an exception"
+        );
     }
 
     // ── Stage 8: expose exactly what happens per glyph ───────────────────────
@@ -204,12 +222,16 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         SkipIfNoFreeType();
 
         var fontData = LoadDejaVuSansRegular();
-        var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData,
-            "BT /F1 24 Tf 100 600 Td (Hello) Tj ET");
+        var pdfBytes = PdfFixtures.WithEmbeddedFont(
+            fontData,
+            "BT /F1 24 Tf 100 600 Td (Hello) Tj ET"
+        );
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
-        await Renderer!.RenderPageAsync(doc.Pages[1],
+        await Renderer!.RenderPageAsync(
+            doc.Pages[1],
             new RenderOptions(96),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         Log($"TextErrors:      {Renderer.LastTextErrors}");
         Log($"GlyphsAttempted: {Renderer.LastGlyphsAttempted}");
@@ -223,9 +245,11 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         //
         // If GlyphsAttempted > 0 but pixels == 0:
         // → BlitGlyphBitmap runs but writes nothing
-        Renderer.LastGlyphsAttempted.ShouldBeGreaterThan(0,
+        Renderer.LastGlyphsAttempted.ShouldBeGreaterThan(
+            0,
             $"ShowString must call BlitGlyphBitmap for at least one glyph. " +
-            $"TextErrors={Renderer.LastTextErrors}, Attempted={Renderer.LastGlyphsAttempted}, Skipped={Renderer.LastGlyphsSkipped}");
+            $"TextErrors={Renderer.LastTextErrors}, Attempted={Renderer.LastGlyphsAttempted}, Skipped={Renderer.LastGlyphsSkipped}"
+        );
     }
 
     [Fact]
@@ -243,11 +267,14 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
             "TestFont",
             fontData,
             'H',
-            32); // ceil(24pt * 96dpi / 72)
+            32
+        ); // ceil(24pt * 96dpi / 72)
 
         Log($"DiagnoseGlyphRender result: {diagnosis}");
 
-        diagnosis.StartsWith("OK:", StringComparison.Ordinal).ShouldBeTrue(
-            $"glyph render pipeline should complete successfully; got: {diagnosis}");
+        diagnosis.StartsWith("OK:", StringComparison.Ordinal)
+            .ShouldBeTrue(
+                $"glyph render pipeline should complete successfully; got: {diagnosis}"
+            );
     }
 }

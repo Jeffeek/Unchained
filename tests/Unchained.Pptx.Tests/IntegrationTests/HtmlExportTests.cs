@@ -101,12 +101,14 @@ public sealed class HtmlExportTests : PptxTestBase
     public async Task SaveAsHtml_WithText_TextAppearsInOutput()
     {
         var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(2),
-            "Hello HTML World");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(2),
+                "Hello HTML World"
+            );
 
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
@@ -148,9 +150,11 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc,
+            var files = await Processor.SaveAsHtmlAsync(
+                doc,
                 dir,
-                new HtmlSaveOptions { IncludeHiddenSlides = true });
+                new HtmlSaveOptions { IncludeHiddenSlides = true }
+            );
             files.Count.ShouldBe(2);
         }
         finally
@@ -163,11 +167,14 @@ public sealed class HtmlExportTests : PptxTestBase
     public async Task SaveAsHtml_ShapeWithSolidFill_ContainsCssColor()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(3),
-            Emu.FromInches(2));
+        var shape = doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(3),
+                Emu.FromInches(2)
+            );
         shape.Fill.SetSolid(ColorSpec.FromRgb(0, 112, 192));
 
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());

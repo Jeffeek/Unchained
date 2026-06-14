@@ -182,9 +182,13 @@ internal static class PdfAValidator
         var hasOutputIntent = core.Catalog["OutputIntents"] is not null;
         if (!hasOutputIntent)
         {
-            v.Add(W("6.2.2",
-                "Catalog does not have /OutputIntents. Device-independent colour spaces or an " +
-                "ICC-based output intent are required for PDF/A compliance."));
+            v.Add(
+                W(
+                    "6.2.2",
+                    "Catalog does not have /OutputIntents. Device-independent colour spaces or an " +
+                    "ICC-based output intent are required for PDF/A compliance."
+                )
+            );
         }
     }
 
@@ -260,10 +264,14 @@ internal static class PdfAValidator
 
             if (!hasFile)
             {
-                v.Add(E("6.3.3",
-                    $"Font '{baseName ?? "(unnamed)"}' (obj {obj.ObjectNumber}) is not embedded. " +
-                    "All fonts — including Standard 14 — must be embedded in PDF/A-1.",
-                    obj.ObjectNumber));
+                v.Add(
+                    E(
+                        "6.3.3",
+                        $"Font '{baseName ?? "(unnamed)"}' (obj {obj.ObjectNumber}) is not embedded. " +
+                        "All fonts — including Standard 14 — must be embedded in PDF/A-1.",
+                        obj.ObjectNumber
+                    )
+                );
             }
         }
     }

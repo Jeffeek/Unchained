@@ -132,7 +132,8 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
     {
         var asm = typeof(FontCache).Assembly; // fonts are in Unchained.Drawing.Text
         using var stream = asm.GetManifestResourceStream(
-                               "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
+                               "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf"
+                           )
                            ?? throw new InvalidOperationException("DejaVuSans-Regular.ttf not found.");
         using var ms = new MemoryStream();
         stream.CopyTo(ms);

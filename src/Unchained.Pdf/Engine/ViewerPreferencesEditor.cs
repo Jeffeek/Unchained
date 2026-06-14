@@ -40,7 +40,8 @@ public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
         var existing = adapter.Core.CollectObjects();
 
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.IsCatalog());
+            o.Value is PdfDictionary d && d.IsCatalog()
+        );
         var catalog = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catalog.Entries);
 
@@ -87,5 +88,6 @@ public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
         document as PdfDocumentAdapter
         ?? throw new ArgumentException(
             $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}.",
-            nameof(document));
+            nameof(document)
+        );
 }

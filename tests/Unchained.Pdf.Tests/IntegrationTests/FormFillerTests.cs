@@ -160,7 +160,8 @@ public sealed class FormFillerTests : PdfTestBase
         await Filler.FillAsync(
             doc,
             new Dictionary<string, string> { ["First"] = "A", ["Second"] = "B" },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var map = doc.GetFormFields().ToDictionary(static f => f.Name, static f => f.Value);
         map["First"].ShouldBe("A");
         map["Second"].ShouldBe("B");
@@ -174,7 +175,8 @@ public sealed class FormFillerTests : PdfTestBase
         await Filler.FillAsync(
             doc,
             new Dictionary<string, string> { ["First"] = "changed" },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var map = doc.GetFormFields().ToDictionary(static f => f.Name, static f => f.Value);
         map["First"].ShouldBe("changed");
         map["Second"].ShouldBe("keep");
@@ -187,7 +189,8 @@ public sealed class FormFillerTests : PdfTestBase
         await Filler.FillAsync(
             doc,
             new Dictionary<string, string> { ["Group.First"] = "updated" },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var map = doc.GetFormFields().ToDictionary(static f => f.Name, static f => f.Value);
         map["Group.First"].ShouldBe("updated");
         map["Group.Second"].ShouldBe("v2");
@@ -201,7 +204,8 @@ public sealed class FormFillerTests : PdfTestBase
             doc,
             // ReSharper disable once StringLiteralTypo
             new Dictionary<string, string> { ["Group.Second"] = "newval" },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
         ms.Position = 0;
@@ -216,7 +220,8 @@ public sealed class FormFillerTests : PdfTestBase
     {
         var badDoc = new FakeDocument();
         await Should.ThrowAsync<ArgumentException>(() =>
-            Filler.FillAsync(badDoc, new Dictionary<string, string> { ["x"] = "y" }));
+            Filler.FillAsync(badDoc, new Dictionary<string, string> { ["x"] = "y" })
+        );
     }
 
     // ── FlattenAsync ──────────────────────────────────────────────────────────

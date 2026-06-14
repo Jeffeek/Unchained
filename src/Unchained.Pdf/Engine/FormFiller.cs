@@ -32,7 +32,8 @@ public sealed class FormFiller : IFormFiller
         var adapter = document as PdfDocumentAdapter
                       ?? throw new ArgumentException(
                           $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document));
+                          nameof(document)
+                      );
 
         var existing = adapter.Core.CollectObjects();
         var swaps = new Dictionary<int, PdfIndirectObject>();
@@ -94,7 +95,8 @@ public sealed class FormFiller : IFormFiller
         var adapter = document as PdfDocumentAdapter
                       ?? throw new ArgumentException(
                           $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document));
+                          nameof(document)
+                      );
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -125,12 +127,17 @@ public sealed class FormFiller : IFormFiller
 
             // Add the appearance stream to page /Contents.
             var appearanceBytes = normalAp.Data.ToArray();
-            var apStream = builder.Add(new PdfStream(
-                new PdfDictionary(new Dictionary<string, PdfObject>
-                {
-                    [PdfName.Length.Value] = new PdfInteger(appearanceBytes.Length)
-                }),
-                appearanceBytes));
+            var apStream = builder.Add(
+                new PdfStream(
+                    new PdfDictionary(
+                        new Dictionary<string, PdfObject>
+                        {
+                            [PdfName.Length.Value] = new PdfInteger(appearanceBytes.Length)
+                        }
+                    ),
+                    appearanceBytes
+                )
+            );
 
             var pd = (PdfDictionary)pageObj.Value;
             var existingContents = pd[PdfName.Contents];
@@ -230,11 +237,13 @@ public sealed class FormFiller : IFormFiller
     {
         var totalMax = objects.Max(static o => o.ObjectNumber);
         var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-            [PdfName.Root.Value] = rootRef
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
+                [PdfName.Root.Value] = rootRef
+            }
+        );
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
         adapter.ReplaceCore(newDoc.Core);
     }

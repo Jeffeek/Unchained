@@ -27,12 +27,14 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         // Build a presentation with the public API, save it (custom writer), then read it back
         // with both parsers and compare what the SDK reader currently maps.
         var doc = PptxFixtures.WithSlides(2);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(5),
-            Emu.FromInches(2),
-            "Hello Parity");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(5),
+                Emu.FromInches(2),
+                "Hello Parity"
+            );
         doc.Slides[1].IsHidden = true;
 
         using var ms = new MemoryStream();
@@ -76,8 +78,10 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
     public async Task RealFile_BothParsers_AgreeOnSlideCountSizeAndHidden(string fileName)
     {
         var path = SamplePath(fileName);
-        Assert.SkipUnless(File.Exists(path),
-            $"Sample {fileName} not found at {path}. Ensure TestFiles/python-pptx/ is copied to output.");
+        Assert.SkipUnless(
+            File.Exists(path),
+            $"Sample {fileName} not found at {path}. Ensure TestFiles/python-pptx/ is copied to output."
+        );
 
         var bytes = await File.ReadAllBytesAsync(path);
 
@@ -102,16 +106,22 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
 
             for (var l = 0; l < cm.Layouts.Count; l++)
             {
-                sm.Layouts[l].LayoutType.ShouldBe(cm.Layouts[l].LayoutType,
-                    $"{fileName}: master {m + 1} layout {l + 1} type");
+                sm.Layouts[l]
+                    .LayoutType.ShouldBe(
+                        cm.Layouts[l].LayoutType,
+                        $"{fileName}: master {m + 1} layout {l + 1} type"
+                    );
             }
         }
 
         // Each slide resolves to a layout whose type matches the custom parser's.
         for (var i = 0; i < custom.Slides.Count; i++)
         {
-            sdk.Slides[i].Layout.LayoutType.ShouldBe(custom.Slides[i].Layout.LayoutType,
-                $"{fileName}: slide {i + 1} layout type");
+            sdk.Slides[i]
+                .Layout.LayoutType.ShouldBe(
+                    custom.Slides[i].Layout.LayoutType,
+                    $"{fileName}: slide {i + 1} layout type"
+                );
         }
 
         for (var i = 0; i < custom.Slides.Count; i++)
@@ -120,8 +130,11 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         // Notes / sections / comment authors parity (M4).
         for (var i = 0; i < custom.Slides.Count; i++)
         {
-            sdk.Slides[i].Notes.NotesText.ShouldBe(custom.Slides[i].Notes.NotesText,
-                $"{fileName}: slide {i + 1} notes text");
+            sdk.Slides[i]
+                .Notes.NotesText.ShouldBe(
+                    custom.Slides[i].Notes.NotesText,
+                    $"{fileName}: slide {i + 1} notes text"
+                );
         }
 
         sdk.Sections.Count.ShouldBe(custom.Sections.Count, $"{fileName}: section count");
@@ -152,12 +165,16 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
                     // Pictures must resolve their embedded image bytes identically.
                     case PictureShape cp when ss is PictureShape sp:
                     {
-                        (sp.Image is not null).ShouldBe(cp.Image is not null,
-                            $"{fileName}: slide {i + 1} shape {j + 1} image presence");
+                        (sp.Image is not null).ShouldBe(
+                            cp.Image is not null,
+                            $"{fileName}: slide {i + 1} shape {j + 1} image presence"
+                        );
                         if (cp.Image is not null && sp.Image is not null)
                         {
-                            sp.Image.Data.Length.ShouldBe(cp.Image.Data.Length,
-                                $"{fileName}: slide {i + 1} shape {j + 1} image byte length");
+                            sp.Image.Data.Length.ShouldBe(
+                                cp.Image.Data.Length,
+                                $"{fileName}: slide {i + 1} shape {j + 1} image byte length"
+                            );
                         }
 
                         break;
@@ -165,10 +182,14 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
                     // Charts must resolve the same model (type + series count) from the chart part.
                     case ChartShape cc
                         when ss is ChartShape sc:
-                        sc.Chart.Type.ShouldBe(cc.Chart.Type,
-                            $"{fileName}: slide {i + 1} shape {j + 1} chart type");
-                        sc.Chart.Data.Series.Count.ShouldBe(cc.Chart.Data.Series.Count,
-                            $"{fileName}: slide {i + 1} shape {j + 1} chart series count");
+                        sc.Chart.Type.ShouldBe(
+                            cc.Chart.Type,
+                            $"{fileName}: slide {i + 1} shape {j + 1} chart type"
+                        );
+                        sc.Chart.Data.Series.Count.ShouldBe(
+                            cc.Chart.Data.Series.Count,
+                            $"{fileName}: slide {i + 1} shape {j + 1} chart series count"
+                        );
                     break;
                     // Text runs must carry identical formatting (M1): plain text, bold/italic,
                     // font size, font name, paragraph alignment.
@@ -177,15 +198,23 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
                     {
                         var cParas = ca.TextFrame.Paragraphs;
                         var sParas = sa.TextFrame.Paragraphs;
-                        sParas.Count.ShouldBe(cParas.Count,
-                            $"{fileName}: slide {i + 1} shape {j + 1} paragraph count");
+                        sParas.Count.ShouldBe(
+                            cParas.Count,
+                            $"{fileName}: slide {i + 1} shape {j + 1} paragraph count"
+                        );
 
                         for (var pi = 0; pi < cParas.Count; pi++)
                         {
-                            sParas[pi].Alignment.ShouldBe(cParas[pi].Alignment,
-                                $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} alignment");
-                            sParas[pi].Runs.Count.ShouldBe(cParas[pi].Runs.Count,
-                                $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} run count");
+                            sParas[pi]
+                                .Alignment.ShouldBe(
+                                    cParas[pi].Alignment,
+                                    $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} alignment"
+                                );
+                            sParas[pi]
+                                .Runs.Count.ShouldBe(
+                                    cParas[pi].Runs.Count,
+                                    $"{fileName}: s{i + 1} sh{j + 1} para {pi + 1} run count"
+                                );
 
                             for (var ri = 0; ri < cParas[pi].Runs.Count; ri++)
                             {

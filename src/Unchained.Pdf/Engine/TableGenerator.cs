@@ -75,7 +75,8 @@ public sealed class TableGenerator : ITableGenerator
         var adapter = document as PdfDocumentAdapter
                       ?? throw new ArgumentException(
                           $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document));
+                          nameof(document)
+                      );
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -110,12 +111,15 @@ public sealed class TableGenerator : ITableGenerator
         var rebuiltPagesObj = new PdfIndirectObject(
             pagesObjNum,
             0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Pages,
-                [PdfName.Kids.Value] = new PdfArray(allKids),
-                [PdfName.Count.Value] = new PdfInteger(allKids.Length)
-            }));
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    [PdfName.Type.Value] = PdfName.Pages,
+                    [PdfName.Kids.Value] = new PdfArray(allKids),
+                    [PdfName.Count.Value] = new PdfInteger(allKids.Length)
+                }
+            )
+        );
 
         var finalObjects = existing
             .Select(o => o.ObjectNumber == pagesObjNum ? rebuiltPagesObj : o)
@@ -147,18 +151,23 @@ public sealed class TableGenerator : ITableGenerator
                 );
 
                 // Add new structure tree objects to finalObjects.
-                finalObjects.AddRange(builder.Objects.Where(o =>
-                    finalObjects.All(e => e.ObjectNumber != o.ObjectNumber)));
+                finalObjects.AddRange(
+                    builder.Objects.Where(o =>
+                        finalObjects.All(e => e.ObjectNumber != o.ObjectNumber)
+                    )
+                );
             }
         }
 
         var totalMax = finalObjects.Max(static o => o.ObjectNumber);
         var rootRef2 = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Document trailer is missing /Root.");
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-            [PdfName.Root.Value] = rootRef2
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
+                [PdfName.Root.Value] = rootRef2
+            }
+        );
 
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(finalObjects, trailer);
         adapter.ReplaceCore(newDoc.Core);
@@ -236,10 +245,12 @@ public sealed class TableGenerator : ITableGenerator
             taggedItems
         );
         var contentBytes = contentBuffer.WrittenMemory.ToArray();
-        var streamDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Length.Value] = new PdfInteger(contentBytes.Length)
-        });
+        var streamDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Length.Value] = new PdfInteger(contentBytes.Length)
+            }
+        );
 
         return builder.Add(new PdfStream(streamDict, contentBytes));
     }
@@ -444,7 +455,8 @@ public sealed class TableGenerator : ITableGenerator
             new Dictionary<string, PdfObject>
             {
                 [PdfName.Marked.Value] = PdfBoolean.True
-            });
+            }
+        );
 
         if (language is not null)
             catalogEntries[PdfName.Lang.Value] = PdfString.FromLatin1(language);
@@ -453,7 +465,8 @@ public sealed class TableGenerator : ITableGenerator
             new Dictionary<string, PdfObject>
             {
                 ["DisplayDocTitle"] = PdfBoolean.True
-            });
+            }
+        );
 
         var structTreeRef = StructureTreeBuilder.Build(taggedItems, pageRefs, builder);
         catalogEntries[PdfName.StructTreeRoot.Value] = structTreeRef;
@@ -465,48 +478,63 @@ public sealed class TableGenerator : ITableGenerator
     {
         var fontNormalObj = builder.Add(MakeFontDict(style.FontName));
         var fontBoldObj = builder.Add(MakeFontDict(style.FontName + "-Bold"));
-        return builder.Add(new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Font.Value] = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                ["F1"] = fontNormalObj.ToReference(),
-                ["F2"] = fontBoldObj.ToReference()
-            })
-        })).ToReference();
+        return builder.Add(
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Font.Value] = new PdfDictionary(
+                            new Dictionary<string, PdfObject>
+                            {
+                                ["F1"] = fontNormalObj.ToReference(),
+                                ["F2"] = fontBoldObj.ToReference()
+                            }
+                        )
+                    }
+                )
+            )
+            .ToReference();
     }
 
     private static PdfDictionary MakeFontDict(string baseFontName) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Type.Value] = PdfName.Font,
-            [PdfName.Subtype.Value] = PdfName.Type1,
-            [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
-        });
+        new(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Type.Value] = PdfName.Font,
+                [PdfName.Subtype.Value] = PdfName.Type1,
+                [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
+            }
+        );
 
     private static PdfDictionary MakePageDict(
         PdfObject pagesRef,
         PdfObject contentsRef,
         PdfObject resourcesRef
-    ) => new(new Dictionary<string, PdfObject>
-    {
-        [PdfName.Type.Value] = PdfName.Page,
-        [PdfName.Parent.Value] = pagesRef,
-        [PdfName.MediaBox.Value] = new PdfArray([
-            new PdfInteger(0), new PdfInteger(0),
-            new PdfInteger((int)TableLayout.PageWidth),
-            new PdfInteger((int)TableLayout.PageHeight)
-        ]),
-        [PdfName.Resources.Value] = resourcesRef,
-        [PdfName.Contents.Value] = contentsRef
-    });
+    ) => new(
+        new Dictionary<string, PdfObject>
+        {
+            [PdfName.Type.Value] = PdfName.Page,
+            [PdfName.Parent.Value] = pagesRef,
+            [PdfName.MediaBox.Value] = new PdfArray(
+                [
+                    new PdfInteger(0), new PdfInteger(0),
+                    new PdfInteger((int)TableLayout.PageWidth),
+                    new PdfInteger((int)TableLayout.PageHeight)
+                ]
+            ),
+            [PdfName.Resources.Value] = resourcesRef,
+            [PdfName.Contents.Value] = contentsRef
+        }
+    );
 
     private static PdfDictionary MakePagesDict(IReadOnlyCollection<PdfIndirectReference> kids) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Type.Value] = PdfName.Pages,
-            [PdfName.Kids.Value] = new PdfArray(kids.Cast<PdfObject>().ToArray()),
-            [PdfName.Count.Value] = new PdfInteger(kids.Count)
-        });
+        new(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Type.Value] = PdfName.Pages,
+                [PdfName.Kids.Value] = new PdfArray(kids.Cast<PdfObject>().ToArray()),
+                [PdfName.Count.Value] = new PdfInteger(kids.Count)
+            }
+        );
 
     private static List<List<IReadOnlyList<string>>> SliceRows(
         IReadOnlyCollection<IReadOnlyList<string>> rows,

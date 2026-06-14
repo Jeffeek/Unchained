@@ -254,7 +254,8 @@ public sealed class LinearizationTests : PdfTestBase
     {
         await using var source = await Processor.LoadFromTxtAsync(
             "Hello linearized world",
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
         using var ms = new MemoryStream();
         await Processor.SaveAsync(source, ms, new SaveOptions(Linearize: true), TestContext.Current.CancellationToken);
 

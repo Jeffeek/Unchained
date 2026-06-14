@@ -42,7 +42,8 @@ public sealed class CrossReferenceTableTests
     {
         var table = Table(
             (1, new CrossReferenceEntry(10, 0, CrossReferenceEntryType.InUse)),
-            (2, new CrossReferenceEntry(50, 0, CrossReferenceEntryType.InUse)));
+            (2, new CrossReferenceEntry(50, 0, CrossReferenceEntryType.InUse))
+        );
         table.Count.ShouldBe(2);
     }
 

@@ -96,7 +96,8 @@ internal sealed unsafe class GlyphFace : IDisposable
             (nint)bitmap.buffer,
             (int)bitmap.pixel_mode,
             slot->bitmap_left,
-            slot->bitmap_top);
+            slot->bitmap_top
+        );
     }
 
     /// <summary>

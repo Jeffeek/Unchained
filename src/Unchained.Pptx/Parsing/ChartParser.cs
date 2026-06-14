@@ -108,8 +108,11 @@ internal static class ChartParser
         axis.NumberFormat = axEl.Element(CmlNames.Cml + "numFmt")?.GetAttr("formatCode");
 
         // Axis title (c:title/c:tx/c:rich text runs).
-        var titleRuns = axEl.Element(CmlNames.Title)?.Element(CmlNames.Text)?.Element(CmlNames.Rich)
-            ?.Descendants(DmlNames.Dml + "t").Select(static t => t.Value);
+        var titleRuns = axEl.Element(CmlNames.Title)
+            ?.Element(CmlNames.Text)
+            ?.Element(CmlNames.Rich)
+            ?.Descendants(DmlNames.Dml + "t")
+            .Select(static t => t.Value);
         if (titleRuns is null) return;
 
         var title = string.Concat(titleRuns);
@@ -156,10 +159,11 @@ internal static class ChartParser
         {
             var hasExplosion = element.Elements(CmlNames.Series)
                 .Any(static s =>
-                {
-                    var exp = s.Element(CmlNames.Cml + "explosion");
-                    return exp?.GetAttrInt(CmlNames.AttributeValue) > 0;
-                });
+                    {
+                        var exp = s.Element(CmlNames.Cml + "explosion");
+                        return exp?.GetAttrInt(CmlNames.AttributeValue) > 0;
+                    }
+                );
             return (hasExplosion ? ChartType.PieExploded : ChartType.Pie, true);
         }
 

@@ -19,7 +19,8 @@ public sealed class CcittFaxDecoderTests
     // against libtiff's own decoder. BlackIs1=false → 1=white.
     private static readonly byte[] EncodedG32D =
         Convert.FromHexString(
-            "001d4002800ea00118466a003a80047d4007ea6002e003f530010c0070bd5800bb800ec5b0010c0075000a");
+            "001d4002800ea00118466a003a80047d4007ea6002e003f530010c0070bd5800bb800ec5b0010c0075000a"
+        );
 
     [Fact]
     public void DecodeGroup4_ProducesExpectedBitmap()

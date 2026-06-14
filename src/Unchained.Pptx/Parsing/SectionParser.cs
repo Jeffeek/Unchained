@@ -21,7 +21,8 @@ internal static class SectionParser
     public static void Parse(XElement presentationRoot, SectionCollection sections)
     {
         var pml = XNamespace.Get(
-            "http://schemas.openxmlformats.org/presentationml/2006/main");
+            "http://schemas.openxmlformats.org/presentationml/2006/main"
+        );
 
         var extLst = presentationRoot.Element(pml + "extLst");
         if (extLst == null) return;

@@ -18,10 +18,12 @@ public sealed class CfbDocumentTests
         var largeData = new byte[8192];
         new Random(42).NextBytes(largeData);
 
-        var cfb = CfbDocument.Write([
-            ("EncryptionInfo", smallData),
-            ("EncryptedPackage", largeData)
-        ]);
+        var cfb = CfbDocument.Write(
+            [
+                ("EncryptionInfo", smallData),
+                ("EncryptedPackage", largeData)
+            ]
+        );
 
         var streams = CfbDocument.Read(cfb);
 

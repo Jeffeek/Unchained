@@ -65,7 +65,8 @@ internal static class SlideImageDecoder
             svgRenderSize,
             svgRenderSize,
             out width,
-            out height);
+            out height
+        );
 
         return pixels;
     }

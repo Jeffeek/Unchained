@@ -111,8 +111,11 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     /// </summary>
     public bool HasDigitalSignatures =>
         Preserved?.Parts.Any(static p =>
-            p.ContentType.Contains("digital-signature-xmlsignature",
-                StringComparison.OrdinalIgnoreCase)) == true;
+            p.ContentType.Contains(
+                "digital-signature-xmlsignature",
+                StringComparison.OrdinalIgnoreCase
+            )
+        ) == true;
 
     /// <summary>Encryption and write-protection state of the presentation.</summary>
     public ProtectionInfo Protection { get; }
@@ -177,7 +180,8 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
 #endif
                     signerName = x509.GetNameInfo(
                         X509NameType.SimpleName,
-                        false);
+                        false
+                    );
                 }
                 catch
                 {
@@ -194,7 +198,8 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
                     signingTimeEl.Value.Trim(),
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.None,
-                    out var dt))
+                    out var dt
+                ))
                 signingTime = dt;
 
             return new DigitalSignatureInfo

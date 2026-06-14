@@ -15,12 +15,14 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 public sealed class HyperlinkTests : PptxTestBase
 {
     private static AutoShape AddBox(PresentationDocument doc, int slideIndex)
-        => doc.Slides[slideIndex].Shapes.AddShape(
-            AutoShapeType.Rectangle,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(2),
-            Emu.FromInches(1));
+        => doc.Slides[slideIndex]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(2),
+                Emu.FromInches(1)
+            );
 
     [Fact]
     public async Task UrlHyperlink_RoundTrips()

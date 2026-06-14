@@ -23,7 +23,8 @@ public sealed class EmbeddedFontTests
     {
         var store = StoreWith(
             Font("DM Sans", EmbeddedFontStyle.Regular, 1),
-            Font("DM Sans", EmbeddedFontStyle.Bold, 2));
+            Font("DM Sans", EmbeddedFontStyle.Bold, 2)
+        );
 
         var data = store.FindFontData("DM Sans", EmbeddedFontStyle.Bold);
 

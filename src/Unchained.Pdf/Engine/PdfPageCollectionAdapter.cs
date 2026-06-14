@@ -155,7 +155,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     /// </summary>
     /// <returns>
     ///     A read-only dictionary where the key is the font resource name and the
-    ///     value is a <see cref="Type3FontInfo"/> describing the font matrix,
+    ///     value is a <see cref="Type3FontInfo" /> describing the font matrix,
     ///     encoding, glyph widths, and glyph drawing programs.
     /// </returns>
     internal IReadOnlyDictionary<string, Type3FontInfo> GetType3Fonts() =>
@@ -167,7 +167,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     /// </summary>
     /// <returns>
     ///     A read-only dictionary where the key is the color space resource name and
-    ///     the value is a resolved <see cref="ColorSpaceInfo"/> describing how color
+    ///     the value is a resolved <see cref="ColorSpaceInfo" /> describing how color
     ///     values should be interpreted and converted to RGB.
     /// </returns>
     internal IReadOnlyDictionary<string, ColorSpaceInfo> GetColorSpaces() =>

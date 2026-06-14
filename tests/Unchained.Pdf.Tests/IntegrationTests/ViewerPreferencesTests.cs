@@ -63,9 +63,11 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetViewerPreferences_Direction_RightToLeft_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
-        await Editor.SetViewerPreferencesAsync(doc,
+        await Editor.SetViewerPreferencesAsync(
+            doc,
             new ViewerPreferences(Direction: ReadingDirection.RightToLeft),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         doc.GetViewerPreferences().Direction.ShouldBe(ReadingDirection.RightToLeft);
     }
 
@@ -151,9 +153,11 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetViewerPreferences_DuplexFlipLongEdge_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
-        await Editor.SetViewerPreferencesAsync(doc,
+        await Editor.SetViewerPreferencesAsync(
+            doc,
             new ViewerPreferences(Duplex: DuplexMode.DuplexFlipLongEdge),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         doc.GetViewerPreferences().Duplex.ShouldBe(DuplexMode.DuplexFlipLongEdge);
     }
 
@@ -161,9 +165,11 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetViewerPreferences_DuplexFlipShortEdge_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
-        await Editor.SetViewerPreferencesAsync(doc,
+        await Editor.SetViewerPreferencesAsync(
+            doc,
             new ViewerPreferences(Duplex: DuplexMode.DuplexFlipShortEdge),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         doc.GetViewerPreferences().Duplex.ShouldBe(DuplexMode.DuplexFlipShortEdge);
     }
 
@@ -171,9 +177,11 @@ public sealed class ViewerPreferencesTests : PdfTestBase
     public async Task SetViewerPreferences_NonFullScreenPageMode_UseOutlines_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
-        await Editor.SetViewerPreferencesAsync(doc,
+        await Editor.SetViewerPreferencesAsync(
+            doc,
             new ViewerPreferences(NonFullScreenPageMode: PageMode.UseOutlines),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         doc.GetViewerPreferences().NonFullScreenPageMode.ShouldBe(PageMode.UseOutlines);
     }
 

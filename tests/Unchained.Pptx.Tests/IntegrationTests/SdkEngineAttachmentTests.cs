@@ -18,12 +18,14 @@ public sealed class SdkEngineAttachmentTests : PptxTestBase
     {
         // Round-trip a generated doc through the custom writer to get valid bytes.
         using var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(2),
-            "Engine attach");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(2),
+                "Engine attach"
+            );
         using var ms = new MemoryStream();
         new PresentationProcessor().SaveAsync(doc, ms).GetAwaiter().GetResult();
         return ms.ToArray();

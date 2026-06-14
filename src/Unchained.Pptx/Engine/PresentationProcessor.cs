@@ -43,7 +43,8 @@ public sealed class PresentationProcessor : IDisposable
         {
             throw new ArgumentOutOfRangeException(
                 nameof(maxConcurrency),
-                "Concurrency limit must be at least 1.");
+                "Concurrency limit must be at least 1."
+            );
         }
 
         _gate = new SemaphoreSlim(limit, limit);
@@ -146,12 +147,14 @@ public sealed class PresentationProcessor : IDisposable
         };
         var protection = new ProtectionInfo();
 
-        return new PresentationDocument(slides,
+        return new PresentationDocument(
+            slides,
             masters,
             mediaStore,
             properties,
             protection,
-            slideSize);
+            slideSize
+        );
     }
 
     // ── HTML Export (M10) ─────────────────────────────────────────────────────
@@ -173,8 +176,10 @@ public sealed class PresentationProcessor : IDisposable
 
         var opts = options ?? HtmlSaveOptions.Default;
         var files = await Task.Run(
-            () => PptxToHtmlWriter.Write(document, opts),
-            cancellationToken).ConfigureAwait(false);
+                () => PptxToHtmlWriter.Write(document, opts),
+                cancellationToken
+            )
+            .ConfigureAwait(false);
 
         Directory.CreateDirectory(directoryPath);
         var written = new List<string>(files.Count);
@@ -224,7 +229,8 @@ public sealed class PresentationProcessor : IDisposable
         var opts = options ?? HtmlPlayerSaveOptions.Default;
         return Task.Run(
             () => PptxToHtmlPlayerWriter.Write(document, opts),
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     // ── ODP Export (M-H) ───────────────────────────────────────────────────────
@@ -259,7 +265,8 @@ public sealed class PresentationProcessor : IDisposable
         var opts = options ?? OdpSaveOptions.Default;
         return Task.Run(
             () => PptxToOdpWriter.Write(document, opts),
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     // ── SVG Export (M10) ──────────────────────────────────────────────────────
@@ -278,7 +285,8 @@ public sealed class PresentationProcessor : IDisposable
         var opts = options ?? SvgSaveOptions.Default;
         return Task.Run(
             () => PptxToSvgWriter.WriteSlide(slide, slideSize, opts),
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     /// <summary>
@@ -295,7 +303,8 @@ public sealed class PresentationProcessor : IDisposable
         var opts = options ?? SvgSaveOptions.Default;
         return Task.Run(
             () => PptxToSvgWriter.WriteAll(document, opts),
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     // ── PDF Export (M9) ───────────────────────────────────────────────────────
@@ -344,8 +353,10 @@ public sealed class PresentationProcessor : IDisposable
         {
             var opts = options ?? PdfSaveOptions.Default;
             return await Task.Run(
-                () => PptxToPdfWriter.Write(document, opts),
-                cancellationToken).ConfigureAwait(false);
+                    () => PptxToPdfWriter.Write(document, opts),
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -409,12 +420,14 @@ public sealed class PresentationProcessor : IDisposable
         try
         {
             var parsed = await Task.Run(
-                () => OdpParser.IsOdp(bytes)
-                    ? OdpParser.Parse(bytes)
-                    : options?.UseOpenXmlEngine == true
-                        ? OpenXmlPresentationParser.Parse(bytes)
-                        : PresentationParser.Parse(bytes, options),
-                cancellationToken).ConfigureAwait(false);
+                    () => OdpParser.IsOdp(bytes)
+                        ? OdpParser.Parse(bytes)
+                        : options?.UseOpenXmlEngine == true
+                            ? OpenXmlPresentationParser.Parse(bytes)
+                            : PresentationParser.Parse(bytes, options),
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             return new PresentationDocument(
                 parsed.Slides,
@@ -425,7 +438,8 @@ public sealed class PresentationProcessor : IDisposable
                 parsed.SlideSize,
                 parsed.CommentAuthors,
                 parsed.Sections,
-                parsed.Engine)
+                parsed.Engine
+            )
             {
                 SlideShow = parsed.SlideShow ?? new SlideShowSettings(),
                 Preserved = parsed.Preserved
@@ -453,22 +467,28 @@ public sealed class PresentationProcessor : IDisposable
             // the custom writer. The SDK path preserves unmodelled parts (Phase 2 / M5b).
             return options?.UseOpenXmlEngine == true && OpenXmlPresentationWriter.CanSave(document)
                 ? await Task.Run(
-                    () => OpenXmlPresentationWriter.Save(document),
-                    cancellationToken).ConfigureAwait(false)
-                : await Task.Run(() =>
-                        PresentationWriter.Write(
-                            document.Slides,
-                            document.Masters,
-                            document.Media,
-                            document.Properties,
-                            document.SlideSize,
-                            document.CommentAuthors,
-                            document.Sections,
-                            document.Protection,
-                            options,
-                            document.SlideShow,
-                            document.Preserved),
-                    cancellationToken).ConfigureAwait(false);
+                        () => OpenXmlPresentationWriter.Save(document),
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false)
+                : await Task.Run(
+                        () =>
+                            PresentationWriter.Write(
+                                document.Slides,
+                                document.Masters,
+                                document.Media,
+                                document.Properties,
+                                document.SlideSize,
+                                document.CommentAuthors,
+                                document.Sections,
+                                document.Protection,
+                                options,
+                                document.SlideShow,
+                                document.Preserved
+                            ),
+                        cancellationToken
+                    )
+                    .ConfigureAwait(false);
         }
         finally
         {

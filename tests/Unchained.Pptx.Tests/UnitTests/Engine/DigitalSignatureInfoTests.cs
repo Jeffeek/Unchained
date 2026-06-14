@@ -20,7 +20,15 @@ public sealed class DigitalSignatureInfoTests
     public void Properties_RoundTrip()
     {
         // ReSharper disable BadListLineBreaks
-        var when = new DateTimeOffset(2026, 6, 14, 12, 0, 0, TimeSpan.Zero);
+        var when = new DateTimeOffset(
+            2026,
+            6,
+            14,
+            12,
+            0,
+            0,
+            TimeSpan.Zero
+        );
         // ReSharper restore BadListLineBreaks
         var info = new DigitalSignatureInfo
         {

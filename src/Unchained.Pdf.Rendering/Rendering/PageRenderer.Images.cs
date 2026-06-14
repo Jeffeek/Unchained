@@ -27,13 +27,15 @@ internal sealed partial class PageRenderer
 
         if (dstW <= 0 || dstH <= 0) return;
 
-        BlitScaledImage(img.RgbData,
+        BlitScaledImage(
+            img.RgbData,
             img.Width,
             img.Height,
             dstX,
             dstY,
             dstW,
-            dstH);
+            dstH
+        );
     }
 
     private void PaintXObject(string resourceName)
@@ -53,14 +55,16 @@ internal sealed partial class PageRenderer
 
         if (dstW <= 0 || dstH <= 0) return;
 
-        BlitScaledImage(img.RgbData,
+        BlitScaledImage(
+            img.RgbData,
             img.Width,
             img.Height,
             dstX,
             dstY,
             dstW,
             dstH,
-            img.Alpha);
+            img.Alpha
+        );
     }
 
     // Scales an RGB image into the destination rectangle. When the image is downscaled
@@ -137,13 +141,15 @@ internal sealed partial class PageRenderer
                     buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
                 break;
                 default:
-                    buffer.BlendPixel(dstX + px,
+                    buffer.BlendPixel(
+                        dstX + px,
                         dstY + py,
                         r,
                         g,
                         b,
                         (byte)a,
-                        _gs.BlendMode);
+                        _gs.BlendMode
+                    );
                 break;
             }
         }
@@ -178,13 +184,15 @@ internal sealed partial class PageRenderer
         for (var y = py; y < y2; y++)
         for (var x = px; x < x2; x++)
         {
-            buffer.SetPixel(x,
+            buffer.SetPixel(
+                x,
                 y,
                 r,
                 g,
                 b,
                 SoftMaskAlpha(x, y, baseAlpha),
-                blendMode);
+                blendMode
+            );
         }
     }
 
@@ -202,13 +210,15 @@ internal sealed partial class PageRenderer
     {
         for (var x = x0; x <= x1; x++)
         {
-            buffer.SetPixel(x,
+            buffer.SetPixel(
+                x,
                 y,
                 r,
                 g,
                 b,
                 SoftMaskAlpha(x, y, baseAlpha),
-                blendMode);
+                blendMode
+            );
         }
     }
 
@@ -255,7 +265,8 @@ internal sealed partial class PageRenderer
                 formPage.GetShadings(),
                 formPage.GetTilingPatterns(),
                 null,
-                (formPage as PdfPageAdapter)?.GetColorSpaces());
+                (formPage as PdfPageAdapter)?.GetColorSpaces()
+            );
 
             maskRenderer.Render(smInfo.Operators, formPage.GetFontNameMap());
 

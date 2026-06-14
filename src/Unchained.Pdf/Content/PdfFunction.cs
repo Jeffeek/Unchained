@@ -78,14 +78,16 @@ internal sealed class PdfFunction
                 var c0 = ReadDoubles(dict["C0"]) ?? [0.0];
                 var c1 = ReadDoubles(dict["C1"]) ?? [1.0];
                 var n = dict["N"].ReadIntOrRealNullable() ?? 1.0;
-                return new PdfFunction(2,
+                return new PdfFunction(
+                    2,
                     domain,
                     c0,
                     c1,
                     n,
                     [],
                     [],
-                    []);
+                    []
+                );
             }
             case 3:
             {
@@ -95,14 +97,16 @@ internal sealed class PdfFunction
                 var encode = ReadDoubles(dict["Encode"]) ?? [];
                 return fns.Length == 0
                     ? null
-                    : new PdfFunction(3,
+                    : new PdfFunction(
+                        3,
                         domain,
                         [],
                         [],
                         1,
                         fns,
                         bounds,
-                        encode);
+                        encode
+                    );
             }
             default:
                 // Types 0 / 4: approximate with the dict's C0/C1 if present, else null.
@@ -110,14 +114,16 @@ internal sealed class PdfFunction
                 var c0 = ReadDoubles(dict["C0"]);
                 var c1 = ReadDoubles(dict["C1"]);
                 return c0 is not null && c1 is not null
-                    ? new PdfFunction(2,
+                    ? new PdfFunction(
+                        2,
                         domain,
                         c0,
                         c1,
                         1,
                         [],
                         [],
-                        [])
+                        []
+                    )
                     : null;
             }
         }

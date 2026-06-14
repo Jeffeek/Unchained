@@ -21,8 +21,12 @@ internal static class LineWriter
 
         if (line.WidthPoints.HasValue)
         {
-            ln.Add(new XAttribute(DmlNames.AttributeLineWidth,
-                (int)(line.WidthPoints.Value * EmuConversions.EmuPerPoint)));
+            ln.Add(
+                new XAttribute(
+                    DmlNames.AttributeLineWidth,
+                    (int)(line.WidthPoints.Value * EmuConversions.EmuPerPoint)
+                )
+            );
         }
 
         // Fill
@@ -31,8 +35,12 @@ internal static class LineWriter
         // Dash style
         if (line.DashStyle != LineDashStyle.Solid)
         {
-            ln.Add(new XElement(DmlNames.PresetDash,
-                new XAttribute(DmlNames.AttributeValue, DashStyleToString(line.DashStyle))));
+            ln.Add(
+                new XElement(
+                    DmlNames.PresetDash,
+                    new XAttribute(DmlNames.AttributeValue, DashStyleToString(line.DashStyle))
+                )
+            );
         }
 
         // Head arrow
@@ -55,10 +63,12 @@ internal static class LineWriter
     }
 
     private static XElement WriteArrow(XName elementName, ArrowFormat arrow) =>
-        new(elementName,
+        new(
+            elementName,
             new XAttribute("type", ArrowTypeToString(arrow.HeadType)),
             new XAttribute("w", ArrowSizeToString(arrow.Width)),
-            new XAttribute("len", ArrowSizeToString(arrow.Length)));
+            new XAttribute("len", ArrowSizeToString(arrow.Length))
+        );
 
     private static string DashStyleToString(LineDashStyle style) => style switch
     {

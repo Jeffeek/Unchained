@@ -23,7 +23,8 @@ internal static class PdfFixtures
         Headers = Enumerable.Range(1, cols).Select(static i => $"Col{i}").ToList(),
         Rows = Enumerable.Range(0, rows)
             .Select(IReadOnlyList<string> (r) =>
-                Enumerable.Range(1, cols).Select(c => $"R{r}C{c}").ToList())
+                Enumerable.Range(1, cols).Select(c => $"R{r}C{c}").ToList()
+            )
             .ToList()
     };
 
@@ -763,8 +764,10 @@ internal static class PdfFixtures
         var escapedValue = EscapeString(fieldValue);
         offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "4 0 obj");
-        AppendWithLineEnding(sb,
-            $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({escapedName}) /V ({escapedValue}) /Rect [50 700 300 720] /P 3 0 R >>");
+        AppendWithLineEnding(
+            sb,
+            $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({escapedName}) /V ({escapedValue}) /Rect [50 700 300 720] /P 3 0 R >>"
+        );
         AppendWithLineEnding(sb, "endobj");
 
         var xrefOffset = ByteLength(sb);
@@ -965,8 +968,10 @@ internal static class PdfFixtures
             var (name, value) = fields[i];
             offsets.Add(ByteLength(sb));
             AppendWithLineEnding(sb, $"{4 + i} 0 obj");
-            AppendWithLineEnding(sb,
-                $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(name)}) /V ({EscapeString(value)}) /Rect [50 {700 - (i * 30)} 300 {720 - (i * 30)}] /P 3 0 R >>");
+            AppendWithLineEnding(
+                sb,
+                $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(name)}) /V ({EscapeString(value)}) /Rect [50 {700 - (i * 30)} 300 {720 - (i * 30)}] /P 3 0 R >>"
+            );
             AppendWithLineEnding(sb, "endobj");
         }
 
@@ -1077,8 +1082,10 @@ internal static class PdfFixtures
 
         offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "4 0 obj");
-        AppendWithLineEnding(sb,
-            $"<< /Type /Annot /Subtype /Widget /FT /Btn /T ({EscapeString(fieldName)}) /V /Off /Rect [50 700 70 720] /P 3 0 R >>");
+        AppendWithLineEnding(
+            sb,
+            $"<< /Type /Annot /Subtype /Widget /FT /Btn /T ({EscapeString(fieldName)}) /V /Off /Rect [50 700 70 720] /P 3 0 R >>"
+        );
         AppendWithLineEnding(sb, "endobj");
 
         var xrefOffset = ByteLength(sb);
@@ -1141,8 +1148,10 @@ internal static class PdfFixtures
         // 5 — Text field widget with /AP referencing obj 4
         offsets.Add(ByteLength(sb));
         AppendWithLineEnding(sb, "5 0 obj");
-        AppendWithLineEnding(sb,
-            $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(fieldName)}) /V ({EscapeString(fieldValue)}) /Rect [50 700 300 720] /P 3 0 R /AP << /N 4 0 R >> >>");
+        AppendWithLineEnding(
+            sb,
+            $"<< /Type /Annot /Subtype /Widget /FT /Tx /T ({EscapeString(fieldName)}) /V ({EscapeString(fieldValue)}) /Rect [50 700 300 720] /P 3 0 R /AP << /N 4 0 R >> >>"
+        );
         AppendWithLineEnding(sb, "endobj");
 
         var xrefOffset = ByteLength(sb);

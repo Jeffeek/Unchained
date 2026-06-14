@@ -71,13 +71,15 @@ internal sealed partial class PageRenderer
             if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
             else
             {
-                buffer.BlendPixel(px,
+                buffer.BlendPixel(
+                    px,
                     py,
                     r,
                     g,
                     b,
                     _gs.FillA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
             }
         }
     }
@@ -129,12 +131,14 @@ internal sealed partial class PageRenderer
                 if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
                 else
                 {
-                    buffer.BlendPixel(px,
+                    buffer.BlendPixel(
+                        px,
                         py,
                         r,
                         g,
                         b,
-                        _gs.FillA);
+                        _gs.FillA
+                    );
                 }
             }
         }
@@ -171,7 +175,8 @@ internal sealed partial class PageRenderer
         var cellScale = Math.Min(cellScaleX, cellScaleY);
         // Initial CTM translates the BBox lower-left to the tile origin.
         double[] cellCtm = [1, 0, 0, 1, -tp.BBox[0], -tp.BBox[1]];
-        var cell = new PageRenderer(tile,
+        var cell = new PageRenderer(
+                tile,
                 fonts,
                 cellScale,
                 tp.YStep == 0 ? tileH / cellScale : Math.Abs(tp.YStep),
@@ -185,7 +190,8 @@ internal sealed partial class PageRenderer
                 tilingPatterns,
                 null,
                 colorSpaces,
-                type3Fonts)
+                type3Fonts
+            )
             { _tilingDepth = _tilingDepth + 1 };
         // Uncoloured (PaintType 2) cells use the current fill colour.
         if (tp.PaintType == 2)

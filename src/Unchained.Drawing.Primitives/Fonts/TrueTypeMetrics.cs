@@ -25,14 +25,16 @@ internal static class TrueTypeMetrics
     ///     expressed in 1000-unit glyph space.
     /// </summary>
     internal static readonly FontMetrics HelveticaFallback =
-        new(-166,
+        new(
+            -166,
             -225,
             NormalizedUnitsPerEm,
             931,
             800,
             -200,
             716,
-            80);
+            80
+        );
 
     /// <summary>
     ///     Parses metrics from a TrueType/OpenType font byte array.
@@ -125,14 +127,16 @@ internal static class TrueTypeMetrics
                 stemV = (int)Math.Clamp(Math.Pow(weightClass / 65.0, 2) + 50, 10, 340);
         }
 
-        return new FontMetrics(xMin,
+        return new FontMetrics(
+            xMin,
             yMin,
             xMax,
             yMax,
             ascent,
             descent,
             capHeight,
-            stemV);
+            stemV
+        );
     }
 
     private static string ReadTag(IReadOnlyList<byte> b, int o) =>

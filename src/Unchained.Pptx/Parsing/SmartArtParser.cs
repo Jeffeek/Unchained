@@ -95,7 +95,9 @@ internal static class SmartArtParser
 
         var paragraphs = t.Elements(DmlNames.Dml + "p")
             .Select(static p => string.Concat(
-                p.Elements(DmlNames.Dml + "r").Select(static r => (string?)r.Element(DmlNames.Dml + "t") ?? string.Empty)));
+                    p.Elements(DmlNames.Dml + "r").Select(static r => (string?)r.Element(DmlNames.Dml + "t") ?? string.Empty)
+                )
+            );
 
         return string.Join("\n", paragraphs).TrimEnd('\n');
     }
@@ -142,9 +144,11 @@ internal static class SmartArtParser
         var t = pt.Element(DmlNames.DiagramText);
         if (t == null)
         {
-            t = new XElement(DmlNames.DiagramText,
+            t = new XElement(
+                DmlNames.DiagramText,
                 new XElement(a + "bodyPr"),
-                new XElement(a + "lstStyle"));
+                new XElement(a + "lstStyle")
+            );
             pt.Add(t);
         }
 
@@ -153,10 +157,16 @@ internal static class SmartArtParser
         var lines = text.Length == 0 ? [string.Empty] : text.Split('\n');
         foreach (var line in lines)
         {
-            t.Add(new XElement(a + "p",
-                new XElement(a + "r",
-                    new XElement(a + "rPr", new XAttribute("lang", "en-US")),
-                    new XElement(a + "t", line))));
+            t.Add(
+                new XElement(
+                    a + "p",
+                    new XElement(
+                        a + "r",
+                        new XElement(a + "rPr", new XAttribute("lang", "en-US")),
+                        new XElement(a + "t", line)
+                    )
+                )
+            );
         }
     }
 }

@@ -75,7 +75,8 @@ public sealed class OpcPackageTests
             "/ppt/slide1.xml",
             "rId1",
             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
-            "../slideLayouts/slideLayout1.xml");
+            "../slideLayouts/slideLayout1.xml"
+        );
 
         var bytes = package.Save();
         using var reopened = OpcPackage.Open(bytes);

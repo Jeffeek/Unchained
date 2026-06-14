@@ -76,7 +76,8 @@ public sealed class ChartTests : PptxTestBase
             Emu.FromInches(1),
             Emu.FromInches(1),
             Emu.FromInches(6),
-            Emu.FromInches(4));
+            Emu.FromInches(4)
+        );
 
         shape.ShouldBeOfType<ChartShape>();
     }
@@ -85,12 +86,14 @@ public sealed class ChartTests : PptxTestBase
     public void AddChart_AssignsShapeId()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(
-            ChartType.BarClustered,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(5),
-            Emu.FromInches(3));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.BarClustered,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(5),
+                Emu.FromInches(3)
+            );
 
         shape.ShapeId.ShouldBeGreaterThan(0u);
     }
@@ -101,12 +104,14 @@ public sealed class ChartTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var x = Emu.FromInches(2);
         var y = Emu.FromInches(1.5);
-        var shape = doc.Slides[0].Shapes.AddChart(
-            ChartType.Pie,
-            x,
-            y,
-            Emu.FromInches(4),
-            Emu.FromInches(3));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Pie,
+                x,
+                y,
+                Emu.FromInches(4),
+                Emu.FromInches(3)
+            );
 
         shape.X.ShouldBe(x);
         shape.Y.ShouldBe(y);
@@ -118,12 +123,14 @@ public sealed class ChartTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var width = Emu.FromInches(6);
         var height = Emu.FromInches(4);
-        var shape = doc.Slides[0].Shapes.AddChart(
-            ChartType.Line,
-            Emu.Zero,
-            Emu.Zero,
-            width,
-            height);
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Line,
+                Emu.Zero,
+                Emu.Zero,
+                width,
+                height
+            );
 
         shape.Width.ShouldBe(width);
         shape.Height.ShouldBe(height);
@@ -133,12 +140,14 @@ public sealed class ChartTests : PptxTestBase
     public void AddChart_SetsChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(
-            ChartType.LineWithMarkers,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(5),
-            Emu.FromInches(3));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.LineWithMarkers,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(5),
+                Emu.FromInches(3)
+            );
 
         shape.Chart.Type.ShouldBe(ChartType.LineWithMarkers);
     }
@@ -148,16 +157,20 @@ public sealed class ChartTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
-        slide.Shapes.AddShape(AutoShapeType.Rectangle,
+        slide.Shapes.AddShape(
+            AutoShapeType.Rectangle,
             Emu.Zero,
             Emu.Zero,
             Emu.FromInches(1),
-            Emu.FromInches(1));
-        slide.Shapes.AddChart(ChartType.ColumnClustered,
+            Emu.FromInches(1)
+        );
+        slide.Shapes.AddChart(
+            ChartType.ColumnClustered,
             Emu.FromInches(2),
             Emu.Zero,
             Emu.FromInches(5),
-            Emu.FromInches(3));
+            Emu.FromInches(3)
+        );
 
         slide.Shapes.Count.ShouldBe(2);
     }
@@ -168,12 +181,14 @@ public sealed class ChartTests : PptxTestBase
     public void ChartModel_SetTitle()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(
-            ChartType.ColumnClustered,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(5),
-            Emu.FromInches(3));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ColumnClustered,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(5),
+                Emu.FromInches(3)
+            );
 
         shape.Chart.Title = "Sales by Region";
         shape.Chart.Title.ShouldBe("Sales by Region");
@@ -183,12 +198,14 @@ public sealed class ChartTests : PptxTestBase
     public void ChartModel_AddCategoriesAndSeries()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(
-            ChartType.ColumnClustered,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(5),
-            Emu.FromInches(3));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ColumnClustered,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(5),
+                Emu.FromInches(3)
+            );
 
         shape.Chart.Data.Categories.AddRange(["Q1", "Q2", "Q3", "Q4"]);
         var series = new ChartSeries { Name = "Revenue" };
@@ -205,12 +222,14 @@ public sealed class ChartTests : PptxTestBase
     public void ChartModel_Legend_DefaultsToBottom()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(
-            ChartType.Line,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(5),
-            Emu.FromInches(3));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Line,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(5),
+                Emu.FromInches(3)
+            );
 
         shape.Chart.Legend.Position.ShouldBe(ChartLegendPosition.Bottom);
         shape.Chart.Legend.IsVisible.ShouldBeTrue();
@@ -220,12 +239,14 @@ public sealed class ChartTests : PptxTestBase
     public void ChartModel_Legend_CanBeChanged()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(
-            ChartType.Line,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(5),
-            Emu.FromInches(3));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Line,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(5),
+                Emu.FromInches(3)
+            );
 
         shape.Chart.Legend.Position = ChartLegendPosition.Right;
         shape.Chart.Legend.IsVisible = false;
@@ -301,11 +322,13 @@ public sealed class ChartTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
-        var shape = slide.Shapes.AddChart(ChartType.ColumnClustered,
+        var shape = slide.Shapes.AddChart(
+            ChartType.ColumnClustered,
             Emu.FromInches(1),
             Emu.FromInches(1),
             Emu.FromInches(8),
-            Emu.FromInches(4));
+            Emu.FromInches(4)
+        );
 
         shape.Chart.Title = "Multi-Series";
         shape.Chart.Data.Categories.AddRange(["Jan", "Feb", "Mar"]);
@@ -330,15 +353,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_BarChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.BarClustered,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.BarClustered,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.BarClustered);
     }
 
@@ -346,15 +374,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_LineChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.Line,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Line,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.Line);
     }
 
@@ -362,15 +395,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_LineWithMarkersChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.LineWithMarkers,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.LineWithMarkers,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.LineWithMarkers);
     }
 
@@ -378,15 +416,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_PieChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.Pie,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(5),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Pie,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(5),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.Pie);
     }
 
@@ -394,15 +437,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_DoughnutChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.Doughnut,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(5),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Doughnut,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(5),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.Doughnut);
     }
 
@@ -410,15 +458,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_AreaChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.Area,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Area,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.Area);
     }
 
@@ -426,15 +479,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_ScatterChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.ScatterWithMarkersOnly,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ScatterWithMarkersOnly,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.ScatterWithMarkersOnly);
     }
 
@@ -442,18 +500,23 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_ScatterChart_PreservesExplicitXValues()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.ScatterWithMarkersOnly,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ScatterWithMarkersOnly,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         var series = new ChartSeries { Name = "XY" };
         series.XValues.AddRange([1.5, 2.5, 3.5]);
         series.Values.AddRange([10.0, 20.0, 30.0]);
         shape.Chart.Data.Series.Add(series);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var reloadedSeries = reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        var reloadedSeries = reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Data.Series.Single();
         reloadedSeries.XValues.ShouldBe([1.5, 2.5, 3.5]);
         reloadedSeries.Values.ShouldBe([10.0, 20.0, 30.0]);
@@ -463,15 +526,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_RadarChart_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.Radar,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Radar,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.Radar);
     }
 
@@ -481,11 +549,14 @@ public sealed class ChartTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var x = Emu.FromInches(2);
         var y = Emu.FromInches(1.5);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.ColumnClustered,
-            x,
-            y,
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ColumnClustered,
+                x,
+                y,
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
@@ -498,16 +569,21 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_LegendPosition_PreservesRight()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.ColumnClustered,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ColumnClustered,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
         shape.Chart.Legend.Position = ChartLegendPosition.Right;
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Legend.Position.ShouldBe(ChartLegendPosition.Right);
     }
 
@@ -515,16 +591,21 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_LegendHidden_PreservesVisibility()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.ColumnClustered,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ColumnClustered,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
         shape.Chart.Legend.IsVisible = false;
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Legend.IsVisible.ShouldBeFalse();
     }
 
@@ -534,19 +615,23 @@ public sealed class ChartTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var slide = doc.Slides[0];
 
-        var s1 = slide.Shapes.AddChart(ChartType.ColumnClustered,
+        var s1 = slide.Shapes.AddChart(
+            ChartType.ColumnClustered,
             Emu.FromInches(0.5),
             Emu.FromInches(1),
             Emu.FromInches(4.5),
-            Emu.FromInches(3.5));
+            Emu.FromInches(3.5)
+        );
         s1.Chart.Title = "Chart A";
         AddSimpleSeries(s1.Chart);
 
-        var s2 = slide.Shapes.AddChart(ChartType.Pie,
+        var s2 = slide.Shapes.AddChart(
+            ChartType.Pie,
             Emu.FromInches(5.5),
             Emu.FromInches(1),
             Emu.FromInches(4),
-            Emu.FromInches(3.5));
+            Emu.FromInches(3.5)
+        );
         s2.Chart.Title = "Chart B";
         AddSimpleSeries(s2.Chart);
 
@@ -561,11 +646,14 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_ChartOnSlide2_SlideCountPreserved()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var shape = doc.Slides[1].Shapes.AddChart(ChartType.Line,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(8),
-            Emu.FromInches(4));
+        var shape = doc.Slides[1]
+            .Shapes.AddChart(
+                ChartType.Line,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(8),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
@@ -578,15 +666,20 @@ public sealed class ChartTests : PptxTestBase
     public async Task RoundTrip_ColumnStacked_PreservesChartType()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddChart(ChartType.ColumnStacked,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var shape = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ColumnStacked,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Shapes.OfType<ChartShape>().Single()
+        reloaded.Slides[0]
+            .Shapes.OfType<ChartShape>()
+            .Single()
             .Chart.Type.ShouldBe(ChartType.ColumnStacked);
     }
 
@@ -594,11 +687,13 @@ public sealed class ChartTests : PptxTestBase
 
     private static void PopulateColumnChart(Slide slide)
     {
-        var shape = slide.Shapes.AddChart(ChartType.ColumnClustered,
+        var shape = slide.Shapes.AddChart(
+            ChartType.ColumnClustered,
             Emu.FromInches(1),
             Emu.FromInches(1),
             Emu.FromInches(8),
-            Emu.FromInches(4));
+            Emu.FromInches(4)
+        );
 
         shape.Chart.Title = "Sales 2024";
         shape.Chart.Data.Categories.AddRange(["Q1", "Q2", "Q3", "Q4"]);

@@ -61,9 +61,12 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
         Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(2);
 
-        var withHidden = Html(await PresentationProcessor.ExportHtmlPlayerAsync(
-            doc,
-            new HtmlPlayerSaveOptions { IncludeHiddenSlides = true }));
+        var withHidden = Html(
+            await PresentationProcessor.ExportHtmlPlayerAsync(
+                doc,
+                new HtmlPlayerSaveOptions { IncludeHiddenSlides = true }
+            )
+        );
         Regex.Matches(withHidden, "class=\"slide-page\"").Count.ShouldBe(3);
     }
 
@@ -71,9 +74,12 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
     public async Task ExportHtmlPlayer_CounterHiddenWhenDisabled()
     {
         var doc = PptxFixtures.WithSlides(2);
-        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(
-            doc,
-            new HtmlPlayerSaveOptions { ShowSlideCounter = false }));
+        var html = Html(
+            await PresentationProcessor.ExportHtmlPlayerAsync(
+                doc,
+                new HtmlPlayerSaveOptions { ShowSlideCounter = false }
+            )
+        );
         html.ShouldNotContain("id=\"counter\"");
     }
 

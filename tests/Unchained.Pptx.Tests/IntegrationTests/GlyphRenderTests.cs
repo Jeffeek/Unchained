@@ -19,17 +19,20 @@ public sealed class GlyphRenderTests : PptxTestBase
     public async Task TextBox_ProducesDarkTextPixels()
     {
         var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(0.5),
-            Emu.FromInches(0.5),
-            Emu.FromInches(8),
-            Emu.FromInches(2),
-            "Rendering Works Now");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(0.5),
+                Emu.FromInches(0.5),
+                Emu.FromInches(8),
+                Emu.FromInches(2),
+                "Rendering Works Now"
+            );
 
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 640, HeightPx = 360 });
+            new RenderOptions { WidthPx = 640, HeightPx = 360 }
+        );
 
         var darkPixels = CountDarkPixels(image.Data.ToArray(), 640, 360);
 
@@ -45,7 +48,8 @@ public sealed class GlyphRenderTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 640, HeightPx = 360 });
+            new RenderOptions { WidthPx = 640, HeightPx = 360 }
+        );
 
         CountDarkPixels(image.Data.ToArray(), 640, 360).ShouldBe(0);
     }
@@ -61,17 +65,20 @@ public sealed class GlyphRenderTests : PptxTestBase
 
         var doc = PptxFixtures.WithSlides(1);
         var image = doc.Media.AddImage(pngBytes, "image/png");
-        doc.Slides[0].Shapes.AddPicture(
-            image,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(3));
+        doc.Slides[0]
+            .Shapes.AddPicture(
+                image,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(3)
+            );
 
         var rendered = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 640, HeightPx = 360 });
+            new RenderOptions { WidthPx = 640, HeightPx = 360 }
+        );
 
         var magenta = CountMagentaPixels(rendered.Data.ToArray(), 640, 360);
         magenta.ShouldBeGreaterThan(100);

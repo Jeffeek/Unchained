@@ -60,9 +60,15 @@ internal static class ShapeWriter
 
         var nvPicPr = new XElement(PmlNames.NonVisualPictureProperties);
         nvPicPr.Add(WriteCommonNonVisualProperties(shape));
-        nvPicPr.Add(new XElement(PmlNames.Pml + "cNvPicPr",
-            new XElement(DmlNames.Dml + "picLocks",
-                new XAttribute("noChangeAspect", "1"))));
+        nvPicPr.Add(
+            new XElement(
+                PmlNames.Pml + "cNvPicPr",
+                new XElement(
+                    DmlNames.Dml + "picLocks",
+                    new XAttribute("noChangeAspect", "1")
+                )
+            )
+        );
         nvPicPr.Add(new XElement(PmlNames.ApplicationNonVisualProperties));
         picEl.Add(nvPicPr);
 
@@ -70,21 +76,31 @@ internal static class ShapeWriter
         var blipFill = new XElement(PmlNames.BlipFill);
         if (shape.Image != null && !string.IsNullOrEmpty(shape.Image.RelationshipId))
         {
-            var blip = new XElement(DmlNames.Blip,
-                new XAttribute(PmlNames.RelationshipId, shape.Image.RelationshipId));
+            var blip = new XElement(
+                DmlNames.Blip,
+                new XAttribute(PmlNames.RelationshipId, shape.Image.RelationshipId)
+            );
             blipFill.Add(blip);
         }
 
-        blipFill.Add(new XElement(DmlNames.Stretch,
-            new XElement(DmlNames.FillRect)));
+        blipFill.Add(
+            new XElement(
+                DmlNames.Stretch,
+                new XElement(DmlNames.FillRect)
+            )
+        );
         picEl.Add(blipFill);
 
         // Shape properties (no fill/line for pictures)
         var spPr = new XElement(PmlNames.ShapeProperties);
         WriteTransformToElement(spPr, shape);
-        spPr.Add(new XElement(DmlNames.PresetGeometry,
-            new XAttribute(DmlNames.AttributePreset, "rect"),
-            new XElement(DmlNames.AdjustValueList)));
+        spPr.Add(
+            new XElement(
+                DmlNames.PresetGeometry,
+                new XAttribute(DmlNames.AttributePreset, "rect"),
+                new XElement(DmlNames.AdjustValueList)
+            )
+        );
         picEl.Add(spPr);
 
         return picEl;
@@ -98,26 +114,42 @@ internal static class ShapeWriter
 
         var nvGraphicFramePr = new XElement(PmlNames.NonVisualGraphicFrameProperties);
         nvGraphicFramePr.Add(WriteCommonNonVisualProperties(shape));
-        nvGraphicFramePr.Add(new XElement(PmlNames.Pml + "cNvGraphicFramePr",
-            new XElement(DmlNames.Dml + "graphicFrameLocks",
-                new XAttribute("noGrp", "1"))));
+        nvGraphicFramePr.Add(
+            new XElement(
+                PmlNames.Pml + "cNvGraphicFramePr",
+                new XElement(
+                    DmlNames.Dml + "graphicFrameLocks",
+                    new XAttribute("noGrp", "1")
+                )
+            )
+        );
         nvGraphicFramePr.Add(new XElement(PmlNames.ApplicationNonVisualProperties));
         frameEl.Add(nvGraphicFramePr);
 
         // Frame transform uses p:xfrm
         var xfrm = new XElement(PmlNames.Pml + "xfrm");
-        xfrm.Add(new XElement(DmlNames.Offset,
-            new XAttribute(DmlNames.AttributeX, shape.X.Value),
-            new XAttribute(DmlNames.AttributeY, shape.Y.Value)));
-        xfrm.Add(new XElement(DmlNames.Extents,
-            new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
-            new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)));
+        xfrm.Add(
+            new XElement(
+                DmlNames.Offset,
+                new XAttribute(DmlNames.AttributeX, shape.X.Value),
+                new XAttribute(DmlNames.AttributeY, shape.Y.Value)
+            )
+        );
+        xfrm.Add(
+            new XElement(
+                DmlNames.Extents,
+                new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
+                new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)
+            )
+        );
         frameEl.Add(xfrm);
 
         // Graphic data
         var graphic = new XElement(DmlNames.Graphic);
-        var graphicData = new XElement(DmlNames.GraphicData,
-            new XAttribute(DmlNames.AttributeUri, DmlNames.GraphicDataTableUri));
+        var graphicData = new XElement(
+            DmlNames.GraphicData,
+            new XAttribute(DmlNames.AttributeUri, DmlNames.GraphicDataTableUri)
+        );
 
         graphicData.Add(WriteTableElement(shape));
         graphic.Add(graphicData);
@@ -129,21 +161,27 @@ internal static class ShapeWriter
     private static XElement WriteTableElement(TableShape shape)
     {
         var tbl = new XElement(DmlNames.Table);
-        var tblPr = new XElement(DmlNames.TableProperties,
+        var tblPr = new XElement(
+            DmlNames.TableProperties,
             new XAttribute("firstRow", shape.HasHeaderRow ? "1" : "0"),
             new XAttribute("lastRow", shape.HasTotalRow ? "1" : "0"),
             new XAttribute("bandRow", shape.HasBandedRows ? "1" : "0"),
             new XAttribute("bandCol", shape.HasBandedColumns ? "1" : "0"),
             new XAttribute("firstCol", shape.HasFirstColumn ? "1" : "0"),
-            new XAttribute("lastCol", shape.HasLastColumn ? "1" : "0"));
+            new XAttribute("lastCol", shape.HasLastColumn ? "1" : "0")
+        );
         tbl.Add(tblPr);
 
         // Column grid
         var tblGrid = new XElement(DmlNames.TableGrid);
         foreach (var width in shape.Grid.ColumnWidths)
         {
-            tblGrid.Add(new XElement(DmlNames.GridColumn,
-                new XAttribute(DmlNames.AttributeWidth, width.Value)));
+            tblGrid.Add(
+                new XElement(
+                    DmlNames.GridColumn,
+                    new XAttribute(DmlNames.AttributeWidth, width.Value)
+                )
+            );
         }
 
         tbl.Add(tblGrid);
@@ -151,8 +189,10 @@ internal static class ShapeWriter
         // Rows
         for (var r = 0; r < shape.Grid.RowCount; r++)
         {
-            var tr = new XElement(DmlNames.TableRow,
-                new XAttribute(DmlNames.AttributeRowHeight, shape.Grid.RowHeights[r].Value));
+            var tr = new XElement(
+                DmlNames.TableRow,
+                new XAttribute(DmlNames.AttributeRowHeight, shape.Grid.RowHeights[r].Value)
+            );
 
             for (var c = 0; c < shape.Grid.ColumnCount; c++)
             {
@@ -208,9 +248,13 @@ internal static class ShapeWriter
             ConnectorType.Curved => "curvedConnector3",
             _ => "straightConnector1"
         };
-        spPr.Add(new XElement(DmlNames.PresetGeometry,
-            new XAttribute(DmlNames.AttributePreset, prst),
-            new XElement(DmlNames.AdjustValueList)));
+        spPr.Add(
+            new XElement(
+                DmlNames.PresetGeometry,
+                new XAttribute(DmlNames.AttributePreset, prst),
+                new XElement(DmlNames.AdjustValueList)
+            )
+        );
 
         LineWriter.Write(spPr, shape.Line);
         cxnEl.Add(spPr);
@@ -254,28 +298,48 @@ internal static class ShapeWriter
 
         var nvGraphicFramePr = new XElement(PmlNames.NonVisualGraphicFrameProperties);
         nvGraphicFramePr.Add(WriteCommonNonVisualProperties(shape));
-        nvGraphicFramePr.Add(new XElement(PmlNames.Pml + "cNvGraphicFramePr",
-            new XElement(DmlNames.Dml + "graphicFrameLocks",
-                new XAttribute("noGrp", "1"))));
+        nvGraphicFramePr.Add(
+            new XElement(
+                PmlNames.Pml + "cNvGraphicFramePr",
+                new XElement(
+                    DmlNames.Dml + "graphicFrameLocks",
+                    new XAttribute("noGrp", "1")
+                )
+            )
+        );
         nvGraphicFramePr.Add(new XElement(PmlNames.ApplicationNonVisualProperties));
         frameEl.Add(nvGraphicFramePr);
 
         // Frame transform (p:xfrm, not a:xfrm)
         var xfrm = new XElement(PmlNames.Pml + "xfrm");
-        xfrm.Add(new XElement(DmlNames.Offset,
-            new XAttribute(DmlNames.AttributeX, shape.X.Value),
-            new XAttribute(DmlNames.AttributeY, shape.Y.Value)));
-        xfrm.Add(new XElement(DmlNames.Extents,
-            new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
-            new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)));
+        xfrm.Add(
+            new XElement(
+                DmlNames.Offset,
+                new XAttribute(DmlNames.AttributeX, shape.X.Value),
+                new XAttribute(DmlNames.AttributeY, shape.Y.Value)
+            )
+        );
+        xfrm.Add(
+            new XElement(
+                DmlNames.Extents,
+                new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
+                new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)
+            )
+        );
         frameEl.Add(xfrm);
 
         // Graphic data referencing the chart part by relationship ID
         var graphic = new XElement(DmlNames.Graphic);
-        var graphicData = new XElement(DmlNames.GraphicData,
-            new XAttribute(DmlNames.AttributeUri, DmlNames.GraphicDataChartUri));
-        graphicData.Add(new XElement(DmlNames.Chart + "chart",
-            new XAttribute(PmlNames.RelationshipId, shape.RelationshipId)));
+        var graphicData = new XElement(
+            DmlNames.GraphicData,
+            new XAttribute(DmlNames.AttributeUri, DmlNames.GraphicDataChartUri)
+        );
+        graphicData.Add(
+            new XElement(
+                DmlNames.Chart + "chart",
+                new XAttribute(PmlNames.RelationshipId, shape.RelationshipId)
+            )
+        );
         graphic.Add(graphicData);
         frameEl.Add(graphic);
 
@@ -295,9 +359,11 @@ internal static class ShapeWriter
 
     private static XElement WriteCommonNonVisualProperties(Shape shape)
     {
-        var cNvPr = new XElement(PmlNames.CommonNonVisualProperties,
+        var cNvPr = new XElement(
+            PmlNames.CommonNonVisualProperties,
             new XAttribute(PmlNames.AttributeId, shape.ShapeId),
-            new XAttribute(PmlNames.AttributeName, shape.Name));
+            new XAttribute(PmlNames.AttributeName, shape.Name)
+        );
 
         if (!string.IsNullOrEmpty(shape.AltTextTitle))
             cNvPr.Add(new XAttribute("title", shape.AltTextTitle));
@@ -309,11 +375,19 @@ internal static class ShapeWriter
         if (shape.IsDecorative)
         {
             var a16 = XNamespace.Get("http://schemas.microsoft.com/office/drawing/2014/main");
-            cNvPr.Add(new XElement(DmlNames.Dml + "extLst",
-                new XElement(DmlNames.Dml + "ext",
-                    new XAttribute("uri", "{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"),
-                    new XElement(a16 + "decorative",
-                        new XAttribute("val", "1")))));
+            cNvPr.Add(
+                new XElement(
+                    DmlNames.Dml + "extLst",
+                    new XElement(
+                        DmlNames.Dml + "ext",
+                        new XAttribute("uri", "{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"),
+                        new XElement(
+                            a16 + "decorative",
+                            new XAttribute("val", "1")
+                        )
+                    )
+                )
+            );
         }
 
         // Click hyperlink (<a:hlinkClick>) — relationship id assigned by PresentationWriter.
@@ -349,9 +423,13 @@ internal static class ShapeWriter
         if (shape is AutoShape auto)
         {
             var prstName = PresetGeometryToString(auto.ShapeType);
-            spPr.Add(new XElement(DmlNames.PresetGeometry,
-                new XAttribute(DmlNames.AttributePreset, prstName),
-                new XElement(DmlNames.AdjustValueList)));
+            spPr.Add(
+                new XElement(
+                    DmlNames.PresetGeometry,
+                    new XAttribute(DmlNames.AttributePreset, prstName),
+                    new XElement(DmlNames.AdjustValueList)
+                )
+            );
         }
 
         FillWriter.Write(spPr, shape.Fill);
@@ -370,8 +448,12 @@ internal static class ShapeWriter
 
         if (shape.RotationDegrees != 0)
         {
-            xfrm.Add(new XAttribute(DmlNames.AttributeRotation,
-                OoXmlHelper.DegreesToOoxmlRotation(shape.RotationDegrees)));
+            xfrm.Add(
+                new XAttribute(
+                    DmlNames.AttributeRotation,
+                    OoXmlHelper.DegreesToOoxmlRotation(shape.RotationDegrees)
+                )
+            );
         }
 
         if (shape.FlipHorizontal)
@@ -380,13 +462,21 @@ internal static class ShapeWriter
         if (shape.FlipVertical)
             xfrm.Add(new XAttribute(DmlNames.AttributeFlipVertical, "1"));
 
-        xfrm.Add(new XElement(DmlNames.Offset,
-            new XAttribute(DmlNames.AttributeX, shape.X.Value),
-            new XAttribute(DmlNames.AttributeY, shape.Y.Value)));
+        xfrm.Add(
+            new XElement(
+                DmlNames.Offset,
+                new XAttribute(DmlNames.AttributeX, shape.X.Value),
+                new XAttribute(DmlNames.AttributeY, shape.Y.Value)
+            )
+        );
 
-        xfrm.Add(new XElement(DmlNames.Extents,
-            new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
-            new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)));
+        xfrm.Add(
+            new XElement(
+                DmlNames.Extents,
+                new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
+                new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)
+            )
+        );
 
         parent.Add(xfrm);
     }

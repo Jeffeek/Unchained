@@ -42,25 +42,30 @@ internal static class MeshShadingDecoder
             switch (shadingType)
             {
                 case 4:
-                    DecodeType4(reader,
+                    DecodeType4(
+                        reader,
                         bpf,
                         bpc,
                         bpComp,
                         decode,
                         nComp,
                         fn,
-                        triangles); break;
+                        triangles
+                    ); break;
                 case 5:
-                    DecodeType5(reader,
+                    DecodeType5(
+                        reader,
                         bpc,
                         bpComp,
                         decode,
                         nComp,
                         fn,
                         vpr,
-                        triangles); break;
+                        triangles
+                    ); break;
                 case 6:
-                    DecodePatches(reader,
+                    DecodePatches(
+                        reader,
                         bpf,
                         bpc,
                         bpComp,
@@ -68,9 +73,11 @@ internal static class MeshShadingDecoder
                         nComp,
                         fn,
                         12,
-                        triangles); break;
+                        triangles
+                    ); break;
                 case 7:
-                    DecodePatches(reader,
+                    DecodePatches(
+                        reader,
                         bpf,
                         bpc,
                         bpComp,
@@ -78,7 +85,8 @@ internal static class MeshShadingDecoder
                         nComp,
                         fn,
                         16,
-                        triangles); break;
+                        triangles
+                    ); break;
             }
         }
         catch
@@ -105,12 +113,14 @@ internal static class MeshShadingDecoder
         while (r.HasBits(bpf + (2 * bpc) + (nComp * bpComp)))
         {
             var flag = (int)r.Read(bpf);
-            var v = ReadVertex(r,
+            var v = ReadVertex(
+                r,
                 bpc,
                 bpComp,
                 decode,
                 nComp,
-                fn);
+                fn
+            );
             switch (flag)
             {
                 case 0:
@@ -119,19 +129,23 @@ internal static class MeshShadingDecoder
                         return;
 
                     r.Read(bpf);
-                    var v1 = ReadVertex(r,
+                    var v1 = ReadVertex(
+                        r,
                         bpc,
                         bpComp,
                         decode,
                         nComp,
-                        fn);
+                        fn
+                    );
                     r.Read(bpf);
-                    var v2 = ReadVertex(r,
+                    var v2 = ReadVertex(
+                        r,
                         bpc,
                         bpComp,
                         decode,
                         nComp,
-                        fn);
+                        fn
+                    );
                     tris.Add(Tri(v, v1, v2));
                     va = v1;
                     vb = v2;
@@ -194,12 +208,14 @@ internal static class MeshShadingDecoder
                     break;
                 }
 
-                row[i] = ReadVertex(r,
+                row[i] = ReadVertex(
+                    r,
                     bpc,
                     bpComp,
                     decode,
                     nComp,
-                    fn);
+                    fn
+                );
             }
 
             if (!ok)
@@ -353,7 +369,8 @@ internal static class MeshShadingDecoder
     }
 
     private static ShadingTriangle Tri(Vertex a, Vertex b, Vertex c) =>
-        new(a.X,
+        new(
+            a.X,
             a.Y,
             a.R,
             a.G,
@@ -367,7 +384,8 @@ internal static class MeshShadingDecoder
             c.Y,
             c.R,
             c.G,
-            c.B);
+            c.B
+        );
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj is PdfArray a
         ? a.Elements.Select(static e => e.ReadIntOrReal()).ToArray()

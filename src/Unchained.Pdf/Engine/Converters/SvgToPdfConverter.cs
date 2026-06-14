@@ -60,10 +60,12 @@ internal static class SvgToPdfConverter
             taggedItems = [];
             // Wrap entire SVG in a /Figure BDC block (MCID 0, page 0).
             w.MarkedContentBegin("Figure", 0);
-            taggedItems.Add(new TaggedContentItem("Figure", 0, 0)
-            {
-                AltText = string.IsNullOrEmpty(options.AltText) ? null : options.AltText
-            });
+            taggedItems.Add(
+                new TaggedContentItem("Figure", 0, 0)
+                {
+                    AltText = string.IsNullOrEmpty(options.AltText) ? null : options.AltText
+                }
+            );
         }
 
         // PDF CTM for SVG: flip Y, scale, and translate.
@@ -88,12 +90,14 @@ internal static class SvgToPdfConverter
         if (options.Tagged && taggedItems is not null)
             // ReSharper disable once BadListLineBreaks
         {
-            acc.AddPage(options.PageWidthPt,
+            acc.AddPage(
+                options.PageWidthPt,
                 options.PageHeightPt,
                 buf.WrittenMemory.Span,
                 fontMap,
                 taggedItems,
-                options.Language);
+                options.Language
+            );
         }
         else
             acc.AddPage(options.PageWidthPt, options.PageHeightPt, buf.WrittenMemory.Span, fontMap);

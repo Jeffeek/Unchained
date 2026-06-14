@@ -17,11 +17,13 @@ internal static class MutationHelper
     {
         var totalMax = objects.Max(static o => o.ObjectNumber);
         var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-            [PdfName.Root.Value] = rootRef
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
+                [PdfName.Root.Value] = rootRef
+            }
+        );
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
         adapter.ReplaceCore(newDoc.Core);
     }
@@ -30,5 +32,6 @@ internal static class MutationHelper
         document as PdfDocumentAdapter
         ?? throw new ArgumentException(
             $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}.",
-            paramName);
+            paramName
+        );
 }

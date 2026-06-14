@@ -44,12 +44,14 @@ public sealed class EncryptionTests : PptxTestBase
     public async Task RoundTrip_EncryptDecrypt_SlideContentPreserved()
     {
         var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(2),
-            "Encrypted content");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(2),
+                "Encrypted content"
+            );
 
         var processor = new PresentationProcessor();
         var ms = new MemoryStream();

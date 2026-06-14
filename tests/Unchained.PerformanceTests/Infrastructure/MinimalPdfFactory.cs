@@ -80,7 +80,9 @@ internal static class MinimalPdfFactory
         // Pre-build content stream bytes for each page
         var streams = Enumerable.Range(0, pageCount)
             .Select(i => Encoding.Latin1.GetBytes(
-                $"BT /F1 12 Tf 50 {700 - (i * 15)} Td ({escaped}) Tj ET"))
+                    $"BT /F1 12 Tf 50 {700 - (i * 15)} Td ({escaped}) Tj ET"
+                )
+            )
             .ToArray();
 
         // Object numbering:

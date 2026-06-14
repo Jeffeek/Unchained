@@ -120,10 +120,12 @@ public sealed class PageLabelEditor : IPageLabelEditor
             numsArray.Add(BuildLabelDict(range));
         }
 
-        var pageLabelsDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Nums.Value] = new PdfArray(numsArray)
-        });
+        var pageLabelsDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Nums.Value] = new PdfArray(numsArray)
+            }
+        );
 
         var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries)
         {

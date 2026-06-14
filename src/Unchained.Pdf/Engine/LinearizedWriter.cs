@@ -65,12 +65,14 @@ internal static class LinearizedWriter
 
         // ── 4. Second pass — write final output ───────────────────────────────
         // ReSharper disable once BadListLineBreaks
-        return WriteFinal(firstPageObjects,
+        return WriteFinal(
+            firstPageObjects,
             remainingObjects,
             trailer,
             firstPageRef,
             layout,
-            hintStream);
+            hintStream
+        );
     }
 
     /// <summary>
@@ -253,7 +255,8 @@ internal static class LinearizedWriter
         var maxObjNum = firstPageObjects.Count > 0
             ? Math.Max(
                 firstPageObjects.Max(static o => o.ObjectNumber),
-                remainingObjects.Count > 0 ? remainingObjects.Max(static o => o.ObjectNumber) : 0)
+                remainingObjects.Count > 0 ? remainingObjects.Max(static o => o.ObjectNumber) : 0
+            )
             : 0;
         var hintObjNum = maxObjNum + 1;
         var hintStreamOffset = pos;
@@ -273,12 +276,14 @@ internal static class LinearizedWriter
 
         // First-page trailer.
         // ReSharper disable once BadListLineBreaks
-        var firstTrailerBytes = BuildFirstTrailer(trailer,
+        var firstTrailerBytes = BuildFirstTrailer(
+            trailer,
             firstPageObjects,
             remainingObjects,
             hintObjNum,
             firstXrefOffset,
-            0 /*mainXref unknown yet*/);
+            0 /*mainXref unknown yet*/
+        );
         buf.Write(firstTrailerBytes);
         pos += firstTrailerBytes.Length;
 
@@ -382,12 +387,14 @@ internal static class LinearizedWriter
         var hintStreamStart = pos;
         objectOffsets[hintObjNum] = pos;
 
-        var hintDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Length"] = new PdfInteger(hintStreamBytes.Length),
-            ["Filter"] = PdfName.FlateDecode,
-            ["S"] = new PdfInteger(0)
-        });
+        var hintDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Length"] = new PdfInteger(hintStreamBytes.Length),
+                ["Filter"] = PdfName.FlateDecode,
+                ["S"] = new PdfInteger(0)
+            }
+        );
         var hintObj = new PdfIndirectObject(hintObjNum, 0, new PdfStream(hintDict, hintStreamBytes));
         pos += WriteObject(buf, hintObj);
 
@@ -439,7 +446,8 @@ internal static class LinearizedWriter
             endOfFirstPage,
             firstPageObjects.Count > 0
                 ? 1 + remainingObjects.Count(static o =>
-                    o.Value is PdfDictionary d && d.IsPage())
+                    o.Value is PdfDictionary d && d.IsPage()
+                )
                 : 1,
             mainXrefOffset
         );

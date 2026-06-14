@@ -69,8 +69,10 @@ internal sealed class PresentationParser
         // Locate the presentation part via package-level relationships
         var presentationRel = package.PackageRelationships
             .FirstOrDefault(static r => r.RelationshipType.Equals(
-                PmlNames.RelTypePresentation,
-                StringComparison.Ordinal));
+                    PmlNames.RelTypePresentation,
+                    StringComparison.Ordinal
+                )
+            );
 
         if (presentationRel == null)
             throw new PptxException("The package does not contain a presentation relationship.");
@@ -107,7 +109,8 @@ internal sealed class PresentationParser
 
             var masterRel = presentationPart.Relationships
                 .FirstOrDefault(r =>
-                    r.Id.Equals(rId, StringComparison.Ordinal));
+                    r.Id.Equals(rId, StringComparison.Ordinal)
+                );
 
             if (masterRel == null) continue;
 
@@ -119,8 +122,10 @@ internal sealed class PresentationParser
         // Parse comment authors (M7)
         var commentAuthorsRel = presentationPart.Relationships
             .FirstOrDefault(static r => r.RelationshipType.Equals(
-                PmlNames.RelTypeCommentAuthors,
-                StringComparison.Ordinal));
+                    PmlNames.RelTypeCommentAuthors,
+                    StringComparison.Ordinal
+                )
+            );
         if (commentAuthorsRel != null)
         {
             var caUri = presentationPart.ResolveUri(commentAuthorsRel.TargetUri);
@@ -153,7 +158,8 @@ internal sealed class PresentationParser
 
             var slideRel = presentationPart.Relationships
                 .FirstOrDefault(r =>
-                    r.Id.Equals(rId, StringComparison.Ordinal));
+                    r.Id.Equals(rId, StringComparison.Ordinal)
+                );
 
             if (slideRel == null) continue;
 
@@ -181,7 +187,8 @@ internal sealed class PresentationParser
             protection,
             slideSize,
             commentAuthors,
-            sections)
+            sections
+        )
         {
             SlideShow = slideShow,
             Preserved = preserved
@@ -214,20 +221,24 @@ internal sealed class PresentationParser
             if (part == null) continue;
 
             preserved.HasMacros = true;
-            preserved.Parts.Add(new PreservedPart
-            {
-                Uri = uri,
-                ContentType = part.ContentType,
-                Data = part.Data
-            });
-            preserved.AnchorRelationships.Add(new PreservedRelationship
-            {
-                SourceUri = null, // anchored to presentation.xml; writer supplies the source
-                Id = rel.Id,
-                Type = rel.RelationshipType,
-                Target = uri,
-                IsExternal = rel.IsExternal
-            });
+            preserved.Parts.Add(
+                new PreservedPart
+                {
+                    Uri = uri,
+                    ContentType = part.ContentType,
+                    Data = part.Data
+                }
+            );
+            preserved.AnchorRelationships.Add(
+                new PreservedRelationship
+                {
+                    SourceUri = null, // anchored to presentation.xml; writer supplies the source
+                    Id = rel.Id,
+                    Type = rel.RelationshipType,
+                    Target = uri,
+                    IsExternal = rel.IsExternal
+                }
+            );
         }
 
         // Digital signatures — a package-level origin relationship plus the signature parts it
@@ -237,7 +248,8 @@ internal sealed class PresentationParser
         {
             if (!originRel.RelationshipType.Equals(
                     PmlNames.RelTypeDigitalSignatureOrigin,
-                    StringComparison.Ordinal))
+                    StringComparison.Ordinal
+                ))
                 continue;
 
             var originUri = "/" + originRel.TargetUri.TrimStart('/');
@@ -245,14 +257,16 @@ internal sealed class PresentationParser
             if (originPart == null) continue;
 
             CapturePartTree(package, originPart, originUri, preserved);
-            preserved.AnchorRelationships.Add(new PreservedRelationship
-            {
-                SourceUri = string.Empty, // package-level anchor
-                Id = originRel.Id,
-                Type = originRel.RelationshipType,
-                Target = originUri,
-                IsExternal = originRel.IsExternal
-            });
+            preserved.AnchorRelationships.Add(
+                new PreservedRelationship
+                {
+                    SourceUri = string.Empty, // package-level anchor
+                    Id = originRel.Id,
+                    Type = originRel.RelationshipType,
+                    Target = originUri,
+                    IsExternal = originRel.IsExternal
+                }
+            );
         }
 
         return preserved;
@@ -281,14 +295,16 @@ internal sealed class PresentationParser
 
         foreach (var rel in part.Relationships)
         {
-            captured.Relationships.Add(new PreservedRelationship
-            {
-                SourceUri = partUri,
-                Id = rel.Id,
-                Type = rel.RelationshipType,
-                Target = rel.TargetUri,
-                IsExternal = rel.IsExternal
-            });
+            captured.Relationships.Add(
+                new PreservedRelationship
+                {
+                    SourceUri = partUri,
+                    Id = rel.Id,
+                    Type = rel.RelationshipType,
+                    Target = rel.TargetUri,
+                    IsExternal = rel.IsExternal
+                }
+            );
 
             if (rel.IsExternal) continue;
 
@@ -304,7 +320,8 @@ internal sealed class PresentationParser
     private static SlideShowSettings? ParsePresProps(OpcPart presentationPart, OpcPackage package)
     {
         var rel = presentationPart.Relationships.FirstOrDefault(static r =>
-            r.RelationshipType.Equals(PmlNames.RelTypePresProps, StringComparison.Ordinal));
+            r.RelationshipType.Equals(PmlNames.RelTypePresProps, StringComparison.Ordinal)
+        );
         if (rel == null) return null;
 
         var uri = presentationPart.ResolveUri(rel.TargetUri);
@@ -364,7 +381,10 @@ internal sealed class PresentationParser
         foreach (var link in slides.SelectMany(static slide => ShapeTextWalker.EnumerateTextFrames(slide.Shapes)
                      .SelectMany(static frame => frame.Paragraphs
                          .SelectMany(static paragraph => paragraph.Runs
-                             .Select(static run => run.Format.Hyperlink)))))
+                             .Select(static run => run.Format.Hyperlink)
+                         )
+                     )
+                 ))
         {
             if (link?.TargetPartUri is { } uri && numberByUri.TryGetValue(uri, out var number))
                 link.TargetSlideNumber = number;
@@ -420,12 +440,14 @@ internal sealed class PresentationParser
                 var part = package.TryGetPart(fontUri);
                 if (part == null) return;
 
-                mediaStore.AddFont(new EmbeddedFont
-                {
-                    Typeface = typeface,
-                    Style = style,
-                    Data = part.Data
-                });
+                mediaStore.AddFont(
+                    new EmbeddedFont
+                    {
+                        Typeface = typeface,
+                        Style = style,
+                        Data = part.Data
+                    }
+                );
             }
         }
     }
@@ -461,8 +483,10 @@ internal sealed class PresentationParser
         // Core properties
         var coreRel = package.PackageRelationships
             .FirstOrDefault(static r => r.RelationshipType.Equals(
-                PmlNames.RelTypeCoreProperties,
-                StringComparison.Ordinal));
+                    PmlNames.RelTypeCoreProperties,
+                    StringComparison.Ordinal
+                )
+            );
 
         if (coreRel == null) return props;
 
@@ -483,7 +507,8 @@ internal sealed class PresentationParser
 
             var dc = XNamespace.Get("http://purl.org/dc/elements/1.1/");
             var cp = XNamespace.Get(
-                "http://schemas.openxmlformats.org/package/2006/metadata/core-properties");
+                "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+            );
             var dcterms = XNamespace.Get("http://purl.org/dc/terms/");
 
             props.Title = root.Element(dc + "title")?.Value;

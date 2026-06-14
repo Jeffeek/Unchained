@@ -175,16 +175,20 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
             ["Type"] = PdfName.EmbeddedFile,
             [PdfName.Filter.Value] = PdfName.FlateDecode,
             [PdfName.Length.Value] = new PdfInteger(compressed.Length),
-            ["Params"] = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                ["Size"] = new PdfInteger(file.Data.Length)
-            })
+            ["Params"] = new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Size"] = new PdfInteger(file.Data.Length)
+                }
+            )
         };
         if (file.MimeType is not null)
             efStreamEntries["Subtype"] = PdfName.Get(file.MimeType.Replace("/", "#2F"));
 
         var efStreamRef = builder.Add(
-            new PdfStream(new PdfDictionary(efStreamEntries), compressed)).ToReference();
+                new PdfStream(new PdfDictionary(efStreamEntries), compressed)
+            )
+            .ToReference();
 
         // Build the file specification dictionary.
         var fileSpecEntries = new Dictionary<string, PdfObject>
@@ -194,11 +198,14 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
             ["UF"] = new PdfString(
                 new[] { PdfConstants.Utf16BeBomByte0, PdfConstants.Utf16BeBomByte1 }
                     .Concat(Encoding.BigEndianUnicode.GetBytes(file.FileName))
-                    .ToArray()),
-            ["EF"] = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                ["F"] = efStreamRef
-            })
+                    .ToArray()
+            ),
+            ["EF"] = new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["F"] = efStreamRef
+                }
+            )
         };
         if (file.Description is not null)
             fileSpecEntries["Desc"] = PdfString.FromLatin1(file.Description);
@@ -252,10 +259,15 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         existingPairs.Add(PdfString.FromLatin1(file.Name));
         existingPairs.Add(fileSpecRef);
 
-        var newEfTreeRef = builder.Add(new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Names.Value] = new PdfArray(existingPairs)
-        })).ToReference();
+        var newEfTreeRef = builder.Add(
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Names.Value] = new PdfArray(existingPairs)
+                    }
+                )
+            )
+            .ToReference();
 
         namesDict["EmbeddedFiles"] = newEfTreeRef;
         var newNamesRef = builder.Add(new PdfDictionary(namesDict)).ToReference();
@@ -300,10 +312,15 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         var maxObj = existing.Max(static o => o.ObjectNumber);
         var builder = new ObjectGraphBuilder(maxObj + 1);
 
-        var newEfRef = builder.Add(new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Names.Value] = new PdfArray(newPairs)
-        })).ToReference();
+        var newEfRef = builder.Add(
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Names.Value] = new PdfArray(newPairs)
+                    }
+                )
+            )
+            .ToReference();
 
         var newNamesEntries = new Dictionary<string, PdfObject>(namesDict.Entries)
         {
@@ -336,15 +353,19 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         {
             if (entries.ContainsKey("Collection")) return; // already enabled
 
-            entries["Collection"] = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                ["Type"] = PdfName.Collection,
-                ["Sort"] = new PdfDictionary(new Dictionary<string, PdfObject>
+            entries["Collection"] = new PdfDictionary(
+                new Dictionary<string, PdfObject>
                 {
-                    ["S"] = PdfName.ModDate,
-                    ["A"] = PdfBoolean.True
-                })
-            });
+                    ["Type"] = PdfName.Collection,
+                    ["Sort"] = new PdfDictionary(
+                        new Dictionary<string, PdfObject>
+                        {
+                            ["S"] = PdfName.ModDate,
+                            ["A"] = PdfBoolean.True
+                        }
+                    )
+                }
+            );
         }
         else
             entries.Remove("Collection");

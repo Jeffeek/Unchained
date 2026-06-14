@@ -8,6 +8,11 @@ namespace Unchained.Pptx.Tests.UnitTests.Writing;
 
 public sealed class TransitionWriterTests
 {
+    public static IEnumerable<object[]> AllTransitions =>
+        Enum.GetValues<TransitionEffect>()
+            .Where(static e => e != TransitionEffect.None)
+            .Select(static e => new object[] { e });
+
     [Fact]
     public void Write_DefaultNoEffect_ReturnsNull()
     {
@@ -55,11 +60,6 @@ public sealed class TransitionWriterTests
         var transition = new SlideTransition { AutoAdvanceSeconds = 5.0 };
         TransitionWriter.Write(transition).ShouldNotBeNull();
     }
-
-    public static IEnumerable<object[]> AllTransitions =>
-        Enum.GetValues<TransitionEffect>()
-            .Where(static e => e != TransitionEffect.None)
-            .Select(static e => new object[] { e });
 
     [
         Theory,

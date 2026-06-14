@@ -46,12 +46,14 @@ internal static class PageImageExtractor
                 var decoded = StreamFilters.Decode(stream);
                 rgb = indexed is not null
                     ? DecodeIndexedToRgb(decoded, w, h, bpc, indexed)
-                    : DecodeImageToRgb(decoded,
+                    : DecodeImageToRgb(
+                        decoded,
                         w,
                         h,
                         cs,
                         bpc,
-                        decode);
+                        decode
+                    );
             }
             catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
             {
@@ -94,12 +96,14 @@ internal static class PageImageExtractor
             var smBpc = (int)(smStream.Dictionary.Get<PdfInteger>(PdfName.BitsPerComponent)?.Value ?? 8);
             var smDecode = ReadDecodeArray(smStream.Dictionary);
             // Decode as DeviceGray then take one channel per pixel as the alpha value.
-            var smRgb = DecodeImageToRgb(StreamFilters.Decode(smStream),
+            var smRgb = DecodeImageToRgb(
+                StreamFilters.Decode(smStream),
                 smw,
                 smh,
                 "DeviceGray",
                 smBpc,
-                smDecode);
+                smDecode
+            );
 
             var alpha = new byte[baseW * baseH];
             for (var y = 0; y < baseH; y++)

@@ -52,11 +52,13 @@ internal sealed class ObjectGraphBuilder
     /// </summary>
     internal static IPdfDocument Finalize(ObjectGraphBuilder builder, PdfIndirectReference rootRef)
     {
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(builder.MaxObjectNumber + 1),
-            [PdfName.Root.Value] = rootRef
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(builder.MaxObjectNumber + 1),
+                [PdfName.Root.Value] = rootRef
+            }
+        );
 
         return SerializeToDocument(builder.Objects, trailer);
     }

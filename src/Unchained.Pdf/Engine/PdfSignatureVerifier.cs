@@ -245,7 +245,8 @@ internal static class PdfSignatureVerifier
                 "yyyyMMddHHmmss",
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal,
-                out var result))
+                out var result
+            ))
             return result;
 
         return null;

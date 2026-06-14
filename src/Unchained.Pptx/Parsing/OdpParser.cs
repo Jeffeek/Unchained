@@ -106,7 +106,8 @@ internal static class OdpParser
             new ProtectionInfo(),
             slideSize,
             new CommentAuthorCollection(),
-            new SectionCollection());
+            new SectionCollection()
+        );
     }
 
     // ── Frame → shape ────────────────────────────────────────────────────────
@@ -199,9 +200,11 @@ internal static class OdpParser
     private static SlideSize ReadSlideSize(XDocument? styles)
     {
         var props = styles?.Root?
-            .Element(Office + "automatic-styles")?
+            .Element(Office + "automatic-styles")
+            ?
             .Elements(Style + "page-layout")
-            .FirstOrDefault()?
+            .FirstOrDefault()
+            ?
             .Element(Style + "page-layout-properties");
 
         var w = ParseLength((string?)props?.Attribute(Fo + "page-width"));
@@ -242,10 +245,12 @@ internal static class OdpParser
 
         var unit = value.Length >= 2 ? value[^2..] : string.Empty;
         var numberText = value[..^unit.Length];
-        return !double.TryParse(numberText,
+        return !double.TryParse(
+            numberText,
             NumberStyles.Float,
             CultureInfo.InvariantCulture,
-            out var number)
+            out var number
+        )
             ? Emu.Zero
             : unit switch
             {

@@ -80,10 +80,11 @@ public sealed class DocumentMergerTests : PdfTestBase
         await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         Should.NotThrow(() =>
-        {
-            for (var i = 1; i <= merged.PageCount; i++)
-                _ = merged.Pages[i];
-        });
+            {
+                for (var i = 1; i <= merged.PageCount; i++)
+                    _ = merged.Pages[i];
+            }
+        );
     }
 
     [Fact]

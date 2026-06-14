@@ -30,17 +30,23 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
         var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
         var xmpBytes = xmpXml.ToUtf8Span();
-        var metaStream = builder.Add(new PdfStream(
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Metadata,
-                [PdfName.Subtype.Value] = PdfName.XML,
-                [PdfName.Length.Value] = new PdfInteger(xmpBytes.Length)
-            }),
-            xmpBytes.ToArray()));
+        var metaStream = builder.Add(
+            new PdfStream(
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Metadata,
+                        [PdfName.Subtype.Value] = PdfName.XML,
+                        [PdfName.Length.Value] = new PdfInteger(xmpBytes.Length)
+                    }
+                ),
+                xmpBytes.ToArray()
+            )
+        );
 
         var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.IsCatalog());
+            o.Value is PdfDictionary d && d.IsCatalog()
+        );
         var catEntries = new Dictionary<string, PdfObject>(((PdfDictionary)catalogObj.Value).Entries)
         {
             [PdfName.Metadata.Value] = metaStream.ToReference()

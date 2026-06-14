@@ -47,12 +47,14 @@ internal static class MarkdownToPdfConverter
                 var taggedItems = new List<TaggedContentItem>();
                 var content = BuildPageContentTagged(page, options, pageIndex, taggedItems);
                 // ReSharper disable once BadListLineBreaks
-                acc.AddPage(options.PageWidthPt,
+                acc.AddPage(
+                    options.PageWidthPt,
                     options.PageHeightPt,
                     content,
                     fontMap,
                     taggedItems,
-                    options.Language);
+                    options.Language
+                );
             }
             else
             {
@@ -107,12 +109,16 @@ internal static class MarkdownToPdfConverter
                 var tag = $"H{h.Level}";
                 runs.Add(new TextRun(text, KeyBold, size, indent, structTag: tag));
                 // ReSharper disable once BadListLineBreaks
-                runs.Add(new TextRun(string.Empty,
-                    KeyBody,
-                    opts.BodyFontSize * 0.4f,
-                    indent,
-                    true,
-                    structTag: tag));
+                runs.Add(
+                    new TextRun(
+                        string.Empty,
+                        KeyBody,
+                        opts.BodyFontSize * 0.4f,
+                        indent,
+                        true,
+                        structTag: tag
+                    )
+                );
                 break;
             }
             case ParagraphBlock p:
@@ -120,26 +126,36 @@ internal static class MarkdownToPdfConverter
                 var segments = ExtractInlineSegments(p.Inline, opts);
                 AppendWrappedSegments(segments, runs, opts, indent, structTag: "P");
                 // ReSharper disable once BadListLineBreaks
-                runs.Add(new TextRun(string.Empty,
-                    KeyBody,
-                    opts.ParagraphSpacingPt,
-                    indent,
-                    true,
-                    structTag: "P"));
+                runs.Add(
+                    new TextRun(
+                        string.Empty,
+                        KeyBody,
+                        opts.ParagraphSpacingPt,
+                        indent,
+                        true,
+                        structTag: "P"
+                    )
+                );
                 break;
             }
             case FencedCodeBlock fc:
             {
-                runs.AddRange(fc.Lines.Lines
-                    .Select(static l => l.Slice.ToString())
-                    .Select(line => new TextRun(line, KeyMono, opts.CodeFontSize, indent + 12f, structTag: "Code")));
+                runs.AddRange(
+                    fc.Lines.Lines
+                        .Select(static l => l.Slice.ToString())
+                        .Select(line => new TextRun(line, KeyMono, opts.CodeFontSize, indent + 12f, structTag: "Code"))
+                );
                 // ReSharper disable once BadListLineBreaks
-                runs.Add(new TextRun(string.Empty,
-                    KeyBody,
-                    opts.ParagraphSpacingPt,
-                    indent,
-                    true,
-                    structTag: "Code"));
+                runs.Add(
+                    new TextRun(
+                        string.Empty,
+                        KeyBody,
+                        opts.ParagraphSpacingPt,
+                        indent,
+                        true,
+                        structTag: "Code"
+                    )
+                );
                 break;
             }
             case ListBlock list:
@@ -158,12 +174,14 @@ internal static class MarkdownToPdfConverter
                         if (segments.Count > 0)
                             segments[0] = (bullet + segments[0].Text, segments[0].FontKey, segments[0].FontSize);
                         // ReSharper disable once BadListLineBreaks
-                        AppendWrappedSegments(segments,
+                        AppendWrappedSegments(
+                            segments,
                             runs,
                             opts,
                             indent,
                             itemIndent,
-                            "LBody");
+                            "LBody"
+                        );
                     }
                     else
                         runs.Add(new TextRun(bullet, KeyBody, opts.BodyFontSize, indent, structTag: "LI"));
@@ -175,29 +193,41 @@ internal static class MarkdownToPdfConverter
                 }
 
                 // ReSharper disable once BadListLineBreaks
-                runs.Add(new TextRun(string.Empty,
-                    KeyBody,
-                    opts.ParagraphSpacingPt * 0.5f,
-                    indent,
-                    true,
-                    structTag: "L"));
+                runs.Add(
+                    new TextRun(
+                        string.Empty,
+                        KeyBody,
+                        opts.ParagraphSpacingPt * 0.5f,
+                        indent,
+                        true,
+                        structTag: "L"
+                    )
+                );
                 break;
             }
             case ThematicBreakBlock:
             {
                 // ReSharper disable BadListLineBreaks
-                runs.Add(new TextRun(string.Empty,
-                    KeyBody,
-                    opts.BodyFontSize,
-                    indent,
-                    isRule: true,
-                    structTag: "P"));
-                runs.Add(new TextRun(string.Empty,
-                    KeyBody,
-                    opts.ParagraphSpacingPt * 0.5f,
-                    indent,
-                    true,
-                    structTag: "P"));
+                runs.Add(
+                    new TextRun(
+                        string.Empty,
+                        KeyBody,
+                        opts.BodyFontSize,
+                        indent,
+                        isRule: true,
+                        structTag: "P"
+                    )
+                );
+                runs.Add(
+                    new TextRun(
+                        string.Empty,
+                        KeyBody,
+                        opts.ParagraphSpacingPt * 0.5f,
+                        indent,
+                        true,
+                        structTag: "P"
+                    )
+                );
                 // ReSharper restore BadListLineBreaks
                 break;
             }

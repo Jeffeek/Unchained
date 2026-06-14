@@ -37,7 +37,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello world",
             new TxtLoadOptions(Tagged: true, Language: "en-US"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -51,7 +52,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello world",
             new TxtLoadOptions(Tagged: true, Language: "en-US"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -64,7 +66,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello world",
             new TxtLoadOptions(Tagged: true, Language: "en-US"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -78,7 +81,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello world",
             new TxtLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         ContentStreamContains(bytes, "BDC").ShouldBeTrue();
@@ -90,7 +94,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello world",
             new TxtLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         ContentStreamContains(bytes, "EMC").ShouldBeTrue();
@@ -102,7 +107,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Line one\nLine two",
             new TxtLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         ContentStreamContains(bytes, "/MCID").ShouldBeTrue();
@@ -114,7 +120,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello world",
             new TxtLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -127,7 +134,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "First line\nSecond line",
             new TxtLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -140,7 +148,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello",
             new TxtLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -152,7 +161,8 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello world",
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -168,7 +178,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "# My Heading\n\nSome paragraph text.",
             new MdLoadOptions(Tagged: true, Language: "en"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -181,7 +192,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "A plain paragraph.",
             new MdLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -194,7 +206,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "```\nvar x = 1;\n```",
             new MdLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -207,7 +220,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "- Item one\n- Item two\n- Item three",
             new MdLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -220,7 +234,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "# H1\n\n## H2\n\n### H3",
             new MdLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -235,7 +250,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "# Title\n\nParagraph.",
             new MdLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         ContentStreamContains(bytes, "BDC").ShouldBeTrue();
@@ -248,7 +264,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "Before\n\n---\n\nAfter",
             new MdLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         ContentStreamContains(bytes, "/Artifact").ShouldBeTrue();
@@ -263,7 +280,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromSvgAsync(
             svg,
             new SvgLoadOptions(Tagged: true, Language: "en", AltText: "A blue square"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         ContentStreamContains(bytes, "/Figure").ShouldBeTrue();
@@ -278,7 +296,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromSvgAsync(
             svg,
             new SvgLoadOptions(Tagged: true, AltText: "A circle"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -292,7 +311,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromSvgAsync(
             svg,
             new SvgLoadOptions(Tagged: true, AltText: "Descriptive alt text"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -305,7 +325,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         const string svg = """<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>""";
         await using var doc = await Processor.LoadFromSvgAsync(
             svg,
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         ContentStreamContains(bytes, "BDC").ShouldBeFalse();
@@ -318,7 +339,8 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         var result = await Processor.ValidatePdfUAAsync(
             PdfFixtures.SinglePage(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         result.Violations.ShouldContain(static v => v.RuleId == "7.2");
     }
@@ -328,7 +350,8 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         var result = await Processor.ValidatePdfUAAsync(
             PdfFixtures.SinglePage(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         result.Violations.ShouldContain(static v => v.RuleId == "7.4");
     }
@@ -338,7 +361,8 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         var result = await Processor.ValidatePdfUAAsync(
             PdfFixtures.SinglePage(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         result.Violations.ShouldContain(static v => v.RuleId == "7.5");
     }
@@ -348,7 +372,8 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         var result = await Processor.ValidatePdfUAAsync(
             PdfFixtures.SinglePage(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         result.Violations.ShouldAllBe(static v => !string.IsNullOrWhiteSpace(v.RuleId));
     }
@@ -358,7 +383,8 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         var result = await Processor.ValidatePdfUAAsync(
             PdfFixtures.SinglePage(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         result.ShouldNotBeNull();
     }
@@ -368,7 +394,8 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         var result = await Processor.ValidatePdfUAAsync(
             PdfFixtures.SinglePage(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         result.IsConformant.ShouldBeFalse();
     }
@@ -378,12 +405,14 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         var untaggedResult = await Processor.ValidatePdfUAAsync(
             PdfFixtures.SinglePage(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await using var taggedDoc = await Processor.LoadFromTxtAsync(
             "Hello accessibility",
             new TxtLoadOptions(Tagged: true, Language: "en-US"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var taggedBytes = await SaveBytesAsync(taggedDoc, TestContext.Current.CancellationToken);
         var taggedResult = await Processor.ValidatePdfUAAsync(taggedBytes, TestContext.Current.CancellationToken);
 
@@ -399,7 +428,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Accessible content",
             new TxtLoadOptions(Tagged: true, Language: "en"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         var result = await Processor.ValidatePdfUAAsync(bytes, TestContext.Current.CancellationToken);
@@ -413,7 +443,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Accessible content",
             new TxtLoadOptions(Tagged: true, Language: "en-US"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         var result = await Processor.ValidatePdfUAAsync(bytes, TestContext.Current.CancellationToken);
@@ -427,7 +458,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Accessible content",
             new TxtLoadOptions(Tagged: true, Language: "en"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         var result = await Processor.ValidatePdfUAAsync(bytes, TestContext.Current.CancellationToken);
@@ -441,7 +473,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "# Title\n\nParagraph text.",
             new MdLoadOptions(Tagged: true, Language: "en"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         var result = await Processor.ValidatePdfUAAsync(bytes, TestContext.Current.CancellationToken);
@@ -454,7 +487,8 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         var result = await Processor.ValidatePdfUAAsync(
             "%PDF"u8.ToArray(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         result.ShouldNotBeNull();
         result.IsConformant.ShouldBeFalse();
@@ -469,7 +503,8 @@ public sealed class TaggedPdfTests : PdfTestBase
             doc,
             ms,
             new SaveOptions(Encryption: new EncryptionOptions("pw")),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var result = await Processor.ValidatePdfUAAsync(ms.ToArray(), TestContext.Current.CancellationToken);
 
@@ -486,7 +521,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromSvgAsync(
             svg,
             new SvgLoadOptions(Tagged: true, Language: "en", AltText: "A rectangle"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         var result = await Processor.ValidatePdfUAAsync(bytes, TestContext.Current.CancellationToken);
@@ -502,7 +538,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromMarkdownAsync(
             "# H1\n\n## H2\n\n### H3\n\nParagraph.",
             new MdLoadOptions(Tagged: true, Language: "en"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 
         var result = await Processor.ValidatePdfUAAsync(bytes, TestContext.Current.CancellationToken);
@@ -518,7 +555,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             string.Join("\n", Enumerable.Repeat("Line of text for the page content.", 100)),
             new TxtLoadOptions(Tagged: true, Language: "en"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -531,7 +569,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Content",
             new TxtLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 
@@ -544,7 +583,8 @@ public sealed class TaggedPdfTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Content",
             new TxtLoadOptions(Tagged: true),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
 

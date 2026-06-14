@@ -10,11 +10,12 @@ public sealed class CompositeFontInfoTests
     public void IdentityFont_StoresFlagsAndDefaults()
     {
         var info = new CompositeFontInfo(
-            IdentityEncoding: true,
-            IdentityCidToGid: true,
-            CidToGid: null,
-            DefaultWidth: 1000,
-            Widths: new Dictionary<int, double>());
+            true,
+            true,
+            null,
+            1000,
+            new Dictionary<int, double>()
+        );
 
         info.IdentityEncoding.ShouldBeTrue();
         info.IdentityCidToGid.ShouldBeTrue();
@@ -29,11 +30,12 @@ public sealed class CompositeFontInfoTests
         var cidToGid = new Dictionary<int, int> { [1] = 10, [2] = 20 };
         var widths = new Dictionary<int, double> { [1] = 500, [2] = 750 };
         var info = new CompositeFontInfo(
-            IdentityEncoding: false,
-            IdentityCidToGid: false,
-            CidToGid: cidToGid,
-            DefaultWidth: 1000,
-            Widths: widths);
+            false,
+            false,
+            cidToGid,
+            1000,
+            widths
+        );
 
         info.IdentityEncoding.ShouldBeFalse();
         info.CidToGid.ShouldNotBeNull();

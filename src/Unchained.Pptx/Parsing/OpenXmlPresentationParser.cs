@@ -122,7 +122,8 @@ internal static class OpenXmlPresentationParser
                 new ProtectionInfo(),
                 slideSize,
                 commentAuthors,
-                sections)
+                sections
+            )
             {
                 // Hand the still-open engine to the parsed result so the document can keep the
                 // source package alive for an in-place SDK-backed save (M5b).
@@ -142,7 +143,8 @@ internal static class OpenXmlPresentationParser
             new ProtectionInfo(),
             slideSize,
             commentAuthors,
-            sections)
+            sections
+        )
         {
             // Hand the still-open engine to the parsed result so the document can keep the
             // source package alive for an in-place SDK-backed save (M5b).
@@ -623,7 +625,8 @@ internal static class OpenXmlPresentationParser
         if (table is null) return;
 
         var columnWidths = table.TableGrid?.Elements<D.GridColumn>()
-            .Select(static c => new Emu(c.Width?.Value ?? 0)).ToArray() ?? [];
+            .Select(static c => new Emu(c.Width?.Value ?? 0))
+            .ToArray() ?? [];
         var rows = table.Elements<D.TableRow>().ToList();
 
         foreach (var w in columnWidths)
