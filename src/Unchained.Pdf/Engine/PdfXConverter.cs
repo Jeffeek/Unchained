@@ -5,7 +5,6 @@ using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Parsing.Filters;
 using Unchained.Pdf.Writing;
 using SaveOptions = System.Xml.Linq.SaveOptions;
 
@@ -121,8 +120,8 @@ internal static class PdfXConverter
 
     private static ReadOnlySpan<byte> BuildPdfXXmp(PdfXProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
     {
-        var existing = ReadExistingXmp(catalogEntries, core);
-        var xmpDoc = (existing is not null ? TryParse(existing) : null) ?? CreateMinimalXmp();
+        var existing = XmpDocumentHelper.ReadExistingXmp(catalogEntries, core);
+        var xmpDoc = (existing is not null ? XmpDocumentHelper.TryParse(existing) : null) ?? XmpDocumentHelper.CreateMinimalXmp();
 
         XNamespace rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
         XNamespace pdfxid = "http://www.npes.org/pdfx/ns/id/";
@@ -137,56 +136,9 @@ internal static class PdfXConverter
                 rdfRoot.Add(desc);
             if (desc.Attribute(XNamespace.Xmlns + "pdfxid") is null)
                 desc.Add(new XAttribute(XNamespace.Xmlns + "pdfxid", pdfxid.NamespaceName));
-            SetOrAdd(desc, pdfxid + "GTS_PDFXVersion", VersionString(profile));
+            XmpDocumentHelper.SetOrAdd(desc, pdfxid + "GTS_PDFXVersion", VersionString(profile));
         }
 
         return xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces).ToUtf8Span();
-    }
-
-    private static string? ReadExistingXmp(IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
-    {
-        var metaObj = catalogEntries.GetValueOrDefault("Metadata");
-        var stream = metaObj switch
-        {
-            PdfStream s => s,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-            _ => null
-        };
-        if (stream is null)
-            return null;
-
-        try
-        {
-            return StreamFilters.Decode(stream).Span.FromUtf8Span();
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static XDocument? TryParse(string xml)
-    {
-        try { return XDocument.Parse(xml); }
-        catch { return null; }
-    }
-
-    private static XDocument CreateMinimalXmp()
-    {
-        XNamespace rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-        XNamespace x = "adobe:ns:meta/";
-        return new XDocument(
-            new XProcessingInstruction("xpacket", "begin=\"﻿\" id=\"W5M0MpCehiHzreSzNTczkc9d\""),
-            new XElement(x + "xmpmeta",
-                new XAttribute(XNamespace.Xmlns + "x", x.NamespaceName),
-                new XElement(rdf + "RDF", new XAttribute(XNamespace.Xmlns + "rdf", rdf.NamespaceName))),
-            new XProcessingInstruction("xpacket", "end=\"w\""));
-    }
-
-    private static void SetOrAdd(XContainer parent, XName name, string value)
-    {
-        var existing = parent.Element(name);
-        if (existing is not null) existing.Value = value;
-        else parent.Add(new XElement(name, value));
     }
 }

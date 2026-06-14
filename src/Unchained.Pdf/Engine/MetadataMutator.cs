@@ -89,7 +89,23 @@ internal static class MetadataMutator
             value is null ? null : PdfString.FromLatin1(value);
     }
 
-    internal static void RemovePdfaCompliance(PdfDocumentAdapter adapter)
+    internal static void RemovePdfaCompliance(PdfDocumentAdapter adapter) =>
+        RemoveComplianceMarkers(adapter, "OutputIntents", "pdfaid");
+
+    internal static void RemovePdfUaCompliance(PdfDocumentAdapter adapter) =>
+        RemoveComplianceMarkers(adapter, PdfName.MarkInfo.Value, "pdfuaid");
+
+    /// <summary>
+    ///     Removes a compliance marker from the catalog and strips the corresponding XMP
+    ///     namespace from the document metadata stream, then serializes. Shared by
+    ///     <see cref="RemovePdfaCompliance" /> (<c>/OutputIntents</c> + <c>pdfaid</c>) and
+    ///     <see cref="RemovePdfUaCompliance" /> (<c>/MarkInfo</c> + <c>pdfuaid</c>).
+    /// </summary>
+    private static void RemoveComplianceMarkers(
+        PdfDocumentAdapter adapter,
+        string catalogKeyToRemove,
+        string xmpNamespacePrefix
+    )
     {
         var existing = adapter.Core.CollectObjects().ToList();
         var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
@@ -100,11 +116,11 @@ internal static class MetadataMutator
         if (existing[catalogIdx].Value is not PdfDictionary catalogDict)
             return;
 
-        // Remove /OutputIntents from catalog.
+        // Remove the compliance marker from the catalog.
         var entries = new Dictionary<string, PdfObject>(catalogDict.Entries);
-        entries.Remove("OutputIntents");
+        entries.Remove(catalogKeyToRemove);
 
-        // Strip pdfaid properties from XMP if present.
+        // Strip the compliance namespace's properties from XMP if present.
         if (entries.TryGetValue("Metadata", out var metaObj))
         {
             var metaStream = metaObj switch
@@ -117,7 +133,7 @@ internal static class MetadataMutator
             if (metaStream is not null)
             {
                 var xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
-                var cleaned = StripXmpNamespace(xmp, "pdfaid");
+                var cleaned = StripXmpNamespace(xmp, xmpNamespacePrefix);
                 var cleanedBytes = cleaned.ToUtf8Span();
                 var newStreamDict = new PdfDictionary(
                     new Dictionary<string, PdfObject>(metaStream.Dictionary.Entries)
@@ -130,58 +146,6 @@ internal static class MetadataMutator
                 {
                     var metaIdx = existing.FindIndex(o => o.ObjectNumber == metaRef.ObjectNumber);
 
-                    if (metaIdx >= 0)
-                        existing[metaIdx] = new PdfIndirectObject(metaRef.ObjectNumber, 0, newStream);
-                }
-                else
-                    entries["Metadata"] = newStream;
-            }
-        }
-
-        existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(entries));
-        MutationHelper.SerializeAndReplace(adapter, existing);
-    }
-
-    internal static void RemovePdfUaCompliance(PdfDocumentAdapter adapter)
-    {
-        var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0)
-            return;
-
-        if (existing[catalogIdx].Value is not PdfDictionary catalogDict)
-            return;
-
-        // Remove /MarkInfo from catalog.
-        var entries = new Dictionary<string, PdfObject>(catalogDict.Entries);
-        entries.Remove(PdfName.MarkInfo.Value);
-
-        // Strip pdfuaid properties from XMP if present.
-        if (entries.TryGetValue("Metadata", out var metaObj))
-        {
-            var metaStream = metaObj switch
-            {
-                PdfStream s => s,
-                PdfIndirectReference r =>
-                    adapter.Core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-                _ => null
-            };
-            if (metaStream is not null)
-            {
-                var xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
-                var cleaned = StripXmpNamespace(xmp, "pdfuaid");
-                var cleanedBytes = cleaned.ToUtf8Span();
-                var newStreamDict = new PdfDictionary(
-                    new Dictionary<string, PdfObject>(metaStream.Dictionary.Entries)
-                    {
-                        ["Length"] = new PdfInteger(cleanedBytes.Length)
-                    });
-                var newStream = new PdfStream(newStreamDict, cleanedBytes.ToArray());
-
-                if (metaObj is PdfIndirectReference metaRef)
-                {
-                    var metaIdx = existing.FindIndex(o => o.ObjectNumber == metaRef.ObjectNumber);
                     if (metaIdx >= 0)
                         existing[metaIdx] = new PdfIndirectObject(metaRef.ObjectNumber, 0, newStream);
                 }

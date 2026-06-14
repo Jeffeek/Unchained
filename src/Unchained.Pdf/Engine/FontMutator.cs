@@ -53,33 +53,7 @@ internal static class FontMutator
             var metrics = TrueTypeMetrics.Read(fontBytes) ?? TrueTypeMetrics.HelveticaFallback;
 
             var maxObj = existing.Max(static o => o.ObjectNumber);
-            var fontFileObjNum = ++maxObj;
-            var fontFileDict = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Length.Value] = new PdfInteger(fontBytes.Length),
-                ["Length1"] = new PdfInteger(fontBytes.Length)
-            });
-            var fontFileObj = new PdfIndirectObject(fontFileObjNum, 0, new PdfStream(fontFileDict, fontBytes));
-            existing.Add(fontFileObj);
-
-            var descObjNum = ++maxObj;
-            var descEntries = new Dictionary<string, PdfObject>
-            {
-                ["Type"] = PdfName.FontDescriptor,
-                ["FontName"] = PdfName.Get(baseFont),
-                ["Flags"] = new PdfInteger(32),
-                ["FontBBox"] = new PdfArray([
-                    new PdfInteger(metrics.XMin), new PdfInteger(metrics.YMin),
-                    new PdfInteger(metrics.XMax), new PdfInteger(metrics.YMax)
-                ]),
-                ["ItalicAngle"] = new PdfInteger(0),
-                ["Ascent"] = new PdfInteger(metrics.Ascent),
-                ["Descent"] = new PdfInteger(metrics.Descent),
-                ["CapHeight"] = new PdfInteger(metrics.CapHeight),
-                ["StemV"] = new PdfInteger(metrics.StemV),
-                ["FontFile2"] = new PdfIndirectReference(fontFileObjNum, 0)
-            };
-            existing.Add(new PdfIndirectObject(descObjNum, 0, new PdfDictionary(descEntries)));
+            var descObjNum = AppendFontDescriptor(existing, ref maxObj, baseFont, fontBytes, metrics);
 
             // Update the font dict to include the descriptor.
             var updatedEntries = new Dictionary<string, PdfObject>(dict.Entries)
@@ -119,40 +93,8 @@ internal static class FontMutator
                 && !string.Equals(baseFont, fontName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            // Build new /FontFile2 stream.
-            var fontFileObjNum = ++maxObj;
-            var fontFileDict = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Length.Value] = new PdfInteger(newFontBytes.Length),
-                ["Length1"] = new PdfInteger(newFontBytes.Length)
-            });
-            existing.Add(new PdfIndirectObject(
-                fontFileObjNum,
-                0,
-                new PdfStream(fontFileDict, newFontBytes)));
-
-            // Build new /FontDescriptor.
-            var descObjNum = ++maxObj;
-            var descEntries = new Dictionary<string, PdfObject>
-            {
-                ["Type"] = PdfName.FontDescriptor,
-                ["FontName"] = PdfName.Get(baseFont),
-                ["Flags"] = new PdfInteger(32),
-                ["FontBBox"] = new PdfArray([
-                    new PdfInteger(metrics.XMin), new PdfInteger(metrics.YMin),
-                    new PdfInteger(metrics.XMax), new PdfInteger(metrics.YMax)
-                ]),
-                ["ItalicAngle"] = new PdfInteger(0),
-                ["Ascent"] = new PdfInteger(metrics.Ascent),
-                ["Descent"] = new PdfInteger(metrics.Descent),
-                ["CapHeight"] = new PdfInteger(metrics.CapHeight),
-                ["StemV"] = new PdfInteger(metrics.StemV),
-                ["FontFile2"] = new PdfIndirectReference(fontFileObjNum, 0)
-            };
-            existing.Add(new PdfIndirectObject(
-                descObjNum,
-                0,
-                new PdfDictionary(descEntries)));
+            // Build new /FontFile2 stream + /FontDescriptor.
+            var descObjNum = AppendFontDescriptor(existing, ref maxObj, baseFont, newFontBytes, metrics);
 
             // Update the font dictionary with the new descriptor.
             var updatedEntries = new Dictionary<string, PdfObject>(dict.Entries)
@@ -217,6 +159,47 @@ internal static class FontMutator
         // "Helvetica-Bold" → "Helvetica", "Times-Roman" → "Times-Roman" (keep as-is for serif)
         var dash = baseFont.IndexOf('-');
         return dash > 0 ? baseFont[..dash] : baseFont;
+    }
+
+    // Appends a /FontFile2 stream and a /FontDescriptor referencing it to the object list,
+    // advancing maxObj for each. Returns the /FontDescriptor object number so the caller can
+    // point its font dictionary at it. Shared by EmbedStandardFonts and ReplaceFont.
+    private static int AppendFontDescriptor(
+        ICollection<PdfIndirectObject> existing,
+        ref int maxObj,
+        string baseFont,
+        byte[] fontBytes,
+        FontMetrics metrics
+    )
+    {
+        var fontFileObjNum = ++maxObj;
+        var fontFileDict = new PdfDictionary(new Dictionary<string, PdfObject>
+        {
+            [PdfName.Length.Value] = new PdfInteger(fontBytes.Length),
+            ["Length1"] = new PdfInteger(fontBytes.Length)
+        });
+        existing.Add(new PdfIndirectObject(fontFileObjNum, 0, new PdfStream(fontFileDict, fontBytes)));
+
+        var descObjNum = ++maxObj;
+        var descEntries = new Dictionary<string, PdfObject>
+        {
+            ["Type"] = PdfName.FontDescriptor,
+            ["FontName"] = PdfName.Get(baseFont),
+            ["Flags"] = new PdfInteger(32),
+            ["FontBBox"] = new PdfArray([
+                new PdfInteger(metrics.XMin), new PdfInteger(metrics.YMin),
+                new PdfInteger(metrics.XMax), new PdfInteger(metrics.YMax)
+            ]),
+            ["ItalicAngle"] = new PdfInteger(0),
+            ["Ascent"] = new PdfInteger(metrics.Ascent),
+            ["Descent"] = new PdfInteger(metrics.Descent),
+            ["CapHeight"] = new PdfInteger(metrics.CapHeight),
+            ["StemV"] = new PdfInteger(metrics.StemV),
+            ["FontFile2"] = new PdfIndirectReference(fontFileObjNum, 0)
+        };
+        existing.Add(new PdfIndirectObject(descObjNum, 0, new PdfDictionary(descEntries)));
+
+        return descObjNum;
     }
 
     // Walks all pages' content streams and collects glyph IDs for each embedded font.
