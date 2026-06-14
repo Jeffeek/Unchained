@@ -1,4 +1,3 @@
-@using System.IO.Compression
 @using Unchained.Pptx.Engine
 @using Unchained.Pptx.Export
 @inject FileExportService Exporter
@@ -213,29 +212,13 @@
             foreach (var path in files)
                 entries.Add((Path.GetFileName(path), await File.ReadAllBytesAsync(path)));
 
-            var zip = BuildZip(entries);
+            var zip = ZipBuilder.Build(entries);
             await Exporter.TriggerDownloadAsync(zip, $"{BaseName}-html.zip", "application/zip");
         }
         finally
         {
             if (Directory.Exists(dir)) Directory.Delete(dir, true);
         }
-    }
-
-    private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
-    {
-        using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
-        {
-            foreach (var (path, data) in entries)
-            {
-                var entry = zip.CreateEntry(path, CompressionLevel.Optimal);
-                using var stream = entry.Open();
-                stream.Write(data);
-            }
-        }
-
-        return ms.ToArray();
     }
 
     private void Cancel() => MudDialog.Cancel();

@@ -52,7 +52,7 @@ public sealed class PdfiumReferenceRenderer
     ///     Renders one page to a PNG byte array using Pdfium.
     ///     Returns <see langword="null" /> when Pdfium is unavailable or the page fails.
     /// </summary>
-    public static async Task<byte[]?> RenderPageAsync(
+    public async Task<byte[]?> RenderPageAsync(
         byte[] pdfBytes,
         int pageNumber,
         int dpi = 96,

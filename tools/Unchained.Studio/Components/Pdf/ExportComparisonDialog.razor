@@ -1,8 +1,7 @@
-@using System.IO.Compression
 @using Unchained.Pdf.Abstractions
 @inject RenderingService Renderer
+@inject PdfiumReferenceRenderer Pdfium
 @inject FileExportService Exporter
-@inject IJSRuntime JS
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -84,7 +83,7 @@
                         <MudRadio Value="OutputMode.Zip" Color="Color.Primary">
                             Download as ZIP
                             <MudText Typo="Typo.caption" Style="opacity:.6;display:block;">
-                                Single ZIP containing unchained/ and pdfjs/ subfolders
+                                Single ZIP containing unchained/ and pdfium/ subfolders
                             </MudText>
                         </MudRadio>
                     </MudRadioGroup>
@@ -141,15 +140,11 @@
     [Parameter]
     public int PageCount { get; set; } = 1;
 
-    [Parameter]
-    public string? ExistingBlobUrl { get; set; }
-
     private PageMode _pageMode = PageMode.Current;
     private OutputMode _outputMode = OutputMode.Zip;
     private string _rangeText = string.Empty;
     private string? _rangeError;
     private int _dpi = 96;
-    private bool _folderSaveSupported;
 
     private bool _exporting;
     private string _progressMessage = string.Empty;
@@ -160,32 +155,10 @@
 
     private string FileNamePreview => BuildFileNamePreview();
 
-    // JS interop is only available after the interactive SignalR circuit is established,
-    // so folder-save detection must run in OnAfterRenderAsync, not OnInitializedAsync.
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
-
-        try
-        {
-            _folderSaveSupported = await JS.InvokeAsync<bool>("unchainedStudio.isFolderSaveSupported");
-        }
-        catch
-        {
-            _folderSaveSupported = false;
-        }
-
-        if (!_folderSaveSupported)
-            _outputMode = OutputMode.Zip;
-        StateHasChanged();
-    }
-
     private string BuildFileNamePreview()
     {
         var baseName = Path.GetFileNameWithoutExtension(FileName);
-        return _outputMode == OutputMode.Zip
-            ? $"{baseName}_comparison_{_dpi}dpi.zip\n  └ unchained/page_001.png\n  └ pdfjs/page_001.png\n  └ …"
-            : throw new NotImplementedException();
+        return $"{baseName}_comparison_{_dpi}dpi.zip\n  └ unchained/page_001.png\n  └ pdfium/page_001.png\n  └ …";
     }
 
     private void Close() => MudDialog.Cancel();
@@ -202,20 +175,6 @@
         _progressPercent = 0;
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
-
-        // Ensure we have a blob URL for PDF.js (reuse if already open in compare mode)
-        var blobUrl = ExistingBlobUrl;
-        var ownedBlob = false;
-        if (blobUrl is null)
-        {
-            _progressMessage = "Preparing PDF for browser rendering…";
-            StateHasChanged();
-            blobUrl = await JS.InvokeAsync<string>(
-                "unchainedStudio.createPdfBlobUrl",
-                ct,
-                Convert.ToBase64String(DocumentBytes));
-            ownedBlob = true;
-        }
 
         try
         {
@@ -250,30 +209,26 @@
                     }
                 }
 
-                // ── PDF.js render (browser-side, 25 s cap) ──────────────────
-                string? pdfjsBase64 = null;
-                using (var jts = CancellationTokenSource.CreateLinkedTokenSource(ct))
+                // ── Pdfium reference render (server-side, same engine as Chrome, 30 s cap) ──
+                byte[]? pdfiumBytes = null;
+                using (var pts = CancellationTokenSource.CreateLinkedTokenSource(ct))
                 {
-                    jts.CancelAfter(TimeSpan.FromSeconds(25));
+                    pts.CancelAfter(TimeSpan.FromSeconds(30));
                     try
                     {
-                        _progressDetail = "PDF.js (browser native)…";
+                        _progressDetail = "Pdfium (Chrome engine)…";
                         StateHasChanged();
-                        pdfjsBase64 = await JS.InvokeAsync<string>(
-                            "unchainedStudio.renderPageWithPdfJs",
-                            jts.Token,
-                            blobUrl,
-                            page,
-                            _dpi,
-                            24000); // pass JS-side timeout (ms)
+                        pdfiumBytes = await Pdfium.RenderPageAsync(DocumentBytes, page, _dpi, pts.Token);
+                        if (pdfiumBytes is null)
+                            _errors.Add($"p.{page} Pdfium: render returned null");
                     }
                     catch (OperationCanceledException)
                     {
-                        _errors.Add($"p.{page} PDF.js: timeout (>25 s)");
+                        _errors.Add($"p.{page} Pdfium: timeout (>30 s)");
                     }
                     catch (Exception ex)
                     {
-                        _errors.Add($"p.{page} PDF.js: {ex.Message}");
+                        _errors.Add($"p.{page} Pdfium: {ex.Message}");
                     }
                 }
 
@@ -281,8 +236,8 @@
                 var pageTag = page.ToString("D3");
                 if (unchainedBytes is not null)
                     collected.Add(($"unchained/page_{pageTag}.png", unchainedBytes));
-                if (pdfjsBase64 is not null)
-                    collected.Add(($"pdfjs/page_{pageTag}.png", Convert.FromBase64String(pdfjsBase64)));
+                if (pdfiumBytes is not null)
+                    collected.Add(($"pdfium/page_{pageTag}.png", pdfiumBytes));
 
                 done++;
                 _progressPercent = done * 100.0 / pages.Count;
@@ -320,40 +275,19 @@
         }
         finally
         {
-            if (ownedBlob)
-                await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", ct, blobUrl);
             _cts?.Dispose();
             _cts = null;
         }
     }
 
-    private async Task SaveAsZip(List<(string Name, byte[] Bytes)> files, string baseName)
+    private async Task SaveAsZip(IReadOnlyList<(string Name, byte[] Bytes)> files, string baseName)
     {
-        var zipBytes = BuildZip(files);
+        var zipBytes = ZipBuilder.Build(files);
         await Exporter.TriggerDownloadAsync(
             zipBytes,
             $"{baseName}_comparison_{_dpi}dpi.zip",
             "application/zip");
         Snackbar.Add($"ZIP with {files.Count} files downloaded.", Severity.Success);
-    }
-
-    private static byte[] BuildZip(List<(string Name, byte[] Bytes)> files)
-    {
-        using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(
-                   ms,
-                   ZipArchiveMode.Create,
-                   true))
-        {
-            foreach (var (name, bytes) in files)
-            {
-                var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
-                using var stream = entry.Open();
-                stream.Write(bytes);
-            }
-        }
-
-        return ms.ToArray();
     }
 
     // Parses the page selection and returns a validated, sorted, deduplicated list.
@@ -365,58 +299,8 @@
         {
             PageMode.Current => [CurrentPage],
             PageMode.All => Enumerable.Range(1, PageCount).ToList(),
-            PageMode.Range => ParseRange(_rangeText, PageCount),
+            PageMode.Range => PageRangeParser.Parse(_rangeText, PageCount, out _rangeError),
             _ => [CurrentPage]
         };
     }
-
-    private List<int>? ParseRange(string text, int max)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            _rangeError = "Enter at least one page number.";
-            return null;
-        }
-
-        var pages = new SortedSet<int>();
-
-        foreach (var token in text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            if (token.Contains('-'))
-            {
-                var parts = token.Split('-');
-                if (parts.Length != 2 ||
-                    !int.TryParse(parts[0].Trim(), out var from) ||
-                    !int.TryParse(parts[1].Trim(), out var to))
-                {
-                    _rangeError = $"Invalid range: \"{token}\"";
-                    return null;
-                }
-
-                if (from < 1 || to > max || from > to)
-                {
-                    _rangeError = $"Range {from}-{to} is out of bounds (1-{max}).";
-                    return null;
-                }
-
-                for (var p = from; p <= to; p++) pages.Add(p);
-            }
-            else
-            {
-                if (!int.TryParse(token, out var p) || p < 1 || p > max)
-                {
-                    _rangeError = $"Invalid page number: \"{token}\" (1-{max}).";
-                    return null;
-                }
-
-                pages.Add(p);
-            }
-        }
-
-        if (pages.Count != 0) return [.. pages];
-
-        _rangeError = "No valid pages found.";
-        return null;
-    }
-
 }
