@@ -47,8 +47,10 @@ public sealed class LineParserTests
     ]
     public void Parse_DashStyle_Mapped(string value, LineDashStyle expected)
     {
-        var ln = new XElement(DmlNames.Line,
-            new XElement(DmlNames.PresetDash, new XAttribute("val", value)));
+        var ln = new XElement(
+            DmlNames.Line,
+            new XElement(DmlNames.PresetDash, new XAttribute("val", value))
+        );
         var parent = new XElement(DmlNames.Dml + "spPr", ln);
         var line = new LineFormat();
         LineParser.Parse(parent, line);
@@ -58,17 +60,21 @@ public sealed class LineParserTests
     [Fact]
     public void Parse_HeadAndTailArrows_Mapped()
     {
-        var ln = new XElement(DmlNames.Line,
+        var ln = new XElement(
+            DmlNames.Line,
             new XElement(
                 DmlNames.HeadEnd,
                 new XAttribute("type", "triangle"),
                 new XAttribute("w", "lg"),
-                new XAttribute("len", "sm")),
+                new XAttribute("len", "sm")
+            ),
             new XElement(
                 DmlNames.TailEnd,
                 new XAttribute("type", "stealth"),
                 new XAttribute("w", "med"),
-                new XAttribute("len", "lg")));
+                new XAttribute("len", "lg")
+            )
+        );
         var parent = new XElement(DmlNames.Dml + "spPr", ln);
         var line = new LineFormat();
         LineParser.Parse(parent, line);
@@ -83,9 +89,11 @@ public sealed class LineParserTests
     [Fact]
     public void ParseElement_ReadsWidthAndDashDirectly()
     {
-        var lnL = new XElement(DmlNames.Dml + "lnL",
+        var lnL = new XElement(
+            DmlNames.Dml + "lnL",
             new XAttribute("w", "25400"),
-            new XElement(DmlNames.PresetDash, new XAttribute("val", "dash")));
+            new XElement(DmlNames.PresetDash, new XAttribute("val", "dash"))
+        );
         var line = new LineFormat();
         LineParser.ParseElement(lnL, line);
         line.WidthPoints.ShouldNotBeNull();

@@ -97,22 +97,26 @@ public sealed class PdfiumReferenceRenderer
             bitmap = fpdfview.FPDFBitmapCreate(pixW, pixH, 0 /* no alpha */);
             if (bitmap is null) return null;
 
-            fpdfview.FPDFBitmapFillRect(bitmap,
+            fpdfview.FPDFBitmapFillRect(
+                bitmap,
                 0,
                 0,
                 pixW,
                 pixH,
-                0xFFFFFFFF);
+                0xFFFFFFFF
+            );
 
             // FPDF_ANNOT = 0x01 — also render annotations (matches Chrome's default view)
-            fpdfview.FPDF_RenderPageBitmap(bitmap,
+            fpdfview.FPDF_RenderPageBitmap(
+                bitmap,
                 page,
                 0,
                 0,
                 pixW,
                 pixH,
                 0,
-                0x01);
+                0x01
+            );
 
             // Read BGRA pixel data and encode to PNG
             var bufferPtr = fpdfview.FPDFBitmapGetBuffer(bitmap);

@@ -256,7 +256,8 @@
             await Exporter.TriggerDownloadAsync(
                 Encoding.UTF8.GetBytes(_extractedText),
                 Path.ChangeExtension(Session.Pptx?.FileName ?? "presentation", ".txt"),
-                "text/plain");
+                "text/plain"
+            );
         }
         catch (Exception ex)
         {
@@ -278,13 +279,15 @@
             var image = await SlideRenderer.RenderAsync(
                 slide,
                 state.Document.SlideSize,
-                new RenderOptions { WidthPx = 1920, HeightPx = 1080 });
+                new RenderOptions { WidthPx = 1920, HeightPx = 1080 }
+            );
 
             var baseName = Path.GetFileNameWithoutExtension(state.FileName);
             await Exporter.TriggerDownloadAsync(
                 image.Data.ToArray(),
                 $"{baseName}-slide{index + 1}.png",
-                "image/png");
+                "image/png"
+            );
         }
         catch (DllNotFoundException)
         {

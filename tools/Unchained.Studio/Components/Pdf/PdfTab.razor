@@ -323,7 +323,8 @@
             await Exporter.TriggerDownloadAsync(
                 Encoding.UTF8.GetBytes(_extractedText),
                 Path.ChangeExtension(Session.Pdf?.FileName ?? "document", ".txt"),
-                "text/plain");
+                "text/plain"
+            );
         }
         catch (Exception ex)
         {
@@ -395,7 +396,8 @@
             await Session.Pdf.Processor.SaveAsync(
                 Session.Pdf.Document,
                 ms,
-                SaveOptions.WebOptimized);
+                SaveOptions.WebOptimized
+            );
             await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
             ShowInfo("Document linearized (web-optimized).");
         }
@@ -611,18 +613,21 @@
                 enc.UserPassword,
                 enc.OwnerPassword,
                 ms,
-                enc.Algorithm);
+                enc.Algorithm
+            );
 
             // Reload the re-encrypted bytes, using the new user password when one was set.
             var bytes = ms.ToArray();
             if (enc.UserPassword.Length > 0)
-                await ReloadAsync(bytes, Session.Pdf.FileName, password: enc.UserPassword);
+                await ReloadAsync(bytes, Session.Pdf.FileName, enc.UserPassword);
             else
                 await ReloadAsync(bytes, Session.Pdf.FileName);
 
-            ShowInfo(enc.UserPassword.Length == 0 && enc.OwnerPassword.Length == 0
-                ? "Encryption removed."
-                : "Document encrypted.");
+            ShowInfo(
+                enc.UserPassword.Length == 0 && enc.OwnerPassword.Length == 0
+                    ? "Encryption removed."
+                    : "Document encrypted."
+            );
         }
         catch (Exception ex)
         {

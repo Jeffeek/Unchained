@@ -139,11 +139,14 @@ public static class PdfTreeBuilder
             };
             foreach (var (key, img) in images)
             {
-                imagesNode.Children.Add(Leaf(
-                    $"{key}: {img.Width}×{img.Height} px",
-                    Icons.Material.Outlined.PhotoLibrary,
-                    TreeNodeType.Image,
-                    (key, img)));
+                imagesNode.Children.Add(
+                    Leaf(
+                        $"{key}: {img.Width}×{img.Height} px",
+                        Icons.Material.Outlined.PhotoLibrary,
+                        TreeNodeType.Image,
+                        (key, img)
+                    )
+                );
             }
 
             children.Add(imagesNode);
@@ -162,26 +165,31 @@ public static class PdfTreeBuilder
             };
             foreach (var ann in annotations)
             {
-                annNode.Children.Add(Leaf(
-                    $"{ann.Subtype}: {TruncateLabel(ann.Contents ?? ann.Subtype.ToString(), 40)}",
-                    Icons.Material.Outlined.StickyNote2,
-                    TreeNodeType.Annotation,
-                    ann));
+                annNode.Children.Add(
+                    Leaf(
+                        $"{ann.Subtype}: {TruncateLabel(ann.Contents ?? ann.Subtype.ToString(), 40)}",
+                        Icons.Material.Outlined.StickyNote2,
+                        TreeNodeType.Annotation,
+                        ann
+                    )
+                );
             }
 
             children.Add(annNode);
         }
 
         // Content stream operators (lazy; expensive on large pages)
-        children.Add(new TreeNode
-        {
-            Label = "Content Stream",
-            Icon = Icons.Material.Outlined.Code,
-            NodeType = TreeNodeType.ContentStream,
-            Payload = page,
-            HasLazyChildren = true,
-            LoadChildrenAsync = () => BuildOperatorsAsync(page)
-        });
+        children.Add(
+            new TreeNode
+            {
+                Label = "Content Stream",
+                Icon = Icons.Material.Outlined.Code,
+                NodeType = TreeNodeType.ContentStream,
+                Payload = page,
+                HasLazyChildren = true,
+                LoadChildrenAsync = () => BuildOperatorsAsync(page)
+            }
+        );
 
         return Task.FromResult(children);
     }
@@ -192,10 +200,12 @@ public static class PdfTreeBuilder
         var nodes = operators
             .Take(500) // cap at 500 operators to keep the UI responsive
             .Select(static (op, i) => Leaf(
-                $"{i + 1:D4}  {op.Name}  {string.Join(" ", op.Operands.Take(3).Select(static o => o.ToString() ?? "?"))}",
-                Icons.Material.Outlined.Terminal,
-                TreeNodeType.Operator,
-                op))
+                    $"{i + 1:D4}  {op.Name}  {string.Join(" ", op.Operands.Take(3).Select(static o => o.ToString() ?? "?"))}",
+                    Icons.Material.Outlined.Terminal,
+                    TreeNodeType.Operator,
+                    op
+                )
+            )
             .ToList();
 
         if (operators.Count > 500)
@@ -254,11 +264,14 @@ public static class PdfTreeBuilder
         };
         foreach (var f in fields)
         {
-            node.Children.Add(Leaf(
-                $"{f.Name} [{f.FieldType}] = {TruncateLabel(f.Value ?? "(empty)", 30)}",
-                Icons.Material.Outlined.TextFields,
-                TreeNodeType.FormField,
-                f));
+            node.Children.Add(
+                Leaf(
+                    $"{f.Name} [{f.FieldType}] = {TruncateLabel(f.Value ?? "(empty)", 30)}",
+                    Icons.Material.Outlined.TextFields,
+                    TreeNodeType.FormField,
+                    f
+                )
+            );
         }
 
         return node;
@@ -279,11 +292,14 @@ public static class PdfTreeBuilder
         };
         foreach (var d in dests)
         {
-            node.Children.Add(Leaf(
-                $"{d.Name} → p.{d.PageNumber}",
-                Icons.Material.Outlined.LocationOn,
-                TreeNodeType.NamedDestination,
-                d));
+            node.Children.Add(
+                Leaf(
+                    $"{d.Name} → p.{d.PageNumber}",
+                    Icons.Material.Outlined.LocationOn,
+                    TreeNodeType.NamedDestination,
+                    d
+                )
+            );
         }
 
         return node;

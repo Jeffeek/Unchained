@@ -11,9 +11,11 @@ public sealed class FileExportService(IJSRuntime js)
         CancellationToken ct = default
     ) =>
         await js.InvokeVoidAsync(
-            "unchainedStudio.downloadFile",
-            ct,
-            Convert.ToBase64String(data),
-            fileName,
-            mimeType).ConfigureAwait(false);
+                "unchainedStudio.downloadFile",
+                ct,
+                Convert.ToBase64String(data),
+                fileName,
+                mimeType
+            )
+            .ConfigureAwait(false);
 }

@@ -158,7 +158,8 @@
                 var image = await SlideRenderer.RenderAsync(
                     Document.Slides[index],
                     Document.SlideSize,
-                    new RenderOptions { WidthPx = _width, HeightPx = height });
+                    new RenderOptions { WidthPx = _width, HeightPx = height }
+                );
                 entries.Add(($"{prefix}slide_{index + 1:D3}.png", image.Data.ToArray()));
             }
             catch (DllNotFoundException)
@@ -224,4 +225,5 @@
 
     private static ReadOnlySpan<byte> BuildReferenceReadme() =>
         "Drop the production engine's slide PNGs here, named slide_001.png, slide_002.png, …\nso they line up with the files in ../unchained/ for visual comparison.\n"u8;
+
 }

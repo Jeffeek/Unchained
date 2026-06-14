@@ -116,24 +116,28 @@ public static class PptxTreeBuilder
             };
 
             // Theme under each master.
-            masterNode.Children.Add(new TreeNode
-            {
-                Label = string.IsNullOrEmpty(master.Theme.Name) ? "Theme" : master.Theme.Name,
-                Icon = Icons.Palette,
-                NodeType = TreeNodeType.Theme,
-                Payload = master.Theme
-            });
+            masterNode.Children.Add(
+                new TreeNode
+                {
+                    Label = string.IsNullOrEmpty(master.Theme.Name) ? "Theme" : master.Theme.Name,
+                    Icon = Icons.Palette,
+                    NodeType = TreeNodeType.Theme,
+                    Payload = master.Theme
+                }
+            );
 
             // Layouts under each master.
             foreach (var layout in master.Layouts)
             {
-                masterNode.Children.Add(new TreeNode
-                {
-                    Label = string.IsNullOrEmpty(layout.Name) ? layout.LayoutType.ToString() : layout.Name,
-                    Icon = Icons.Layout,
-                    NodeType = TreeNodeType.Layout,
-                    Payload = layout
-                });
+                masterNode.Children.Add(
+                    new TreeNode
+                    {
+                        Label = string.IsNullOrEmpty(layout.Name) ? layout.LayoutType.ToString() : layout.Name,
+                        Icon = Icons.Layout,
+                        NodeType = TreeNodeType.Layout,
+                        Payload = layout
+                    }
+                );
             }
 
             node.Children.Add(masterNode);
@@ -157,13 +161,15 @@ public static class PptxTreeBuilder
         for (var i = 0; i < media.Images.Count; i++)
         {
             var image = media.Images[i];
-            node.Children.Add(new TreeNode
-            {
-                Label = $"Image {i + 1} ({image.ContentType})",
-                Icon = Icons.Image,
-                NodeType = TreeNodeType.Image,
-                Payload = image
-            });
+            node.Children.Add(
+                new TreeNode
+                {
+                    Label = $"Image {i + 1} ({image.ContentType})",
+                    Icon = Icons.Image,
+                    NodeType = TreeNodeType.Image,
+                    Payload = image
+                }
+            );
         }
 
         return node;

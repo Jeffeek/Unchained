@@ -75,34 +75,42 @@
 @code {
     private readonly List<FormatCard> _formats =
     [
-        new("PDF",
+        new(
+            "PDF",
             "Read, render, edit, convert",
             Icons.Material.Outlined.PictureAsPdf,
             "#E53935",
             true,
             "/pdf",
-            ["PDF 1.x–2.x, encrypted, linearized, tagged", "Render & extract text", "Optimize, repair, validate PDF/A & PDF/UA", "Batch visual comparison"]),
-        new("PPTX",
+            ["PDF 1.x–2.x, encrypted, linearized, tagged", "Render & extract text", "Optimize, repair, validate PDF/A & PDF/UA", "Batch visual comparison"]
+        ),
+        new(
+            "PPTX",
             "PowerPoint presentations",
             Icons.Material.Outlined.Slideshow,
             "#FB8C00",
             true,
             "/pptx",
-            ["Slides, shapes, charts, tables, SmartArt", "Render slides to PNG", "Find & replace, hyperlinks", "Export to PDF, HTML5 player, ODP"]),
-        new("DOCX",
+            ["Slides, shapes, charts, tables, SmartArt", "Render slides to PNG", "Find & replace, hyperlinks", "Export to PDF, HTML5 player, ODP"]
+        ),
+        new(
+            "DOCX",
             "Word documents",
             Icons.Material.Outlined.Description,
             "#1E88E5",
             false,
             "/docx",
-            ["Built on the shared OOXML core", "Paragraphs, runs, tables, styles", "Round-trip fidelity"]),
-        new("XLSX",
+            ["Built on the shared OOXML core", "Paragraphs, runs, tables, styles", "Round-trip fidelity"]
+        ),
+        new(
+            "XLSX",
             "Excel workbooks",
             Icons.Material.Outlined.TableChart,
             "#43A047",
             false,
             "/xlsx",
-            ["Built on the shared OOXML core", "Sheets, cells, formulas", "Round-trip fidelity"])
+            ["Built on the shared OOXML core", "Sheets, cells, formulas", "Round-trip fidelity"]
+        )
     ];
 
     private readonly List<Capability> _capabilities =

@@ -319,7 +319,7 @@ internal sealed partial class PageRenderer
             var wGlyph = info.Widths.TryGetValue(cid, out var w) ? w : info.DefaultWidth;
             var hScale = TextMatrixHorizontalScale();
             var advance = ((wGlyph / RenderingConstants.CidEmUnits * _gs.FontSize) + _gs.CharSpace) * hScale
-                * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
+                                                                                                    * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
             _gs.TextMatrix[4] += advance;
         }
     }

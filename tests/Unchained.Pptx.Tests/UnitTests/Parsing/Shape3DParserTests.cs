@@ -30,10 +30,12 @@ public sealed class Shape3DParserTests
     [Fact]
     public void Parse_Attributes_ReadExtrusionContourMaterial()
     {
-        var sp3d = new XElement(DmlNames.Dml + "sp3d",
+        var sp3d = new XElement(
+            DmlNames.Dml + "sp3d",
             new XAttribute("extrusionH", "50000"),
             new XAttribute("contourW", "12700"),
-            new XAttribute("prstMaterial", "metal"));
+            new XAttribute("prstMaterial", "metal")
+        );
         var parent = new XElement(DmlNames.Dml + "spPr", sp3d);
         var threeD = new Shape3DFormat();
         Shape3DParser.Parse(parent, threeD);
@@ -46,17 +48,21 @@ public sealed class Shape3DParserTests
     [Fact]
     public void Parse_Bevels_ReadTopAndBottom()
     {
-        var sp3d = new XElement(DmlNames.Dml + "sp3d",
+        var sp3d = new XElement(
+            DmlNames.Dml + "sp3d",
             new XElement(
                 DmlNames.Dml + "bevelT",
                 new XAttribute("w", "38100"),
                 new XAttribute("h", "38100"),
-                new XAttribute("prst", "circle")),
+                new XAttribute("prst", "circle")
+            ),
             new XElement(
                 DmlNames.Dml + "bevelB",
                 new XAttribute("w", "10000"),
                 new XAttribute("h", "5000"),
-                new XAttribute("prst", "angle")));
+                new XAttribute("prst", "angle")
+            )
+        );
         var parent = new XElement(DmlNames.Dml + "spPr", sp3d);
         var threeD = new Shape3DFormat();
         Shape3DParser.Parse(parent, threeD);

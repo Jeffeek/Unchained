@@ -33,9 +33,11 @@
             @if (_replaced.HasValue)
             {
                 <MudAlert Severity="@(_replaced.Value > 0 ? Severity.Success : Severity.Info)" Dense="true">
-                    @(_replaced.Value > 0
+                    @(
+                    _replaced.Value > 0
                         ? $"Replaced {_replaced.Value} occurrence(s)."
-                        : "No occurrences found.")
+                        : "No occurrences found."
+                    )
                 </MudAlert>
             }
         </MudStack>
