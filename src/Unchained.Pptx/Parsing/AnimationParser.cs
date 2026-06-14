@@ -187,11 +187,12 @@ internal static class AnimationParser
 
     private static uint GetInteractiveTriggerShapeId(XContainer seqEl, XNamespace pml)
     {
-        // The trigger shape ID is in the seq's prevCondLst or in a nested cond/@spid
+        // The trigger shape ID is on a nested <p:spTgt spid="N"/> inside prevCondLst/cond/tgtEl.
         var prevCond = seqEl.Element(pml + "prevCondLst")?.Element(pml + "cond");
-        if (prevCond == null) return 0;
+        var spTgt = prevCond?.Descendants(pml + "spTgt").FirstOrDefault();
+        if (spTgt == null) return 0;
 
-        var spid = prevCond.GetAttr("spid");
+        var spid = spTgt.GetAttr("spid");
         return spid != null && uint.TryParse(spid, out var id) ? id : 0;
     }
 }
