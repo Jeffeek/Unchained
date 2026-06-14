@@ -7,7 +7,7 @@ using Unchained.Pdf.Engine;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 
-namespace Unchained.Pdf.Tests.UnitTests.Engine;
+namespace Unchained.Pdf.Tests.IntegrationTests;
 
 public sealed class DocumentProcessorLoadTests : IDisposable
 {

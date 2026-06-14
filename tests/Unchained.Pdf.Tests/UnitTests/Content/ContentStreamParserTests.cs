@@ -12,6 +12,9 @@ public sealed class ContentStreamParserTests
     private static IReadOnlyList<ContentOperator> Parse(string stream) =>
         ContentStreamParser.Parse(Encoding.Latin1.GetBytes(stream));
 
+    private static IReadOnlyList<ContentOperator> Parse(byte[] data) =>
+        ContentStreamParser.Parse(data);
+
     // ── Zero-operand operators ────────────────────────────────────────────────
 
     [Fact]
@@ -182,5 +185,113 @@ public sealed class ContentStreamParserTests
     {
         var ops = Parse("BT");
         ops[0].HasOperands.ShouldBeFalse();
+    }
+
+    // ── Inline image (BI/ID/EI) ───────────────────────────────────────────────
+
+    [Fact]
+    public void Parse_InlineImageBiIdEi_SkipsImageDataAndContinues()
+    {
+        // BI/ID/EI block followed by a regular operator.
+        // The parser must consume the ID keyword and the binary payload up to EI,
+        // then continue to emit subsequent operators.
+        const string stream = "BI /W 10 /H 10 ID \xFF\xD8\xff\x20" + "\n\x45\x49\x20\x71";
+        var ops = Parse(stream);
+
+        // The BI dict-building ops (before ID) are emitted as a Name operator BI.
+        // The EI skipping leaves the next real operator (q) intact.
+        ops.ShouldNotBeEmpty();
+        ops.Last().Name.ShouldBe("q");
+    }
+
+    [Fact]
+    public void Parse_InlineImageWithoutTrailingEi_DoesNotThrow()
+    {
+        // Pathological stream: ID with no matching EI. Parser must not crash.
+        const string stream = "BT ID some binary data without end marker";
+        var ops = Should.NotThrow(static () => Parse(stream));
+        // BT was emitted before the ID token.
+        ops.Select(static o => o.Name).ShouldContain("BT");
+    }
+
+    [Fact]
+    public void Parse_InlineImageEiPrecededBySpace_IsRecognized()
+    {
+        // EI must be preceded by a whitespace byte (§7.4.9).
+        // Using a space before EI so the scanner matches it.
+        var bytes = Encoding.Latin1.GetBytes("BI ID ")
+            .Concat(" EI"u8.ToArray())
+            .Concat(Encoding.Latin1.GetBytes(" q"))
+            .ToArray();
+
+        var ops = Parse(bytes);
+        ops.Last().Name.ShouldBe("q");
+    }
+
+    [Fact]
+    public void Parse_InlineImageEiPrecededByLinefeed_IsRecognized()
+    {
+        var bytes = Encoding.Latin1.GetBytes("BI ID ")
+            .Concat(new byte[] { 0xFF, 0x00, (byte)'\n', (byte)'E', (byte)'I' })
+            .Concat(Encoding.Latin1.GetBytes(" Tj"))
+            .ToArray();
+
+        var ops = Parse(bytes);
+        ops.Last().Name.ShouldBe("Tj");
+    }
+
+    // ── Unexpected / skipped tokens ───────────────────────────────────────────
+
+    [Fact]
+    public void Parse_StandaloneArrayEnd_IsSkippedGracefully()
+    {
+        // ']' appearing outside an array is an unexpected token; must be skipped.
+        var ops = Parse("] BT ET");
+        ops.Count.ShouldBe(2);
+        ops[0].Name.ShouldBe("BT");
+    }
+
+    [Fact]
+    public void Parse_StandaloneDictionaryEnd_IsSkippedGracefully()
+    {
+        var ops = Parse(">> BT");
+        ops.Count.ShouldBe(1);
+        ops[0].Name.ShouldBe("BT");
+    }
+
+    [Fact]
+    public void Parse_BooleanTrueOperand_ParsedAndAssignedToOperator()
+    {
+        var ops = Parse("true false Q");
+        ops.Count.ShouldBe(1);
+        ops[0].Name.ShouldBe("Q");
+        ops[0].Operands.Count.ShouldBe(2);
+        ops[0].Operands[0].ShouldBeOfType<PdfBoolean>();
+        ops[0].Operands[1].ShouldBeOfType<PdfBoolean>();
+    }
+
+    [Fact]
+    public void Parse_NullOperand_ParsedAndAssignedToOperator()
+    {
+        var ops = Parse("null Q");
+        ops.Count.ShouldBe(1);
+        ops[0].Operands[0].ShouldBeOfType<PdfNull>();
+    }
+
+    [Fact]
+    public void Parse_DictionaryOperand_ParsedAsOperand()
+    {
+        // Inline dictionary as operand (unusual but spec-legal in some contexts).
+        var ops = Parse("<< /Key (value) >> Q");
+        ops.Count.ShouldBe(1);
+        ops[0].Name.ShouldBe("Q");
+        ops[0].Operands[0].ShouldBeOfType<PdfDictionary>();
+    }
+
+    [Fact]
+    public void Parse_StreamWithOnlyComments_ReturnsEmpty()
+    {
+        var ops = Parse("% comment line 1\n% comment line 2\n");
+        ops.ShouldBeEmpty();
     }
 }

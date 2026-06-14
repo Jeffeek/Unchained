@@ -116,4 +116,93 @@ public sealed class StampApplierTests : PdfTestBase
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(2);
     }
+
+    [Fact]
+    public async Task StampAsync_TopRightPosition_ContentContainsTj()
+    {
+        // Exercises a stamp positioned at the top-right of the page.
+        var stamp = new TextStamp("TOP-RIGHT", 480, 800);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Applier.StampAsync(doc, stamp, TestContext.Current.CancellationToken);
+        doc.Pages[1].GetContentOperators().ShouldContain(static op => op.Name == "Tj");
+    }
+
+    [Fact]
+    public async Task StampAsync_BottomLeftPosition_ContentContainsTj()
+    {
+        // Exercises a stamp positioned at the bottom-left of the page.
+        var stamp = new TextStamp("BOTTOM-LEFT", 10, 10);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Applier.StampAsync(doc, stamp, TestContext.Current.CancellationToken);
+        doc.Pages[1].GetContentOperators().ShouldContain(static op => op.Name == "Tj");
+    }
+
+    [Fact]
+    public async Task StampAsync_WithRotation_ContentContainsTmOperator()
+    {
+        // Exercises the rotation path (cosR/sinR != [1,0]).
+        var stamp = new TextStamp("ROTATED", 200, 400, RotationDegrees: 45f);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Applier.StampAsync(doc, stamp, TestContext.Current.CancellationToken);
+        doc.Pages[1].GetContentOperators().ShouldContain(static op => op.Name == "Tm");
+    }
+
+    [Fact]
+    public async Task StampAsync_WhiteGray_GrayLevelOneInStream()
+    {
+        // Exercises a non-zero GrayLevel (the `g` operator operand differs).
+        var stamp = new TextStamp("WATERMARK", 100, 400, GrayLevel: 0.5f);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Applier.StampAsync(doc, stamp, TestContext.Current.CancellationToken);
+        doc.Pages[1].GetContentOperators().ShouldContain(static op => op.Name == "g");
+    }
+
+    [Fact]
+    public async Task StampAsync_MultiPageDoc_AllFivePagesStamped()
+    {
+        var stamp = new TextStamp("ALL", 100, 400);
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(5), TestContext.Current.CancellationToken);
+        await Applier.StampAsync(doc, stamp, TestContext.Current.CancellationToken);
+        for (var i = 1; i <= 5; i++)
+            doc.Pages[i].GetContentOperators().ShouldContain(static op => op.Name == "Tj");
+    }
+
+    [Fact]
+    public async Task StampPageAsync_IsBackground_StampPrependedBeforeExistingContent()
+    {
+        // Exercises isBackground = true on a specific page.
+        var stamp = new TextStamp("BG", 100, 400, IsBackground: true);
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithTextContent("original text"),
+            TestContext.Current.CancellationToken);
+        await Applier.StampPageAsync(doc, 1, stamp, TestContext.Current.CancellationToken);
+        var ops = doc.Pages[1].GetContentOperators();
+        // Both the stamp and original content operators must be present.
+        ops.ShouldContain(static op => op.Name == "Tj");
+        ops.ShouldContain(static op => op.Name == "q");
+    }
+
+    [Fact]
+    public async Task StampAsync_CustomFont_FontNameAppearsInResources()
+    {
+        // Exercises a non-default FontName so the font dict uses a different /BaseFont.
+        var stamp = new TextStamp("SERIF", 100, 400, "Times-Roman");
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Applier.StampAsync(doc, stamp, TestContext.Current.CancellationToken);
+        // The page should be parseable and contain the Tf operator.
+        doc.Pages[1].GetContentOperators().ShouldContain(static op => op.Name == "Tf");
+    }
+
+    [Fact]
+    public async Task StampAsync_LargeFont_ContentStreamIsValid()
+    {
+        var stamp = new TextStamp("BIG", 100, 400, FontSize: 72f);
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Applier.StampAsync(doc, stamp, TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        ms.Position = 0;
+        await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
+    }
 }

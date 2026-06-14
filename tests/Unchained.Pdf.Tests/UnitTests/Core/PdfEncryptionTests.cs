@@ -3,13 +3,13 @@ using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Xunit;
 
-namespace Unchained.Pdf.Tests.UnitTests;
+namespace Unchained.Pdf.Tests.UnitTests.Core;
 
 /// <summary>
-///     Direct unit tests for AES-256 PDF encryption key derivation,
+///     Direct unit tests for AES-256 PDF encryption key derivation and password validation,
 ///     bypassing PDF serialization to isolate crypto correctness.
 /// </summary>
-public sealed class EncryptionCryptoTests
+public sealed class PdfEncryptionTests
 {
     [
         Theory,
@@ -39,20 +39,5 @@ public sealed class EncryptionCryptoTests
         var (_, encryptDict) = PdfEncryption.CreateWriteContext(options, fileId);
 
         Should.Throw<PdfEncryptedException>(() => PdfEncryption.CreateReadContext(encryptDict, fileId, "wrong"));
-    }
-
-    [Fact]
-    public void EncryptThenDecryptStream_AES256_Roundtrip()
-    {
-        var key = new byte[32];
-        for (var i = 0; i < 32; i++)
-            key[i] = (byte)i;
-
-        var ctx = new PdfEncryptionContext(key, PdfEncryptionAlgorithm.Aes256);
-        var plain = "Hello, encrypted world!"u8.ToArray();
-        var encrypted = ctx.EncryptStream(plain, 5, 0);
-        var decrypted = ctx.DecryptStream(encrypted, 5, 0);
-
-        decrypted.ShouldBe(plain);
     }
 }

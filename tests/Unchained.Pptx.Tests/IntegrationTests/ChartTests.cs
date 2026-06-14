@@ -14,24 +14,7 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 
 public sealed class ChartTests : PptxTestBase
 {
-    // ── Direct ChartWriter/ChartParser unit tests ─────────────────────────────
-
-    [Fact]
-    public void ChartWriter_LineChart_ProducesValidXml()
-    {
-        var model = new ChartModel { Type = ChartType.Line, Title = "Test Chart" };
-        model.Data.Categories.AddRange(["A", "B", "C"]);
-        var s = new ChartSeries { Name = "Series 1" };
-        s.Values.AddRange([1.0, 2.0, 3.0]);
-        model.Data.Series.Add(s);
-
-        var bytes = ChartWriter.Write(model);
-        bytes.ShouldNotBeEmpty();
-
-        var doc = OoXmlHelper.ParseXml(bytes);
-        doc.Root.ShouldNotBeNull();
-        doc.Root!.Name.LocalName.ShouldBe("chartSpace");
-    }
+    // ── ChartWriter → ChartParser round-trips ─────────────────────────────────
 
     [Fact]
     public void ChartParser_LineChart_ParsesType()

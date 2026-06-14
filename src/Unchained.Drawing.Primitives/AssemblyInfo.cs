@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Unchained.Pdf.Tests")]
 [assembly: InternalsVisibleTo("Unchained.Pptx.Tests")]
 [assembly: InternalsVisibleTo("Unchained.Ooxml.Tests")]
+[assembly: InternalsVisibleTo("Unchained.Drawing.Primitives.Tests")]
 [assembly: InternalsVisibleTo("Unchained.Diagnose")]
 [assembly: InternalsVisibleTo("Unchained.BatchCompare")]
 [assembly: InternalsVisibleTo("Unchained.Render")]

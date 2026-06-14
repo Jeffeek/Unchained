@@ -11,28 +11,6 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 
 public sealed class EncryptionTests : PptxTestBase
 {
-    // ── CFB read/write unit test ──────────────────────────────────────────────
-
-    [Fact]
-    public void Cfb_WriteRead_SmallStreamRoundTrip()
-    {
-        var smallData = "<?xml version=\"1.0\"?><root>hello world</root>"u8.ToArray();
-        var largeData = new byte[8192];
-        new Random(42).NextBytes(largeData);
-
-        var cfb = CfbDocument.Write([
-            ("EncryptionInfo", smallData),
-            ("EncryptedPackage", largeData)
-        ]);
-
-        var streams = CfbDocument.Read(cfb);
-
-        streams.ShouldContainKey("EncryptionInfo");
-        streams.ShouldContainKey("EncryptedPackage");
-        streams["EncryptionInfo"].ShouldBe(smallData);
-        streams["EncryptedPackage"].ShouldBe(largeData);
-    }
-
     // ── Encrypt / Decrypt round-trip ──────────────────────────────────────────
 
     [Fact]

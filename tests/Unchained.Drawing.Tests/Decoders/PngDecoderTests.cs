@@ -5,7 +5,7 @@ using Unchained.Drawing.Decoders;
 using Unchained.Drawing.Encoders;
 using Xunit;
 
-namespace Unchained.Pptx.Tests.UnitTests.Rendering;
+namespace Unchained.Drawing.Tests.Decoders;
 
 public sealed class PngDecoderTests
 {

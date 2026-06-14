@@ -3,7 +3,7 @@ using Unchained.Drawing.Constants;
 using Unchained.Drawing.Decoders;
 using Xunit;
 
-namespace Unchained.Pptx.Tests.UnitTests.Rendering;
+namespace Unchained.Drawing.Tests.Decoders;
 
 public sealed class JpegDecoderTests
 {
