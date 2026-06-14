@@ -31,6 +31,31 @@ public sealed class SaveOptionsTests
         // ReSharper restore RedundantArgumentDefaultValue
         a.ShouldBe(b);
     }
+
+    [Fact]
+    public void Default_NewFlags_AreFalse()
+    {
+        SaveOptions.Default.Encryption.ShouldBeNull();
+        SaveOptions.Default.Tagged.ShouldBeFalse();
+        SaveOptions.Default.Language.ShouldBeNull();
+        SaveOptions.Default.OptimizeSize.ShouldBeFalse();
+        SaveOptions.Default.AllowReusePageContent.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Compact_EnablesLinearizeOptimizeAndReuse()
+    {
+        SaveOptions.Compact.Linearize.ShouldBeTrue();
+        SaveOptions.Compact.OptimizeSize.ShouldBeTrue();
+        SaveOptions.Compact.AllowReusePageContent.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Compact_DoesNotOptimizeImagesOrTag()
+    {
+        SaveOptions.Compact.OptimizeImages.ShouldBeFalse();
+        SaveOptions.Compact.Tagged.ShouldBeFalse();
+    }
 }
 
 public sealed class PdfVersionTests

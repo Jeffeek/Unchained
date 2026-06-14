@@ -109,19 +109,16 @@ internal sealed class PdfFunction
             {
                 var c0 = ReadDoubles(dict["C0"]);
                 var c1 = ReadDoubles(dict["C1"]);
-                if (c0 is not null && c1 is not null)
-                {
-                    return new PdfFunction(2,
+                return c0 is not null && c1 is not null
+                    ? new PdfFunction(2,
                         domain,
                         c0,
                         c1,
                         1,
                         [],
                         [],
-                        []);
-                }
-
-                return null;
+                        [])
+                    : null;
             }
         }
     }

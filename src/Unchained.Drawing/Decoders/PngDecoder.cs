@@ -232,9 +232,6 @@ internal static class PngDecoder
         var pa = Math.Abs(p - a);
         var pb = Math.Abs(p - b);
         var pc = Math.Abs(p - c);
-        if (pa <= pb && pa <= pc)
-            return a;
-
-        return pb <= pc ? b : c;
+        return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
     }
 }

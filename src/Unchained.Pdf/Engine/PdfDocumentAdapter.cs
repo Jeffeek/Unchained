@@ -551,12 +551,12 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
                 seenHashes[hash] = obj.ObjectNumber;
         }
 
-        if (remapping.Count == 0) return objects.ToList();
-
-        return objects
-            .Where(o => !remapping.ContainsKey(o.ObjectNumber))
-            .Select(o => PdfObjectRemapper.RemapSelective(o, remapping) as PdfIndirectObject ?? o)
-            .ToList();
+        return remapping.Count == 0
+            ? objects.ToList()
+            : objects
+                .Where(o => !remapping.ContainsKey(o.ObjectNumber))
+                .Select(o => PdfObjectRemapper.RemapSelective(o, remapping) as PdfIndirectObject ?? o)
+                .ToList();
     }
 
     private static string? GetInfoString(PdfDictionary info, string key) =>

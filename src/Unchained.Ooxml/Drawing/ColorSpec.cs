@@ -127,10 +127,9 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
         else
             baseArgb = scheme?.Resolve(ThemeSlot) ?? OoxmlScaling.UnresolvedThemeColorArgb;
 
-        if (Math.Abs(LuminanceModifier - 1.0) < DoubleComparisonTolerance && LuminanceOffset == 0.0)
-            return baseArgb;
-
-        return ApplyLuminanceTransform(baseArgb, LuminanceModifier, LuminanceOffset);
+        return Math.Abs(LuminanceModifier - 1.0) < DoubleComparisonTolerance && LuminanceOffset == 0.0
+            ? baseArgb
+            : ApplyLuminanceTransform(baseArgb, LuminanceModifier, LuminanceOffset);
     }
 
     // ── Equality ─────────────────────────────────────────────────────────────

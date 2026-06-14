@@ -271,14 +271,13 @@ public sealed class FormFiller : IFormFiller
         var isTruthy = v is "true" or "on" or "yes" or "1" or "checked" or "x" or "X" or "On" or "Yes";
         var isFalsy = v.Length == 0 || v is "false" or "off" or "no" or "0" or "unchecked" or "Off" or "No";
 
-        if (isFalsy && !isTruthy)
-            return "Off";
-
-        if (isTruthy)
-            return OnStateName(field, core) ?? "Yes";
-
-        // Explicit state name supplied by the caller.
-        return v;
+        return isFalsy && !isTruthy
+            ? "Off"
+            : isTruthy
+                ? OnStateName(field, core) ?? "Yes"
+                :
+                // Explicit state name supplied by the caller.
+                v;
     }
 
     // Finds the "on" appearance-state name from the field's (or its widget kid's) /AP /N
