@@ -149,7 +149,8 @@ public static class PptxPropertyAdapter
         {
             case AutoShape auto:
             {
-                groups.Insert(1,
+                groups.Insert(
+                    1,
                     new PropertyGroup
                     {
                         Header = "Auto Shape",
@@ -158,7 +159,8 @@ public static class PptxPropertyAdapter
                             Entry("Preset", auto.ShapeType.ToString()),
                             Entry("Is text box", auto.IsTextBox.ToString(), PropertyValueKind.Boolean)
                         ]
-                    });
+                    }
+                );
                 var text = auto.TextFrame.PlainText;
                 rawText = string.IsNullOrWhiteSpace(text) ? null : text;
             }
@@ -166,7 +168,8 @@ public static class PptxPropertyAdapter
 
             case PictureShape picture:
             {
-                groups.Insert(1,
+                groups.Insert(
+                    1,
                     new PropertyGroup
                     {
                         Header = "Picture",
@@ -176,13 +179,15 @@ public static class PptxPropertyAdapter
                             Entry("Content type", picture.Image?.ContentType ?? "(none)"),
                             Entry("Pixel size", picture.Image is { PixelWidth: > 0 } i ? $"{i.PixelWidth} × {i.PixelHeight}" : "(unknown)")
                         ]
-                    });
+                    }
+                );
             }
             break;
 
             case TableShape table:
             {
-                groups.Insert(1,
+                groups.Insert(
+                    1,
                     new PropertyGroup
                     {
                         Header = "Table",
@@ -192,14 +197,16 @@ public static class PptxPropertyAdapter
                             Entry("Banded rows", table.HasBandedRows.ToString(), PropertyValueKind.Boolean),
                             Entry("Total row", table.HasTotalRow.ToString(), PropertyValueKind.Boolean)
                         ]
-                    });
+                    }
+                );
             }
             break;
 
             case ChartShape chartShape:
             {
                 var chart = chartShape.Chart;
-                groups.Insert(1,
+                groups.Insert(
+                    1,
                     new PropertyGroup
                     {
                         Header = "Chart",
@@ -211,7 +218,8 @@ public static class PptxPropertyAdapter
                             Entry("Categories", chart.Data.Categories.Count.ToString(), PropertyValueKind.Number),
                             Entry("Legend", chart.Legend.IsVisible ? chart.Legend.Position.ToString() : "(hidden)")
                         ]
-                    });
+                    }
+                );
                 rawText = DescribeChart(chart);
                 rawLabel = "Chart Data";
             }
@@ -219,12 +227,14 @@ public static class PptxPropertyAdapter
 
             case GroupShape group:
             {
-                groups.Insert(1,
+                groups.Insert(
+                    1,
                     new PropertyGroup
                     {
                         Header = "Group",
                         Entries = [Entry("Children", group.Children.Count.ToString(), PropertyValueKind.Number)]
-                    });
+                    }
+                );
             }
             break;
         }

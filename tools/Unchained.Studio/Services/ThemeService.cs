@@ -48,9 +48,11 @@ public sealed class ThemeService(IJSRuntime js)
         try
         {
             await js.InvokeVoidAsync(
-                "unchainedStudio.setLocalStorage",
-                StorageKey,
-                IsDarkMode ? "true" : "false").ConfigureAwait(false);
+                    "unchainedStudio.setLocalStorage",
+                    StorageKey,
+                    IsDarkMode ? "true" : "false"
+                )
+                .ConfigureAwait(false);
         }
         catch
         {

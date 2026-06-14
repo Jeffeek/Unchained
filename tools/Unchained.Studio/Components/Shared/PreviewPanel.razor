@@ -1,9 +1,9 @@
-@inject RenderingService Renderer
-@inject PdfiumReferenceRenderer Pdfium
-@inject IDialogService Dialogs
 @using System.Globalization
 @using Unchained.Pdf.Abstractions
 @using Unchained.Pdf.Models
+@inject RenderingService Renderer
+@inject PdfiumReferenceRenderer Pdfium
+@inject IDialogService Dialogs
 
 <div class="preview-panel">
     <div class="preview-toolbar">
@@ -414,4 +414,5 @@
 
         await Dialogs.ShowAsync<ExportComparisonDialog>("Export Comparison", parameters, options);
     }
+
 }

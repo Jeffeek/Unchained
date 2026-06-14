@@ -197,7 +197,8 @@
         await Exporter.TriggerDownloadAsync(
             bytes,
             $"{BaseName}.odp",
-            "application/vnd.oasis.opendocument.presentation");
+            "application/vnd.oasis.opendocument.presentation"
+        );
     }
 
     private async Task ExportHtmlZip()

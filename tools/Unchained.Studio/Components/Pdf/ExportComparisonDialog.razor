@@ -286,7 +286,8 @@
         await Exporter.TriggerDownloadAsync(
             zipBytes,
             $"{baseName}_comparison_{_dpi}dpi.zip",
-            "application/zip");
+            "application/zip"
+        );
         Snackbar.Add($"ZIP with {files.Count} files downloaded.", Severity.Success);
     }
 
@@ -303,4 +304,5 @@
             _ => [CurrentPage]
         };
     }
+
 }

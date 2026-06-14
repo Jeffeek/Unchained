@@ -300,12 +300,14 @@
                 using var ms = new MemoryStream();
                 await using var stream = file.OpenReadStream(maxBytes);
                 await stream.CopyToAsync(ms);
-                _files.Add(new BatchEntry
-                {
-                    FileName = file.Name,
-                    SizeBytes = file.Size,
-                    Bytes = ms.ToArray()
-                });
+                _files.Add(
+                    new BatchEntry
+                    {
+                        FileName = file.Name,
+                        SizeBytes = file.Size,
+                        Bytes = ms.ToArray()
+                    }
+                );
             }
             catch (Exception ex)
             {
@@ -632,4 +634,5 @@
 
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
+
 }

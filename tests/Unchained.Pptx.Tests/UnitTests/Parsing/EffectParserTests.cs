@@ -33,7 +33,8 @@ public sealed class EffectParserTests
     [Fact]
     public void Parse_OuterShadow_ReadsAttributes()
     {
-        var outer = new XElement(A + "outerShdw",
+        var outer = new XElement(
+            A + "outerShdw",
             new XAttribute("blurRad", "50000"),
             new XAttribute("dist", "40000"),
             new XAttribute("dir", "2700000"),
@@ -41,7 +42,8 @@ public sealed class EffectParserTests
             new XAttribute("sy", "80000"),
             new XAttribute("algn", "br"),
             new XAttribute("rotWithShape", "1"),
-            new XElement(DmlNames.SrgbColor, new XAttribute("val", "808080")));
+            new XElement(DmlNames.SrgbColor, new XAttribute("val", "808080"))
+        );
         var effects = new EffectFormat();
         EffectParser.Parse(WithEffects(outer), effects);
 
@@ -73,11 +75,13 @@ public sealed class EffectParserTests
     [Fact]
     public void Parse_InnerShadow_ReadsAttributes()
     {
-        var inner = new XElement(A + "innerShdw",
+        var inner = new XElement(
+            A + "innerShdw",
             new XAttribute("blurRad", "30000"),
             new XAttribute("dist", "20000"),
             new XAttribute("dir", "5400000"),
-            new XElement(DmlNames.SrgbColor, new XAttribute("val", "000000")));
+            new XElement(DmlNames.SrgbColor, new XAttribute("val", "000000"))
+        );
         var effects = new EffectFormat();
         EffectParser.Parse(WithEffects(inner), effects);
 
@@ -89,9 +93,11 @@ public sealed class EffectParserTests
     [Fact]
     public void Parse_Glow_ReadsRadiusAndColor()
     {
-        var glow = new XElement(A + "glow",
+        var glow = new XElement(
+            A + "glow",
             new XAttribute("rad", "63500"),
-            new XElement(DmlNames.SrgbColor, new XAttribute("val", "FFFF00")));
+            new XElement(DmlNames.SrgbColor, new XAttribute("val", "FFFF00"))
+        );
         var effects = new EffectFormat();
         EffectParser.Parse(WithEffects(glow), effects);
 
@@ -103,12 +109,14 @@ public sealed class EffectParserTests
     [Fact]
     public void Parse_Reflection_ReadsOpacities()
     {
-        var refl = new XElement(A + "reflection",
+        var refl = new XElement(
+            A + "reflection",
             new XAttribute("blurRad", "6350"),
             new XAttribute("stA", "50000"),
             new XAttribute("endA", "300"),
             new XAttribute("dist", "5000"),
-            new XAttribute("dir", "5400000"));
+            new XAttribute("dir", "5400000")
+        );
         var effects = new EffectFormat();
         EffectParser.Parse(WithEffects(refl), effects);
 
@@ -131,9 +139,11 @@ public sealed class EffectParserTests
     [Fact]
     public void Parse_Blur_ReadsRadiusAndGrow()
     {
-        var blur = new XElement(A + "blur",
+        var blur = new XElement(
+            A + "blur",
             new XAttribute("rad", "9000"),
-            new XAttribute("grow", "0"));
+            new XAttribute("grow", "0")
+        );
         var effects = new EffectFormat();
         EffectParser.Parse(WithEffects(blur), effects);
 
@@ -157,10 +167,13 @@ public sealed class EffectParserTests
     public void Parse_MultipleEffects_AllPopulated()
     {
         var effects = new EffectFormat();
-        EffectParser.Parse(WithEffects(
+        EffectParser.Parse(
+            WithEffects(
                 new XElement(A + "glow", new XAttribute("rad", "1")),
-                new XElement(A + "blur", new XAttribute("rad", "1"))),
-            effects);
+                new XElement(A + "blur", new XAttribute("rad", "1"))
+            ),
+            effects
+        );
 
         effects.Glow.ShouldNotBeNull();
         effects.Blur.ShouldNotBeNull();

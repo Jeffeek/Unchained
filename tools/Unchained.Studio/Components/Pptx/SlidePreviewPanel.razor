@@ -114,7 +114,8 @@
             var image = await SlideRenderer.RenderAsync(
                 current,
                 Document.SlideSize,
-                new RenderOptions { WidthPx = 1280, HeightPx = 720 });
+                new RenderOptions { WidthPx = 1280, HeightPx = 720 }
+            );
             _slideBytes = image.Data.ToArray();
             _lastRendered = CurrentSlide;
         }

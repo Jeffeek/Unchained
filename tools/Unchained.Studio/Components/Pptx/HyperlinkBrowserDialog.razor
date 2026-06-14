@@ -82,12 +82,15 @@
                     ? ($"Slide {n}", Icons.Material.Outlined.Slideshow)
                     : ("(no target)", Icons.Material.Outlined.LinkOff);
 
-            _links.Add(new LinkRow(
-                numberBySlide.GetValueOrDefault(link.Slide, 0),
-                link.Shape.Name,
-                target,
-                action.Tooltip ?? string.Empty,
-                icon));
+            _links.Add(
+                new LinkRow(
+                    numberBySlide.GetValueOrDefault(link.Slide, 0),
+                    link.Shape.Name,
+                    target,
+                    action.Tooltip ?? string.Empty,
+                    icon
+                )
+            );
         }
     }
 

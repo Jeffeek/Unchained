@@ -1,5 +1,4 @@
 @using Unchained.Pdf.Models
-
 <MudDialog Style="min-width:460px; max-width:560px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -79,7 +78,8 @@
             FontSize: _fontSize,
             GrayLevel: _gray,
             RotationDegrees: _rotation,
-            IsBackground: _background);
+            IsBackground: _background
+        );
         MudDialog.Close(DialogResult.Ok(new WatermarkResult(stamp, _allPages)));
     }
 

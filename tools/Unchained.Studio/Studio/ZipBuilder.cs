@@ -15,7 +15,7 @@ public static class ZipBuilder
     public static byte[] Build(IReadOnlyList<(string Name, byte[] Bytes)> files)
     {
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             foreach (var (name, bytes) in files)
             {

@@ -252,7 +252,8 @@ public static class PdfPropertyAdapter
                 [
                     Entry("Keyword", op.Name, PropertyValueKind.Text),
                     .. op.Operands.Select(static (o, i) =>
-                        Entry($"Operand {i + 1}", o.ToString() ?? "null", PropertyValueKind.Text))
+                        Entry($"Operand {i + 1}", o.ToString() ?? "null", PropertyValueKind.Text)
+                    )
                 ]
             }
         ]

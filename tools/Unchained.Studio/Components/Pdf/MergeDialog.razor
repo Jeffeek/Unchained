@@ -84,7 +84,7 @@
         StateHasChanged();
         try
         {
-            foreach (var file in e.GetMultipleFiles(maximumFileCount: 20))
+            foreach (var file in e.GetMultipleFiles(20))
             {
                 if (file.Size > StudioConstants.MaxUploadBytes)
                 {
