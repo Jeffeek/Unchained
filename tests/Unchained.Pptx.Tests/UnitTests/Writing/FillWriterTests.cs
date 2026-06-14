@@ -106,7 +106,7 @@ public sealed class FillWriterTests
 
     [Fact]
     public void Write_Group_EmitsGrpFill()
-    {
+        {
         var parent = new XElement(DmlNames.Dml + "spPr");
         FillWriter.Write(parent, new FillFormat { Type = FillType.Group });
         parent.Elements().Any(static e => e.Name.LocalName == "grpFill").ShouldBeTrue();

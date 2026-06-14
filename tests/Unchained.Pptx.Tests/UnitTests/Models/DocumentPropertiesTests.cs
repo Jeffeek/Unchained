@@ -22,15 +22,7 @@ public sealed class DocumentPropertiesTests
     public void CoreProperties_RoundTrip()
     {
         // ReSharper disable BadListLineBreaks
-        var created = new DateTimeOffset(
-            2026,
-            1,
-            1,
-            0,
-            0,
-            0,
-            TimeSpan.Zero
-        );
+        var created = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         // ReSharper restore BadListLineBreaks
         var props = new DocumentProperties
         {

@@ -21,7 +21,7 @@ public sealed class ColorSpecResolveTests
     public void Resolve_LuminanceModifierZero_DarkensToBlack()
     {
         // White with a luminance multiplier of 0 → black (alpha preserved).
-        var color = ColorSpec.FromTheme(ThemeColorSlot.Light1, 0.0);
+        var color = ColorSpec.FromTheme(ThemeColorSlot.Light1, luminanceModifier: 0.0);
         var scheme = new ColorScheme { Light1 = ColorSpec.FromRgb(0xFF, 0xFF, 0xFF) };
         color.Resolve(scheme).ShouldBe(0xFF000000u);
     }
@@ -30,7 +30,7 @@ public sealed class ColorSpecResolveTests
     public void Resolve_LuminanceOffsetOne_LightensToWhite()
     {
         // Black with a luminance offset of +1.0 → white.
-        var color = ColorSpec.FromTheme(ThemeColorSlot.Dark1, 1.0, 1.0);
+        var color = ColorSpec.FromTheme(ThemeColorSlot.Dark1, luminanceModifier: 1.0, luminanceOffset: 1.0);
         var scheme = new ColorScheme { Dark1 = ColorSpec.FromRgb(0x00, 0x00, 0x00) };
         color.Resolve(scheme).ShouldBe(0xFFFFFFFFu);
     }
@@ -39,7 +39,7 @@ public sealed class ColorSpecResolveTests
     public void Resolve_LuminanceModifier_PreservesHue()
     {
         // Dimming a pure-red theme colour keeps it red-ish (G and B stay 0).
-        var color = ColorSpec.FromTheme(ThemeColorSlot.Accent1, 0.5);
+        var color = ColorSpec.FromTheme(ThemeColorSlot.Accent1, luminanceModifier: 0.5);
         var scheme = new ColorScheme { Accent1 = ColorSpec.FromRgb(0xFF, 0x00, 0x00) };
         var argb = color.Resolve(scheme);
         var red = (argb >> 16) & 0xFF;
@@ -57,7 +57,7 @@ public sealed class ColorSpecResolveTests
     [Fact]
     public void ToString_Theme_ShowsSlotAndTransforms()
     {
-        var s = ColorSpec.FromTheme(ThemeColorSlot.Accent2, 0.75, 0.1).ToString();
+        var s = ColorSpec.FromTheme(ThemeColorSlot.Accent2, luminanceModifier: 0.75, luminanceOffset: 0.1).ToString();
         s.ShouldContain("Accent2");
         s.ShouldContain("mod=");
         s.ShouldContain("off=");

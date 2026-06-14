@@ -24,11 +24,9 @@ public sealed class ColorParserTests
     [Fact]
     public void Parse_SrgbClrWithAlpha_ReadsAlpha()
     {
-        var srgb = new XElement(
-            DmlNames.SrgbColor,
+        var srgb = new XElement(DmlNames.SrgbColor,
             new XAttribute("val", "FF0000"),
-            new XElement(DmlNames.Alpha, new XAttribute("val", "50000"))
-        );
+            new XElement(DmlNames.Alpha, new XAttribute("val", "50000")));
         var color = ColorParser.Parse(Wrap(srgb));
         // 50000/100000 * 255 ≈ 128.
         var alpha = (color.Rgb >> 24) & 0xFF;
@@ -47,11 +45,9 @@ public sealed class ColorParserTests
     [Fact]
     public void Parse_SchemeClrWithLumMod_ReadsModifier()
     {
-        var scheme = new XElement(
-            DmlNames.SchemeColor,
+        var scheme = new XElement(DmlNames.SchemeColor,
             new XAttribute("val", "dk1"),
-            new XElement(DmlNames.LuminanceModifier, new XAttribute("val", "50000"))
-        );
+            new XElement(DmlNames.LuminanceModifier, new XAttribute("val", "50000")));
         var color = ColorParser.Parse(Wrap(scheme));
         color.LuminanceModifier.ShouldBe(0.5, 0.001);
     }
@@ -59,11 +55,9 @@ public sealed class ColorParserTests
     [Fact]
     public void Parse_SystemColor_UsesLastClr()
     {
-        var sys = new XElement(
-            DmlNames.SystemColor,
+        var sys = new XElement(DmlNames.SystemColor,
             new XAttribute("val", "windowText"),
-            new XAttribute("lastClr", "00FF00")
-        );
+            new XAttribute("lastClr", "00FF00"));
         var color = ColorParser.Parse(Wrap(sys));
         color.Resolve(null).ShouldBe(0xFF00FF00u);
     }

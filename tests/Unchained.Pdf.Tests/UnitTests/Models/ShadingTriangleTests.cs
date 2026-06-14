@@ -38,40 +38,8 @@ public sealed class ShadingTriangleTests
     public void RecordEquality_SameVertices_AreEqual()
     {
         // ReSharper disable BadListLineBreaks
-        var a = new ShadingTriangle(
-            0,
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13
-        );
-        var b = new ShadingTriangle(
-            0,
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13
-        );
+        var a = new ShadingTriangle(0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+        var b = new ShadingTriangle(0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
         // ReSharper restore BadListLineBreaks
         a.ShouldBe(b);
     }
