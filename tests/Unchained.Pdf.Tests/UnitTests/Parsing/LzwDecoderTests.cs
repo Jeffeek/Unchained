@@ -54,13 +54,15 @@ public sealed class LzwDecoderTests
     {
         // Clear, 'H','e','l','l','o', EOD
         // ReSharper disable BadListLineBreaks
-        var data = BuildLzwStream(Clear,
+        var data = BuildLzwStream(
+            Clear,
             72,
             101,
             108,
             108,
             111,
-            Eod);
+            Eod
+        );
         // ReSharper restore BadListLineBreaks
         var result = await Task.Run(() => LzwDecoder.Decode(data));
         Encoding.ASCII.GetString(result.Span).ShouldBe("Hello");
@@ -96,13 +98,15 @@ public sealed class LzwDecoderTests
         // Clear, 'A','B','A','B' — second 'A' triggers table entry 258='AB',
         // second 'B' may reference 258. Use raw literals to stay below table threshold.
         // ReSharper disable BadListLineBreaks
-        var data = BuildLzwStream(Clear,
+        var data = BuildLzwStream(
+            Clear,
             65,
             66,
             65,
             66,
             65,
-            Eod);
+            Eod
+        );
         // ReSharper restore BadListLineBreaks
         var result = await Task.Run(() => LzwDecoder.Decode(data));
         Encoding.ASCII.GetString(result.Span).ShouldBe("ABABA");
@@ -131,6 +135,7 @@ public sealed class LzwDecoderTests
         // After Clear, nextCode=258. Sending code 259 (not yet in table) is illegal.
         var data = BuildLzwStream(Clear, 259, Eod);
         await Should.ThrowAsync<InvalidDataException>(() =>
-            Task.Run(() => LzwDecoder.Decode(data)));
+            Task.Run(() => LzwDecoder.Decode(data))
+        );
     }
 }

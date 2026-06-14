@@ -85,11 +85,13 @@ public sealed class ConvenienceApiTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         // End point is left-and-up of the start: expect flips + positive extents.
-        var line = doc.Slides[0].Shapes.AddLine(
-            Emu.FromInches(4),
-            Emu.FromInches(3),
-            Emu.FromInches(1),
-            Emu.FromInches(1));
+        var line = doc.Slides[0]
+            .Shapes.AddLine(
+                Emu.FromInches(4),
+                Emu.FromInches(3),
+                Emu.FromInches(1),
+                Emu.FromInches(1)
+            );
 
         line.ConnectorType.ShouldBe(ConnectorType.Straight);
         line.X.Value.ShouldBe(Emu.FromInches(1).Value);
@@ -104,12 +106,14 @@ public sealed class ConvenienceApiTests : PptxTestBase
     public void AutoShape_TextShortcut_RoundTripsWithTextFrame()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(2),
-            Emu.FromInches(1));
+        var shape = doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(2),
+                Emu.FromInches(1)
+            );
 
         shape.Text = "Hello";
         shape.Text.ShouldBe("Hello");
@@ -120,11 +124,13 @@ public sealed class ConvenienceApiTests : PptxTestBase
     public async Task MergedTable_SurvivesRoundTrip()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero,
-            Emu.Zero,
-            [Emu.FromInches(1), Emu.FromInches(1)],
-            [Emu.FromInches(0.5), Emu.FromInches(0.5)]);
+        var table = doc.Slides[0]
+            .Shapes.AddTable(
+                Emu.Zero,
+                Emu.Zero,
+                [Emu.FromInches(1), Emu.FromInches(1)],
+                [Emu.FromInches(0.5), Emu.FromInches(0.5)]
+            );
         table.MergeCells(0, 0, 1, 0);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);

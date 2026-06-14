@@ -93,16 +93,19 @@ internal static class AgileEncryption
             encryptedVerifierInput,
             encryptedVerifierHash,
             encryptedHmacKey,
-            encryptedHmacValue);
+            encryptedHmacValue
+        );
 
         var encryptionInfoStream = new byte[EncryptionInfoHeader.Length + xmlBytes.Length];
         EncryptionInfoHeader.CopyTo(encryptionInfoStream, 0);
         xmlBytes.CopyTo(encryptionInfoStream, EncryptionInfoHeader.Length);
 
-        return CfbDocument.Write([
-            ("EncryptionInfo", encryptionInfoStream),
-            ("EncryptedPackage", encryptedPackage)
-        ]);
+        return CfbDocument.Write(
+            [
+                ("EncryptionInfo", encryptionInfoStream),
+                ("EncryptedPackage", encryptedPackage)
+            ]
+        );
     }
 
     /// <summary>
@@ -148,7 +151,8 @@ internal static class AgileEncryption
         if (!CryptographicOperations.FixedTimeEquals(actualHash, expectedHash.AsSpan(0, Math.Min(64, expectedHash.Length))))
         {
             throw new PptxEncryptedException(
-                "The supplied password is incorrect. Supply the correct password via OpenOptions.Password.");
+                "The supplied password is incorrect. Supply the correct password via OpenOptions.Password."
+            );
         }
 
         // Decrypt the document key and the package
@@ -346,43 +350,60 @@ internal static class AgileEncryption
         var enc = XNamespace.Get("http://schemas.microsoft.com/office/2006/encryption");
         var pwd = XNamespace.Get("http://schemas.microsoft.com/office/2006/keyEncryptor/password");
 
-        var encEl = new XElement(enc + "encryption",
-            new XAttribute(XNamespace.Xmlns + "p", pwd.NamespaceName));
+        var encEl = new XElement(
+            enc + "encryption",
+            new XAttribute(XNamespace.Xmlns + "p", pwd.NamespaceName)
+        );
 
-        encEl.Add(new XElement(enc + "keyData",
-            new XAttribute("saltSize", SaltSize),
-            new XAttribute("blockSize", BlockSize),
-            new XAttribute("keyBits", KeyBytes * 8),
-            new XAttribute("hashSize", 64),
-            new XAttribute("cipherAlgorithm", "AES"),
-            new XAttribute("cipherChaining", "ChainingModeCBC"),
-            new XAttribute("hashAlgorithm", "SHA512"),
-            new XAttribute("saltValue", Convert.ToBase64String(documentSalt))));
+        encEl.Add(
+            new XElement(
+                enc + "keyData",
+                new XAttribute("saltSize", SaltSize),
+                new XAttribute("blockSize", BlockSize),
+                new XAttribute("keyBits", KeyBytes * 8),
+                new XAttribute("hashSize", 64),
+                new XAttribute("cipherAlgorithm", "AES"),
+                new XAttribute("cipherChaining", "ChainingModeCBC"),
+                new XAttribute("hashAlgorithm", "SHA512"),
+                new XAttribute("saltValue", Convert.ToBase64String(documentSalt))
+            )
+        );
 
-        encEl.Add(new XElement(enc + "dataIntegrity",
-            new XAttribute("encryptedHmacKey", Convert.ToBase64String(encryptedHmacKey)),
-            new XAttribute("encryptedHmacValue", Convert.ToBase64String(encryptedHmacValue))));
+        encEl.Add(
+            new XElement(
+                enc + "dataIntegrity",
+                new XAttribute("encryptedHmacKey", Convert.ToBase64String(encryptedHmacKey)),
+                new XAttribute("encryptedHmacValue", Convert.ToBase64String(encryptedHmacValue))
+            )
+        );
 
-        var keyEncryptor = new XElement(enc + "keyEncryptor",
-            new XAttribute("uri", "http://schemas.microsoft.com/office/2006/keyEncryptor/password"));
-        keyEncryptor.Add(new XElement(pwd + "encryptedKey",
-            new XAttribute("spinCount", SpinCount),
-            new XAttribute("saltSize", SaltSize),
-            new XAttribute("blockSize", BlockSize),
-            new XAttribute("keyBits", KeyBytes * 8),
-            new XAttribute("hashSize", 64),
-            new XAttribute("cipherAlgorithm", "AES"),
-            new XAttribute("cipherChaining", "ChainingModeCBC"),
-            new XAttribute("hashAlgorithm", "SHA512"),
-            new XAttribute("saltValue", Convert.ToBase64String(passwordSalt)),
-            new XAttribute("encryptedVerifierHashInput", Convert.ToBase64String(encryptedVerifierInput)),
-            new XAttribute("encryptedVerifierHash", Convert.ToBase64String(encryptedVerifierHash)),
-            new XAttribute("encryptedKeyValue", Convert.ToBase64String(encryptedKeyValue))));
+        var keyEncryptor = new XElement(
+            enc + "keyEncryptor",
+            new XAttribute("uri", "http://schemas.microsoft.com/office/2006/keyEncryptor/password")
+        );
+        keyEncryptor.Add(
+            new XElement(
+                pwd + "encryptedKey",
+                new XAttribute("spinCount", SpinCount),
+                new XAttribute("saltSize", SaltSize),
+                new XAttribute("blockSize", BlockSize),
+                new XAttribute("keyBits", KeyBytes * 8),
+                new XAttribute("hashSize", 64),
+                new XAttribute("cipherAlgorithm", "AES"),
+                new XAttribute("cipherChaining", "ChainingModeCBC"),
+                new XAttribute("hashAlgorithm", "SHA512"),
+                new XAttribute("saltValue", Convert.ToBase64String(passwordSalt)),
+                new XAttribute("encryptedVerifierHashInput", Convert.ToBase64String(encryptedVerifierInput)),
+                new XAttribute("encryptedVerifierHash", Convert.ToBase64String(encryptedVerifierHash)),
+                new XAttribute("encryptedKeyValue", Convert.ToBase64String(encryptedKeyValue))
+            )
+        );
 
         encEl.Add(new XElement(enc + "keyEncryptors", keyEncryptor));
 
         return Encoding.UTF8.GetBytes(
-            new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), encEl).ToString());
+            new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), encEl).ToString()
+        );
     }
 
     private static (byte[] documentSalt, byte[] passwordSalt, int spinCount,
@@ -408,8 +429,10 @@ internal static class AgileEncryption
             encryptedVerifierHash: B64(encKeyEl, "encryptedVerifierHash"));
 
         static byte[] B64(XElement el, string attr) =>
-            Convert.FromBase64String((string?)el.Attribute(attr)
-                                     ?? throw new PptxEncryptedException($"Missing attribute: {attr}"));
+            Convert.FromBase64String(
+                (string?)el.Attribute(attr)
+                ?? throw new PptxEncryptedException($"Missing attribute: {attr}")
+            );
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────

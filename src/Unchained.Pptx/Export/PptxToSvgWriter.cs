@@ -34,13 +34,17 @@ internal static class PptxToSvgWriter
 
         if (options.Responsive)
         {
-            sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
-                          $"viewBox=\"0 0 {w:F4} {h:F4}\">");
+            sb.AppendLine(
+                $"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
+                $"viewBox=\"0 0 {w:F4} {h:F4}\">"
+            );
         }
         else
         {
-            sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
-                          $"width=\"{w:F4}pt\" height=\"{h:F4}pt\" viewBox=\"0 0 {w:F4} {h:F4}\">");
+            sb.AppendLine(
+                $"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
+                $"width=\"{w:F4}pt\" height=\"{h:F4}pt\" viewBox=\"0 0 {w:F4} {h:F4}\">"
+            );
         }
 
         // Background
@@ -204,9 +208,11 @@ internal static class PptxToSvgWriter
                     ? ToSvgColor(run.Format.Fill.Solid.Color.Resolve(colorScheme))
                     : defaultColor;
 
-                sb.Append($"<tspan font-size=\"{fs:F1}\" font-weight=\"{weight}\" " +
-                          $"font-style=\"{style}\" fill=\"{fill}\">" +
-                          $"{EscapeSvg(run.Text)}</tspan>");
+                sb.Append(
+                    $"<tspan font-size=\"{fs:F1}\" font-weight=\"{weight}\" " +
+                    $"font-style=\"{style}\" fill=\"{fill}\">" +
+                    $"{EscapeSvg(run.Text)}</tspan>"
+                );
             }
 
             sb.AppendLine("</text>");
@@ -222,9 +228,11 @@ internal static class PptxToSvgWriter
     )
     {
         var dataUri = ExportText.ToBase64DataUri(pic.Image!.Data, pic.Image.ContentType);
-        sb.AppendLine($"<image x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" " +
-                      $"preserveAspectRatio=\"none\" " +
-                      $"href=\"{dataUri}\"/>");
+        sb.AppendLine(
+            $"<image x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" " +
+            $"preserveAspectRatio=\"none\" " +
+            $"href=\"{dataUri}\"/>"
+        );
     }
 
     private static string ToSvgColor(uint argb)

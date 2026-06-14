@@ -59,8 +59,10 @@ internal sealed class PresentationWriter
 
         // Register standard defaults
         var contentTypes = new ContentTypeMap();
-        contentTypes.RegisterDefault("rels",
-            "application/vnd.openxmlformats-package.relationships+xml");
+        contentTypes.RegisterDefault(
+            "rels",
+            "application/vnd.openxmlformats-package.relationships+xml"
+        );
         contentTypes.RegisterDefault("xml", "application/xml");
 
         // Assign master relationship IDs before writing presentation.xml
@@ -94,7 +96,8 @@ internal sealed class PresentationWriter
             contentTypes,
             ref chartPartIndex,
             ref notesPartIndex,
-            ref commentPartIndex);
+            ref commentPartIndex
+        );
 
         // Write comment authors (M7) — before presentation.xml so we can add relationship
         var hasAnyComments = slides.Any(static s => s.HasComments);
@@ -112,7 +115,8 @@ internal sealed class PresentationWriter
         // Write presentation.xml (includes sections and write-protection). Use the macro-enabled
         // content type when a VBA project is being preserved (M-G).
         var hasMacros = preserved?.HasMacros == true;
-        WritePresentationPart(package,
+        WritePresentationPart(
+            package,
             slides,
             masters,
             slideSize,
@@ -120,7 +124,8 @@ internal sealed class PresentationWriter
             protection,
             contentTypes,
             hasPresProps,
-            hasMacros);
+            hasMacros
+        );
 
         // Re-emit verbatim-preserved content (VBA project, digital signatures) (M-G).
         if (preserved is { IsEmpty: false })
@@ -130,12 +135,16 @@ internal sealed class PresentationWriter
         WriteCoreProperties(package, properties, contentTypes);
 
         // Package-level relationships
-        package.AddPackageRelationship("rId1",
+        package.AddPackageRelationship(
+            "rId1",
             PmlNames.RelTypePresentation,
-            PresentationPartUri.TrimStart('/'));
-        package.AddPackageRelationship("rId2",
+            PresentationPartUri.TrimStart('/')
+        );
+        package.AddPackageRelationship(
+            "rId2",
             PmlNames.RelTypeCoreProperties,
-            CorePropsPartUri.TrimStart('/'));
+            CorePropsPartUri.TrimStart('/')
+        );
 
         var zipBytes = package.Save();
 
@@ -182,9 +191,11 @@ internal sealed class PresentationWriter
             // Write theme
             var themeUri = $"/ppt/theme/theme{i + 1}.xml";
             var themeXml = ThemeWriter.Write(master.Theme);
-            package.AddOrReplacePart(themeUri,
+            package.AddOrReplacePart(
+                themeUri,
                 PmlNames.ContentTypeTheme,
-                new XDocument(themeXml).ToUtf8Bytes());
+                new XDocument(themeXml).ToUtf8Bytes()
+            );
             contentTypes.Register(themeUri, PmlNames.ContentTypeTheme);
 
             // Write layouts
@@ -192,22 +203,28 @@ internal sealed class PresentationWriter
 
             // Write master XML
             var masterXml = MasterWriter.Write(master, themeUri, layoutUris);
-            package.AddOrReplacePart(masterUri,
+            package.AddOrReplacePart(
+                masterUri,
                 PmlNames.ContentTypeSlideMaster,
-                new XDocument(masterXml).ToUtf8Bytes());
+                new XDocument(masterXml).ToUtf8Bytes()
+            );
 
             // Master relationships. Layout rels reuse layout.RelationshipId (rId1..N), so the
             // theme rel must take an ID past that range to avoid colliding on the master part.
-            package.AddRelationship(masterUri,
+            package.AddRelationship(
+                masterUri,
                 $"rId{layoutUris.Count + 1}",
                 PmlNames.RelTypeTheme,
-                themeUri);
+                themeUri
+            );
             foreach (var (layout, layoutUri) in layoutUris)
             {
-                package.AddRelationship(masterUri,
+                package.AddRelationship(
+                    masterUri,
                     layout.RelationshipId.Length > 0 ? layout.RelationshipId : "rId1",
                     PmlNames.RelTypeSlideLayout,
-                    RelativeUri(masterUri, layoutUri));
+                    RelativeUri(masterUri, layoutUri)
+                );
             }
         }
     }
@@ -236,15 +253,19 @@ internal sealed class PresentationWriter
             contentTypes.Register(layoutUri, PmlNames.ContentTypeSlideLayout);
 
             var layoutXml = LayoutWriter.Write(layout);
-            package.AddOrReplacePart(layoutUri,
+            package.AddOrReplacePart(
+                layoutUri,
                 PmlNames.ContentTypeSlideLayout,
-                new XDocument(layoutXml).ToUtf8Bytes());
+                new XDocument(layoutXml).ToUtf8Bytes()
+            );
 
             // Layout → master relationship
-            package.AddRelationship(layoutUri,
+            package.AddRelationship(
+                layoutUri,
                 "rId1",
                 PmlNames.RelTypeSlideMaster,
-                RelativeUri(layoutUri, layout.Master.PartUri));
+                RelativeUri(layoutUri, layout.Master.PartUri)
+            );
 
             layoutUris[layout] = layoutUri;
         }
@@ -308,23 +329,29 @@ internal sealed class PresentationWriter
             // Write slide XML (all relationship IDs now set)
             contentTypes.Register(slideUri, PmlNames.ContentTypeSlide);
             var slideXml = SlideWriter.Write(slide);
-            package.AddOrReplacePart(slideUri,
+            package.AddOrReplacePart(
+                slideUri,
                 PmlNames.ContentTypeSlide,
-                new XDocument(slideXml).ToUtf8Bytes());
+                new XDocument(slideXml).ToUtf8Bytes()
+            );
 
             // Slide relationships
-            package.AddRelationship(slideUri,
+            package.AddRelationship(
+                slideUri,
                 "rId1",
                 PmlNames.RelTypeSlideLayout,
-                RelativeUri(slideUri, slide.Layout.PartUri));
+                RelativeUri(slideUri, slide.Layout.PartUri)
+            );
 
             foreach (var shape in slide.Shapes.OfType<PictureShape>()
                          .Where(static p => p.Image is { PartUri.Length: > 0 }))
             {
-                package.AddRelationship(slideUri,
+                package.AddRelationship(
+                    slideUri,
                     shape.Image!.RelationshipId,
                     PmlNames.RelTypeImage,
-                    RelativeUri(slideUri, shape.Image.PartUri));
+                    RelativeUri(slideUri, shape.Image.PartUri)
+                );
             }
 
             foreach (var chartShape in slide.Shapes.OfType<ChartShape>())
@@ -337,10 +364,12 @@ internal sealed class PresentationWriter
                 package.AddOrReplacePart(chartShape.PartUri, PmlNames.ContentTypeChart, chartBytes);
                 contentTypes.Register(chartShape.PartUri, PmlNames.ContentTypeChart);
 
-                package.AddRelationship(slideUri,
+                package.AddRelationship(
+                    slideUri,
                     chartShape.RelationshipId,
                     PmlNames.RelTypeChart,
-                    RelativeUri(slideUri, chartShape.PartUri));
+                    RelativeUri(slideUri, chartShape.PartUri)
+                );
             }
 
             // SmartArt diagrams (M-F): write the referenced diagram parts using the
@@ -368,14 +397,18 @@ internal sealed class PresentationWriter
                 var notesDoc = NotesWriter.Write(slide.Notes);
                 if (notesDoc != null)
                 {
-                    package.AddOrReplacePart(notesUri,
+                    package.AddOrReplacePart(
+                        notesUri,
                         PmlNames.ContentTypeNotesSlide,
-                        notesDoc.ToUtf8Bytes());
+                        notesDoc.ToUtf8Bytes()
+                    );
                     contentTypes.Register(notesUri, PmlNames.ContentTypeNotesSlide);
-                    package.AddRelationship(slideUri,
+                    package.AddRelationship(
+                        slideUri,
                         $"rId{rId++}",
                         PmlNames.RelTypeNotesSlide,
-                        RelativeUri(slideUri, notesUri));
+                        RelativeUri(slideUri, notesUri)
+                    );
                 }
             }
 
@@ -386,15 +419,19 @@ internal sealed class PresentationWriter
                 var comments = slide.GetComments();
                 var commentsUri = $"/ppt/comments/comment{commentPartIndex++}.xml";
                 var cmDoc = CommentWriter.Write(comments);
-                package.AddOrReplacePart(commentsUri,
+                package.AddOrReplacePart(
+                    commentsUri,
                     PmlNames.ContentTypeComments,
-                    cmDoc.ToUtf8Bytes());
+                    cmDoc.ToUtf8Bytes()
+                );
                 contentTypes.Register(commentsUri, PmlNames.ContentTypeComments);
-                package.AddRelationship(slideUri,
+                package.AddRelationship(
+                    slideUri,
                     // ReSharper disable once RedundantAssignment
                     $"rId{rId++}",
                     PmlNames.RelTypeComments,
-                    RelativeUri(slideUri, commentsUri));
+                    RelativeUri(slideUri, commentsUri)
+                );
             }
         }
     }
@@ -430,19 +467,23 @@ internal sealed class PresentationWriter
 
         if (!string.IsNullOrEmpty(action.Url))
         {
-            package.AddRelationship(slideUri,
+            package.AddRelationship(
+                slideUri,
                 action.RelationshipId,
                 PmlNames.RelTypeHyperlink,
                 action.Url,
-                true);
+                true
+            );
         }
         else if (action.TargetSlideNumber is { } number and >= 1 && number <= slides.Count)
         {
             var targetUri = slides[number - 1].PartUri;
-            package.AddRelationship(slideUri,
+            package.AddRelationship(
+                slideUri,
                 action.RelationshipId,
                 PmlNames.RelTypeSlide,
-                RelativeUri(slideUri, targetUri));
+                RelativeUri(slideUri, targetUri)
+            );
         }
     }
 
@@ -471,19 +512,23 @@ internal sealed class PresentationWriter
 
         if (!string.IsNullOrEmpty(link.Url))
         {
-            package.AddRelationship(slideUri,
+            package.AddRelationship(
+                slideUri,
                 link.RelationshipId,
                 PmlNames.RelTypeHyperlink,
                 link.Url,
-                true);
+                true
+            );
         }
         else if (link.TargetSlideNumber is { } number and >= 1 && number <= slides.Count)
         {
             var targetUri = slides[number - 1].PartUri;
-            package.AddRelationship(slideUri,
+            package.AddRelationship(
+                slideUri,
                 link.RelationshipId,
                 PmlNames.RelTypeSlide,
-                RelativeUri(slideUri, targetUri));
+                RelativeUri(slideUri, targetUri)
+            );
         }
     }
 
@@ -510,50 +555,60 @@ internal sealed class PresentationWriter
             dataBytes = shape.DiagramDataDocument.ToUtf8Bytes();
         }
 
-        WriteDiagramPart(package,
+        WriteDiagramPart(
+            package,
             contentTypes,
             slideUri,
             shape.DataRelationshipId,
             shape.DataPartUri,
             dataBytes,
             PmlNames.RelTypeDiagramData,
-            PmlNames.ContentTypeDiagramData);
+            PmlNames.ContentTypeDiagramData
+        );
 
-        WriteDiagramPart(package,
+        WriteDiagramPart(
+            package,
             contentTypes,
             slideUri,
             shape.LayoutRelationshipId,
             shape.LayoutPartUri,
             shape.LayoutPartData,
             PmlNames.RelTypeDiagramLayout,
-            PmlNames.ContentTypeDiagramLayout);
+            PmlNames.ContentTypeDiagramLayout
+        );
 
-        WriteDiagramPart(package,
+        WriteDiagramPart(
+            package,
             contentTypes,
             slideUri,
             shape.QuickStyleRelationshipId,
             shape.QuickStylePartUri,
             shape.QuickStylePartData,
             PmlNames.RelTypeDiagramQuickStyle,
-            PmlNames.ContentTypeDiagramQuickStyle);
+            PmlNames.ContentTypeDiagramQuickStyle
+        );
 
-        WriteDiagramPart(package,
+        WriteDiagramPart(
+            package,
             contentTypes,
             slideUri,
             shape.ColorsRelationshipId,
             shape.ColorsPartUri,
             shape.ColorsPartData,
             PmlNames.RelTypeDiagramColors,
-            PmlNames.ContentTypeDiagramColors);
+            PmlNames.ContentTypeDiagramColors
+        );
 
-        WriteDiagramPart(package,
+        WriteDiagramPart(
+            package,
             contentTypes,
             slideUri,
             shape.DrawingRelationshipId,
             shape.DrawingPartUri,
             shape.DrawingPartData,
             PmlNames.RelTypeDiagramDrawing,
-            PmlNames.ContentTypeDiagramDrawing);
+            PmlNames.ContentTypeDiagramDrawing
+        );
     }
 
     private static void WriteDiagramPart(
@@ -582,9 +637,11 @@ internal sealed class PresentationWriter
     )
     {
         var caDoc = CommentAuthorWriter.Write(authors);
-        package.AddOrReplacePart(CommentAuthorsPartUri,
+        package.AddOrReplacePart(
+            CommentAuthorsPartUri,
             PmlNames.ContentTypeCommentAuthors,
-            caDoc.ToUtf8Bytes());
+            caDoc.ToUtf8Bytes()
+        );
         contentTypes.Register(CommentAuthorsPartUri, PmlNames.ContentTypeCommentAuthors);
     }
 
@@ -605,43 +662,65 @@ internal sealed class PresentationWriter
         var pml = PmlNames.Pml;
         var r = PmlNames.Relationships;
 
-        var pres = new XElement(PmlNames.Presentation,
+        var pres = new XElement(
+            PmlNames.Presentation,
             new XAttribute(XNamespace.Xmlns + "p", pml.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName));
+            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName)
+        );
 
         // Slide master IDs
         var masterIdLst = new XElement(PmlNames.SlideMasterIdList);
         for (var i = 0; i < masters.Count; i++)
         {
             var master = masters[i];
-            masterIdLst.Add(new XElement(PmlNames.SlideMasterId,
-                new XAttribute(PmlNames.AttributeId, (uint)(2_147_483_648 + i)),
-                new XAttribute(PmlNames.RelationshipId,
-                    master.RelationshipId.Length > 0
-                        ? master.RelationshipId
-                        : $"rId{100 + i}")));
+            masterIdLst.Add(
+                new XElement(
+                    PmlNames.SlideMasterId,
+                    new XAttribute(PmlNames.AttributeId, (uint)(2_147_483_648 + i)),
+                    new XAttribute(
+                        PmlNames.RelationshipId,
+                        master.RelationshipId.Length > 0
+                            ? master.RelationshipId
+                            : $"rId{100 + i}"
+                    )
+                )
+            );
         }
 
         pres.Add(masterIdLst);
 
         // Slide size
-        pres.Add(new XElement(PmlNames.SlideSize,
-            new XAttribute(PmlNames.AttributeWidth, slideSize.Width.Value),
-            new XAttribute(PmlNames.AttributeHeight, slideSize.Height.Value)));
+        pres.Add(
+            new XElement(
+                PmlNames.SlideSize,
+                new XAttribute(PmlNames.AttributeWidth, slideSize.Width.Value),
+                new XAttribute(PmlNames.AttributeHeight, slideSize.Height.Value)
+            )
+        );
 
-        pres.Add(new XElement(PmlNames.NotesSize,
-            new XAttribute(PmlNames.AttributeWidth, Emu.FromInches(7.5).Value),
-            new XAttribute(PmlNames.AttributeHeight, Emu.FromInches(10).Value)));
+        pres.Add(
+            new XElement(
+                PmlNames.NotesSize,
+                new XAttribute(PmlNames.AttributeWidth, Emu.FromInches(7.5).Value),
+                new XAttribute(PmlNames.AttributeHeight, Emu.FromInches(10).Value)
+            )
+        );
 
         // Slide IDs
         var slideIdLst = new XElement(PmlNames.SlideIdList);
         for (var i = 0; i < slides.Count; i++)
         {
             var slide = slides[i];
-            slideIdLst.Add(new XElement(PmlNames.SlideId,
-                new XAttribute(PmlNames.AttributeId, slide.SlideId),
-                new XAttribute(PmlNames.RelationshipId,
-                    slide.RelationshipId.Length > 0 ? slide.RelationshipId : $"rId{i + 1}")));
+            slideIdLst.Add(
+                new XElement(
+                    PmlNames.SlideId,
+                    new XAttribute(PmlNames.AttributeId, slide.SlideId),
+                    new XAttribute(
+                        PmlNames.RelationshipId,
+                        slide.RelationshipId.Length > 0 ? slide.RelationshipId : $"rId{i + 1}"
+                    )
+                )
+            );
         }
 
         pres.Add(slideIdLst);
@@ -656,7 +735,8 @@ internal sealed class PresentationWriter
 
         var presXml = new XDocument(
             new XDeclaration("1.0", "UTF-8", "yes"),
-            pres);
+            pres
+        );
 
         // A presentation that carries a VBA project must use the macro-enabled content type.
         var presContentType = hasMacros
@@ -673,10 +753,12 @@ internal sealed class PresentationWriter
                 ? master.RelationshipId
                 : $"rId{100 + rIdCounter}";
             master.RelationshipId = rId;
-            package.AddRelationship(PresentationPartUri,
+            package.AddRelationship(
+                PresentationPartUri,
                 rId,
                 PmlNames.RelTypeSlideMaster,
-                RelativeUri(PresentationPartUri, master.PartUri));
+                RelativeUri(PresentationPartUri, master.PartUri)
+            );
             rIdCounter++;
         }
 
@@ -687,29 +769,35 @@ internal sealed class PresentationWriter
                 ? slide.RelationshipId
                 : $"rId{i + 1}";
             slide.RelationshipId = rId;
-            package.AddRelationship(PresentationPartUri,
+            package.AddRelationship(
+                PresentationPartUri,
                 rId,
                 PmlNames.RelTypeSlide,
-                RelativeUri(PresentationPartUri, slide.PartUri));
+                RelativeUri(PresentationPartUri, slide.PartUri)
+            );
         }
 
         // Comment authors relationship (M7)
         if (package.TryGetPart(CommentAuthorsPartUri) != null)
         {
-            package.AddRelationship(PresentationPartUri,
+            package.AddRelationship(
+                PresentationPartUri,
                 $"rId{rIdCounter++}",
                 PmlNames.RelTypeCommentAuthors,
-                RelativeUri(PresentationPartUri, CommentAuthorsPartUri));
+                RelativeUri(PresentationPartUri, CommentAuthorsPartUri)
+            );
         }
 
         // Presentation-properties relationship (M-G slide-show settings)
         if (hasPresProps && package.TryGetPart(PresPropsPartUri) != null)
         {
-            package.AddRelationship(PresentationPartUri,
+            package.AddRelationship(
+                PresentationPartUri,
                 // ReSharper disable once RedundantAssignment
                 $"rId{rIdCounter++}",
                 PmlNames.RelTypePresProps,
-                RelativeUri(PresentationPartUri, PresPropsPartUri));
+                RelativeUri(PresentationPartUri, PresPropsPartUri)
+            );
         }
     }
 
@@ -745,11 +833,13 @@ internal sealed class PresentationWriter
             if (anchor.SourceUri is null)
             {
                 // presentation.xml → VBA project (or similar).
-                package.AddRelationship(PresentationPartUri,
+                package.AddRelationship(
+                    PresentationPartUri,
                     $"rId{presRelIndex++}",
                     anchor.Type,
                     RelativeUri(PresentationPartUri, anchor.Target),
-                    anchor.IsExternal);
+                    anchor.IsExternal
+                );
             }
             else if (anchor.SourceUri.Length == 0)
             {
@@ -770,29 +860,43 @@ internal sealed class PresentationWriter
         var showPr = new XElement(pml + "showPr");
 
         // Show type is a child element choice: present / browse / kiosk.
-        showPr.Add(show.ShowType switch
-        {
-            SlideShowType.Browsed => new XElement(pml + "browse"),
-            SlideShowType.Kiosk => new XElement(pml + "kiosk"),
-            _ => new XElement(pml + "present")
-        });
+        showPr.Add(
+            show.ShowType switch
+            {
+                SlideShowType.Browsed => new XElement(pml + "browse"),
+                SlideShowType.Kiosk => new XElement(pml + "kiosk"),
+                _ => new XElement(pml + "present")
+            }
+        );
 
         // Optional slide range (1-based, inclusive).
         if (show.RangeStart.HasValue || show.RangeEnd.HasValue)
         {
             var start = show.RangeStart ?? 1;
             var end = show.RangeEnd ?? start;
-            showPr.Add(new XElement(pml + "sldRg",
-                new XAttribute("st", start),
-                new XAttribute("end", end)));
+            showPr.Add(
+                new XElement(
+                    pml + "sldRg",
+                    new XAttribute("st", start),
+                    new XAttribute("end", end)
+                )
+            );
         }
 
         if (!string.IsNullOrEmpty(show.PenColorHex))
         {
-            showPr.Add(new XElement(pml + "penClr",
-                new XElement(DmlNames.SolidFill,
-                    new XElement(DmlNames.SrgbColor,
-                        new XAttribute("val", show.PenColorHex)))));
+            showPr.Add(
+                new XElement(
+                    pml + "penClr",
+                    new XElement(
+                        DmlNames.SolidFill,
+                        new XElement(
+                            DmlNames.SrgbColor,
+                            new XAttribute("val", show.PenColorHex)
+                        )
+                    )
+                )
+            );
         }
 
         // Boolean show flags are attributes on showPr. The XML stores the positive sense
@@ -801,11 +905,13 @@ internal sealed class PresentationWriter
         if (show.ShowWithoutNarration) showPr.Add(new XAttribute("showNarration", "0"));
         if (show.ShowWithoutAnimation) showPr.Add(new XAttribute("showAnimation", "0"));
 
-        var presentationPr = new XElement(pml + "presentationPr",
+        var presentationPr = new XElement(
+            pml + "presentationPr",
             new XAttribute(XNamespace.Xmlns + "p", pml.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "a", DmlNames.Dml.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "r", PmlNames.Relationships.NamespaceName),
-            showPr);
+            showPr
+        );
 
         var doc = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), presentationPr);
         package.AddOrReplacePart(PresPropsPartUri, PmlNames.ContentTypePresProps, doc.ToUtf8Bytes());
@@ -815,14 +921,16 @@ internal sealed class PresentationWriter
     private static XElement WriteModifyVerifier(ProtectionInfo protection)
     {
         var pml = PmlNames.Pml;
-        return new XElement(pml + "modifyVerifier",
+        return new XElement(
+            pml + "modifyVerifier",
             new XAttribute("cryptProviderType", "rsaAES"),
             new XAttribute("cryptAlgorithmClass", "hash"),
             new XAttribute("cryptAlgorithmType", "typeAny"),
             new XAttribute("cryptAlgorithmSid", "14"), // SHA-512
             new XAttribute("spinCount", ProtectionInfo.WriteProtectionSpinCount),
             new XAttribute("saltValue", protection.WriteProtectionSaltBase64!),
-            new XAttribute("hashValue", protection.WriteProtectionHashBase64!));
+            new XAttribute("hashValue", protection.WriteProtectionHashBase64!)
+        );
     }
 
     private static XElement WriteSectionsExtLst(SectionCollection sections)
@@ -834,9 +942,11 @@ internal sealed class PresentationWriter
 
         foreach (var section in sections)
         {
-            var sec = new XElement(p14 + "section",
+            var sec = new XElement(
+                p14 + "section",
                 new XAttribute("name", section.Name),
-                new XAttribute("id", $"{{{Guid.NewGuid()}}}"));
+                new XAttribute("id", $"{{{Guid.NewGuid()}}}")
+            );
 
             var sldIdLst = new XElement(p14 + "sldIdLst");
             foreach (var id in section.SlideIds)
@@ -845,9 +955,11 @@ internal sealed class PresentationWriter
             sectionLst.Add(sec);
         }
 
-        var ext = new XElement(pml + "ext",
+        var ext = new XElement(
+            pml + "ext",
             new XAttribute("uri", "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}"),
-            sectionLst);
+            sectionLst
+        );
 
         return new XElement(pml + "extLst", ext);
     }
@@ -861,16 +973,19 @@ internal sealed class PresentationWriter
     )
     {
         var cp = XNamespace.Get(
-            "http://schemas.openxmlformats.org/package/2006/metadata/core-properties");
+            "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+        );
         var dc = XNamespace.Get("http://purl.org/dc/elements/1.1/");
         var dcterms = XNamespace.Get("http://purl.org/dc/terms/");
         var xsi = XNamespace.Get("http://www.w3.org/2001/XMLSchema-instance");
 
-        var root = new XElement(cp + "coreProperties",
+        var root = new XElement(
+            cp + "coreProperties",
             new XAttribute(XNamespace.Xmlns + "cp", cp.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "dc", dc.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "dcterms", dcterms.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "xsi", xsi.NamespaceName));
+            new XAttribute(XNamespace.Xmlns + "xsi", xsi.NamespaceName)
+        );
 
         if (properties.Title != null)
             root.Add(new XElement(dc + "title", properties.Title));
@@ -890,17 +1005,27 @@ internal sealed class PresentationWriter
             root.Add(new XElement(cp + "contentStatus", properties.ContentStatus));
 
         var now = DateTimeOffset.UtcNow;
-        root.Add(new XElement(dcterms + "created",
-            new XAttribute(xsi + "type", "dcterms:W3CDTF"),
-            (properties.Created ?? now).ToString("yyyy-MM-ddTHH:mm:ssZ")));
-        root.Add(new XElement(dcterms + "modified",
-            new XAttribute(xsi + "type", "dcterms:W3CDTF"),
-            (properties.Modified ?? now).ToString("yyyy-MM-ddTHH:mm:ssZ")));
+        root.Add(
+            new XElement(
+                dcterms + "created",
+                new XAttribute(xsi + "type", "dcterms:W3CDTF"),
+                (properties.Created ?? now).ToString("yyyy-MM-ddTHH:mm:ssZ")
+            )
+        );
+        root.Add(
+            new XElement(
+                dcterms + "modified",
+                new XAttribute(xsi + "type", "dcterms:W3CDTF"),
+                (properties.Modified ?? now).ToString("yyyy-MM-ddTHH:mm:ssZ")
+            )
+        );
 
         var doc = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root);
-        package.AddOrReplacePart(CorePropsPartUri,
+        package.AddOrReplacePart(
+            CorePropsPartUri,
             PmlNames.ContentTypeCoreProperties,
-            doc.ToUtf8Bytes());
+            doc.ToUtf8Bytes()
+        );
         contentTypes.Register(CorePropsPartUri, PmlNames.ContentTypeCoreProperties);
     }
 

@@ -47,7 +47,8 @@ public sealed class DocumentMerger : IDocumentMerger
             var adapter = doc as PdfDocumentAdapter
                           ?? throw new ArgumentException(
                               $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {doc.GetType().Name}.",
-                              nameof(documents));
+                              nameof(documents)
+                          );
 
             var objects = adapter.Core.CollectObjects();
             var sourceMax = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
@@ -153,35 +154,48 @@ public sealed class DocumentMerger : IDocumentMerger
             globalObjects[i] = new PdfIndirectObject(
                 globalObjects[i].ObjectNumber,
                 globalObjects[i].Generation,
-                new PdfDictionary(entries));
+                new PdfDictionary(entries)
+            );
         }
 
         // New flat /Pages root and /Catalog.
-        globalObjects.Add(new PdfIndirectObject(
-            pagesRootNum,
-            0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Pages,
-                [PdfName.Kids.Value] = new PdfArray(pageRefs.Cast<PdfObject>().ToArray()),
-                [PdfName.Count.Value] = new PdfInteger(pageRefs.Count)
-            })));
+        globalObjects.Add(
+            new PdfIndirectObject(
+                pagesRootNum,
+                0,
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Pages,
+                        [PdfName.Kids.Value] = new PdfArray(pageRefs.Cast<PdfObject>().ToArray()),
+                        [PdfName.Count.Value] = new PdfInteger(pageRefs.Count)
+                    }
+                )
+            )
+        );
 
         var catalogRef = new PdfIndirectReference(catalogNum, 0);
-        globalObjects.Add(new PdfIndirectObject(
-            catalogNum,
-            0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Catalog,
-                [PdfName.Pages.Value] = pagesRef
-            })));
+        globalObjects.Add(
+            new PdfIndirectObject(
+                catalogNum,
+                0,
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Catalog,
+                        [PdfName.Pages.Value] = pagesRef
+                    }
+                )
+            )
+        );
 
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(catalogNum + 1),
-            [PdfName.Root.Value] = catalogRef
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(catalogNum + 1),
+                [PdfName.Root.Value] = catalogRef
+            }
+        );
 
         return ObjectGraphBuilder.SerializeToDocument(globalObjects, trailer);
     }

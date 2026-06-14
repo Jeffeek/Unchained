@@ -15,20 +15,24 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
     public async Task RunEffectsAndOutline_RoundTrip()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(4),
-            Emu.FromInches(2),
-            "Glow");
+        var shape = doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(4),
+                Emu.FromInches(2),
+                "Glow"
+            );
         var run = shape.TextFrame.Paragraphs[0].Runs[0];
         run.Format.Effects.Glow = new GlowEffect { Color = ColorSpec.FromRgb(0, 0xB0, 0xF0), Radius = Emu.FromPoints(5) };
         run.Format.Outline = new LineFormat();
         run.Format.Outline.SetSolid(ColorSpec.FromRgb(0, 0, 0), 1.5);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var r = reloaded.Slides[0].Shapes.OfType<AutoShape>()
-            .SelectMany(static s => s.TextFrame.Paragraphs).SelectMany(static p => p.Runs)
+        var r = reloaded.Slides[0]
+            .Shapes.OfType<AutoShape>()
+            .SelectMany(static s => s.TextFrame.Paragraphs)
+            .SelectMany(static p => p.Runs)
             .First(static x => !x.Format.Effects.IsEmpty);
         r.Format.Effects.Glow.ShouldNotBeNull();
         r.Format.Effects.Glow.Radius.Value.ShouldBe(Emu.FromPoints(5).Value);
@@ -40,16 +44,19 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
     public async Task TextWarp_RoundTrips()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddTextBox(
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(4),
-            Emu.FromInches(2),
-            "Arched");
+        var shape = doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(4),
+                Emu.FromInches(2),
+                "Arched"
+            );
         shape.TextFrame.Format.Warp = new TextWarpFormat { Preset = "textArchUp" };
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var s = reloaded.Slides[0].Shapes.OfType<AutoShape>()
+        var s = reloaded.Slides[0]
+            .Shapes.OfType<AutoShape>()
             .First(static x => x.TextFrame.Format.Warp is not null);
         s.TextFrame.Format.Warp!.Preset.ShouldBe("textArchUp");
     }
@@ -58,12 +65,14 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
     public async Task Shape3D_RoundTrips()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(2),
-            Emu.FromInches(1));
+        var shape = doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(2),
+                Emu.FromInches(1)
+            );
         shape.ThreeD.ExtrusionHeight = Emu.FromPoints(10);
         shape.ThreeD.Material = "metal";
         shape.ThreeD.TopBevel = new BevelFormat { Width = Emu.FromPoints(6), Height = Emu.FromPoints(6), Preset = "circle" };

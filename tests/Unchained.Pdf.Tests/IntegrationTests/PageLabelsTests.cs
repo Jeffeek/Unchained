@@ -49,7 +49,8 @@ public sealed class PageLabelsTests : PdfTestBase
         await editor.SetPageLabelsAsync(
             doc,
             [new PageLabelRange(0, PageLabelStyle.Decimal, "A-")],
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var result = editor.GetPageLabels(doc);
         result[0].Prefix.ShouldBe("A-");
@@ -64,7 +65,8 @@ public sealed class PageLabelsTests : PdfTestBase
         await editor.SetPageLabelsAsync(
             doc,
             [new PageLabelRange(0)],
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await editor.RemovePageLabelsAsync(doc, TestContext.Current.CancellationToken);
         editor.GetPageLabels(doc).ShouldBeEmpty();
@@ -80,7 +82,9 @@ public sealed class PageLabelsTests : PdfTestBase
             editor.SetPageLabelsAsync(
                 doc,
                 [new PageLabelRange(1)],
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken
+            )
+        );
     }
 
     [Fact]
@@ -92,7 +96,8 @@ public sealed class PageLabelsTests : PdfTestBase
         await editor.SetPageLabelsAsync(
             doc,
             [new PageLabelRange(0, PageLabelStyle.AlphaUpper)],
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         var result = editor.GetPageLabels(reloaded);
@@ -116,7 +121,8 @@ public sealed class PageLabelsTests : PdfTestBase
         await editor.SetPageLabelsAsync(
             doc,
             [new PageLabelRange(0, style)],
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         editor.GetPageLabels(reloaded)[0].Style.ShouldBe(style);

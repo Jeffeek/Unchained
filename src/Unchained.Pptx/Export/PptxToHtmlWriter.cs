@@ -236,7 +236,8 @@ internal static class PptxToHtmlWriter
     {
         var dataUri = ExportText.ToBase64DataUri(pic.Image!.Data, pic.Image.ContentType);
         sb.AppendLine(
-            $"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"{dataUri}\" alt=\"{ExportText.EscapeHtml(pic.AltText ?? string.Empty)}\">");
+            $"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"{dataUri}\" alt=\"{ExportText.EscapeHtml(pic.AltText ?? string.Empty)}\">"
+        );
     }
 
     private static string ToCssColor(uint argb)

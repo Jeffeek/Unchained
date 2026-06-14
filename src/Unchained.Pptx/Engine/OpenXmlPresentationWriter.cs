@@ -34,7 +34,8 @@ internal static class OpenXmlPresentationWriter
     {
         var engine = document.Engine
                      ?? throw new InvalidOperationException(
-                         "SDK-backed save requires a document loaded via the OpenXML engine path.");
+                         "SDK-backed save requires a document loaded via the OpenXML engine path."
+                     );
 
         var sdkDoc = (SdkPresentationDocument)engine.Package;
         var presPart = sdkDoc.PresentationPart

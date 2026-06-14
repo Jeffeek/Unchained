@@ -170,7 +170,8 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
         return new PdfToken(
             isReal ? PdfTokenKind.Real : PdfTokenKind.Integer,
             Slice(start, Position),
-            start);
+            start
+        );
     }
 
     private PdfToken ReadKeyword()

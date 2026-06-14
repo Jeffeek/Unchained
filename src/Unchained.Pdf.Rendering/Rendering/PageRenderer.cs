@@ -173,7 +173,8 @@ internal sealed partial class PageRenderer(
             case "sc" or "SC" when op.Operands.Count >= 1:
             {
                 var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal)
-                    .Select(static o => o.ReadIntOrReal()).ToArray();
+                    .Select(static o => o.ReadIntOrReal())
+                    .ToArray();
                 var csName = op.Name == "sc" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
                 var (r2, g2, b2) = ResolveColorComponents(nums, csName);
                 if (op.Name == "sc") SetFillRgb(r2, g2, b2);
@@ -220,7 +221,12 @@ internal sealed partial class PageRenderer(
                             }
                             case 4:
                             {
-                                var (r2, g2, b2) = CmykToRgb(nums[0].ReadIntOrReal(), nums[1].ReadIntOrReal(), nums[2].ReadIntOrReal(), nums[3].ReadIntOrReal());
+                                var (r2, g2, b2) = CmykToRgb(
+                                    nums[0].ReadIntOrReal(),
+                                    nums[1].ReadIntOrReal(),
+                                    nums[2].ReadIntOrReal(),
+                                    nums[3].ReadIntOrReal()
+                                );
                                 if (op.Name == "scn") SetFillRgb(r2, g2, b2);
                                 else SetStrokeRgb(r2, g2, b2);
                                 break;
@@ -293,28 +299,34 @@ internal sealed partial class PageRenderer(
             case "m" when op.Operands.Count >= 2: PathMoveTo(Num(op, 0), Num(op, 1)); break;
             case "l" when op.Operands.Count >= 2: PathLineTo(Num(op, 0), Num(op, 1)); break;
             case "c" when op.Operands.Count >= 6:
-                PathCurveTo(Num(op, 0),
+                PathCurveTo(
+                    Num(op, 0),
                     Num(op, 1),
                     Num(op, 2),
                     Num(op, 3),
                     Num(op, 4),
-                    Num(op, 5));
+                    Num(op, 5)
+                );
             break;
             case "v" when op.Operands.Count >= 4:
-                PathCurveTo(_currentPoint.X,
+                PathCurveTo(
+                    _currentPoint.X,
                     _currentPoint.Y,
                     Num(op, 0),
                     Num(op, 1),
                     Num(op, 2),
-                    Num(op, 3));
+                    Num(op, 3)
+                );
             break;
             case "y" when op.Operands.Count >= 4:
-                PathCurveTo(Num(op, 0),
+                PathCurveTo(
+                    Num(op, 0),
                     Num(op, 1),
                     Num(op, 2),
                     Num(op, 3),
                     Num(op, 2),
-                    Num(op, 3));
+                    Num(op, 3)
+                );
             break;
             case "h":
             {

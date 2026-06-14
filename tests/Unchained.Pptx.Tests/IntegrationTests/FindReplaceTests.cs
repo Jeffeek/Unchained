@@ -15,11 +15,14 @@ public sealed class FindReplaceTests : PptxTestBase
     public void ReplaceText_WithinSingleRun_ReplacesAndKeepsCount()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var box = doc.Slides[0].Shapes.AddTextBox(Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(4),
-            Emu.FromInches(1),
-            "Hello world, hello again");
+        var box = doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(4),
+                Emu.FromInches(1),
+                "Hello world, hello again"
+            );
 
         var n = doc.ReplaceText("hello", "hi", StringComparison.OrdinalIgnoreCase);
 
@@ -69,11 +72,13 @@ public sealed class FindReplaceTests : PptxTestBase
     public void ReplaceText_InTableCells()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var table = doc.Slides[0].Shapes.AddTable(
-            Emu.Zero,
-            Emu.Zero,
-            [Emu.FromInches(2), Emu.FromInches(2)],
-            [Emu.FromInches(0.5)]);
+        var table = doc.Slides[0]
+            .Shapes.AddTable(
+                Emu.Zero,
+                Emu.Zero,
+                [Emu.FromInches(2), Emu.FromInches(2)],
+                [Emu.FromInches(0.5)]
+            );
         table.Grid[0, 0].TextFrame.PlainText = "TOKEN here";
         table.Grid[1, 0].TextFrame.PlainText = "and TOKEN there";
 

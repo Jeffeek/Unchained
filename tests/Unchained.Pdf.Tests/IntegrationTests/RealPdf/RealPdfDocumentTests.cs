@@ -214,7 +214,9 @@ public sealed class RealPdfDocumentTests : PdfTestBase
         await using var doc = await LoadAsync(bytes);
         sw.Stop();
         doc.PageCount.ShouldBeGreaterThan(0);
-        sw.ElapsedMilliseconds.ShouldBeLessThan(10_000,
-            $"Parsing {bytes.Length / 1024} KB took {sw.ElapsedMilliseconds} ms");
+        sw.ElapsedMilliseconds.ShouldBeLessThan(
+            10_000,
+            $"Parsing {bytes.Length / 1024} KB took {sw.ElapsedMilliseconds} ms"
+        );
     }
 }

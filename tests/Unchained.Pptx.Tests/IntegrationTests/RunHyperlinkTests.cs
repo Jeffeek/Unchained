@@ -16,11 +16,13 @@ public sealed class RunHyperlinkTests : PptxTestBase
 {
     private static Run AddLinkedRun(PresentationDocument doc, int slideIndex, string text)
     {
-        var box = doc.Slides[slideIndex].Shapes.AddTextBox(
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(4),
-            Emu.FromInches(1));
+        var box = doc.Slides[slideIndex]
+            .Shapes.AddTextBox(
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(4),
+                Emu.FromInches(1)
+            );
         var para = box.TextFrame.Paragraphs.Add();
         return para.Runs.Add(text);
     }
@@ -35,9 +37,12 @@ public sealed class RunHyperlinkTests : PptxTestBase
         run.Format.Hyperlink.Tooltip = "Go";
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var reRun = reloaded.Slides[0].Shapes
-            .OfType<AutoShape>().First()
-            .TextFrame.Paragraphs[0].Runs[0];
+        var reRun = reloaded.Slides[0]
+            .Shapes
+            .OfType<AutoShape>()
+            .First()
+            .TextFrame.Paragraphs[0]
+            .Runs[0];
 
         reRun.Format.Hyperlink.ShouldNotBeNull();
         reRun.Format.Hyperlink.Url.ShouldBe("https://example.com");
@@ -53,9 +58,12 @@ public sealed class RunHyperlinkTests : PptxTestBase
         run.Format.Hyperlink = RunHyperlink.ToSlide(3);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var reRun = reloaded.Slides[0].Shapes
-            .OfType<AutoShape>().First()
-            .TextFrame.Paragraphs[0].Runs[0];
+        var reRun = reloaded.Slides[0]
+            .Shapes
+            .OfType<AutoShape>()
+            .First()
+            .TextFrame.Paragraphs[0]
+            .Runs[0];
 
         reRun.Format.Hyperlink.ShouldNotBeNull();
         reRun.Format.Hyperlink.TargetSlideNumber.ShouldBe(3);
@@ -74,8 +82,10 @@ public sealed class RunHyperlinkTests : PptxTestBase
         b.Format.Hyperlink = RunHyperlink.ToUrl("https://two.example");
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var runs = reloaded.Slides[0].Shapes
-            .OfType<AutoShape>().First()
+        var runs = reloaded.Slides[0]
+            .Shapes
+            .OfType<AutoShape>()
+            .First()
             .TextFrame.Paragraphs[0].Runs;
 
         runs.Count.ShouldBe(2);
@@ -90,9 +100,12 @@ public sealed class RunHyperlinkTests : PptxTestBase
         AddLinkedRun(doc, 0, "plain");
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var reRun = reloaded.Slides[0].Shapes
-            .OfType<AutoShape>().First()
-            .TextFrame.Paragraphs[0].Runs[0];
+        var reRun = reloaded.Slides[0]
+            .Shapes
+            .OfType<AutoShape>()
+            .First()
+            .TextFrame.Paragraphs[0]
+            .Runs[0];
 
         reRun.Format.Hyperlink.ShouldBeNull();
     }

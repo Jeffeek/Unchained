@@ -317,10 +317,12 @@ internal static class ContentStreamParser
         // Build a minimal PdfStream wrapping the raw bytes so we can reuse StreamFilters.
         try
         {
-            var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                ["Filter"] = PdfName.Get(expanded)
-            });
+            var dict = new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Filter"] = PdfName.Get(expanded)
+                }
+            );
             var stream = new PdfStream(dict, raw);
             return StreamFilters.Decode(stream);
         }

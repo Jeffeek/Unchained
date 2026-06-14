@@ -104,7 +104,8 @@ internal static class FontMutator
             existing[i] = new PdfIndirectObject(
                 obj.ObjectNumber,
                 obj.Generation,
-                new PdfDictionary(updatedEntries));
+                new PdfDictionary(updatedEntries)
+            );
             changed = true;
         }
 
@@ -137,16 +138,20 @@ internal static class FontMutator
             if (subsetBytes.Length >= originalBytes.Length) continue; // no savings
 
             // Rebuild the font stream with updated length.
-            var newDict = new PdfDictionary(new Dictionary<string, PdfObject>(
-                fontStream.Dictionary.Entries)
-            {
-                [PdfName.Length.Value] = new PdfInteger(subsetBytes.Length),
-                ["Length1"] = new PdfInteger(subsetBytes.Length)
-            });
+            var newDict = new PdfDictionary(
+                new Dictionary<string, PdfObject>(
+                    fontStream.Dictionary.Entries
+                )
+                {
+                    [PdfName.Length.Value] = new PdfInteger(subsetBytes.Length),
+                    ["Length1"] = new PdfInteger(subsetBytes.Length)
+                }
+            );
             existing[i] = new PdfIndirectObject(
                 obj.ObjectNumber,
                 obj.Generation,
-                new PdfStream(newDict, subsetBytes));
+                new PdfStream(newDict, subsetBytes)
+            );
             changed = true;
         }
 
@@ -173,11 +178,13 @@ internal static class FontMutator
     )
     {
         var fontFileObjNum = ++maxObj;
-        var fontFileDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Length.Value] = new PdfInteger(fontBytes.Length),
-            ["Length1"] = new PdfInteger(fontBytes.Length)
-        });
+        var fontFileDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Length.Value] = new PdfInteger(fontBytes.Length),
+                ["Length1"] = new PdfInteger(fontBytes.Length)
+            }
+        );
         existing.Add(new PdfIndirectObject(fontFileObjNum, 0, new PdfStream(fontFileDict, fontBytes)));
 
         var descObjNum = ++maxObj;
@@ -186,10 +193,12 @@ internal static class FontMutator
             ["Type"] = PdfName.FontDescriptor,
             ["FontName"] = PdfName.Get(baseFont),
             ["Flags"] = new PdfInteger(32),
-            ["FontBBox"] = new PdfArray([
-                new PdfInteger(metrics.XMin), new PdfInteger(metrics.YMin),
-                new PdfInteger(metrics.XMax), new PdfInteger(metrics.YMax)
-            ]),
+            ["FontBBox"] = new PdfArray(
+                [
+                    new PdfInteger(metrics.XMin), new PdfInteger(metrics.YMin),
+                    new PdfInteger(metrics.XMax), new PdfInteger(metrics.YMax)
+                ]
+            ),
             ["ItalicAngle"] = new PdfInteger(0),
             ["Ascent"] = new PdfInteger(metrics.Ascent),
             ["Descent"] = new PdfInteger(metrics.Descent),

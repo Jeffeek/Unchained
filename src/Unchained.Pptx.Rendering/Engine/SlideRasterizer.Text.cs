@@ -31,7 +31,8 @@ internal sealed partial class SlideRasterizer
     {
         var scale = dpi / RenderingConstants.PointsPerInch;
         var lineHeight = 0;
-        RenderRunText(buffer,
+        RenderRunText(
+            buffer,
             text,
             TextConstants.FallbackLatinFont,
             null,
@@ -43,7 +44,8 @@ internal sealed partial class SlideRasterizer
             r,
             g,
             b,
-            ref lineHeight);
+            ref lineHeight
+        );
     }
 
     private void RenderTextFrame(
@@ -101,7 +103,8 @@ internal sealed partial class SlideRasterizer
                     for (var pi = start; pi < end; pi++)
                         colFrame.Paragraphs.Add(textFrame.Paragraphs[pi]);
 
-                    RenderTextFrame(buffer,
+                    RenderTextFrame(
+                        buffer,
                         colFrame,
                         colX,
                         shapeY,
@@ -111,7 +114,8 @@ internal sealed partial class SlideRasterizer
                         colorScheme,
                         styleTextColor,
                         placeholderType,
-                        fontScheme);
+                        fontScheme
+                    );
                 }
 
                 return;
@@ -153,7 +157,8 @@ internal sealed partial class SlideRasterizer
             var totalTextH = MeasureTotalTextHeight(
                 textFrame,
                 scale,
-                defaultFontSize);
+                defaultFontSize
+            );
             var availH = shapeHeight - marginTop - marginBottom;
             var offset = availH - totalTextH;
             if (anchor is TextAnchor.Middle
@@ -244,7 +249,8 @@ internal sealed partial class SlideRasterizer
                 if (string.IsNullOrEmpty(renderWord)) continue;
 
                 var dummy = 0;
-                lineX = RenderRunText(buffer,
+                lineX = RenderRunText(
+                    buffer,
                     renderWord,
                     fontName,
                     embBytes,
@@ -256,7 +262,8 @@ internal sealed partial class SlideRasterizer
                     r,
                     g,
                     b,
-                    ref dummy);
+                    ref dummy
+                );
                 if (dummy > lineHeight) lineHeight = dummy;
             }
 
@@ -395,12 +402,14 @@ internal sealed partial class SlideRasterizer
                 var penX = cursorX + (glyphPositions[i].XOffset / TextShapingConstants.HarfBuzzFixed);
                 var penY = startY + (int)pixelSize + (glyphPositions[i].YOffset / TextShapingConstants.HarfBuzzFixed);
 
-                buffer.BlitGlyphFromFace(penX,
+                buffer.BlitGlyphFromFace(
+                    penX,
                     penY,
                     ftFace,
                     r,
                     g,
-                    b);
+                    b
+                );
 
                 cursorX += glyphPositions[i].XAdvance / TextShapingConstants.HarfBuzzFixed;
 

@@ -62,12 +62,14 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_TextShape_TextAppearsInOutput()
     {
         var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(2),
-            "Hello SVG");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(2),
+                "Hello SVG"
+            );
 
         var svgs = await Processor.ExportAsSvgAsync(doc);
         var text = Encoding.UTF8.GetString(svgs[0]);
@@ -78,11 +80,14 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_ShapeWithFill_ContainsFillAttribute()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(3),
-            Emu.FromInches(2));
+        var shape = doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(3),
+                Emu.FromInches(2)
+            );
         shape.Fill.SetSolid(ColorSpec.FromRgb(255, 0, 0));
 
         var svgs = await Processor.ExportAsSvgAsync(doc);
@@ -106,8 +111,10 @@ public sealed class SvgExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(2);
         doc.Slides[1].IsHidden = true;
 
-        var svgs = await Processor.ExportAsSvgAsync(doc,
-            new SvgSaveOptions { IncludeHiddenSlides = true });
+        var svgs = await Processor.ExportAsSvgAsync(
+            doc,
+            new SvgSaveOptions { IncludeHiddenSlides = true }
+        );
         svgs.Length.ShouldBe(2);
     }
 
@@ -115,8 +122,10 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_Responsive_NoWidthHeightAttributes()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var svgs = await Processor.ExportAsSvgAsync(doc,
-            new SvgSaveOptions { Responsive = true });
+        var svgs = await Processor.ExportAsSvgAsync(
+            doc,
+            new SvgSaveOptions { Responsive = true }
+        );
         var text = Encoding.UTF8.GetString(svgs[0]);
         // Responsive SVG: <svg> root has no fixed width/height, only viewBox
         var svgLine = text.Split('\n').First(static l => l.TrimStart().StartsWith("<svg ", StringComparison.Ordinal));

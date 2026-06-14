@@ -47,7 +47,8 @@ public sealed class PdfRenderer : IRenderer
                 "supplied automatically by FreeTypeSharp (Windows/macOS/linux-x64) or " +
                 "Unchained.Drawing.Runtimes (linux-arm64); a system-installed FreeType2 also works. " +
                 $"Inner: {ex.Message}",
-                ex);
+                ex
+            );
         }
     }
 
@@ -98,18 +99,21 @@ public sealed class PdfRenderer : IRenderer
         await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            return await Task.Run(IReadOnlyList<byte[]> () =>
-                {
-                    var results = new List<byte[]>(document.PageCount);
-                    for (var i = 1; i <= document.PageCount; i++)
+            return await Task.Run(
+                    IReadOnlyList<byte[]> () =>
                     {
-                        ct.ThrowIfCancellationRequested();
-                        results.Add(RenderPage(document.Pages[i], options));
-                    }
+                        var results = new List<byte[]>(document.PageCount);
+                        for (var i = 1; i <= document.PageCount; i++)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            results.Add(RenderPage(document.Pages[i], options));
+                        }
 
-                    return results;
-                },
-                ct).ConfigureAwait(false);
+                        return results;
+                    },
+                    ct
+                )
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -212,7 +216,8 @@ public sealed class PdfRenderer : IRenderer
             tilingPatterns,
             softMasks,
             colorSpaces,
-            type3Fonts);
+            type3Fonts
+        );
         renderer.Render(page.GetContentOperators(), fontMap);
 
         LastTextErrors = renderer.TextErrorCount;

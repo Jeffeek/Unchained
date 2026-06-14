@@ -134,12 +134,14 @@ internal static class SvgDecoder
                 case "polyline":
                 {
                     // ReSharper disable once BadListLineBreaks
-                    RenderPoly(el,
+                    RenderPoly(
+                        el,
                         ctx,
                         fill,
                         stroke,
                         opacity,
-                        localName == "polygon");
+                        localName == "polygon"
+                    );
                     break;
                 }
                 case "path":
@@ -169,7 +171,8 @@ internal static class SvgDecoder
         {
             var (r, g, b) = ParseColor(fill);
             // ReSharper disable BadListLineBreaks
-            FillRect(ctx,
+            FillRect(
+                ctx,
                 x,
                 y,
                 w,
@@ -177,7 +180,8 @@ internal static class SvgDecoder
                 r,
                 g,
                 b,
-                opacity);
+                opacity
+            );
             // ReSharper restore BadListLineBreaks
         }
 
@@ -186,7 +190,8 @@ internal static class SvgDecoder
         {
             var (r, g, b) = ParseColor(stroke);
             // ReSharper disable BadListLineBreaks
-            StrokeRect(ctx,
+            StrokeRect(
+                ctx,
                 x,
                 y,
                 w,
@@ -194,7 +199,8 @@ internal static class SvgDecoder
                 r,
                 g,
                 b,
-                opacity);
+                opacity
+            );
             // ReSharper restore BadListLineBreaks
         }
     }
@@ -216,7 +222,8 @@ internal static class SvgDecoder
         {
             var (fr, fg, fb) = ParseColor(fill);
             // ReSharper disable BadListLineBreaks
-            FillEllipse(ctx,
+            FillEllipse(
+                ctx,
                 cx - r,
                 cy - r,
                 r * 2,
@@ -224,7 +231,8 @@ internal static class SvgDecoder
                 fr,
                 fg,
                 fb,
-                opacity);
+                opacity
+            );
             // ReSharper restore BadListLineBreaks
         }
 
@@ -233,7 +241,8 @@ internal static class SvgDecoder
         {
             var (sr, sg, sb) = ParseColor(stroke);
             // ReSharper disable BadListLineBreaks
-            StrokeEllipse(ctx,
+            StrokeEllipse(
+                ctx,
                 cx - r,
                 cy - r,
                 r * 2,
@@ -241,7 +250,8 @@ internal static class SvgDecoder
                 sr,
                 sg,
                 sb,
-                opacity);
+                opacity
+            );
             // ReSharper restore BadListLineBreaks
         }
     }
@@ -265,7 +275,8 @@ internal static class SvgDecoder
         {
             var (fr, fg, fb) = ParseColor(fill);
             // ReSharper disable BadListLineBreaks
-            FillEllipse(ctx,
+            FillEllipse(
+                ctx,
                 cx - rx,
                 cy - ry2,
                 rx * 2,
@@ -273,7 +284,8 @@ internal static class SvgDecoder
                 fr,
                 fg,
                 fb,
-                opacity);
+                opacity
+            );
             // ReSharper restore BadListLineBreaks
         }
     }
@@ -295,7 +307,8 @@ internal static class SvgDecoder
 
         var (r, g, b) = ParseColor(stroke);
         // ReSharper disable BadListLineBreaks
-        DrawLine(ctx,
+        DrawLine(
+            ctx,
             x1,
             y1,
             x2,
@@ -303,7 +316,8 @@ internal static class SvgDecoder
             r,
             g,
             b,
-            opacity);
+            opacity
+        );
         // ReSharper restore BadListLineBreaks
     }
 
@@ -323,12 +337,14 @@ internal static class SvgDecoder
         {
             var (fr, fg, fb) = ParseColor(fill);
             // ReSharper disable once BadListLineBreaks
-            FillPolygon(ctx,
+            FillPolygon(
+                ctx,
                 pts,
                 fr,
                 fg,
                 fb,
-                opacity);
+                opacity
+            );
         }
 
         // ReSharper disable once InvertIf
@@ -338,7 +354,8 @@ internal static class SvgDecoder
             // ReSharper disable BadListLineBreaks
             for (var i = 0; i < pts.Count - 1; i++)
             {
-                DrawLine(ctx,
+                DrawLine(
+                    ctx,
                     pts[i].X,
                     pts[i].Y,
                     pts[i + 1].X,
@@ -346,12 +363,14 @@ internal static class SvgDecoder
                     sr,
                     sg,
                     sb,
-                    opacity);
+                    opacity
+                );
             }
 
             if (close && pts.Count > 2)
             {
-                DrawLine(ctx,
+                DrawLine(
+                    ctx,
                     pts[^1].X,
                     pts[^1].Y,
                     pts[0].X,
@@ -359,7 +378,8 @@ internal static class SvgDecoder
                     sr,
                     sg,
                     sb,
-                    opacity);
+                    opacity
+                );
             }
             // ReSharper restore BadListLineBreaks
         }
@@ -385,12 +405,14 @@ internal static class SvgDecoder
             foreach (var poly in polygons.Where(static poly => poly.Count >= 3))
                 // ReSharper disable once BadListLineBreaks
             {
-                FillPolygon(ctx,
+                FillPolygon(
+                    ctx,
                     poly,
                     fr,
                     fg,
                     fb,
-                    opacity);
+                    opacity
+                );
             }
         }
 
@@ -403,7 +425,8 @@ internal static class SvgDecoder
                 // ReSharper disable BadListLineBreaks
                 for (var i = 0; i < poly.Count - 1; i++)
                 {
-                    DrawLine(ctx,
+                    DrawLine(
+                        ctx,
                         poly[i].X,
                         poly[i].Y,
                         poly[i + 1].X,
@@ -411,7 +434,8 @@ internal static class SvgDecoder
                         sr,
                         sg,
                         sb,
-                        opacity);
+                        opacity
+                    );
                 }
                 // ReSharper restore BadListLineBreaks
             }
@@ -436,12 +460,14 @@ internal static class SvgDecoder
         for (var row = py; row < py + ph; row++)
         for (var col = px; col < px + pw; col++)
         {
-            ctx.BlendPixel(col,
+            ctx.BlendPixel(
+                col,
                 row,
                 r,
                 g,
                 b,
-                opacity);
+                opacity
+            );
         }
     }
 
@@ -458,7 +484,8 @@ internal static class SvgDecoder
     )
     {
         // ReSharper disable BadListLineBreaks
-        DrawLine(ctx,
+        DrawLine(
+            ctx,
             x,
             y,
             x + w,
@@ -466,8 +493,10 @@ internal static class SvgDecoder
             r,
             g,
             b,
-            opacity);
-        DrawLine(ctx,
+            opacity
+        );
+        DrawLine(
+            ctx,
             x + w,
             y,
             x + w,
@@ -475,8 +504,10 @@ internal static class SvgDecoder
             r,
             g,
             b,
-            opacity);
-        DrawLine(ctx,
+            opacity
+        );
+        DrawLine(
+            ctx,
             x + w,
             y + h,
             x,
@@ -484,8 +515,10 @@ internal static class SvgDecoder
             r,
             g,
             b,
-            opacity);
-        DrawLine(ctx,
+            opacity
+        );
+        DrawLine(
+            ctx,
             x,
             y + h,
             x,
@@ -493,7 +526,8 @@ internal static class SvgDecoder
             r,
             g,
             b,
-            opacity);
+            opacity
+        );
         // ReSharper restore BadListLineBreaks
     }
 
@@ -524,12 +558,14 @@ internal static class SvgDecoder
             var dy = (row - cy) / ry;
             if ((dx * dx) + (dy * dy) <= 1.0f)
             {
-                ctx.BlendPixel(col,
+                ctx.BlendPixel(
+                    col,
                     row,
                     r,
                     g,
                     b,
-                    opacity);
+                    opacity
+                );
             }
         }
     }
@@ -555,7 +591,8 @@ internal static class SvgDecoder
             var ey = (float)(y + (h / 2) + (h / 2 * Math.Sin(angle)));
             if (prevX.HasValue)
             {
-                DrawLine(ctx,
+                DrawLine(
+                    ctx,
                     prevX.Value,
                     prevY!.Value,
                     ex,
@@ -563,7 +600,8 @@ internal static class SvgDecoder
                     r,
                     g,
                     b,
-                    opacity);
+                    opacity
+                );
             }
 
             prevX = ex;
@@ -596,12 +634,14 @@ internal static class SvgDecoder
 
         for (var steps = 0; steps < 4096; steps++)
         {
-            ctx.BlendPixel(cx,
+            ctx.BlendPixel(
+                cx,
                 cy,
                 r,
                 g,
                 b,
-                opacity);
+                opacity
+            );
             if (cx == px1 && cy == py1) break;
 
             var e2 = 2 * err;
@@ -659,12 +699,14 @@ internal static class SvgDecoder
             {
                 for (var col = intersections[k]; col <= intersections[k + 1]; col++)
                 {
-                    ctx.BlendPixel(col,
+                    ctx.BlendPixel(
+                        col,
                         scanY,
                         r,
                         g,
                         b,
-                        opacity);
+                        opacity
+                    );
                 }
             }
         }
@@ -790,7 +832,8 @@ internal static class SvgDecoder
                             y += cy;
                         }
 
-                        AppendBezierCubic(current,
+                        AppendBezierCubic(
+                            current,
                             cx,
                             cy,
                             x1,
@@ -798,7 +841,8 @@ internal static class SvgDecoder
                             x2,
                             y2,
                             x,
-                            y);
+                            y
+                        );
                         cx = x;
                         cy = y;
                     }
@@ -822,13 +866,15 @@ internal static class SvgDecoder
                             y += cy;
                         }
 
-                        AppendBezierQuadratic(current,
+                        AppendBezierQuadratic(
+                            current,
                             cx,
                             cy,
                             x1,
                             y1,
                             x,
-                            y);
+                            y
+                        );
                         cx = x;
                         cy = y;
                     }
@@ -853,12 +899,14 @@ internal static class SvgDecoder
                             y += cy;
                         }
 
-                        AppendArc(current,
+                        AppendArc(
+                            current,
                             cx,
                             cy,
                             x,
                             y,
-                            8);
+                            8
+                        );
                         cx = x;
                         cy = y;
                     }
@@ -882,7 +930,8 @@ internal static class SvgDecoder
                             y += cy;
                         }
 
-                        AppendBezierCubic(current,
+                        AppendBezierCubic(
+                            current,
                             cx,
                             cy,
                             cx,
@@ -890,7 +939,8 @@ internal static class SvgDecoder
                             x2,
                             y2,
                             x,
-                            y);
+                            y
+                        );
                         cx = x;
                         cy = y;
                     }

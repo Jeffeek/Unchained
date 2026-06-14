@@ -34,19 +34,22 @@ internal static class ConnectorRasterizer
             (_, r, g, b) = ColorMath.UnpackArgb(shape.Line.Fill.Solid.Color.Resolve(colorScheme));
 
         var thickness = Math.Max(1, (int)Math.Round((shape.Line.WidthPoints ?? 1.0) * 1.333));
-        buffer.DrawLine(x0,
+        buffer.DrawLine(
+            x0,
             y0,
             x1,
             y1,
             r,
             g,
             b,
-            thickness);
+            thickness
+        );
 
         // Arrow heads — draw at endpoints if configured.
         if (shape.Line.HeadArrow.HeadType != ArrowHeadType.None)
         {
-            DrawArrowHead(buffer,
+            DrawArrowHead(
+                buffer,
                 x1,
                 y1,
                 x0,
@@ -56,12 +59,14 @@ internal static class ConnectorRasterizer
                 shape.Line.HeadArrow.Length,
                 r,
                 g,
-                b);
+                b
+            );
         }
 
         if (shape.Line.TailArrow.HeadType != ArrowHeadType.None)
         {
-            DrawArrowHead(buffer,
+            DrawArrowHead(
+                buffer,
                 x0,
                 y0,
                 x1,
@@ -71,7 +76,8 @@ internal static class ConnectorRasterizer
                 shape.Line.TailArrow.Length,
                 r,
                 g,
-                b);
+                b
+            );
         }
     }
 
@@ -122,7 +128,8 @@ internal static class ConnectorRasterizer
         var rx2 = bx - (int)(px * halfWidth);
         var ry2 = by - (int)(ux * halfWidth);
 
-        DrawFilledTriangle(buffer,
+        DrawFilledTriangle(
+            buffer,
             tipX,
             tipY,
             lx,
@@ -131,7 +138,8 @@ internal static class ConnectorRasterizer
             ry2,
             r,
             g,
-            b);
+            b
+        );
     }
 
     // Fills a triangle using horizontal scan lines.
@@ -169,13 +177,15 @@ internal static class ConnectorRasterizer
         var totalH = y2 - y0;
         if (totalH == 0)
         {
-            buffer.DrawLine(x0,
+            buffer.DrawLine(
+                x0,
                 y0,
                 x2,
                 y0,
                 r,
                 g,
-                b);
+                b
+            );
             return;
         }
 
@@ -192,13 +202,15 @@ internal static class ConnectorRasterizer
                 : (int)(x1 + ((x2 - x1) * beta));
 
             if (ax > bx2) (ax, bx2) = (bx2, ax);
-            buffer.FillRect(ax,
+            buffer.FillRect(
+                ax,
                 scanY,
                 bx2 - ax + 1,
                 1,
                 r,
                 g,
-                b);
+                b
+            );
         }
     }
 }

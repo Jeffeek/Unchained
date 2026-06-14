@@ -86,12 +86,14 @@ public sealed class DocumentProcessorLoadTests : IDisposable
     [Fact]
     public async Task LoadAsync_ConcurrentLoads_AllSucceed()
     {
-        var tasks = Enumerable.Range(0, 8).Select(async _ =>
-        {
-            var stream = new MemoryStream(PdfFixtures.SinglePage());
-            await using var doc = await _processor.LoadAsync(stream);
-            return doc.PageCount;
-        });
+        var tasks = Enumerable.Range(0, 8)
+            .Select(async _ =>
+                {
+                    var stream = new MemoryStream(PdfFixtures.SinglePage());
+                    await using var doc = await _processor.LoadAsync(stream);
+                    return doc.PageCount;
+                }
+            );
         var results = await Task.WhenAll(tasks);
         results.ShouldAllBe(static n => n == 1);
     }
@@ -141,14 +143,16 @@ public sealed class DocumentProcessorSaveTests : IDisposable
     [Fact]
     public async Task SaveAsync_WithNullDoc_Throws() =>
         await Should.ThrowAsync<ArgumentNullException>(() =>
-            _processor.SaveAsync(null!, new MemoryStream()));
+            _processor.SaveAsync(null!, new MemoryStream())
+        );
 
     [Fact]
     public async Task SaveAsync_WithNullStream_Throws()
     {
         await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
         await Should.ThrowAsync<ArgumentNullException>(() =>
-            _processor.SaveAsync(doc, (Stream)null!));
+            _processor.SaveAsync(doc, (Stream)null!)
+        );
     }
 
     [Fact]
@@ -159,7 +163,8 @@ public sealed class DocumentProcessorSaveTests : IDisposable
         foreign.Setup(static d => d.IsDisposed).Returns(false);
 
         await Should.ThrowAsync<ArgumentException>(() =>
-            _processor.SaveAsync(foreign.Object, new MemoryStream()));
+            _processor.SaveAsync(foreign.Object, new MemoryStream())
+        );
     }
 }
 
@@ -176,9 +181,10 @@ public sealed class DocumentProcessorLifetimeTests
     [Fact]
     public void Constructor_CustomConcurrency_Accepted() =>
         Should.NotThrow(static () =>
-        {
-            using var p = new DocumentProcessor(2);
-        });
+            {
+                using var p = new DocumentProcessor(2);
+            }
+        );
 }
 
 /// <summary>Wraps a byte array in a non-seekable stream to test the copy-to-buffer path.</summary>

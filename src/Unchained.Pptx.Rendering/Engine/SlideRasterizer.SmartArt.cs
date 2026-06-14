@@ -21,14 +21,16 @@ internal sealed partial class SlideRasterizer
         var roots = shape.Nodes.Where(static n => !string.IsNullOrWhiteSpace(n.Text) || n.Children.Count > 0).ToList();
         if (roots.Count == 0)
         {
-            DrawBorder(buffer,
+            DrawBorder(
+                buffer,
                 x,
                 y,
                 width,
                 height,
                 180,
                 180,
-                180);
+                180
+            );
             return;
         }
 
@@ -37,53 +39,63 @@ internal sealed partial class SlideRasterizer
 
         if (hasChildren)
         {
-            RenderSmartArtHierarchy(buffer,
+            RenderSmartArtHierarchy(
+                buffer,
                 roots,
                 x,
                 y,
                 width,
                 height,
-                dpi);
+                dpi
+            );
         }
         else
         {
             switch (roots.Count)
             {
                 case 4 when width >= height:
-                    RenderSmartArtMatrix(buffer,
+                    RenderSmartArtMatrix(
+                        buffer,
                         flatTexts,
                         x,
                         y,
                         width,
                         height,
-                        dpi);
+                        dpi
+                    );
                 break;
                 case >= 3 and <= 6 when !hasChildren:
-                    RenderSmartArtCycle(buffer,
+                    RenderSmartArtCycle(
+                        buffer,
                         flatTexts,
                         x,
                         y,
                         width,
                         height,
-                        dpi);
+                        dpi
+                    );
                 break;
                 case >= 3 when height > width:
-                    RenderSmartArtPyramid(buffer,
+                    RenderSmartArtPyramid(
+                        buffer,
                         flatTexts,
                         x,
                         y,
                         width,
                         height,
-                        dpi);
+                        dpi
+                    );
                 break;
                 default:
-                    RenderSmartArtLinear(buffer,
+                    RenderSmartArtLinear(
+                        buffer,
                         flatTexts,
                         x,
                         y,
                         width,
                         height,
-                        dpi);
+                        dpi
+                    );
                 break;
             }
         }
@@ -105,14 +117,17 @@ internal sealed partial class SlideRasterizer
         for (var i = 0; i < nodes.Count; i++)
         {
             var color = SeriesPalette[i % SeriesPalette.Length];
-            buffer.FillRect(x + 2,
+            buffer.FillRect(
+                x + 2,
                 cy,
                 width - 4,
                 boxH,
                 color.R,
                 color.G,
-                color.B);
-            RenderTextFrameText(buffer,
+                color.B
+            );
+            RenderTextFrameText(
+                buffer,
                 nodes[i],
                 x + 8,
                 cy + 2,
@@ -121,7 +136,8 @@ internal sealed partial class SlideRasterizer
                 dpi,
                 255,
                 255,
-                255);
+                255
+            );
             cy += boxH + 4;
             if (cy > y + height) break;
         }
@@ -158,7 +174,8 @@ internal sealed partial class SlideRasterizer
                     buffer.BlitImagePixel(px, py, color.R, color.G, color.B);
             }
 
-            RenderTextFrameText(buffer,
+            RenderTextFrameText(
+                buffer,
                 TruncateLabel(nodes[i], 8),
                 nx - nodeR,
                 ny - 5,
@@ -167,7 +184,8 @@ internal sealed partial class SlideRasterizer
                 dpi,
                 255,
                 255,
-                255);
+                255
+            );
         }
     }
 
@@ -200,14 +218,17 @@ internal sealed partial class SlideRasterizer
         )
         {
             var color = SeriesPalette[colorIdx % SeriesPalette.Length];
-            buffer.FillRect(nx,
+            buffer.FillRect(
+                nx,
                 ny,
                 boxW,
                 boxH,
                 color.R,
                 color.G,
-                color.B);
-            RenderTextFrameText(buffer,
+                color.B
+            );
+            RenderTextFrameText(
+                buffer,
                 TruncateLabel(node.Text, 10),
                 nx + 4,
                 ny + 4,
@@ -216,7 +237,8 @@ internal sealed partial class SlideRasterizer
                 dpi,
                 255,
                 255,
-                255);
+                255
+            );
 
             if (node.Children.Count == 0) return;
 
@@ -228,13 +250,15 @@ internal sealed partial class SlideRasterizer
             {
                 var childX = x + (ci * childW) + 4;
                 // Connect line
-                buffer.DrawLine(nx + (boxW / 2),
+                buffer.DrawLine(
+                    nx + (boxW / 2),
                     ny + boxH,
                     childX + (childW / 2),
                     childY,
                     180,
                     180,
-                    180);
+                    180
+                );
                 DrawNode(node.Children[ci], childX, childY, colorIdx + ci + 1);
             }
         }
@@ -260,14 +284,17 @@ internal sealed partial class SlideRasterizer
             var cx2 = x + 2 + (col * (cellW + 2));
             var cy3 = y + 2 + (row * (cellH + 2));
             var color = SeriesPalette[i % SeriesPalette.Length];
-            buffer.FillRect(cx2,
+            buffer.FillRect(
+                cx2,
                 cy3,
                 cellW,
                 cellH,
                 color.R,
                 color.G,
-                color.B);
-            RenderTextFrameText(buffer,
+                color.B
+            );
+            RenderTextFrameText(
+                buffer,
                 nodes[i],
                 cx2 + 4,
                 cy3 + (cellH / 2) - 6,
@@ -276,7 +303,8 @@ internal sealed partial class SlideRasterizer
                 dpi,
                 255,
                 255,
-                255);
+                255
+            );
         }
     }
 
@@ -301,14 +329,17 @@ internal sealed partial class SlideRasterizer
             var rx = x + ((width - rowW) / 2);
             var ry = y + (i * rowH);
             var color = SeriesPalette[i % SeriesPalette.Length];
-            buffer.FillRect(rx,
+            buffer.FillRect(
+                rx,
                 ry,
                 rowW,
                 rowH - 2,
                 color.R,
                 color.G,
-                color.B);
-            RenderTextFrameText(buffer,
+                color.B
+            );
+            RenderTextFrameText(
+                buffer,
                 TruncateLabel(nodes[i], 12),
                 rx + 4,
                 ry + (rowH / 2) - 5,
@@ -317,7 +348,8 @@ internal sealed partial class SlideRasterizer
                 dpi,
                 255,
                 255,
-                255);
+                255
+            );
         }
     }
 

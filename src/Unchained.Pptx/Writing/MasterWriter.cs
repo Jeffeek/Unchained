@@ -25,10 +25,12 @@ internal static class MasterWriter
         var r = PmlNames.Relationships;
         var dml = DmlNames.Dml;
 
-        var sldMaster = new XElement(PmlNames.SlideMaster,
+        var sldMaster = new XElement(
+            PmlNames.SlideMaster,
             new XAttribute(XNamespace.Xmlns + "p", pml.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "a", dml.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName));
+            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName)
+        );
 
         // Common slide data
         var cSld = new XElement(PmlNames.CommonSlideData);
@@ -36,20 +38,36 @@ internal static class MasterWriter
             cSld.Add(new XAttribute(PmlNames.AttributeName, master.Name));
 
         var spTree = new XElement(PmlNames.ShapeTree);
-        spTree.Add(new XElement(PmlNames.NonVisualGroupShapeProperties,
-            new XElement(PmlNames.CommonNonVisualProperties,
-                new XAttribute(PmlNames.AttributeId, 1),
-                new XAttribute(PmlNames.AttributeName, string.Empty)),
-            new XElement(pml + "cNvGrpSpPr"),
-            new XElement(PmlNames.ApplicationNonVisualProperties)));
-        spTree.Add(new XElement(PmlNames.GroupShapeProperties,
-            new XElement(DmlNames.Transform,
-                new XElement(DmlNames.Offset,
-                    new XAttribute(DmlNames.AttributeX, 0),
-                    new XAttribute(DmlNames.AttributeY, 0)),
-                new XElement(DmlNames.Extents,
-                    new XAttribute(DmlNames.AttributeWidth, 0),
-                    new XAttribute(DmlNames.AttributeHeight, 0)))));
+        spTree.Add(
+            new XElement(
+                PmlNames.NonVisualGroupShapeProperties,
+                new XElement(
+                    PmlNames.CommonNonVisualProperties,
+                    new XAttribute(PmlNames.AttributeId, 1),
+                    new XAttribute(PmlNames.AttributeName, string.Empty)
+                ),
+                new XElement(pml + "cNvGrpSpPr"),
+                new XElement(PmlNames.ApplicationNonVisualProperties)
+            )
+        );
+        spTree.Add(
+            new XElement(
+                PmlNames.GroupShapeProperties,
+                new XElement(
+                    DmlNames.Transform,
+                    new XElement(
+                        DmlNames.Offset,
+                        new XAttribute(DmlNames.AttributeX, 0),
+                        new XAttribute(DmlNames.AttributeY, 0)
+                    ),
+                    new XElement(
+                        DmlNames.Extents,
+                        new XAttribute(DmlNames.AttributeWidth, 0),
+                        new XAttribute(DmlNames.AttributeHeight, 0)
+                    )
+                )
+            )
+        );
 
         foreach (var el in master.Shapes.Select(static shape => ShapeWriter.Write(shape)).OfType<XElement>())
             spTree.Add(el);
@@ -62,17 +80,27 @@ internal static class MasterWriter
         var idCounter = 2147483649u;
         foreach (var layout in master.Layouts)
         {
-            sldLayoutIdLst.Add(new XElement(PmlNames.SlideLayoutId,
-                new XAttribute(PmlNames.AttributeId, idCounter++),
-                new XAttribute(PmlNames.RelationshipId,
-                    layout.RelationshipId.Length > 0 ? layout.RelationshipId : "rId1")));
+            sldLayoutIdLst.Add(
+                new XElement(
+                    PmlNames.SlideLayoutId,
+                    new XAttribute(PmlNames.AttributeId, idCounter++),
+                    new XAttribute(
+                        PmlNames.RelationshipId,
+                        layout.RelationshipId.Length > 0 ? layout.RelationshipId : "rId1"
+                    )
+                )
+            );
         }
 
         sldMaster.Add(sldLayoutIdLst);
 
         sldMaster.Add(new XElement(pml + "txStyles"));
-        sldMaster.Add(new XElement(PmlNames.ColorMapOverride,
-            new XElement(dml + "masterClrMapping")));
+        sldMaster.Add(
+            new XElement(
+                PmlNames.ColorMapOverride,
+                new XElement(dml + "masterClrMapping")
+            )
+        );
 
         return sldMaster;
     }

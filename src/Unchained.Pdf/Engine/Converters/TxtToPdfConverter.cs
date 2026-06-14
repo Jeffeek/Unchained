@@ -41,12 +41,14 @@ internal static class TxtToPdfConverter
                 var taggedItems = new List<TaggedContentItem>();
                 var content = BuildPageContentTagged(pageLines, options, pageIndex, taggedItems);
                 // ReSharper disable once BadListLineBreaks
-                acc.AddPage(options.PageWidthPt,
+                acc.AddPage(
+                    options.PageWidthPt,
                     options.PageHeightPt,
                     content,
                     fontMap,
                     taggedItems,
-                    options.Language);
+                    options.Language
+                );
             }
             else
             {

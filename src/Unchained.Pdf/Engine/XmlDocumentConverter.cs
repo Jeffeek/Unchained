@@ -50,9 +50,11 @@ internal static class XmlDocumentConverter
             var width = GetMediaBoxDimension(pageDict, 2);
             var height = GetMediaBoxDimension(pageDict, 3);
 
-            var pageEl = new XElement("Page",
+            var pageEl = new XElement(
+                "Page",
                 new XAttribute("width", width.ToString("G", CultureInfo.InvariantCulture)),
-                new XAttribute("height", height.ToString("G", CultureInfo.InvariantCulture)));
+                new XAttribute("height", height.ToString("G", CultureInfo.InvariantCulture))
+            );
 
             // Emit text spans as Paragraph elements.
             try
@@ -63,16 +65,26 @@ internal static class XmlDocumentConverter
 
                 foreach (var span in spans.Where(static span => !string.IsNullOrWhiteSpace(span.Text)))
                 {
-                    pageEl.Add(new XElement("Paragraph",
-                        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-                        new XAttribute("font", span.FontName ?? "Helvetica"),
-                        new XAttribute("size",
-                            span.FontSize.ToString("G", CultureInfo.InvariantCulture)),
-                        new XAttribute("x",
-                            span.X.ToString("G", CultureInfo.InvariantCulture)),
-                        new XAttribute("y",
-                            span.Y.ToString("G", CultureInfo.InvariantCulture)),
-                        span.Text));
+                    pageEl.Add(
+                        new XElement(
+                            "Paragraph",
+                            // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
+                            new XAttribute("font", span.FontName ?? "Helvetica"),
+                            new XAttribute(
+                                "size",
+                                span.FontSize.ToString("G", CultureInfo.InvariantCulture)
+                            ),
+                            new XAttribute(
+                                "x",
+                                span.X.ToString("G", CultureInfo.InvariantCulture)
+                            ),
+                            new XAttribute(
+                                "y",
+                                span.Y.ToString("G", CultureInfo.InvariantCulture)
+                            ),
+                            span.Text
+                        )
+                    );
                 }
             }
             catch
@@ -151,7 +163,8 @@ internal static class XmlDocumentConverter
             // Convert fontRefs to string→ref map for PdfPageAccumulator.
             var fontMap = fontRefs.ToDictionary(
                 static kv => kv.Key,
-                static kv => kv.Value);
+                static kv => kv.Value
+            );
 
             acc.AddPage(width, height, buf.WrittenMemory.Span, fontMap);
         }
@@ -223,12 +236,14 @@ internal static class XmlDocumentConverter
                 e.Elements()
                     .Where(static c => c.Name.LocalName.Equals("Cell", StringComparison.OrdinalIgnoreCase))
                     .Select(static c => c.Value)
-                    .ToList())
+                    .ToList()
+            )
             .ToList();
 
         var fontKey = fontRefs.Keys.FirstOrDefault() ?? "Helvetica";
         var boldKey = fontRefs.Keys.FirstOrDefault(static k =>
-            k.Contains("Bold", StringComparison.OrdinalIgnoreCase)) ?? fontKey;
+            k.Contains("Bold", StringComparison.OrdinalIgnoreCase)
+        ) ?? fontKey;
 
         var curY = startY;
 

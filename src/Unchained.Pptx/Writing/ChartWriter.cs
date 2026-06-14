@@ -25,31 +25,46 @@ internal static class ChartWriter
         var c = CmlNames.Cml;
         var a = DmlNames.Dml;
         var r = XNamespace.Get(
-            "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+        );
 
-        var chartSpace = new XElement(CmlNames.ChartSpace,
+        var chartSpace = new XElement(
+            CmlNames.ChartSpace,
             new XAttribute(XNamespace.Xmlns + "c", c.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "a", a.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName));
+            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName)
+        );
 
-        chartSpace.Add(new XElement(CmlNames.Language,
-            new XAttribute(CmlNames.AttributeValue, "en-US")));
+        chartSpace.Add(
+            new XElement(
+                CmlNames.Language,
+                new XAttribute(CmlNames.AttributeValue, "en-US")
+            )
+        );
 
         var chartEl = new XElement(CmlNames.Chart);
 
         if (model.HasTitle)
             chartEl.Add(WriteTitle(model.Title, a));
 
-        chartEl.Add(new XElement(CmlNames.AutoTitleDeleted,
-            new XAttribute(CmlNames.AttributeValue, model.HasTitle ? "0" : "1")));
+        chartEl.Add(
+            new XElement(
+                CmlNames.AutoTitleDeleted,
+                new XAttribute(CmlNames.AttributeValue, model.HasTitle ? "0" : "1")
+            )
+        );
 
         chartEl.Add(WritePlotArea(model));
 
         if (model.Legend.IsVisible)
             chartEl.Add(WriteLegend(model.Legend));
 
-        chartEl.Add(new XElement(CmlNames.PlotVisibleOnly,
-            new XAttribute(CmlNames.AttributeValue, "1")));
+        chartEl.Add(
+            new XElement(
+                CmlNames.PlotVisibleOnly,
+                new XAttribute(CmlNames.AttributeValue, "1")
+            )
+        );
 
         chartSpace.Add(chartEl);
 
@@ -322,8 +337,12 @@ internal static class ChartWriter
 
         if (includeMarker)
         {
-            ser.Add(new XElement(CmlNames.Marker,
-                new XElement(CmlNames.MarkerSymbol, new XAttribute(CmlNames.AttributeValue, "circle"))));
+            ser.Add(
+                new XElement(
+                    CmlNames.Marker,
+                    new XElement(CmlNames.MarkerSymbol, new XAttribute(CmlNames.AttributeValue, "circle"))
+                )
+            );
         }
 
         // Data labels and trendline precede the category/value data per the c:ser schema.
@@ -354,9 +373,13 @@ internal static class ChartWriter
         var dLbls = new XElement(CmlNames.Cml + "dLbls");
         if (!string.IsNullOrEmpty(labels.NumberFormat))
         {
-            dLbls.Add(new XElement(c + "numFmt",
-                new XAttribute("formatCode", labels.NumberFormat),
-                new XAttribute("sourceLinked", "0")));
+            dLbls.Add(
+                new XElement(
+                    c + "numFmt",
+                    new XAttribute("formatCode", labels.NumberFormat),
+                    new XAttribute("sourceLinked", "0")
+                )
+            );
         }
 
         if (!string.IsNullOrEmpty(labels.Position))
@@ -418,9 +441,13 @@ internal static class ChartWriter
         var tx = new XElement(CmlNames.Text);
         var strLit = new XElement(CmlNames.StringLiteral);
         strLit.Add(new XElement(CmlNames.PointCount, new XAttribute(CmlNames.AttributeValue, "1")));
-        strLit.Add(new XElement(CmlNames.Point,
-            new XAttribute(CmlNames.AttributeIndex, "0"),
-            new XElement(CmlNames.PointValue, name)));
+        strLit.Add(
+            new XElement(
+                CmlNames.Point,
+                new XAttribute(CmlNames.AttributeIndex, "0"),
+                new XElement(CmlNames.PointValue, name)
+            )
+        );
         tx.Add(strLit);
         return tx;
     }
@@ -431,9 +458,13 @@ internal static class ChartWriter
         strLit.Add(new XElement(CmlNames.PointCount, new XAttribute(CmlNames.AttributeValue, values.Count)));
         for (var i = 0; i < values.Count; i++)
         {
-            strLit.Add(new XElement(CmlNames.Point,
-                new XAttribute(CmlNames.AttributeIndex, i),
-                new XElement(CmlNames.PointValue, values[i])));
+            strLit.Add(
+                new XElement(
+                    CmlNames.Point,
+                    new XAttribute(CmlNames.AttributeIndex, i),
+                    new XElement(CmlNames.PointValue, values[i])
+                )
+            );
         }
 
         return strLit;
@@ -446,10 +477,16 @@ internal static class ChartWriter
         numLit.Add(new XElement(CmlNames.PointCount, new XAttribute(CmlNames.AttributeValue, values.Count)));
         for (var i = 0; i < values.Count; i++)
         {
-            numLit.Add(new XElement(CmlNames.Point,
-                new XAttribute(CmlNames.AttributeIndex, i),
-                new XElement(CmlNames.PointValue,
-                    values[i].ToString("G", CultureInfo.InvariantCulture))));
+            numLit.Add(
+                new XElement(
+                    CmlNames.Point,
+                    new XAttribute(CmlNames.AttributeIndex, i),
+                    new XElement(
+                        CmlNames.PointValue,
+                        values[i].ToString("G", CultureInfo.InvariantCulture)
+                    )
+                )
+            );
         }
 
         return numLit;
@@ -474,9 +511,13 @@ internal static class ChartWriter
         if (!string.IsNullOrEmpty(axis.Title)) ax.Add(WriteAxisTitle(axis.Title));
         if (!string.IsNullOrEmpty(axis.NumberFormat))
         {
-            ax.Add(new XElement(CmlNames.Cml + "numFmt",
-                new XAttribute("formatCode", axis.NumberFormat),
-                new XAttribute("sourceLinked", "0")));
+            ax.Add(
+                new XElement(
+                    CmlNames.Cml + "numFmt",
+                    new XAttribute("formatCode", axis.NumberFormat),
+                    new XAttribute("sourceLinked", "0")
+                )
+            );
         }
 
         ax.Add(new XElement(CmlNames.CrossAxis, new XAttribute(CmlNames.AttributeValue, ValueAxisId)));
@@ -499,9 +540,13 @@ internal static class ChartWriter
         if (!string.IsNullOrEmpty(axis.Title)) ax.Add(WriteAxisTitle(axis.Title));
         if (!string.IsNullOrEmpty(axis.NumberFormat))
         {
-            ax.Add(new XElement(CmlNames.Cml + "numFmt",
-                new XAttribute("formatCode", axis.NumberFormat),
-                new XAttribute("sourceLinked", "0")));
+            ax.Add(
+                new XElement(
+                    CmlNames.Cml + "numFmt",
+                    new XAttribute("formatCode", axis.NumberFormat),
+                    new XAttribute("sourceLinked", "0")
+                )
+            );
         }
 
         ax.Add(new XElement(CmlNames.CrossAxis, new XAttribute(CmlNames.AttributeValue, CategoryAxisId)));
@@ -514,8 +559,10 @@ internal static class ChartWriter
 
     private static XElement WriteScaling(ChartAxis axis)
     {
-        var scaling = new XElement(CmlNames.Scaling,
-            new XElement(CmlNames.Orientation, new XAttribute(CmlNames.AttributeValue, "minMax")));
+        var scaling = new XElement(
+            CmlNames.Scaling,
+            new XElement(CmlNames.Orientation, new XAttribute(CmlNames.AttributeValue, "minMax"))
+        );
         if (axis.Maximum is { } max)
             scaling.Add(new XElement(CmlNames.Cml + "max", new XAttribute(CmlNames.AttributeValue, Num(max))));
         if (axis.Minimum is { } min)
@@ -526,15 +573,25 @@ internal static class ChartWriter
     private static XElement WriteAxisTitle(string title)
     {
         var a = DmlNames.Dml;
-        return new XElement(CmlNames.Title,
-            new XElement(CmlNames.Text,
-                new XElement(CmlNames.Rich,
+        return new XElement(
+            CmlNames.Title,
+            new XElement(
+                CmlNames.Text,
+                new XElement(
+                    CmlNames.Rich,
                     new XElement(a + "bodyPr"),
                     new XElement(a + "lstStyle"),
-                    new XElement(a + "p",
-                        new XElement(a + "r",
-                            new XElement(a + "t", title))))),
-            new XElement(CmlNames.Cml + "overlay", new XAttribute(CmlNames.AttributeValue, "0")));
+                    new XElement(
+                        a + "p",
+                        new XElement(
+                            a + "r",
+                            new XElement(a + "t", title)
+                        )
+                    )
+                )
+            ),
+            new XElement(CmlNames.Cml + "overlay", new XAttribute(CmlNames.AttributeValue, "0"))
+        );
     }
 
     private static string Num(double value) =>

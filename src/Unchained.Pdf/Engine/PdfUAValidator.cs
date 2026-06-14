@@ -261,7 +261,8 @@ internal static class PdfUAValidator
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
         if (root is null) return;
 
-        WalkStructTree(root,
+        WalkStructTree(
+            root,
             core,
             elem =>
             {
@@ -274,7 +275,8 @@ internal static class PdfUAValidator
 
                 if (!hasAlt && !hasActualText)
                     v.Add(E("7.7", $"/{type} structure element is missing required /Alt or /ActualText entry."));
-            });
+            }
+        );
     }
 
     private static void CheckFormFieldAltText(PdfDocumentCore core, ICollection<PdfUAViolation> v)
@@ -311,7 +313,8 @@ internal static class PdfUAValidator
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
         if (root is null) return;
 
-        WalkStructTree(root,
+        WalkStructTree(
+            root,
             core,
             elem =>
             {
@@ -324,7 +327,8 @@ internal static class PdfUAValidator
                         headingLevels.Add(level);
                     break;
                 }
-            });
+            }
+        );
 
         for (var i = 1; i < headingLevels.Count; i++)
         {
@@ -342,7 +346,8 @@ internal static class PdfUAValidator
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
         if (root is null) return;
 
-        WalkStructTree(root,
+        WalkStructTree(
+            root,
             core,
             elem =>
             {
@@ -351,17 +356,20 @@ internal static class PdfUAValidator
 
                 // Each Table must have at least one TR child (via /K).
                 var hasRow = false;
-                WalkStructKids(elem,
+                WalkStructKids(
+                    elem,
                     core,
                     child =>
                     {
                         if (child.GetName(PdfName.S.Value) == "TR")
                             hasRow = true;
-                    });
+                    }
+                );
 
                 if (!hasRow)
                     v.Add(W("7.9", "Table structure element has no TR (table row) children."));
-            });
+            }
+        );
     }
 
     // ── §7.10  Lists ─────────────────────────────────────────────────────────
@@ -371,7 +379,8 @@ internal static class PdfUAValidator
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
         if (root is null) return;
 
-        WalkStructTree(root,
+        WalkStructTree(
+            root,
             core,
             elem =>
             {
@@ -379,7 +388,8 @@ internal static class PdfUAValidator
                     return;
 
                 // Each L must have LI children, and each LI must have LBody.
-                WalkStructKids(elem,
+                WalkStructKids(
+                    elem,
                     core,
                     liElem =>
                     {
@@ -387,18 +397,22 @@ internal static class PdfUAValidator
                             return;
 
                         var hasLBody = false;
-                        WalkStructKids(liElem,
+                        WalkStructKids(
+                            liElem,
                             core,
                             child =>
                             {
                                 if (child.GetName(PdfName.S.Value) == "LBody")
                                     hasLBody = true;
-                            });
+                            }
+                        );
 
                         if (!hasLBody)
                             v.Add(W("7.10", "LI (list item) structure element is missing an LBody child."));
-                    });
-            });
+                    }
+                );
+            }
+        );
     }
 
     // ── §7.11  Untagged content ───────────────────────────────────────────────
@@ -451,9 +465,13 @@ internal static class PdfUAValidator
 
             if (pageHasContent && !pageHasMarkedContent)
             {
-                v.Add(E("7.11",
-                    $"Page {page} contains drawing operators but no marked-content sequences (BDC/BMC). All content must be tagged.",
-                    pageNumber: page));
+                v.Add(
+                    E(
+                        "7.11",
+                        $"Page {page} contains drawing operators but no marked-content sequences (BDC/BMC). All content must be tagged.",
+                        pageNumber: page
+                    )
+                );
             }
         }
     }
@@ -488,9 +506,13 @@ internal static class PdfUAValidator
                     var hasTu = dict[PdfName.TU] is not null;
                     if (!hasContents && !hasTu)
                     {
-                        v.Add(W("7.13",
-                            $"/{subtype} annotation on page {page} has no /Contents or /TU — screen readers cannot describe it.",
-                            pageNumber: page));
+                        v.Add(
+                            W(
+                                "7.13",
+                                $"/{subtype} annotation on page {page} has no /Contents or /TU — screen readers cannot describe it.",
+                                pageNumber: page
+                            )
+                        );
                     }
                 }
 
@@ -498,9 +520,13 @@ internal static class PdfUAValidator
                 var tabs = pageDict.GetName("Tabs");
                 if (tabs is null)
                 {
-                    v.Add(W("7.13",
-                        $"Page {page} has annotations but no /Tabs entry. Set /Tabs /S for structure-based tab order.",
-                        pageNumber: page));
+                    v.Add(
+                        W(
+                            "7.13",
+                            $"Page {page} has annotations but no /Tabs entry. Set /Tabs /S for structure-based tab order.",
+                            pageNumber: page
+                        )
+                    );
                 }
             }
         }
@@ -513,8 +539,12 @@ internal static class PdfUAValidator
         // /AA (additional actions) on the document catalog must not have scripts (§7.14.2).
         if (core.Catalog[PdfName.AA] is not null)
         {
-            v.Add(W("7.14",
-                "Catalog contains /AA (additional actions). Verify no JavaScript actions are present — they are not permitted in PDF/UA."));
+            v.Add(
+                W(
+                    "7.14",
+                    "Catalog contains /AA (additional actions). Verify no JavaScript actions are present — they are not permitted in PDF/UA."
+                )
+            );
         }
 
         // OpenAction: if present, may not be a named action of type /Named (§7.14.1).

@@ -31,5 +31,6 @@ public sealed record TableStyle(
     public static readonly TableStyle Compact = new(
         HeaderFontSize: 8f,
         CellFontSize: 7f,
-        CellPaddingPt: 2f);
+        CellPaddingPt: 2f
+    );
 }

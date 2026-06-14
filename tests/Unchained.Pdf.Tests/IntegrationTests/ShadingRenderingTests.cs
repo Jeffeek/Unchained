@@ -112,12 +112,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithTriangularClip(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
@@ -129,18 +131,22 @@ public sealed class ShadingRenderingTests : RendererTestBase
         for (var y = 0; y < cornerSize; y++)
         for (var x = 0; x < cornerSize; x++)
         {
-            g[y, x].ShouldBeGreaterThanOrEqualTo(
-                230,
-                $"pixel ({x},{y}) should be white (outside triangle clip) but was {g[y, x]}");
+            g[y, x]
+                .ShouldBeGreaterThanOrEqualTo(
+                    230,
+                    $"pixel ({x},{y}) should be white (outside triangle clip) but was {g[y, x]}"
+                );
         }
 
         // Bottom-right corner region must be black (inside the triangle).
         for (var y = h - cornerSize; y < h; y++)
         for (var x = w - cornerSize; x < w; x++)
         {
-            g[y, x].ShouldBeLessThan(
-                50,
-                $"pixel ({x},{y}) should be black (inside triangle clip) but was {g[y, x]}");
+            g[y, x]
+                .ShouldBeLessThan(
+                    50,
+                    $"pixel ({x},{y}) should be black (inside triangle clip) but was {g[y, x]}"
+                );
         }
     }
 
@@ -166,12 +172,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithBlendMode(blendMode),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
@@ -197,12 +205,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithBlendMode("Multiply"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
@@ -221,12 +231,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithBlendMode("Screen"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
@@ -246,12 +258,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithSoftMask(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
@@ -260,17 +274,23 @@ public sealed class ShadingRenderingTests : RendererTestBase
         // Centre region (inside the 50×50 mask square at 25–75% of page) should be dark.
         var centreX = w / 2;
         var centreY = h / 2;
-        g[centreY, centreX].ShouldBeLessThan(
-            50,
-            $"Centre pixel should be black (inside soft mask) but was {g[centreY, centreX]}");
+        g[centreY, centreX]
+            .ShouldBeLessThan(
+                50,
+                $"Centre pixel should be black (inside soft mask) but was {g[centreY, centreX]}"
+            );
 
         // Corner pixels (outside the mask square) should be white.
-        g[0, 0].ShouldBeGreaterThanOrEqualTo(
-            230,
-            $"Top-left corner should be white (outside soft mask) but was {g[0, 0]}");
-        g[0, w - 1].ShouldBeGreaterThanOrEqualTo(
-            230,
-            $"Top-right corner should be white (outside soft mask) but was {g[0, w - 1]}");
+        g[0, 0]
+            .ShouldBeGreaterThanOrEqualTo(
+                230,
+                $"Top-left corner should be white (outside soft mask) but was {g[0, 0]}"
+            );
+        g[0, w - 1]
+            .ShouldBeGreaterThanOrEqualTo(
+                230,
+                $"Top-right corner should be white (outside soft mask) but was {g[0, w - 1]}"
+            );
     }
 
     [Fact]
@@ -283,12 +303,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(
             PdfFixtures.WithSeparationColorSpace(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var png = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var g = PdfTestConstants.DecodeGrayscale(png);
         var h = g.GetLength(0);
@@ -298,11 +320,15 @@ public sealed class ShadingRenderingTests : RendererTestBase
         // CMYK(1,0,0,0) → RGB(0,255,255) → grey ≈ 181. Grey-128 fallback would be 128.
         // Both are < 253, so any non-white result confirms the color space was applied.
         var centre = g[h / 2, w / 2];
-        centre.ShouldBeLessThan(253,
-            $"Centre pixel should not be white after Separation fill, but was {centre}");
+        centre.ShouldBeLessThan(
+            253,
+            $"Centre pixel should not be white after Separation fill, but was {centre}"
+        );
 
         // Verify it's NOT the grey-128 fallback — it should be brighter (cyan maps to ~181).
-        centre.ShouldNotBe(128,
-            "Centre pixel should not be the grey-128 fallback; tint function should have been evaluated");
+        centre.ShouldNotBe(
+            128,
+            "Centre pixel should not be the grey-128 fallback; tint function should have been evaluated"
+        );
     }
 }

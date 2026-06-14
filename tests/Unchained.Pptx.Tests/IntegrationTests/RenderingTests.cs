@@ -50,9 +50,11 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_BlankSlide_ProducesNonEmptyData()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+        var image = await SlideRenderer.RenderAsync(
+            doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 });
+            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+        );
 
         image.Data.IsEmpty.ShouldBeFalse();
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -62,9 +64,11 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_OutputIsPng()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+        var image = await SlideRenderer.RenderAsync(
+            doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 });
+            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+        );
 
         // PNG magic bytes: 89 50 4E 47
         var bytes = image.Data.Span;
@@ -78,9 +82,11 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_DimensionsMatchOptions()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+        var image = await SlideRenderer.RenderAsync(
+            doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 640, HeightPx = 360 });
+            new RenderOptions { WidthPx = 640, HeightPx = 360 }
+        );
 
         image.WidthPx.ShouldBe(640);
         image.HeightPx.ShouldBe(360);
@@ -90,16 +96,20 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_WithTextShape_ProducesOutput()
     {
         var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(2),
-            "Hello Renderer");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(2),
+                "Hello Renderer"
+            );
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+        var image = await SlideRenderer.RenderAsync(
+            doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 });
+            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+        );
 
         image.Data.Length.ShouldBeGreaterThan(100);
     }
@@ -108,16 +118,21 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_WithColoredShape_ProducesOutput()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddShape(AutoShapeType.Rectangle,
-            Emu.FromInches(0.5),
-            Emu.FromInches(0.5),
-            Emu.FromInches(3),
-            Emu.FromInches(2));
+        var shape = doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.FromInches(0.5),
+                Emu.FromInches(0.5),
+                Emu.FromInches(3),
+                Emu.FromInches(2)
+            );
         shape.Fill.SetSolid(ColorSpec.FromRgb(0, 112, 192));
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+        var image = await SlideRenderer.RenderAsync(
+            doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 });
+            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+        );
 
         image.Data.Length.ShouldBeGreaterThan(0);
     }
@@ -126,8 +141,10 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderAllAsync_FiveSlides_ReturnsFiveImages()
     {
         var doc = PptxFixtures.WithSlides(5);
-        var images = await SlideRenderer.RenderAllAsync(doc,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 });
+        var images = await SlideRenderer.RenderAllAsync(
+            doc,
+            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+        );
 
         images.Length.ShouldBe(5);
         foreach (var img in images)
@@ -138,8 +155,10 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderAllAsync_AllImagesArePng()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var images = await SlideRenderer.RenderAllAsync(doc,
-            new RenderOptions { WidthPx = 160, HeightPx = 90 });
+        var images = await SlideRenderer.RenderAllAsync(
+            doc,
+            new RenderOptions { WidthPx = 160, HeightPx = 90 }
+        );
 
         foreach (var img in images)
         {
@@ -152,8 +171,10 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderAllAsync_EmptyPresentation_ReturnsEmpty()
     {
         var doc = new PresentationProcessor().CreateBlank();
-        var images = await SlideRenderer.RenderAllAsync(doc,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 });
+        var images = await SlideRenderer.RenderAllAsync(
+            doc,
+            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+        );
 
         images.Length.ShouldBe(0);
     }
@@ -162,9 +183,11 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_BmpFormat_ProducesBmpBytesAndLabel()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+        var image = await SlideRenderer.RenderAsync(
+            doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Bmp });
+            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Bmp }
+        );
 
         image.Format.ShouldBe(RenderImageFormat.Bmp);
         var bytes = image.Data.Span;
@@ -176,9 +199,11 @@ public sealed class RenderingTests : PptxTestBase
     public async Task RenderSlide_JpegFormat_ProducesJpegBytesAndLabel()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0],
+        var image = await SlideRenderer.RenderAsync(
+            doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Jpeg });
+            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Jpeg }
+        );
 
         image.Format.ShouldBe(RenderImageFormat.Jpeg);
         var bytes = image.Data.Span;

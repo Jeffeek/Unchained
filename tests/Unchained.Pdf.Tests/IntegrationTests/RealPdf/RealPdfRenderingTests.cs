@@ -23,8 +23,10 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         var tested = 0;
         foreach (var path in Files())
         {
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
-                TestContext.Current.CancellationToken);
+            await using var doc = await TryLoadDocAsync(
+                await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken
+            );
             if (doc is null)
                 continue;
 
@@ -45,8 +47,10 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         var tested = 0;
         foreach (var path in Files())
         {
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
-                TestContext.Current.CancellationToken);
+            await using var doc = await TryLoadDocAsync(
+                await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken
+            );
             if (doc is null)
                 continue;
 
@@ -76,7 +80,8 @@ public sealed class RealPdfRenderingTests : RendererTestBase
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         // A page with text should contain at least one non-white pixel.
-        png.Skip(8).Any(static b => b != 0xFF)
+        png.Skip(8)
+            .Any(static b => b != 0xFF)
             .ShouldBeTrue("Expected at least one non-white pixel.");
     }
 
@@ -103,8 +108,10 @@ public sealed class RealPdfRenderingTests : RendererTestBase
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(), TestContext.Current.CancellationToken);
-        png.Length.ShouldBeGreaterThan(5_000,
-            "Expected a substantial PNG for a page containing images.");
+        png.Length.ShouldBeGreaterThan(
+            5_000,
+            "Expected a substantial PNG for a page containing images."
+        );
     }
 
     [Fact]

@@ -44,22 +44,26 @@ public sealed class TrueTypeMetricsTests
     [Fact]
     public void FontMetrics_Record_EqualityByValue()
     {
-        var a = new FontMetrics(1,
+        var a = new FontMetrics(
+            1,
             2,
             3,
             4,
             5,
             6,
             7,
-            8);
-        var b = new FontMetrics(1,
+            8
+        );
+        var b = new FontMetrics(
+            1,
             2,
             3,
             4,
             5,
             6,
             7,
-            8);
+            8
+        );
         a.ShouldBe(b);
     }
 }

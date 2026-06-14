@@ -43,84 +43,98 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
 
     [Fact]
     public Task Parse_AllVeraPdfFiles_PageCountIsNonNegative() =>
-        Parse_AllVeraPdfFiles_Core(static (pdfPath, doc) =>
+        Parse_AllVeraPdfFiles_Core(
+            static (pdfPath, doc) =>
             {
                 doc.PageCount.ShouldBeGreaterThanOrEqualTo(0, Path.GetFileName(pdfPath));
 
                 return ValueTask.CompletedTask;
             },
-            VeraPdfFixtures.AllPdfFilePaths());
+            VeraPdfFixtures.AllPdfFilePaths()
+        );
 
     // ── "pass" files — must parse cleanly ────────────────────────────────────
 
     [Fact]
     public Task Parse_VeraPdfPassFiles_HavePositivePageCount() =>
-        Parse_AllVeraPdfFiles_Core(static (pdfPath, doc) =>
+        Parse_AllVeraPdfFiles_Core(
+            static (pdfPath, doc) =>
             {
                 doc.PageCount.ShouldBeGreaterThan(0, Path.GetFileName(pdfPath));
 
                 return ValueTask.CompletedTask;
             },
-            VeraPdfFixtures.PassPdfFilePaths());
+            VeraPdfFixtures.PassPdfFilePaths()
+        );
 
     [Fact]
     public Task Parse_VeraPdfPassFiles_PagesMatchPageCount() =>
-        Parse_AllVeraPdfFiles_Core(static (pdfPath, doc) =>
+        Parse_AllVeraPdfFiles_Core(
+            static (pdfPath, doc) =>
             {
                 doc.Pages.Count.ShouldBe(doc.PageCount, Path.GetFileName(pdfPath));
 
                 return ValueTask.CompletedTask;
             },
-            VeraPdfFixtures.PassPdfFilePaths());
+            VeraPdfFixtures.PassPdfFilePaths()
+        );
 
     // ── Content stream & text extraction ─────────────────────────────────────
 
     [Fact]
     public Task GetContentOperators_AllVeraPdfFiles_DoNotThrow() =>
-        Parse_AllVeraPdfFiles_Core(static (pdfPath, doc) =>
+        Parse_AllVeraPdfFiles_Core(
+            static (pdfPath, doc) =>
             {
                 for (var i = 1; i <= doc.PageCount; i++)
                     doc.Pages[i].GetContentOperators().ShouldNotBeNull(Path.GetFileName(pdfPath));
 
                 return ValueTask.CompletedTask;
             },
-            VeraPdfFixtures.AllPdfFilePaths());
+            VeraPdfFixtures.AllPdfFilePaths()
+        );
 
     [Fact]
     public Task ExtractText_AllVeraPdfFiles_DoNotThrow() =>
-        Parse_AllVeraPdfFiles_Core(static (pdfPath, doc) =>
+        Parse_AllVeraPdfFiles_Core(
+            static (pdfPath, doc) =>
             {
                 for (var i = 1; i <= doc.PageCount; i++)
                     _ = doc.Pages[i].ExtractText();
 
                 return ValueTask.CompletedTask;
             },
-            VeraPdfFixtures.AllPdfFilePaths());
+            VeraPdfFixtures.AllPdfFilePaths()
+        );
 
     // ── Round-trip ────────────────────────────────────────────────────────────
 
     [Fact]
     public Task RoundTrip_VeraPdfPassFiles_PageCountPreserved() =>
-        Parse_AllVeraPdfFiles_Core(static async (pdfPath, doc) =>
+        Parse_AllVeraPdfFiles_Core(
+            static async (pdfPath, doc) =>
             {
                 var before = doc.PageCount;
                 await using var reloaded = await SaveAndReloadAsync(doc);
                 reloaded.PageCount.ShouldBe(before, Path.GetFileName(pdfPath));
             },
-            VeraPdfFixtures.PassPdfFilePaths());
+            VeraPdfFixtures.PassPdfFilePaths()
+        );
 
     // ── Image XObjects ────────────────────────────────────────────────────────
 
     [Fact]
     public Task GetImageXObjects_AllVeraPdfFiles_DoNotThrow() =>
-        Parse_AllVeraPdfFiles_Core(static (pdfPath, doc) =>
+        Parse_AllVeraPdfFiles_Core(
+            static (pdfPath, doc) =>
             {
                 for (var i = 1; i <= doc.PageCount; i++)
                     doc.Pages[i].GetImageXObjects().ShouldNotBeNull(Path.GetFileName(pdfPath));
 
                 return ValueTask.CompletedTask;
             },
-            VeraPdfFixtures.AllPdfFilePaths());
+            VeraPdfFixtures.AllPdfFilePaths()
+        );
 
     // Fail files
     [Fact]
@@ -134,8 +148,10 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
         {
             try
             {
-                _ = await LoadAsync(await File.ReadAllBytesAsync(pdfPath, TestContext.Current.CancellationToken),
-                    TestContext.Current.CancellationToken);
+                _ = await LoadAsync(
+                    await File.ReadAllBytesAsync(pdfPath, TestContext.Current.CancellationToken),
+                    TestContext.Current.CancellationToken
+                );
                 successfullyParsed++;
             }
             catch (PdfException)
@@ -148,7 +164,8 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
         }
 
         outputHelper.WriteLine(
-            $"[{nameof(Parse_FailVeraPdfFiles_ParsesOrThrows_PdfException)}] Tested: {tested}, Successfully Parsed: {successfullyParsed}, Throws PdfException: {throwsPdfException}");
+            $"[{nameof(Parse_FailVeraPdfFiles_ParsesOrThrows_PdfException)}] Tested: {tested}, Successfully Parsed: {successfullyParsed}, Throws PdfException: {throwsPdfException}"
+        );
 
         if (tested == 0)
             Assert.Skip("No veraPDF test files found in TestFiles/veraPDF/.");

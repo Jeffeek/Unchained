@@ -51,9 +51,11 @@ public sealed class SampleRenderingTests : PptxTestBase
             if (content is null)
                 continue; // genuinely empty slide (e.g. an API fixture) — blank is correct
 
-            ink.ShouldBeGreaterThan(0.1,
+            ink.ShouldBeGreaterThan(
+                0.1,
                 $"{sample} slide {i + 1} has content [{content}] but rendered blank (ink={ink:0.00}%) " +
-                "— it is missing from the rasterizer");
+                "— it is missing from the rasterizer"
+            );
         }
     }
 

@@ -194,7 +194,8 @@ internal sealed class RasterBuffer(int width, int height)
             var br = _data[i];
             var bg = _data[i + 1];
             var bb = _data[i + 2];
-            Blend(blendMode,
+            Blend(
+                blendMode,
                 br,
                 bg,
                 bb,
@@ -204,7 +205,8 @@ internal sealed class RasterBuffer(int width, int height)
                 a,
                 out var or,
                 out var og,
-                out var ob);
+                out var ob
+            );
             _data[i] = or;
             _data[i + 1] = og;
             _data[i + 2] = ob;
@@ -237,7 +239,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = (byte)(br * sr / 255);
                 var mg = (byte)(bg * sg / 255);
                 var mb = (byte)(bb * sb / 255);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -246,7 +249,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Screen":
@@ -254,7 +258,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = (byte)(br + sr - (br * sr / 255));
                 var mg = (byte)(bg + sg - (bg * sg / 255));
                 var mb = (byte)(bb + sb - (bb * sb / 255));
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -263,7 +268,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Overlay":
@@ -271,7 +277,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = HardLightChannel(sr, br);
                 var mg = HardLightChannel(sg, bg);
                 var mb = HardLightChannel(sb, bb);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -280,7 +287,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Darken":
@@ -288,7 +296,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = Math.Min(br, sr);
                 var mg = Math.Min(bg, sg);
                 var mb = Math.Min(bb, sb);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -297,7 +306,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Lighten":
@@ -305,7 +315,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = Math.Max(br, sr);
                 var mg = Math.Max(bg, sg);
                 var mb = Math.Max(bb, sb);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -314,7 +325,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "ColorDodge":
@@ -322,7 +334,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = ColorDodgeChannel(br, sr);
                 var mg = ColorDodgeChannel(bg, sg);
                 var mb = ColorDodgeChannel(bb, sb);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -331,7 +344,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "ColorBurn":
@@ -339,7 +353,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = ColorBurnChannel(br, sr);
                 var mg = ColorBurnChannel(bg, sg);
                 var mb = ColorBurnChannel(bb, sb);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -348,7 +363,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "HardLight":
@@ -356,7 +372,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = HardLightChannel(br, sr);
                 var mg = HardLightChannel(bg, sg);
                 var mb = HardLightChannel(bb, sb);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -365,7 +382,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "SoftLight":
@@ -373,7 +391,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = SoftLightChannel(br, sr);
                 var mg = SoftLightChannel(bg, sg);
                 var mb = SoftLightChannel(bb, sb);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -382,7 +401,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Difference":
@@ -390,7 +410,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = (byte)Math.Abs(br - sr);
                 var mg = (byte)Math.Abs(bg - sg);
                 var mb = (byte)Math.Abs(bb - sb);
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -399,7 +420,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Exclusion":
@@ -407,7 +429,8 @@ internal sealed class RasterBuffer(int width, int height)
                 var mr = (byte)(br + sr - (2 * br * sr / 255));
                 var mg = (byte)(bg + sg - (2 * bg * sg / 255));
                 var mb = (byte)(bb + sb - (2 * bb * sb / 255));
-                AlphaComposite(br,
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -416,30 +439,38 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Hue":
             {
-                RgbToHsl(br,
+                RgbToHsl(
+                    br,
                     bg,
                     bb,
                     out _,
                     out var sl,
-                    out var ll);
-                RgbToHsl(sr,
+                    out var ll
+                );
+                RgbToHsl(
+                    sr,
                     sg,
                     sb,
                     out var hs,
                     out _,
-                    out _);
-                HslToRgb(hs,
+                    out _
+                );
+                HslToRgb(
+                    hs,
                     sl,
                     ll,
                     out var mr,
                     out var mg,
-                    out var mb);
-                AlphaComposite(br,
+                    out var mb
+                );
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -448,30 +479,38 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Saturation":
             {
-                RgbToHsl(br,
+                RgbToHsl(
+                    br,
                     bg,
                     bb,
                     out var hb,
                     out _,
-                    out var lb);
-                RgbToHsl(sr,
+                    out var lb
+                );
+                RgbToHsl(
+                    sr,
                     sg,
                     sb,
                     out _,
                     out var ss,
-                    out _);
-                HslToRgb(hb,
+                    out _
+                );
+                HslToRgb(
+                    hb,
                     ss,
                     lb,
                     out var mr,
                     out var mg,
-                    out var mb);
-                AlphaComposite(br,
+                    out var mb
+                );
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -480,30 +519,38 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Color":
             {
-                RgbToHsl(br,
+                RgbToHsl(
+                    br,
                     bg,
                     bb,
                     out _,
                     out _,
-                    out var lb);
-                RgbToHsl(sr,
+                    out var lb
+                );
+                RgbToHsl(
+                    sr,
                     sg,
                     sb,
                     out var hs,
                     out var ss,
-                    out _);
-                HslToRgb(hs,
+                    out _
+                );
+                HslToRgb(
+                    hs,
                     ss,
                     lb,
                     out var mr,
                     out var mg,
-                    out var mb);
-                AlphaComposite(br,
+                    out var mb
+                );
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -512,30 +559,38 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             case "Luminosity":
             {
-                RgbToHsl(br,
+                RgbToHsl(
+                    br,
                     bg,
                     bb,
                     out var hb,
                     out var sb2,
-                    out _);
-                RgbToHsl(sr,
+                    out _
+                );
+                RgbToHsl(
+                    sr,
                     sg,
                     sb,
                     out _,
                     out _,
-                    out var ls);
-                HslToRgb(hb,
+                    out var ls
+                );
+                HslToRgb(
+                    hb,
                     sb2,
                     ls,
                     out var mr,
                     out var mg,
-                    out var mb);
-                AlphaComposite(br,
+                    out var mb
+                );
+                AlphaComposite(
+                    br,
                     bg,
                     bb,
                     mr,
@@ -544,7 +599,8 @@ internal sealed class RasterBuffer(int width, int height)
                     a,
                     out or,
                     out og,
-                    out ob);
+                    out ob
+                );
                 break;
             }
             default:
@@ -696,13 +752,15 @@ internal sealed class RasterBuffer(int width, int height)
         for (var py = y1; py < y2; py++)
         for (var px = x1; px < x2; px++)
         {
-            SetPixel(px,
+            SetPixel(
+                px,
                 py,
                 r,
                 g,
                 b,
                 a,
-                blendMode);
+                blendMode
+            );
         }
     }
 
@@ -726,13 +784,15 @@ internal sealed class RasterBuffer(int width, int height)
         var xb = Math.Min(Width - 1, x1);
         for (var px = xa; px <= xb; px++)
         {
-            SetPixel(px,
+            SetPixel(
+                px,
                 y,
                 r,
                 g,
                 b,
                 a,
-                blendMode);
+                blendMode
+            );
         }
     }
 
@@ -763,13 +823,15 @@ internal sealed class RasterBuffer(int width, int height)
             for (var ty = -half; ty <= half; ty++)
             for (var tx = -half; tx <= half; tx++)
             {
-                SetPixel(x0 + tx,
+                SetPixel(
+                    x0 + tx,
                     y0 + ty,
                     r,
                     g,
                     b,
                     a,
-                    blendMode);
+                    blendMode
+                );
             }
 
             if (x0 == x1 && y0 == y1)
@@ -822,13 +884,15 @@ internal sealed class RasterBuffer(int width, int height)
                 if (alpha == 0)
                     continue;
 
-                SetPixel(destX + col,
+                SetPixel(
+                    destX + col,
                     destY + row,
                     r,
                     g,
                     b,
                     alpha,
-                    blendMode);
+                    blendMode
+                );
             }
         }
     }
@@ -876,13 +940,15 @@ internal sealed class RasterBuffer(int width, int height)
         byte a,
         string blendMode = "Normal"
     ) =>
-        SetPixel(x,
+        SetPixel(
+            x,
             y,
             r,
             g,
             b,
             a,
-            blendMode);
+            blendMode
+        );
 
     /// <summary>
     ///     Returns the axis-aligned bounding box of the active clip mask in device pixels,
@@ -934,13 +1000,15 @@ internal sealed class RasterBuffer(int width, int height)
         {
             if ((dx * dx) + (dy * dy) <= r2)
             {
-                SetPixel(cx + dx,
+                SetPixel(
+                    cx + dx,
                     cy + dy,
                     red,
                     grn,
                     blu,
                     a,
-                    blendMode);
+                    blendMode
+                );
             }
         }
     }
@@ -987,13 +1055,15 @@ internal sealed class RasterBuffer(int width, int height)
             var xb = Math.Min(Width - 1, (int)Math.Round(crosses[^1]));
             for (var px = xa; px <= xb; px++)
             {
-                SetPixel(px,
+                SetPixel(
+                    px,
                     y,
                     r,
                     g,
                     b,
                     a,
-                    blendMode);
+                    blendMode
+                );
             }
         }
     }

@@ -42,12 +42,14 @@ internal static class PdfSigner
 
     // Sentinel integers for the /ByteRange array placeholder.
     // Four different 10-digit numbers give a unique, easily searchable byte sequence.
-    private static readonly PdfArray ByteRangePlaceholder = new([
-        new PdfInteger(ByteRangeSentinel0),
-        new PdfInteger(ByteRangeSentinel1),
-        new PdfInteger(ByteRangeSentinel2),
-        new PdfInteger(ByteRangeSentinel3)
-    ]);
+    private static readonly PdfArray ByteRangePlaceholder = new(
+        [
+            new PdfInteger(ByteRangeSentinel0),
+            new PdfInteger(ByteRangeSentinel1),
+            new PdfInteger(ByteRangeSentinel2),
+            new PdfInteger(ByteRangeSentinel3)
+        ]
+    );
 
     // ── Public entry point ────────────────────────────────────────────────────
 
@@ -110,7 +112,8 @@ internal static class PdfSigner
         {
             throw new InvalidOperationException(
                 $"PKCS#7 signature ({signatureBytes.Length} bytes) exceeds reserved space ({SignatureReservedBytes} bytes). " +
-                "Increase SignatureReservedBytes or reduce certificate chain depth.");
+                "Increase SignatureReservedBytes or reduce certificate chain depth."
+            );
         }
 
         // ── Step 9: patch /Contents with the actual signature ─────────────────
@@ -147,20 +150,24 @@ internal static class PdfSigner
     }
 
     private static PdfDictionary BuildSignatureFieldDict(PdfObject sigValueRef, string fieldName) =>
-        new(new Dictionary<string, PdfObject>
-        {
-            [PdfName.FT.Value] = PdfName.Sig,
-            [PdfName.Type.Value] = PdfName.Annot,
-            [PdfName.Subtype.Value] = PdfName.Widget,
-            [PdfName.T.Value] = PdfString.FromLatin1(fieldName),
-            [PdfName.V.Value] = sigValueRef,
-            // Zero-size invisible widget — no visual appearance required
-            [PdfName.Rect.Value] = new PdfArray([
-                new PdfInteger(0), new PdfInteger(0),
-                new PdfInteger(0), new PdfInteger(0)
-            ]),
-            [PdfName.F.Value] = new PdfInteger(4) // Print flag
-        });
+        new(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.FT.Value] = PdfName.Sig,
+                [PdfName.Type.Value] = PdfName.Annot,
+                [PdfName.Subtype.Value] = PdfName.Widget,
+                [PdfName.T.Value] = PdfString.FromLatin1(fieldName),
+                [PdfName.V.Value] = sigValueRef,
+                // Zero-size invisible widget — no visual appearance required
+                [PdfName.Rect.Value] = new PdfArray(
+                    [
+                        new PdfInteger(0), new PdfInteger(0),
+                        new PdfInteger(0), new PdfInteger(0)
+                    ]
+                ),
+                [PdfName.F.Value] = new PdfInteger(4) // Print flag
+            }
+        );
 
     // ── Catalog mutation ──────────────────────────────────────────────────────
 

@@ -134,7 +134,8 @@ internal static class PageShadingResolver
                     xstep,
                     ystep,
                     matrix.Select(static f => (double)f).ToArray(),
-                    ops);
+                    ops
+                );
             }
         }
 
@@ -182,12 +183,14 @@ internal static class PageShadingResolver
             var tris = MeshShadingDecoder.Decode(meshStream, core, type);
             return tris.Count == 0
                 ? null
-                : new ShadingInfo(type,
+                : new ShadingInfo(
+                    type,
                     [],
                     false,
                     false,
                     new byte[256 * 3],
-                    tris);
+                    tris
+                );
         }
 
         if (type is not (2 or 3)) return null; // only axial/radial below

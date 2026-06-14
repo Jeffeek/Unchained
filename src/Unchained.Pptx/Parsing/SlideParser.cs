@@ -177,7 +177,8 @@ internal sealed class SlideParser(OpcPackage package,
     private EmbeddedImage? ResolveImageRelationship(OpcPart sourcePart, string relationshipId)
     {
         var rel = sourcePart.Relationships.FirstOrDefault(r =>
-            r.Id.Equals(relationshipId, StringComparison.Ordinal));
+            r.Id.Equals(relationshipId, StringComparison.Ordinal)
+        );
 
         if (rel == null) return null;
 
@@ -187,7 +188,8 @@ internal sealed class SlideParser(OpcPackage package,
 
         // Check if already in the media store (dedup by URI)
         var existing = mediaStore.Images.FirstOrDefault(img =>
-            img.PartUri.Equals(imageUri, StringComparison.OrdinalIgnoreCase));
+            img.PartUri.Equals(imageUri, StringComparison.OrdinalIgnoreCase)
+        );
 
         if (existing != null) return existing;
 
@@ -210,7 +212,8 @@ internal sealed class SlideParser(OpcPackage package,
     private void LoadChartPart(OpcPart slidePart, ChartShape shape)
     {
         var rel = slidePart.Relationships.FirstOrDefault(r =>
-            r.Id.Equals(shape.RelationshipId, StringComparison.Ordinal));
+            r.Id.Equals(shape.RelationshipId, StringComparison.Ordinal)
+        );
         if (rel == null) return;
 
         var chartUri = slidePart.ResolveUri(rel.TargetUri);
@@ -239,9 +242,11 @@ internal sealed class SlideParser(OpcPackage package,
     private void LoadSmartArtParts(OpcPart slidePart, SmartArtShape shape)
     {
         // Data part (r:dm) — also carries the node text model and a reference to the drawing part.
-        var dataPart = ResolveDiagramPart(slidePart,
+        var dataPart = ResolveDiagramPart(
+            slidePart,
             shape.DataRelationshipId,
-            uri => shape.DataPartUri = uri);
+            uri => shape.DataPartUri = uri
+        );
         if (dataPart != null)
         {
             shape.DataPartData = dataPart.Data;
@@ -262,28 +267,36 @@ internal sealed class SlideParser(OpcPackage package,
                 if (!string.IsNullOrEmpty(drawingRelId))
                 {
                     shape.DrawingRelationshipId = drawingRelId;
-                    var drawingPart = ResolveDiagramPart(slidePart,
+                    var drawingPart = ResolveDiagramPart(
+                        slidePart,
                         drawingRelId,
-                        uri => shape.DrawingPartUri = uri);
+                        uri => shape.DrawingPartUri = uri
+                    );
                     if (drawingPart != null)
                         shape.DrawingPartData = drawingPart.Data;
                 }
             }
         }
 
-        var layoutPart = ResolveDiagramPart(slidePart,
+        var layoutPart = ResolveDiagramPart(
+            slidePart,
             shape.LayoutRelationshipId,
-            uri => shape.LayoutPartUri = uri);
+            uri => shape.LayoutPartUri = uri
+        );
         if (layoutPart != null) shape.LayoutPartData = layoutPart.Data;
 
-        var quickStylePart = ResolveDiagramPart(slidePart,
+        var quickStylePart = ResolveDiagramPart(
+            slidePart,
             shape.QuickStyleRelationshipId,
-            uri => shape.QuickStylePartUri = uri);
+            uri => shape.QuickStylePartUri = uri
+        );
         if (quickStylePart != null) shape.QuickStylePartData = quickStylePart.Data;
 
-        var colorsPart = ResolveDiagramPart(slidePart,
+        var colorsPart = ResolveDiagramPart(
+            slidePart,
             shape.ColorsRelationshipId,
-            uri => shape.ColorsPartUri = uri);
+            uri => shape.ColorsPartUri = uri
+        );
         if (colorsPart != null) shape.ColorsPartData = colorsPart.Data;
     }
 
@@ -292,7 +305,8 @@ internal sealed class SlideParser(OpcPackage package,
         if (string.IsNullOrEmpty(relationshipId)) return null;
 
         var rel = sourcePart.Relationships.FirstOrDefault(r =>
-            r.Id.Equals(relationshipId, StringComparison.Ordinal));
+            r.Id.Equals(relationshipId, StringComparison.Ordinal)
+        );
         if (rel == null) return null;
 
         var uri = sourcePart.ResolveUri(rel.TargetUri);
@@ -339,7 +353,8 @@ internal sealed class SlideParser(OpcPackage package,
         if (string.IsNullOrEmpty(action.RelationshipId)) return; // e.g. action-only links
 
         var rel = slidePart.Relationships.FirstOrDefault(r =>
-            r.Id.Equals(action.RelationshipId, StringComparison.Ordinal));
+            r.Id.Equals(action.RelationshipId, StringComparison.Ordinal)
+        );
         if (rel == null) return;
 
         if (rel.IsExternal)
@@ -357,7 +372,8 @@ internal sealed class SlideParser(OpcPackage package,
         if (string.IsNullOrEmpty(link.RelationshipId)) return;
 
         var rel = slidePart.Relationships.FirstOrDefault(r =>
-            r.Id.Equals(link.RelationshipId, StringComparison.Ordinal));
+            r.Id.Equals(link.RelationshipId, StringComparison.Ordinal)
+        );
         if (rel == null) return;
 
         if (rel.IsExternal)
@@ -404,19 +420,22 @@ internal sealed class SlideParser(OpcPackage package,
         if (target.PlaceholderIndex is { } idx)
         {
             var byIdx = candidates.FirstOrDefault(c => c.PlaceholderIndex == idx
-                                                       && c.Width.Value > 0 && c.Height.Value > 0);
+                                                       && c.Width.Value > 0 && c.Height.Value > 0
+            );
             if (byIdx is not null) return byIdx;
         }
 
         var byType = candidates.FirstOrDefault(c => c.PlaceholderType == target.PlaceholderType
-                                                    && c.Width.Value > 0 && c.Height.Value > 0);
+                                                    && c.Width.Value > 0 && c.Height.Value > 0
+        );
         if (byType is not null) return byType;
 
         // Title family and body/content/object family are interchangeable across slide↔layout.
         if (IsTitle(target.PlaceholderType))
         {
             return candidates.FirstOrDefault(static c => IsTitle(c.PlaceholderType)
-                                                         && c.Width.Value > 0 && c.Height.Value > 0);
+                                                         && c.Width.Value > 0 && c.Height.Value > 0
+            );
         }
 
 #pragma warning disable IDE0046
@@ -424,7 +443,8 @@ internal sealed class SlideParser(OpcPackage package,
 #pragma warning restore IDE0046
         {
             return candidates.FirstOrDefault(static c => IsBodyLike(c.PlaceholderType)
-                                                         && c.Width.Value > 0 && c.Height.Value > 0);
+                                                         && c.Width.Value > 0 && c.Height.Value > 0
+            );
         }
 
         return null;
@@ -443,7 +463,8 @@ internal sealed class SlideParser(OpcPackage package,
         masters
             .SelectMany(static m => m.Layouts)
             .FirstOrDefault(l =>
-                l.PartUri.Equals(partUri, StringComparison.OrdinalIgnoreCase));
+                l.PartUri.Equals(partUri, StringComparison.OrdinalIgnoreCase)
+            );
 
     private SlideLayout GetFallbackLayout()
     {

@@ -42,7 +42,8 @@ public sealed class AnimationTimeline
         {
             throw new ArgumentException(
                 "The sequence does not belong to this timeline.",
-                nameof(sequence));
+                nameof(sequence)
+            );
         }
     }
 }

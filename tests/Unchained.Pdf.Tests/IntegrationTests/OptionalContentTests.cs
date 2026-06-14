@@ -100,7 +100,8 @@ public sealed class OptionalContentTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         await Should.ThrowAsync<InvalidOperationException>(() =>
-            editor.SetLayerVisibilityAsync(doc, 5, false, TestContext.Current.CancellationToken));
+            editor.SetLayerVisibilityAsync(doc, 5, false, TestContext.Current.CancellationToken)
+        );
     }
 
     // ── Soft mask parsing ─────────────────────────────────────────────────────────
@@ -110,7 +111,8 @@ public sealed class OptionalContentTests : PdfTestBase
     {
         await using var doc = await LoadAsync(
             PdfFixtures.WithSoftMask(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var page = doc.Pages[1];
         var pixW = (int)(page.Width * 72.0 / 72.0);
@@ -132,7 +134,8 @@ public sealed class OptionalContentTests : PdfTestBase
     {
         await using var doc = await LoadAsync(
             PdfFixtures.WithSoftMask(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var alphas = doc.Pages[1].GetExtGStateAlphas();
 

@@ -111,7 +111,8 @@ internal sealed partial class PageRenderer
             var (px2, py2) = UToPixel(rmaxX, rminY);
             if (HasSoftMask)
             {
-                FillRectSoftMasked((int)px1,
+                FillRectSoftMasked(
+                    (int)px1,
                     (int)py1,
                     (int)(px2 - px1 + 1),
                     (int)(py2 - py1 + 1),
@@ -119,7 +120,8 @@ internal sealed partial class PageRenderer
                     fg,
                     fb,
                     _gs.FillA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
             }
             else
             {
@@ -132,7 +134,8 @@ internal sealed partial class PageRenderer
                     fg,
                     fb,
                     _gs.FillA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
             }
 
             return;
@@ -236,25 +239,29 @@ internal sealed partial class PageRenderer
 
                 if (HasSoftMask)
                 {
-                    FillSpanSoftMasked(y,
+                    FillSpanSoftMasked(
+                        y,
                         xStart,
                         xEnd - 1,
                         fr,
                         fg,
                         fb,
                         _gs.FillA,
-                        _gs.BlendMode);
+                        _gs.BlendMode
+                    );
                 }
                 else
                 {
-                    buffer.FillSpan(y,
+                    buffer.FillSpan(
+                        y,
                         xStart,
                         xEnd - 1,
                         fr,
                         fg,
                         fb,
                         _gs.FillA,
-                        _gs.BlendMode);
+                        _gs.BlendMode
+                    );
                 }
             }
         }
@@ -285,7 +292,8 @@ internal sealed partial class PageRenderer
                 var (x1, y1) = UToPixel(sub[i + 1].X, sub[i + 1].Y);
                 if (dashPx is null)
                 {
-                    buffer.DrawLine((int)x0,
+                    buffer.DrawLine(
+                        (int)x0,
                         (int)y0,
                         (int)x1,
                         (int)y1,
@@ -294,16 +302,19 @@ internal sealed partial class PageRenderer
                         _gs.StrokeB,
                         thickPx,
                         _gs.StrokeA,
-                        _gs.BlendMode);
+                        _gs.BlendMode
+                    );
                 }
                 else
                 {
-                    DrawDashedLine(x0,
+                    DrawDashedLine(
+                        x0,
                         y0,
                         x1,
                         y1,
                         thickPx,
-                        dashPx);
+                        dashPx
+                    );
                 }
             }
 
@@ -319,7 +330,8 @@ internal sealed partial class PageRenderer
                         UToPixel(sub[i - 1].X, sub[i - 1].Y),
                         (px, py),
                         UToPixel(sub[i + 1].X, sub[i + 1].Y),
-                        half);
+                        half
+                    );
                 }
             }
 
@@ -331,26 +343,31 @@ internal sealed partial class PageRenderer
             var (bx, by) = UToPixel(sub[^1].X, sub[^1].Y);
             if (_gs.LineCap == 1)
             {
-                buffer.FillCircle((int)ax,
+                buffer.FillCircle(
+                    (int)ax,
                     (int)ay,
                     capR,
                     _gs.StrokeR,
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
-                buffer.FillCircle((int)bx,
+                    _gs.BlendMode
+                );
+                buffer.FillCircle(
+                    (int)bx,
                     (int)by,
                     capR,
                     _gs.StrokeR,
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
             }
             else
             {
-                buffer.FillRect((int)ax - capR,
+                buffer.FillRect(
+                    (int)ax - capR,
                     (int)ay - capR,
                     thickPx,
                     thickPx,
@@ -358,8 +375,10 @@ internal sealed partial class PageRenderer
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
-                buffer.FillRect((int)bx - capR,
+                    _gs.BlendMode
+                );
+                buffer.FillRect(
+                    (int)bx - capR,
                     (int)by - capR,
                     thickPx,
                     thickPx,
@@ -367,7 +386,8 @@ internal sealed partial class PageRenderer
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
             }
         }
     }
@@ -402,14 +422,16 @@ internal sealed partial class PageRenderer
         switch (_gs.LineJoin)
         {
             case 1: // Round — fill circle at join vertex
-                buffer.FillCircle(bx,
+                buffer.FillCircle(
+                    bx,
                     by,
                     half,
                     _gs.StrokeR,
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
             break;
 
             case 2: // Bevel — fill triangle between the two outer corners and the vertex
@@ -418,7 +440,8 @@ internal sealed partial class PageRenderer
                 var oy1 = (int)(by + (nyIn * half));
                 var ox2 = (int)(bx + (nxOut * half));
                 var oy2 = (int)(by + (nyOut * half));
-                buffer.FillTriangle(bx,
+                buffer.FillTriangle(
+                    bx,
                     by,
                     ox1,
                     oy1,
@@ -428,13 +451,15 @@ internal sealed partial class PageRenderer
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
                 // Also fill the inner side.
                 var ix1 = (int)(bx - (nxIn * half));
                 var iy1 = (int)(by - (nyIn * half));
                 var ix2 = (int)(bx - (nxOut * half));
                 var iy2 = (int)(by - (nyOut * half));
-                buffer.FillTriangle(bx,
+                buffer.FillTriangle(
+                    bx,
                     by,
                     ix1,
                     iy1,
@@ -444,7 +469,8 @@ internal sealed partial class PageRenderer
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
                 break;
             }
 
@@ -467,7 +493,8 @@ internal sealed partial class PageRenderer
                 var oy1 = (int)(by + (nyIn * half));
                 var ox2 = (int)(bx + (nxOut * half));
                 var oy2 = (int)(by + (nyOut * half));
-                buffer.FillTriangle((int)mx,
+                buffer.FillTriangle(
+                    (int)mx,
                     (int)my,
                     ox1,
                     oy1,
@@ -477,7 +504,8 @@ internal sealed partial class PageRenderer
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
                 // Inner side.
                 var ix1 = (int)(bx - (nxIn * half));
                 var iy1 = (int)(by - (nyIn * half));
@@ -485,7 +513,8 @@ internal sealed partial class PageRenderer
                 var iy2 = (int)(by - (nyOut * half));
                 var imx = bx - ((nxIn + nxOut) * half / 2.0 / Math.Max(RenderingConstants.Epsilon, Math.Abs(sinHalf)));
                 var imy = by - ((nyIn + nyOut) * half / 2.0 / Math.Max(RenderingConstants.Epsilon, Math.Abs(sinHalf)));
-                buffer.FillTriangle((int)imx,
+                buffer.FillTriangle(
+                    (int)imx,
                     (int)imy,
                     ix1,
                     iy1,
@@ -495,7 +524,8 @@ internal sealed partial class PageRenderer
                     _gs.StrokeG,
                     _gs.StrokeB,
                     _gs.StrokeA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
                 break;
             }
         }
@@ -541,7 +571,8 @@ internal sealed partial class PageRenderer
                 var ay = y0 + (uy * pos);
                 var bx = x0 + (ux * end);
                 var by = y0 + (uy * end);
-                buffer.DrawLine((int)ax,
+                buffer.DrawLine(
+                    (int)ax,
                     (int)ay,
                     (int)bx,
                     (int)by,
@@ -550,7 +581,8 @@ internal sealed partial class PageRenderer
                     _gs.StrokeB,
                     thickPx,
                     _gs.StrokeA,
-                    _gs.BlendMode);
+                    _gs.BlendMode
+                );
             }
 
             pos = end;

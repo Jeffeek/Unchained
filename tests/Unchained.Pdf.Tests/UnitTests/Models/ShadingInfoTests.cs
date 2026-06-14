@@ -42,7 +42,8 @@ public sealed class ShadingInfoTests
             false,
             false,
             [],
-            []);
+            []
+        );
         info.IsMesh.ShouldBeTrue();
     }
 
@@ -86,4 +87,3 @@ public sealed class ShadingInfoTests
         info.Coords.ShouldBe([0, 0, 1, 1]);
     }
 }
-

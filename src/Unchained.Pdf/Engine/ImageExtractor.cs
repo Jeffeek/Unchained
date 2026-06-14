@@ -14,7 +14,8 @@ public sealed class ImageExtractor : IImageExtractor
     public Task<IReadOnlyList<ExtractedImage>> ExtractImagesAsync(
         IPdfDocument document,
         CancellationToken ct = default
-    ) => Task.Run<IReadOnlyList<ExtractedImage>>(() =>
+    ) => Task.Run<IReadOnlyList<ExtractedImage>>(
+        () =>
         {
             var result = new List<ExtractedImage>();
             for (var p = 1; p <= document.PageCount; p++)
@@ -25,27 +26,32 @@ public sealed class ImageExtractor : IImageExtractor
 
             return result;
         },
-        ct);
+        ct
+    );
 
     /// <inheritdoc />
     public Task<IReadOnlyList<ExtractedImage>> ExtractImagesAsync(
         IPdfDocument document,
         int pageNumber,
         CancellationToken ct = default
-    ) => Task.Run<IReadOnlyList<ExtractedImage>>(() =>
+    ) => Task.Run<IReadOnlyList<ExtractedImage>>(
+        () =>
         {
             if (pageNumber < 1 || pageNumber > document.PageCount)
             {
-                throw new ArgumentOutOfRangeException(nameof(pageNumber),
+                throw new ArgumentOutOfRangeException(
+                    nameof(pageNumber),
                     pageNumber,
-                    $"Page number must be between 1 and {document.PageCount}.");
+                    $"Page number must be between 1 and {document.PageCount}."
+                );
             }
 
             var result = new List<ExtractedImage>();
             ExtractPage(document, pageNumber, result);
             return result;
         },
-        ct);
+        ct
+    );
 
     private static void ExtractPage(IPdfDocument document, int pageNumber, ICollection<ExtractedImage> sink)
     {
@@ -56,12 +62,16 @@ public sealed class ImageExtractor : IImageExtractor
             if (img.Width <= 0 || img.Height <= 0 || img.RgbData.Length < img.Width * img.Height * 3)
                 continue;
 
-            sink.Add(new ExtractedImage(pageNumber,
-                name,
-                img.Width,
-                img.Height,
-                img.RgbData,
-                img.Alpha));
+            sink.Add(
+                new ExtractedImage(
+                    pageNumber,
+                    name,
+                    img.Width,
+                    img.Height,
+                    img.RgbData,
+                    img.Alpha
+                )
+            );
         }
     }
 }

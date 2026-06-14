@@ -32,23 +32,27 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
         var existing = adapter.Core.CollectObjects();
         var changed = false;
         var finalObjects = existing.Select(o =>
-        {
-            if (o.Value is not PdfStream stream) return o;
-            // Skip already-filtered streams and tiny ones that wouldn't benefit.
-            if (stream.Dictionary[PdfName.Filter] is not null) return o;
-            if (stream.Data.Length < CompressionThresholdBytes) return o;
+                {
+                    if (o.Value is not PdfStream stream) return o;
+                    // Skip already-filtered streams and tiny ones that wouldn't benefit.
+                    if (stream.Dictionary[PdfName.Filter] is not null) return o;
+                    if (stream.Data.Length < CompressionThresholdBytes) return o;
 
-            var compressed = Compress(stream.Data.Span);
-            if (compressed.Length >= stream.Data.Length) return o; // no gain
+                    var compressed = Compress(stream.Data.Span);
+                    if (compressed.Length >= stream.Data.Length) return o; // no gain
 
-            var newDict = new PdfDictionary(new Dictionary<string, PdfObject>(stream.Dictionary.Entries)
-            {
-                [PdfName.Filter.Value] = PdfName.FlateDecode,
-                [PdfName.Length.Value] = new PdfInteger(compressed.Length)
-            });
-            changed = true;
-            return new PdfIndirectObject(o.ObjectNumber, o.Generation, new PdfStream(newDict, compressed));
-        }).ToList();
+                    var newDict = new PdfDictionary(
+                        new Dictionary<string, PdfObject>(stream.Dictionary.Entries)
+                        {
+                            [PdfName.Filter.Value] = PdfName.FlateDecode,
+                            [PdfName.Length.Value] = new PdfInteger(compressed.Length)
+                        }
+                    );
+                    changed = true;
+                    return new PdfIndirectObject(o.ObjectNumber, o.Generation, new PdfStream(newDict, compressed));
+                }
+            )
+            .ToList();
 
         if (changed)
             MutationHelper.SerializeAndReplace(adapter, finalObjects);

@@ -21,16 +21,19 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata("My Title",
+            new DocumentMetadata(
+                "My Title",
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         doc.Metadata.Title.ShouldBe("My Title");
     }
@@ -43,16 +46,19 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(null,
+            new DocumentMetadata(
+                null,
                 "Alice",
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         doc.Metadata.Author.ShouldBe("Alice");
     }
@@ -72,8 +78,10 @@ public sealed class InfoWriteTests : PdfTestBase
                 "Unchained",
                 "Unchained.Pdf",
                 null,
-                null),
-            TestContext.Current.CancellationToken);
+                null
+            ),
+            TestContext.Current.CancellationToken
+        );
 
         doc.Metadata.Title.ShouldBe("Report");
         doc.Metadata.Author.ShouldBe("Bob");
@@ -94,31 +102,37 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata("Original",
+            new DocumentMetadata(
+                "Original",
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // Set author without touching title.
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(null,
+            new DocumentMetadata(
+                null,
                 "Alice",
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         doc.Metadata.Title.ShouldBe("Original", "Title must not be overwritten when null is passed.");
         doc.Metadata.Author.ShouldBe("Alice");
@@ -134,16 +148,19 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata("Persisted",
+            new DocumentMetadata(
+                "Persisted",
                 "Carol",
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
 
@@ -159,30 +176,36 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata("First",
+            new DocumentMetadata(
+                "First",
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata("Second",
+            new DocumentMetadata(
+                "Second",
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         doc.Metadata.Title.ShouldBe("Second");
     }
@@ -194,21 +217,25 @@ public sealed class InfoWriteTests : PdfTestBase
         // but we just need any doc — we create one via TxtConverter that lacks /Info).
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello",
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
 
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata("From Txt",
+            new DocumentMetadata(
+                "From Txt",
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         doc.Metadata.Title.ShouldBe("From Txt");
     }
@@ -221,30 +248,36 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata("Initial",
+            new DocumentMetadata(
+                "Initial",
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata(string.Empty,
+            new DocumentMetadata(
+                string.Empty,
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // An empty string is written as an empty PDF string — read back as empty or null.
         var title = doc.Metadata.Title;
@@ -261,16 +294,19 @@ public sealed class InfoWriteTests : PdfTestBase
         await Processor.SetMetadataAsync(
             doc,
             // ReSharper disable BadListLineBreaks
-            new DocumentMetadata("Three Pages",
+            new DocumentMetadata(
+                "Three Pages",
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null),
+                null
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         doc.PageCount.ShouldBe(3);
     }

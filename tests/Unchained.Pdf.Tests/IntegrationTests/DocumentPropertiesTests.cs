@@ -53,7 +53,8 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello",
             new TxtLoadOptions(Tagged: true, Language: "en"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
 
@@ -188,7 +189,8 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await Processor.SetOpenActionAsync(
             doc,
             PdfOpenAction.Uri("https://example.com"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -204,7 +206,8 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await Processor.SetOpenActionAsync(
             doc,
             PdfOpenAction.Named("FirstPage"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -220,7 +223,8 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await Processor.SetOpenActionAsync(
             doc,
             PdfOpenAction.GoTo(2),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
@@ -255,7 +259,8 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await using var source = await Processor.LoadFromTxtAsync(
             "Hello",
             new TxtLoadOptions(Tagged: true, Language: "en"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         using var tagged = new MemoryStream();
         await Processor.SaveAsync(source, tagged, ct: TestContext.Current.CancellationToken);
 
@@ -277,7 +282,8 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await Processor.EmbedStandardFontsAsync(
             doc,
             new Dictionary<string, byte[]>(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         doc.PageCount.ShouldBe(1);
     }
 
@@ -289,7 +295,8 @@ public sealed class DocumentPropertiesTests : PdfTestBase
 
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello",
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
         await Processor.EmbedStandardFontsAsync(doc, fontMap, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();

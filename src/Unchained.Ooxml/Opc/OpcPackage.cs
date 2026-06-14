@@ -159,8 +159,10 @@ internal sealed class OpcPackage : IDisposable
         string targetUri,
         bool isExternal = false
     ) =>
-        GetPart(sourcePartUri).AddRelationship(
-            new OpcRelationship(relationshipId, relationshipType, targetUri, isExternal));
+        GetPart(sourcePartUri)
+            .AddRelationship(
+                new OpcRelationship(relationshipId, relationshipType, targetUri, isExternal)
+            );
 
     // ── Serialization ───────────────────────────────────────────────────────
 
@@ -281,10 +283,12 @@ internal sealed class OpcPackage : IDisposable
 
         foreach (var rel in relationships)
         {
-            var el = new XElement(ns + "Relationship",
+            var el = new XElement(
+                ns + "Relationship",
                 new XAttribute("Id", rel.Id),
                 new XAttribute("Type", rel.RelationshipType),
-                new XAttribute("Target", rel.TargetUri));
+                new XAttribute("Target", rel.TargetUri)
+            );
 
             if (rel.IsExternal)
                 el.Add(new XAttribute("TargetMode", "External"));

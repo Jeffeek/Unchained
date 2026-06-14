@@ -224,10 +224,12 @@ public sealed class PdfStreamTests
     [Fact]
     public void DeclaredLength_ReadsFromLengthEntry()
     {
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Length.Value] = new PdfInteger(42)
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Length.Value] = new PdfInteger(42)
+            }
+        );
         var stream = new PdfStream(dict, ReadOnlyMemory<byte>.Empty);
         stream.DeclaredLength.ShouldBe(42);
     }

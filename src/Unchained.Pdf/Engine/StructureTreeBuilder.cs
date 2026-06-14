@@ -152,10 +152,12 @@ internal static class StructureTreeBuilder
         // Flat leaf node: /Nums [ key1 val1 key2 val2 ... ]
         var parentTreeObjNum = builder.NextNumber();
         var parentTreeRef = new PdfIndirectReference(parentTreeObjNum, 0);
-        var parentTreeDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Nums.Value] = new PdfArray(parentTreeNums)
-        });
+        var parentTreeDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Nums.Value] = new PdfArray(parentTreeNums)
+            }
+        );
         builder.AddAt(parentTreeObjNum, parentTreeDict);
 
         // ── 5. StructTreeRoot ──────────────────────────────────────────────────

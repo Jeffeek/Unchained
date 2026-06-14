@@ -43,12 +43,14 @@ internal static class PdfAConverter
         // ── 1. Add/update /Metadata with pdfaid XMP ───────────────────────────
         var metaObjNum = maxObj + 1;
         var xmpBytes = BuildPdfAXmp(profile, catalogEntries, core);
-        var metaDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Type"] = PdfName.Metadata,
-            ["Subtype"] = PdfName.XML,
-            ["Length"] = new PdfInteger(xmpBytes.Length)
-        });
+        var metaDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Type"] = PdfName.Metadata,
+                ["Subtype"] = PdfName.XML,
+                ["Length"] = new PdfInteger(xmpBytes.Length)
+            }
+        );
         objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
         catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
 
@@ -185,10 +187,12 @@ internal static class PdfAConverter
         // /ID is required by PDF/A — preserve existing or generate new
         var existingId = core.Trailer.Get<PdfArray>(PdfName.ID);
         entries[PdfName.ID.Value] = existingId
-                                    ?? new PdfArray([
-                                        new PdfString(RandomNumberGenerator.GetBytes(16), true),
-                                        new PdfString(RandomNumberGenerator.GetBytes(16), true)
-                                    ]);
+                                    ?? new PdfArray(
+                                        [
+                                            new PdfString(RandomNumberGenerator.GetBytes(16), true),
+                                            new PdfString(RandomNumberGenerator.GetBytes(16), true)
+                                        ]
+                                    );
 
         return new PdfDictionary(entries);
     }

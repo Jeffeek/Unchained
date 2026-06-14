@@ -79,7 +79,9 @@ public sealed class SmartArtTests : PptxTestBase
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
         var reloadedText = reloaded.Slides.SelectMany(static s => s.Shapes)
-            .OfType<SmartArtShape>().First().GetAllText();
+            .OfType<SmartArtShape>()
+            .First()
+            .GetAllText();
 
         reloadedText.ShouldBe(original, "node text must survive a round-trip");
     }
@@ -97,7 +99,9 @@ public sealed class SmartArtTests : PptxTestBase
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
         var reloadedText = reloaded.Slides.SelectMany(static s => s.Shapes)
-            .OfType<SmartArtShape>().First().GetAllText();
+            .OfType<SmartArtShape>()
+            .First()
+            .GetAllText();
 
         reloadedText.ShouldContain("Edited Node");
         reloadedText.ShouldNotContain("Smart Art");

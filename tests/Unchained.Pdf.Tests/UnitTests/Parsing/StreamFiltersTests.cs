@@ -37,11 +37,13 @@ public sealed class StreamFiltersTests
         using (var z = new ZLibStream(ms, CompressionMode.Compress, true)) z.Write(original);
         var compressed = ms.ToArray();
 
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Filter.Value] = PdfName.Get("FlateDecode"),
-            [PdfName.Length.Value] = new PdfInteger(compressed.Length)
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Filter.Value] = PdfName.Get("FlateDecode"),
+                [PdfName.Length.Value] = new PdfInteger(compressed.Length)
+            }
+        );
         var stream = new PdfStream(dict, compressed);
 
         StreamFilters.Decode(stream).ToArray().ShouldBe(original);
@@ -54,13 +56,17 @@ public sealed class StreamFiltersTests
         // Single ASCIIHexDecode: "41>" → [0x41] = 'A'
         // So double: "3431>" → "41>" → [0x41] = 'A'
         var doubleEncoded = "3431>"u8.ToArray();
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Filter.Value] = new PdfArray([
-                PdfName.Get("ASCIIHexDecode"),
-                PdfName.Get("ASCIIHexDecode")
-            ])
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Filter.Value] = new PdfArray(
+                    [
+                        PdfName.Get("ASCIIHexDecode"),
+                        PdfName.Get("ASCIIHexDecode")
+                    ]
+                )
+            }
+        );
         var stream = new PdfStream(dict, doubleEncoded);
 
         var result = StreamFilters.Decode(stream);
@@ -70,13 +76,16 @@ public sealed class StreamFiltersTests
     [Fact]
     public void Decode_UnknownFilter_ThrowsPdfException() =>
         Should.Throw<PdfException>(static () =>
-        {
-            var dict = new PdfDictionary(new Dictionary<string, PdfObject>
             {
-                [PdfName.Filter.Value] = PdfName.Get("UnknownFilter")
-            });
-            StreamFilters.Decode(new PdfStream(dict, ReadOnlyMemory<byte>.Empty));
-        });
+                var dict = new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Filter.Value] = PdfName.Get("UnknownFilter")
+                    }
+                );
+                StreamFilters.Decode(new PdfStream(dict, ReadOnlyMemory<byte>.Empty));
+            }
+        );
 
     [Fact]
     public async Task Decode_AsciiHexDecodeAlias_AHx_Works()
@@ -199,10 +208,12 @@ public sealed class StreamFiltersTests
                 bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
         }
 
-        var parms = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["EarlyChange"] = new PdfInteger(1)
-        });
+        var parms = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["EarlyChange"] = new PdfInteger(1)
+            }
+        );
         var stream = MakeStream("LZWDecode", bytes, parms);
         var result = await Task.Run(() => StreamFilters.Decode(stream));
         result.Span[0].ShouldBe((byte)'B');
@@ -212,13 +223,16 @@ public sealed class StreamFiltersTests
     public async Task Decode_InvalidFilterType_ThrowsPdfException()
     {
         // /Filter set to an integer (not a name or array) — should throw.
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Filter.Value] = new PdfInteger(42)
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Filter.Value] = new PdfInteger(42)
+            }
+        );
         var stream = new PdfStream(dict, new byte[] { 1 });
         await Should.ThrowAsync<PdfException>(() =>
-            Task.Run(() => StreamFilters.Decode(stream)));
+            Task.Run(() => StreamFilters.Decode(stream))
+        );
     }
 
     [Fact]
@@ -226,11 +240,13 @@ public sealed class StreamFiltersTests
     {
         // One filter with one DecodeParms dict in an array — Crypt pass-through.
         var data = new byte[] { 9, 8, 7 };
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Filter.Value] = new PdfArray([PdfName.Get("Crypt")]),
-            ["DecodeParms"] = new PdfArray([new PdfDictionary()])
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Filter.Value] = new PdfArray([PdfName.Get("Crypt")]),
+                ["DecodeParms"] = new PdfArray([new PdfDictionary()])
+            }
+        );
         var stream = new PdfStream(dict, data);
         var result = await Task.Run(() => StreamFilters.Decode(stream));
         result.ToArray().ShouldBe(data);
@@ -241,11 +257,13 @@ public sealed class StreamFiltersTests
     {
         // DecodeParms array with a PdfNull element (treated as null dict).
         var data = new byte[] { 0, (byte)'P', 128 };
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Filter.Value] = new PdfArray([PdfName.Get("RunLengthDecode")]),
-            ["DecodeParms"] = new PdfArray([PdfNull.Instance])
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Filter.Value] = new PdfArray([PdfName.Get("RunLengthDecode")]),
+                ["DecodeParms"] = new PdfArray([PdfNull.Instance])
+            }
+        );
         var stream = new PdfStream(dict, data);
         var result = await Task.Run(() => StreamFilters.Decode(stream));
         result.Span[0].ShouldBe((byte)'P');
@@ -270,14 +288,18 @@ public sealed class StreamFiltersTests
                 bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
         }
 
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Filter.Value] = PdfName.Get("LZWDecode"),
-            ["DecodeParms"] = new PdfDictionary(new Dictionary<string, PdfObject>
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
             {
-                ["EarlyChange"] = new PdfInteger(1)
-            })
-        });
+                [PdfName.Filter.Value] = PdfName.Get("LZWDecode"),
+                ["DecodeParms"] = new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        ["EarlyChange"] = new PdfInteger(1)
+                    }
+                )
+            }
+        );
         var stream = new PdfStream(dict, bytes);
         var result = await Task.Run(() => StreamFilters.Decode(stream));
         result.Span[0].ShouldBe((byte)'C');

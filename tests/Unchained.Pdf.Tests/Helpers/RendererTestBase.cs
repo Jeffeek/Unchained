@@ -43,7 +43,8 @@ public abstract class RendererTestBase : PdfTestBase, IDisposable
     {
         var asm = typeof(FontCache).Assembly;
         using var stream = asm.GetManifestResourceStream(
-                               "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
+                               "Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf"
+                           )
                            ?? throw new InvalidOperationException("DejaVuSans-Regular not found");
         using var ms = new MemoryStream();
         stream.CopyTo(ms);

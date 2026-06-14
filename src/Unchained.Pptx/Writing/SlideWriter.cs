@@ -17,10 +17,12 @@ internal static class SlideWriter
         var r = PmlNames.Relationships;
         var dml = DmlNames.Dml;
 
-        var sld = new XElement(PmlNames.Slide,
+        var sld = new XElement(
+            PmlNames.Slide,
             new XAttribute(XNamespace.Xmlns + "p", pml.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "a", dml.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName));
+            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName)
+        );
 
         if (slide.IsHidden)
             sld.Add(new XAttribute(PmlNames.AttributeShow, "0"));
@@ -46,8 +48,12 @@ internal static class SlideWriter
             sld.Add(slide.ColorMapOverrideElement);
         else
         {
-            sld.Add(new XElement(PmlNames.ColorMapOverride,
-                new XElement(dml + "masterClrMapping")));
+            sld.Add(
+                new XElement(
+                    PmlNames.ColorMapOverride,
+                    new XElement(dml + "masterClrMapping")
+                )
+            );
         }
 
         // Transition (M6)
@@ -66,9 +72,13 @@ internal static class SlideWriter
     private static XElement WriteGroupShapeNonVisualProperties()
     {
         var nvGrpSpPr = new XElement(PmlNames.NonVisualGroupShapeProperties);
-        nvGrpSpPr.Add(new XElement(PmlNames.CommonNonVisualProperties,
-            new XAttribute(PmlNames.AttributeId, 1),
-            new XAttribute(PmlNames.AttributeName, string.Empty)));
+        nvGrpSpPr.Add(
+            new XElement(
+                PmlNames.CommonNonVisualProperties,
+                new XAttribute(PmlNames.AttributeId, 1),
+                new XAttribute(PmlNames.AttributeName, string.Empty)
+            )
+        );
         nvGrpSpPr.Add(new XElement(PmlNames.Pml + "cNvGrpSpPr"));
         nvGrpSpPr.Add(new XElement(PmlNames.ApplicationNonVisualProperties));
         return nvGrpSpPr;
@@ -78,18 +88,34 @@ internal static class SlideWriter
     {
         var grpSpPr = new XElement(PmlNames.GroupShapeProperties);
         var xfrm = new XElement(DmlNames.Transform);
-        xfrm.Add(new XElement(DmlNames.Offset,
-            new XAttribute(DmlNames.AttributeX, 0),
-            new XAttribute(DmlNames.AttributeY, 0)));
-        xfrm.Add(new XElement(DmlNames.Extents,
-            new XAttribute(DmlNames.AttributeWidth, 0),
-            new XAttribute(DmlNames.AttributeHeight, 0)));
-        xfrm.Add(new XElement(DmlNames.Dml + "chOff",
-            new XAttribute(DmlNames.AttributeX, 0),
-            new XAttribute(DmlNames.AttributeY, 0)));
-        xfrm.Add(new XElement(DmlNames.Dml + "chExt",
-            new XAttribute(DmlNames.AttributeWidth, 0),
-            new XAttribute(DmlNames.AttributeHeight, 0)));
+        xfrm.Add(
+            new XElement(
+                DmlNames.Offset,
+                new XAttribute(DmlNames.AttributeX, 0),
+                new XAttribute(DmlNames.AttributeY, 0)
+            )
+        );
+        xfrm.Add(
+            new XElement(
+                DmlNames.Extents,
+                new XAttribute(DmlNames.AttributeWidth, 0),
+                new XAttribute(DmlNames.AttributeHeight, 0)
+            )
+        );
+        xfrm.Add(
+            new XElement(
+                DmlNames.Dml + "chOff",
+                new XAttribute(DmlNames.AttributeX, 0),
+                new XAttribute(DmlNames.AttributeY, 0)
+            )
+        );
+        xfrm.Add(
+            new XElement(
+                DmlNames.Dml + "chExt",
+                new XAttribute(DmlNames.AttributeWidth, 0),
+                new XAttribute(DmlNames.AttributeHeight, 0)
+            )
+        );
         grpSpPr.Add(xfrm);
         return grpSpPr;
     }

@@ -22,10 +22,12 @@ internal static class LayoutWriter
         var r = PmlNames.Relationships;
         var dml = DmlNames.Dml;
 
-        var sldLayout = new XElement(PmlNames.SlideLayout,
+        var sldLayout = new XElement(
+            PmlNames.SlideLayout,
             new XAttribute(XNamespace.Xmlns + "p", pml.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "a", dml.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName));
+            new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName)
+        );
 
         if (!string.IsNullOrEmpty(layout.Name))
             sldLayout.Add(new XAttribute(PmlNames.AttributeName, layout.Name));
@@ -40,20 +42,36 @@ internal static class LayoutWriter
             cSld.Add(new XAttribute(PmlNames.AttributeName, layout.Name));
 
         var spTree = new XElement(PmlNames.ShapeTree);
-        spTree.Add(new XElement(PmlNames.NonVisualGroupShapeProperties,
-            new XElement(PmlNames.CommonNonVisualProperties,
-                new XAttribute(PmlNames.AttributeId, 1),
-                new XAttribute(PmlNames.AttributeName, string.Empty)),
-            new XElement(pml + "cNvGrpSpPr"),
-            new XElement(PmlNames.ApplicationNonVisualProperties)));
-        spTree.Add(new XElement(PmlNames.GroupShapeProperties,
-            new XElement(DmlNames.Transform,
-                new XElement(DmlNames.Offset,
-                    new XAttribute(DmlNames.AttributeX, 0),
-                    new XAttribute(DmlNames.AttributeY, 0)),
-                new XElement(DmlNames.Extents,
-                    new XAttribute(DmlNames.AttributeWidth, 0),
-                    new XAttribute(DmlNames.AttributeHeight, 0)))));
+        spTree.Add(
+            new XElement(
+                PmlNames.NonVisualGroupShapeProperties,
+                new XElement(
+                    PmlNames.CommonNonVisualProperties,
+                    new XAttribute(PmlNames.AttributeId, 1),
+                    new XAttribute(PmlNames.AttributeName, string.Empty)
+                ),
+                new XElement(pml + "cNvGrpSpPr"),
+                new XElement(PmlNames.ApplicationNonVisualProperties)
+            )
+        );
+        spTree.Add(
+            new XElement(
+                PmlNames.GroupShapeProperties,
+                new XElement(
+                    DmlNames.Transform,
+                    new XElement(
+                        DmlNames.Offset,
+                        new XAttribute(DmlNames.AttributeX, 0),
+                        new XAttribute(DmlNames.AttributeY, 0)
+                    ),
+                    new XElement(
+                        DmlNames.Extents,
+                        new XAttribute(DmlNames.AttributeWidth, 0),
+                        new XAttribute(DmlNames.AttributeHeight, 0)
+                    )
+                )
+            )
+        );
 
         foreach (var el in layout.Shapes.Select(static shape => ShapeWriter.Write(shape)).OfType<XElement>())
             spTree.Add(el);
@@ -61,8 +79,12 @@ internal static class LayoutWriter
         cSld.Add(spTree);
         sldLayout.Add(cSld);
 
-        sldLayout.Add(new XElement(PmlNames.ColorMapOverride,
-            new XElement(dml + "masterClrMapping")));
+        sldLayout.Add(
+            new XElement(
+                PmlNames.ColorMapOverride,
+                new XElement(dml + "masterClrMapping")
+            )
+        );
 
         return sldLayout;
     }

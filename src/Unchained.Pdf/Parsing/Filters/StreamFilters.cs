@@ -69,19 +69,25 @@ internal static class StreamFilters
             "ASCIIHexDecode" or "AHx" => AsciiHexDecoder.Decode(data),
             "ASCII85Decode" or "A85" => Ascii85Decoder.Decode(data),
             "RunLengthDecode" or "RL" => RunLengthDecoder.Decode(data),
-            "LZWDecode" or "LZW" => LzwDecoder.Decode(data,
-                (int)(parms?.Get<PdfInteger>("EarlyChange")?.Value ?? 1L)),
-            "CCITTFaxDecode" or "CCF" => CcittFaxDecoder.Decode(data,
+            "LZWDecode" or "LZW" => LzwDecoder.Decode(
+                data,
+                (int)(parms?.Get<PdfInteger>("EarlyChange")?.Value ?? 1L)
+            ),
+            "CCITTFaxDecode" or "CCF" => CcittFaxDecoder.Decode(
+                data,
                 (int)(parms?.Get<PdfInteger>("K")?.Value ?? 0L),
                 (int)(parms?.Get<PdfInteger>("Columns")?.Value ?? 1728L),
                 (int)(parms?.Get<PdfInteger>("Rows")?.Value ?? 0L),
                 parms?.Get<PdfBoolean>("BlackIs1")?.Value ?? false,
                 parms?.Get<PdfBoolean>("EndOfBlock")?.Value ?? true,
-                parms?.Get<PdfBoolean>("EncodedByteAlign")?.Value ?? false),
-            "JBIG2Decode" => Jbig2Decoder.Decode(data,
+                parms?.Get<PdfBoolean>("EncodedByteAlign")?.Value ?? false
+            ),
+            "JBIG2Decode" => Jbig2Decoder.Decode(
+                data,
                 parms?[PdfName.JBIG2Globals] is PdfStream gs
                     ? Decode(gs)
-                    : (ReadOnlyMemory<byte>?)null),
+                    : (ReadOnlyMemory<byte>?)null
+            ),
             "DCTDecode" or "DCT" => DctDecoder.Decode(data),
             "JPXDecode" => JpxDecoder.Decode(data),
             "Crypt" => data, // identity pass-through

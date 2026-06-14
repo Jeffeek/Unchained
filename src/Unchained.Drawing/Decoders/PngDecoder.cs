@@ -109,12 +109,14 @@ internal static class PngDecoder
 
         var unfiltered = Unfilter(raw, w, h, channels, stride);
         // ReSharper disable once BadListLineBreaks
-        var rgb = ToRgb(unfiltered,
+        var rgb = ToRgb(
+            unfiltered,
             w,
             h,
             channels,
             colorType,
-            palette);
+            palette
+        );
         if (rgb is null)
             return null;
 

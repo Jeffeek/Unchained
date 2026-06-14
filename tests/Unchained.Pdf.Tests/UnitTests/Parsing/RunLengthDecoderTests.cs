@@ -75,7 +75,8 @@ public sealed class RunLengthDecoderTests
         // length=5 → try to copy 6 bytes, but only 2 follow
         var input = new byte[] { 5, (byte)'A', (byte)'B' };
         await Should.ThrowAsync<InvalidDataException>(() =>
-            Task.Run(() => RunLengthDecoder.Decode(input)));
+            Task.Run(() => RunLengthDecoder.Decode(input))
+        );
     }
 
     [Fact]
@@ -84,7 +85,8 @@ public sealed class RunLengthDecoderTests
         // length=200 → repeat run, but no data byte follows
         var input = new byte[] { 200 };
         await Should.ThrowAsync<InvalidDataException>(() =>
-            Task.Run(() => RunLengthDecoder.Decode(input)));
+            Task.Run(() => RunLengthDecoder.Decode(input))
+        );
     }
 
     [Fact]

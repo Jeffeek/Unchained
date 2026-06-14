@@ -81,11 +81,13 @@ internal static class TrueTypeSubsetter
             if (gid >= numGlyphs)
                 continue;
 
-            var (gStart, gLen) = GetGlyphRange(b,
+            var (gStart, gLen) = GetGlyphRange(
+                b,
                 locaOff,
                 glyfOff,
                 indexToLocFormat,
-                gid);
+                gid
+            );
 
             if (gLen < 2)
                 continue;
@@ -125,11 +127,13 @@ internal static class TrueTypeSubsetter
             if (!keepGlyphs.Contains(gid))
                 continue;
 
-            var (gStart, gLen) = GetGlyphRange(b,
+            var (gStart, gLen) = GetGlyphRange(
+                b,
                 locaOff,
                 glyfOff,
                 indexToLocFormat,
-                gid);
+                gid
+            );
 
             if (gLen <= 0)
                 continue;
@@ -169,11 +173,13 @@ internal static class TrueTypeSubsetter
 
         // Rebuild the font file with updated glyf and loca tables.
         // Also update head.indexToLocFormat if we switched from short to long.
-        return RebuildFont(b,
+        return RebuildFont(
+            b,
             tables,
             indexToLocFormat,
             newGlyf,
-            newLoca);
+            newLoca
+        );
     }
 
     // Rebuilds the TrueType font with the updated glyf and loca tables.

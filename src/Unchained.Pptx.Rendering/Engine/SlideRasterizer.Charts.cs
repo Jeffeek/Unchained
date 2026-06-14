@@ -18,21 +18,25 @@ internal sealed partial class SlideRasterizer
         double dpi
     )
     {
-        buffer.FillRect(x,
+        buffer.FillRect(
+            x,
             y,
             width,
             height,
             255,
             255,
-            255);
-        DrawBorder(buffer,
+            255
+        );
+        DrawBorder(
+            buffer,
             x,
             y,
             width,
             height,
             180,
             180,
-            180);
+            180
+        );
 
         var model = shape.Chart;
         if (model.Data.Series.Count == 0) return;
@@ -40,7 +44,8 @@ internal sealed partial class SlideRasterizer
         var titleH = 0;
         if (model.HasTitle && !string.IsNullOrWhiteSpace(model.Title))
         {
-            RenderTextFrameText(buffer,
+            RenderTextFrameText(
+                buffer,
                 model.Title,
                 x + 6,
                 y + 4,
@@ -49,7 +54,8 @@ internal sealed partial class SlideRasterizer
                 dpi,
                 60,
                 60,
-                60);
+                60
+            );
             titleH = (int)(18 * dpi / RenderingConstants.PointsPerInch);
         }
 
@@ -66,18 +72,21 @@ internal sealed partial class SlideRasterizer
         var type = model.Type.ToString();
         if (type.StartsWith("Pie", StringComparison.Ordinal) || type.StartsWith("Doughnut", StringComparison.Ordinal))
         {
-            RenderPieChart(buffer,
+            RenderPieChart(
+                buffer,
                 series[0],
                 plotX,
                 plotY,
                 plotW,
-                plotH);
+                plotH
+            );
         }
         else if (type.StartsWith("Line", StringComparison.Ordinal) || type.StartsWith("Scatter", StringComparison.Ordinal))
         {
             var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(1).Max();
             var minVal = Math.Min(0.0, series.SelectMany(static s => s.Values).DefaultIfEmpty(0).Min());
-            RenderChartAxes(buffer,
+            RenderChartAxes(
+                buffer,
                 plotX,
                 plotY,
                 plotW,
@@ -86,20 +95,24 @@ internal sealed partial class SlideRasterizer
                 maxVal,
                 dpi,
                 model.Data.Categories,
-                false);
-            RenderLineChart(buffer,
+                false
+            );
+            RenderLineChart(
+                buffer,
                 series,
                 plotX,
                 plotY,
                 plotW,
-                plotH);
+                plotH
+            );
         }
         else
         {
             var isHorizontal = type.StartsWith("Bar", StringComparison.Ordinal);
             var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(1).Max();
             var minVal = Math.Min(0.0, series.SelectMany(static s => s.Values).DefaultIfEmpty(0).Min());
-            RenderChartAxes(buffer,
+            RenderChartAxes(
+                buffer,
                 plotX,
                 plotY,
                 plotW,
@@ -108,25 +121,30 @@ internal sealed partial class SlideRasterizer
                 maxVal,
                 dpi,
                 model.Data.Categories,
-                isHorizontal);
-            RenderBarChart(buffer,
+                isHorizontal
+            );
+            RenderBarChart(
+                buffer,
                 series,
                 plotX,
                 plotY,
                 plotW,
                 plotH,
-                isHorizontal);
+                isHorizontal
+            );
         }
 
         // Legend
         if (model.Legend.IsVisible && series.Count > 0)
         {
-            RenderChartLegend(buffer,
+            RenderChartLegend(
+                buffer,
                 series,
                 x,
                 y + height - 14,
                 width,
-                dpi);
+                dpi
+            );
         }
     }
 
@@ -159,15 +177,18 @@ internal sealed partial class SlideRasterizer
             {
                 var gy = plotY + plotH - (int)(frac * plotH);
                 // Gridline
-                buffer.FillRect(plotX,
+                buffer.FillRect(
+                    plotX,
                     gy,
                     plotW,
                     1,
                     230,
                     230,
-                    230);
+                    230
+                );
                 // Tick label
-                RenderTextFrameText(buffer,
+                RenderTextFrameText(
+                    buffer,
                     label,
                     plotX - 38,
                     gy - 6,
@@ -176,19 +197,23 @@ internal sealed partial class SlideRasterizer
                     dpi,
                     100,
                     100,
-                    100);
+                    100
+                );
             }
             else
             {
                 var gx = plotX + (int)(frac * plotW);
-                buffer.FillRect(gx,
+                buffer.FillRect(
+                    gx,
                     plotY,
                     1,
                     plotH,
                     230,
                     230,
-                    230);
-                RenderTextFrameText(buffer,
+                    230
+                );
+                RenderTextFrameText(
+                    buffer,
                     label,
                     gx - 12,
                     plotY + plotH + 2,
@@ -197,25 +222,30 @@ internal sealed partial class SlideRasterizer
                     dpi,
                     100,
                     100,
-                    100);
+                    100
+                );
             }
         }
 
         // Axis lines
-        buffer.FillRect(plotX,
+        buffer.FillRect(
+            plotX,
             plotY,
             1,
             plotH,
             160,
             160,
-            160);
-        buffer.FillRect(plotX,
+            160
+        );
+        buffer.FillRect(
+            plotX,
             plotY + plotH,
             plotW,
             1,
             160,
             160,
-            160);
+            160
+        );
 
         // Category labels (up to 8 to avoid crowding).
         // ReSharper disable once InvertIf
@@ -229,7 +259,8 @@ internal sealed partial class SlideRasterizer
                 if (!horizontal)
                 {
                     var lx = plotX + (int)((ci + 0.5) / categories.Count * plotW) - 12;
-                    RenderTextFrameText(buffer,
+                    RenderTextFrameText(
+                        buffer,
                         label,
                         lx,
                         plotY + plotH + 2,
@@ -238,12 +269,14 @@ internal sealed partial class SlideRasterizer
                         dpi,
                         80,
                         80,
-                        80);
+                        80
+                    );
                 }
                 else
                 {
                     var ly = plotY + (int)((ci + 0.5) / categories.Count * plotH) - 5;
-                    RenderTextFrameText(buffer,
+                    RenderTextFrameText(
+                        buffer,
                         label,
                         plotX - 38,
                         ly,
@@ -252,7 +285,8 @@ internal sealed partial class SlideRasterizer
                         dpi,
                         80,
                         80,
-                        80);
+                        80
+                    );
                 }
             }
         }
@@ -273,16 +307,19 @@ internal sealed partial class SlideRasterizer
         for (var si = 0; si < Math.Min(series.Count, 6); si++)
         {
             var color = SeriesPalette[si % SeriesPalette.Length];
-            buffer.FillRect(cursorX,
+            buffer.FillRect(
+                cursorX,
                 y + 3,
                 swatchSize,
                 swatchSize,
                 color.R,
                 color.G,
-                color.B);
+                color.B
+            );
             cursorX += swatchSize + 2;
             var name = TruncateLabel(series[si].Name, 10);
-            RenderTextFrameText(buffer,
+            RenderTextFrameText(
+                buffer,
                 name,
                 cursorX,
                 y + 3,
@@ -291,7 +328,8 @@ internal sealed partial class SlideRasterizer
                 dpi,
                 60,
                 60,
-                60);
+                60
+            );
             cursorX += 90;
             if (cursorX > x + width - 20) break;
         }
@@ -340,25 +378,29 @@ internal sealed partial class SlideRasterizer
                 {
                     var barLen = (int)(val / maxVal * w);
                     var by = y + (c * groupSpan) + (s * barSpan);
-                    buffer.FillRect(x,
+                    buffer.FillRect(
+                        x,
                         by,
                         barLen,
                         barSpan - 1,
                         color.R,
                         color.G,
-                        color.B);
+                        color.B
+                    );
                 }
                 else
                 {
                     var barLen = (int)(val / maxVal * h);
                     var bx = x + (c * groupSpan) + (s * barSpan);
-                    buffer.FillRect(bx,
+                    buffer.FillRect(
+                        bx,
                         y + h - barLen,
                         barSpan - 1,
                         barLen,
                         color.R,
                         color.G,
-                        color.B);
+                        color.B
+                    );
                 }
             }
         }
@@ -390,14 +432,16 @@ internal sealed partial class SlideRasterizer
                 var x1 = x + (int)((i + 1) * stepX);
                 var y0 = y + h - (int)(vals[i] / maxVal * h);
                 var y1 = y + h - (int)(vals[i + 1] / maxVal * h);
-                buffer.DrawLine(x0,
+                buffer.DrawLine(
+                    x0,
                     y0,
                     x1,
                     y1,
                     color.R,
                     color.G,
                     color.B,
-                    2);
+                    2
+                );
             }
         }
     }

@@ -137,7 +137,8 @@ internal sealed class FontCache : IDisposable
                            ?? throw new InvalidOperationException(
                                $"Bundled font resource '{resourceName}' not found in " +
                                $"'{asm.GetName().Name}'. Ensure the font files are included " +
-                               "as EmbeddedResource in the project.");
+                               "as EmbeddedResource in the project."
+                           );
         using var ms = new MemoryStream();
         stream.CopyTo(ms);
         return ms.ToArray();

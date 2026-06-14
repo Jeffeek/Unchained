@@ -58,8 +58,10 @@ internal static class FillWriter
 
         foreach (var stop in gradient.Stops)
         {
-            var gs = new XElement(DmlNames.GradientStop,
-                new XAttribute(DmlNames.AttributePosition, (int)(stop.Position * OoxmlScaling.PercentScale)));
+            var gs = new XElement(
+                DmlNames.GradientStop,
+                new XAttribute(DmlNames.AttributePosition, (int)(stop.Position * OoxmlScaling.PercentScale))
+            );
             gs.Add(ColorWriter.Write(stop.Color));
             gsLst.Add(gs);
         }
@@ -69,17 +71,23 @@ internal static class FillWriter
         if (!gradient.IsLinear) return gradFill;
 
         var ang = OoXmlHelper.DegreesToOoxmlRotation(gradient.LinearAngleDegrees);
-        gradFill.Add(new XElement(DmlNames.LinearGradient,
-            new XAttribute(DmlNames.AttributeRotation, ang),
-            new XAttribute("scaled", "0")));
+        gradFill.Add(
+            new XElement(
+                DmlNames.LinearGradient,
+                new XAttribute(DmlNames.AttributeRotation, ang),
+                new XAttribute("scaled", "0")
+            )
+        );
 
         return gradFill;
     }
 
     private static XElement WritePattern(PatternFill pattern)
     {
-        var pattFill = new XElement(DmlNames.PatternFill,
-            new XAttribute("prst", PatternPresetToString(pattern.Preset)));
+        var pattFill = new XElement(
+            DmlNames.PatternFill,
+            new XAttribute("prst", PatternPresetToString(pattern.Preset))
+        );
 
         var fg = new XElement(DmlNames.SolidFill);
         fg.Add(ColorWriter.Write(pattern.ForegroundColor));
@@ -103,8 +111,12 @@ internal static class FillWriter
             blipFill.Add(blip);
         }
 
-        blipFill.Add(new XElement(DmlNames.Stretch,
-            new XElement(DmlNames.FillRect)));
+        blipFill.Add(
+            new XElement(
+                DmlNames.Stretch,
+                new XElement(DmlNames.FillRect)
+            )
+        );
         return blipFill;
     }
 

@@ -1,8 +1,8 @@
 using System.Xml.Linq;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Parsing.Filters;
-using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Pdf.Engine;
 
@@ -57,10 +57,13 @@ internal static class XmpDocumentHelper
             // ReSharper disable StringLiteralTypo
             new XProcessingInstruction("xpacket", "begin=\"﻿\" id=\"W5M0MpCehiHzreSzNTczkc9d\""),
             // ReSharper restore StringLiteralTypo
-            new XElement(x + "xmpmeta",
+            new XElement(
+                x + "xmpmeta",
                 new XAttribute(XNamespace.Xmlns + "x", x.NamespaceName),
-                new XElement(rdf + "RDF", new XAttribute(XNamespace.Xmlns + "rdf", rdf.NamespaceName))),
-            new XProcessingInstruction("xpacket", "end=\"w\""));
+                new XElement(rdf + "RDF", new XAttribute(XNamespace.Xmlns + "rdf", rdf.NamespaceName))
+            ),
+            new XProcessingInstruction("xpacket", "end=\"w\"")
+        );
     }
 
     internal static void SetOrAdd(XContainer parent, XName name, string value)

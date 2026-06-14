@@ -78,7 +78,7 @@ public sealed class ColorSpaceInfoTests
     public void Indexed_GrayPalette_LooksUpEntry()
     {
         // Two-entry gray palette: index 0 = black, index 1 = white.
-        var info = ColorSpaceInfo.Indexed([0x00, 0xFF], channels: 1, baseSpace: "DeviceGray");
+        var info = ColorSpaceInfo.Indexed([0x00, 0xFF], 1, "DeviceGray");
         info.Kind.ShouldBe("Indexed");
         // Component 0 → index round(0*255)=0 → black.
         info.ToRgb([0.0]).ShouldBe(((byte)0, (byte)0, (byte)0));
@@ -88,7 +88,7 @@ public sealed class ColorSpaceInfoTests
     public void Indexed_RgbPalette_ReturnsTriple()
     {
         // Single RGB entry at index 0.
-        var info = ColorSpaceInfo.Indexed([0x10, 0x20, 0x30], channels: 3, baseSpace: "DeviceRGB");
+        var info = ColorSpaceInfo.Indexed([0x10, 0x20, 0x30], 3, "DeviceRGB");
         info.ToRgb([0.0]).ShouldBe(((byte)0x10, (byte)0x20, (byte)0x30));
     }
 

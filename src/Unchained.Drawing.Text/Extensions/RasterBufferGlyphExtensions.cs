@@ -32,7 +32,8 @@ internal static class RasterBufferGlyphExtensions
         var destX = penX + bitmap.Left;
         var destY = penY - bitmap.Top;
 
-        BlitFromNativeBuffer(buffer,
+        BlitFromNativeBuffer(
+            buffer,
             destX,
             destY,
             bitmap.Width,
@@ -43,7 +44,8 @@ internal static class RasterBufferGlyphExtensions
             r,
             g,
             b,
-            blendMode);
+            blendMode
+        );
     }
 
     // Low-level blitter: given raw glyph bitmap fields, reads pixel data and blits.
@@ -79,7 +81,8 @@ internal static class RasterBufferGlyphExtensions
                 {
                     var srcRow = pitch >= 0 ? row : h - 1 - row;
                     Marshal.Copy(IntPtr.Add(bufPtr, srcRow * absPitch), rowBuf, 0, absPitch);
-                    buffer.BlitGrayBitmap(destX,
+                    buffer.BlitGrayBitmap(
+                        destX,
                         destY + row,
                         w,
                         1,
@@ -89,7 +92,8 @@ internal static class RasterBufferGlyphExtensions
                         r,
                         g,
                         b,
-                        blendMode);
+                        blendMode
+                    );
                 }
 
                 break;
@@ -105,7 +109,8 @@ internal static class RasterBufferGlyphExtensions
                     Marshal.Copy(IntPtr.Add(bufPtr, srcRow * absPitch), monoRow, 0, absPitch);
                     for (var col = 0; col < w; col++)
                         grayRow[col] = (monoRow[col >> 3] & (0x80 >> (col & 7))) != 0 ? (byte)255 : (byte)0;
-                    buffer.BlitGrayBitmap(destX,
+                    buffer.BlitGrayBitmap(
+                        destX,
                         destY + row,
                         w,
                         1,
@@ -115,7 +120,8 @@ internal static class RasterBufferGlyphExtensions
                         r,
                         g,
                         b,
-                        blendMode);
+                        blendMode
+                    );
                 }
 
                 break;

@@ -19,8 +19,10 @@ public sealed class RealPdfTextTests : PdfTestBase
         var tested = 0;
         foreach (var path in Files())
         {
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
-                TestContext.Current.CancellationToken);
+            await using var doc = await TryLoadDocAsync(
+                await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken
+            );
             if (doc is null)
                 continue;
 
@@ -39,8 +41,10 @@ public sealed class RealPdfTextTests : PdfTestBase
         var tested = 0;
         foreach (var path in Files())
         {
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
-                TestContext.Current.CancellationToken);
+            await using var doc = await TryLoadDocAsync(
+                await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken
+            );
             if (doc is null)
                 continue;
 
@@ -81,7 +85,8 @@ public sealed class RealPdfTextTests : PdfTestBase
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
-        doc.Pages[1].GetTextSpans()
+        doc.Pages[1]
+            .GetTextSpans()
             .Where(static s => s.Text.Length > 0)
             .ShouldAllBe(static s => s.FontSize > 0);
     }
@@ -97,8 +102,11 @@ public sealed class RealPdfTextTests : PdfTestBase
 
         for (var i = 1; i < spans.Count; i++)
         {
-            spans[i].Y.ShouldBeLessThanOrEqualTo(spans[i - 1].Y + 2.0,
-                $"span {i} Y={spans[i].Y:F1} is above span {i - 1} Y={spans[i - 1].Y:F1}");
+            spans[i]
+                .Y.ShouldBeLessThanOrEqualTo(
+                    spans[i - 1].Y + 2.0,
+                    $"span {i} Y={spans[i].Y:F1} is above span {i - 1} Y={spans[i - 1].Y:F1}"
+                );
         }
     }
 
@@ -108,7 +116,8 @@ public sealed class RealPdfTextTests : PdfTestBase
         var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
-        doc.Pages[1].GetTextSpans()
+        doc.Pages[1]
+            .GetTextSpans()
             .Where(static s => s.Text.Length > 0)
             .ShouldAllBe(static s => !string.IsNullOrEmpty(s.FontName));
     }
@@ -137,7 +146,9 @@ public sealed class RealPdfTextTests : PdfTestBase
         var embedded = Enumerable.Range(1, doc.PageCount)
             .SelectMany(i => doc.Pages[i].GetEmbeddedFontBytes().Values)
             .Count(static b => b is { Length: > 0 });
-        embedded.ShouldBeGreaterThanOrEqualTo(0,
-            "Embedded font programs found: " + embedded + " (0 is acceptable — some PDFs use system fonts without embedding)");
+        embedded.ShouldBeGreaterThanOrEqualTo(
+            0,
+            "Embedded font programs found: " + embedded + " (0 is acceptable — some PDFs use system fonts without embedding)"
+        );
     }
 }

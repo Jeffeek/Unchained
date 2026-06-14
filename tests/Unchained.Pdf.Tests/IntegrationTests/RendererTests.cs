@@ -133,7 +133,8 @@ public sealed class RendererTests : RendererTestBase
         var jpeg = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72, OutputFormat.Jpeg),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // JPEG starts with FF D8 FF
         jpeg.Length.ShouldBeGreaterThan(3);
@@ -150,7 +151,8 @@ public sealed class RendererTests : RendererTestBase
         var bmp = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72, OutputFormat.Bmp),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // BMP starts with 'BM'
         bmp.Length.ShouldBeGreaterThan(2);
@@ -167,13 +169,17 @@ public sealed class RendererTests : RendererTestBase
         var highQ = await Renderer!.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72, OutputFormat.Jpeg, 95),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         var lowQ = await Renderer.RenderPageAsync(
             doc.Pages[1],
             new RenderOptions(72, OutputFormat.Jpeg, 10),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
-        lowQ.Length.ShouldBeLessThan(highQ.Length,
-            "Lower JPEG quality should produce a smaller file");
+        lowQ.Length.ShouldBeLessThan(
+            highQ.Length,
+            "Lower JPEG quality should produce a smaller file"
+        );
     }
 }

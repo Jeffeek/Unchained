@@ -30,7 +30,8 @@ public sealed class ContentStreamTests : IDisposable
     {
         await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), TestContext.Current.CancellationToken);
 
-        var names = doc.Pages[1].GetContentOperators()
+        var names = doc.Pages[1]
+            .GetContentOperators()
             .Select(static o => o.Name)
             .ToList();
 
@@ -41,8 +42,10 @@ public sealed class ContentStreamTests : IDisposable
     [Fact]
     public async Task GetContentOperators_PageWithText_ContainsTjWithString()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent("Test string")),
-            TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(
+            new MemoryStream(PdfFixtures.WithTextContent("Test string")),
+            TestContext.Current.CancellationToken
+        );
 
         var tjOp = doc.Pages[1].GetContentOperators().FirstOrDefault(static o => o.Name == "Tj");
 
@@ -56,7 +59,8 @@ public sealed class ContentStreamTests : IDisposable
     {
         await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithTextContent()), TestContext.Current.CancellationToken);
 
-        var tfOp = doc.Pages[1].GetContentOperators()
+        var tfOp = doc.Pages[1]
+            .GetContentOperators()
             .FirstOrDefault(static o => o.Name == "Tf");
 
         tfOp.ShouldNotBeNull();

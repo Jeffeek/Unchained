@@ -83,10 +83,12 @@ public sealed class PdfWriterValueTests
     [Fact]
     public void WriteValue_Dictionary_WritesNameValuePairs()
     {
-        var dict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Type"] = PdfName.Page
-        });
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Type"] = PdfName.Page
+            }
+        );
         var result = Write(dict);
         result.ShouldContain("/Type");
         result.ShouldContain("/Page");
@@ -154,35 +156,46 @@ public sealed class PdfWriterDocumentTests
         var catalog = new PdfIndirectObject(
             1,
             0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                ["Type"] = PdfName.Catalog,
-                ["Pages"] = new PdfIndirectReference(2, 0)
-            }));
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Type"] = PdfName.Catalog,
+                    ["Pages"] = new PdfIndirectReference(2, 0)
+                }
+            )
+        );
         var pages = new PdfIndirectObject(
             2,
             0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                ["Type"] = PdfName.Pages,
-                ["Kids"] = new PdfArray([new PdfIndirectReference(3, 0)]),
-                ["Count"] = new PdfInteger(1)
-            }));
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Type"] = PdfName.Pages,
+                    ["Kids"] = new PdfArray([new PdfIndirectReference(3, 0)]),
+                    ["Count"] = new PdfInteger(1)
+                }
+            )
+        );
         var page = new PdfIndirectObject(
             3,
             0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                ["Type"] = PdfName.Page,
-                ["Parent"] = new PdfIndirectReference(2, 0),
-                ["MediaBox"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(595), new PdfInteger(842)])
-            }));
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Type"] = PdfName.Page,
+                    ["Parent"] = new PdfIndirectReference(2, 0),
+                    ["MediaBox"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(595), new PdfInteger(842)])
+                }
+            )
+        );
 
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Size"] = new PdfInteger(4),
-            ["Root"] = new PdfIndirectReference(1, 0)
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Size"] = new PdfInteger(4),
+                ["Root"] = new PdfIndirectReference(1, 0)
+            }
+        );
 
         var buffer = new ArrayBufferWriter<byte>();
         using var writer = new PdfWriter(buffer);

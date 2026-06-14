@@ -128,9 +128,11 @@ public sealed class FontSubsystemTests : RendererTestBase
             Rows = [["tiny", "this cell has a lot of content"]]
         };
         var layout = TableLayout.Compute(data.Headers.Count, TableStyle.Default, false, data);
-        layout.ColumnWidths.Sum().ShouldBe(
-            TableLayout.PageWidth - (2 * TableLayout.Margin),
-            0.1f);
+        layout.ColumnWidths.Sum()
+            .ShouldBe(
+                TableLayout.PageWidth - (2 * TableLayout.Margin),
+                0.1f
+            );
     }
 
     [Fact]
@@ -216,7 +218,8 @@ public sealed class FontSubsystemTests : RendererTestBase
         var asm = typeof(FontCache).Assembly;
         using var stream = asm.GetManifestResourceStream("Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
                            ?? throw new InvalidOperationException(
-                               "DejaVuSans-Regular.ttf not found in Drawing.Text assembly.");
+                               "DejaVuSans-Regular.ttf not found in Drawing.Text assembly."
+                           );
         using var ms = new MemoryStream();
         stream.CopyTo(ms);
         return ms.ToArray();
@@ -295,7 +298,8 @@ public sealed class FontUtilitiesTests : PdfTestBase
         // The font map must match the exact /BaseFont name used in the fixture.
         await using var doc = await LoadAsync(
             PdfFixtures.WithTextContent("Hello"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // Map both "Helvetica" and "Helvetica-Bold" to cover possible /BaseFont values.
         var fontMap = new Dictionary<string, byte[]>
@@ -307,7 +311,8 @@ public sealed class FontUtilitiesTests : PdfTestBase
         };
         // Should not throw regardless of whether fonts are found.
         await Should.NotThrowAsync(() =>
-            Processor.EmbedStandardFontsAsync(doc, fontMap, TestContext.Current.CancellationToken));
+            Processor.EmbedStandardFontsAsync(doc, fontMap, TestContext.Current.CancellationToken)
+        );
     }
 
     // ── ReplaceFontAsync ─────────────────────────────────────────────────────────
@@ -321,14 +326,16 @@ public sealed class FontUtilitiesTests : PdfTestBase
         // Create a PDF with an embedded font first.
         await using var doc = await LoadAsync(
             PdfFixtures.WithEmbeddedFont(originalFont),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // Replace Helvetica (the font name in the fixture) with a new font.
         await Processor.ReplaceFontAsync(
             doc,
             "Helvetica",
             replacementFont,
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // Save and reload to verify the change persisted.
         using var ms = new MemoryStream();
@@ -336,8 +343,10 @@ public sealed class FontUtilitiesTests : PdfTestBase
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         var embedded = reloaded.Pages[1].GetEmbeddedFontBytes();
-        embedded.Values.Any(static v => v is not null).ShouldBeTrue(
-            "font should still be embedded after ReplaceFontAsync");
+        embedded.Values.Any(static v => v is not null)
+            .ShouldBeTrue(
+                "font should still be embedded after ReplaceFontAsync"
+            );
     }
 
     // ── SubsetFontsAsync ─────────────────────────────────────────────────────────
@@ -348,7 +357,8 @@ public sealed class FontUtilitiesTests : PdfTestBase
         var fontBytes = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
         await using var doc = await LoadAsync(
             PdfFixtures.WithEmbeddedFont(fontBytes),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // Record size before subsetting.
         using var msBefore = new MemoryStream();
@@ -365,7 +375,8 @@ public sealed class FontUtilitiesTests : PdfTestBase
         // Subset must not make the file larger (it may be the same if font was already small).
         sizeAfter.ShouldBeLessThanOrEqualTo(
             sizeBefore,
-            $"SubsetFontsAsync should not increase file size (before={sizeBefore}, after={sizeAfter})");
+            $"SubsetFontsAsync should not increase file size (before={sizeBefore}, after={sizeAfter})"
+        );
     }
 
     [Fact]
@@ -373,11 +384,13 @@ public sealed class FontUtilitiesTests : PdfTestBase
     {
         await using var doc = await LoadAsync(
             PdfFixtures.WithTextContent("Hello"),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         // Should not throw even when there are no embedded fonts.
         await Should.NotThrowAsync(() =>
-            Processor.SubsetFontsAsync(doc, TestContext.Current.CancellationToken));
+            Processor.SubsetFontsAsync(doc, TestContext.Current.CancellationToken)
+        );
     }
 
     // ── TrueTypeSubsetter unit tests ─────────────────────────────────────────────
@@ -398,8 +411,10 @@ public sealed class FontUtilitiesTests : PdfTestBase
         var allGlyphs = Enumerable.Range(0, 65536).ToHashSet();
         var result = TrueTypeSubsetter.Subset(original, allGlyphs);
         // Either returns original reference or same length.
-        result.Length.ShouldBe(original.Length,
-            "requesting all glyphs should not change font size");
+        result.Length.ShouldBe(
+            original.Length,
+            "requesting all glyphs should not change font size"
+        );
     }
 
     [Fact]
@@ -418,7 +433,9 @@ public sealed class FontUtilitiesTests : PdfTestBase
         (isOtf || isTtf).ShouldBeTrue("subset result should have valid TrueType/OTF sfVersion");
 
         // Subset should be smaller than original (DejaVuSans has 6000+ glyphs).
-        result.Length.ShouldBeLessThan(original.Length,
-            "subset of 26 glyphs should be much smaller than full font");
+        result.Length.ShouldBeLessThan(
+            original.Length,
+            "subset of 26 glyphs should be much smaller than full font"
+        );
     }
 }

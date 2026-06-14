@@ -301,20 +301,24 @@ internal static class CfbDocument
         var result = new byte[totalFileSize];
 
         WriteHeader(result, fatSectorCount, hasMini);
-        WriteFat(result,
+        WriteFat(
+            result,
             miniContainerSectors,
             largeEntries,
             largeSectorStarts,
             largeSectorCounts,
-            hasMini);
+            hasMini
+        );
         if (hasMini) WriteMiniFat(result, miniEntries);
-        WriteDirectory(result,
+        WriteDirectory(
+            result,
             miniEntries,
             largeEntries,
             miniSectors,
             largeSectorStarts,
             totalMiniBytes,
-            hasMini);
+            hasMini
+        );
         if (hasMini) WriteMiniStreamContainer(result, miniEntries);
         WriteLargeStreams(result, largeEntries, largeSectorStarts);
 
@@ -419,7 +423,8 @@ internal static class CfbDocument
                 var isLast = i == count - 1;
                 BinaryPrimitives.WriteInt32LittleEndian(
                     miniFatBuf[(miniSectorIdx * 4)..],
-                    isLast ? EndOfChain : miniSectorIdx + 1);
+                    isLast ? EndOfChain : miniSectorIdx + 1
+                );
                 miniSectorIdx++;
             }
         }
@@ -475,7 +480,8 @@ internal static class CfbDocument
 
         // Root entry (entry 0)
         var rootChild = sorted.Count > 0 ? sorted[0].idx : NoStream;
-        WriteDirEntry(buf,
+        WriteDirEntry(
+            buf,
             dirOffset,
             0,
             "Root Entry",
@@ -485,14 +491,16 @@ internal static class CfbDocument
             NoStream,
             rootChild,
             hasMini ? 3 : EndOfChain,
-            hasMini ? (ulong)Pad(totalMiniBytes, SectorSize) : 0UL);
+            hasMini ? (ulong)Pad(totalMiniBytes, SectorSize) : 0UL
+        );
 
         // Stream entries
         for (var i = 0; i < all.Count; i++)
         {
             var (name, _, _, start, size) = all[i];
             var entryIdx = i + 1;
-            WriteDirEntry(buf,
+            WriteDirEntry(
+                buf,
                 dirOffset,
                 entryIdx,
                 name,
@@ -502,7 +510,8 @@ internal static class CfbDocument
                 rightSibling[entryIdx],
                 NoStream,
                 start,
-                (ulong)size);
+                (ulong)size
+            );
         }
 
         // Mark remaining entries as free (type=0 already from Array.Clear)

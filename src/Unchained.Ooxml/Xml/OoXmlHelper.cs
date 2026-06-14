@@ -112,7 +112,8 @@ internal static class OoXmlHelper
                 raw,
                 NumberStyles.Float,
                 CultureInfo.InvariantCulture,
-                out var value)
+                out var value
+            )
                 ? value
                 : null;
         }
@@ -144,7 +145,8 @@ internal static class OoXmlHelper
         public XElement RequiredChild(XName name) =>
             element.Element(name)
             ?? throw new OoXmlException(
-                $"Required child element '{name.LocalName}' is missing inside '{element.Name.LocalName}'.");
+                $"Required child element '{name.LocalName}' is missing inside '{element.Name.LocalName}'."
+            );
 
         /// <summary>
         ///     Returns all child elements with the given name.

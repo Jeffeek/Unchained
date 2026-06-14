@@ -18,19 +18,29 @@ internal static class ColorWriter
         if (color.Type == ColorSpecType.ThemeSlot)
         {
             var slotName = SlotToString(color.ThemeSlot);
-            var schemeEl = new XElement(DmlNames.SchemeColor,
-                new XAttribute(DmlNames.AttributeValue, slotName));
+            var schemeEl = new XElement(
+                DmlNames.SchemeColor,
+                new XAttribute(DmlNames.AttributeValue, slotName)
+            );
 
             if (Math.Abs(color.LuminanceModifier - 1.0) > 0.05)
             {
-                schemeEl.Add(new XElement(DmlNames.LuminanceModifier,
-                    new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceModifier * OoxmlScaling.PercentScale))));
+                schemeEl.Add(
+                    new XElement(
+                        DmlNames.LuminanceModifier,
+                        new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceModifier * OoxmlScaling.PercentScale))
+                    )
+                );
             }
 
             if (color.LuminanceOffset != 0.0)
             {
-                schemeEl.Add(new XElement(DmlNames.LuminanceOffset,
-                    new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceOffset * OoxmlScaling.PercentScale))));
+                schemeEl.Add(
+                    new XElement(
+                        DmlNames.LuminanceOffset,
+                        new XAttribute(DmlNames.AttributeValue, (int)(color.LuminanceOffset * OoxmlScaling.PercentScale))
+                    )
+                );
             }
 
             return schemeEl;
@@ -40,13 +50,19 @@ internal static class ColorWriter
         var argb = color.Rgb;
         var alpha = (argb >> 24) & 0xFF;
         var hex = $"{argb & 0x00FFFFFF:X6}";
-        var srgbEl = new XElement(DmlNames.SrgbColor,
-            new XAttribute(DmlNames.AttributeValue, hex));
+        var srgbEl = new XElement(
+            DmlNames.SrgbColor,
+            new XAttribute(DmlNames.AttributeValue, hex)
+        );
 
         if (alpha < 255)
         {
-            srgbEl.Add(new XElement(DmlNames.Alpha,
-                new XAttribute(DmlNames.AttributeValue, (int)Math.Round(alpha / 255.0 * OoxmlScaling.PercentScale))));
+            srgbEl.Add(
+                new XElement(
+                    DmlNames.Alpha,
+                    new XAttribute(DmlNames.AttributeValue, (int)Math.Round(alpha / 255.0 * OoxmlScaling.PercentScale))
+                )
+            );
         }
 
         return srgbEl;

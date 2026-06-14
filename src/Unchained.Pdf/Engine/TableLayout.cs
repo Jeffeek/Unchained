@@ -66,12 +66,14 @@ internal readonly struct TableLayout
         }
 
         // ReSharper disable once BadListLineBreaks
-        return new TableLayout(cols,
+        return new TableLayout(
+            cols,
             rowH,
             headerH,
             titleH,
             usableWidth,
-            rowsPerPage);
+            rowsPerPage
+        );
     }
 
     // Measures each column's required width (widest header or cell text + padding),

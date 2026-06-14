@@ -139,7 +139,8 @@ public sealed class AnnotationEditorTests : PdfTestBase
             10,
             100,
             50,
-            Color: [1f, 0f, 0f]);
+            Color: [1f, 0f, 0f]
+        );
         await Editor.AddAnnotationAsync(doc, 1, ann, TestContext.Current.CancellationToken);
         var result = doc.Pages[1].GetAnnotations()[0];
         result.Color.ShouldNotBeNull();
@@ -185,7 +186,8 @@ public sealed class AnnotationEditorTests : PdfTestBase
             300,
             200,
             60,
-            "Free text note");
+            "Free text note"
+        );
         await Editor.AddAnnotationAsync(doc, 1, ann, TestContext.Current.CancellationToken);
         var result = doc.Pages[1].GetAnnotations()[0];
         result.Subtype.ShouldBe(AnnotationSubtype.FreeText);
@@ -204,7 +206,8 @@ public sealed class AnnotationEditorTests : PdfTestBase
             600,
             50,
             50,
-            "Added");
+            "Added"
+        );
         await Editor.AddAnnotationAsync(doc, 1, ann, TestContext.Current.CancellationToken);
         var annots = doc.Pages[1].GetAnnotations();
         annots.Count.ShouldBe(2);
@@ -222,7 +225,8 @@ public sealed class AnnotationEditorTests : PdfTestBase
                 700,
                 50,
                 50,
-                $"Note {i}");
+                $"Note {i}"
+            );
             await Editor.AddAnnotationAsync(doc, 1, ann, TestContext.Current.CancellationToken);
         }
 
@@ -251,7 +255,8 @@ public sealed class AnnotationEditorTests : PdfTestBase
             80,
             80,
             "Colored circle",
-            [0f, 0f, 1f]);
+            [0f, 0f, 1f]
+        );
         await Editor.AddAnnotationAsync(doc, 1, ann, TestContext.Current.CancellationToken);
         var result = doc.Pages[1].GetAnnotations()[0];
         result.Contents.ShouldBe("Colored circle");
@@ -268,7 +273,8 @@ public sealed class AnnotationEditorTests : PdfTestBase
             10,
             50,
             50,
-            Color: [0f, 1f, 0f]);
+            Color: [0f, 1f, 0f]
+        );
         await Editor.AddAnnotationAsync(doc, 1, ann, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);

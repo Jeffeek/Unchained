@@ -54,7 +54,8 @@ public sealed class ColorWriterTests
     [Fact]
     public void Write_ThemeSlotWithLuminanceModifier_AddsLumMod()
     {
-        var color = ColorSpec.FromTheme(ThemeColorSlot.Accent1, luminanceModifier: 0.5, luminanceOffset: 0.0);
+        // ReSharper disable once RedundantArgumentDefaultValue
+        var color = ColorSpec.FromTheme(ThemeColorSlot.Accent1, 0.5, 0.0);
         var el = ColorWriter.Write(color);
         var lumMod = el.Elements().SingleOrDefault(static e => e.Name.LocalName == "lumMod");
         lumMod.ShouldNotBeNull();
@@ -64,7 +65,7 @@ public sealed class ColorWriterTests
     [Fact]
     public void Write_ThemeSlotWithLuminanceOffset_AddsLumOff()
     {
-        var color = ColorSpec.FromTheme(ThemeColorSlot.Accent1, luminanceModifier: 1.0, luminanceOffset: 0.2);
+        var color = ColorSpec.FromTheme(ThemeColorSlot.Accent1, 1.0, 0.2);
         var el = ColorWriter.Write(color);
         var lumOff = el.Elements().SingleOrDefault(static e => e.Name.LocalName == "lumOff");
         lumOff.ShouldNotBeNull();

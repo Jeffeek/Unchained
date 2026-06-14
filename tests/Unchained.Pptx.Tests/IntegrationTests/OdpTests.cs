@@ -89,8 +89,10 @@ public sealed class OdpTests : PptxTestBase
         var reloaded = await Processor.LoadAsync(odp);
 
         reloaded.Slides.Count.ShouldBe(2);
-        reloaded.Slides[0].Shapes.OfType<AutoShape>()
-            .Any(static s => s.TextFrame.PlainText.Contains("Slide one text")).ShouldBeTrue();
+        reloaded.Slides[0]
+            .Shapes.OfType<AutoShape>()
+            .Any(static s => s.TextFrame.PlainText.Contains("Slide one text"))
+            .ShouldBeTrue();
     }
 
     [Fact]

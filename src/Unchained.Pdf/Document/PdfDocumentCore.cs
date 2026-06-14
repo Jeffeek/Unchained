@@ -176,7 +176,8 @@ internal sealed class PdfDocumentCore : IDisposable
 
             if (!int.TryParse(
                     Encoding.ASCII.GetString(span[start..pos]),
-                    out var objNum) || objNum <= 0) continue;
+                    out var objNum
+                ) || objNum <= 0) continue;
 
             // Parse generation number
             var genStart = pos + 1;
@@ -245,11 +246,13 @@ internal sealed class PdfDocumentCore : IDisposable
             throw new PdfException("Repair failed: could not locate document catalog.");
 
         var size = entries.Keys.Max() + 1;
-        trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Root.Value] = catalogRef,
-            [PdfName.Size.Value] = new PdfInteger(size)
-        });
+        trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Root.Value] = catalogRef,
+                [PdfName.Size.Value] = new PdfInteger(size)
+            }
+        );
 
         return new PdfDocumentCore(source, syntheticXref, trailer);
 
@@ -315,7 +318,8 @@ internal sealed class PdfDocumentCore : IDisposable
         _encryption = PdfEncryption.CreateReadContext(encryptDict, fileId, password ?? string.Empty)
                       ?? throw new PdfEncryptedException(
                           $"Unsupported PDF encryption (V={encryptDict.Get<PdfInteger>("V")?.Value}, " +
-                          $"R={encryptDict.Get<PdfInteger>("R")?.Value}).");
+                          $"R={encryptDict.Get<PdfInteger>("R")?.Value})."
+                      );
     }
 
     // ── Object resolution ─────────────────────────────────────────────────────

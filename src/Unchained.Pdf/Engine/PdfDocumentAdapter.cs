@@ -49,7 +49,8 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
                     GetInfoString(info, "Creator"),
                     GetInfoString(info, "Producer"),
                     null,
-                    null);
+                    null
+                );
         }
     }
 
@@ -543,7 +544,8 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             if (stream.Data.Length == 0) continue;
 
             var hash = Convert.ToBase64String(
-                SHA256.HashData(stream.Data.Span));
+                SHA256.HashData(stream.Data.Span)
+            );
 
             if (seenHashes.TryGetValue(hash, out var canonical))
                 remapping[obj.ObjectNumber] = canonical;

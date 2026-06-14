@@ -197,9 +197,11 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
         WriteAscii("0000000000 65535 f \r\n"); // free object 0
         for (var i = 1; i <= maxObjectNumber; i++)
         {
-            WriteAscii(_objectOffsets.TryGetValue(i, out var offset)
-                ? $"{offset:D10} 00000 n \r\n"
-                : "0000000000 00000 f \r\n"); // gap — mark as free
+            WriteAscii(
+                _objectOffsets.TryGetValue(i, out var offset)
+                    ? $"{offset:D10} 00000 n \r\n"
+                    : "0000000000 00000 f \r\n"
+            ); // gap — mark as free
         }
     }
 

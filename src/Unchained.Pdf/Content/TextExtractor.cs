@@ -418,13 +418,15 @@ internal static class TextExtractor
         // Scale the reported width and font size by the CTM's average linear scale so
         // downstream consumers see device-space magnitudes.
         var ctmScale = CtmScale(ctm);
-        spans.Add(new TextSpan(
-            text,
-            startX,
-            startY,
-            totalAdvance * ctmScale,
-            fontSize * ctmScale,
-            fontName)
+        spans.Add(
+            new TextSpan(
+                text,
+                startX,
+                startY,
+                totalAdvance * ctmScale,
+                fontSize * ctmScale,
+                fontName
+            )
         );
     }
 

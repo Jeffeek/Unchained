@@ -47,16 +47,19 @@ internal static class MetadataMutator
             var objects = existing
                 .Select(o => o.ObjectNumber == existingRef.ObjectNumber
                     ? new PdfIndirectObject(o.ObjectNumber, o.Generation, infoDict)
-                    : o)
+                    : o
+                )
                 .ToList();
 
             var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-            var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Size.Value] = new PdfInteger(maxObj + 1),
-                [PdfName.Root.Value] = rootRef,
-                [PdfName.Info.Value] = existingRef
-            });
+            var trailer = new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    [PdfName.Size.Value] = new PdfInteger(maxObj + 1),
+                    [PdfName.Root.Value] = rootRef,
+                    [PdfName.Info.Value] = existingRef
+                }
+            );
 
             var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
             adapter.ReplaceCore(newDoc.Core);
@@ -71,12 +74,14 @@ internal static class MetadataMutator
                 .ToList();
 
             var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-            var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Size.Value] = new PdfInteger(infoObjNum + 1),
-                [PdfName.Root.Value] = rootRef,
-                [PdfName.Info.Value] = infoRef
-            });
+            var trailer = new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    [PdfName.Size.Value] = new PdfInteger(infoObjNum + 1),
+                    [PdfName.Root.Value] = rootRef,
+                    [PdfName.Info.Value] = infoRef
+                }
+            );
 
             var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
             adapter.ReplaceCore(newDoc.Core);
@@ -139,7 +144,8 @@ internal static class MetadataMutator
                     new Dictionary<string, PdfObject>(metaStream.Dictionary.Entries)
                     {
                         ["Length"] = new PdfInteger(cleanedBytes.Length)
-                    });
+                    }
+                );
                 var newStream = new PdfStream(newStreamDict, cleanedBytes.ToArray());
 
                 if (metaObj is PdfIndirectReference metaRef)
@@ -171,20 +177,23 @@ internal static class MetadataMutator
             $"""
              \s+xmlns:{nsPrefix}="[^"]*"
              """,
-            string.Empty);
+            string.Empty
+        );
 
         // Remove <nsPrefix:xxx>...</nsPrefix:xxx> elements.
         cleaned = Regex.Replace(
             cleaned,
             $"<{nsPrefix}:[^>]*/?>.*?</{nsPrefix}:[^>]+>",
             string.Empty,
-            RegexOptions.Singleline);
+            RegexOptions.Singleline
+        );
 
         // Remove self-closing <nsPrefix:xxx ... /> elements.
         cleaned = Regex.Replace(
             cleaned,
             $@"<{nsPrefix}:[^/]*/\s*>",
-            string.Empty);
+            string.Empty
+        );
 
         return cleaned;
     }

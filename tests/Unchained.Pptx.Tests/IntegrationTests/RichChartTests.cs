@@ -15,12 +15,14 @@ public sealed class RichChartTests : PptxTestBase
     private static ChartShape NewColumnChart(out PresentationDocument doc)
     {
         doc = PptxFixtures.WithSlides(1);
-        var chart = doc.Slides[0].Shapes.AddChart(
-            ChartType.ColumnClustered,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(6),
-            Emu.FromInches(4));
+        var chart = doc.Slides[0]
+            .Shapes.AddChart(
+                ChartType.ColumnClustered,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(6),
+                Emu.FromInches(4)
+            );
         chart.Chart.Data.Categories.AddRange(["Q1", "Q2", "Q3"]);
         var series = new ChartSeries { Name = "Revenue" };
         series.Values.AddRange([10, 20, 30]);

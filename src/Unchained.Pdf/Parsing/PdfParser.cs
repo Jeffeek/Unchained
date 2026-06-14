@@ -151,7 +151,8 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
             lexer.ReadNext(); // consume R
             return new PdfIndirectReference(
                 (int)ParseRawInteger(first.Raw.Span),
-                (int)ParseRawInteger(second.Raw.Span));
+                (int)ParseRawInteger(second.Raw.Span)
+            );
         }
 
         lexer.Seek(saved);
@@ -530,8 +531,10 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     }
 
     private static double ParseRawReal(ReadOnlySpan<byte> span) =>
-        double.Parse(Encoding.Latin1.GetString(span),
-            CultureInfo.InvariantCulture);
+        double.Parse(
+            Encoding.Latin1.GetString(span),
+            CultureInfo.InvariantCulture
+        );
 
     // §7.3.5 — decodes a name token: strips the leading '/' and expands '#xx' escapes.
     private static string ParseRawName(ReadOnlySpan<byte> span)

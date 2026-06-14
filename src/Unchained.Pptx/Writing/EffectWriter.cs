@@ -22,9 +22,13 @@ internal static class EffectWriter
 
         if (effects.Blur is { } blur)
         {
-            lst.Add(new XElement(A + "blur",
-                new XAttribute("rad", blur.Radius.Value),
-                new XAttribute("grow", blur.GrowBounds ? "1" : "0")));
+            lst.Add(
+                new XElement(
+                    A + "blur",
+                    new XAttribute("rad", blur.Radius.Value),
+                    new XAttribute("grow", blur.GrowBounds ? "1" : "0")
+                )
+            );
         }
 
         if (effects.Glow is { } glow)
@@ -36,36 +40,44 @@ internal static class EffectWriter
 
         if (effects.InnerShadow is { } inner)
         {
-            var el = new XElement(A + "innerShdw",
+            var el = new XElement(
+                A + "innerShdw",
                 new XAttribute("blurRad", inner.BlurRadius.Value),
                 new XAttribute("dist", inner.Distance.Value),
-                new XAttribute("dir", DegreesToAngle(inner.DirectionDegrees)));
+                new XAttribute("dir", DegreesToAngle(inner.DirectionDegrees))
+            );
             el.Add(ColorWriter.Write(inner.Color));
             lst.Add(el);
         }
 
         if (effects.OuterShadow is { } outer)
         {
-            var el = new XElement(A + "outerShdw",
+            var el = new XElement(
+                A + "outerShdw",
                 new XAttribute("blurRad", outer.BlurRadius.Value),
                 new XAttribute("dist", outer.Distance.Value),
                 new XAttribute("dir", DegreesToAngle(outer.DirectionDegrees)),
                 new XAttribute("sx", PercentToThousandths(outer.ScaleHorizontalPercent)),
                 new XAttribute("sy", PercentToThousandths(outer.ScaleVerticalPercent)),
                 new XAttribute("algn", outer.Alignment),
-                new XAttribute("rotWithShape", outer.RotateWithShape ? "1" : "0"));
+                new XAttribute("rotWithShape", outer.RotateWithShape ? "1" : "0")
+            );
             el.Add(ColorWriter.Write(outer.Color));
             lst.Add(el);
         }
 
         if (effects.Reflection is { } refl)
         {
-            lst.Add(new XElement(A + "reflection",
-                new XAttribute("blurRad", refl.BlurRadius.Value),
-                new XAttribute("stA", PercentToThousandths(refl.StartOpacityPercent)),
-                new XAttribute("endA", PercentToThousandths(refl.EndOpacityPercent)),
-                new XAttribute("dist", refl.Distance.Value),
-                new XAttribute("dir", DegreesToAngle(refl.DirectionDegrees))));
+            lst.Add(
+                new XElement(
+                    A + "reflection",
+                    new XAttribute("blurRad", refl.BlurRadius.Value),
+                    new XAttribute("stA", PercentToThousandths(refl.StartOpacityPercent)),
+                    new XAttribute("endA", PercentToThousandths(refl.EndOpacityPercent)),
+                    new XAttribute("dist", refl.Distance.Value),
+                    new XAttribute("dir", DegreesToAngle(refl.DirectionDegrees))
+                )
+            );
         }
 
         if (effects.SoftEdge is { } soft)

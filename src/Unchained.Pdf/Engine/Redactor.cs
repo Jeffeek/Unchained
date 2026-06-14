@@ -35,9 +35,11 @@ public sealed class Redactor : IRedactor
 
         foreach (var r in regions.Where(r => r.PageNumber < 1 || r.PageNumber > pageCount))
         {
-            throw new ArgumentOutOfRangeException(nameof(regions),
+            throw new ArgumentOutOfRangeException(
+                nameof(regions),
                 r.PageNumber,
-                $"Region page number must be between 1 and {pageCount}.");
+                $"Region page number must be between 1 and {pageCount}."
+            );
         }
 
         var existing = adapter.Core.CollectObjects();
@@ -56,12 +58,17 @@ public sealed class Redactor : IRedactor
             var newContent = BuildRedactedContent(ops, pageRegions);
             var contentBytes = Encoding.Latin1.GetBytes(newContent);
 
-            var streamObj = builder.Add(new PdfStream(
-                new PdfDictionary(new Dictionary<string, PdfObject>
-                {
-                    [PdfName.Length.Value] = new PdfInteger(contentBytes.Length)
-                }),
-                contentBytes));
+            var streamObj = builder.Add(
+                new PdfStream(
+                    new PdfDictionary(
+                        new Dictionary<string, PdfObject>
+                        {
+                            [PdfName.Length.Value] = new PdfInteger(contentBytes.Length)
+                        }
+                    ),
+                    contentBytes
+                )
+            );
 
             // Replace /Contents with the single rebuilt stream (resources are preserved).
             foreach (var obj in existing)
@@ -178,8 +185,14 @@ public sealed class Redactor : IRedactor
         {
             var (cr, cg, cb) = r.FillColor;
             sb.Append("q ").Append(F(cr)).Append(' ').Append(F(cg)).Append(' ').Append(F(cb)).Append(" rg ");
-            sb.Append(F(r.X)).Append(' ').Append(F(r.Y)).Append(' ')
-                .Append(F(r.Width)).Append(' ').Append(F(r.Height)).Append(" re f Q\n");
+            sb.Append(F(r.X))
+                .Append(' ')
+                .Append(F(r.Y))
+                .Append(' ')
+                .Append(F(r.Width))
+                .Append(' ')
+                .Append(F(r.Height))
+                .Append(" re f Q\n");
         }
 
         return sb.ToString();

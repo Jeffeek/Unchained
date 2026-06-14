@@ -129,7 +129,8 @@ public sealed class PageOrganizer : IPageOrganizer
         {
             throw new ArgumentException(
                 $"newOrder must be a permutation of 1..{pageCount}.",
-                nameof(newOrder));
+                nameof(newOrder)
+            );
         }
 
         var leaves = CollectLeaves(adapter.Core);
@@ -146,9 +147,11 @@ public sealed class PageOrganizer : IPageOrganizer
         var destCount = adapter.Core.PageCount;
         if (atPageNumber < 1 || atPageNumber > destCount + 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(atPageNumber),
+            throw new ArgumentOutOfRangeException(
+                nameof(atPageNumber),
                 atPageNumber,
-                $"Insert position must be between 1 and {destCount + 1}.");
+                $"Insert position must be between 1 and {destCount + 1}."
+            );
         }
 
         var destObjects = adapter.Core.CollectObjects();
@@ -201,9 +204,11 @@ public sealed class PageOrganizer : IPageOrganizer
         {
             if (start < 1 || end > pageCount || start > end)
             {
-                throw new ArgumentOutOfRangeException(nameof(ranges),
+                throw new ArgumentOutOfRangeException(
+                    nameof(ranges),
                     (start, end),
-                    $"Each range must satisfy 1 <= Start <= End <= {pageCount}.");
+                    $"Each range must satisfy 1 <= Start <= End <= {pageCount}."
+                );
             }
         }
 
@@ -251,33 +256,49 @@ public sealed class PageOrganizer : IPageOrganizer
                 continue;
 
             var d = (PdfDictionary)objects[i].Value;
-            objects[i] = new PdfIndirectObject(objects[i].ObjectNumber,
+            objects[i] = new PdfIndirectObject(
+                objects[i].ObjectNumber,
                 objects[i].Generation,
-                WithEntry(d, PdfName.Parent.Value, pagesRef));
+                WithEntry(d, PdfName.Parent.Value, pagesRef)
+            );
         }
 
-        objects.Add(new PdfIndirectObject(pagesRootNum,
-            0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Pages,
-                [PdfName.Kids.Value] = new PdfArray(orderedRefs),
-                [PdfName.Count.Value] = new PdfInteger(keptLeafNums.Count)
-            })));
+        objects.Add(
+            new PdfIndirectObject(
+                pagesRootNum,
+                0,
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Pages,
+                        [PdfName.Kids.Value] = new PdfArray(orderedRefs),
+                        [PdfName.Count.Value] = new PdfInteger(keptLeafNums.Count)
+                    }
+                )
+            )
+        );
         var catalogRef = new PdfIndirectReference(catalogNum, 0);
-        objects.Add(new PdfIndirectObject(catalogNum,
-            0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Catalog,
-                [PdfName.Pages.Value] = pagesRef
-            })));
+        objects.Add(
+            new PdfIndirectObject(
+                catalogNum,
+                0,
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Catalog,
+                        [PdfName.Pages.Value] = pagesRef
+                    }
+                )
+            )
+        );
 
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(catalogNum + 1),
-            [PdfName.Root.Value] = catalogRef
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(catalogNum + 1),
+                [PdfName.Root.Value] = catalogRef
+            }
+        );
         return ObjectGraphBuilder.SerializeToDocument(objects, trailer);
     }
 
@@ -323,25 +344,33 @@ public sealed class PageOrganizer : IPageOrganizer
             objects.Add(new PdfIndirectObject(objNum, 0, WithEntry(dict, PdfName.Parent.Value, pagesRef)));
 
         // New flat /Pages root.
-        objects.Add(new PdfIndirectObject(pagesRootNum,
-            0,
-            new PdfDictionary(new Dictionary<string, PdfObject>
-            {
-                [PdfName.Type.Value] = PdfName.Pages,
-                [PdfName.Kids.Value] = new PdfArray(ordered.Select(static PdfObject (p) => new PdfIndirectReference(p.ObjNum, 0)).ToArray()),
-                [PdfName.Count.Value] = new PdfInteger(ordered.Count)
-            })));
+        objects.Add(
+            new PdfIndirectObject(
+                pagesRootNum,
+                0,
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        [PdfName.Type.Value] = PdfName.Pages,
+                        [PdfName.Kids.Value] = new PdfArray(ordered.Select(static PdfObject (p) => new PdfIndirectReference(p.ObjNum, 0)).ToArray()),
+                        [PdfName.Count.Value] = new PdfInteger(ordered.Count)
+                    }
+                )
+            )
+        );
 
         // Re-emit the catalog with /Pages pointing at the new root, keeping all other entries.
         objects.Add(new PdfIndirectObject(catalogNum, 0, WithEntry(catalog, PdfName.Pages.Value, pagesRef)));
 
         var totalMax = objects.Max(static o => o.ObjectNumber);
         var rootRef = new PdfIndirectReference(catalogNum, 0);
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-            [PdfName.Root.Value] = rootRef
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
+                [PdfName.Root.Value] = rootRef
+            }
+        );
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
         adapter.ReplaceCore(newDoc.Core);
     }

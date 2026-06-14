@@ -32,64 +32,70 @@ public sealed class RealPdfSmokeTests : PdfTestBase
     [Fact]
     public Task Parse_AllRealPdfs_PageCountIsPositive() =>
         Parse_AllRealPdfs_Core(static (path, doc) =>
-        {
-            doc.PageCount.ShouldBeGreaterThan(0, path);
+            {
+                doc.PageCount.ShouldBeGreaterThan(0, path);
 
-            return ValueTask.CompletedTask;
-        });
+                return ValueTask.CompletedTask;
+            }
+        );
 
     [Fact]
     public Task Parse_AllRealPdfs_PagesMatchPageCount() =>
         Parse_AllRealPdfs_Core(static (path, doc) =>
-        {
-            doc.Pages.Count.ShouldBe(doc.PageCount, path);
+            {
+                doc.Pages.Count.ShouldBe(doc.PageCount, path);
 
-            return ValueTask.CompletedTask;
-        });
+                return ValueTask.CompletedTask;
+            }
+        );
 
     [Fact]
     public Task Parse_AllRealPdfs_AllPagesHavePositiveDimensions() =>
         Parse_AllRealPdfs_Core(static (path, doc) =>
-        {
-            for (var i = 1; i <= doc.PageCount; i++)
             {
-                doc.Pages[i].Width.ShouldBeGreaterThanOrEqualTo(0, $"{path} page {i} width");
-                doc.Pages[i].Height.ShouldBeGreaterThanOrEqualTo(0, $"{path} page {i} height");
-            }
+                for (var i = 1; i <= doc.PageCount; i++)
+                {
+                    doc.Pages[i].Width.ShouldBeGreaterThanOrEqualTo(0, $"{path} page {i} width");
+                    doc.Pages[i].Height.ShouldBeGreaterThanOrEqualTo(0, $"{path} page {i} height");
+                }
 
-            return ValueTask.CompletedTask;
-        });
+                return ValueTask.CompletedTask;
+            }
+        );
 
     [Fact]
     public Task Parse_AllRealPdfs_GetContentOperators_DoesNotThrow() =>
         Parse_AllRealPdfs_Core(static (path, doc) =>
-        {
-            for (var i = 1; i <= doc.PageCount; i++)
-                doc.Pages[i].GetContentOperators().ShouldNotBeNull(path);
+            {
+                for (var i = 1; i <= doc.PageCount; i++)
+                    doc.Pages[i].GetContentOperators().ShouldNotBeNull(path);
 
-            return ValueTask.CompletedTask;
-        });
+                return ValueTask.CompletedTask;
+            }
+        );
 
     [Fact]
     public Task RoundTrip_AllRealPdfs_PageCountPreserved() =>
         Parse_AllRealPdfs_Core(static async (path, doc) =>
-        {
-            var before = doc.PageCount;
-            await using var reloaded = await SaveAndReloadAsync(doc);
-            reloaded.PageCount.ShouldBe(before, path);
-        });
+            {
+                var before = doc.PageCount;
+                await using var reloaded = await SaveAndReloadAsync(doc);
+                reloaded.PageCount.ShouldBe(before, path);
+            }
+        );
 
     [Fact]
     public Task RoundTrip_AllRealPdfs_OutputStartsWithPdfHeader() =>
         Parse_AllRealPdfs_Core(async (path, doc) =>
-        {
-            using var ms = new MemoryStream();
-            await Processor.SaveAsync(doc, ms);
-            ms.Position = 0;
-            var header = new byte[5];
-            _ = ms.Read(header, 0, 5);
-            header.ShouldBe("%PDF-"u8.ToArray(), path);
-        });
+            {
+                using var ms = new MemoryStream();
+                await Processor.SaveAsync(doc, ms);
+                ms.Position = 0;
+                var header = new byte[5];
+                _ = ms.Read(header, 0, 5);
+                header.ShouldBe("%PDF-"u8.ToArray(), path);
+            }
+        );
 
     // ── helpers ───────────────────────────────────────────────────────────────
 

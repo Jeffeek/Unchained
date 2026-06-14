@@ -37,26 +37,30 @@ internal static class PdfXConverter
 
         // ── 1. /OutputIntents with a GTS_PDFX intent ──────────────────────────
         var intentObjNum = maxObj + 1;
-        var intentDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Type.Value] = PdfName.OutputIntent,
-            [PdfName.S.Value] = PdfName.GTS_PDFX,
-            [PdfName.OutputConditionIdentifier.Value] = PdfString.FromLatin1(outputConditionIdentifier),
-            [PdfName.Info.Value] = PdfString.FromLatin1(outputConditionIdentifier),
-            [PdfName.RegistryName.Value] = PdfString.FromLatin1("http://www.color.org")
-        });
+        var intentDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Type.Value] = PdfName.OutputIntent,
+                [PdfName.S.Value] = PdfName.GTS_PDFX,
+                [PdfName.OutputConditionIdentifier.Value] = PdfString.FromLatin1(outputConditionIdentifier),
+                [PdfName.Info.Value] = PdfString.FromLatin1(outputConditionIdentifier),
+                [PdfName.RegistryName.Value] = PdfString.FromLatin1("http://www.color.org")
+            }
+        );
         objects.Add(new PdfIndirectObject(intentObjNum, 0, intentDict));
         catalogEntries["OutputIntents"] = new PdfArray([new PdfIndirectReference(intentObjNum, 0)]);
 
         // ── 2. /Metadata with pdfxid XMP ──────────────────────────────────────
         var metaObjNum = maxObj + 2;
         var xmpBytes = BuildPdfXXmp(profile, catalogEntries, core);
-        var metaDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Type.Value] = PdfName.Metadata,
-            [PdfName.Subtype.Value] = PdfName.XML,
-            [PdfName.Length.Value] = new PdfInteger(xmpBytes.Length)
-        });
+        var metaDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Type.Value] = PdfName.Metadata,
+                [PdfName.Subtype.Value] = PdfName.XML,
+                [PdfName.Length.Value] = new PdfInteger(xmpBytes.Length)
+            }
+        );
         objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
         catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
 
@@ -96,10 +100,12 @@ internal static class PdfXConverter
         else
         {
             var hex = new string('0', 32);
-            trailerEntries[PdfName.ID.Value] = new PdfArray([
-                new PdfString(Encoding.Latin1.GetBytes(hex), true),
-                new PdfString(Encoding.Latin1.GetBytes(hex), true)
-            ]);
+            trailerEntries[PdfName.ID.Value] = new PdfArray(
+                [
+                    new PdfString(Encoding.Latin1.GetBytes(hex), true),
+                    new PdfString(Encoding.Latin1.GetBytes(hex), true)
+                ]
+            );
         }
 
         var buf = new ArrayBufferWriter<byte>();

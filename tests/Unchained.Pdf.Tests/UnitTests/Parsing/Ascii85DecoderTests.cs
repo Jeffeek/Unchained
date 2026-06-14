@@ -79,18 +79,21 @@ public sealed class Ascii85DecoderTests
     public async Task Decode_ZInsideGroup_ThrowsPdfException() =>
         // 'z' appearing when groupLen != 0 is illegal
         await Should.ThrowAsync<InvalidDataException>(static () =>
-            Task.Run(static () => Ascii85Decoder.Decode("!z~>"u8.ToArray())));
+            Task.Run(static () => Ascii85Decoder.Decode("!z~>"u8.ToArray()))
+        );
 
     [Fact]
     public async Task Decode_TildeNotFollowedByGreaterThan_ThrowsPdfException() =>
         await Should.ThrowAsync<InvalidDataException>(static () =>
-            Task.Run(static () => Ascii85Decoder.Decode("~~"u8.ToArray())));
+            Task.Run(static () => Ascii85Decoder.Decode("~~"u8.ToArray()))
+        );
 
     [Fact]
     public async Task Decode_OutOfRangeCharacter_ThrowsPdfException() =>
         // 'v' (0x76=118) is above 'u' (0x75=117)
         await Should.ThrowAsync<InvalidDataException>(static () =>
-            Task.Run(static () => Ascii85Decoder.Decode("vvvvv~>"u8.ToArray())));
+            Task.Run(static () => Ascii85Decoder.Decode("vvvvv~>"u8.ToArray()))
+        );
 
     [Fact]
     public async Task Decode_KnownVector_ManEncoding()

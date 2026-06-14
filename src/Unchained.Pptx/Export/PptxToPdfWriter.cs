@@ -116,7 +116,8 @@ internal static class PptxToPdfWriter
                     fontObjNums,
                     fontKeys,
                     slideImages,
-                    structElemNums[i]);
+                    structElemNums[i]
+                );
 
                 // Write page object
                 StartObj(pageNums[i]);
@@ -360,23 +361,27 @@ internal static class PptxToPdfWriter
                 switch (shape)
                 {
                     case AutoShape auto:
-                        WriteAutoShape(sb,
+                        WriteAutoShape(
+                            sb,
                             auto,
                             pageHeight,
                             colorScheme,
                             fontObjNums,
-                            fontKeys);
+                            fontKeys
+                        );
                     break;
                     case PictureShape pic:
                         WritePictureShape(sb, pic, pageHeight, slideImages);
                     break;
                     case TableShape table:
-                        WriteTableShape(sb,
+                        WriteTableShape(
+                            sb,
                             table,
                             pageHeight,
                             colorScheme,
                             fontObjNums,
-                            fontKeys);
+                            fontKeys
+                        );
                     break;
                 }
 
@@ -459,7 +464,8 @@ internal static class PptxToPdfWriter
 
             AppendLine(sb, "Q");
 
-            WriteTextFrame(sb,
+            WriteTextFrame(
+                sb,
                 shape.TextFrame,
                 x,
                 y,
@@ -468,7 +474,8 @@ internal static class PptxToPdfWriter
                 colorScheme,
                 shape.StyleTextColor,
                 fontObjNums,
-                fontKeys);
+                fontKeys
+            );
         }
 
         private static void WriteTableShape(
@@ -537,7 +544,8 @@ internal static class PptxToPdfWriter
                 AppendLine(sb, $"{cx:F4} {pdfCy:F4} {cw:F4} {ch:F4} re S");
                 AppendLine(sb, "Q");
 
-                WriteTextFrame(sb,
+                WriteTextFrame(
+                    sb,
                     cell.TextFrame,
                     cx + 2,
                     cy + 2,
@@ -546,7 +554,8 @@ internal static class PptxToPdfWriter
                     colorScheme,
                     null,
                     fontObjNums,
-                    fontKeys);
+                    fontKeys
+                );
             }
         }
 
@@ -655,7 +664,8 @@ internal static class PptxToPdfWriter
                     var runFontRef = ResolvePdfFontRef(
                         run.Format,
                         fontObjNums,
-                        fontKeys);
+                        fontKeys
+                    );
 
                     if (!textSet)
                     {
@@ -755,11 +765,13 @@ internal static class PptxToPdfWriter
                 if (!written.Add(shape.Image.PartUri)) continue;
                 if (!imageObjNums.TryGetValue(shape.Image.PartUri, out var objNum)) continue;
 
-                WriteImageXObject(objNum,
+                WriteImageXObject(
+                    objNum,
                     shape.Image.Data,
                     shape.Image.ContentType,
                     shape.Image.PixelWidth,
-                    shape.Image.PixelHeight);
+                    shape.Image.PixelHeight
+                );
             }
         }
 
@@ -828,9 +840,11 @@ internal static class PptxToPdfWriter
                 var elemIdx = 0;
                 foreach (var shape in slide.Shapes.Where(static shape => !shape.IsDecorative).TakeWhile(_ => elemIdx < elems.Count))
                 {
-                    allElems.Add((elems[elemIdx], pageObj,
-                        StructTypeForShape(shape),
-                        shape is PictureShape ? (shape.AltText ?? string.Empty) : null));
+                    allElems.Add(
+                        (elems[elemIdx], pageObj,
+                            StructTypeForShape(shape),
+                            shape is PictureShape ? (shape.AltText ?? string.Empty) : null)
+                    );
                     elemIdx++;
                 }
             }

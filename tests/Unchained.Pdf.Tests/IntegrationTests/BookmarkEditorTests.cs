@@ -69,12 +69,14 @@ public sealed class BookmarkEditorTests : PdfTestBase
     public async Task SetBookmarksAsync_PageNumbers_RoundTripped()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
-        await Editor.SetBookmarksAsync(doc,
+        await Editor.SetBookmarksAsync(
+            doc,
             [
                 new("A", 1),
                 new("B", 2)
             ],
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         doc.GetBookmarks()[0].PageNumber.ShouldBe(1);
         doc.GetBookmarks()[1].PageNumber.ShouldBe(2);
     }

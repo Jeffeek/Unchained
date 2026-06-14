@@ -111,9 +111,11 @@ public sealed class PdfExportTests : PptxTestBase
         doc.Slides[1].IsHidden = true;
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc,
+        await Processor.SaveAsPdfAsync(
+            doc,
             ms,
-            new PdfSaveOptions { IncludeHiddenSlides = true });
+            new PdfSaveOptions { IncludeHiddenSlides = true }
+        );
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/Count 2");
     }
@@ -125,7 +127,8 @@ public sealed class PdfExportTests : PptxTestBase
     {
         // Use a 10 × 7.5 inch slide = 720 × 540 pt exactly
         var doc = Processor.CreateBlank(
-            SlideSize.Custom(Emu.FromInches(10), Emu.FromInches(7.5)));
+            SlideSize.Custom(Emu.FromInches(10), Emu.FromInches(7.5))
+        );
         doc.Slides.AddBlank(doc.Masters[0].Layouts[0]);
 
         using var ms = new MemoryStream();
@@ -143,12 +146,14 @@ public sealed class PdfExportTests : PptxTestBase
     public async Task ExportPdf_TextShape_TextAppearsInOutput()
     {
         var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(2),
-            "Hello PDF World");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(2),
+                "Hello PDF World"
+            );
 
         using var ms = new MemoryStream();
         await Processor.SaveAsPdfAsync(doc, ms);
@@ -160,18 +165,22 @@ public sealed class PdfExportTests : PptxTestBase
     public async Task ExportPdf_MultipleTextShapes_AllTextPresent()
     {
         var doc = PptxFixtures.WithSlides(1);
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(0.5),
-            Emu.FromInches(0.5),
-            Emu.FromInches(3),
-            Emu.FromInches(1),
-            "Title text");
-        doc.Slides[0].Shapes.AddTextBox(
-            Emu.FromInches(0.5),
-            Emu.FromInches(2),
-            Emu.FromInches(5),
-            Emu.FromInches(3),
-            "Body content here");
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(0.5),
+                Emu.FromInches(0.5),
+                Emu.FromInches(3),
+                Emu.FromInches(1),
+                "Title text"
+            );
+        doc.Slides[0]
+            .Shapes.AddTextBox(
+                Emu.FromInches(0.5),
+                Emu.FromInches(2),
+                Emu.FromInches(5),
+                Emu.FromInches(3),
+                "Body content here"
+            );
 
         using var ms = new MemoryStream();
         await Processor.SaveAsPdfAsync(doc, ms);
@@ -186,12 +195,14 @@ public sealed class PdfExportTests : PptxTestBase
     public async Task ExportPdf_ShapeWithSolidFill_ContainsRgOperator()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(3),
-            Emu.FromInches(2));
+        var shape = doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(3),
+                Emu.FromInches(2)
+            );
         shape.Fill.SetSolid(ColorSpec.FromRgb(0, 112, 192));
 
         using var ms = new MemoryStream();
@@ -209,7 +220,8 @@ public sealed class PdfExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(2);
         using var ms = new MemoryStream();
         await Should.NotThrowAsync(() =>
-            Processor.SaveAsPdfAsync(doc, ms, PdfSaveOptions.Default));
+            Processor.SaveAsPdfAsync(doc, ms, PdfSaveOptions.Default)
+        );
     }
 
     [Fact]

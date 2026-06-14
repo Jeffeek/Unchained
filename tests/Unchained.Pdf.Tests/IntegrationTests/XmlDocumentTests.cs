@@ -18,7 +18,8 @@ public sealed class XmlDocumentTests : PdfTestBase
     {
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello XML world",
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
 
         var xml = await Processor.SaveAsXmlAsync(doc, TestContext.Current.CancellationToken);
 
@@ -32,7 +33,8 @@ public sealed class XmlDocumentTests : PdfTestBase
     {
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello XML",
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
 
         var xml = await Processor.SaveAsXmlAsync(doc, TestContext.Current.CancellationToken);
 
@@ -44,7 +46,8 @@ public sealed class XmlDocumentTests : PdfTestBase
     {
         await using var doc = await Processor.LoadFromTxtAsync(
             string.Join("\n", Enumerable.Repeat("Line.", 200)),
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
 
         var xml = await Processor.SaveAsXmlAsync(doc, TestContext.Current.CancellationToken);
         var pageCount = CountOccurrences(xml, "<Page");
@@ -149,7 +152,8 @@ public sealed class XmlDocumentTests : PdfTestBase
     {
         await using var source = await Processor.LoadFromTxtAsync(
             "Round-trip test content",
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
 
         var xml = await Processor.SaveAsXmlAsync(source, TestContext.Current.CancellationToken);
         await using var reloaded = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
@@ -162,7 +166,8 @@ public sealed class XmlDocumentTests : PdfTestBase
     {
         await using var source = await Processor.LoadFromMarkdownAsync(
             "# Title\n\nParagraph text.",
-            ct: TestContext.Current.CancellationToken);
+            ct: TestContext.Current.CancellationToken
+        );
 
         var xml = await Processor.SaveAsXmlAsync(source, TestContext.Current.CancellationToken);
         await using var reloaded = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);

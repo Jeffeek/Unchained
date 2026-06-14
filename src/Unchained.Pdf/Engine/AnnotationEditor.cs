@@ -24,7 +24,8 @@ public sealed class AnnotationEditor : IAnnotationEditor
         var adapter = document as PdfDocumentAdapter
                       ?? throw new ArgumentException(
                           $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document));
+                          nameof(document)
+                      );
 
         var existing = adapter.Core.CollectObjects();
         var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
@@ -35,12 +36,14 @@ public sealed class AnnotationEditor : IAnnotationEditor
         {
             [PdfName.Type.Value] = PdfName.Annot,
             [PdfName.Subtype.Value] = PdfName.Get(annotation.Subtype.ToString()),
-            [PdfName.Rect.Value] = new PdfArray([
-                new PdfReal(annotation.X),
-                new PdfReal(annotation.Y),
-                new PdfReal(annotation.X + annotation.Width),
-                new PdfReal(annotation.Y + annotation.Height)
-            ])
+            [PdfName.Rect.Value] = new PdfArray(
+                [
+                    new PdfReal(annotation.X),
+                    new PdfReal(annotation.Y),
+                    new PdfReal(annotation.X + annotation.Width),
+                    new PdfReal(annotation.Y + annotation.Height)
+                ]
+            )
         };
         if (annotation.Contents is not null)
             annotEntries[PdfName.Contents.Value] = PdfString.FromLatin1(annotation.Contents);
@@ -79,11 +82,13 @@ public sealed class AnnotationEditor : IAnnotationEditor
 
         var totalMax = finalObjects.Max(static o => o.ObjectNumber);
         var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var trailer = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-            [PdfName.Root.Value] = rootRef
-        });
+        var trailer = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
+                [PdfName.Root.Value] = rootRef
+            }
+        );
 
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(finalObjects, trailer);
         adapter.ReplaceCore(newDoc.Core);

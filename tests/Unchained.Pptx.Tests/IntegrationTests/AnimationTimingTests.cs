@@ -16,14 +16,18 @@ public sealed class AnimationTimingTests : PptxTestBase
     public async Task EaseAutoReverseRepeat_RoundTrip()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Rectangle,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(2),
-            Emu.FromInches(1));
-        var effect = doc.Slides[0].Animations.MainSequence.AddEffect(
-            shape.ShapeId);
+        var shape = doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Rectangle,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(2),
+                Emu.FromInches(1)
+            );
+        var effect = doc.Slides[0]
+            .Animations.MainSequence.AddEffect(
+                shape.ShapeId
+            );
         effect.Timing.DurationSeconds = 1.0;
         effect.Timing.AccelerationPercent = 0.3;
         effect.Timing.DecelerationPercent = 0.2;
@@ -42,12 +46,14 @@ public sealed class AnimationTimingTests : PptxTestBase
     public async Task IndefiniteRepeat_RoundTrips()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0].Shapes.AddShape(
-            AutoShapeType.Ellipse,
-            Emu.Zero,
-            Emu.Zero,
-            Emu.FromInches(2),
-            Emu.FromInches(1));
+        var shape = doc.Slides[0]
+            .Shapes.AddShape(
+                AutoShapeType.Ellipse,
+                Emu.Zero,
+                Emu.Zero,
+                Emu.FromInches(2),
+                Emu.FromInches(1)
+            );
         var effect = doc.Slides[0].Animations.MainSequence.AddEffect(shape.ShapeId);
         effect.Timing.RepeatCount = -1; // indefinite
 

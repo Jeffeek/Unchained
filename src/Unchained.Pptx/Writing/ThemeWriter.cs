@@ -15,9 +15,11 @@ internal static class ThemeWriter
     {
         var dml = DmlNames.Dml;
 
-        var themeEl = new XElement(DmlNames.Theme,
+        var themeEl = new XElement(
+            DmlNames.Theme,
             new XAttribute(XNamespace.Xmlns + "a", dml.NamespaceName),
-            new XAttribute("name", theme.Name));
+            new XAttribute("name", theme.Name)
+        );
 
         var elements = new XElement(DmlNames.ThemeElements);
 
@@ -34,8 +36,10 @@ internal static class ThemeWriter
 
     private static XElement WriteColorScheme(ColorScheme colors)
     {
-        var scheme = new XElement(DmlNames.ColorScheme,
-            new XAttribute("name", "Custom"));
+        var scheme = new XElement(
+            DmlNames.ColorScheme,
+            new XAttribute("name", "Custom")
+        );
 
         scheme.Add(WrapSlot(DmlNames.Dark1, colors.Dark1));
         scheme.Add(WrapSlot(DmlNames.Light1, colors.Light1));
@@ -62,8 +66,10 @@ internal static class ThemeWriter
 
     private static XElement WriteFontScheme(FontScheme fonts)
     {
-        var scheme = new XElement(DmlNames.FontScheme,
-            new XAttribute("name", fonts.Name.Length > 0 ? fonts.Name : "Office"));
+        var scheme = new XElement(
+            DmlNames.FontScheme,
+            new XAttribute("name", fonts.Name.Length > 0 ? fonts.Name : "Office")
+        );
 
         scheme.Add(WriteFontSet(DmlNames.MajorFont, fonts.MajorFont));
         scheme.Add(WriteFontSet(DmlNames.MinorFont, fonts.MinorFont));
@@ -75,19 +81,37 @@ internal static class ThemeWriter
     {
         var el = new XElement(elementName);
 
-        el.Add(new XElement(DmlNames.LatinFont,
-            new XAttribute(DmlNames.AttributeTypeface,
-                fontSet.LatinFont.Length > 0 ? fontSet.LatinFont : "Calibri")));
-        el.Add(new XElement(DmlNames.EastAsianFont,
-            new XAttribute(DmlNames.AttributeTypeface, fontSet.EastAsianFont)));
-        el.Add(new XElement(DmlNames.ComplexScriptFont,
-            new XAttribute(DmlNames.AttributeTypeface, fontSet.ComplexScriptFont)));
+        el.Add(
+            new XElement(
+                DmlNames.LatinFont,
+                new XAttribute(
+                    DmlNames.AttributeTypeface,
+                    fontSet.LatinFont.Length > 0 ? fontSet.LatinFont : "Calibri"
+                )
+            )
+        );
+        el.Add(
+            new XElement(
+                DmlNames.EastAsianFont,
+                new XAttribute(DmlNames.AttributeTypeface, fontSet.EastAsianFont)
+            )
+        );
+        el.Add(
+            new XElement(
+                DmlNames.ComplexScriptFont,
+                new XAttribute(DmlNames.AttributeTypeface, fontSet.ComplexScriptFont)
+            )
+        );
 
         foreach (var (script, typeface) in fontSet.ScriptFonts)
         {
-            el.Add(new XElement(DmlNames.Dml + "font",
-                new XAttribute("script", script),
-                new XAttribute(DmlNames.AttributeTypeface, typeface)));
+            el.Add(
+                new XElement(
+                    DmlNames.Dml + "font",
+                    new XAttribute("script", script),
+                    new XAttribute(DmlNames.AttributeTypeface, typeface)
+                )
+            );
         }
 
         return el;
@@ -96,22 +120,34 @@ internal static class ThemeWriter
     private static XElement WriteFormatScheme()
     {
         var dml = DmlNames.Dml;
-        var scheme = new XElement(DmlNames.FormatScheme,
-            new XAttribute("name", "Office"));
+        var scheme = new XElement(
+            DmlNames.FormatScheme,
+            new XAttribute("name", "Office")
+        );
 
         // Minimal fill, line, and effect style lists required by OOXML
         var fillStyleLst = new XElement(dml + "fillStyleLst");
-        fillStyleLst.Add(new XElement(DmlNames.SolidFill,
-            new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr"))));
+        fillStyleLst.Add(
+            new XElement(
+                DmlNames.SolidFill,
+                new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr"))
+            )
+        );
         fillStyleLst.Add(new XElement(DmlNames.GradientFill));
         fillStyleLst.Add(new XElement(DmlNames.GradientFill));
         scheme.Add(fillStyleLst);
 
         var lnStyleLst = new XElement(dml + "lnStyleLst");
-        lnStyleLst.Add(new XElement(DmlNames.Line,
-            new XAttribute(DmlNames.AttributeLineWidth, 6350),
-            new XElement(DmlNames.SolidFill,
-                new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr")))));
+        lnStyleLst.Add(
+            new XElement(
+                DmlNames.Line,
+                new XAttribute(DmlNames.AttributeLineWidth, 6350),
+                new XElement(
+                    DmlNames.SolidFill,
+                    new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr"))
+                )
+            )
+        );
         lnStyleLst.Add(new XElement(DmlNames.Line, new XAttribute(DmlNames.AttributeLineWidth, 12700)));
         lnStyleLst.Add(new XElement(DmlNames.Line, new XAttribute(DmlNames.AttributeLineWidth, 19050)));
         scheme.Add(lnStyleLst);
@@ -123,8 +159,12 @@ internal static class ThemeWriter
         scheme.Add(effectStyleLst);
 
         var bgFillStyleLst = new XElement(dml + "bgFillStyleLst");
-        bgFillStyleLst.Add(new XElement(DmlNames.SolidFill,
-            new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr"))));
+        bgFillStyleLst.Add(
+            new XElement(
+                DmlNames.SolidFill,
+                new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr"))
+            )
+        );
         bgFillStyleLst.Add(new XElement(DmlNames.GradientFill));
         bgFillStyleLst.Add(new XElement(DmlNames.GradientFill));
         scheme.Add(bgFillStyleLst);

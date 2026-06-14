@@ -145,30 +145,36 @@ internal static class JpegEncoder
             }
 
             // ReSharper disable BadListLineBreaks
-            EncodeBlock(y,
+            EncodeBlock(
+                y,
                 lumQt,
                 dcLumCodes,
                 dcLumLens,
                 acLumCodes,
                 acLumLens,
                 ref dcY,
-                bw);
-            EncodeBlock(cb,
+                bw
+            );
+            EncodeBlock(
+                cb,
                 chrQt,
                 dcChrCodes,
                 dcChrLens,
                 acChrCodes,
                 acChrLens,
                 ref dcCb,
-                bw);
-            EncodeBlock(cr,
+                bw
+            );
+            EncodeBlock(
+                cr,
                 chrQt,
                 dcChrCodes,
                 dcChrLens,
                 acChrCodes,
                 acChrLens,
                 ref dcCr,
-                bw);
+                bw
+            );
             // ReSharper restore BadListLineBreaks
         }
 

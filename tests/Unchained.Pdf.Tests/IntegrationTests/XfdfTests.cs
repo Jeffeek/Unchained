@@ -63,15 +63,19 @@ public sealed class XfdfTests : PdfTestBase
     {
         await using var source = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         // ReSharper disable once BadListLineBreaks
-        await AnnotEditor.AddAnnotationAsync(source,
+        await AnnotEditor.AddAnnotationAsync(
+            source,
             1,
-            new Annotation(AnnotationSubtype.Text,
+            new Annotation(
+                AnnotationSubtype.Text,
                 50,
                 700,
                 50,
                 50,
-                "Round-trip note"),
-            TestContext.Current.CancellationToken);
+                "Round-trip note"
+            ),
+            TestContext.Current.CancellationToken
+        );
 
         var xfdf = Editor.ExportAnnotationsToXfdf(source);
 
@@ -98,13 +102,16 @@ public sealed class XfdfTests : PdfTestBase
             doc,
             1,
             // ReSharper disable once BadListLineBreaks
-            new Annotation(subtype,
+            new Annotation(
+                subtype,
                 10,
                 10,
                 50,
                 50,
-                "test"),
-            TestContext.Current.CancellationToken);
+                "test"
+            ),
+            TestContext.Current.CancellationToken
+        );
 
         var xfdf = Editor.ExportAnnotationsToXfdf(doc);
 
@@ -122,15 +129,18 @@ public sealed class XfdfTests : PdfTestBase
             doc,
             1,
             // ReSharper disable BadListLineBreaks
-            new Annotation(AnnotationSubtype.Text,
+            new Annotation(
+                AnnotationSubtype.Text,
                 10,
                 10,
                 50,
                 50,
                 "colored",
-                color),
+                color
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var xfdf = Editor.ExportAnnotationsToXfdf(doc);
 
@@ -146,15 +156,18 @@ public sealed class XfdfTests : PdfTestBase
             source,
             1,
             // ReSharper disable BadListLineBreaks
-            new Annotation(AnnotationSubtype.Highlight,
+            new Annotation(
+                AnnotationSubtype.Highlight,
                 10,
                 10,
                 50,
                 20,
                 "highlighted",
-                color),
+                color
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var xfdf = Editor.ExportAnnotationsToXfdf(source);
 
@@ -176,26 +189,32 @@ public sealed class XfdfTests : PdfTestBase
             doc,
             1,
             // ReSharper disable BadListLineBreaks
-            new Annotation(AnnotationSubtype.Text,
+            new Annotation(
+                AnnotationSubtype.Text,
                 10,
                 10,
                 50,
                 50,
-                "page1"),
+                "page1"
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
         await AnnotEditor.AddAnnotationAsync(
             doc,
             3,
             // ReSharper disable BadListLineBreaks
-            new Annotation(AnnotationSubtype.Text,
+            new Annotation(
+                AnnotationSubtype.Text,
                 10,
                 10,
                 50,
                 50,
-                "page3"),
+                "page3"
+            ),
             // ReSharper restore BadListLineBreaks
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var xfdf = Editor.ExportAnnotationsToXfdf(doc);
 
@@ -354,7 +373,8 @@ public sealed class XfdfTests : PdfTestBase
             doc,
             1,
             new Annotation(AnnotationSubtype.Text, 50f, 700f, 100f, 80f),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         var xfdf = Editor.ExportAnnotationsToXfdf(doc);
 

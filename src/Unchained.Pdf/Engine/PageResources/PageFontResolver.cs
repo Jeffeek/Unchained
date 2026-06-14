@@ -162,7 +162,8 @@ internal static class PageFontResolver
                 identityCidToGid,
                 cidToGid,
                 dw,
-                widths);
+                widths
+            );
         }
 
         return result;
@@ -215,13 +216,15 @@ internal static class PageFontResolver
 
             // /FontMatrix: glyph space → text space transform.
             var fm = font[PdfName.FontMatrix] is PdfArray { Count: >= 6 } fmArr
-                ? fmArr.Elements.Take(6).Select(static e =>
+                ? fmArr.Elements.Take(6)
+                    .Select(static e =>
                         e switch
                         {
                             PdfReal rr => rr.Value,
                             PdfInteger ii => ii.Value,
                             _ => 0.0
-                        })
+                        }
+                    )
                     .ToArray()
                 : [FontConstants.Type3DefaultMatrixScale, 0, 0, FontConstants.Type3DefaultMatrixScale, 0, 0];
 
@@ -298,11 +301,12 @@ internal static class PageFontResolver
             var widths = font[PdfName.Widths] is PdfArray widthsArr
                 ? widthsArr.Elements
                     .Select(static e => e switch
-                    {
-                        PdfReal wr => wr.Value,
-                        PdfInteger wi => wi.Value,
-                        _ => 0.0
-                    })
+                        {
+                            PdfReal wr => wr.Value,
+                            PdfInteger wi => wi.Value,
+                            _ => 0.0
+                        }
+                    )
                     .ToArray()
                 : [];
 

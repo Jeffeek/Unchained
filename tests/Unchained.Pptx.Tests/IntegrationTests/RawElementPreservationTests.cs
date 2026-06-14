@@ -68,7 +68,8 @@ public sealed class RawElementPreservationTests
 
         var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
         var reloadedNotes = reloaded.Slides
-            .FirstOrDefault(static s => !string.IsNullOrWhiteSpace(s.Notes.NotesText))?.Notes.NotesText;
+            .FirstOrDefault(static s => !string.IsNullOrWhiteSpace(s.Notes.NotesText))
+            ?.Notes.NotesText;
         reloadedNotes.ShouldBe(originalNotes, "notes text must survive a custom-writer round-trip");
 
         await doc.DisposeAsync();

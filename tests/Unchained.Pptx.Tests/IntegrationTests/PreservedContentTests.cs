@@ -42,7 +42,8 @@ public sealed class PreservedContentTests : PptxTestBase
             pres.CreateRelationship(
                 new Uri("vbaProject.bin", UriKind.Relative),
                 TargetMode.Internal,
-                PmlNames.RelTypeVbaProject);
+                PmlNames.RelTypeVbaProject
+            );
         }
 
         return ms.ToArray();
@@ -74,7 +75,8 @@ public sealed class PreservedContentTests : PptxTestBase
             origin.CreateRelationship(
                 new Uri("sig1.xml", UriKind.Relative),
                 TargetMode.Internal,
-                PmlNames.RelTypeDigitalSignature);
+                PmlNames.RelTypeDigitalSignature
+            );
         }
 
         return ms.ToArray();
@@ -126,8 +128,10 @@ public sealed class PreservedContentTests : PptxTestBase
         var saved = outMs.ToArray();
 
         var ct = Encoding.UTF8.GetString(PartBytes(saved, "[Content_Types].xml"));
-        ct.ShouldContain("presentation.macroEnabled.main+xml",
-            customMessage: "a deck with macros must declare the macro-enabled content type");
+        ct.ShouldContain(
+            "presentation.macroEnabled.main+xml",
+            customMessage: "a deck with macros must declare the macro-enabled content type"
+        );
     }
 
     [Fact]

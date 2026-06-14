@@ -31,14 +31,16 @@ public sealed class PdfFunctionTests
     [Fact]
     public void Type2_Eval_AtStart_ReturnsC0()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(0.0, 0.0, 0.0),
-            ["C1"] = Array(1.0, 0.5, 0.25),
-            ["N"] = new PdfReal(1.0)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0, 0.0, 0.0),
+                ["C1"] = Array(1.0, 0.5, 0.25),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
         var fn = PdfFunction.Build(dict, Core());
         fn.ShouldNotBeNull();
 
@@ -51,14 +53,16 @@ public sealed class PdfFunctionTests
     [Fact]
     public void Type2_Eval_AtEnd_ReturnsC1()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(0.0, 0.0, 0.0),
-            ["C1"] = Array(1.0, 0.5, 0.25),
-            ["N"] = new PdfReal(1.0)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0, 0.0, 0.0),
+                ["C1"] = Array(1.0, 0.5, 0.25),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
         var fn = PdfFunction.Build(dict, Core());
         fn.ShouldNotBeNull();
 
@@ -71,14 +75,16 @@ public sealed class PdfFunctionTests
     [Fact]
     public void Type2_Eval_Linear_Midpoint_Interpolates()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(0.0),
-            ["C1"] = Array(1.0),
-            ["N"] = new PdfReal(1.0)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
         var fn = PdfFunction.Build(dict, Core());
         fn.ShouldNotBeNull();
 
@@ -88,14 +94,16 @@ public sealed class PdfFunctionTests
     [Fact]
     public void Type2_Eval_ExponentN2_AppliesPower()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(0.0),
-            ["C1"] = Array(1.0),
-            ["N"] = new PdfReal(2.0)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0),
+                ["N"] = new PdfReal(2.0)
+            }
+        );
         var fn = PdfFunction.Build(dict, Core());
         fn.ShouldNotBeNull();
 
@@ -106,14 +114,16 @@ public sealed class PdfFunctionTests
     [Fact]
     public void Type2_Eval_ClampsToDomain()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(0.0),
-            ["C1"] = Array(1.0),
-            ["N"] = new PdfReal(1.0)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
         var fn = PdfFunction.Build(dict, Core());
         fn.ShouldNotBeNull();
 
@@ -124,11 +134,13 @@ public sealed class PdfFunctionTests
     [Fact]
     public void Type2_Defaults_C0AndC1WhenAbsent()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1)
+            }
+        );
         var fn = PdfFunction.Build(dict, Core());
         fn.ShouldNotBeNull();
 
@@ -140,30 +152,36 @@ public sealed class PdfFunctionTests
     [Fact]
     public void Type3_Stitching_RoutesToSubFunctions()
     {
-        var sub0 = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(0.0),
-            ["C1"] = Array(1.0),
-            ["N"] = new PdfReal(1.0)
-        });
-        var sub1 = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(10.0),
-            ["C1"] = Array(20.0),
-            ["N"] = new PdfReal(1.0)
-        });
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(3),
-            ["Domain"] = Array(0, 1),
-            ["Functions"] = new PdfArray([sub0, sub1]),
-            ["Bounds"] = Array(0.5),
-            ["Encode"] = Array(0, 1, 0, 1)
-        });
+        var sub0 = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
+        var sub1 = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(10.0),
+                ["C1"] = Array(20.0),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(3),
+                ["Domain"] = Array(0, 1),
+                ["Functions"] = new PdfArray([sub0, sub1]),
+                ["Bounds"] = Array(0.5),
+                ["Encode"] = Array(0, 1, 0, 1)
+            }
+        );
         var fn = PdfFunction.Build(dict, Core());
         fn.ShouldNotBeNull();
 
@@ -176,27 +194,31 @@ public sealed class PdfFunctionTests
     [Fact]
     public void Type3_NoSubFunctions_ReturnsNull()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(3),
-            ["Domain"] = Array(0, 1),
-            ["Functions"] = new PdfArray([]),
-            ["Bounds"] = Array(),
-            ["Encode"] = Array()
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(3),
+                ["Domain"] = Array(0, 1),
+                ["Functions"] = new PdfArray([]),
+                ["Bounds"] = Array(),
+                ["Encode"] = Array()
+            }
+        );
         PdfFunction.Build(dict, Core()).ShouldBeNull();
     }
 
     [Fact]
     public void UnsupportedType_WithC0C1_FallsBackToInterpolation()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(0),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(0.0),
-            ["C1"] = Array(1.0)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(0),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0)
+            }
+        );
         var fn = PdfFunction.Build(dict, Core());
         fn.ShouldNotBeNull();
         fn.Eval(0.5)[0].ShouldBe(0.5, 0.0001);
@@ -205,25 +227,29 @@ public sealed class PdfFunctionTests
     [Fact]
     public void UnsupportedType_WithoutC0C1_ReturnsNull()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(4),
-            ["Domain"] = Array(0, 1)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(4),
+                ["Domain"] = Array(0, 1)
+            }
+        );
         PdfFunction.Build(dict, Core()).ShouldBeNull();
     }
 
     [Fact]
     public void Build_FromStream_UsesStreamDictionary()
     {
-        var dict = Dict(new Dictionary<string, PdfObject>
-        {
-            ["FunctionType"] = new PdfInteger(2),
-            ["Domain"] = Array(0, 1),
-            ["C0"] = Array(0.0),
-            ["C1"] = Array(1.0),
-            ["N"] = new PdfReal(1.0)
-        });
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
         var stream = new PdfStream(dict, ReadOnlyMemory<byte>.Empty);
         var fn = PdfFunction.Build(stream, Core());
         fn.ShouldNotBeNull();

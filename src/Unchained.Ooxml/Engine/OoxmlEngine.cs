@@ -111,7 +111,8 @@ public sealed class OoxmlEngine : IDisposable
         {
             throw new InvalidOperationException(
                 "The package was opened read-only (editable: false) and cannot be saved. " +
-                "Reopen with editable: true to persist changes.");
+                "Reopen with editable: true to persist changes."
+            );
         }
 
         // Package.Save() flushes the SDK's part tree to the underlying stream without closing it,
@@ -138,7 +139,8 @@ public sealed class OoxmlEngine : IDisposable
         using var package = System.IO.Packaging.Package.Open(
             stream,
             FileMode.Open,
-            FileAccess.Read);
+            FileAccess.Read
+        );
 
         foreach (var ct in package.GetParts().Select(static part => part.ContentType))
         {
@@ -152,6 +154,7 @@ public sealed class OoxmlEngine : IDisposable
         }
 
         throw new OoXmlException(
-            "Could not determine OOXML format: no presentation, document, or workbook main part found.");
+            "Could not determine OOXML format: no presentation, document, or workbook main part found."
+        );
     }
 }

@@ -150,7 +150,8 @@ public sealed class Slide
             Shapes
                 .OfType<AutoShape>()
                 .Select(static s => s.TextFrame.PlainText)
-                .Where(static t => !string.IsNullOrEmpty(t)));
+                .Where(static t => !string.IsNullOrEmpty(t))
+        );
 
     /// <summary>
     ///     Finds the first shape with the given name, or <see langword="null" /> if not found.

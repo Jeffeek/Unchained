@@ -69,13 +69,15 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
         {
             foreach (var shape in master.Shapes.Where(static shape => !shape.IsPlaceholder))
             {
-                RenderShape(buffer,
+                RenderShape(
+                    buffer,
                     shape,
                     root,
                     options.Dpi,
                     colorScheme,
                     layoutPlaceholders,
-                    fontScheme);
+                    fontScheme
+                );
             }
         }
 
@@ -83,26 +85,30 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
         {
             foreach (var shape in layout.Shapes.Where(static shape => !shape.IsPlaceholder))
             {
-                RenderShape(buffer,
+                RenderShape(
+                    buffer,
                     shape,
                     root,
                     options.Dpi,
                     colorScheme,
                     layoutPlaceholders,
-                    fontScheme);
+                    fontScheme
+                );
             }
         }
 
         // Render each shape in Z-order (insertion order = back-to-front).
         foreach (var shape in slide.Shapes)
         {
-            RenderShape(buffer,
+            RenderShape(
+                buffer,
                 shape,
                 root,
                 options.Dpi,
                 colorScheme,
                 layoutPlaceholders,
-                fontScheme);
+                fontScheme
+            );
         }
 
         return buffer;
@@ -170,13 +176,15 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
                     var r = (byte)(r1 + ((r2 - r1) * t));
                     var g = (byte)(g1 + ((g2 - g1) * t));
                     var bv = (byte)(b1 + ((b2 - b1) * t));
-                    buffer.FillRect(0,
+                    buffer.FillRect(
+                        0,
                         row,
                         buffer.Width,
                         1,
                         r,
                         g,
-                        bv);
+                        bv
+                    );
                 }
 
                 break;
@@ -206,13 +214,15 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
         {
             if (shape is GroupShape groupShape)
             {
-                RenderGroup(buffer,
+                RenderGroup(
+                    buffer,
                     groupShape,
                     transform,
                     dpi,
                     colorScheme,
                     layoutPlaceholders,
-                    fontScheme);
+                    fontScheme
+                );
                 return;
             }
 
@@ -238,17 +248,20 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
         switch (shape)
         {
             case GroupShape group:
-                RenderGroup(buffer,
+                RenderGroup(
+                    buffer,
                     group,
                     transform,
                     dpi,
                     colorScheme,
                     layoutPlaceholders,
-                    fontScheme);
+                    fontScheme
+                );
             break;
 
             case AutoShape autoShape when width > 0 && height > 0:
-                RenderAutoShape(buffer,
+                RenderAutoShape(
+                    buffer,
                     autoShape,
                     x,
                     y,
@@ -256,57 +269,68 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
                     height,
                     dpi,
                     colorScheme,
-                    fontScheme);
+                    fontScheme
+                );
             break;
 
             case PictureShape pictureShape when width > 0 && height > 0:
-                RenderPicture(buffer,
+                RenderPicture(
+                    buffer,
                     pictureShape,
                     x,
                     y,
                     width,
-                    height);
+                    height
+                );
             break;
 
             case TableShape table when width > 0 && height > 0:
-                RenderTable(buffer,
+                RenderTable(
+                    buffer,
                     table,
                     x,
                     y,
                     width,
                     height,
                     dpi,
-                    colorScheme);
+                    colorScheme
+                );
             break;
 
             case ConnectorShape connector:
-                ConnectorRasterizer.RenderConnector(buffer,
+                ConnectorRasterizer.RenderConnector(
+                    buffer,
                     connector,
                     x,
                     y,
                     width,
                     height,
-                    colorScheme);
+                    colorScheme
+                );
             break;
 
             case ChartShape chart when width > 0 && height > 0:
-                RenderChart(buffer,
+                RenderChart(
+                    buffer,
                     chart,
                     x,
                     y,
                     width,
                     height,
-                    dpi);
+                    dpi
+                );
             break;
 
             case SmartArtShape smartArt when width > 0 && height > 0:
-                RenderSmartArt(buffer,
+                RenderSmartArt(
+                    buffer,
                     smartArt,
                     x,
                     y,
                     width,
                     height,
-                    dpi);
+                    dpi
+                );
             break;
         }
     }
@@ -336,18 +360,21 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
                 parent.ScaleX * sx,
                 parent.ScaleY * sy,
                 groupPxX - (parent.ScaleX * sx * group.ChildOffsetX.Value),
-                groupPxY - (parent.ScaleY * sy * group.ChildOffsetY.Value));
+                groupPxY - (parent.ScaleY * sy * group.ChildOffsetY.Value)
+            );
         }
 
         foreach (var child in group.Children)
         {
-            RenderShape(buffer,
+            RenderShape(
+                buffer,
                 child,
                 childTransform,
                 dpi,
                 colorScheme,
                 layoutPlaceholders,
-                fontScheme);
+                fontScheme
+            );
         }
     }
 
@@ -366,35 +393,41 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
         // Drop shadow — rendered before the fill so it sits underneath the shape.
         if (shape.Effects.OuterShadow is not null)
         {
-            RenderDropShadow(buffer,
+            RenderDropShadow(
+                buffer,
                 shape.Effects.OuterShadow,
                 x,
                 y,
                 width,
                 height,
                 dpi,
-                colorScheme);
+                colorScheme
+            );
         }
 
-        PaintFill(buffer,
+        PaintFill(
+            buffer,
             shape.Fill,
             x,
             y,
             width,
             height,
             colorScheme,
-            shape.StyleFillColor);
+            shape.StyleFillColor
+        );
 
         // 3-D bevel — edge highlights/shadows after fill, before text.
         if (shape.ThreeD is { IsEmpty: false, TopBevel: not null })
         {
-            RenderBevel(buffer,
+            RenderBevel(
+                buffer,
                 shape.ThreeD,
                 x,
                 y,
                 width,
                 height,
-                dpi);
+                dpi
+            );
         }
 
         // WordArt warp: render text to offscreen buffer then blit with curve displacement.
@@ -402,7 +435,8 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
         {
             var textBuffer = new RasterBuffer(width, height);
             textBuffer.Clear(0, 0, 0); // transparent black
-            RenderTextFrame(textBuffer,
+            RenderTextFrame(
+                textBuffer,
                 shape.TextFrame,
                 0,
                 0,
@@ -412,18 +446,22 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
                 colorScheme,
                 shape.StyleTextColor,
                 shape.PlaceholderType,
-                fontScheme);
-            BlitWarpedText(buffer,
+                fontScheme
+            );
+            BlitWarpedText(
+                buffer,
                 textBuffer,
                 x,
                 y,
                 width,
                 height,
-                shape.TextFrame.Format.Warp.Preset);
+                shape.TextFrame.Format.Warp.Preset
+            );
         }
         else
         {
-            RenderTextFrame(buffer,
+            RenderTextFrame(
+                buffer,
                 shape.TextFrame,
                 x,
                 y,
@@ -433,7 +471,8 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
                 colorScheme,
                 shape.StyleTextColor,
                 shape.PlaceholderType,
-                fontScheme);
+                fontScheme
+            );
         }
     }
 
@@ -450,34 +489,42 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
         byte b
     )
     {
-        buffer.FillRect(x,
+        buffer.FillRect(
+            x,
             y,
             w,
             1,
             r,
             g,
-            b);
-        buffer.FillRect(x,
+            b
+        );
+        buffer.FillRect(
+            x,
             y + h - 1,
             w,
             1,
             r,
             g,
-            b);
-        buffer.FillRect(x,
+            b
+        );
+        buffer.FillRect(
+            x,
             y,
             1,
             h,
             r,
             g,
-            b);
-        buffer.FillRect(x + w - 1,
+            b
+        );
+        buffer.FillRect(
+            x + w - 1,
             y,
             1,
             h,
             r,
             g,
-            b);
+            b
+        );
     }
 
     private static void ExtractArgb(

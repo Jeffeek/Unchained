@@ -47,7 +47,8 @@ public class PdfBaselineBenchmark
     public async Task<int> ParseFromBytes_1Page()
     {
         await using var doc = await _processor.LoadAsync(
-            new MemoryStream(_singlePageBytes));
+            new MemoryStream(_singlePageBytes)
+        );
         return doc.PageCount;
     }
 
@@ -62,7 +63,8 @@ public class PdfBaselineBenchmark
     public async Task<int> ParseFromBytes_10Pages()
     {
         await using var doc = await _processor.LoadAsync(
-            new MemoryStream(_tenPageBytes));
+            new MemoryStream(_tenPageBytes)
+        );
         return doc.PageCount;
     }
 
@@ -70,7 +72,8 @@ public class PdfBaselineBenchmark
     public async Task<double> ParseAndIteratePages()
     {
         await using var doc = await _processor.LoadAsync(
-            new MemoryStream(_tenPageBytes));
+            new MemoryStream(_tenPageBytes)
+        );
         var total = 0.0;
         for (var i = 1; i <= doc.PageCount; i++)
             total += doc.Pages[i].Width;
@@ -81,7 +84,8 @@ public class PdfBaselineBenchmark
     public async Task<int> RoundTrip()
     {
         await using var doc = await _processor.LoadAsync(
-            new MemoryStream(_singlePageBytes));
+            new MemoryStream(_singlePageBytes)
+        );
         var ms = new MemoryStream();
         await _processor.SaveAsync(doc, ms);
         return (int)ms.Length;

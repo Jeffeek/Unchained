@@ -68,12 +68,14 @@ internal sealed class PdfPageAccumulator
         ReadOnlySpan<byte> contentBytes,
         IReadOnlyDictionary<string, PdfIndirectReference> fontMap
         // ReSharper disable once BadListLineBreaks
-    ) => AddPage(widthPt,
+    ) => AddPage(
+        widthPt,
         heightPt,
         contentBytes,
         fontMap,
         null,
-        null);
+        null
+    );
 
     /// <summary>
     ///     Adds a tagged page. When <paramref name="taggedItems" /> is non-null and non-empty,
@@ -97,30 +99,39 @@ internal sealed class PdfPageAccumulator
         string? language
     )
     {
-        var contentDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Length"] = new PdfInteger(contentBytes.Length)
-        });
+        var contentDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Length"] = new PdfInteger(contentBytes.Length)
+            }
+        );
         var contentRef = _builder.Add(new PdfStream(contentDict, contentBytes.ToArray())).ToReference();
 
         var fontEntries = fontMap.ToDictionary(
             static kv => kv.Key,
-            static PdfObject (kv) => kv.Value);
+            static PdfObject (kv) => kv.Value
+        );
 
-        var pageDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Type"] = PdfName.Page,
-            ["Parent"] = _pagesRef,
-            ["MediaBox"] = new PdfArray([
-                new PdfInteger(0), new PdfInteger(0),
-                new PdfReal(widthPt), new PdfReal(heightPt)
-            ]),
-            ["Contents"] = contentRef,
-            ["Resources"] = new PdfDictionary(new Dictionary<string, PdfObject>
+        var pageDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
             {
-                ["Font"] = new PdfDictionary(fontEntries)
-            })
-        });
+                ["Type"] = PdfName.Page,
+                ["Parent"] = _pagesRef,
+                ["MediaBox"] = new PdfArray(
+                    [
+                        new PdfInteger(0), new PdfInteger(0),
+                        new PdfReal(widthPt), new PdfReal(heightPt)
+                    ]
+                ),
+                ["Contents"] = contentRef,
+                ["Resources"] = new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        ["Font"] = new PdfDictionary(fontEntries)
+                    }
+                )
+            }
+        );
 
         _pageRefs.Add(_builder.Add(pageDict).ToReference());
 
@@ -137,12 +148,14 @@ internal sealed class PdfPageAccumulator
     /// <summary>Finalizes and returns the complete PDF document.</summary>
     internal IPdfDocument Build()
     {
-        var pagesDict = new PdfDictionary(new Dictionary<string, PdfObject>
-        {
-            ["Type"] = PdfName.Pages,
-            ["Kids"] = new PdfArray(_pageRefs.Cast<PdfObject>().ToArray()),
-            ["Count"] = new PdfInteger(_pageRefs.Count)
-        });
+        var pagesDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Type"] = PdfName.Pages,
+                ["Kids"] = new PdfArray(_pageRefs.Cast<PdfObject>().ToArray()),
+                ["Count"] = new PdfInteger(_pageRefs.Count)
+            }
+        );
         _builder.AddAt(_pagesNum, pagesDict);
 
         var catalogEntries = new Dictionary<string, PdfObject>
@@ -159,7 +172,8 @@ internal sealed class PdfPageAccumulator
                 new Dictionary<string, PdfObject>
                 {
                     [PdfName.Marked.Value] = PdfBoolean.True
-                });
+                }
+            );
 
             // /Lang — required by PDF/UA.
             if (_language is not null)
@@ -170,7 +184,8 @@ internal sealed class PdfPageAccumulator
                 new Dictionary<string, PdfObject>
                 {
                     ["DisplayDocTitle"] = PdfBoolean.True
-                });
+                }
+            );
 
             // /StructTreeRoot — build the full structure tree.
             var structTreeRef = StructureTreeBuilder.Build(_taggedItems, _pageRefs, _builder);

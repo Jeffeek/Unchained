@@ -89,8 +89,10 @@ public sealed class RoundTripTests : IDisposable
     [Fact]
     public async Task Load_WithInfoDictionary_MetadataPopulated()
     {
-        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.WithInfo("My Title", "Jane Doe")),
-            TestContext.Current.CancellationToken);
+        await using var doc = await _processor.LoadAsync(
+            new MemoryStream(PdfFixtures.WithInfo("My Title", "Jane Doe")),
+            TestContext.Current.CancellationToken
+        );
         doc.Metadata.Title.ShouldBe("My Title");
         doc.Metadata.Author.ShouldBe("Jane Doe");
     }
