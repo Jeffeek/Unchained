@@ -1,4 +1,3 @@
-using System;
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Core;

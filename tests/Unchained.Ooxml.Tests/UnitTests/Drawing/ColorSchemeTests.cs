@@ -1,4 +1,3 @@
-using System;
 using Shouldly;
 using Unchained.Ooxml.Drawing;
 using Xunit;
@@ -49,7 +48,7 @@ public sealed class ColorSchemeTests
 
     [Fact]
     public void Indexer_Set_UnknownSlot_Throws() =>
-        Should.Throw<ArgumentOutOfRangeException>(() => new ColorScheme()[(ThemeColorSlot)999] = ColorSpec.FromRgb(0, 0, 0));
+        Should.Throw<ArgumentOutOfRangeException>(static () => new ColorScheme()[(ThemeColorSlot)999] = ColorSpec.FromRgb(0, 0, 0));
 
     [Fact]
     public void Resolve_InitialisedSlot_ReturnsArgb()

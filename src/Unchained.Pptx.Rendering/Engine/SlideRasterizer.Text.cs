@@ -266,17 +266,15 @@ internal sealed partial class SlideRasterizer
     }
 
     // Resolves +mj-lt / +mn-lt theme font references to real font family names.
-    private static string ResolveFont(string fontName, FontScheme? fontScheme)
-    {
-        if (fontScheme is null) return fontName;
-
-        return fontName switch
-        {
-            OoxmlScaling.ThemeMajorLatinFont => fontScheme.MajorFont.LatinFont is { Length: > 0 } mj ? mj : fontName,
-            OoxmlScaling.ThemeMinorLatinFont => fontScheme.MinorFont.LatinFont is { Length: > 0 } mn ? mn : fontName,
-            _ => fontName
-        };
-    }
+    private static string ResolveFont(string fontName, FontScheme? fontScheme) =>
+        fontScheme is null
+            ? fontName
+            : fontName switch
+            {
+                OoxmlScaling.ThemeMajorLatinFont => fontScheme.MajorFont.LatinFont is { Length: > 0 } mj ? mj : fontName,
+                OoxmlScaling.ThemeMinorLatinFont => fontScheme.MinorFont.LatinFont is { Length: > 0 } mn ? mn : fontName,
+                _ => fontName
+            };
 
     // Estimates the total pixel height of all paragraphs in a text frame for vertical anchor.
     private static int MeasureTotalTextHeight(

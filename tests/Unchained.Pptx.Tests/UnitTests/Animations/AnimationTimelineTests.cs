@@ -1,4 +1,3 @@
-using System;
 using Shouldly;
 using Unchained.Pptx.Animations;
 using Xunit;

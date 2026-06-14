@@ -1,6 +1,4 @@
-using System;
 using Shouldly;
-using Unchained.Ooxml;
 using Xunit;
 
 namespace Unchained.Ooxml.Tests.UnitTests;

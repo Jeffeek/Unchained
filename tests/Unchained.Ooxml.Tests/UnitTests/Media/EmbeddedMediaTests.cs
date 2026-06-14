@@ -67,7 +67,7 @@ public sealed class EmbeddedImageTests
 
     [Fact]
     public void Constructor_NullContentType_Throws() =>
-        Should.Throw<System.ArgumentNullException>(() => new EmbeddedImage(null!, new byte[] { 1 }));
+        Should.Throw<ArgumentNullException>(static () => new EmbeddedImage(null!, new byte[] { 1 }));
 
     [Fact]
     public void PixelDimensions_RoundTrip()

@@ -53,7 +53,7 @@ public sealed class OpenOptionsTests
     [Fact]
     public void Properties_RoundTrip()
     {
-        var warnings = new System.Collections.Generic.List<string>();
+        var warnings = new List<string>();
         var options = new OpenOptions
         {
             Password = "pw",

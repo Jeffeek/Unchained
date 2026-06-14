@@ -326,10 +326,7 @@ internal static class TrueTypeSubsetter
 
         var len = Math.Max(0, end - start);
         // Sanity check against buffer bounds.
-        if (start < 0 || start + len > b.Length)
-            return (glyfOff, 0);
-
-        return (start, len);
+        return start < 0 || start + len > b.Length ? (glyfOff, 0) : (start, len);
     }
 
     // ── Primitive read/write helpers ────────────────────────────────────────────

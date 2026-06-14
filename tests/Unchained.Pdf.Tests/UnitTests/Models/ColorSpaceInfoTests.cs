@@ -115,7 +115,7 @@ public sealed class ColorSpaceInfoTests
         info.CalRgbGamma.ShouldBe([1.0, 1.0, 1.0]);
         // Identity-ish conversion should not throw and yields a valid triple.
         var (r, g, b) = info.ToRgb([1.0, 1.0, 1.0]);
-        ((int)r + g + b).ShouldBeGreaterThan(0);
+        (r + g + b).ShouldBeGreaterThan(0);
     }
 
     [Fact]

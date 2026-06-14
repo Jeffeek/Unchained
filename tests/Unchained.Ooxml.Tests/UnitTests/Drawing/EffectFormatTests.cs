@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Xunit;
 

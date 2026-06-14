@@ -87,5 +87,5 @@ public readonly struct InheritableBool : IEquatable<InheritableBool>
     public static bool operator !=(InheritableBool left, InheritableBool right) => !left.Equals(right);
 
     /// <inheritdoc />
-    public override string ToString() => _value.HasValue ? _value.Value.ToString() : "Inherit";
+    public override string ToString() => _value?.ToString() ?? "Inherit";
 }

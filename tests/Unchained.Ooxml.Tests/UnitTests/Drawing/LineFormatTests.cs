@@ -52,9 +52,17 @@ public sealed class LineFormatTests
     [Fact]
     public void Arrows_RoundTripProperties()
     {
-        var line = new LineFormat();
-        line.HeadArrow.HeadType = ArrowHeadType.Triangle;
-        line.TailArrow.HeadType = ArrowHeadType.Stealth;
+        var line = new LineFormat
+        {
+            HeadArrow =
+            {
+                HeadType = ArrowHeadType.Triangle
+            },
+            TailArrow =
+            {
+                HeadType = ArrowHeadType.Stealth
+            }
+        };
 
         line.HeadArrow.HeadType.ShouldBe(ArrowHeadType.Triangle);
         line.TailArrow.HeadType.ShouldBe(ArrowHeadType.Stealth);

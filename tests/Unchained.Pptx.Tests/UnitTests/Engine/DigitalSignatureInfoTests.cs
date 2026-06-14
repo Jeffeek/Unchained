@@ -1,4 +1,3 @@
-using System;
 using Shouldly;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
@@ -21,7 +20,9 @@ public sealed class DigitalSignatureInfoTests
     [Fact]
     public void Properties_RoundTrip()
     {
+        // ReSharper disable BadListLineBreaks
         var when = new DateTimeOffset(2026, 6, 14, 12, 0, 0, TimeSpan.Zero);
+        // ReSharper restore BadListLineBreaks
         var info = new DigitalSignatureInfo
         {
             SignerName = "CN=Alice",
@@ -53,7 +54,9 @@ public sealed class DocumentPropertiesTests
     [Fact]
     public void CoreProperties_RoundTrip()
     {
+        // ReSharper disable BadListLineBreaks
         var created = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        // ReSharper restore BadListLineBreaks
         var props = new DocumentProperties
         {
             Title = "Deck",
@@ -77,10 +80,15 @@ public sealed class DocumentPropertiesTests
     [Fact]
     public void CustomProperties_AcceptsVariedTypes()
     {
-        var props = new DocumentProperties();
-        props.CustomProperties["str"] = "value";
-        props.CustomProperties["int"] = 42;
-        props.CustomProperties["bool"] = true;
+        var props = new DocumentProperties
+        {
+            CustomProperties =
+            {
+                ["str"] = "value",
+                ["int"] = 42,
+                ["bool"] = true
+            }
+        };
         props.CustomProperties.Count.ShouldBe(3);
         props.CustomProperties["int"].ShouldBe(42);
     }

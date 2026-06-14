@@ -36,7 +36,13 @@ public sealed class ShadingInfoTests
     ]
     public void MeshTypes_IsMesh_True(int shadingType)
     {
-        var info = new ShadingInfo(shadingType, [], false, false, [], []);
+        var info = new ShadingInfo(
+            shadingType,
+            [],
+            false,
+            false,
+            [],
+            []);
         info.IsMesh.ShouldBeTrue();
     }
 
@@ -87,9 +93,22 @@ public sealed class ShadingTriangleTests
     public void Constructor_StoresAllVertices()
     {
         var t = new ShadingTriangle(
-            0, 0, 255, 0, 0,
-            10, 0, 0, 255, 0,
-            5, 10, 0, 0, 255);
+            0,
+            0,
+            255,
+            0,
+            0,
+            10,
+            0,
+            0,
+            255,
+            0,
+            5,
+            10,
+            0,
+            0,
+            255
+        );
 
         t.X0.ShouldBe(0);
         t.Y2.ShouldBe(10);
@@ -101,8 +120,10 @@ public sealed class ShadingTriangleTests
     [Fact]
     public void RecordEquality_SameVertices_AreEqual()
     {
+        // ReSharper disable BadListLineBreaks
         var a = new ShadingTriangle(0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
         var b = new ShadingTriangle(0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+        // ReSharper restore BadListLineBreaks
         a.ShouldBe(b);
     }
 }

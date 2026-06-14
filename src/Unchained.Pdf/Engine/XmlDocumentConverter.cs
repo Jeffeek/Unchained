@@ -313,8 +313,6 @@ internal static class XmlDocumentConverter
     private static float GetMediaBoxDimension(PdfDictionary pageDict, int index)
     {
         var mb = pageDict.Get<PdfArray>(PdfName.MediaBox);
-        if (mb is null || mb.Count <= index) return index == 2 ? 595f : 842f;
-
-        return (float)mb[index].ReadIntOrReal(index == 2 ? 595f : 842f);
+        return mb is null || mb.Count <= index ? index == 2 ? 595f : 842f : (float)mb[index].ReadIntOrReal(index == 2 ? 595f : 842f);
     }
 }
