@@ -3,6 +3,7 @@ using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -72,8 +73,8 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
     private static IReadOnlyList<EmbeddedFile> CollectEmbeddedFiles(PdfDocumentCore core)
     {
         var result = new List<EmbeddedFile>();
-        var names = ResolveDict(core.Catalog[PdfName.Names], core);
-        var efTree = names is not null ? ResolveDict(names[PdfName.Get("EmbeddedFiles")], core) : null;
+        var names = core.ResolveDict(core.Catalog[PdfName.Names]);
+        var efTree = names is not null ? core.ResolveDict(names[PdfName.EmbeddedFiles]) : null;
         if (efTree is null) return result;
 
         CollectNameTree(efTree, core, result);
@@ -87,7 +88,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
     )
     {
         // Leaf node: /Names array of (string-key, filespec-dict) pairs.
-        if (node.Get<PdfArray>(PdfName.Get("Names")) is { } namesArr)
+        if (node.Get<PdfArray>(PdfName.Names) is { } namesArr)
         {
             for (var i = 0; i + 1 < namesArr.Count; i += 2)
             {
@@ -125,26 +126,26 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         PdfDocumentCore core
     )
     {
-        var fileName = fileSpec[PdfName.Get("UF")] is PdfString uf
+        var fileName = fileSpec[PdfName.UF] is PdfString uf
             ? Encoding.BigEndianUnicode.GetString(uf.Bytes.Span).TrimStart('﻿')
-            : fileSpec[PdfName.Get("F")] is PdfString f
+            : fileSpec[PdfName.F] is PdfString f
                 ? Encoding.Latin1.GetString(f.Bytes.Span)
                 : name;
 
-        var desc = fileSpec[PdfName.Get("Desc")] is PdfString ds
+        var desc = fileSpec[PdfName.Desc] is PdfString ds
             ? Encoding.Latin1.GetString(ds.Bytes.Span)
             : null;
 
-        var efDict = ResolveDict(fileSpec[PdfName.Get("EF")], core);
+        var efDict = core.ResolveDict(fileSpec[PdfName.EF]);
         var streamObj = efDict is not null
-            ? efDict[PdfName.Get("F")] is PdfIndirectReference sr
+            ? efDict[PdfName.F] is PdfIndirectReference sr
                 ? core.ResolveIndirect(sr.ObjectNumber).Value as PdfStream
-                : efDict[PdfName.Get("F")] as PdfStream
+                : efDict[PdfName.F] as PdfStream
             : null;
 
         if (streamObj is null) return null;
 
-        var mimeType = fileSpec[PdfName.Get("Subtype")] is PdfName mtn ? mtn.Value : null;
+        var mimeType = fileSpec[PdfName.Subtype] is PdfName mtn ? mtn.Value : null;
 
         byte[] data;
         try { data = StreamFilters.Decode(streamObj).ToArray(); }
@@ -173,8 +174,8 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         // Build the embedded file stream.
         var efStreamEntries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Get("EmbeddedFile"),
-            [PdfName.Filter.Value] = PdfName.Get("FlateDecode"),
+            ["Type"] = PdfName.EmbeddedFile,
+            [PdfName.Filter.Value] = PdfName.FlateDecode,
             [PdfName.Length.Value] = new PdfInteger(compressed.Length),
             ["Params"] = new PdfDictionary(new Dictionary<string, PdfObject>
             {
@@ -190,7 +191,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         // Build the file specification dictionary.
         var fileSpecEntries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Get("Filespec"),
+            ["Type"] = PdfName.Filespec,
             ["F"] = PdfString.FromLatin1(file.FileName),
             ["UF"] = new PdfString(
                 new[] { PdfConstants.Utf16BeBomByte0, PdfConstants.Utf16BeBomByte1 }
@@ -228,16 +229,10 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
 
         // Build a flat /EmbeddedFiles name tree leaf — collect existing + new.
         var efTree = namesDict.GetValueOrDefault("EmbeddedFiles");
-        var efDict = efTree switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r =>
-                adapter.Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
+        var efDict = adapter.Core.ResolveDict(efTree);
 
         var existingPairs = new List<PdfObject>();
-        if (efDict?.Get<PdfArray>(PdfName.Get("Names")) is { } oldNames)
+        if (efDict?.Get<PdfArray>(PdfName.Names) is { } oldNames)
         {
             // Copy existing pairs, removing any entry with the same name.
             for (var i = 0; i + 1 < oldNames.Count; i += 2)
@@ -261,7 +256,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
 
         var newEfTreeRef = builder.Add(new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            [PdfName.Get("Names").Value] = new PdfArray(existingPairs)
+            [PdfName.Names.Value] = new PdfArray(existingPairs)
         })).ToReference();
 
         namesDict["EmbeddedFiles"] = newEfTreeRef;
@@ -284,12 +279,12 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         if (existing[catalogIdx].Value is not PdfDictionary catalogDict) return;
 
         var namesObj = catalogDict[PdfName.Names];
-        var namesDict = ResolveDict(namesObj, adapter.Core);
+        var namesDict = adapter.Core.ResolveDict(namesObj);
         if (namesDict is null) return;
 
-        var efObj = namesDict[PdfName.Get("EmbeddedFiles")];
-        var efDict = ResolveDict(efObj, adapter.Core);
-        if (efDict?.Get<PdfArray>(PdfName.Get("Names")) is not { } oldNames) return;
+        var efObj = namesDict[PdfName.EmbeddedFiles];
+        var efDict = adapter.Core.ResolveDict(efObj);
+        if (efDict?.Get<PdfArray>(PdfName.Names) is not { } oldNames) return;
 
         var newPairs = new List<PdfObject>();
         for (var i = 0; i + 1 < oldNames.Count; i += 2)
@@ -309,7 +304,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
 
         var newEfRef = builder.Add(new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            [PdfName.Get("Names").Value] = new PdfArray(newPairs)
+            [PdfName.Names.Value] = new PdfArray(newPairs)
         })).ToReference();
 
         var newNamesEntries = new Dictionary<string, PdfObject>(namesDict.Entries)
@@ -345,10 +340,10 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
 
             entries["Collection"] = new PdfDictionary(new Dictionary<string, PdfObject>
             {
-                ["Type"] = PdfName.Get("Collection"),
+                ["Type"] = PdfName.Collection,
                 ["Sort"] = new PdfDictionary(new Dictionary<string, PdfObject>
                 {
-                    ["S"] = PdfName.Get("ModDate"),
+                    ["S"] = PdfName.ModDate,
                     ["A"] = PdfBoolean.True
                 })
             });
@@ -359,13 +354,4 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(entries));
         MutationHelper.SerializeAndReplace(adapter, existing);
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static PdfDictionary? ResolveDict(PdfObject? obj, PdfDocumentCore core) => obj switch
-    {
-        PdfDictionary d => d,
-        PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-        _ => null
-    };
 }

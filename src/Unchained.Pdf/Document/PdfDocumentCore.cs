@@ -277,7 +277,7 @@ internal sealed class PdfDocumentCore : IDisposable
 
     private void InitializeEncryption(string? password)
     {
-        var encryptEntry = Trailer[PdfName.Get("Encrypt")];
+        var encryptEntry = Trailer[PdfName.Encrypt];
         if (encryptEntry is null) return;
 
         PdfDictionary encryptDict;
@@ -309,7 +309,7 @@ internal sealed class PdfDocumentCore : IDisposable
 
         // Get the first element of the /ID array as the file identifier.
         var fileId = Array.Empty<byte>();
-        if (Trailer.Get<PdfArray>(PdfName.Get("ID")) is [PdfString idStr, ..])
+        if (Trailer.Get<PdfArray>(PdfName.ID) is [PdfString idStr, ..])
             fileId = idStr.Bytes.ToArray();
 
         _encryption = PdfEncryption.CreateReadContext(encryptDict, fileId, password ?? string.Empty)

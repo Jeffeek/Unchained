@@ -385,7 +385,7 @@ internal static class LinearizedWriter
         var hintDict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
             ["Length"] = new PdfInteger(hintStreamBytes.Length),
-            ["Filter"] = PdfName.Get("FlateDecode"),
+            ["Filter"] = PdfName.FlateDecode,
             ["S"] = new PdfInteger(0)
         });
         var hintObj = new PdfIndirectObject(hintObjNum, 0, new PdfStream(hintDict, hintStreamBytes));

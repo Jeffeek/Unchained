@@ -2,6 +2,7 @@ using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 
 namespace Unchained.Pdf.Engine;
 
@@ -49,7 +50,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
         if (pageNumber <= 0)
             existingDests.Remove(name);
         else if (pageRef is not null)
-            existingDests[name] = new PdfArray([pageRef, PdfName.Get("Fit")]);
+            existingDests[name] = new PdfArray([pageRef, PdfName.Fit]);
 
         // Rebuild /Names /Dests as a flat name dict (simple structure).
         var namesEntries = new Dictionary<string, PdfObject>();
@@ -64,7 +65,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
 
             namesEntries[PdfName.Dests.Value] = new PdfDictionary(new Dictionary<string, PdfObject>
             {
-                [PdfName.Get("Names").Value] = new PdfArray(namesList.ToArray())
+                [PdfName.Names.Value] = new PdfArray(namesList.ToArray())
             });
         }
 
@@ -86,20 +87,10 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
     {
         var result = new Dictionary<string, PdfObject>(StringComparer.Ordinal);
         var namesObj = catalog[PdfName.Names];
-        var namesDict = namesObj switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
+        var namesDict = core.ResolveDict(namesObj);
         var destsObj = namesDict?[PdfName.Dests];
-        var destsDict = destsObj switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
-        var namesArr = destsDict?.Get<PdfArray>(PdfName.Get("Names"));
+        var destsDict = core.ResolveDict(destsObj);
+        var namesArr = destsDict?.Get<PdfArray>(PdfName.Names);
         if (namesArr is null) return result;
 
         for (var i = 0; i + 1 < namesArr.Count; i += 2)

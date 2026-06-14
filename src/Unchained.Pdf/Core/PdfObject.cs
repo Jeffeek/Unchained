@@ -335,6 +335,299 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     // ReSharper disable once MemberCanBeInternal
     public static readonly PdfName Nums = Get("Nums");
 
+    // ── Actions & destinations ────────────────────────────────────────────────
+
+    /// <summary>The <c>/Action</c> name (action dictionary type).</summary>
+    public static readonly PdfName Action = Get("Action");
+
+    /// <summary>The <c>/GoTo</c> name (go-to action subtype — jump to a destination in the same document).</summary>
+    public static readonly PdfName GoTo = Get("GoTo");
+
+    /// <summary>The <c>/URI</c> name (URI action subtype — resolve a uniform resource identifier).</summary>
+    public static readonly PdfName URI = Get("URI");
+
+    /// <summary>The <c>/Named</c> name (named action subtype — a predefined viewer action such as NextPage).</summary>
+    public static readonly PdfName Named = Get("Named");
+
+    /// <summary>The <c>/XYZ</c> name (destination type — explicit top-left position plus zoom factor).</summary>
+    public static readonly PdfName XYZ = Get("XYZ");
+
+    // ── Shadings & functions ──────────────────────────────────────────────────
+
+    /// <summary>The <c>/BitsPerCoordinate</c> name (mesh shading — bits used per vertex coordinate value).</summary>
+    public static readonly PdfName BitsPerCoordinate = Get("BitsPerCoordinate");
+
+    /// <summary>The <c>/BitsPerComponent</c> name (bits per colour component in an image or shading sample).</summary>
+    public static readonly PdfName BitsPerComponent = Get("BitsPerComponent");
+
+    /// <summary>The <c>/BitsPerFlag</c> name (mesh shading — bits used per vertex edge flag).</summary>
+    public static readonly PdfName BitsPerFlag = Get("BitsPerFlag");
+
+    /// <summary>The <c>/VerticesPerRow</c> name (lattice-form Gouraud-shaded triangle mesh row width).</summary>
+    public static readonly PdfName VerticesPerRow = Get("VerticesPerRow");
+
+    /// <summary>The <c>/FunctionType</c> name (PDF function dictionary type: 0 sampled, 2 exponential, 3 stitching, 4 PostScript).</summary>
+    public static readonly PdfName FunctionType = Get("FunctionType");
+
+    // ── Encryption ────────────────────────────────────────────────────────────
+
+    /// <summary>The <c>/Standard</c> name (the standard password-based security handler).</summary>
+    public static readonly PdfName Standard = Get("Standard");
+
+    /// <summary>The <c>/StdCF</c> name (the standard crypt filter entry in <c>/CF</c>).</summary>
+    public static readonly PdfName StdCF = Get("StdCF");
+
+    /// <summary>The <c>/AESV3</c> name (crypt filter method — AES-256 in CBC mode).</summary>
+    public static readonly PdfName AESV3 = Get("AESV3");
+
+    /// <summary>The <c>/DocOpen</c> name (crypt filter event — decrypt when the document is opened).</summary>
+    public static readonly PdfName DocOpen = Get("DocOpen");
+
+    /// <summary>The <c>/Encrypt</c> name (the trailer entry referencing the encryption dictionary).</summary>
+    public static readonly PdfName Encrypt = Get("Encrypt");
+
+    /// <summary>The <c>/ID</c> name (the file identifier array in the trailer).</summary>
+    public static readonly PdfName ID = Get("ID");
+
+    // ── Fonts ─────────────────────────────────────────────────────────────────
+
+    /// <summary>The <c>/Type1</c> name (Type 1 font subtype).</summary>
+    public static readonly PdfName Type1 = Get("Type1");
+
+    /// <summary>The <c>/C</c> name (a colour array, e.g. an annotation's border/background colour).</summary>
+    public static readonly PdfName C = Get("C");
+
+    /// <summary>The <c>/ColorSpace</c> name (colour space resource or entry).</summary>
+    public static readonly PdfName ColorSpace = Get("ColorSpace");
+
+    /// <summary>The <c>/XObject</c> name (external object — form or image — resource category).</summary>
+    public static readonly PdfName XObject = Get("XObject");
+
+    /// <summary>The <c>/Alternate</c> name (alternate colour space for an ICCBased colour space).</summary>
+    public static readonly PdfName Alternate = Get("Alternate");
+
+    /// <summary>The <c>/N</c> name (number of colour components in an ICCBased stream, or the normal-appearance entry).</summary>
+    public static readonly PdfName N = Get("N");
+
+    /// <summary>The <c>/Gamma</c> name (gamma value for a CalGray or CalRGB colour space).</summary>
+    public static readonly PdfName Gamma = Get("Gamma");
+
+    /// <summary>The <c>/Matrix</c> name (transformation matrix for a CalRGB/Lab colour space, form, or pattern).</summary>
+    public static readonly PdfName Matrix = Get("Matrix");
+
+    /// <summary>The <c>/DescendantFonts</c> name (the CIDFont array of a Type 0 composite font).</summary>
+    public static readonly PdfName DescendantFonts = Get("DescendantFonts");
+
+    /// <summary>The <c>/FontDescriptor</c> name (font metrics and embedded-program descriptor dictionary).</summary>
+    public static readonly PdfName FontDescriptor = Get("FontDescriptor");
+
+    /// <summary>The <c>/FontFile2</c> name (embedded TrueType font program stream).</summary>
+    public static readonly PdfName FontFile2 = Get("FontFile2");
+
+    /// <summary>The <c>/FontFile3</c> name (embedded CFF / OpenType font program stream).</summary>
+    public static readonly PdfName FontFile3 = Get("FontFile3");
+
+    /// <summary>The <c>/FontFile</c> name (embedded Type 1 font program stream).</summary>
+    public static readonly PdfName FontFile = Get("FontFile");
+
+    /// <summary>The <c>/DW</c> name (default glyph width for a CIDFont).</summary>
+    public static readonly PdfName DW = Get("DW");
+
+    /// <summary>The <c>/ToUnicode</c> name (CMap stream mapping character codes to Unicode).</summary>
+    public static readonly PdfName ToUnicode = Get("ToUnicode");
+
+    /// <summary>The <c>/FontMatrix</c> name (glyph-space-to-text-space matrix for a Type 3 font).</summary>
+    public static readonly PdfName FontMatrix = Get("FontMatrix");
+
+    /// <summary>The <c>/Encoding</c> name (font character encoding, by name or differences dictionary).</summary>
+    public static readonly PdfName Encoding = Get("Encoding");
+
+    /// <summary>The <c>/Differences</c> name (the code-to-glyph-name override array in an encoding dictionary).</summary>
+    public static readonly PdfName Differences = Get("Differences");
+
+    /// <summary>The <c>/CharProcs</c> name (glyph content-stream procedures for a Type 3 font).</summary>
+    public static readonly PdfName CharProcs = Get("CharProcs");
+
+    /// <summary>The <c>/Widths</c> name (the per-glyph advance-width array of a simple font).</summary>
+    public static readonly PdfName Widths = Get("Widths");
+
+    /// <summary>The <c>/FirstChar</c> name (the character code of the first entry in <c>/Widths</c>).</summary>
+    public static readonly PdfName FirstChar = Get("FirstChar");
+
+    // ── Images & XObjects ─────────────────────────────────────────────────────
+
+    /// <summary>The <c>/Width</c> name (image width in samples).</summary>
+    public static readonly PdfName Width = Get("Width");
+
+    /// <summary>The <c>/Height</c> name (image height in samples).</summary>
+    public static readonly PdfName Height = Get("Height");
+
+    /// <summary>The <c>/SMask</c> name (soft-mask image or transparency group giving per-pixel alpha).</summary>
+    public static readonly PdfName SMask = Get("SMask");
+
+    /// <summary>The <c>/BBox</c> name (bounding box of a form XObject, pattern, or annotation appearance).</summary>
+    public static readonly PdfName BBox = Get("BBox");
+
+    /// <summary>The <c>/Annot</c> name (annotation object type).</summary>
+    public static readonly PdfName Annot = Get("Annot");
+
+    /// <summary>The <c>/Collection</c> name (the catalog entry that marks a PDF portfolio / collection).</summary>
+    public static readonly PdfName Collection = Get("Collection");
+
+    /// <summary>The <c>/DecodeParms</c> name (per-filter decode parameters for a stream).</summary>
+    public static readonly PdfName DecodeParms = Get("DecodeParms");
+
+    /// <summary>The <c>/JBIG2Globals</c> name (the shared globals stream referenced by a JBIG2-encoded image).</summary>
+    public static readonly PdfName JBIG2Globals = Get("JBIG2Globals");
+
+    /// <summary>The <c>/XML</c> name (metadata stream subtype — XMP packet).</summary>
+    public static readonly PdfName XML = Get("XML");
+
+    // ── Document-level & viewer preferences ───────────────────────────────────
+
+    /// <summary>The <c>/R2L</c> name (viewer preference — right-to-left reading/page order).</summary>
+    public static readonly PdfName R2L = Get("R2L");
+
+    /// <summary>The <c>/Document</c> name (top-level structure type, or output-intent context).</summary>
+    public static readonly PdfName Document = Get("Document");
+
+    /// <summary>The <c>/OutputIntent</c> name (output-intent dictionary type for PDF/X, PDF/A, etc.).</summary>
+    public static readonly PdfName OutputIntent = Get("OutputIntent");
+
+    /// <summary>The <c>/GTS_PDFX</c> name (output-intent subtype identifying a PDF/X conformance intent).</summary>
+    public static readonly PdfName GTS_PDFX = Get("GTS_PDFX");
+
+    /// <summary>The <c>/DisplayDocTitle</c> name (viewer preference — show the document title in the window title bar).</summary>
+    public static readonly PdfName DisplayDocTitle = Get("DisplayDocTitle");
+
+    /// <summary>The <c>/TU</c> name (the user-facing alternate name / tooltip of a form field).</summary>
+    public static readonly PdfName TU = Get("TU");
+
+    /// <summary>The <c>/AA</c> name (additional-actions dictionary for a page, field, or annotation).</summary>
+    public static readonly PdfName AA = Get("AA");
+
+    // ── Signatures ────────────────────────────────────────────────────────────
+
+    /// <summary>The <c>/Sig</c> name (signature field / value dictionary type).</summary>
+    public static readonly PdfName Sig = Get("Sig");
+
+    /// <summary>The <c>/Adobe.PPKLite</c> name (the signature handler / filter for PKCS#7 signatures).</summary>
+    public static readonly PdfName Adobe_PPKLite = Get("Adobe.PPKLite");
+
+    /// <summary>The <c>/adbe.pkcs7.detached</c> name (signature sub-filter — a detached PKCS#7 / CMS blob).</summary>
+    public static readonly PdfName adbe_pkcs7_detached = Get("adbe.pkcs7.detached");
+
+    /// <summary>The <c>/Widget</c> name (widget annotation subtype — the on-page appearance of a form field).</summary>
+    public static readonly PdfName Widget = Get("Widget");
+
+    /// <summary>The <c>/Fit</c> name (destination type — fit the whole page in the window).</summary>
+    public static readonly PdfName Fit = Get("Fit");
+
+    /// <summary>The <c>/FlateDecode</c> name (the zlib/deflate stream filter).</summary>
+    public static readonly PdfName FlateDecode = Get("FlateDecode");
+
+    // ── Embedded files ────────────────────────────────────────────────────────
+
+    /// <summary>The <c>/EmbeddedFiles</c> name (the name tree of embedded file specifications in <c>/Names</c>).</summary>
+    public static readonly PdfName EmbeddedFiles = Get("EmbeddedFiles");
+
+    /// <summary>The <c>/UF</c> name (the Unicode file name of a file specification).</summary>
+    public static readonly PdfName UF = Get("UF");
+
+    /// <summary>The <c>/F</c> name (file specification name / annotation flags, depending on context).</summary>
+    public static readonly PdfName F = Get("F");
+
+    /// <summary>The <c>/Desc</c> name (textual description of an embedded file).</summary>
+    public static readonly PdfName Desc = Get("Desc");
+
+    /// <summary>The <c>/AP</c> name (annotation appearance-streams dictionary).</summary>
+    public static readonly PdfName AP = Get("AP");
+
+    /// <summary>The <c>/T</c> name (the partial field name of a form field).</summary>
+    public static readonly PdfName T = Get("T");
+
+    /// <summary>The <c>/EF</c> name (the embedded-file-streams dictionary of a file specification).</summary>
+    public static readonly PdfName EF = Get("EF");
+
+    /// <summary>The <c>/EmbeddedFile</c> name (embedded file stream type).</summary>
+    public static readonly PdfName EmbeddedFile = Get("EmbeddedFile");
+
+    /// <summary>The <c>/ModDate</c> name (modification date, e.g. in <c>/Info</c> or an embedded file's params).</summary>
+    public static readonly PdfName ModDate = Get("ModDate");
+
+    /// <summary>The <c>/Filespec</c> name (file specification object type).</summary>
+    public static readonly PdfName Filespec = Get("Filespec");
+
+    // ── Optional content (layers) ─────────────────────────────────────────────
+
+    /// <summary>The <c>/OCProperties</c> name (the catalog's optional-content (layers) configuration).</summary>
+    public static readonly PdfName OCProperties = Get("OCProperties");
+
+    /// <summary>The <c>/D</c> name (the default optional-content configuration, or a destination entry).</summary>
+    public static readonly PdfName D = Get("D");
+
+    /// <summary>The <c>/OFF</c> name (the array of optional-content groups that start switched off).</summary>
+    public static readonly PdfName OFF = Get("OFF");
+
+    /// <summary>The <c>/PageLabels</c> name (the number tree defining page label ranges).</summary>
+    public static readonly PdfName PageLabels = Get("PageLabels");
+
+    /// <summary>The <c>/Rotate</c> name (page rotation in degrees, a multiple of 90).</summary>
+    public static readonly PdfName Rotate = Get("Rotate");
+
+    // ── Shadings, patterns & graphics state ───────────────────────────────────
+
+    /// <summary>The <c>/Shading</c> name (shading dictionary, or the shading resource category).</summary>
+    public static readonly PdfName Shading = Get("Shading");
+
+    /// <summary>The <c>/Pattern</c> name (pattern colour space, or the pattern resource category).</summary>
+    public static readonly PdfName Pattern = Get("Pattern");
+
+    /// <summary>The <c>/PatternType</c> name (1 = tiling pattern, 2 = shading pattern).</summary>
+    public static readonly PdfName PatternType = Get("PatternType");
+
+    /// <summary>The <c>/PaintType</c> name (tiling pattern paint type: 1 = coloured, 2 = uncoloured).</summary>
+    public static readonly PdfName PaintType = Get("PaintType");
+
+    /// <summary>The <c>/ExtGState</c> name (extended graphics-state dictionary or resource category).</summary>
+    public static readonly PdfName ExtGState = Get("ExtGState");
+
+    /// <summary>The <c>/G</c> name (the transparency group form XObject of a soft mask).</summary>
+    public static readonly PdfName G = Get("G");
+
+    /// <summary>The <c>/BM</c> name (the current blend mode in the graphics state).</summary>
+    public static readonly PdfName BM = Get("BM");
+
+    /// <summary>The <c>/A</c> name (the action of an annotation, or the destination array of an outline item).</summary>
+    public static readonly PdfName A = Get("A");
+
+    /// <summary>The <c>/ShadingType</c> name (1 function-based, 2 axial, 3 radial, 4–7 mesh).</summary>
+    public static readonly PdfName ShadingType = Get("ShadingType");
+
+    /// <summary>The <c>/HideToolbar</c> name (viewer preference — hide the viewer's tool bars).</summary>
+    public static readonly PdfName HideToolbar = Get("HideToolbar");
+
+    /// <summary>The <c>/HideMenubar</c> name (viewer preference — hide the viewer's menu bar).</summary>
+    public static readonly PdfName HideMenubar = Get("HideMenubar");
+
+    /// <summary>The <c>/HideWindowUI</c> name (viewer preference — hide UI elements inside the document window).</summary>
+    public static readonly PdfName HideWindowUI = Get("HideWindowUI");
+
+    /// <summary>The <c>/FitWindow</c> name (viewer preference — resize the window to fit the first page).</summary>
+    public static readonly PdfName FitWindow = Get("FitWindow");
+
+    /// <summary>The <c>/CenterWindow</c> name (viewer preference — centre the document window on screen).</summary>
+    public static readonly PdfName CenterWindow = Get("CenterWindow");
+
+    /// <summary>The <c>/OCGs</c> name (the array of all optional-content groups in <c>/OCProperties</c>).</summary>
+    public static readonly PdfName OCGs = Get("OCGs");
+
+    /// <summary>The <c>/Name</c> name (an optional-content group's display name, or a generic name entry).</summary>
+    public static readonly PdfName Name = Get("Name");
+
+    /// <summary>The <c>/V</c> name (the value of a form field, or the version entry in some dictionaries).</summary>
+    public static readonly PdfName V = Get("V");
+
     private PdfName(string value) => Value = value;
 
     /// <summary>The name string without the leading <c>/</c> delimiter.</summary>

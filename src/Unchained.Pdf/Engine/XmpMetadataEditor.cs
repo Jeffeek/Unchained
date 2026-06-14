@@ -33,8 +33,8 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
         var metaStream = builder.Add(new PdfStream(
             new PdfDictionary(new Dictionary<string, PdfObject>
             {
-                [PdfName.Type.Value] = PdfName.Get("Metadata"),
-                [PdfName.Subtype.Value] = PdfName.Get("XML"),
+                [PdfName.Type.Value] = PdfName.Metadata,
+                [PdfName.Subtype.Value] = PdfName.XML,
                 [PdfName.Length.Value] = new PdfInteger(xmpBytes.Length)
             }),
             xmpBytes.ToArray()));

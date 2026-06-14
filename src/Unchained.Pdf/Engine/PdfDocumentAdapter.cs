@@ -5,6 +5,7 @@ using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 using Unchained.Pdf.Writing;
@@ -73,12 +74,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         get
         {
             var markInfo = Core.Catalog[PdfName.MarkInfo];
-            var dict = markInfo switch
-            {
-                PdfDictionary d => d,
-                PdfIndirectReference r => Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                _ => null
-            };
+            var dict = Core.ResolveDict(markInfo);
             return dict?[PdfName.Marked] is PdfBoolean { Value: true };
         }
     }
@@ -112,7 +108,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     {
         get
         {
-            var idArr = Core.Trailer.Get<PdfArray>(PdfName.Get("ID"));
+            var idArr = Core.Trailer.Get<PdfArray>(PdfName.ID);
             if (idArr is null || idArr.Count < 2)
                 return null;
 
@@ -142,17 +138,17 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     /// <inheritdoc />
     public ViewerPreferences GetViewerPreferences()
     {
-        var vp = ResolveDict(Core.Catalog[PdfName.ViewerPreferences]);
+        var vp = Core.ResolveDict(Core.Catalog[PdfName.ViewerPreferences]);
 
         return vp is null
             ? ViewerPreferences.Default
             : new ViewerPreferences(
-                vp[PdfName.Get("HideToolbar")] is PdfBoolean { Value: true },
-                vp[PdfName.Get("HideMenubar")] is PdfBoolean { Value: true },
-                vp[PdfName.Get("HideWindowUI")] is PdfBoolean { Value: true },
-                vp[PdfName.Get("FitWindow")] is PdfBoolean { Value: true },
-                vp[PdfName.Get("CenterWindow")] is PdfBoolean { Value: true },
-                vp[PdfName.Get("DisplayDocTitle")] is PdfBoolean { Value: true },
+                vp[PdfName.HideToolbar] is PdfBoolean { Value: true },
+                vp[PdfName.HideMenubar] is PdfBoolean { Value: true },
+                vp[PdfName.HideWindowUI] is PdfBoolean { Value: true },
+                vp[PdfName.FitWindow] is PdfBoolean { Value: true },
+                vp[PdfName.CenterWindow] is PdfBoolean { Value: true },
+                vp[PdfName.DisplayDocTitle] is PdfBoolean { Value: true },
                 (vp.GetName("Direction") ?? string.Empty) == "R2L" ? ReadingDirection.RightToLeft : ReadingDirection.LeftToRight,
                 (vp.GetName("Duplex") ?? string.Empty) switch
                 {
@@ -207,13 +203,13 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         var catalog = Core.Catalog;
 
         // Try /Names /Dests name tree (PDF 1.2+)
-        var namesDict = ResolveDict(catalog[PdfName.Names]);
-        var destsTree = namesDict is not null ? ResolveDict(namesDict[PdfName.Dests]) : null;
+        var namesDict = Core.ResolveDict(catalog[PdfName.Names]);
+        var destsTree = Core.ResolveDict(namesDict?[PdfName.Dests]);
         if (destsTree is not null)
             CollectNameTree(destsTree, result);
 
         // Legacy /Dests dict (PDF 1.0)
-        var legacyDests = ResolveDict(catalog[PdfName.Dests]);
+        var legacyDests = Core.ResolveDict(catalog[PdfName.Dests]);
 
         if (legacyDests is null)
             return result;
@@ -234,13 +230,13 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     public IReadOnlyList<OptionalContentGroup> GetLayers()
     {
         var result = new List<OptionalContentGroup>();
-        var ocProps = ResolveDict(Core.Catalog[PdfName.Get("OCProperties")]);
+        var ocProps = Core.ResolveDict(Core.Catalog[PdfName.OCProperties]);
         if (ocProps is null) return result;
 
         // Collect the set of OCGs that are OFF in the default (/D) configuration.
         var off = new HashSet<int>();
-        var defaultCfg = ResolveDict(ocProps[PdfName.Get("D")]);
-        if (defaultCfg?[PdfName.Get("OFF")] is PdfArray offArr)
+        var defaultCfg = Core.ResolveDict(ocProps[PdfName.D]);
+        if (defaultCfg?[PdfName.OFF] is PdfArray offArr)
         {
             foreach (var e in offArr.Elements)
             {
@@ -249,7 +245,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             }
         }
 
-        if (ocProps[PdfName.Get("OCGs")] is not PdfArray ocgs)
+        if (ocProps[PdfName.OCGs] is not PdfArray ocgs)
             return result;
 
         foreach (var e in ocgs.Elements)
@@ -257,7 +253,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             if (e is not PdfIndirectReference r) continue;
             if (Core.ResolveIndirect(r.ObjectNumber).Value is not PdfDictionary ocg) continue;
 
-            var name = ocg[PdfName.Get("Name")] is PdfString s
+            var name = ocg[PdfName.Name] is PdfString s
                 ? Encoding.Latin1.GetString(s.Bytes.Span)
                 : string.Empty;
             result.Add(new OptionalContentGroup(name, r.ObjectNumber, !off.Contains(r.ObjectNumber)));
@@ -271,14 +267,14 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     /// <inheritdoc />
     public IReadOnlyList<Bookmark> GetBookmarks()
     {
-        var outlines = ResolveDict(Core.Catalog[PdfName.Outlines]);
+        var outlines = Core.ResolveDict(Core.Catalog[PdfName.Outlines]);
         return outlines is null ? [] : ReadOutlineLevel(outlines);
     }
 
     /// <inheritdoc />
     public IReadOnlyList<FormField> GetFormFields()
     {
-        var acroForm = ResolveDict(Core.Catalog[PdfName.AcroForm]);
+        var acroForm = Core.ResolveDict(Core.Catalog[PdfName.AcroForm]);
         if (acroForm is null)
             return [];
 
@@ -396,7 +392,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     private void CollectNameTree(PdfDictionary node, ICollection<NamedDestination> result)
     {
         // Leaf node: /Names array of (string, dest) pairs
-        if (node.Get<PdfArray>(PdfName.Get("Names")) is { } names)
+        if (node.Get<PdfArray>(PdfName.Names) is { } names)
         {
             for (var i = 0; i + 1 < names.Count; i += 2)
             {
@@ -429,7 +425,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     private IReadOnlyList<Bookmark> ReadOutlineLevel(PdfDictionary node)
     {
         var result = new List<Bookmark>();
-        var current = ResolveDict(node[PdfName.First]);
+        var current = Core.ResolveDict(node[PdfName.First]);
         while (current is not null)
         {
             var title = current[PdfName.Title] is PdfString ts
@@ -437,12 +433,12 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
                 : string.Empty;
 
             var pageNum = ResolveDestPage(current);
-            var children = ResolveDict(current[PdfName.First]) is not null
+            var children = Core.ResolveDict(current[PdfName.First]) is not null
                 ? ReadOutlineLevel(current)
                 : null;
 
             result.Add(new Bookmark(title, pageNum, children));
-            current = ResolveDict(current[PdfName.Next]);
+            current = Core.ResolveDict(current[PdfName.Next]);
         }
 
         return result;
@@ -498,9 +494,9 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
 
     private void CollectFields(PdfArray fields, string prefix, ICollection<FormField> result)
     {
-        foreach (var dict in fields.Elements.Select(ResolveDict).OfType<PdfDictionary>())
+        foreach (var dict in fields.Elements.Select(x => Core.ResolveDict(x)).Where(static x => x != null))
         {
-            var partialName = dict[PdfName.Get("T")] is PdfString ts
+            var partialName = dict![PdfName.T] is PdfString ts
                 ? Encoding.Latin1.GetString(ts.Bytes.Span)
                 : string.Empty;
 
@@ -521,7 +517,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
 
     private static string? DecodeFieldValue(PdfDictionary dict)
     {
-        var v = dict[PdfName.Get("V")];
+        var v = dict[PdfName.V];
         return v switch
         {
             PdfString s => Encoding.Latin1.GetString(s.Bytes.Span),
@@ -562,13 +558,6 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             .Select(o => PdfObjectRemapper.RemapSelective(o, remapping) as PdfIndirectObject ?? o)
             .ToList();
     }
-
-    private PdfDictionary? ResolveDict(PdfObject? obj) => obj switch
-    {
-        PdfDictionary d => d,
-        PdfIndirectReference r => Core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-        _ => null
-    };
 
     private static string? GetInfoString(PdfDictionary info, string key) =>
         info[key] is not PdfString str

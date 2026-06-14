@@ -42,7 +42,7 @@
   <Folder Name="/src/Ooxml/">
     <Project Path="src/Unchained.Ooxml/Unchained.Ooxml.csproj" />
   </Folder>
-  <Folder Name="/src/Pptx/">
+  <Folder Name="/src/Ooxml/Pptx/">
     <Project Path="src/Unchained.Pptx.Rendering/Unchained.Pptx.Rendering.csproj" />
     <Project Path="src/Unchained.Pptx/Unchained.Pptx.csproj" />
   </Folder>

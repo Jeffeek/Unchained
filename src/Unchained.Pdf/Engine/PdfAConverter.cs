@@ -46,8 +46,8 @@ internal static class PdfAConverter
         var xmpBytes = BuildPdfAXmp(profile, catalogEntries, core);
         var metaDict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Get("Metadata"),
-            ["Subtype"] = PdfName.Get("XML"),
+            ["Type"] = PdfName.Metadata,
+            ["Subtype"] = PdfName.XML,
             ["Length"] = new PdfInteger(xmpBytes.Length)
         });
         objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
@@ -243,7 +243,7 @@ internal static class PdfAConverter
             entries[PdfName.Info.Value] = info;
 
         // /ID is required by PDF/A — preserve existing or generate new
-        var existingId = core.Trailer.Get<PdfArray>(PdfName.Get("ID"));
+        var existingId = core.Trailer.Get<PdfArray>(PdfName.ID);
         entries["ID"] = existingId
                         ?? new PdfArray([
                             new PdfString(RandomNumberGenerator.GetBytes(16), true),

@@ -3,6 +3,7 @@ using System.Text;
 using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -148,7 +149,7 @@ internal static class PdfUAValidator
     {
         // /ViewerPreferences /DisplayDocTitle must be true.
         var vp = Resolve<PdfDictionary>(core.Catalog[PdfName.ViewerPreferences], core);
-        if (vp?[PdfName.Get("DisplayDocTitle")] is not PdfBoolean { Value: true })
+        if (vp?[PdfName.DisplayDocTitle] is not PdfBoolean { Value: true })
             v.Add(E("7.3", "/ViewerPreferences /DisplayDocTitle must be true so the window title bar shows the document title."));
 
         // The /Info /Title or DC title in XMP must be present.
@@ -293,15 +294,10 @@ internal static class PdfUAValidator
 
             foreach (var elem in annots.Elements)
             {
-                var dict = elem switch
-                {
-                    PdfDictionary d => d,
-                    PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                    _ => null
-                };
+                var dict = core.ResolveDict(elem);
                 if (dict?.GetName("Subtype") != "Widget") continue;
 
-                if (dict[PdfName.Get("TU")] is null)
+                if (dict[PdfName.TU] is null)
                     v.Add(W("7.7", $"Widget annotation on page {page} is missing /TU (tooltip / accessible name).", pageNumber: page));
             }
         }
@@ -481,12 +477,7 @@ internal static class PdfUAValidator
 
             foreach (var elem in annots.Elements)
             {
-                var dict = elem switch
-                {
-                    PdfDictionary d => d,
-                    PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                    _ => null
-                };
+                var dict = core.ResolveDict(elem);
                 if (dict is null) continue;
 
                 var subtype = dict.GetName("Subtype") ?? string.Empty;
@@ -494,8 +485,8 @@ internal static class PdfUAValidator
                 // All annotations except /Popup must have a /Contents or /TU entry (accessible name).
                 if (subtype is not ("Popup" or "Link"))
                 {
-                    var hasContents = dict[PdfName.Get("Contents")] is not null;
-                    var hasTu = dict[PdfName.Get("TU")] is not null;
+                    var hasContents = dict[PdfName.Contents] is not null;
+                    var hasTu = dict[PdfName.TU] is not null;
                     if (!hasContents && !hasTu)
                     {
                         v.Add(W("7.13",
@@ -521,7 +512,7 @@ internal static class PdfUAValidator
     private static void CheckActions(PdfDocumentCore core, ICollection<PdfUAViolation> v)
     {
         // /AA (additional actions) on the document catalog must not have scripts (§7.14.2).
-        if (core.Catalog[PdfName.Get("AA")] is not null)
+        if (core.Catalog[PdfName.AA] is not null)
         {
             v.Add(W("7.14",
                 "Catalog contains /AA (additional actions). Verify no JavaScript actions are present — they are not permitted in PDF/UA."));
@@ -640,14 +631,10 @@ internal static class PdfUAValidator
 
         foreach (var kid in kids)
         {
-            var resolved = kid switch
-            {
-                PdfDictionary d => d,
-                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                _ => null
-            };
+            var resolved = core.ResolveDict(kid);
 
-            if (resolved is not null) visitor(resolved);
+            if (resolved is not null)
+                visitor(resolved);
         }
     }
 

@@ -142,7 +142,7 @@ internal static class StructureTreeBuilder
         var docEntries = new Dictionary<string, PdfObject>
         {
             [PdfName.Type.Value] = PdfName.StructElem,
-            [PdfName.S.Value] = PdfName.Get("Document"),
+            [PdfName.S.Value] = PdfName.Document,
             [PdfName.P.Value] = rootRef,
             [PdfName.K.Value] = new PdfArray(elemRefs.Cast<PdfObject>().ToList())
         };

@@ -35,7 +35,7 @@ internal static class StreamFilters
         };
 
         // /DecodeParms: single dict (for single filter) or array parallel to /Filter.
-        var dpObj = stream.Dictionary[PdfName.Get("DecodeParms")];
+        var dpObj = stream.Dictionary[PdfName.DecodeParms];
         IReadOnlyList<PdfDictionary?> parms = dpObj switch
         {
             PdfDictionary d => [d],
@@ -79,7 +79,7 @@ internal static class StreamFilters
                 parms?.Get<PdfBoolean>("EndOfBlock")?.Value ?? true,
                 parms?.Get<PdfBoolean>("EncodedByteAlign")?.Value ?? false),
             "JBIG2Decode" => Jbig2Decoder.Decode(data,
-                parms?[PdfName.Get("JBIG2Globals")] is PdfStream gs
+                parms?[PdfName.JBIG2Globals] is PdfStream gs
                     ? Decode(gs)
                     : (ReadOnlyMemory<byte>?)null),
             "DCTDecode" or "DCT" => DctDecoder.Decode(data),

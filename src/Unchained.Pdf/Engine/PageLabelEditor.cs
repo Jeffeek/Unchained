@@ -2,6 +2,7 @@ using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
@@ -51,13 +52,8 @@ public sealed class PageLabelEditor : IPageLabelEditor
     private static IReadOnlyList<PageLabelRange> ReadPageLabels(PdfDocumentCore core)
     {
         var result = new List<PageLabelRange>();
-        var pageLabelsObj = core.Catalog[PdfName.Get("PageLabels")];
-        var root = pageLabelsObj switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
+        var pageLabelsObj = core.Catalog[PdfName.PageLabels];
+        var root = core.ResolveDict(pageLabelsObj);
         if (root is null) return result;
 
         CollectNumberTree(root, core, result);
@@ -83,7 +79,7 @@ public sealed class PageLabelEditor : IPageLabelEditor
                 if (labelDict is null) continue;
 
                 var style = ParseStyle(labelDict.GetName("S"));
-                var prefix = labelDict[PdfName.Get("P")] is PdfString ps
+                var prefix = labelDict[PdfName.P] is PdfString ps
                     ? Encoding.Latin1.GetString(ps.Bytes.Span)
                     : null;
                 var first = (int)(labelDict.Get<PdfInteger>("St")?.Value ?? 1);

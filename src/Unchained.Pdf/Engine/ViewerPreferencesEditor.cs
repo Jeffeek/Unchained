@@ -60,7 +60,7 @@ public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
             if (prefs.DisplayDocTitle)
                 vpEntries["DisplayDocTitle"] = PdfBoolean.True;
             if (prefs.Direction == ReadingDirection.RightToLeft)
-                vpEntries["Direction"] = PdfName.Get("R2L");
+                vpEntries["Direction"] = PdfName.R2L;
             if (prefs.Duplex != DuplexMode.None)
                 vpEntries["Duplex"] = PdfName.Get(prefs.Duplex.ToString());
             if (prefs.NonFullScreenPageMode != PageMode.Default && prefs.NonFullScreenPageMode != PageMode.UseNone)

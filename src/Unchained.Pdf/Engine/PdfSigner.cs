@@ -6,6 +6,7 @@ using System.Text;
 using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Writing;
 
@@ -124,10 +125,10 @@ internal static class PdfSigner
     {
         var entries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Get("Sig"),
-            ["Filter"] = PdfName.Get("Adobe.PPKLite"),
+            ["Type"] = PdfName.Sig,
+            ["Filter"] = PdfName.Adobe_PPKLite,
             // ReSharper disable once StringLiteralTypo
-            ["SubFilter"] = PdfName.Get("adbe.pkcs7.detached"),
+            ["SubFilter"] = PdfName.adbe_pkcs7_detached,
             // Placeholder array — patched in Step 6
             ["ByteRange"] = ByteRangePlaceholder,
             // Placeholder hex-zero string — patched in Step 9
@@ -148,9 +149,9 @@ internal static class PdfSigner
     private static PdfDictionary BuildSignatureFieldDict(PdfObject sigValueRef, string fieldName) =>
         new(new Dictionary<string, PdfObject>
         {
-            ["FT"] = PdfName.Get("Sig"),
-            ["Type"] = PdfName.Get("Annot"),
-            ["Subtype"] = PdfName.Get("Widget"),
+            ["FT"] = PdfName.Sig,
+            ["Type"] = PdfName.Annot,
+            ["Subtype"] = PdfName.Widget,
             ["T"] = PdfString.FromLatin1(fieldName),
             ["V"] = sigValueRef,
             // Zero-size invisible widget — no visual appearance required
@@ -187,12 +188,7 @@ internal static class PdfSigner
     private static PdfDictionary BuildOrUpdateAcroForm(PdfObject? existing, PdfObject sigFieldRef, PdfDocumentCore core)
     {
         // Resolve existing AcroForm if it's an indirect reference
-        var existingDict = existing switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
+        var existingDict = core.ResolveDict(existing);
 
         // Start from existing entries, or an empty dict
         var entries = existingDict is not null

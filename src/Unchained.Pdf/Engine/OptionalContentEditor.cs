@@ -1,6 +1,7 @@
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
@@ -32,17 +33,17 @@ public sealed class OptionalContentEditor : IOptionalContentEditor
         var existing = adapter.Core.CollectObjects();
 
         var catalog = adapter.Core.Catalog;
-        var ocPropsRef = catalog[PdfName.Get("OCProperties")];
-        var ocProps = Resolve(ocPropsRef, adapter.Core);
+        var ocPropsRef = catalog[PdfName.OCProperties];
+        var ocProps = adapter.Core.ResolveDict(ocPropsRef);
         if (ocProps is null)
             throw new InvalidOperationException("Document has no /OCProperties (no layers).");
 
         // The default config /D is usually a direct dict inside /OCProperties.
-        var defaultCfg = Resolve(ocProps[PdfName.Get("D")], adapter.Core);
+        var defaultCfg = adapter.Core.ResolveDict(ocProps[PdfName.D]);
         if (defaultCfg is null)
             throw new InvalidOperationException("Document /OCProperties has no default configuration /D.");
 
-        var offList = (defaultCfg[PdfName.Get("OFF")] as PdfArray)?.Elements.ToList() ?? [];
+        var offList = (defaultCfg[PdfName.OFF] as PdfArray)?.Elements.ToList() ?? [];
         var ocgRef = new PdfIndirectReference(ocgObjectNumber, 0);
 
         var alreadyOff = offList.Any(e => e is PdfIndirectReference r && r.ObjectNumber == ocgObjectNumber);
@@ -60,11 +61,11 @@ public sealed class OptionalContentEditor : IOptionalContentEditor
 
         var newDefault = new Dictionary<string, PdfObject>(defaultCfg.Entries)
         {
-            [PdfName.Get("OFF").Value] = new PdfArray(offList.ToArray())
+            [PdfName.OFF.Value] = new PdfArray(offList.ToArray())
         };
         var newOcProps = new Dictionary<string, PdfObject>(ocProps.Entries)
         {
-            [PdfName.Get("D").Value] = new PdfDictionary(newDefault)
+            [PdfName.D.Value] = new PdfDictionary(newDefault)
         };
 
         // Rebuild the object holding /OCProperties. It may be the catalog inline, or its own
@@ -84,7 +85,7 @@ public sealed class OptionalContentEditor : IOptionalContentEditor
             var catObj = existing.First(o => o.ObjectNumber == catNum);
             var catEntries = new Dictionary<string, PdfObject>(((PdfDictionary)catObj.Value).Entries)
             {
-                [PdfName.Get("OCProperties").Value] = new PdfDictionary(newOcProps)
+                [PdfName.OCProperties.Value] = new PdfDictionary(newOcProps)
             };
             swaps[catNum] = new PdfIndirectObject(catNum, catObj.Generation, new PdfDictionary(catEntries));
         }
@@ -92,11 +93,4 @@ public sealed class OptionalContentEditor : IOptionalContentEditor
         var finalObjects = existing.Select(o => swaps.GetValueOrDefault(o.ObjectNumber, o)).ToList();
         MutationHelper.SerializeAndReplace(adapter, finalObjects);
     }
-
-    private static PdfDictionary? Resolve(PdfObject? obj, PdfDocumentCore core) => obj switch
-    {
-        PdfDictionary d => d,
-        PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-        _ => null
-    };
 }

@@ -33,7 +33,7 @@ public sealed class AnnotationEditor : IAnnotationEditor
         // Build annotation dict.
         var annotEntries = new Dictionary<string, PdfObject>
         {
-            [PdfName.Type.Value] = PdfName.Get("Annot"),
+            [PdfName.Type.Value] = PdfName.Annot,
             [PdfName.Subtype.Value] = PdfName.Get(annotation.Subtype.ToString()),
             [PdfName.Rect.Value] = new PdfArray([
                 new PdfReal(annotation.X),

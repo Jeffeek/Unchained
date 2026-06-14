@@ -479,7 +479,7 @@ public sealed class TableGenerator : ITableGenerator
         new(new Dictionary<string, PdfObject>
         {
             [PdfName.Type.Value] = PdfName.Font,
-            [PdfName.Subtype.Value] = PdfName.Get("Type1"),
+            [PdfName.Subtype.Value] = PdfName.Type1,
             [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
         });
 

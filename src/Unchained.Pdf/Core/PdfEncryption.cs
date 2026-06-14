@@ -123,7 +123,7 @@ internal static class PdfEncryption
         // All binary values in the /Encrypt dict use hex encoding for safe round-trip.
         var encryptDict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            ["Filter"] = PdfName.Get("Standard"),
+            ["Filter"] = PdfName.Standard,
             ["V"] = new PdfInteger(5),
             ["R"] = new PdfInteger(6),
             ["Length"] = new PdfInteger(256),
@@ -134,14 +134,14 @@ internal static class PdfEncryption
             ["UE"] = new PdfString(ueBytes, true),
             ["Perms"] = new PdfString(permsBytes, true),
             ["EncryptMetadata"] = PdfBoolean.True,
-            ["StmF"] = PdfName.Get("StdCF"),
-            ["StrF"] = PdfName.Get("StdCF"),
+            ["StmF"] = PdfName.StdCF,
+            ["StrF"] = PdfName.StdCF,
             ["CF"] = new PdfDictionary(new Dictionary<string, PdfObject>
             {
                 ["StdCF"] = new PdfDictionary(new Dictionary<string, PdfObject>
                 {
-                    ["CFM"] = PdfName.Get("AESV3"),
-                    ["AuthEvent"] = PdfName.Get("DocOpen"),
+                    ["CFM"] = PdfName.AESV3,
+                    ["AuthEvent"] = PdfName.DocOpen,
                     ["Length"] = new PdfInteger(32)
                 })
             })

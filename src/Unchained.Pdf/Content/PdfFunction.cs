@@ -67,7 +67,7 @@ internal sealed class PdfFunction
         };
         if (dict is null) return null;
 
-        var ft = (int)(dict.Get<PdfInteger>(PdfName.Get("FunctionType"))?.Value ?? -1);
+        var ft = (int)(dict.Get<PdfInteger>(PdfName.FunctionType)?.Value ?? -1);
         var domain = ReadDoubles(dict["Domain"]) ?? [0, 1];
 
         switch (ft)

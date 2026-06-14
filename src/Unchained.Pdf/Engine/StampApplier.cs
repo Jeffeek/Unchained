@@ -2,6 +2,7 @@ using System.Buffers;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
@@ -158,7 +159,7 @@ public sealed class StampApplier : IStampApplier
         }
 
         // Merge /Resources /Font
-        var existingResources = ResolveDict(page[PdfName.Resources], core);
+        var existingResources = core.ResolveDict(page[PdfName.Resources]);
         var existingFonts = existingResources?.Get<PdfDictionary>(PdfName.Font);
         var fontEntries = existingFonts?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value) ?? new Dictionary<string, PdfObject>();
         fontEntries[StampFontKey] = fontRef;
@@ -178,18 +179,11 @@ public sealed class StampApplier : IStampApplier
         return new PdfDictionary(entries);
     }
 
-    private static PdfDictionary? ResolveDict(PdfObject? obj, PdfDocumentCore core) => obj switch
-    {
-        PdfDictionary d => d,
-        PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-        _ => null
-    };
-
     private static PdfDictionary MakeFontDict(string baseFontName) =>
         new(new Dictionary<string, PdfObject>
         {
             [PdfName.Type.Value] = PdfName.Font,
-            [PdfName.Subtype.Value] = PdfName.Get("Type1"),
+            [PdfName.Subtype.Value] = PdfName.Type1,
             [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
         });
 }

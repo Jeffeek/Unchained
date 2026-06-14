@@ -2,9 +2,15 @@
 # Fetch native binaries required by Unchained.Drawing.Runtimes.
 #
 # Usage:
-#   bash scripts/FetchNatives/fetch-natives.sh [--rid <rid>]
+#   bash scripts/FetchNatives/fetch-natives.sh [--rid <rid>] [--pin]
 #
 #   If --rid is omitted the script auto-detects the current host RID.
+#   --pin records the SHA-256 of the materialized binary into checksums.sha256
+#         (run on a trusted host, then commit + review the diff).
+#
+# Every fetched binary's SHA-256 is computed and printed. If checksums.sha256 has a
+# pinned hash for the RID, the binary is verified against it and the script FAILS on
+# mismatch. If no pin exists, the script warns and prints the value to pin.
 #
 # The FreeType2 native library is supplied by the FreeTypeSharp NuGet package for
 # Windows (x64/arm64/x86), macOS, and linux-x64. The ONLY platform FreeTypeSharp does
@@ -25,10 +31,12 @@ set -euo pipefail
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
 RID=""
+PIN=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --rid) RID="$2"; shift 2 ;;
+        --pin) PIN=1; shift ;;
         -h|--help)
             grep -E '^#' "$0" | sed 's/^# \{0,1\}//'
             exit 0 ;;
@@ -40,6 +48,7 @@ done
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/../.." && pwd)"
+checksums_file="${script_dir}/checksums.sha256"
 
 detect_host_rid() {
     local os arch
@@ -58,6 +67,64 @@ detect_host_rid() {
         *) echo "Unsupported host arch: $(uname -m)" >&2; exit 1 ;;
     esac
     echo "${os}-${arch}"
+}
+
+# ── Checksum helpers ────────────────────────────────────────────────────────────
+#
+# Compute the SHA-256 of a file, look up its pinned value in checksums.sha256, and
+# either verify (fail on mismatch), warn (no pin), or record it (--pin).
+
+compute_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{print $1}'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{print $1}'
+    else
+        echo "ERROR: neither sha256sum nor shasum is available." >&2; exit 1
+    fi
+}
+
+lookup_pin() {
+    # echoes the pinned hash for $1 (rid), or nothing if unpinned.
+    # '|| true' guards against grep/awk exiting 1 (no match) under 'set -e -o pipefail'.
+    [[ -f "$checksums_file" ]] || return 0
+    { grep -vE '^[[:space:]]*#' "$checksums_file" || true; } | awk -v rid="$1" '$1 == rid {print $2; exit}'
+}
+
+record_pin() {
+    # upsert "<rid>  <hash>" in checksums.sha256
+    local rid="$1" hash="$2" tmp
+    tmp="$(mktemp)"
+    if [[ -f "$checksums_file" ]]; then
+        grep -vE "^[[:space:]]*${rid}[[:space:]]" "$checksums_file" > "$tmp" || true
+    fi
+    printf '%-16s %s\n' "$rid" "$hash" >> "$tmp"
+    mv "$tmp" "$checksums_file"
+    echo "[${rid}] pinned SHA-256 recorded in ${checksums_file}"
+}
+
+verify_or_pin() {
+    # $1 = rid, $2 = path to materialized binary
+    local rid="$1" path="$2" actual pinned
+    actual="$(compute_sha256 "$path")"
+    echo "[${rid}] SHA-256: ${actual}"
+
+    if [[ "$PIN" -eq 1 ]]; then
+        record_pin "$rid" "$actual"
+        return 0
+    fi
+
+    pinned="$(lookup_pin "$rid")"
+    if [[ -z "$pinned" ]]; then
+        echo "[${rid}] WARNING: no pinned checksum. To pin, run with --pin on a trusted host." >&2
+    elif [[ "$pinned" != "$actual" ]]; then
+        echo "[${rid}] ERROR: checksum mismatch!" >&2
+        echo "         expected ${pinned}" >&2
+        echo "         actual   ${actual}" >&2
+        exit 1
+    else
+        echo "[${rid}] checksum verified against pin."
+    fi
 }
 
 # ── Library: FreeType2 (linux-arm64 only) ──────────────────────────────────────
@@ -87,6 +154,7 @@ _ft_linux_arm64() {
     # FreeTypeSharp's resolver looks for libfreetype.so (no version suffix).
     cp -f "$src" "${dest}/libfreetype.so"
     echo "[linux-arm64] -> ${dest}/libfreetype.so  (from ${src})"
+    verify_or_pin "linux-arm64" "${dest}/libfreetype.so"
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────

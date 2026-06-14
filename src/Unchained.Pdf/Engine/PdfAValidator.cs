@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using Unchained.Drawing.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -138,7 +139,7 @@ internal static class PdfAValidator
 
     private static void CheckFileId(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
-        var id = core.Trailer.Get<PdfArray>(PdfName.Get("ID"));
+        var id = core.Trailer.Get<PdfArray>(PdfName.ID);
         if (id is null || id.Count < 2)
             v.Add(E("6.1.3", "Trailer is missing required /ID array."));
     }
@@ -207,7 +208,7 @@ internal static class PdfAValidator
             if (type != "ExtGState" && type is not null)
                 continue; // skip non-ExtGState (unless no type)
 
-            if (dict[PdfName.Get("SMask")] is not null and not PdfName { Value: "None" })
+            if (dict[PdfName.SMask] is not null and not PdfName { Value: "None" })
                 v.Add(E("6.4", "Transparency /SMask is not permitted in PDF/A-1.", obj.ObjectNumber));
 
             var bm = dict.Get<PdfName>("BM");
@@ -244,7 +245,7 @@ internal static class PdfAValidator
             // Standard 14 fonts MUST be embedded in PDF/A-1
             var baseName = dict.GetName("BaseFont");
 
-            var descriptor = Resolve<PdfDictionary>(dict[PdfName.Get("FontDescriptor")], core);
+            var descriptor = Resolve<PdfDictionary>(dict[PdfName.FontDescriptor], core);
             if (descriptor is null)
             {
                 if (subtype is not ("Type3" or "Type0"))
@@ -253,9 +254,9 @@ internal static class PdfAValidator
                 continue;
             }
 
-            var hasFile = descriptor[PdfName.Get("FontFile")] is not null ||
-                          descriptor[PdfName.Get("FontFile2")] is not null ||
-                          descriptor[PdfName.Get("FontFile3")] is not null;
+            var hasFile = descriptor[PdfName.FontFile] is not null ||
+                          descriptor[PdfName.FontFile2] is not null ||
+                          descriptor[PdfName.FontFile3] is not null;
 
             if (!hasFile)
             {
@@ -285,12 +286,7 @@ internal static class PdfAValidator
 
             foreach (var elem in annots.Elements)
             {
-                var dict = elem switch
-                {
-                    PdfDictionary d => d,
-                    PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-                    _ => null
-                };
+                var dict = core.ResolveDict(elem);
 
                 if (dict is null)
                     continue;
@@ -307,7 +303,7 @@ internal static class PdfAValidator
                     v.Add(E("6.5.3", $"/{subtype} annotation on page {page} does not have the Print flag (bit 3) set.", pageNumber: page));
 
                 // Widget annotations must have an appearance stream
-                if (subtype == "Widget" && dict[PdfName.Get("AP")] is null)
+                if (subtype == "Widget" && dict[PdfName.AP] is null)
                     v.Add(E("6.5.4", $"Widget annotation on page {page} is missing an appearance stream (/AP).", pageNumber: page));
             }
         }
@@ -320,7 +316,7 @@ internal static class PdfAValidator
             v.Add(E("6.6.1", "Catalog contains /AA (additional actions), which is not permitted in PDF/A-1."));
 
         // Catalog /OpenAction must not be a prohibited action
-        CheckActionDict(core.Catalog[PdfName.Get("OpenAction")], core, "catalog /OpenAction", v);
+        CheckActionDict(core.Catalog[PdfName.OpenAction], core, "catalog /OpenAction", v);
 
         // Scan all objects for prohibited action dicts
         foreach (var obj in core.CollectObjects())
@@ -329,10 +325,10 @@ internal static class PdfAValidator
                 continue;
 
             // Check /A entry (action on annotations, links, etc.)
-            CheckActionDict(dict[PdfName.Get("A")], core, $"object {obj.ObjectNumber}", v, obj.ObjectNumber);
+            CheckActionDict(dict[PdfName.A], core, $"object {obj.ObjectNumber}", v, obj.ObjectNumber);
 
             // Check /AA entry (additional actions on fields/pages)
-            if (dict[PdfName.Get("AA")] is not PdfDictionary aaDict)
+            if (dict[PdfName.AA] is not PdfDictionary aaDict)
                 continue;
 
             foreach (var (_, aAction) in aaDict.Entries)
@@ -351,12 +347,7 @@ internal static class PdfAValidator
         if (actionObj is null)
             return;
 
-        var dict = actionObj switch
-        {
-            PdfDictionary d => d,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-            _ => null
-        };
+        var dict = core.ResolveDict(actionObj);
 
         if (dict is null)
             return;
@@ -440,13 +431,13 @@ internal static class PdfAValidator
     {
         // /Names /EmbeddedFiles must not be present (for PDF/A-1 and PDF/A-2)
         var names = Resolve<PdfDictionary>(core.Catalog[PdfName.Names], core);
-        if (names?[PdfName.Get("EmbeddedFiles")] is not null)
+        if (names?[PdfName.EmbeddedFiles] is not null)
             v.Add(E("6.8", "Embedded file attachments (/Names /EmbeddedFiles) are not permitted in PDF/A-1/2."));
     }
 
     private static void CheckCollection(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
-        if (core.Catalog[PdfName.Get("Collection")] is not null)
+        if (core.Catalog[PdfName.Collection] is not null)
             v.Add(E("6.8", "/Collection (PDF Portfolio) is not permitted in PDF/A."));
     }
 

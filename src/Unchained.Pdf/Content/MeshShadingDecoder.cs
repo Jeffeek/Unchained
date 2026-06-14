@@ -22,14 +22,14 @@ internal static class MeshShadingDecoder
         try
         {
             var dict = stream.Dictionary;
-            var bpc = (int)(dict.Get<PdfInteger>(PdfName.Get("BitsPerCoordinate"))?.Value ?? 0);
-            var bpComp = (int)(dict.Get<PdfInteger>(PdfName.Get("BitsPerComponent"))?.Value ?? 0);
-            var bpf = (int)(dict.Get<PdfInteger>(PdfName.Get("BitsPerFlag"))?.Value ?? 0);
+            var bpc = (int)(dict.Get<PdfInteger>(PdfName.BitsPerCoordinate)?.Value ?? 0);
+            var bpComp = (int)(dict.Get<PdfInteger>(PdfName.BitsPerComponent)?.Value ?? 0);
+            var bpf = (int)(dict.Get<PdfInteger>(PdfName.BitsPerFlag)?.Value ?? 0);
             var decode = ReadDoubles(dict["Decode"]);
             if (bpc == 0 || bpComp == 0 || decode is null || decode.Length < 6)
                 return triangles;
 
-            var vpr = (int)(dict.Get<PdfInteger>(PdfName.Get("VerticesPerRow"))?.Value ?? 0);
+            var vpr = (int)(dict.Get<PdfInteger>(PdfName.VerticesPerRow)?.Value ?? 0);
             var fn = PdfFunction.Build(dict["Function"], core);
             // Colour component count: 1 when a /Function is present (single parametric input),
             // else the colour-space channel count inferred from the Decode array length.

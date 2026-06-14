@@ -104,7 +104,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
             var bm = items[i];
             var pageObjNum = pageObjNums.GetValueOrDefault(bm.PageNumber, 0);
             PdfObject destArr = pageObjNum > 0
-                ? new PdfArray([new PdfIndirectReference(pageObjNum, 0), PdfName.Get("Fit")])
+                ? new PdfArray([new PdfIndirectReference(pageObjNum, 0), PdfName.Fit])
                 : PdfNull.Instance;
 
             var dict = new Dictionary<string, PdfObject>

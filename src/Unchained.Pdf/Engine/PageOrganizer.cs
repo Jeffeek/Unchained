@@ -83,7 +83,7 @@ public sealed class PageOrganizer : IPageOrganizer
             var (objNum, dict) = leaves[i];
             if (targets.Contains(i + 1))
             {
-                var current = (int)(dict.Get<PdfInteger>(PdfName.Get("Rotate"))?.Value ?? 0L);
+                var current = (int)(dict.Get<PdfInteger>(PdfName.Rotate)?.Value ?? 0L);
                 var next = Normalize(relative ? current + degrees : degrees);
                 var entries = new Dictionary<string, PdfObject>(dict.Entries)
                 {

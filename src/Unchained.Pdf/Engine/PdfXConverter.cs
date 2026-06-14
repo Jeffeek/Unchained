@@ -40,8 +40,8 @@ internal static class PdfXConverter
         var intentObjNum = maxObj + 1;
         var intentDict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Get("OutputIntent"),
-            ["S"] = PdfName.Get("GTS_PDFX"),
+            ["Type"] = PdfName.OutputIntent,
+            ["S"] = PdfName.GTS_PDFX,
             ["OutputConditionIdentifier"] = PdfString.FromLatin1(outputConditionIdentifier),
             ["Info"] = PdfString.FromLatin1(outputConditionIdentifier),
             ["RegistryName"] = PdfString.FromLatin1("http://www.color.org")
@@ -54,8 +54,8 @@ internal static class PdfXConverter
         var xmpBytes = BuildPdfXXmp(profile, catalogEntries, core);
         var metaDict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Get("Metadata"),
-            ["Subtype"] = PdfName.Get("XML"),
+            ["Type"] = PdfName.Metadata,
+            ["Subtype"] = PdfName.XML,
             ["Length"] = new PdfInteger(xmpBytes.Length)
         });
         objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));

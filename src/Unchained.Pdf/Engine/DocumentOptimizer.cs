@@ -43,7 +43,7 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
 
             var newDict = new PdfDictionary(new Dictionary<string, PdfObject>(stream.Dictionary.Entries)
             {
-                [PdfName.Filter.Value] = PdfName.Get("FlateDecode"),
+                [PdfName.Filter.Value] = PdfName.FlateDecode,
                 [PdfName.Length.Value] = new PdfInteger(compressed.Length)
             });
             changed = true;

@@ -2,6 +2,7 @@ using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 
 namespace Unchained.Pdf.Engine;
 
@@ -109,13 +110,13 @@ public sealed class FormFiller : IFormFiller
             if (fieldDict.GetName("FT") != "Tx")
                 continue;
 
-            var ap = ResolveDict(fieldDict[PdfName.Get("AP")], adapter.Core);
-            var normalAp = ap is not null ? ResolveStream(ap[PdfName.Get("N")], adapter.Core) : null;
+            var ap = adapter.Core.ResolveDict(fieldDict[PdfName.AP]);
+            var normalAp = ap is not null ? ResolveStream(ap[PdfName.N], adapter.Core) : null;
             if (normalAp is null)
                 continue;
 
             // Find which page this widget annotation belongs to.
-            if (fieldDict[PdfName.Get("P")] is not PdfIndirectReference pageRef)
+            if (fieldDict[PdfName.P] is not PdfIndirectReference pageRef)
                 continue;
 
             var pageObj = existing.FirstOrDefault(o => o.ObjectNumber == pageRef.ObjectNumber);
@@ -179,7 +180,7 @@ public sealed class FormFiller : IFormFiller
             return new Dictionary<string, PdfIndirectObject>();
 
         var catalog = (PdfDictionary)acroFormObj.Value;
-        var acroForm = ResolveDict(catalog[PdfName.AcroForm], core);
+        var acroForm = core.ResolveDict(catalog[PdfName.AcroForm]);
         if (acroForm is null)
             return new Dictionary<string, PdfIndirectObject>();
 
@@ -209,7 +210,7 @@ public sealed class FormFiller : IFormFiller
             if (obj?.Value is not PdfDictionary dict)
                 continue;
 
-            var partialName = dict[PdfName.Get("T")] is PdfString ts
+            var partialName = dict[PdfName.T] is PdfString ts
                 ? Encoding.Latin1.GetString(ts.Bytes.Span)
                 : string.Empty;
             var fullName = prefix.Length > 0 ? $"{prefix}.{partialName}" : partialName;
@@ -238,13 +239,6 @@ public sealed class FormFiller : IFormFiller
         adapter.ReplaceCore(newDoc.Core);
     }
 
-    private static PdfDictionary? ResolveDict(PdfObject? obj, PdfDocumentCore core) => obj switch
-    {
-        PdfDictionary d => d,
-        PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
-        _ => null
-    };
-
     private static PdfStream? ResolveStream(PdfObject? obj, PdfDocumentCore core) => obj switch
     {
         PdfStream s => s,
@@ -261,7 +255,7 @@ public sealed class FormFiller : IFormFiller
             if (current.GetName("FT") is { } ft)
                 return ft;
 
-            current = ResolveDict(current["Parent"], core);
+            current = core.ResolveDict(current["Parent"]);
         }
 
         return null;
@@ -291,14 +285,14 @@ public sealed class FormFiller : IFormFiller
     // dictionary — the first key that is not "Off".
     private static string? OnStateName(PdfDictionary field, PdfDocumentCore core)
     {
-        var ap = ResolveDict(field["AP"], core);
+        var ap = core.ResolveDict(field["AP"]);
         // For a parent field, the appearance lives on the widget kid.
         if (ap is null && field.Get<PdfArray>(PdfName.Kids) is { Count: > 0 } kids
                        && kids[0] is PdfIndirectReference kr
                        && core.ResolveIndirect(kr.ObjectNumber).Value is PdfDictionary kidDict)
-            ap = ResolveDict(kidDict["AP"], core);
+            ap = core.ResolveDict(kidDict["AP"]);
 
-        var normal = ap is not null ? ResolveDict(ap["N"], core) : null;
+        var normal = ap is not null ? core.ResolveDict(ap["N"]) : null;
         if (normal is null)
             return null;
 

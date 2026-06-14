@@ -21,7 +21,7 @@
     <PackageTags>drawing;freetype;native;runtimes;dotnet;document-processing</PackageTags>
     <IsPackable>true</IsPackable>
     <PackageId>Unchained.Drawing.Runtimes</PackageId>
-    <IsUserFacingPackage>true</IsUserFacingPackage>
+    <IsUserFacingPackage>false</IsUserFacingPackage>
   </PropertyGroup>
 
   <!-- ── Linux arm64 (the only RID FreeTypeSharp omits) ───────────────────── -->
