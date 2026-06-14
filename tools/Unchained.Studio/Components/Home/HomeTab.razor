@@ -73,19 +73,6 @@
 </div>
 
 @code {
-
-    private sealed record FormatCard(
-        string Name,
-        string Tagline,
-        string Icon,
-        string Accent,
-        bool Enabled,
-        string Route,
-        string[] Features
-    );
-
-    private sealed record Capability(string Name, string Desc, string Icon);
-
     private readonly List<FormatCard> _formats =
     [
         new("PDF",

@@ -39,7 +39,7 @@
     public string Accept { get; set; } = ".pdf";
 
     [Parameter]
-    public long MaxSizeBytes { get; set; } = 100 * 1024 * 1024;
+    public long MaxSizeBytes { get; set; } = StudioConstants.MaxUploadBytes;
 
     [Parameter]
     public EventCallback<(byte[] Bytes, string FileName)> OnFileLoaded { get; set; }

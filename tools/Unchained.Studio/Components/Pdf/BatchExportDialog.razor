@@ -1,11 +1,11 @@
 @using System.Collections
-@using System.IO.Compression
 @using System.Text
 @using Unchained.Pdf.Abstractions
 @using Unchained.Pdf.Engine
 @inject DocumentProcessor Processor
 @inject RenderingService Renderer
 @inject FileExportService Exporter
+@inject PdfiumReferenceRenderer Pdfium
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 
@@ -95,11 +95,11 @@
                             </MudRadio>
                             <MudRadio Value="PageScope.FirstN" Color="Color.Primary" Dense="true">
                                 First
-                                <MudTextField @bind-Value="_firstN" T="int"
-                                              Variant="Variant.Text" Margin="Margin.Dense"
-                                              Style="width:40px;display:inline-block;margin:0 4px;"
-                                              Min="1" Max="999"
-                                              Disabled="@(_pageScope != PageScope.FirstN)"/>
+                                <MudNumericField @bind-Value="_firstN" T="int"
+                                                 Variant="Variant.Text" Margin="Margin.Dense"
+                                                 Style="width:40px;display:inline-block;margin:0 4px;"
+                                                 Min="1" Max="999"
+                                                 Disabled="@(_pageScope != PageScope.FirstN)"/>
                                 pages
                             </MudRadio>
                         </MudRadioGroup>
@@ -424,7 +424,7 @@
                         pdfiumCts.CancelAfter(PageTimeout);
                         try
                         {
-                            var pdfiumPng = await PdfiumReferenceRenderer.RenderPageAsync(entry.Bytes, page, _dpi, pdfiumCts.Token);
+                            var pdfiumPng = await Pdfium.RenderPageAsync(entry.Bytes, page, _dpi, pdfiumCts.Token);
                             if (pdfiumPng is not null)
                             {
                                 zipEntries.Add(($"{folderName}/pdfium/page_{page:D3}.png", pdfiumPng));
@@ -487,7 +487,7 @@
         _currentEntry = null;
         StateHasChanged();
 
-        var zipBytes = BuildZip(zipEntries);
+        var zipBytes = ZipBuilder.Build(zipEntries);
         await Exporter.TriggerDownloadAsync(zipBytes, $"{_zipName}.zip", "application/zip");
 
         _phase = Phase.Done;
@@ -632,24 +632,4 @@
 
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
-
-    private static byte[] BuildZip(List<(string Path, byte[] Data)> entries)
-    {
-        using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(
-                   ms,
-                   ZipArchiveMode.Create,
-                   true))
-        {
-            foreach (var (path, data) in entries)
-            {
-                var entry = zip.CreateEntry(path, CompressionLevel.Optimal);
-                using var stream = entry.Open();
-                stream.Write(data);
-            }
-        }
-
-        return ms.ToArray();
-    }
-
 }
