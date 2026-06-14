@@ -1,5 +1,6 @@
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 
 namespace Unchained.Pdf.Content;
 
@@ -76,7 +77,7 @@ internal sealed class PdfFunction
             {
                 var c0 = ReadDoubles(dict["C0"]) ?? [0.0];
                 var c1 = ReadDoubles(dict["C1"]) ?? [1.0];
-                var n = ReadDouble(dict["N"]) ?? 1.0;
+                var n = dict["N"].ReadIntOrRealNullable() ?? 1.0;
                 return new PdfFunction(2,
                     domain,
                     c0,
@@ -172,9 +173,7 @@ internal sealed class PdfFunction
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj switch
     {
-        PdfArray a => a.Elements.Select(static e => e.ToDouble()).ToArray(),
+        PdfArray a => a.Elements.Select(static e => e.ReadIntOrReal()).ToArray(),
         _ => null
     };
-
-    private static double? ReadDouble(PdfObject? obj) => obj.ToDoubleOrNull();
 }

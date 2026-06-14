@@ -125,23 +125,23 @@ internal static class PdfSigner
     {
         var entries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Sig,
-            ["Filter"] = PdfName.AdobePPKLite,
+            [PdfName.Type.Value] = PdfName.Sig,
+            [PdfName.Filter.Value] = PdfName.AdobePPKLite,
             // ReSharper disable once StringLiteralTypo
-            ["SubFilter"] = PdfName.AdbePkcs7Detached,
+            [PdfName.SubFilter.Value] = PdfName.AdbePkcs7Detached,
             // Placeholder array — patched in Step 6
-            ["ByteRange"] = ByteRangePlaceholder,
+            [PdfName.ByteRange.Value] = ByteRangePlaceholder,
             // Placeholder hex-zero string — patched in Step 9
-            ["Contents"] = new PdfString(new byte[SignatureReservedBytes], true),
-            ["M"] = PdfString.FromLatin1(FormatPdfDate(now))
+            [PdfName.Contents.Value] = new PdfString(new byte[SignatureReservedBytes], true),
+            [PdfName.M.Value] = PdfString.FromLatin1(FormatPdfDate(now))
         };
 
         if (opts.Reason is not null)
-            entries["Reason"] = PdfString.FromLatin1(opts.Reason);
+            entries[PdfName.Reason.Value] = PdfString.FromLatin1(opts.Reason);
         if (opts.Location is not null)
-            entries["Location"] = PdfString.FromLatin1(opts.Location);
+            entries[PdfName.Location.Value] = PdfString.FromLatin1(opts.Location);
         if (opts.ContactInfo is not null)
-            entries["ContactInfo"] = PdfString.FromLatin1(opts.ContactInfo);
+            entries[PdfName.ContactInfo.Value] = PdfString.FromLatin1(opts.ContactInfo);
 
         return new PdfDictionary(entries);
     }
@@ -149,17 +149,17 @@ internal static class PdfSigner
     private static PdfDictionary BuildSignatureFieldDict(PdfObject sigValueRef, string fieldName) =>
         new(new Dictionary<string, PdfObject>
         {
-            ["FT"] = PdfName.Sig,
-            ["Type"] = PdfName.Annot,
-            ["Subtype"] = PdfName.Widget,
-            ["T"] = PdfString.FromLatin1(fieldName),
-            ["V"] = sigValueRef,
+            [PdfName.FT.Value] = PdfName.Sig,
+            [PdfName.Type.Value] = PdfName.Annot,
+            [PdfName.Subtype.Value] = PdfName.Widget,
+            [PdfName.T.Value] = PdfString.FromLatin1(fieldName),
+            [PdfName.V.Value] = sigValueRef,
             // Zero-size invisible widget — no visual appearance required
-            ["Rect"] = new PdfArray([
+            [PdfName.Rect.Value] = new PdfArray([
                 new PdfInteger(0), new PdfInteger(0),
                 new PdfInteger(0), new PdfInteger(0)
             ]),
-            ["F"] = new PdfInteger(4) // Print flag
+            [PdfName.F.Value] = new PdfInteger(4) // Print flag
         });
 
     // ── Catalog mutation ──────────────────────────────────────────────────────

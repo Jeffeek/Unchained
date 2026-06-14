@@ -2,6 +2,7 @@ using Unchained.Drawing.Primitives;
 using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -369,7 +370,7 @@ internal static class MeshShadingDecoder
             c.B);
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj is PdfArray a
-        ? a.Elements.Select(static e => e.ToDouble()).ToArray()
+        ? a.Elements.Select(static e => e.ReadIntOrReal()).ToArray()
         : null;
 
     // ── Vertex / point / colour readers ─────────────────────────────────────────

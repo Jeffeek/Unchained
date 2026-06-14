@@ -96,9 +96,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
                     ? Encoding.Latin1.GetString(ks.Bytes.Span)
                     : (namesArr[i] as PdfName)?.Value ?? string.Empty;
 
-                var fileSpec = namesArr[i + 1] is PdfIndirectReference r
-                    ? core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary
-                    : namesArr[i + 1] as PdfDictionary;
+                var fileSpec = core.ResolveDict(namesArr[i + 1]);
 
                 if (fileSpec is null || key.Length == 0) continue;
 

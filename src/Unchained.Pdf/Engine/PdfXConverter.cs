@@ -40,11 +40,11 @@ internal static class PdfXConverter
         var intentObjNum = maxObj + 1;
         var intentDict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.OutputIntent,
-            ["S"] = PdfName.GTS_PDFX,
-            ["OutputConditionIdentifier"] = PdfString.FromLatin1(outputConditionIdentifier),
-            ["Info"] = PdfString.FromLatin1(outputConditionIdentifier),
-            ["RegistryName"] = PdfString.FromLatin1("http://www.color.org")
+            [PdfName.Type.Value] = PdfName.OutputIntent,
+            [PdfName.S.Value] = PdfName.GTS_PDFX,
+            [PdfName.OutputConditionIdentifier.Value] = PdfString.FromLatin1(outputConditionIdentifier),
+            [PdfName.Info.Value] = PdfString.FromLatin1(outputConditionIdentifier),
+            [PdfName.RegistryName.Value] = PdfString.FromLatin1("http://www.color.org")
         });
         objects.Add(new PdfIndirectObject(intentObjNum, 0, intentDict));
         catalogEntries["OutputIntents"] = new PdfArray([new PdfIndirectReference(intentObjNum, 0)]);
@@ -54,9 +54,9 @@ internal static class PdfXConverter
         var xmpBytes = BuildPdfXXmp(profile, catalogEntries, core);
         var metaDict = new PdfDictionary(new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Metadata,
-            ["Subtype"] = PdfName.XML,
-            ["Length"] = new PdfInteger(xmpBytes.Length)
+            [PdfName.Type.Value] = PdfName.Metadata,
+            [PdfName.Subtype.Value] = PdfName.XML,
+            [PdfName.Length.Value] = new PdfInteger(xmpBytes.Length)
         });
         objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
         catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
@@ -92,12 +92,12 @@ internal static class PdfXConverter
             [PdfName.Root.Value] = core.Trailer[PdfName.Root]!,
             [PdfName.Info.Value] = new PdfIndirectReference(infoObjNum, 0)
         };
-        if (core.Trailer["ID"] is { } id)
-            trailerEntries["ID"] = id;
+        if (core.Trailer[PdfName.ID.Value] is { } id)
+            trailerEntries[PdfName.ID.Value] = id;
         else
         {
             var hex = new string('0', 32);
-            trailerEntries["ID"] = new PdfArray([
+            trailerEntries[PdfName.ID.Value] = new PdfArray([
                 new PdfString(Encoding.Latin1.GetBytes(hex), true),
                 new PdfString(Encoding.Latin1.GetBytes(hex), true)
             ]);

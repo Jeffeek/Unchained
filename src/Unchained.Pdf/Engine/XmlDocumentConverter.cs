@@ -5,6 +5,7 @@ using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.Converters;
+using Unchained.Pdf.Engine.PageResources;
 
 namespace Unchained.Pdf.Engine;
 
@@ -314,11 +315,6 @@ internal static class XmlDocumentConverter
         var mb = pageDict.Get<PdfArray>(PdfName.MediaBox);
         if (mb is null || mb.Count <= index) return index == 2 ? 595f : 842f;
 
-        return mb[index] switch
-        {
-            PdfReal r => (float)r.Value,
-            PdfInteger i => i.Value,
-            _ => index == 2 ? 595f : 842f
-        };
+        return (float)mb[index].ReadIntOrReal(index == 2 ? 595f : 842f);
     }
 }

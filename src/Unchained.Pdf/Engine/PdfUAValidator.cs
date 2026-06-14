@@ -602,8 +602,7 @@ internal static class PdfUAValidator
                 var resolved = kid switch
                 {
                     PdfDictionary d => d,
-                    PdfIndirectReference r when visited.Add(r.ObjectNumber) =>
-                        c.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+                    PdfIndirectReference r when visited.Add(r.ObjectNumber) => c.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
                     _ => null
                 };
 

@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
@@ -51,10 +52,10 @@ internal static class PdfSignatureVerifier
         if (byteRange is null || byteRange.Count < 4)
             return Invalid(fieldName, "Missing or malformed /ByteRange.");
 
-        var off0 = ReadLong(byteRange[0]);
-        var len0 = ReadLong(byteRange[1]);
-        var off1 = ReadLong(byteRange[2]);
-        var len1 = ReadLong(byteRange[3]);
+        var off0 = byteRange[0].ReadInt(-1);
+        var len0 = byteRange[1].ReadInt(-1);
+        var off1 = byteRange[2].ReadInt(-1);
+        var len1 = byteRange[3].ReadInt(-1);
 
         if (off0 < 0 || len0 <= 0 || off1 < 0 || len1 <= 0 ||
             off0 + len0 > pdfBytes.Length || off1 + len1 > pdfBytes.Length)
@@ -71,8 +72,8 @@ internal static class PdfSignatureVerifier
 
         // Reconstruct the signed byte ranges (everything except the /Contents hex literal)
         var signedContent = new byte[len0 + len1];
-        pdfBytes.AsSpan((int)off0, (int)len0).CopyTo(signedContent);
-        pdfBytes.AsSpan((int)off1, (int)len1).CopyTo(signedContent.AsSpan((int)len0));
+        pdfBytes.AsSpan(off0, len0).CopyTo(signedContent);
+        pdfBytes.AsSpan(off1, len1).CopyTo(signedContent.AsSpan(len0));
 
         // Extract metadata
         var reason = ReadString(sigValue, "Reason");
@@ -192,13 +193,6 @@ internal static class PdfSignatureVerifier
         T direct => direct,
         PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as T,
         _ => null
-    };
-
-    private static long ReadLong(PdfObject obj) => obj switch
-    {
-        PdfInteger i => i.Value,
-        PdfReal r => (long)r.Value,
-        _ => -1
     };
 
     private static string? ReadString(PdfDictionary dict, string key) =>

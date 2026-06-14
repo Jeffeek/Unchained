@@ -1,5 +1,6 @@
 using System.Text;
 using Unchained.Pdf.Core;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Content;
@@ -69,9 +70,9 @@ internal static class TextExtractor
                 {
                     double[] m =
                     [
-                        op.Operands[0].ToDouble(), op.Operands[1].ToDouble(),
-                        op.Operands[2].ToDouble(), op.Operands[3].ToDouble(),
-                        op.Operands[4].ToDouble(), op.Operands[5].ToDouble()
+                        op.Operands[0].ReadIntOrReal(), op.Operands[1].ReadIntOrReal(),
+                        op.Operands[2].ReadIntOrReal(), op.Operands[3].ReadIntOrReal(),
+                        op.Operands[4].ReadIntOrReal(), op.Operands[5].ReadIntOrReal()
                     ];
                     ctm = MultiplyMatrix(m, ctm); // cm pre-concatenates: CTM = m × CTM
                     break;
@@ -107,37 +108,37 @@ internal static class TextExtractor
                 {
                     var resName = (op.Operands[0] as PdfName)?.Value ?? string.Empty;
                     fontName = fontNameMap.GetValueOrDefault(resName, resName);
-                    fontSize = op.Operands[1].ToDouble();
+                    fontSize = op.Operands[1].ReadIntOrReal();
                     break;
                 }
 
                 // ── Text state parameters ─────────────────────────────────────
                 case "Tc" when op.Operands.Count >= 1:
                 {
-                    tc = op.Operands[0].ToDouble();
+                    tc = op.Operands[0].ReadIntOrReal();
                     break;
                 }
                 case "Tw" when op.Operands.Count >= 1:
                 {
-                    tw = op.Operands[0].ToDouble();
+                    tw = op.Operands[0].ReadIntOrReal();
                     break;
                 }
                 case "Tz" when op.Operands.Count >= 1:
                 {
-                    th = op.Operands[0].ToDouble();
+                    th = op.Operands[0].ReadIntOrReal();
                     break;
                 }
                 case "TL" when op.Operands.Count >= 1:
                 {
-                    tl = op.Operands[0].ToDouble();
+                    tl = op.Operands[0].ReadIntOrReal();
                     break;
                 }
 
                 // ── Text positioning ──────────────────────────────────────────
                 case "Td" when inText && op.Operands.Count >= 2:
                 {
-                    var tx = op.Operands[0].ToDouble();
-                    var ty = op.Operands[1].ToDouble();
+                    var tx = op.Operands[0].ReadIntOrReal();
+                    var ty = op.Operands[1].ReadIntOrReal();
                     MoveLine(
                         tx,
                         ty,
@@ -158,8 +159,8 @@ internal static class TextExtractor
                 }
                 case "TD" when inText && op.Operands.Count >= 2:
                 {
-                    var tx = op.Operands[0].ToDouble();
-                    var ty = op.Operands[1].ToDouble();
+                    var tx = op.Operands[0].ReadIntOrReal();
+                    var ty = op.Operands[1].ReadIntOrReal();
                     tl = -ty;
                     MoveLine(
                         tx,
@@ -202,12 +203,12 @@ internal static class TextExtractor
                 case "Tm" when inText && op.Operands.Count >= 6:
                 {
                     // Tm a b c d e f — set both text and line matrix directly.
-                    tmA = op.Operands[0].ToDouble();
-                    tmB = op.Operands[1].ToDouble();
-                    tmC = op.Operands[2].ToDouble();
-                    tmD = op.Operands[3].ToDouble();
-                    tmE = op.Operands[4].ToDouble();
-                    tmF = op.Operands[5].ToDouble();
+                    tmA = op.Operands[0].ReadIntOrReal();
+                    tmB = op.Operands[1].ReadIntOrReal();
+                    tmC = op.Operands[2].ReadIntOrReal();
+                    tmD = op.Operands[3].ReadIntOrReal();
+                    tmE = op.Operands[4].ReadIntOrReal();
+                    tmF = op.Operands[5].ReadIntOrReal();
                     tlmA = tmA;
                     tlmB = tmB;
                     tlmC = tmC;
@@ -276,8 +277,8 @@ internal static class TextExtractor
                 }
                 case "\"" when inText && op.Operands.Count >= 3:
                 {
-                    tw = op.Operands[0].ToDouble();
-                    tc = op.Operands[1].ToDouble();
+                    tw = op.Operands[0].ReadIntOrReal();
+                    tc = op.Operands[1].ReadIntOrReal();
                     MoveLine(
                         0,
                         -tl,

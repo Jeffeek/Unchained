@@ -347,8 +347,8 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
 
             var encObjNum = maxObjNum + 1;
             var encryptRef = new PdfIndirectReference(encObjNum, 0);
-            trailerEntries["Encrypt"] = encryptRef;
-            trailerEntries["ID"] = new PdfArray([new PdfString(fileId), new PdfString(fileId)]);
+            trailerEntries[PdfName.Encrypt.Value] = encryptRef;
+            trailerEntries[PdfName.ID.Value] = new PdfArray([new PdfString(fileId), new PdfString(fileId)]);
             trailerEntries[PdfName.Size.Value] = new PdfInteger(encObjNum + 1);
 
             // Encrypt all objects except the /Encrypt dict itself.

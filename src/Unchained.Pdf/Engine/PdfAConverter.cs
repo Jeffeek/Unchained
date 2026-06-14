@@ -244,11 +244,11 @@ internal static class PdfAConverter
 
         // /ID is required by PDF/A — preserve existing or generate new
         var existingId = core.Trailer.Get<PdfArray>(PdfName.ID);
-        entries["ID"] = existingId
-                        ?? new PdfArray([
-                            new PdfString(RandomNumberGenerator.GetBytes(16), true),
-                            new PdfString(RandomNumberGenerator.GetBytes(16), true)
-                        ]);
+        entries[PdfName.ID.Value] = existingId
+                                    ?? new PdfArray([
+                                        new PdfString(RandomNumberGenerator.GetBytes(16), true),
+                                        new PdfString(RandomNumberGenerator.GetBytes(16), true)
+                                    ]);
 
         return new PdfDictionary(entries);
     }

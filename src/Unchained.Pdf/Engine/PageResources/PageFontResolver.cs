@@ -209,9 +209,7 @@ internal static class PageFontResolver
 
         foreach (var (resName, fontObj) in fontDict.Entries)
         {
-            var font = fontObj is PdfIndirectReference r
-                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary
-                : fontObj as PdfDictionary;
+            var font = core.ResolveDict(fontObj);
             if (font is null) continue;
             if (font.GetName("Subtype") != "Type3") continue;
 

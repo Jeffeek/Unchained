@@ -5,6 +5,7 @@ using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
@@ -117,18 +118,18 @@ public sealed class Redactor : IRedactor
                     tlm = Matrix2D.Identity();
                 break;
                 case "Tf" when op.Operands.Count >= 2:
-                    op.Operands[1].ToDouble();
+                    op.Operands[1].ReadIntOrReal();
                 break;
                 case "TL" when op.Operands.Count >= 1:
-                    leading = op.Operands[0].ToDouble();
+                    leading = op.Operands[0].ReadIntOrReal();
                 break;
                 case "Td" when op.Operands.Count >= 2:
-                    tlm = Matrix2D.Multiply(Matrix2D.Translate(op.Operands[0].ToDouble(), op.Operands[1].ToDouble()), tlm);
+                    tlm = Matrix2D.Multiply(Matrix2D.Translate(op.Operands[0].ReadIntOrReal(), op.Operands[1].ReadIntOrReal()), tlm);
                     tm = (double[])tlm.Clone();
                 break;
                 case "TD" when op.Operands.Count >= 2:
-                    leading = -op.Operands[1].ToDouble();
-                    tlm = Matrix2D.Multiply(Matrix2D.Translate(op.Operands[0].ToDouble(), op.Operands[1].ToDouble()), tlm);
+                    leading = -op.Operands[1].ReadIntOrReal();
+                    tlm = Matrix2D.Multiply(Matrix2D.Translate(op.Operands[0].ReadIntOrReal(), op.Operands[1].ReadIntOrReal()), tlm);
                     tm = (double[])tlm.Clone();
                 break;
                 case "Tm" when op.Operands.Count >= 6:
@@ -276,7 +277,7 @@ public sealed class Redactor : IRedactor
 
     private static double[] ReadMatrix(ContentOperator op) =>
     [
-        op.Operands[0].ToDouble(), op.Operands[1].ToDouble(), op.Operands[2].ToDouble(),
-        op.Operands[3].ToDouble(), op.Operands[4].ToDouble(), op.Operands[5].ToDouble()
+        op.Operands[0].ReadIntOrReal(), op.Operands[1].ReadIntOrReal(), op.Operands[2].ReadIntOrReal(),
+        op.Operands[3].ReadIntOrReal(), op.Operands[4].ReadIntOrReal(), op.Operands[5].ReadIntOrReal()
     ];
 }

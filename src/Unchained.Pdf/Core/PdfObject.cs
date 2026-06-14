@@ -633,6 +633,16 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     /// <summary>The <c>/V</c> name (the value of a form field, or the version entry in some dictionaries).</summary>
     public static readonly PdfName V = Get("V");
 
+    public static readonly PdfName OutputConditionIdentifier = Get("OutputConditionIdentifier");
+    public static readonly PdfName RegistryName = Get("RegistryName");
+    public static readonly PdfName SubFilter = Get("SubFilter");
+    public static readonly PdfName ByteRange = Get("ByteRange");
+    public static readonly PdfName M = Get("M");
+    public static readonly PdfName Reason = Get("Reason");
+    public static readonly PdfName Location = Get("Location");
+    public static readonly PdfName ContactInfo = Get("ContactInfo");
+    public static readonly PdfName FT = Get("FT");
+
     private PdfName(string value) => Value = value;
 
     /// <summary>The name string without the leading <c>/</c> delimiter.</summary>

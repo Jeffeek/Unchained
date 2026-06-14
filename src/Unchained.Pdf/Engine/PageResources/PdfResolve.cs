@@ -35,17 +35,28 @@ internal static class PdfResolve
 
     extension(PdfObject? obj)
     {
-        internal double ReadIntOrReal() => obj switch
+        internal double ReadIntOrReal(double fallback = 0) =>
+            (double)obj.ReadIntOrRealNullable(fallback)!;
+
+        internal double? ReadIntOrRealNullable(double? fallback = null) => obj switch
         {
             PdfInteger i => i.Value,
             PdfReal r => r.Value,
-            _ => 0
+            _ => fallback
         };
 
-        internal float ReadFloat() => (float)ReadIntOrReal(obj);
+        internal float ReadFloat(float fallback = 0) => (float)obj.ReadIntOrReal(fallback);
+
+        internal long ReadLong(long fallback = 0) => (long)obj.ReadIntOrReal(fallback);
+
+        internal int ReadInt(int fallback = 0) => (int)obj.ReadIntOrReal(fallback);
 
         internal float[]? ReadFloatArray() => obj is PdfArray a
-            ? a.Elements.Select(ReadFloat).ToArray()
+            ? a.Elements.Select(static x => x.ReadFloat()).ToArray()
+            : null;
+
+        internal double[]? ReadDoubleArray() => obj is PdfArray a
+            ? a.Elements.Select(static x => x.ReadIntOrReal()).ToArray()
             : null;
     }
 

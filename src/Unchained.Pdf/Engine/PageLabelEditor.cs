@@ -72,9 +72,7 @@ public sealed class PageLabelEditor : IPageLabelEditor
             for (var i = 0; i + 1 < nums.Count; i += 2)
             {
                 var pageIdx = (int)(nums[i] is PdfInteger pi ? pi.Value : 0);
-                var labelDict = nums[i + 1] is PdfIndirectReference r
-                    ? core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary
-                    : nums[i + 1] as PdfDictionary;
+                var labelDict = core.ResolveDict(nums[i + 1]);
 
                 if (labelDict is null) continue;
 

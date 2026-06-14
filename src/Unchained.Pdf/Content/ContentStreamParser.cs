@@ -2,6 +2,7 @@ using System.Text;
 using Unchained.Drawing.Primitives;
 using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing;
 using Unchained.Pdf.Parsing.Filters;
@@ -64,7 +65,7 @@ internal static class ContentStreamParser
                         lexer.ReadNext();
                         var opName = Encoding.Latin1.GetString(raw);
 
-                        if (opName == "ID")
+                        if (opName == PdfName.ID.Value)
                         {
                             // The operands accumulated since `BI` are the image dict key-value
                             // pairs (§8.9.7).  Decode the image and emit a BI operator.
@@ -127,10 +128,10 @@ internal static class ContentStreamParser
                     dict[key.Value] = operands[i + 1];
             }
 
-            var w = GetInt(dict, "W", "Width", 0);
-            var h = GetInt(dict, "H", "Height", 0);
-            var bpc = GetInt(dict, "BPC", "BitsPerComponent", 8);
-            var cs = GetName(dict, "CS", "ColorSpace");
+            var w = GetInt(dict, "W", PdfName.Width.Value, 0);
+            var h = GetInt(dict, "H", PdfName.Height.Value, 0);
+            var bpc = GetInt(dict, "BPC", PdfName.BitsPerComponent.Value, 8);
+            var cs = GetName(dict, "CS", PdfName.ColorSpace.Value);
             var filters = GetFilters(dict);
 
             if (w <= 0 || h <= 0) return null;
@@ -179,12 +180,7 @@ internal static class ContentStreamParser
     )
     {
         var obj = dict.GetValueOrDefault(abbr) ?? dict.GetValueOrDefault(full);
-        return obj switch
-        {
-            PdfInteger n => (int)n.Value,
-            PdfReal r => (int)r.Value,
-            _ => fallback
-        };
+        return (int)obj.ReadIntOrReal(fallback);
     }
 
     private static string? GetName(
@@ -277,7 +273,7 @@ internal static class ContentStreamParser
     // names applied in sequence (§8.9.7). Returns an empty list when no filter is present.
     private static List<string> GetFilters(IReadOnlyDictionary<string, PdfObject> dict)
     {
-        var obj = dict.GetValueOrDefault("F") ?? dict.GetValueOrDefault("Filter");
+        var obj = dict.GetValueOrDefault(PdfName.F.Value) ?? dict.GetValueOrDefault(PdfName.Filter.Value);
         var result = new List<string>();
         switch (obj)
         {

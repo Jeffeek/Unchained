@@ -232,12 +232,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
                 var elem = box[index];
                 if (elem is PdfIndirectReference er)
                     elem = core.ResolveIndirect(er.ObjectNumber).Value;
-                return elem switch
-                {
-                    PdfInteger i => i.Value,
-                    PdfReal r2 => r2.Value,
-                    _ => null
-                };
+                return elem.ReadIntOrRealNullable();
             }
 
             current = dict[PdfName.Parent];

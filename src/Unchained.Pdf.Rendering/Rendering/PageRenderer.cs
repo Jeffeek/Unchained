@@ -2,6 +2,7 @@ using Unchained.Drawing;
 using Unchained.Drawing.Primitives;
 using Unchained.Drawing.Text;
 using Unchained.Pdf.Core;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Rendering.Rendering;
@@ -172,7 +173,7 @@ internal sealed partial class PageRenderer(
             case "sc" or "SC" when op.Operands.Count >= 1:
             {
                 var nums = op.Operands.Where(static o => o is PdfInteger or PdfReal)
-                    .Select(static o => o.ToDouble()).ToArray();
+                    .Select(static o => o.ReadIntOrReal()).ToArray();
                 var csName = op.Name == "sc" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
                 var (r2, g2, b2) = ResolveColorComponents(nums, csName);
                 if (op.Name == "sc") SetFillRgb(r2, g2, b2);
@@ -193,7 +194,7 @@ internal sealed partial class PageRenderer(
                     case > 0 when !isPattern:
                     {
                         var csName = op.Name == "scn" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
-                        var components = nums.Select(static o => o.ToDouble()).ToArray();
+                        var components = nums.Select(static o => o.ReadIntOrReal()).ToArray();
                         var (r2, g2, b2) = ResolveColorComponents(components, csName);
                         if (op.Name == "scn") SetFillRgb(r2, g2, b2);
                         else SetStrokeRgb(r2, g2, b2);
@@ -205,21 +206,21 @@ internal sealed partial class PageRenderer(
                         {
                             case 1:
                             {
-                                var v = nums[0].ToDouble();
+                                var v = nums[0].ReadIntOrReal();
                                 if (op.Name == "scn") SetFillGray(v);
                                 else SetStrokeGray(v);
                                 break;
                             }
                             case 3:
                             {
-                                var (r2, g2, b2) = (nums[0].ToDouble(), nums[1].ToDouble(), nums[2].ToDouble());
+                                var (r2, g2, b2) = (nums[0].ReadIntOrReal(), nums[1].ReadIntOrReal(), nums[2].ReadIntOrReal());
                                 if (op.Name == "scn") SetFillRgb(r2, g2, b2);
                                 else SetStrokeRgb(r2, g2, b2);
                                 break;
                             }
                             case 4:
                             {
-                                var (r2, g2, b2) = CmykToRgb(nums[0].ToDouble(), nums[1].ToDouble(), nums[2].ToDouble(), nums[3].ToDouble());
+                                var (r2, g2, b2) = CmykToRgb(nums[0].ReadIntOrReal(), nums[1].ReadIntOrReal(), nums[2].ReadIntOrReal(), nums[3].ReadIntOrReal());
                                 if (op.Name == "scn") SetFillRgb(r2, g2, b2);
                                 else SetStrokeRgb(r2, g2, b2);
                                 break;
@@ -253,7 +254,7 @@ internal sealed partial class PageRenderer(
             {
                 // d [dashArray] dashPhase — store the on/off lengths (phase ignored).
                 _gs.DashLengths = op.Operands[0] is PdfArray da
-                    ? da.Elements.Select(static o => o.ToDouble()).Where(static v => v >= 0).ToArray()
+                    ? da.Elements.Select(static o => o.ReadIntOrReal()).Where(static v => v >= 0).ToArray()
                     : [];
                 break;
             }
@@ -502,7 +503,7 @@ internal sealed partial class PageRenderer(
         return s > RenderingConstants.Epsilon ? s : 1.0;
     }
 
-    private static double Num(ContentOperator op, int i) => op.Operands[i].ToDouble();
+    private static double Num(ContentOperator op, int i) => op.Operands[i].ReadIntOrReal();
 
     // Maps a PDF colour component in [0,1] to an 8-bit channel value. Truncates (matches the
     // historic renderer behaviour) rather than rounding — do not change without re-baselining
