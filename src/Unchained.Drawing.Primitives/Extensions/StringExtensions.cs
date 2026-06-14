@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Unchained.Drawing.Extensions;
+namespace Unchained.Drawing.Primitives.Extensions;
 
 internal static class StringExtensions
 {

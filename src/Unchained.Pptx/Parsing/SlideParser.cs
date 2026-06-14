@@ -311,7 +311,10 @@ internal sealed class SlideParser(OpcPackage package,
         }
 
         // Run-level hyperlinks across every text frame on the slide.
-        foreach (var run in from frame in ShapeTextWalker.EnumerateTextFrames(slide.Shapes) from paragraph in frame.Paragraphs from run in paragraph.Runs select run)
+        foreach (var run in from frame in ShapeTextWalker.EnumerateTextFrames(slide.Shapes)
+                            from paragraph in frame.Paragraphs
+                            from run in paragraph.Runs
+                            select run)
         {
             if (run.Format.Hyperlink is { } link)
                 ResolveRunHyperlinkTarget(slidePart, link);

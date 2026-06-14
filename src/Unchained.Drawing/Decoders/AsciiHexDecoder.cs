@@ -1,4 +1,4 @@
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Drawing.Decoders;
 

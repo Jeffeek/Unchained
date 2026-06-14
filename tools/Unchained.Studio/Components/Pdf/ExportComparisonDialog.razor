@@ -81,15 +81,6 @@
                 <div>
                     <MudText Typo="Typo.subtitle2" Class="mb-1">Output</MudText>
                     <MudRadioGroup @bind-Value="_outputMode" T="OutputMode">
-                        @if (_folderSaveSupported)
-                        {
-                            <MudRadio Value="OutputMode.Folder" Color="Color.Primary">
-                                Save to folder
-                                <MudText Typo="Typo.caption" Style="opacity:.6;display:block;">
-                                    You'll choose a folder; files are written directly (Chrome / Edge only)
-                                </MudText>
-                            </MudRadio>
-                        }
                         <MudRadio Value="OutputMode.Zip" Color="Color.Primary">
                             Download as ZIP
                             <MudText Typo="Typo.caption" Style="opacity:.6;display:block;">
@@ -192,9 +183,9 @@
     private string BuildFileNamePreview()
     {
         var baseName = Path.GetFileNameWithoutExtension(FileName);
-        return _outputMode == OutputMode.Folder
-            ? $"[chosen folder]/\n  {baseName}_page_001_unchained_{_dpi}dpi.png\n  {baseName}_page_001_pdfjs_{_dpi}dpi.png\n  …"
-            : $"{baseName}_comparison_{_dpi}dpi.zip\n  └ unchained/page_001.png\n  └ pdfjs/page_001.png\n  └ …";
+        return _outputMode == OutputMode.Zip
+            ? $"{baseName}_comparison_{_dpi}dpi.zip\n  └ unchained/page_001.png\n  └ pdfjs/page_001.png\n  └ …"
+            : throw new NotImplementedException();
     }
 
     private void Close() => MudDialog.Cancel();
@@ -320,11 +311,7 @@
             _progressDetail = string.Empty;
             StateHasChanged();
 
-            if (_outputMode == OutputMode.Folder && _folderSaveSupported)
-            {
-                await SaveToFolder(collected, baseName, ct);
-            }
-            else
+            if (_outputMode == OutputMode.Zip)
             {
                 await SaveAsZip(collected, baseName);
             }
@@ -337,33 +324,6 @@
                 await JS.InvokeVoidAsync("unchainedStudio.revokeBlobUrl", ct, blobUrl);
             _cts?.Dispose();
             _cts = null;
-        }
-    }
-
-    private async Task SaveToFolder(
-        IReadOnlyCollection<(string Name, byte[] Bytes)> files,
-        string baseName,
-        CancellationToken ct
-    )
-    {
-        // Build the flat list the JS side expects: [{name, base64}]
-        // We group by subfolder (unchained/ pdfjs/) but showDirectoryPicker
-        // doesn't create sub-directories automatically — so we flatten the
-        // name with a prefix and use underscores instead of slashes.
-        var flat = files.Select(static f => new
-        {
-            name = f.Name.Replace('/', '_'),
-            base64 = Convert.ToBase64String(f.Bytes)
-        }).ToArray<object?>();
-
-        try
-        {
-            await JS.InvokeVoidAsync("unchainedStudio.saveFilesToFolder", ct, flat);
-            Snackbar.Add($"Saved {files.Count} files to folder.", Severity.Success);
-        }
-        catch (JSException ex) when (ex.Message.Contains("AbortError") || ex.Message.Contains("cancelled"))
-        {
-            Snackbar.Add("Folder save cancelled.", Severity.Info);
         }
     }
 

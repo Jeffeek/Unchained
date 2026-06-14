@@ -28,7 +28,12 @@ internal static class PdfTestConstants
     ///     ZLib IDAT chunk starting at offset 33) into raw scanline bytes, also returning the
     ///     pixel dimensions and the per-row stride (1 filter byte + width × 4 RGBA bytes).
     /// </summary>
-    internal static byte[] DecodePdfEncoderPng(byte[] png, out int width, out int height, out int stride)
+    internal static byte[] DecodePdfEncoderPng(
+        byte[] png,
+        out int width,
+        out int height,
+        out int stride
+    )
     {
         width = (int)ReadUInt32BigEndian(png, 16);
         height = (int)ReadUInt32BigEndian(png, 20);

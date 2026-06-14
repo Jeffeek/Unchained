@@ -1,5 +1,5 @@
 using System.Text;
-using Unchained.Drawing;
+using Unchained.Drawing.Primitives;
 using Unchained.Drawing.Text;
 using Unchained.Drawing.Text.Extensions;
 using Unchained.Pdf.Core;
@@ -313,7 +313,7 @@ internal sealed partial class PageRenderer
             var wGlyph = info.Widths.TryGetValue(cid, out var w) ? w : info.DefaultWidth;
             var hScale = TextMatrixHorizontalScale();
             var advance = ((wGlyph / RenderingConstants.CidEmUnits * _gs.FontSize) + _gs.CharSpace) * hScale
-                                                                             * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
+                * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
             _gs.TextMatrix[4] += advance;
         }
     }
@@ -328,10 +328,12 @@ internal sealed partial class PageRenderer
                     ShowString(s.GetBinaryBytes().Span);
                 break;
                 case PdfInteger n:
-                    _gs.TextMatrix[4] -= n.Value / RenderingConstants.CidEmUnits * _gs.FontSize * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
+                    _gs.TextMatrix[4] -= n.Value / RenderingConstants.CidEmUnits * _gs.FontSize *
+                                         (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
                 break;
                 case PdfReal r:
-                    _gs.TextMatrix[4] -= r.Value / RenderingConstants.CidEmUnits * _gs.FontSize * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
+                    _gs.TextMatrix[4] -= r.Value / RenderingConstants.CidEmUnits * _gs.FontSize *
+                                         (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
                 break;
             }
         }
@@ -496,22 +498,21 @@ internal sealed partial class PageRenderer
             }
 
             // Close the contour back to the first point.
-            if (!first && contour.Length > 0)
-            {
-                var firstX = penX + contour[0].X;
-                var firstY = penY - contour[0].Y;
-                buffer.DrawLine(
-                    (int)prevX,
-                    (int)prevY,
-                    (int)firstX,
-                    (int)firstY,
-                    _gs.StrokeR,
-                    _gs.StrokeG,
-                    _gs.StrokeB,
-                    thickPx,
-                    _gs.StrokeA,
-                    _gs.BlendMode);
-            }
+            if (first || contour.Length <= 0) continue;
+
+            var firstX = penX + contour[0].X;
+            var firstY = penY - contour[0].Y;
+            buffer.DrawLine(
+                (int)prevX,
+                (int)prevY,
+                (int)firstX,
+                (int)firstY,
+                _gs.StrokeR,
+                _gs.StrokeG,
+                _gs.StrokeB,
+                thickPx,
+                _gs.StrokeA,
+                _gs.BlendMode);
         }
     }
 }

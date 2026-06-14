@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using Unchained.Drawing.Constants;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Drawing.Encoders;
 

@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -126,9 +126,9 @@ internal static class PdfSigner
         var entries = new Dictionary<string, PdfObject>
         {
             ["Type"] = PdfName.Sig,
-            ["Filter"] = PdfName.Adobe_PPKLite,
+            ["Filter"] = PdfName.AdobePPKLite,
             // ReSharper disable once StringLiteralTypo
-            ["SubFilter"] = PdfName.adbe_pkcs7_detached,
+            ["SubFilter"] = PdfName.AdbePkcs7Detached,
             // Placeholder array — patched in Step 6
             ["ByteRange"] = ByteRangePlaceholder,
             // Placeholder hex-zero string — patched in Step 9

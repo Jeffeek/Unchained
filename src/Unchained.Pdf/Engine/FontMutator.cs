@@ -1,6 +1,5 @@
-using Unchained.Drawing.Fonts;
+using Unchained.Drawing.Primitives.Fonts;
 using Unchained.Pdf.Core;
-using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;

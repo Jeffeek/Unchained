@@ -81,7 +81,7 @@
     private IEnumerable<TreeNode> VisibleChildren(IEnumerable<TreeNode> nodes) =>
         string.IsNullOrWhiteSpace(_filter) ? nodes : nodes.Where(NodeOrChildMatchesFilter);
 
-        private async Task OnExpandedChanged(TreeNode node, bool expanded)
+    private async Task OnExpandedChanged(TreeNode node, bool expanded)
     {
         node.IsExpanded = expanded;
 
@@ -99,10 +99,10 @@
     }
 
     private Task SelectNode(TreeNode node)
-        {
-            _selectedNode = node;
-            return SelectedNodeChanged.InvokeAsync(node);
-        }
+    {
+        _selectedNode = node;
+        return SelectedNodeChanged.InvokeAsync(node);
+    }
 
     private Task OnRefresh() => OnRefreshRequested.InvokeAsync();
 }

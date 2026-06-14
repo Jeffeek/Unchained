@@ -1,10 +1,10 @@
 using Unchained.Drawing;
+using Unchained.Drawing.Primitives;
 using Unchained.Drawing.Text;
-using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
-using Unchained.Ooxml.Media;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Media;
+using Unchained.Pptx.Rendering.Engine.Rasterizers;
 using Unchained.Pptx.Rendering.Models;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
@@ -16,12 +16,18 @@ namespace Unchained.Pptx.Rendering.Engine;
 ///     using FreeType2 for glyph rendering and HarfBuzz for text shaping.
 /// </summary>
 /// <remarks>
-///     The shape renderers share the injected <see cref="fonts" />/<see cref="media" /> and the
+///     The shape renderers share the injected parameters and the
 ///     <see cref="SeriesPalette" />, so they are organised as cohesive <c>partial</c> files
 ///     rather than independent collaborators:
 ///     <list type="bullet">
-///         <item><c>SlideRasterizer.cs</c> — pipeline orchestration, shape dispatch, groups, auto-shapes and shared helpers.</item>
-///         <item><c>SlideRasterizer.Effects.cs</c> — fills, gradients, bevels, drop shadows, WordArt warp, pictures and tables.</item>
+///         <item>
+///             <c>SlideRasterizer.cs</c> — pipeline orchestration, shape dispatch, groups, auto-shapes and shared
+///             helpers.
+///         </item>
+///         <item>
+///             <c>SlideRasterizer.Effects.cs</c> — fills, gradients, bevels, drop shadows, WordArt warp, pictures and
+///             tables.
+///         </item>
 ///         <item><c>SlideRasterizer.Text.cs</c> — text layout, measurement, font resolution and glyph blitting.</item>
 ///         <item><c>SlideRasterizer.Charts.cs</c> — chart plot/axis/legend rendering.</item>
 ///         <item><c>SlideRasterizer.SmartArt.cs</c> — SmartArt layout heuristics and renderers.</item>

@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;

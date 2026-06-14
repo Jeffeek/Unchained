@@ -1,8 +1,6 @@
-using System.IO.Compression;
 using System.Runtime.InteropServices;
 using HarfBuzzSharp;
 using Shouldly;
-using Unchained.Drawing.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;

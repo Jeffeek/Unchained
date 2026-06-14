@@ -19,14 +19,14 @@ internal static class PageFontResolver
     internal static Dictionary<string, string> ResolveFontNames(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, string>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
-        var fontDict = PdfResolve.ResolveDict(core, resources?[PdfName.Font]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
+        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
         if (fontDict is null)
             return result;
 
         foreach (var (key, value) in fontDict.Entries)
         {
-            var fontEntry = PdfResolve.ResolveDict(core, value);
+            var fontEntry = core.ResolveDict(value);
             var baseFontName = fontEntry?.GetName(PdfName.BaseFont.Value);
             if (baseFontName is not null)
                 result[key] = baseFontName;
@@ -38,14 +38,14 @@ internal static class PageFontResolver
     internal static IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, byte[]?>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
-        var fontDict = PdfResolve.ResolveDict(core, resources?[PdfName.Font]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
+        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
         if (fontDict is null)
             return result;
 
         foreach (var (key, value) in fontDict.Entries)
         {
-            var fontEntry = PdfResolve.ResolveDict(core, value);
+            var fontEntry = core.ResolveDict(value);
             if (fontEntry is null)
             {
                 result[key] = null;
@@ -63,7 +63,7 @@ internal static class PageFontResolver
                     descendants = core.ResolveIndirect(dr.ObjectNumber).Value;
                 var cidFont = descendants switch
                 {
-                    PdfArray { Count: > 0 } a => PdfResolve.ResolveDict(core, a[0]),
+                    PdfArray { Count: > 0 } a => core.ResolveDict(a[0]),
                     PdfDictionary d => d,
                     _ => null
                 };
@@ -71,7 +71,7 @@ internal static class PageFontResolver
                     descriptorHolder = cidFont;
             }
 
-            var descriptor = PdfResolve.ResolveDict(core, descriptorHolder[PdfName.FontDescriptor]);
+            var descriptor = core.ResolveDict(descriptorHolder[PdfName.FontDescriptor]);
             if (descriptor is null)
             {
                 result[key] = null;
@@ -104,14 +104,14 @@ internal static class PageFontResolver
     internal static IReadOnlyDictionary<string, CompositeFontInfo> GetCompositeFonts(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, CompositeFontInfo>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
-        var fontDict = PdfResolve.ResolveDict(core, resources?[PdfName.Font]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
+        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
         if (fontDict is null)
             return result;
 
         foreach (var (key, value) in fontDict.Entries)
         {
-            var fontEntry = PdfResolve.ResolveDict(core, value);
+            var fontEntry = core.ResolveDict(value);
             if (fontEntry is null || fontEntry.GetName(PdfName.Subtype.Value) != "Type0")
                 continue;
 
@@ -125,7 +125,7 @@ internal static class PageFontResolver
                 descendants = core.ResolveIndirect(dr.ObjectNumber).Value;
             var cidFont = descendants switch
             {
-                PdfArray { Count: > 0 } a => PdfResolve.ResolveDict(core, a[0]),
+                PdfArray { Count: > 0 } a => core.ResolveDict(a[0]),
                 PdfDictionary d => d,
                 _ => null
             };
@@ -154,7 +154,7 @@ internal static class PageFontResolver
 
             var dwInt = cidFont.Get<PdfInteger>(PdfName.DW)?.Value;
             var dwReal = cidFont.Get<PdfReal>(PdfName.DW)?.Value;
-            var dw = dwInt ?? (dwReal ?? 1000.0);
+            var dw = dwInt ?? dwReal ?? 1000.0;
             var widths = ParseCidWidths(core, cidFont["W"]);
 
             result[key] = new CompositeFontInfo(
@@ -171,13 +171,13 @@ internal static class PageFontResolver
     internal static IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>> GetToUnicodeMaps(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, IReadOnlyDictionary<uint, string>>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
-        var fontDict = PdfResolve.ResolveDict(core, resources?[PdfName.Font]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
+        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
         if (fontDict is null) return result;
 
         foreach (var (key, value) in fontDict.Entries)
         {
-            var fontEntry = PdfResolve.ResolveDict(core, value);
+            var fontEntry = core.ResolveDict(value);
             if (fontEntry is null) continue;
 
             var tuRef = fontEntry[PdfName.ToUnicode];
@@ -203,8 +203,8 @@ internal static class PageFontResolver
     internal static IReadOnlyDictionary<string, Type3FontInfo> GetType3Fonts(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, Type3FontInfo>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
-        var fontDict = PdfResolve.ResolveDict(core, resources?[PdfName.Font]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
+        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
         if (fontDict is null) return result;
 
         foreach (var (resName, fontObj) in fontDict.Entries)
@@ -273,7 +273,7 @@ internal static class PageFontResolver
 
             // /CharProcs: glyph name → stream of content operators.
             var charProcs = new Dictionary<string, IReadOnlyList<ContentOperator>>();
-            var cpDict = PdfResolve.ResolveDict(core, font[PdfName.CharProcs]);
+            var cpDict = core.ResolveDict(font[PdfName.CharProcs]);
             if (cpDict is not null)
             {
                 foreach (var (glyphName, streamObj) in cpDict.Entries)
@@ -340,21 +340,21 @@ internal static class PageFontResolver
                 continue;
             }
 
-            var first = (int)PdfResolve.ReadIntOrReal(arr[i]);
+            var first = (int)arr[i].ReadIntOrReal();
             if (i + 1 >= arr.Count) break;
 
             if (arr[i + 1] is PdfArray widthList)
             {
                 for (var k = 0; k < widthList.Count; k++)
-                    result[first + k] = PdfResolve.ReadIntOrReal(widthList[k]);
+                    result[first + k] = widthList[k].ReadIntOrReal();
                 i += 2;
             }
             else if (i + 2 < arr.Count
                      && arr[i + 1] is PdfInteger or PdfReal
                      && arr[i + 2] is PdfInteger or PdfReal)
             {
-                var last = (int)PdfResolve.ReadIntOrReal(arr[i + 1]);
-                var w = PdfResolve.ReadIntOrReal(arr[i + 2]);
+                var last = (int)arr[i + 1].ReadIntOrReal();
+                var w = arr[i + 2].ReadIntOrReal();
                 for (var cid = first; cid <= last && cid - first < FontConstants.MaxCidRangeSize; cid++)
                     result[cid] = w;
                 i += 3;

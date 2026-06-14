@@ -42,10 +42,10 @@ internal static class PageAnnotationReader
             };
 
             var rect = dict.Get<PdfArray>(PdfName.Rect);
-            var x = rect is { Count: >= 4 } ? (float)PdfResolve.ReadIntOrReal(rect[0]) : 0f;
-            var y = rect is { Count: >= 4 } ? (float)PdfResolve.ReadIntOrReal(rect[1]) : 0f;
-            var x2 = rect is { Count: >= 4 } ? (float)PdfResolve.ReadIntOrReal(rect[2]) : 0f;
-            var y2 = rect is { Count: >= 4 } ? (float)PdfResolve.ReadIntOrReal(rect[3]) : 0f;
+            var x = rect is { Count: >= 4 } ? (float)rect[0].ReadIntOrReal() : 0f;
+            var y = rect is { Count: >= 4 } ? (float)rect[1].ReadIntOrReal() : 0f;
+            var x2 = rect is { Count: >= 4 } ? (float)rect[2].ReadIntOrReal() : 0f;
+            var y2 = rect is { Count: >= 4 } ? (float)rect[3].ReadIntOrReal() : 0f;
 
             string? contents = null;
             if (dict[PdfName.Contents] is PdfString cs)
@@ -53,7 +53,7 @@ internal static class PageAnnotationReader
 
             float[]? color = null;
             if (dict.Get<PdfArray>(PdfName.C) is { Count: 3 } cArr)
-                color = [PdfResolve.ReadFloat(cArr[0]), PdfResolve.ReadFloat(cArr[1]), PdfResolve.ReadFloat(cArr[2])];
+                color = [cArr[0].ReadFloat(), cArr[1].ReadFloat(), cArr[2].ReadFloat()];
 
             result.Add(new Annotation(
                 subtype,

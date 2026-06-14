@@ -1,5 +1,5 @@
-using Unchained.Drawing;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -339,7 +339,12 @@ internal static class MeshShadingDecoder
         static byte B255(double v) => ColorMath.ToByteRounded(v);
 
         // ReSharper disable once BadListLineBreaks
-        static (byte R, byte G, byte B) CmykToBytes(double c, double m, double y, double k)
+        static (byte R, byte G, byte B) CmykToBytes(
+            double c,
+            double m,
+            double y,
+            double k
+        )
         {
             var (r, g, b) = ColorMath.CmykToRgb(c, m, y, k);
             return (B255(r), B255(g), B255(b));

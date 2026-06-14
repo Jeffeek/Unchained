@@ -1,8 +1,5 @@
-using System.IO.Compression;
-using System.Text;
 using Shouldly;
 using Unchained.Drawing;
-using Unchained.Drawing.Constants;
 using Unchained.Drawing.Encoders;
 using Unchained.Ooxml;
 using Unchained.Pptx.Rendering.Engine;

@@ -1,8 +1,9 @@
 using Unchained.Drawing;
+using Unchained.Drawing.Primitives;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Shapes;
 
-namespace Unchained.Pptx.Rendering.Engine;
+namespace Unchained.Pptx.Rendering.Engine.Rasterizers;
 
 /// <summary>
 ///     Renders connector shapes: the connecting line (with flip handling) and any configured

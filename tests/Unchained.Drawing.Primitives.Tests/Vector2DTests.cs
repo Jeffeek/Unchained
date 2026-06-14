@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Drawing;
 using Xunit;
 
 namespace Unchained.Drawing.Primitives.Tests;

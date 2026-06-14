@@ -1,4 +1,4 @@
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Primitives;
 
 /// <summary>
 ///     Pure colour-component arithmetic shared across the rendering and document assemblies.

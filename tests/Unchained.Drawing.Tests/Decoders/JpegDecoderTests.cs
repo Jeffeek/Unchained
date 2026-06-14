@@ -22,7 +22,9 @@ public sealed class JpegDecoderTests
 
     [Fact]
     public void TruncatedJpeg_ReturnsNullNotThrow() =>
-        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.App0Jfif, JpegConstants.ByteStuff],
+        JpegDecoder.TryDecodeToRgb([
+                JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.App0Jfif, JpegConstants.ByteStuff
+            ],
             out _,
             out _).ShouldBeNull();
 

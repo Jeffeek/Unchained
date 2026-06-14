@@ -1,5 +1,5 @@
-using Unchained.Drawing;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -17,8 +17,8 @@ internal static class PageImageExtractor
     internal static IReadOnlyDictionary<string, ImageXObject> GetImageXObjects(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, ImageXObject>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
-        var xObjDict = PdfResolve.ResolveDict(core, resources?[PdfName.XObject]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
+        var xObjDict = core.ResolveDict(resources?[PdfName.XObject]);
         if (xObjDict is null)
             return result;
 
@@ -35,7 +35,7 @@ internal static class PageImageExtractor
             var h = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Height)?.Value ?? 0);
             if (w <= 0 || h <= 0) continue;
 
-            var cs = PdfResolve.ReadColorSpace(core, stream.Dictionary);
+            var cs = core.ReadColorSpace(stream.Dictionary);
             var bpc = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.BitsPerComponent)?.Value ?? 8);
             var decode = ReadDecodeArray(stream.Dictionary);
             var indexed = ReadIndexedPalette(core, stream.Dictionary);
@@ -70,7 +70,13 @@ internal static class PageImageExtractor
     // 0 = transparent, 255 = opaque), resampled to the base image's dimensions. The SMask
     // is a DeviceGray image whose samples are the alpha values (§11.6.5.2). Returns null
     // when there is no soft mask, or it cannot be decoded.
-    private static byte[]? ReadSoftMask(PdfDocumentCore core, PdfDictionary imageDict, int baseW, int baseH)
+    // ReSharper disable once BadListLineBreaks
+    private static byte[]? ReadSoftMask(
+        PdfDocumentCore core,
+        PdfDictionary imageDict,
+        int baseW,
+        int baseH
+    )
     {
         var smRef = imageDict[PdfName.SMask];
         if (smRef is PdfIndirectReference r)
@@ -121,7 +127,7 @@ internal static class PageImageExtractor
 
         var values = new float[da.Count];
         for (var i = 0; i < da.Count; i++)
-            values[i] = PdfResolve.ReadFloat(da[i]);
+            values[i] = da[i].ReadFloat();
 
         return values;
     }
@@ -140,7 +146,7 @@ internal static class PageImageExtractor
             return null;
 
         // Base colour space: a name, or a nested array (e.g. [/ICCBased ...]).
-        var baseName = PdfResolve.ResolveBaseSpaceName(core, arr[1]);
+        var baseName = core.ResolveBaseSpaceName(arr[1]);
         if (baseName is null)
             return null;
 

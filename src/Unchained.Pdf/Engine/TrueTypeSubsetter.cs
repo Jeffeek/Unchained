@@ -270,8 +270,8 @@ internal static class TrueTypeSubsetter
     private static uint ComputeCheckSum(
         string tag,
         IReadOnlyDictionary<string, (uint CheckSum, int Offset, int Length)> tables,
-        byte[] newGlyf,
-        byte[] newLoca
+        IReadOnlyList<byte> newGlyf,
+        IReadOnlyList<byte> newLoca
     ) =>
         tag switch
         {
@@ -281,11 +281,11 @@ internal static class TrueTypeSubsetter
             _ => tables[tag].CheckSum
         };
 
-    private static uint TableCheckSum(byte[] data)
+    private static uint TableCheckSum(IReadOnlyList<byte> data)
     {
         uint sum = 0;
         var i = 0;
-        while (i + 3 < data.Length)
+        while (i + 3 < data.Count)
         {
             sum += ((uint)data[i] << 24) | ((uint)data[i + 1] << 16) |
                    ((uint)data[i + 2] << 8) | data[i + 3];
@@ -293,11 +293,11 @@ internal static class TrueTypeSubsetter
         }
 
         // Handle trailing bytes.
-        if (i >= data.Length)
+        if (i >= data.Count)
             return sum;
 
         uint last = 0;
-        for (var j = 0; j < data.Length - i; j++)
+        for (var j = 0; j < data.Count - i; j++)
             last |= (uint)data[i + j] << (24 - (j * 8));
         sum += last;
 
@@ -334,10 +334,10 @@ internal static class TrueTypeSubsetter
 
     // ── Primitive read/write helpers ────────────────────────────────────────────
 
-    private static string ReadTag(byte[] b, int o) =>
+    private static string ReadTag(IReadOnlyList<byte> b, int o) =>
         new([.. new[] { b[o], b[o + 1], b[o + 2], b[o + 3] }.Select(static c => (char)c)]);
 
-    private static void WriteTag(byte[] b, int o, string tag)
+    private static void WriteTag(IList<byte> b, int o, string tag)
     {
         for (var i = 0; i < 4 && i < tag.Length; i++)
             b[o + i] = (byte)tag[i];

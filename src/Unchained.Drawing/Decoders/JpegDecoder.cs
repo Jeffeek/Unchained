@@ -74,7 +74,7 @@ internal static class JpegDecoder
 
                 switch (marker)
                 {
-                    case JpegConstants.ByteStuff:                              // stuffed byte outside scan — skip
+                    case JpegConstants.ByteStuff:                                // stuffed byte outside scan — skip
                     case >= JpegConstants.RstFirst and <= JpegConstants.RstLast: // RSTn (no payload)
                     {
                         break;

@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
-using Unchained.Drawing;
+using Unchained.Drawing.Primitives;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Xml;

@@ -3,7 +3,6 @@ using Unchained.Ooxml;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
-using Unchained.Pptx.Security;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 

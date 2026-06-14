@@ -1,4 +1,5 @@
 using Unchained.Drawing;
+using Unchained.Drawing.Primitives;
 using Unchained.Drawing.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
@@ -16,7 +17,10 @@ namespace Unchained.Pdf.Rendering.Rendering;
 ///     implementation is split across cohesive <c>partial</c> files that share that state:
 ///     <list type="bullet">
 ///         <item><c>PageRenderer.cs</c> — operator dispatch, graphics-state stack, colour state and coordinate helpers.</item>
-///         <item><c>PageRenderer.Text.cs</c> — text-showing pipeline (HarfBuzz shaping, direct, composite and Type3 glyphs).</item>
+///         <item>
+///             <c>PageRenderer.Text.cs</c> — text-showing pipeline (HarfBuzz shaping, direct, composite and Type3
+///             glyphs).
+///         </item>
 ///         <item><c>PageRenderer.Paths.cs</c> — path construction, filling, stroking and clipping.</item>
 ///         <item><c>PageRenderer.Shading.cs</c> — axial/radial/mesh shadings and tiling patterns.</item>
 ///         <item><c>PageRenderer.Images.cs</c> — image XObject / inline-image blitting and soft masks.</item>

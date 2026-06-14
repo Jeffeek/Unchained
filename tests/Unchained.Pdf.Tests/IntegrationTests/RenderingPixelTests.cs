@@ -1,7 +1,5 @@
-using System.IO.Compression;
 using System.Text;
 using Shouldly;
-using Unchained.Drawing.Text;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;

@@ -3,7 +3,7 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using PDFiumCore;
 using Unchained.Drawing.Constants;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Studio.Services;
 

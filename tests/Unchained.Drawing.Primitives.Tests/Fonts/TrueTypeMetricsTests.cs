@@ -1,5 +1,5 @@
 using Shouldly;
-using Unchained.Drawing.Fonts;
+using Unchained.Drawing.Primitives.Fonts;
 using Xunit;
 
 namespace Unchained.Drawing.Primitives.Tests.Fonts;
@@ -44,8 +44,22 @@ public sealed class TrueTypeMetricsTests
     [Fact]
     public void FontMetrics_Record_EqualityByValue()
     {
-        var a = new FontMetrics(1, 2, 3, 4, 5, 6, 7, 8);
-        var b = new FontMetrics(1, 2, 3, 4, 5, 6, 7, 8);
+        var a = new FontMetrics(1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8);
+        var b = new FontMetrics(1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8);
         a.ShouldBe(b);
     }
 }

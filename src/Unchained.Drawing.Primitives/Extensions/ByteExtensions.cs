@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Unchained.Drawing.Extensions;
+namespace Unchained.Drawing.Primitives.Extensions;
 
 internal static class ByteExtensions
 {

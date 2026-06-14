@@ -1,13 +1,11 @@
 using Unchained.Drawing;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Drawing.Text;
 using Unchained.Drawing.Text.Extensions;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Text;
-using Unchained.Pptx.Core;
-using Unchained.Pptx.Media;
 using Unchained.Pptx.Shapes;
 using Buffer = HarfBuzzSharp.Buffer;
 
@@ -417,13 +415,8 @@ internal sealed partial class SlideRasterizer
         return cursorX;
     }
 
-    private static string SelectFontName(Run run)
-    {
-        if (run.Format.Bold == InheritableBool.True)
-            return TextConstants.FallbackLatinFontBold;
-
-        return TextConstants.FallbackLatinFont;
-    }
+    private static string SelectFontName(Run run) =>
+        run.Format.Bold == InheritableBool.True ? TextConstants.FallbackLatinFontBold : TextConstants.FallbackLatinFont;
 
     private byte[]? ResolveEmbeddedFont(Run run, string fontName, out string cacheKey)
     {

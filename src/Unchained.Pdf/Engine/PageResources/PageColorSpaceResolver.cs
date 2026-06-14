@@ -18,7 +18,7 @@ internal static class PageColorSpaceResolver
     internal static IReadOnlyDictionary<string, ColorSpaceInfo> GetColorSpaces(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, ColorSpaceInfo>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
         if (resources is null) return result;
 
         // Recurse into form XObjects as well (same pattern as CollectShadings).
@@ -37,7 +37,7 @@ internal static class PageColorSpaceResolver
         if (resources is null || depth > MaxFormXObjectDepth)
             return;
 
-        var csDict = PdfResolve.ResolveDict(core, resources[PdfName.ColorSpace]);
+        var csDict = core.ResolveDict(resources[PdfName.ColorSpace]);
         if (csDict is not null)
         {
             foreach (var (name, value) in csDict.Entries)
@@ -54,7 +54,7 @@ internal static class PageColorSpaceResolver
         }
 
         // Recurse into form XObjects.
-        var xObjDict = PdfResolve.ResolveDict(core, resources[PdfName.XObject]);
+        var xObjDict = core.ResolveDict(resources[PdfName.XObject]);
         if (xObjDict is null) return;
 
         foreach (var (_, xObj) in xObjDict.Entries)
@@ -68,7 +68,7 @@ internal static class PageColorSpaceResolver
             if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
                 continue;
 
-            CollectColorSpaces(core, PdfResolve.ResolveDict(core, stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
+            CollectColorSpaces(core, core.ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
         }
     }
 
@@ -121,7 +121,7 @@ internal static class PageColorSpaceResolver
 
             case "Separation" when arr.Count >= 4:
             {
-                var altName = PdfResolve.ResolveBaseSpaceName(core, arr[2]) ?? "DeviceRGB";
+                var altName = core.ResolveBaseSpaceName(arr[2]) ?? "DeviceRGB";
                 var fn = PdfFunction.Build(arr[3], core);
                 return ColorSpaceInfo.Separation(fn, altName);
             }
@@ -129,14 +129,14 @@ internal static class PageColorSpaceResolver
             case "DeviceN" when arr.Count >= 4:
             {
                 // arr[1] = names array, arr[2] = alternate space, arr[3] = tint transform
-                var altName = PdfResolve.ResolveBaseSpaceName(core, arr[2]) ?? "DeviceRGB";
+                var altName = core.ResolveBaseSpaceName(arr[2]) ?? "DeviceRGB";
                 var fn = PdfFunction.Build(arr[3], core);
                 return ColorSpaceInfo.DeviceN(fn, altName);
             }
 
             case "Indexed" when arr.Count >= 4:
             {
-                var baseName = PdfResolve.ResolveBaseSpaceName(core, arr[1]) ?? "DeviceRGB";
+                var baseName = core.ResolveBaseSpaceName(arr[1]) ?? "DeviceRGB";
                 var baseChannels = baseName switch
                 {
                     "DeviceGray" => 1, "DeviceCMYK" => 4, _ => 3
@@ -160,7 +160,7 @@ internal static class PageColorSpaceResolver
                 var dict = arr[1] is PdfIndirectReference dgr
                     ? core.ResolveIndirect(dgr.ObjectNumber).Value as PdfDictionary
                     : arr[1] as PdfDictionary;
-                var gamma = PdfResolve.ReadFloat(dict?[PdfName.Gamma]);
+                var gamma = (dict?[PdfName.Gamma]).ReadFloat();
                 return ColorSpaceInfo.CalGrayInfo(gamma > 0 ? gamma : 1.0);
             }
 
@@ -170,10 +170,10 @@ internal static class PageColorSpaceResolver
                     ? core.ResolveIndirect(dcr.ObjectNumber).Value as PdfDictionary
                     : arr[1] as PdfDictionary;
                 var gammaArr = dict?[PdfName.Gamma] is PdfArray ga
-                    ? ga.Elements.Select(static e => (double)PdfResolve.ReadFloat(e)).ToArray()
+                    ? ga.Elements.Select(static e => (double)e.ReadFloat()).ToArray()
                     : null;
                 var matArr = dict?[PdfName.Matrix] is PdfArray ma
-                    ? ma.Elements.Select(static e => (double)PdfResolve.ReadFloat(e)).ToArray()
+                    ? ma.Elements.Select(static e => (double)e.ReadFloat()).ToArray()
                     : null;
                 return ColorSpaceInfo.CalRgb(gammaArr, matArr);
             }

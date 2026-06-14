@@ -39,7 +39,11 @@ public sealed class OdpTests : PptxTestBase
 
         // mimetype must exist, be first, and be stored uncompressed.
         using var ms = new MemoryStream(odp);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
+#endif
         var entries = archive.Entries;
         entries[0].FullName.ShouldBe("mimetype");
         entries[0].CompressedLength.ShouldBe(entries[0].Length, "mimetype must be stored, not compressed");

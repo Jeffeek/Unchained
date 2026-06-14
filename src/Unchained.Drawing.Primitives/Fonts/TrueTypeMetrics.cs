@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace Unchained.Drawing.Fonts;
+namespace Unchained.Drawing.Primitives.Fonts;
 
 /// <summary>
 ///     Reads font metrics from a TrueType or OpenType font file by parsing the minimal set

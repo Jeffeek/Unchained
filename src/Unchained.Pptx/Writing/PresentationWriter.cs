@@ -280,7 +280,8 @@ internal sealed class PresentationWriter
             var rId = 2; // rId1 is reserved for the layout relationship
 
             foreach (var shape in slide.Shapes.OfType<PictureShape>()
-                         .Where(static p => p.Image is { PartUri.Length: > 0 }).Where(static shape => string.IsNullOrEmpty(shape.Image!.RelationshipId)))
+                         .Where(static p => p.Image is { PartUri.Length: > 0 })
+                         .Where(static shape => string.IsNullOrEmpty(shape.Image!.RelationshipId)))
                 shape.Image!.RelationshipId = $"rId{rId++}";
 
             foreach (var chartShape in slide.Shapes.OfType<ChartShape>())
@@ -300,7 +301,8 @@ internal sealed class PresentationWriter
             }
 
             // Assign relationship IDs for run-level hyperlinks across all text frames.
-            foreach (var link in EnumerateRunHyperlinks(slide).Where(static link => RunLinkNeedsRelationship(link) && string.IsNullOrEmpty(link.RelationshipId)))
+            foreach (var link in EnumerateRunHyperlinks(slide)
+                         .Where(static link => RunLinkNeedsRelationship(link) && string.IsNullOrEmpty(link.RelationshipId)))
                 link.RelationshipId = $"rId{rId++}";
 
             // Write slide XML (all relationship IDs now set)
@@ -447,7 +449,8 @@ internal sealed class PresentationWriter
     /// <summary>Yields every run-level hyperlink across a slide's text frames.</summary>
     private static IEnumerable<RunHyperlink> EnumerateRunHyperlinks(Slide slide)
     {
-        foreach (var run in ShapeTextWalker.EnumerateTextFrames(slide.Shapes).SelectMany(static frame => frame.Paragraphs.SelectMany(static paragraph => paragraph.Runs)))
+        foreach (var run in ShapeTextWalker.EnumerateTextFrames(slide.Shapes)
+                     .SelectMany(static frame => frame.Paragraphs.SelectMany(static paragraph => paragraph.Runs)))
         {
             if (run.Format.Hyperlink is { } link)
                 yield return link;

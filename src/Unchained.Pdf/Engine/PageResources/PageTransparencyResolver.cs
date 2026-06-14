@@ -19,13 +19,13 @@ internal static class PageTransparencyResolver
     )
     {
         var result = new Dictionary<string, (double, double, string, string?)>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
-        var extDict = PdfResolve.ResolveDict(core, resources?[PdfName.ExtGState]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
+        var extDict = core.ResolveDict(resources?[PdfName.ExtGState]);
         if (extDict is null) return result;
 
         foreach (var (name, value) in extDict.Entries)
         {
-            var gs = PdfResolve.ResolveDict(core, value);
+            var gs = core.ResolveDict(value);
             if (gs is null)
                 continue;
 
@@ -54,13 +54,13 @@ internal static class PageTransparencyResolver
     )
     {
         var result = new Dictionary<string, SoftMaskInfo>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
-        var extDict = PdfResolve.ResolveDict(core, resources?[PdfName.ExtGState]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
+        var extDict = core.ResolveDict(resources?[PdfName.ExtGState]);
         if (extDict is null) return result;
 
         foreach (var (name, value) in extDict.Entries)
         {
-            var gs = PdfResolve.ResolveDict(core, value);
+            var gs = core.ResolveDict(value);
             var smaskObj = gs?[PdfName.SMask];
             if (smaskObj is not PdfDictionary smaskDict) continue;
 
@@ -71,8 +71,8 @@ internal static class PageTransparencyResolver
                 : formRef as PdfStream;
             if (formStream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form") continue;
 
-            var bbox = PdfResolve.GetFormBBox(formStream);
-            var matrix = PdfResolve.GetFormMatrix(formStream);
+            var bbox = formStream.GetFormBBox();
+            var matrix = formStream.GetFormMatrix();
 
             try
             {

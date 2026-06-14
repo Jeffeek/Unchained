@@ -1,7 +1,4 @@
-using System.IO.Compression;
-using System.Text;
 using Shouldly;
-using Unchained.Drawing.Constants;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;

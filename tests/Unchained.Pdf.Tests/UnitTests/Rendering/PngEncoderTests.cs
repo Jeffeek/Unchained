@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Drawing;
 using Unchained.Drawing.Constants;
 using Unchained.Drawing.Encoders;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 

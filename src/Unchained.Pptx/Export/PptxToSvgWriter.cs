@@ -1,5 +1,5 @@
 using System.Text;
-using Unchained.Drawing;
+using Unchained.Drawing.Primitives;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Text;

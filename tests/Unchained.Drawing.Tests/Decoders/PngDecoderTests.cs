@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Drawing;
 using Unchained.Drawing.Constants;
 using Unchained.Drawing.Decoders;
 using Unchained.Drawing.Encoders;

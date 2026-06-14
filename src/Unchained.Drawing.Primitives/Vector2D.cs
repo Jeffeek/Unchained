@@ -1,4 +1,4 @@
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Primitives;
 
 /// <summary>
 ///     Pure 2D vector arithmetic shared by the rendering assemblies. No image or PDF types —

@@ -1,6 +1,5 @@
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
-using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 

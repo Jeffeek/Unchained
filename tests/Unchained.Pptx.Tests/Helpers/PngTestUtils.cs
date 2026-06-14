@@ -37,7 +37,12 @@ internal static class PngTestUtils
     ///     Inflates a filter-None RGBA PNG and counts the pixels for which
     ///     <paramref name="predicate" /> (given R, G, B) returns <see langword="true" />.
     /// </summary>
-    internal static int CountPixels(byte[] png, int width, int height, Func<byte, byte, byte, bool> predicate)
+    internal static int CountPixels(
+        byte[] png,
+        int width,
+        int height,
+        Func<byte, byte, byte, bool> predicate
+    )
     {
         var idat = ExtractIdat(png);
         using var input = new MemoryStream(idat);

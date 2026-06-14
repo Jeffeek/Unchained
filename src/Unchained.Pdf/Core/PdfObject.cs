@@ -366,7 +366,10 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     /// <summary>The <c>/VerticesPerRow</c> name (lattice-form Gouraud-shaded triangle mesh row width).</summary>
     public static readonly PdfName VerticesPerRow = Get("VerticesPerRow");
 
-    /// <summary>The <c>/FunctionType</c> name (PDF function dictionary type: 0 sampled, 2 exponential, 3 stitching, 4 PostScript).</summary>
+    /// <summary>
+    ///     The <c>/FunctionType</c> name (PDF function dictionary type: 0 sampled, 2 exponential, 3 stitching, 4
+    ///     PostScript).
+    /// </summary>
     public static readonly PdfName FunctionType = Get("FunctionType");
 
     // ── Encryption ────────────────────────────────────────────────────────────
@@ -495,6 +498,7 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     public static readonly PdfName OutputIntent = Get("OutputIntent");
 
     /// <summary>The <c>/GTS_PDFX</c> name (output-intent subtype identifying a PDF/X conformance intent).</summary>
+    // ReSharper disable once InconsistentNaming
     public static readonly PdfName GTS_PDFX = Get("GTS_PDFX");
 
     /// <summary>The <c>/DisplayDocTitle</c> name (viewer preference — show the document title in the window title bar).</summary>
@@ -512,10 +516,11 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     public static readonly PdfName Sig = Get("Sig");
 
     /// <summary>The <c>/Adobe.PPKLite</c> name (the signature handler / filter for PKCS#7 signatures).</summary>
-    public static readonly PdfName Adobe_PPKLite = Get("Adobe.PPKLite");
+    // ReSharper disable once InconsistentNaming
+    public static readonly PdfName AdobePPKLite = Get("Adobe.PPKLite");
 
     /// <summary>The <c>/adbe.pkcs7.detached</c> name (signature sub-filter — a detached PKCS#7 / CMS blob).</summary>
-    public static readonly PdfName adbe_pkcs7_detached = Get("adbe.pkcs7.detached");
+    public static readonly PdfName AdbePkcs7Detached = Get("adbe.pkcs7.detached");
 
     /// <summary>The <c>/Widget</c> name (widget annotation subtype — the on-page appearance of a form field).</summary>
     public static readonly PdfName Widget = Get("Widget");
@@ -604,7 +609,7 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     /// <summary>The <c>/ShadingType</c> name (1 function-based, 2 axial, 3 radial, 4–7 mesh).</summary>
     public static readonly PdfName ShadingType = Get("ShadingType");
 
-    /// <summary>The <c>/HideToolbar</c> name (viewer preference — hide the viewer's tool bars).</summary>
+    /// <summary>The <c>/HideToolbar</c> name (viewer preference — hide the viewer's toolbars).</summary>
     public static readonly PdfName HideToolbar = Get("HideToolbar");
 
     /// <summary>The <c>/HideMenubar</c> name (viewer preference — hide the viewer's menu bar).</summary>
@@ -622,7 +627,7 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     /// <summary>The <c>/OCGs</c> name (the array of all optional-content groups in <c>/OCProperties</c>).</summary>
     public static readonly PdfName OCGs = Get("OCGs");
 
-    /// <summary>The <c>/Name</c> name (an optional-content group's display name, or a generic name entry).</summary>
+    /// <summary>The <c>/Name</c> (an optional-content group's display name, or a generic name entry).</summary>
     public static readonly PdfName Name = Get("Name");
 
     /// <summary>The <c>/V</c> name (the value of a form field, or the version entry in some dictionaries).</summary>

@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using Shouldly;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Drawing.Decoders;
 

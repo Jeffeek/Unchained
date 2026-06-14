@@ -13,8 +13,8 @@ namespace Unchained.Drawing.Text;
 /// </summary>
 internal sealed unsafe class GlyphFace : IDisposable
 {
-    private FT_FaceRec_* _face;
     private bool _disposed;
+    private FT_FaceRec_* _face;
 
     internal GlyphFace(FreeTypeLibrary library, nint fontData, int dataLength)
     {
@@ -28,6 +28,18 @@ internal sealed unsafe class GlyphFace : IDisposable
 
     /// <summary>Font units per em — used to scale the HarfBuzz font to match.</summary>
     public ushort UnitsPerEm => _face->units_per_EM;
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        if (_face == null) return;
+
+        FT_Done_Face(_face);
+        _face = null;
+    }
 
     /// <summary>Sets the rasterization size in whole pixels.</summary>
     public void SetPixelSize(uint pixelSize) => FT_Set_Pixel_Sizes(_face, 0, pixelSize);
@@ -123,18 +135,6 @@ internal sealed unsafe class GlyphFace : IDisposable
         }
 
         return result;
-    }
-
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _disposed = true;
-        if (_face == null) return;
-
-        FT_Done_Face(_face);
-        _face = null;
     }
 }
 

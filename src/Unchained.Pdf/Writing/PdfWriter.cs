@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Globalization;
 using System.Text;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 
 namespace Unchained.Pdf.Writing;

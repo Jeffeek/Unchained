@@ -701,4 +701,3 @@ public sealed class TextExtractorTests
         text.ShouldContain('\n');
     }
 }
-

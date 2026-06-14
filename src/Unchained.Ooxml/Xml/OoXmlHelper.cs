@@ -9,6 +9,41 @@ namespace Unchained.Ooxml.Xml;
 /// </summary>
 internal static class OoXmlHelper
 {
+    // ── Element navigation ───────────────────────────────────────────────────
+
+    // ── EMU helpers ──────────────────────────────────────────────────────────
+
+    // ── Serialization helpers ─────────────────────────────────────────────────
+
+    /// <summary>
+    ///     Converts an <see cref="XDocument" /> to a UTF-8 byte array with an XML declaration.
+    /// </summary>
+    public static byte[] ToUtf8Bytes(this XDocument document)
+    {
+        using var ms = new MemoryStream();
+        document.Save(ms);
+        return ms.ToArray();
+    }
+
+    /// <summary>
+    ///     Parses an XML byte array into an <see cref="XDocument" />.
+    /// </summary>
+    public static XDocument ParseXml(byte[] bytes) =>
+        XDocument.Load(new MemoryStream(bytes));
+
+    // ── Rotation helpers ─────────────────────────────────────────────────────
+
+    /// <summary>
+    ///     Converts an OOXML rotation value (in 1/60,000 degrees) to degrees.
+    /// </summary>
+    public static double OoxmlRotationToDegrees(int ooxmlRotation) =>
+        ooxmlRotation / 60_000.0;
+
+    /// <summary>
+    ///     Converts degrees to an OOXML rotation value (in 1/60,000 degrees).
+    /// </summary>
+    public static int DegreesToOoxmlRotation(double degrees) =>
+        (int)(degrees * 60_000);
     // ── Attribute reading ────────────────────────────────────────────────────
 
     extension(XElement element)
@@ -124,40 +159,4 @@ internal static class OoXmlHelper
         public Emu GetAttrEmu(string attributeName) =>
             new(GetAttrLong(element, attributeName) ?? 0L);
     }
-
-    // ── Element navigation ───────────────────────────────────────────────────
-
-    // ── EMU helpers ──────────────────────────────────────────────────────────
-
-    // ── Serialization helpers ─────────────────────────────────────────────────
-
-    /// <summary>
-    ///     Converts an <see cref="XDocument" /> to a UTF-8 byte array with an XML declaration.
-    /// </summary>
-    public static byte[] ToUtf8Bytes(this XDocument document)
-    {
-        using var ms = new MemoryStream();
-        document.Save(ms);
-        return ms.ToArray();
-    }
-
-    /// <summary>
-    ///     Parses an XML byte array into an <see cref="XDocument" />.
-    /// </summary>
-    public static XDocument ParseXml(byte[] bytes) =>
-        XDocument.Load(new MemoryStream(bytes));
-
-    // ── Rotation helpers ─────────────────────────────────────────────────────
-
-    /// <summary>
-    ///     Converts an OOXML rotation value (in 1/60,000 degrees) to degrees.
-    /// </summary>
-    public static double OoxmlRotationToDegrees(int ooxmlRotation) =>
-        ooxmlRotation / 60_000.0;
-
-    /// <summary>
-    ///     Converts degrees to an OOXML rotation value (in 1/60,000 degrees).
-    /// </summary>
-    public static int DegreesToOoxmlRotation(double degrees) =>
-        (int)(degrees * 60_000);
 }

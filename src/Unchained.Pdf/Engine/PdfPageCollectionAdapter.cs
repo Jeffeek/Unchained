@@ -150,12 +150,27 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     public IReadOnlyDictionary<string, ImageXObject> GetImageXObjects() =>
         PageImageExtractor.GetImageXObjects(page, core);
 
-    /// <inheritdoc />
-    public IReadOnlyDictionary<string, Type3FontInfo> GetType3Fonts() =>
+    /// <summary>
+    ///     Resolves Type 3 fonts from the page font resources.
+    /// </summary>
+    /// <returns>
+    ///     A read-only dictionary where the key is the font resource name and the
+    ///     value is a <see cref="Type3FontInfo"/> describing the font matrix,
+    ///     encoding, glyph widths, and glyph drawing programs.
+    /// </returns>
+    internal IReadOnlyDictionary<string, Type3FontInfo> GetType3Fonts() =>
         PageFontResolver.GetType3Fonts(page, core);
 
-    /// <inheritdoc />
-    public IReadOnlyDictionary<string, ColorSpaceInfo> GetColorSpaces() =>
+    /// <summary>
+    ///     Resolves named color spaces from the page <c>/Resources/ColorSpace</c>
+    ///     dictionary.
+    /// </summary>
+    /// <returns>
+    ///     A read-only dictionary where the key is the color space resource name and
+    ///     the value is a resolved <see cref="ColorSpaceInfo"/> describing how color
+    ///     values should be interpreted and converted to RGB.
+    /// </returns>
+    internal IReadOnlyDictionary<string, ColorSpaceInfo> GetColorSpaces() =>
         PageColorSpaceResolver.GetColorSpaces(page, core);
 
     // ── Page geometry ─────────────────────────────────────────────────────────

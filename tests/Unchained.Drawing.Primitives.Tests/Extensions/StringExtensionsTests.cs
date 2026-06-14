@@ -1,5 +1,5 @@
 using Shouldly;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Xunit;
 
 namespace Unchained.Drawing.Primitives.Tests.Extensions;
@@ -9,11 +9,11 @@ public sealed class StringExtensionsTests
 {
     [Fact]
     public void ToUtf8Span_AsciiString_EncodesBytes() =>
-        "ABC".ToUtf8Span().ToArray().ShouldBe([(byte)0x41, (byte)0x42, (byte)0x43]);
+        "ABC".ToUtf8Span().ToArray().ShouldBe("ABC"u8.ToArray());
 
     [Fact]
     public void FromUtf8Span_DecodesBytes() =>
-        new ReadOnlySpan<byte>([(byte)0x41, (byte)0x42, (byte)0x43]).FromUtf8Span().ShouldBe("ABC");
+        new ReadOnlySpan<byte>("ABC"u8.ToArray()).FromUtf8Span().ShouldBe("ABC");
 
     [
         Theory,

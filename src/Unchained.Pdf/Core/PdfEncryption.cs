@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Core;

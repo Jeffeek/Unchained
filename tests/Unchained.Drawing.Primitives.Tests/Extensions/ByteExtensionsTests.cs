@@ -1,5 +1,5 @@
 using Shouldly;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Xunit;
 
 namespace Unchained.Drawing.Primitives.Tests.Extensions;

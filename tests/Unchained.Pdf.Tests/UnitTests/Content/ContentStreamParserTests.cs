@@ -12,7 +12,7 @@ public sealed class ContentStreamParserTests
     private static IReadOnlyList<ContentOperator> Parse(string stream) =>
         ContentStreamParser.Parse(Encoding.Latin1.GetBytes(stream));
 
-    private static IReadOnlyList<ContentOperator> Parse(byte[] data) =>
+    private static IEnumerable<ContentOperator> Parse(byte[] data) =>
         ContentStreamParser.Parse(data);
 
     // ── Zero-operand operators ────────────────────────────────────────────────

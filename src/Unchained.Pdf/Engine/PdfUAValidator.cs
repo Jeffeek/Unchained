@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -292,14 +292,13 @@ internal static class PdfUAValidator
             };
             if (annots is null) continue;
 
-            foreach (var elem in annots.Elements)
-            {
-                var dict = core.ResolveDict(elem);
-                if (dict?.GetName("Subtype") != "Widget") continue;
-
-                if (dict[PdfName.TU] is null)
-                    v.Add(W("7.7", $"Widget annotation on page {page} is missing /TU (tooltip / accessible name).", pageNumber: page));
-            }
+            foreach (var _ in from elem in annots.Elements
+                              select core.ResolveDict(elem)
+                              into dict
+                              where dict?.GetName("Subtype") == "Widget"
+                              where dict[PdfName.TU] is null
+                              select dict)
+                v.Add(W("7.7", $"Widget annotation on page {page} is missing /TU (tooltip / accessible name).", pageNumber: page));
         }
     }
 
@@ -629,13 +628,8 @@ internal static class PdfUAValidator
             _ => [kObj]
         };
 
-        foreach (var kid in kids)
-        {
-            var resolved = core.ResolveDict(kid);
-
-            if (resolved is not null)
-                visitor(resolved);
-        }
+        foreach (var resolved in kids.Select(core.ResolveDict).Where(static x => x != null))
+            visitor(resolved!);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

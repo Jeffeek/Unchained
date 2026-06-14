@@ -1,4 +1,4 @@
-using Unchained.Drawing;
+using Unchained.Drawing.Primitives;
 using Unchained.Pdf.Content;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -19,7 +19,7 @@ internal static class PageShadingResolver
     internal static IReadOnlyDictionary<string, ShadingInfo> GetShadings(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, ShadingInfo>();
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
         // Collect from the page resources and from every form XObject's resources, since
         // GetContentOperators inlines form content (so their sh/scn operators reach the
         // renderer) and those operators reference shading/pattern names declared on the form.
@@ -30,7 +30,7 @@ internal static class PageShadingResolver
     internal static IReadOnlyDictionary<string, TilingPatternInfo> GetTilingPatterns(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, TilingPatternInfo>();
-        CollectTilingPatterns(core, PdfResolve.ResolveDict(core, page[PdfName.Resources]), result, 0, (HashSet<int>)[]);
+        CollectTilingPatterns(core, core.ResolveDict(page[PdfName.Resources]), result, 0, (HashSet<int>)[]);
         return result;
     }
 
@@ -45,35 +45,35 @@ internal static class PageShadingResolver
         if (resources is null || depth > MaxFormXObjectDepth) return;
 
         // /Shading resources — painted directly by the `sh` operator.
-        var shadingDict = PdfResolve.ResolveDict(core, resources[PdfName.Shading]);
+        var shadingDict = core.ResolveDict(resources[PdfName.Shading]);
         if (shadingDict is not null)
         {
             foreach (var (name, value) in shadingDict.Entries)
             {
-                if (!result.ContainsKey(name) && BuildShading(core, PdfResolve.ResolveAny(core, value)) is { } s)
+                if (!result.ContainsKey(name) && BuildShading(core, core.ResolveAny(value)) is { } s)
                     result[name] = s;
             }
         }
 
         // /Pattern resources with /PatternType 2 — shading used as a fill colour.
-        var patternDict = PdfResolve.ResolveDict(core, resources[PdfName.Pattern]);
+        var patternDict = core.ResolveDict(resources[PdfName.Pattern]);
         if (patternDict is not null)
         {
             foreach (var (name, value) in patternDict.Entries)
             {
                 if (result.ContainsKey(name)) continue;
 
-                var pat = PdfResolve.ResolveDictOrStreamDict(core, value);
+                var pat = core.ResolveDictOrStreamDict(value);
                 if (pat is null) continue;
                 if ((int)(pat.Get<PdfInteger>(PdfName.PatternType)?.Value ?? 0) != 2) continue;
 
-                if (BuildShading(core, PdfResolve.ResolveAny(core, pat["Shading"])) is { } s)
+                if (BuildShading(core, core.ResolveAny(pat["Shading"])) is { } s)
                     result[name] = s;
             }
         }
 
         // Recurse into form XObjects' own resource dictionaries.
-        var xObjDict = PdfResolve.ResolveDict(core, resources[PdfName.XObject]);
+        var xObjDict = core.ResolveDict(resources[PdfName.XObject]);
         if (xObjDict is null)
             return;
 
@@ -88,7 +88,7 @@ internal static class PageShadingResolver
             if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
                 continue;
 
-            CollectShadings(core, PdfResolve.ResolveDict(core, stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
+            CollectShadings(core, core.ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
         }
     }
 
@@ -102,7 +102,7 @@ internal static class PageShadingResolver
     {
         if (resources is null || depth > MaxFormXObjectDepth) return;
 
-        var patternDict = PdfResolve.ResolveDict(core, resources[PdfName.Pattern]);
+        var patternDict = core.ResolveDict(resources[PdfName.Pattern]);
         if (patternDict is not null)
         {
             foreach (var (name, value) in patternDict.Entries)
@@ -110,19 +110,19 @@ internal static class PageShadingResolver
                 if (result.ContainsKey(name))
                     continue;
 
-                var resolved = PdfResolve.ResolveAny(core, value);
+                var resolved = core.ResolveAny(value);
                 if (resolved is not PdfStream stream) continue; // tiling patterns are streams
 
                 var d = stream.Dictionary;
                 if ((int)(d.Get<PdfInteger>(PdfName.PatternType)?.Value ?? 0) != 1) continue;
 
-                var bbox = PdfResolve.ReadFloatArray(d["BBox"]);
+                var bbox = d["BBox"].ReadFloatArray();
                 if (bbox is null || bbox.Length < 4) continue;
 
                 var paintType = (int)(d.Get<PdfInteger>(PdfName.PaintType)?.Value ?? 1);
-                var xstep = PdfResolve.ReadFloat(d["XStep"]);
-                var ystep = PdfResolve.ReadFloat(d["YStep"]);
-                var matrix = PdfResolve.ReadFloatArray(d["Matrix"]) ?? [1, 0, 0, 1, 0, 0];
+                var xstep = d["XStep"].ReadFloat();
+                var ystep = d["YStep"].ReadFloat();
+                var matrix = d["Matrix"].ReadFloatArray() ?? [1, 0, 0, 1, 0, 0];
 
                 IReadOnlyList<ContentOperator> ops;
                 try { ops = ContentStreamParser.Parse(StreamFilters.Decode(stream)); }
@@ -139,7 +139,7 @@ internal static class PageShadingResolver
         }
 
         // Recurse into form XObjects (same flattening rationale as shadings).
-        var xObjDict = PdfResolve.ResolveDict(core, resources[PdfName.XObject]);
+        var xObjDict = core.ResolveDict(resources[PdfName.XObject]);
         if (xObjDict is null)
             return;
 
@@ -154,7 +154,7 @@ internal static class PageShadingResolver
             if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
                 continue;
 
-            CollectTilingPatterns(core, PdfResolve.ResolveDict(core, stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
+            CollectTilingPatterns(core, core.ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
         }
     }
 
@@ -192,12 +192,12 @@ internal static class PageShadingResolver
 
         if (type is not (2 or 3)) return null; // only axial/radial below
 
-        var coords = PdfResolve.ReadFloatArray(dict["Coords"]);
+        var coords = dict["Coords"].ReadFloatArray();
         if (coords is null || coords.Length < (type == 2 ? 4 : 6)) return null;
 
-        var domain = PdfResolve.ReadFloatArray(dict["Domain"]) ?? [0, 1];
+        var domain = dict["Domain"].ReadFloatArray() ?? [0, 1];
         var (extStart, extEnd) = ReadExtend(dict["Extend"]);
-        var cs = PdfResolve.ReadColorSpace(core, dict) ?? "DeviceRGB";
+        var cs = core.ReadColorSpace(dict) ?? "DeviceRGB";
 
         var fn = PdfFunction.Build(dict["Function"], core);
 
@@ -228,7 +228,12 @@ internal static class PageShadingResolver
 
         static byte B255(double v) => ColorMath.ToByteRounded(v);
 
-        static (byte R, byte G, byte B) CmykToBytes(double c, double m, double y, double k)
+        static (byte R, byte G, byte B) CmykToBytes(
+            double c,
+            double m,
+            double y,
+            double k
+        )
         {
             var (r, g, b) = ColorMath.CmykToRgb(c, m, y, k);
             return (B255(r), B255(g), B255(b));

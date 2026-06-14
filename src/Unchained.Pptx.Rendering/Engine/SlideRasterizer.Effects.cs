@@ -2,6 +2,7 @@ using Unchained.Drawing;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Media;
+using Unchained.Pptx.Rendering.Engine.Rasterizers;
 using Unchained.Pptx.Shapes;
 
 namespace Unchained.Pptx.Rendering.Engine;

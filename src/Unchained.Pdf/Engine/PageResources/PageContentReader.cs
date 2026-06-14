@@ -29,7 +29,7 @@ internal static class PageContentReader
         if (decoded.Length == 0) return [];
 
         var operators = ContentStreamParser.Parse(decoded);
-        var resources = PdfResolve.ResolveDict(core, page[PdfName.Resources]);
+        var resources = core.ResolveDict(page[PdfName.Resources]);
         var budget = MaxExpandedOperatorsPerPage;
         return ExpandFormXObjects(core, operators, resources, 0, ref budget);
     }
@@ -52,7 +52,7 @@ internal static class PageContentReader
             !operators.Any(static op => op.Name == "Do"))
             return operators;
 
-        var xObjDict = PdfResolve.ResolveDict(core, resources?[PdfName.XObject]);
+        var xObjDict = core.ResolveDict(resources?[PdfName.XObject]);
         var result = new List<ContentOperator>(operators.Count + 4);
 
         foreach (var op in operators)
@@ -110,7 +110,7 @@ internal static class PageContentReader
 
             if (formData.Length > 0)
             {
-                var formResources = PdfResolve.ResolveDict(core, xStream.Dictionary[PdfName.Resources]) ?? resources;
+                var formResources = core.ResolveDict(xStream.Dictionary[PdfName.Resources]) ?? resources;
                 var formOps = ContentStreamParser.Parse(formData);
                 result.AddRange(ExpandFormXObjects(core, formOps, formResources, depth + 1, ref budget));
             }

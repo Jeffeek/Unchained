@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
-using Unchained.Drawing.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;

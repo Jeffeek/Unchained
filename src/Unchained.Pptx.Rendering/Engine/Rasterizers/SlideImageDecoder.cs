@@ -1,10 +1,9 @@
 using Unchained.Drawing;
 using Unchained.Drawing.Decoders;
-using Unchained.Drawing.Extensions;
-using Unchained.Drawing.Text.Extensions;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Ooxml.Media;
 
-namespace Unchained.Pptx.Rendering.Engine;
+namespace Unchained.Pptx.Rendering.Engine.Rasterizers;
 
 /// <summary>
 ///     Decodes embedded slide images (PNG / JPEG / SVG) to packed RGB and blits scaled RGB
@@ -57,20 +56,18 @@ internal static class SlideImageDecoder
         if (IsJpeg(bytes))
             return JpegDecoder.TryDecodeToRgb(bytes, out width, out height);
 
-        if (IsSvg(bytes))
-        {
-            // Render SVG at a reasonable fixed resolution; caller scales to dest rect.
-            const int svgRenderSize = 256;
-            var pixels = SvgDecoder.TryDecodeToRgb(
-                bytes,
-                svgRenderSize,
-                svgRenderSize,
-                out width,
-                out height);
-            return pixels;
-        }
+        if (!IsSvg(bytes)) return null;
 
-        return null;
+        // Render SVG at a reasonable fixed resolution; caller scales to dest rect.
+        const int svgRenderSize = 256;
+        var pixels = SvgDecoder.TryDecodeToRgb(
+            bytes,
+            svgRenderSize,
+            svgRenderSize,
+            out width,
+            out height);
+
+        return pixels;
     }
 
     private static bool IsPng(ReadOnlySpan<byte> bytes) =>

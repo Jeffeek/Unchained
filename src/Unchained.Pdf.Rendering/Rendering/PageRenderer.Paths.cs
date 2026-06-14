@@ -1,4 +1,4 @@
-using Unchained.Drawing;
+using Unchained.Drawing.Primitives;
 
 namespace Unchained.Pdf.Rendering.Rendering;
 
@@ -208,7 +208,7 @@ internal sealed partial class PageRenderer
                 for (var i = 0; i < n; i++)
                 {
                     var (ax, ay) = pts[i];
-                    var (bx, by) = pts[(i + 1) % n];             // implicit close
+                    var (bx, by) = pts[(i + 1) % n];        // implicit close
                     if (Math.Abs(ay - by) < 0.05) continue; // horizontal edge contributes no crossing
                     // Half-open [min,max) so shared vertices aren't double-counted.
                     if (!(sy >= Math.Min(ay, by)) || !(sy < Math.Max(ay, by))) continue;

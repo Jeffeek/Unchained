@@ -1,4 +1,4 @@
-namespace Unchained.Drawing;
+namespace Unchained.Drawing.Primitives;
 
 /// <summary>
 ///     Pure 2D affine-matrix arithmetic shared by the rendering and document assemblies.
