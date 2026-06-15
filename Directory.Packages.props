@@ -11,7 +11,7 @@
   <ItemGroup Label="Unchained.Pdf">
     <PackageVersion Include="JpegLibrary" Version="0.4.32" />
     <PackageVersion Include="JBig2Decoder.NETStandard" Version="1.5.2" />
-    <PackageVersion Include="CoreJ2K" Version="2.2.2.72" />
+    <PackageVersion Include="CoreJ2K" Version="2.3.0.81" />
     <PackageVersion Include="Markdig" Version="1.2.0" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.8" />
   </ItemGroup>
