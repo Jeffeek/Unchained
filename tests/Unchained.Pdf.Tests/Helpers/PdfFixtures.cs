@@ -195,8 +195,6 @@ internal static class PdfFixtures
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
@@ -262,8 +260,6 @@ internal static class PdfFixtures
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
@@ -326,8 +322,6 @@ internal static class PdfFixtures
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     private static byte[] BuildWithContent(string contentStream)
@@ -382,10 +376,6 @@ internal static class PdfFixtures
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     private static byte[] Build(int pageCount, string? title = null, string? author = null)
@@ -450,8 +440,6 @@ internal static class PdfFixtures
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     private static int ByteLength(StringBuilder sb) => Encoding.Latin1.GetByteCount(sb.ToString());
@@ -551,10 +539,6 @@ internal static class PdfFixtures
             rawXref[pos + 5] = (byte)(gen >> 8);
             rawXref[pos + 6] = (byte)gen;
         }
-
-        static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     private static byte[] BuildWithAnnotation(string contents)
@@ -796,68 +780,64 @@ internal static class PdfFixtures
 
         var sb = new StringBuilder();
 
-        AppendLineWithLineEnding("%PDF-1.7");
-        AppendLineWithLineEnding("%\xE2\xE3\xCF\xD3");
+        Ln(sb, "%PDF-1.7");
+        Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        var o1 = Len();
-        AppendLineWithLineEnding("1 0 obj");
-        AppendLineWithLineEnding("<< /Type /Catalog /Pages 2 0 R >>");
-        AppendLineWithLineEnding("endobj");
-        var o2 = Len();
-        AppendLineWithLineEnding("2 0 obj");
-        AppendLineWithLineEnding("<< /Type /Pages /Kids [7 0 R] /Count 1 >>");
-        AppendLineWithLineEnding("endobj");
+        var o1 = Len(sb);
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        Ln(sb, "endobj");
+        var o2 = Len(sb);
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [7 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
 
         // Object 3 — content stream
-        var o3 = Len();
-        AppendLineWithLineEnding("3 0 obj");
-        AppendLineWithLineEnding($"<< /Length {Encoding.Latin1.GetByteCount(contentStream)} >>");
+        var o3 = Len(sb);
+        Ln(sb, "3 0 obj");
+        Ln(sb, $"<< /Length {Encoding.Latin1.GetByteCount(contentStream)} >>");
         sb.Append("stream\n").Append(contentStream).Append("\nendstream\n");
-        AppendLineWithLineEnding("endobj");
+        Ln(sb, "endobj");
 
         // Object 4 — FontDescriptor
-        var o4 = Len();
-        AppendLineWithLineEnding("4 0 obj");
-        AppendLineWithLineEnding("<< /Type /FontDescriptor /FontName /TestFont /Flags 32 /FontFile2 5 0 R >>");
-        AppendLineWithLineEnding("endobj");
+        var o4 = Len(sb);
+        Ln(sb, "4 0 obj");
+        Ln(sb, "<< /Type /FontDescriptor /FontName /TestFont /Flags 32 /FontFile2 5 0 R >>");
+        Ln(sb, "endobj");
 
         // Object 5 — embedded font stream (hex-encoded, ASCIIHexDecode)
-        var o5 = Len();
-        AppendLineWithLineEnding("5 0 obj");
-        AppendLineWithLineEnding($"<< /Length {hexLen} /Length1 {fontBytes.Length} /Filter /ASCIIHexDecode >>");
+        var o5 = Len(sb);
+        Ln(sb, "5 0 obj");
+        Ln(sb, $"<< /Length {hexLen} /Length1 {fontBytes.Length} /Filter /ASCIIHexDecode >>");
         sb.Append("stream\n").Append(hexStream).Append("\nendstream\n");
-        AppendLineWithLineEnding("endobj");
+        Ln(sb, "endobj");
 
         // Object 6 — Font
-        var o6 = Len();
-        AppendLineWithLineEnding("6 0 obj");
-        AppendLineWithLineEnding("<< /Type /Font /Subtype /TrueType /BaseFont /TestFont /FontDescriptor 4 0 R >>");
-        AppendLineWithLineEnding("endobj");
+        var o6 = Len(sb);
+        Ln(sb, "6 0 obj");
+        Ln(sb, "<< /Type /Font /Subtype /TrueType /BaseFont /TestFont /FontDescriptor 4 0 R >>");
+        Ln(sb, "endobj");
 
         // Object 7 — Page
-        var o7 = Len();
-        AppendLineWithLineEnding("7 0 obj");
-        AppendLineWithLineEnding("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
-        AppendLineWithLineEnding("   /Resources << /Font << /F1 6 0 R >> >> >>");
-        AppendLineWithLineEnding("endobj");
+        var o7 = Len(sb);
+        Ln(sb, "7 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
+        Ln(sb, "   /Resources << /Font << /F1 6 0 R >> >> >>");
+        Ln(sb, "endobj");
 
-        var xref = Len();
-        AppendLineWithLineEnding("xref");
-        AppendLineWithLineEnding("0 8");
-        AppendLineWithLineEnding("0000000000 65535 f ");
+        var xref = Len(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 8");
+        Ln(sb, "0000000000 65535 f ");
         foreach (var o in new[] { o1, o2, o3, o4, o5, o6, o7 })
-            AppendLineWithLineEnding($"{o:D10} 00000 n ");
-        AppendLineWithLineEnding("trailer");
-        AppendLineWithLineEnding("<< /Size 8 /Root 1 0 R >>");
-        AppendLineWithLineEnding("startxref");
-        AppendLineWithLineEnding(xref.ToString());
+            Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 8 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xref.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        int Len() => Encoding.Latin1.GetByteCount(sb.ToString());
-
-        void AppendLineWithLineEnding(string line) => sb.Append(line).Append('\n');
     }
 
     // Builds a PDF with a DeviceRGB image XObject and a Do operator that paints it.
@@ -1411,8 +1391,6 @@ internal static class PdfFixtures
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
@@ -1481,8 +1459,6 @@ internal static class PdfFixtures
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
@@ -1558,8 +1534,6 @@ internal static class PdfFixtures
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     /// <summary>
@@ -1626,8 +1600,6 @@ internal static class PdfFixtures
         Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
     }
 
     private static byte[] ZlibCompress(byte[] data)
@@ -1637,4 +1609,8 @@ internal static class PdfFixtures
             zlib.Write(data);
         return ms.ToArray();
     }
+
+    private static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
+
+    private static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
 }
