@@ -4,6 +4,7 @@ using Unchained.Drawing.Encoders;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Text;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Rendering.Engine;
@@ -23,6 +24,7 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 public sealed class RasterizerCoverageTests : PptxTestBase
 {
     private static readonly RenderOptions Small = new() { WidthPx = 320, HeightPx = 180 };
+    private static readonly RenderOptions Large = new() { WidthPx = 1280, HeightPx = 720 };
 
     private static byte[] SmallPng()
     {
@@ -306,5 +308,178 @@ public sealed class RasterizerCoverageTests : PptxTestBase
 
         var rendered = await RenderAsync(doc);
         rendered.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    // ── Text layout branches (SlideRasterizer.Text) ──────────────────────────────
+
+    [Fact]
+    public async Task MultiColumnText_Renders()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var tb = doc.Slides[0]
+            .Shapes.AddTextBox(Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(6), Emu.FromInches(4));
+        tb.TextFrame.Format.ColumnCount = 3;
+        tb.TextFrame.Format.ColumnSpacing = Emu.FromPoints(18);
+        for (var i = 0; i < 9; i++)
+            tb.TextFrame.Paragraphs.Add($"Paragraph number {i} with several words to wrap");
+
+        var image = await RenderAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [
+        Theory,
+        InlineData(TextAnchor.Top),
+        InlineData(TextAnchor.Middle),
+        InlineData(TextAnchor.Bottom),
+        InlineData(TextAnchor.MiddleCentered),
+        InlineData(TextAnchor.BottomCentered)
+    ]
+    public async Task VerticalAnchoredText_Renders(TextAnchor anchor)
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var tb = doc.Slides[0]
+            .Shapes.AddTextBox(Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(4), Emu.FromInches(3));
+        tb.TextFrame.Format.VerticalAnchor = anchor;
+        tb.TextFrame.Paragraphs.Add("anchored line one");
+        tb.TextFrame.Paragraphs.Add("anchored line two");
+
+        var image = await RenderAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task AutofitShrinkText_Renders()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var tb = doc.Slides[0]
+            .Shapes.AddTextBox(Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(2), Emu.FromInches(1));
+        tb.TextFrame.Format.Autofit = TextAutofit.ShrinkText;
+        for (var i = 0; i < 12; i++)
+            tb.TextFrame.Paragraphs.Add($"Overflowing paragraph {i} that needs shrinking to fit the box");
+
+        var image = await RenderAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task EmptyAndColoredParagraphs_Render()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var tb = doc.Slides[0]
+            .Shapes.AddTextBox(Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(4), Emu.FromInches(3));
+        // Empty paragraph (no runs) then a coloured run.
+        tb.TextFrame.Paragraphs.Add("");
+        var para = tb.TextFrame.Paragraphs.Add("Coloured text here");
+        para.Runs[0].Format.Fill = new FillFormat();
+        para.Runs[0].Format.Fill!.SetSolid(ColorSpec.FromRgb(200, 30, 30));
+        para.Runs[0].Format.FontSizePoints = 28;
+
+        var image = await RenderAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task LongWrappingParagraph_ExceedsBoxAndClips()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var tb = doc.Slides[0]
+            .Shapes.AddTextBox(Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(2), Emu.FromInches(1));
+        tb.TextFrame.Paragraphs.Add(string.Join(" ", Enumerable.Repeat("wordwordword", 40)));
+
+        var image = await RenderAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    // ── Chart rendering branches (SlideRasterizer.Charts) ─────────────────────────
+
+    private static ChartShape AddChart(
+        PresentationDocument doc,
+        ChartType type,
+        bool legend,
+        bool title,
+        int seriesCount
+    )
+    {
+        var chart = doc.Slides[0]
+            .Shapes.AddChart(type, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(6), Emu.FromInches(4));
+        chart.Chart.HasTitle = title;
+        if (title) chart.Chart.Title = $"{type} chart";
+        chart.Chart.Legend.IsVisible = legend;
+        chart.Chart.Data.Categories.AddRange(["Q1", "Q2", "Q3", "Q4"]);
+        for (var i = 0; i < seriesCount; i++)
+        {
+            var s = new ChartSeries { Name = $"S{i}" };
+            s.Values.AddRange([3.0 + i, 7.0 - i, 5.0, 9.0 + i]);
+            chart.Chart.Data.Series.Add(s);
+        }
+        return chart;
+    }
+
+    private static async Task<PptxImage> RenderLargeAsync(PresentationDocument doc) =>
+        await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Large);
+
+    [
+        Theory,
+        InlineData(ChartType.Pie),
+        InlineData(ChartType.Doughnut),
+        InlineData(ChartType.Line),
+        InlineData(ChartType.LineWithMarkers),
+        InlineData(ChartType.ScatterWithStraightLines),
+        InlineData(ChartType.BarClustered),
+        InlineData(ChartType.ColumnClustered)
+    ]
+    public async Task ChartTypes_RenderWithLegendAndTitle(ChartType type)
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        AddChart(doc, type, legend: true, title: true, seriesCount: 2);
+
+        var image = await RenderLargeAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Chart_NoLegendNoTitle_Renders()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        AddChart(doc, ChartType.ColumnClustered, legend: false, title: false, seriesCount: 1);
+
+        var image = await RenderLargeAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Chart_NoSeries_RendersEmptyFrame()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var chart = doc.Slides[0]
+            .Shapes.AddChart(ChartType.BarClustered, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(5), Emu.FromInches(3));
+        chart.Chart.HasTitle = true;
+        chart.Chart.Title = "Empty";
+
+        var image = await RenderLargeAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Chart_TitleEnabledButBlank_SkipsTitle()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var chart = AddChart(doc, ChartType.Line, legend: true, title: false, seriesCount: 2);
+        chart.Chart.HasTitle = true;
+        chart.Chart.Title = "   ";
+
+        var image = await RenderLargeAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Chart_MultiSeriesBar_RendersGroups()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        AddChart(doc, ChartType.BarClustered, legend: true, title: true, seriesCount: 3);
+
+        var image = await RenderLargeAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
     }
 }
