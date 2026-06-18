@@ -75,7 +75,7 @@ public sealed class PdfAValidatorBranchTests
     [Fact]
     public void ProhibitedAnnotationType_ReportsViolation()
     {
-        var page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>";
+        const string page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>";
         var bodies = new List<string>
         {
             PlainCatalog,
@@ -90,7 +90,7 @@ public sealed class PdfAValidatorBranchTests
     [Fact]
     public void Annotation_WithoutPrintFlag_ReportsViolation()
     {
-        var page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>";
+        const string page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>";
         var bodies = new List<string>
         {
             PlainCatalog,
@@ -106,7 +106,7 @@ public sealed class PdfAValidatorBranchTests
     [Fact]
     public void WidgetAnnotation_WithoutAppearance_ReportsViolation()
     {
-        var page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>";
+        const string page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>";
         var bodies = new List<string>
         {
             PlainCatalog,
@@ -123,7 +123,7 @@ public sealed class PdfAValidatorBranchTests
     [Fact]
     public void ProhibitedActionInAnnotation_ReportsViolation()
     {
-        var page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>";
+        const string page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [4 0 R] >>";
         var bodies = new List<string>
         {
             PlainCatalog,
@@ -138,7 +138,7 @@ public sealed class PdfAValidatorBranchTests
     [Fact]
     public void CatalogAdditionalActions_ReportsViolation()
     {
-        var catalog = "<< /Type /Catalog /Pages 2 0 R /AA << /WC << /S /JavaScript >> >> >>";
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /AA << /WC << /S /JavaScript >> >> >>";
         var result = Validate(catalog);
         result.Violations.ShouldContain(static v => v.RuleId == "6.6.1");
     }
@@ -148,7 +148,7 @@ public sealed class PdfAValidatorBranchTests
     [Fact]
     public void EmbeddedFiles_ReportsViolation()
     {
-        var catalog = "<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Names [] >> >> >>";
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Names [] >> >> >>";
         var result = Validate(catalog);
         result.Violations.ShouldContain(static v => v.RuleId == "6.8" && v.Description.Contains("EmbeddedFiles"));
     }
@@ -156,7 +156,7 @@ public sealed class PdfAValidatorBranchTests
     [Fact]
     public void Collection_ReportsViolation()
     {
-        var catalog = "<< /Type /Catalog /Pages 2 0 R /Collection << /View /D >> >>";
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /Collection << /View /D >> >>";
         var result = Validate(catalog);
         result.Violations.ShouldContain(static v => v.RuleId == "6.8" && v.Description.Contains("Collection"));
     }

@@ -206,7 +206,7 @@ public sealed class PdfUAValidatorTests
     {
         const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) /MarkInfo << /Marked true >> " +
                                "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R " +
-                               "/OpenAction << /S /JavaScript /JS (app.alert\\(1\\)) >> >>";
+                               @"/OpenAction << /S /JavaScript /JS (app.alert\(1\)) >> >>";
         var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>" };
         PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
             .Violations.ShouldContain(static v => v.RuleId == "7.14");

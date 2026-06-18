@@ -14,8 +14,6 @@ namespace Unchained.Pdf.Tests.IntegrationTests;
 /// </summary>
 public sealed class RedactorBranchTests : PdfTestBase
 {
-    private static readonly Redactor Redactor = new();
-
     // A content stream that uses every text-positioning operator and carries operands of
     // every PdfObject kind on a custom (non-text, never-dropped) operator "Xx".
     private const string RichContent =
@@ -35,6 +33,7 @@ public sealed class RedactorBranchTests : PdfTestBase
         "(Quote) '\n" +
         "0 0 (DQ) \"\n" +
         "ET";
+    private static readonly Redactor Redactor = new();
 
     [Fact]
     public async Task Redact_RichContent_OutsideRegion_PreservesAllOperators()

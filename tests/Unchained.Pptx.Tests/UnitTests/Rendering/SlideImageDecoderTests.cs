@@ -1,3 +1,4 @@
+using System.Text;
 using Shouldly;
 using Unchained.Drawing;
 using Unchained.Drawing.Encoders;
@@ -56,10 +57,9 @@ public sealed class SlideImageDecoderTests
     [Fact]
     public void TryDecode_Svg_RendersAtFixedResolution()
     {
-        var svg =
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\">" +
-            "<rect x=\"0\" y=\"0\" width=\"32\" height=\"32\" fill=\"#3366CC\"/></svg>";
-        var bytes = System.Text.Encoding.UTF8.GetBytes(svg);
+        const string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\">" +
+                           "<rect x=\"0\" y=\"0\" width=\"32\" height=\"32\" fill=\"#3366CC\"/></svg>";
+        var bytes = Encoding.UTF8.GetBytes(svg);
 
         var result = SlideImageDecoder.TryDecodeImageToRgb(Image(bytes, "image/svg+xml"), out var w, out var h);
 
@@ -71,11 +71,10 @@ public sealed class SlideImageDecoderTests
     [Fact]
     public void TryDecode_SvgWithXmlDeclaration_IsDetected()
     {
-        var svg =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\">" +
-            "<circle cx=\"8\" cy=\"8\" r=\"6\" fill=\"red\"/></svg>";
-        var bytes = System.Text.Encoding.UTF8.GetBytes(svg);
+        const string svg = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                           "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\">" +
+                           "<circle cx=\"8\" cy=\"8\" r=\"6\" fill=\"red\"/></svg>";
+        var bytes = Encoding.UTF8.GetBytes(svg);
 
         var result = SlideImageDecoder.TryDecodeImageToRgb(Image(bytes, "image/svg+xml"), out _, out _);
 
@@ -104,7 +103,16 @@ public sealed class SlideImageDecoderTests
             0, 0, 255, 255, 255, 0
         };
 
-        SlideImageDecoder.BlitScaledRgb(dst, src, 2, 2, 0, 0, 8, 8);
+        SlideImageDecoder.BlitScaledRgb(
+            dst,
+            src,
+            2,
+            2,
+            0,
+            0,
+            8,
+            8
+        );
 
         // Top-left should be the first source pixel (red).
         var (r, g, b) = dst.GetPixelRgb(0, 0);

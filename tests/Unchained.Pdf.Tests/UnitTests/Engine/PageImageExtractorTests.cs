@@ -17,7 +17,7 @@ public sealed class PageImageExtractorTests
     private static PdfDocumentCore Core() => PdfDocumentCore.Parse(PdfFixtures.SinglePage());
 
     // Builds a page dict whose /Resources /XObject holds one image named Im1.
-    private static PdfDictionary PageWithImage(PdfStream image)
+    private static PdfDictionary PageWithImage(PdfObject image)
     {
         var resources = new PdfDictionary(
             new Dictionary<string, PdfObject>
@@ -79,7 +79,7 @@ public sealed class PageImageExtractorTests
     public void DeviceCmyk_ConvertsToRgb()
     {
         // One CMYK pixel: 0,0,0,0 = white.
-        var data = new byte[] { 0, 0, 0, 0 };
+        var data = "\0\0\0\0"u8.ToArray();
         var img = PageImageExtractor.GetImageXObjects(PageWithImage(Image(1, 1, "DeviceCMYK", 8, data)), Core())["Im1"];
         img.RgbData[0].ShouldBe((byte)255);
         img.RgbData[1].ShouldBe((byte)255);
@@ -149,7 +149,7 @@ public sealed class PageImageExtractorTests
         var decode = new PdfArray(
             [new PdfReal(1), new PdfReal(0), new PdfReal(1), new PdfReal(0), new PdfReal(1), new PdfReal(0)]
         );
-        var data = new byte[] { 0, 0, 0 };
+        var data = "\0\0\0"u8.ToArray();
         var img = PageImageExtractor.GetImageXObjects(
             PageWithImage(
                 Image(

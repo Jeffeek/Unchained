@@ -160,12 +160,7 @@ public sealed class MeshShadingDecoderPatchTests
         };
         // 3 vertices, each: flag(1)+x(1)+y(1)+c(1)+m(1)+y(1)+k(1) = 7 bytes.
         // All-zero CMYK → white.
-        byte[] data =
-        [
-            0, 0, 0, 0, 0, 0, 0,
-            0, 100, 0, 0, 0, 0, 0,
-            0, 0, 100, 0, 0, 0, 0
-        ];
+        var data = "\0\0\0\0\0\0\0\0d\0\0\0\0\0\0\0d\0\0\0\0"u8.ToArray();
         var stream = new PdfStream(new PdfDictionary(entries), data);
 
         var tris = MeshShadingDecoder.Decode(stream, Core(), 4);

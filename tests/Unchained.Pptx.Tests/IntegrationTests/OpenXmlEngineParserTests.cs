@@ -1,6 +1,10 @@
+using System.IO.Compression;
 using Shouldly;
+using Unchained.Drawing;
+using Unchained.Drawing.Encoders;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
+using Unchained.Pptx.Comments;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Models.Themes;
@@ -185,7 +189,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var author = doc.CommentAuthors.Add("Engine Author");
-        doc.Slides[0].AddComment("hi", new Unchained.Pptx.Comments.SlidePosition(Emu.Zero, Emu.Zero), author);
+        doc.Slides[0].AddComment("hi", new SlidePosition(Emu.Zero, Emu.Zero), author);
 
         using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms);
@@ -236,9 +240,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
     public async Task SdkEngine_PictureWithImage_RoundTripsBytes()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var buffer = new Unchained.Drawing.RasterBuffer(8, 8);
+        var buffer = new RasterBuffer(8, 8);
         buffer.Clear(10, 50, 200);
-        var png = Unchained.Drawing.Encoders.PngEncoder.Encode(buffer);
+        var png = PngEncoder.Encode(buffer);
         var image = doc.Media.AddImage(png, "image/png");
         doc.Slides[0].Shapes.AddPicture(image, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(2), Emu.FromInches(2));
 
@@ -342,27 +346,34 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
     private static byte[] BuildMinimalWordPackage()
     {
         using var ms = new MemoryStream();
-        using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             var ct = archive.CreateEntry("[Content_Types].xml");
             using (var s = new StreamWriter(ct.Open()))
+            {
                 s.Write(
                     "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">" +
                     "<Default Extension=\"xml\" ContentType=\"application/xml\"/>" +
                     "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>" +
                     "</Types>"
                 );
+            }
+
             var rels = archive.CreateEntry("_rels/.rels");
             using (var s = new StreamWriter(rels.Open()))
+            {
                 s.Write(
                     "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
                     "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>" +
                     "</Relationships>"
                 );
+            }
+
             var docEntry = archive.CreateEntry("word/document.xml");
             using (var s = new StreamWriter(docEntry.Open()))
                 s.Write("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body/></w:document>");
         }
+
         return ms.ToArray();
     }
 }

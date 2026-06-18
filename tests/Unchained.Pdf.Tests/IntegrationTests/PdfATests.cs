@@ -473,56 +473,51 @@ public sealed class PdfATests : PdfTestBase
         var sb = new StringBuilder();
         var offsets = new List<int>();
 
-        Ln(sb, "%PDF-1.4");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        PdfFixtures.Ln(sb, "%PDF-1.4");
+        PdfFixtures.Ln(sb, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog (references /Metadata at obj 4)
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "1 0 obj");
-        Ln(sb, "<< /Type /Catalog /Pages 2 0 R /Metadata 4 0 R >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "1 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Catalog /Pages 2 0 R /Metadata 4 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
 
         // Object 2 — Pages
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "2 0 obj");
-        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "2 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Ln(sb, "endobj");
 
         // Object 3 — Page
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "3 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "3 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        PdfFixtures.Ln(sb, "endobj");
 
         // Object 4 — Metadata stream
         var metaBytes = Encoding.UTF8.GetBytes(rawXmpContent);
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "4 0 obj");
-        Ln(sb, $"<< /Type /Metadata /Subtype /XML /Length {metaBytes.Length} >>");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "4 0 obj");
+        PdfFixtures.Ln(sb, $"<< /Type /Metadata /Subtype /XML /Length {metaBytes.Length} >>");
         sb.Append("stream\n");
         // Embed raw XMP bytes as Latin-1 (all chars ≤255; UTF-8 bytes land in Latin-1 passthrough)
         foreach (var b in metaBytes) sb.Append((char)b);
-        Ln(sb, "\nendstream");
-        Ln(sb, "endobj");
+        PdfFixtures.Ln(sb, "\nendstream");
+        PdfFixtures.Ln(sb, "endobj");
 
-        var xrefOffset = ByteLength(sb);
-        Ln(sb, "xref");
-        Ln(sb, "0 5");
-        Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
-        Ln(sb, "<< /Size 5 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        var xrefOffset = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, "0 5");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
+        PdfFixtures.Ln(sb, "<< /Size 5 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) =>
-            b.Append(line).Append('\n');
-
-        static int ByteLength(StringBuilder b) =>
-            Encoding.Latin1.GetByteCount(b.ToString());
     }
 
     /// <summary>
@@ -534,52 +529,46 @@ public sealed class PdfATests : PdfTestBase
         var sb = new StringBuilder();
         var offsets = new List<int>();
 
-        Ln(sb, "%PDF-1.4");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        PdfFixtures.Ln(sb, "%PDF-1.4");
+        PdfFixtures.Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "1 0 obj");
-        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "1 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "2 0 obj");
-        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "2 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Ln(sb, "endobj");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "3 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "3 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
 
         // Object 4 — stream with /LZWDecode filter (1 dummy byte)
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "4 0 obj");
-        Ln(sb, "<< /Length 1 /Filter /LZWDecode >>");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "4 0 obj");
+        PdfFixtures.Ln(sb, "<< /Length 1 /Filter /LZWDecode >>");
         sb.Append("stream\n\0\nendstream\n");
-        Ln(sb, "endobj");
+        PdfFixtures.Ln(sb, "endobj");
 
-        var xrefOffset = ByteLength(sb);
-        Ln(sb, "xref");
-        Ln(sb, "0 5");
-        Ln(sb, "0000000000 65535 f ");
+        var xrefOffset = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, "0 5");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
         foreach (var o in offsets)
-            Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
         // ReSharper disable StringLiteralTypo
-        Ln(sb, "<< /Size 5 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
+        PdfFixtures.Ln(sb, "<< /Size 5 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
         // ReSharper restore StringLiteralTypo
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) =>
-            b.Append(line).Append('\n');
-
-        static int ByteLength(StringBuilder b) =>
-            Encoding.Latin1.GetByteCount(b.ToString());
     }
 
     /// <summary>
@@ -591,48 +580,43 @@ public sealed class PdfATests : PdfTestBase
         var sb = new StringBuilder();
         var offsets = new List<int>();
 
-        Ln(sb, "%PDF-1.4");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        PdfFixtures.Ln(sb, "%PDF-1.4");
+        PdfFixtures.Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "1 0 obj");
-        Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "1 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "2 0 obj");
-        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "2 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Ln(sb, "endobj");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "3 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "3 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        PdfFixtures.Ln(sb, "endobj");
 
         // Object 4 — Font with no /FontDescriptor (nor FontFile*)
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "4 0 obj");
-        Ln(sb, "<< /Type /Font /Subtype /TrueType /BaseFont /Helvetica >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "4 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Font /Subtype /TrueType /BaseFont /Helvetica >>");
+        PdfFixtures.Ln(sb, "endobj");
 
-        var xrefOffset = ByteLength(sb);
-        Ln(sb, "xref");
-        Ln(sb, "0 5");
-        Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
-        Ln(sb, "<< /Size 5 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        var xrefOffset = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, "0 5");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
+        PdfFixtures.Ln(sb, "<< /Size 5 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) =>
-            b.Append(line).Append('\n');
-
-        static int ByteLength(StringBuilder b) =>
-            Encoding.Latin1.GetByteCount(b.ToString());
     }
 
     /// <summary>
@@ -644,44 +628,39 @@ public sealed class PdfATests : PdfTestBase
         var sb = new StringBuilder();
         var offsets = new List<int>();
 
-        Ln(sb, "%PDF-1.4");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        PdfFixtures.Ln(sb, "%PDF-1.4");
+        PdfFixtures.Ln(sb, "%\xE2\xE3\xCF\xD3");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "1 0 obj");
-        Ln(sb, @"<< /Type /Catalog /Pages 2 0 R /AA << /WC << /S /JavaScript /JS (app.alert\('hi'\)) >> >> >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "1 0 obj");
+        PdfFixtures.Ln(sb, @"<< /Type /Catalog /Pages 2 0 R /AA << /WC << /S /JavaScript /JS (app.alert\('hi'\)) >> >> >>");
+        PdfFixtures.Ln(sb, "endobj");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "2 0 obj");
-        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "2 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Ln(sb, "endobj");
 
-        offsets.Add(ByteLength(sb));
-        Ln(sb, "3 0 obj");
-        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
-        Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "3 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>");
+        PdfFixtures.Ln(sb, "endobj");
 
-        var xrefOffset = ByteLength(sb);
-        Ln(sb, "xref");
-        Ln(sb, "0 4");
-        Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
+        var xrefOffset = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, "0 4");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
         // ReSharper disable StringLiteralTypo
-        Ln(sb, "<< /Size 4 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
+        PdfFixtures.Ln(sb, "<< /Size 4 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
         // ReSharper restore StringLiteralTypo
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
-
-        static void Ln(StringBuilder b, string line) =>
-            b.Append(line).Append('\n');
-
-        static int ByteLength(StringBuilder b) =>
-            Encoding.Latin1.GetByteCount(b.ToString());
     }
 
     // ── veraPDF corpus ────────────────────────────────────────────────────────
