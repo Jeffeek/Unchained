@@ -89,6 +89,17 @@ The following notice from the original JJ2000 5.1 implementation must be preserv
 
 ---
 
+## DocumentFormat.OpenXml
+
+**License:** MIT — https://opensource.org/licenses/MIT  
+**Copyright:** Copyright (c) Microsoft Corporation and the .NET Foundation  
+**Source:** https://github.com/dotnet/Open-XML-SDK
+
+Used by `Unchained.Ooxml` (and transitively by `Unchained.Pptx`) for OPC package
+read/write of OOXML documents.
+
+---
+
 ## DejaVu Fonts
 
 **License:** Bitstream Vera Fonts Copyright — https://dejavu-fonts.github.io/License.html  

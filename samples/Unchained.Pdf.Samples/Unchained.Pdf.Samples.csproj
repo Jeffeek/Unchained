@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Unchained.Pdf.Samples</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Unchained.Pdf\Unchained.Pdf.csproj" />
+    <ProjectReference Include="..\..\src\Unchained.Pdf.Rendering\Unchained.Pdf.Rendering.csproj" />
+    <ProjectReference Include="..\..\src\Unchained.Drawing.Runtimes\Unchained.Drawing.Runtimes.csproj" />
+  </ItemGroup>
+
+</Project>
