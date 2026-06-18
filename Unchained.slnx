@@ -8,7 +8,10 @@
     <File Path="README.md" />
 
   </Folder>
-  <Folder Name="/samples/" />
+  <Folder Name="/samples/">
+    <Project Path="samples/Unchained.Pdf.Samples/Unchained.Pdf.Samples.csproj" />
+    <Project Path="samples/Unchained.Pptx.Samples/Unchained.Pptx.Samples.csproj" />
+  </Folder>
   <Folder Name="/Solution items/">
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />

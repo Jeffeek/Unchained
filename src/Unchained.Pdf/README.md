@@ -59,10 +59,11 @@ IReadOnlyList<ContentOperator> ops = doc.Pages[1].GetContentOperators();
 
 ```csharp
 var generator = new TableGenerator();
-var data = new TableData(
-    Headers: ["Name", "Amount"],
-    Rows:    [["Alice", "$1,200"], ["Bob", "$950"]]
-);
+var data = new TableData
+{
+    Headers = ["Name", "Amount"],
+    Rows    = [["Alice", "$1,200"], ["Bob", "$950"]]
+};
 await using var tableDoc = await generator.GenerateAsync(data, TableStyle.Default);
 await processor.SaveAsync(tableDoc, "report.pdf");
 ```
@@ -71,7 +72,7 @@ await processor.SaveAsync(tableDoc, "report.pdf");
 
 ```csharp
 var merger = new DocumentMerger();
-await using var merged = await merger.MergeAsync([doc1, doc2, doc3]);
+await using var merged = await merger.MergeAsync([doc1, doc2, doc3], MergeOptions.Default);
 ```
 
 ### Stamps & watermarks
@@ -79,14 +80,17 @@ await using var merged = await merger.MergeAsync([doc1, doc2, doc3]);
 ```csharp
 var applier = new StampApplier();
 await applier.StampAsync(doc,
-    new TextStamp("DRAFT", position: StampPosition.Center, opacity: 0.25f, rotation: 45));
+    new TextStamp("DRAFT", X: 150, Y: 400, FontSize: 60f, GrayLevel: 0.8f,
+                  RotationDegrees: 45f, IsBackground: true));
 ```
 
 ### Annotations
 
 ```csharp
 var editor = new AnnotationEditor();
-editor.AddTextAnnotation(doc.Pages[1], x: 72, y: 720, text: "Please review");
+await editor.AddAnnotationAsync(doc, pageNumber: 1,
+    new Annotation(AnnotationSubtype.Text, X: 72, Y: 720, Width: 200, Height: 40,
+                   Contents: "Please review"));
 
 // Export/import XFDF
 var xfdfEditor = new XfdfEditor();
@@ -98,8 +102,11 @@ await xfdfEditor.ImportAnnotationsFromXfdfAsync(doc, xfdfXml);
 
 ```csharp
 var bookmarkEditor = new BookmarkEditor();
-bookmarkEditor.AddBookmark(doc, new Bookmark("Introduction", pageNumber: 1));
-bookmarkEditor.AddBookmark(doc, new Bookmark("Chapter 1",    pageNumber: 5));
+await bookmarkEditor.SetBookmarksAsync(doc,
+[
+    new Bookmark("Introduction", PageNumber: 1),
+    new Bookmark("Chapter 1",    PageNumber: 5)
+]);
 
 IReadOnlyList<Bookmark> bookmarks = doc.GetBookmarks();
 ```
@@ -156,14 +163,14 @@ await processor.ChangePasswordsAsync(doc, "newUser", "newOwner", ms);
 
 ```csharp
 // Validate
-var result = await processor.ValidatePdfAAsync(pdfBytes, PdfAProfile.PdfA1b);
+var result = await processor.ValidatePdfAAsync(pdfBytes, PdfAProfile.PdfA1B);
 Console.WriteLine(result.IsConformant);
 foreach (var violation in result.Errors)
     Console.WriteLine($"[{violation.RuleId}] {violation.Description}");
 
 // Convert
 using var output = new MemoryStream();
-await processor.ConvertToPdfAAsync(doc, output, PdfAProfile.PdfA1b);
+await processor.ConvertToPdfAAsync(doc, output, PdfAProfile.PdfA1B);
 ```
 
 ### PDF/UA validation
@@ -243,12 +250,12 @@ await using var svg = await processor.LoadFromSvgAsync(svgString);
 ```csharp
 // Viewer preferences
 var prefEditor = new ViewerPreferencesEditor();
-prefEditor.SetHideToolbar(doc, true);
-prefEditor.SetPageLayout(doc, PageLayout.TwoColumnLeft);
+await prefEditor.SetViewerPreferencesAsync(doc, new ViewerPreferences(HideToolbar: true));
+await prefEditor.SetPageLayoutAsync(doc, PageLayout.TwoColumnLeft);
 
 // XMP metadata
 var xmpEditor = new XmpMetadataEditor();
-xmpEditor.SetXmpMetadata(doc, "<x:xmpmeta>...</x:xmpmeta>");
+await xmpEditor.SetXmpMetadataAsync(doc, "<x:xmpmeta>...</x:xmpmeta>");
 string? xmp = doc.GetXmpMetadata();
 
 // /Info metadata (Title, Author, Subject, Keywords, Creator, Producer)
@@ -265,7 +272,7 @@ await processor.SetMetadataAsync(doc,
 
 // Named destinations
 var destEditor = new NamedDestinationEditor();
-destEditor.AddDestination(doc, new NamedDestination("toc", pageNumber: 3));
+await destEditor.SetDestinationAsync(doc, "toc", pageNumber: 3);
 ```
 
 ### Optimization & repair
