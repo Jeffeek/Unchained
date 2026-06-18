@@ -83,7 +83,16 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
         // 4×2 gray glyph, full coverage (255), pitch == width.
         var pixels = new byte[4 * 2];
         Array.Fill(pixels, (byte)255);
-        Blit(buffer, 1, 1, 4, 2, 4, pixels, PixelModeGray);
+        Blit(
+            buffer,
+            1,
+            1,
+            4,
+            2,
+            4,
+            pixels,
+            PixelModeGray
+        );
         CountDark(buffer).ShouldBe(8);
     }
 
@@ -95,7 +104,16 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
         // Negative pitch signals bottom-up row order; both rows are fully covered.
         var pixels = new byte[4 * 2];
         Array.Fill(pixels, (byte)255);
-        Blit(buffer, 1, 1, 4, 2, -4, pixels, PixelModeGray);
+        Blit(
+            buffer,
+            1,
+            1,
+            4,
+            2,
+            -4,
+            pixels,
+            PixelModeGray
+        );
         CountDark(buffer).ShouldBe(8);
     }
 
@@ -106,7 +124,16 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
         buffer.Clear();
         // 8-pixel-wide mono row 0b10101010 → 4 set bits per row, 2 rows = 8 dark pixels.
         var pixels = new byte[] { 0b10101010, 0b10101010 };
-        Blit(buffer, 0, 1, 8, 2, 1, pixels, PixelModeMono);
+        Blit(
+            buffer,
+            0,
+            1,
+            8,
+            2,
+            1,
+            pixels,
+            PixelModeMono
+        );
         CountDark(buffer).ShouldBe(8);
     }
 
@@ -116,7 +143,16 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
         var buffer = new RasterBuffer(8, 4);
         buffer.Clear();
         var pixels = new byte[] { 0b11110000, 0b00001111 };
-        Blit(buffer, 0, 1, 8, 2, -1, pixels, PixelModeMono);
+        Blit(
+            buffer,
+            0,
+            1,
+            8,
+            2,
+            -1,
+            pixels,
+            PixelModeMono
+        );
         // 4 bits set in each row → 8 dark pixels total regardless of row order.
         CountDark(buffer).ShouldBe(8);
     }
@@ -127,7 +163,16 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
         var buffer = new RasterBuffer(8, 4);
         buffer.Clear();
         // width over 4096 → early-out guard; nothing is painted.
-        Blit(buffer, 0, 0, 5000, 2, 5000, new byte[] { 255 }, PixelModeGray);
+        Blit(
+            buffer,
+            0,
+            0,
+            5000,
+            2,
+            5000,
+            [255],
+            PixelModeGray
+        );
         CountDark(buffer).ShouldBe(0);
     }
 
@@ -139,7 +184,16 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
         var pixels = new byte[4];
         Array.Fill(pixels, (byte)255);
         // Pixel mode 3 (BGRA / LCD) is not handled → switch falls through, nothing painted.
-        Blit(buffer, 0, 0, 4, 1, 4, pixels, 3);
+        Blit(
+            buffer,
+            0,
+            0,
+            4,
+            1,
+            4,
+            pixels,
+            3
+        );
         CountDark(buffer).ShouldBe(0);
     }
 
@@ -148,7 +202,16 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
     {
         var buffer = new RasterBuffer(8, 4);
         buffer.Clear();
-        Blit(buffer, 0, 0, 4, 1, 0, new byte[] { 255, 255, 255, 255 }, PixelModeGray);
+        Blit(
+            buffer,
+            0,
+            0,
+            4,
+            1,
+            0,
+            [255, 255, 255, 255],
+            PixelModeGray
+        );
         CountDark(buffer).ShouldBe(0);
     }
 
@@ -157,7 +220,16 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
     {
         var buffer = new RasterBuffer(8, 4);
         buffer.Clear();
-        Blit(buffer, 0, 0, 4, 1, 4, null, PixelModeGray);
+        Blit(
+            buffer,
+            0,
+            0,
+            4,
+            1,
+            4,
+            null,
+            PixelModeGray
+        );
         CountDark(buffer).ShouldBe(0);
     }
 }

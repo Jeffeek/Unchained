@@ -1,8 +1,6 @@
 using System.Text;
-using System.Xml.Linq;
 using Shouldly;
 using Unchained.Ooxml.Opc;
-using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Parsing;
 using Xunit;
@@ -49,7 +47,7 @@ public sealed class LayoutParserTests
     [Fact]
     public void Parse_NoShapeTree_ReturnsLayoutWithNameAndType()
     {
-        var parser = new LayoutParser(PackageWith(LayoutXml("blank", withShapeTree: false)));
+        var parser = new LayoutParser(PackageWith(LayoutXml("blank", false)));
         var layout = parser.Parse(PartUri, "rId3");
         layout.Name.ShouldBe("Layout One");
         layout.LayoutType.ShouldBe(LayoutType.Blank);
@@ -59,7 +57,7 @@ public sealed class LayoutParserTests
     [Fact]
     public void Parse_WithShapeTree_ParsesShapes()
     {
-        var parser = new LayoutParser(PackageWith(LayoutXml("title", withShapeTree: true)));
+        var parser = new LayoutParser(PackageWith(LayoutXml("title", true)));
         var layout = parser.Parse(PartUri, "rId4");
         layout.LayoutType.ShouldBe(LayoutType.Title);
         layout.RawElement.ShouldNotBeNull();
@@ -84,7 +82,7 @@ public sealed class LayoutParserTests
     ]
     public void Parse_MapsLayoutTypeTokens(string token, LayoutType expected)
     {
-        var parser = new LayoutParser(PackageWith(LayoutXml(token, withShapeTree: true)));
+        var parser = new LayoutParser(PackageWith(LayoutXml(token, true)));
         parser.Parse(PartUri, "rId5").LayoutType.ShouldBe(expected);
     }
 }

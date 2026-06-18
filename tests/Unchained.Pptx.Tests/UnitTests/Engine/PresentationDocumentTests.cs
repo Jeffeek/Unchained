@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Core;
@@ -15,6 +18,11 @@ namespace Unchained.Pptx.Tests.UnitTests.Engine;
 /// </summary>
 public sealed class PresentationDocumentTests
 {
+    // ── Digital-signature parsing (ParseSignatureInfo / GetDigitalSignatures) ─────
+
+    private const string SignatureContentType =
+        "application/vnd.openxmlformats-officedocument.digital-signature-xmlsignature+xml";
+
     [Fact]
     public void Blank_ExposesNonNullCollections()
     {
@@ -178,36 +186,33 @@ public sealed class PresentationDocumentTests
         doc.SlideShow.ShouldNotBeNull();
     }
 
-    // ── Digital-signature parsing (ParseSignatureInfo / GetDigitalSignatures) ─────
-
-    private const string SignatureContentType =
-        "application/vnd.openxmlformats-officedocument.digital-signature-xmlsignature+xml";
-
     private static PreservedPart SignaturePart(string xml, string uri = "/_xmlsignatures/sig1.xml") =>
         new()
         {
             Uri = uri,
             ContentType = SignatureContentType,
-            Data = System.Text.Encoding.UTF8.GetBytes(xml)
+            Data = Encoding.UTF8.GetBytes(xml)
         };
 
     private static string SelfSignedCertBase64(out string commonName)
     {
         commonName = "Unchained Test Signer";
-        using var rsa = System.Security.Cryptography.RSA.Create(2048);
-        var request = new System.Security.Cryptography.X509Certificates.CertificateRequest(
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest(
             $"CN={commonName}",
             rsa,
-            System.Security.Cryptography.HashAlgorithmName.SHA256,
-            System.Security.Cryptography.RSASignaturePadding.Pkcs1
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1
         );
         using var cert = request.CreateSelfSigned(
             DateTimeOffset.UtcNow.AddDays(-1),
             DateTimeOffset.UtcNow.AddDays(1)
         );
-        return Convert.ToBase64String(cert.Export(
-            System.Security.Cryptography.X509Certificates.X509ContentType.Cert
-        ));
+        return Convert.ToBase64String(
+            cert.Export(
+                X509ContentType.Cert
+            )
+        );
     }
 
     private static string SignatureXml(string? certBase64, string? signingTime)
@@ -297,12 +302,14 @@ public sealed class PresentationDocumentTests
     {
         using var doc = PptxFixtures.BlankPresentation();
         var preserved = new PreservedContent();
-        preserved.Parts.Add(new PreservedPart
-        {
-            Uri = "/ppt/vbaProject.bin",
-            ContentType = "application/vnd.ms-office.vbaProject",
-            Data = [1, 2, 3]
-        });
+        preserved.Parts.Add(
+            new PreservedPart
+            {
+                Uri = "/ppt/vbaProject.bin",
+                ContentType = "application/vnd.ms-office.vbaProject",
+                Data = [1, 2, 3]
+            }
+        );
         doc.Preserved = preserved;
 
         doc.HasDigitalSignatures.ShouldBeFalse();

@@ -44,8 +44,8 @@ public sealed class RasterizerCoverageTests : PptxTestBase
         return shape;
     }
 
-    private static async Task<PptxImage> RenderAsync(PresentationDocument doc) =>
-        await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+    private static Task<PptxImage> RenderAsync(PresentationDocument doc) =>
+        SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
 
     // ── SmartArt layouts ─────────────────────────────────────────────────────────
 
@@ -413,11 +413,12 @@ public sealed class RasterizerCoverageTests : PptxTestBase
             s.Values.AddRange([3.0 + i, 7.0 - i, 5.0, 9.0 + i]);
             chart.Chart.Data.Series.Add(s);
         }
+
         return chart;
     }
 
-    private static async Task<PptxImage> RenderLargeAsync(PresentationDocument doc) =>
-        await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Large);
+    private static Task<PptxImage> RenderLargeAsync(PresentationDocument doc) =>
+        SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Large);
 
     [
         Theory,
@@ -432,7 +433,7 @@ public sealed class RasterizerCoverageTests : PptxTestBase
     public async Task ChartTypes_RenderWithLegendAndTitle(ChartType type)
     {
         var doc = PptxFixtures.WithSlides(1);
-        AddChart(doc, type, legend: true, title: true, seriesCount: 2);
+        AddChart(doc, type, true, true, 2);
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -442,7 +443,7 @@ public sealed class RasterizerCoverageTests : PptxTestBase
     public async Task Chart_NoLegendNoTitle_Renders()
     {
         var doc = PptxFixtures.WithSlides(1);
-        AddChart(doc, ChartType.ColumnClustered, legend: false, title: false, seriesCount: 1);
+        AddChart(doc, ChartType.ColumnClustered, false, false, 1);
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -465,7 +466,7 @@ public sealed class RasterizerCoverageTests : PptxTestBase
     public async Task Chart_TitleEnabledButBlank_SkipsTitle()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var chart = AddChart(doc, ChartType.Line, legend: true, title: false, seriesCount: 2);
+        var chart = AddChart(doc, ChartType.Line, true, false, 2);
         chart.Chart.HasTitle = true;
         chart.Chart.Title = "   ";
 
@@ -477,7 +478,7 @@ public sealed class RasterizerCoverageTests : PptxTestBase
     public async Task Chart_MultiSeriesBar_RendersGroups()
     {
         var doc = PptxFixtures.WithSlides(1);
-        AddChart(doc, ChartType.BarClustered, legend: true, title: true, seriesCount: 3);
+        AddChart(doc, ChartType.BarClustered, true, true, 3);
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);

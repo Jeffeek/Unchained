@@ -87,12 +87,12 @@ public sealed class PdfDocumentCoreHardeningTests
         // Pages node with an intermediate Pages subtree forces the subtree-count branch.
         var bodies = new[]
         {
-            "<< /Type /Catalog /Pages 2 0 R >>",                           // 1 catalog
-            "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 3 >>",             // 2 root pages
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",       // 3 page 1
+            "<< /Type /Catalog /Pages 2 0 R >>",                             // 1 catalog
+            "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 3 >>",               // 2 root pages
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",         // 3 page 1
             "<< /Type /Pages /Parent 2 0 R /Kids [5 0 R 6 0 R] /Count 2 >>", // 4 subtree
-            "<< /Type /Page /Parent 4 0 R /MediaBox [0 0 10 10] >>",       // 5 page 2
-            "<< /Type /Page /Parent 4 0 R /MediaBox [0 0 10 10] >>"        // 6 page 3
+            "<< /Type /Page /Parent 4 0 R /MediaBox [0 0 10 10] >>",         // 5 page 2
+            "<< /Type /Page /Parent 4 0 R /MediaBox [0 0 10 10] >>"          // 6 page 3
         };
         using var core = PdfDocumentCore.Parse(RawPdfBuilder.Build(bodies));
         core.PageCount.ShouldBe(3);

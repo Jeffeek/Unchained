@@ -93,7 +93,7 @@ public sealed class PdfDocumentCoreTests
         // The catalog's /Pages is an indirect reference; dereference resolves it.
         var pagesRef = core.Catalog["Pages"];
         pagesRef.ShouldBeOfType<PdfIndirectReference>();
-        var pages = core.Dereference(pagesRef!);
+        var pages = core.Dereference(pagesRef);
         pages.ShouldBeOfType<PdfDictionary>();
     }
 
@@ -144,7 +144,7 @@ public sealed class PdfDocumentCoreTests
 
     [Fact]
     public void Repair_EmptyBytes_Throws() =>
-        Should.Throw<PdfException>(() => PdfDocumentCore.Repair("not a pdf at all"u8.ToArray()));
+        Should.Throw<PdfException>(static () => PdfDocumentCore.Repair("not a pdf at all"u8.ToArray()));
 
     [Fact]
     public void ResolveIndirect_FreeObject_Throws()

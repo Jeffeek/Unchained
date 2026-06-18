@@ -177,56 +177,55 @@ public sealed class EditorBranchTests : PdfTestBase
         // Two pages each referencing their own content stream.
         var sb = new StringBuilder();
         var offsets = new List<int>();
-        void Ln(string s) => sb.Append(s).Append('\n');
-        int Len() => Encoding.Latin1.GetByteCount(sb.ToString());
 
-        Ln("%PDF-1.7");
-        Ln("%\xE2\xE3\xCF\xD3");
-        offsets.Add(Len());
-        Ln("1 0 obj");
-        Ln("<< /Type /Catalog /Pages 2 0 R >>");
-        Ln("endobj");
-        offsets.Add(Len());
-        Ln("2 0 obj");
-        Ln("<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>");
-        Ln("endobj");
+        PdfFixtures.Ln(sb, "%PDF-1.7");
+        PdfFixtures.Ln(sb, "%\xE2\xE3\xCF\xD3");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "1 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "2 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>");
+        PdfFixtures.Ln(sb, "endobj");
 
         const string c1 = "BT /F1 12 Tf 100 700 Td (PageOne) Tj ET";
         const string c2 = "BT /F1 12 Tf 100 700 Td (PageTwo) Tj ET";
 
-        offsets.Add(Len());
-        Ln("3 0 obj");
-        Ln("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R >>");
-        Ln("endobj");
-        var c1b = Encoding.Latin1.GetBytes(c1);
-        offsets.Add(Len());
-        Ln("4 0 obj");
-        Ln($"<< /Length {c1b.Length} >>");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "3 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
+        var c1B = Encoding.Latin1.GetBytes(c1);
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "4 0 obj");
+        PdfFixtures.Ln(sb, $"<< /Length {c1B.Length} >>");
         sb.Append("stream\n").Append(c1);
-        Ln("\nendstream");
-        Ln("endobj");
+        PdfFixtures.Ln(sb, "\nendstream");
+        PdfFixtures.Ln(sb, "endobj");
 
-        offsets.Add(Len());
-        Ln("5 0 obj");
-        Ln("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 6 0 R >>");
-        Ln("endobj");
-        var c2b = Encoding.Latin1.GetBytes(c2);
-        offsets.Add(Len());
-        Ln("6 0 obj");
-        Ln($"<< /Length {c2b.Length} >>");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "5 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 6 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
+        var c2B = Encoding.Latin1.GetBytes(c2);
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "6 0 obj");
+        PdfFixtures.Ln(sb, $"<< /Length {c2B.Length} >>");
         sb.Append("stream\n").Append(c2);
-        Ln("\nendstream");
-        Ln("endobj");
+        PdfFixtures.Ln(sb, "\nendstream");
+        PdfFixtures.Ln(sb, "endobj");
 
-        var xref = Len();
-        Ln("xref");
-        Ln("0 7");
-        Ln("0000000000 65535 f ");
-        foreach (var o in offsets) Ln($"{o:D10} 00000 n ");
-        Ln("trailer");
-        Ln("<< /Size 7 /Root 1 0 R >>");
-        Ln("startxref");
-        Ln(xref.ToString());
+        var xref = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, "0 7");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
+        PdfFixtures.Ln(sb, "<< /Size 7 /Root 1 0 R >>");
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xref.ToString());
         sb.Append("%%EOF");
         return Encoding.Latin1.GetBytes(sb.ToString());
     }

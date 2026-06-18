@@ -20,27 +20,28 @@ internal static class RawPdfBuilder
         var sb = new StringBuilder();
         var offsets = new List<int>();
 
-        Ln(sb, $"%PDF-{version}");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        PdfFixtures.Ln(sb, $"%PDF-{version}");
+        PdfFixtures.Ln(sb, "%\xE2\xE3\xCF\xD3");
 
         for (var i = 0; i < bodies.Count; i++)
         {
-            offsets.Add(ByteLength(sb));
-            Ln(sb, $"{i + 1} 0 obj");
-            Ln(sb, bodies[i]);
-            Ln(sb, "endobj");
+            offsets.Add(PdfFixtures.Len(sb));
+            PdfFixtures.Ln(sb, $"{i + 1} 0 obj");
+            PdfFixtures.Ln(sb, bodies[i]);
+            PdfFixtures.Ln(sb, "endobj");
         }
 
         var total = bodies.Count + 1;
-        var xrefOffset = ByteLength(sb);
-        Ln(sb, "xref");
-        Ln(sb, $"0 {total}");
-        Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
-        Ln(sb, $"<< /Size {total} /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        var xrefOffset = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, $"0 {total}");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
+        PdfFixtures.Ln(sb, $"<< /Size {total} /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
@@ -62,42 +63,39 @@ internal static class RawPdfBuilder
         var sb = new StringBuilder();
         var offsets = new List<int>();
 
-        Ln(sb, $"%PDF-{version}");
-        Ln(sb, "%\xE2\xE3\xCF\xD3");
+        PdfFixtures.Ln(sb, $"%PDF-{version}");
+        PdfFixtures.Ln(sb, "%\xE2\xE3\xCF\xD3");
 
         for (var i = 0; i < bodies.Count; i++)
         {
-            offsets.Add(ByteLength(sb));
-            Ln(sb, $"{i + 1} 0 obj");
+            offsets.Add(PdfFixtures.Len(sb));
+            PdfFixtures.Ln(sb, $"{i + 1} 0 obj");
             if (i + 1 == streamObjIndex)
             {
-                Ln(sb, $"{streamDictNoLength[..^2]} /Length {streamData.Length} >>");
+                PdfFixtures.Ln(sb, $"{streamDictNoLength[..^2]} /Length {streamData.Length} >>");
                 sb.Append("stream\n");
                 foreach (var b in streamData) sb.Append((char)b);
-                Ln(sb, "\nendstream");
+                PdfFixtures.Ln(sb, "\nendstream");
             }
             else
-                Ln(sb, bodies[i]);
+                PdfFixtures.Ln(sb, bodies[i]);
 
-            Ln(sb, "endobj");
+            PdfFixtures.Ln(sb, "endobj");
         }
 
         var total = bodies.Count + 1;
-        var xrefOffset = ByteLength(sb);
-        Ln(sb, "xref");
-        Ln(sb, $"0 {total}");
-        Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
-        Ln(sb, "trailer");
-        Ln(sb, $"<< /Size {total} /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
-        Ln(sb, "startxref");
-        Ln(sb, xrefOffset.ToString());
+        var xrefOffset = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, $"0 {total}");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
+        PdfFixtures.Ln(sb, $"<< /Size {total} /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] >>");
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xrefOffset.ToString());
         sb.Append("%%EOF");
 
         return Encoding.Latin1.GetBytes(sb.ToString());
     }
-
-    private static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
-
-    private static int ByteLength(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
 }

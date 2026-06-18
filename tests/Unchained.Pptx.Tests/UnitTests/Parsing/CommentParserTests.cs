@@ -47,7 +47,7 @@ public sealed class CommentParserTests
         var (slide, authors) = Fixture();
         var root = new XElement(
             Pml + "cmLst",
-            Comment("0", "1", withPos: true, dt: "2024-01-02T03:04:05Z", withText: true)
+            Comment("0", "1", true, "2024-01-02T03:04:05Z", true)
         );
 
         CommentParser.Parse(root, slide, authors);
@@ -64,7 +64,7 @@ public sealed class CommentParserTests
         var (slide, authors) = Fixture();
         var root = new XElement(
             Pml + "cmLst",
-            Comment("0", "1", withPos: false, dt: null, withText: false)
+            Comment("0", "1", false, null, false)
         );
 
         CommentParser.Parse(root, slide, authors);
@@ -81,7 +81,7 @@ public sealed class CommentParserTests
         var (slide, authors) = Fixture();
         var root = new XElement(
             Pml + "cmLst",
-            Comment("0", "7", withPos: false, dt: null, withText: true)
+            Comment("0", "7", false, null, true)
         );
 
         CommentParser.Parse(root, slide, authors);
@@ -95,7 +95,7 @@ public sealed class CommentParserTests
         var (slide, authors) = Fixture();
         var root = new XElement(
             Pml + "cmLst",
-            Comment("notANumber", "1", withPos: false, dt: null, withText: true)
+            Comment("notANumber", "1", false, null, true)
         );
 
         CommentParser.Parse(root, slide, authors);
@@ -109,7 +109,7 @@ public sealed class CommentParserTests
         var (slide, authors) = Fixture();
         var root = new XElement(
             Pml + "cmLst",
-            Comment("999", "1", withPos: false, dt: null, withText: true)
+            Comment("999", "1", false, null, true)
         );
 
         CommentParser.Parse(root, slide, authors);
@@ -123,7 +123,7 @@ public sealed class CommentParserTests
         var (slide, authors) = Fixture();
         var root = new XElement(
             Pml + "cmLst",
-            Comment("0", "notANumber", withPos: false, dt: null, withText: true)
+            Comment("0", "notANumber", false, null, true)
         );
 
         CommentParser.Parse(root, slide, authors);
