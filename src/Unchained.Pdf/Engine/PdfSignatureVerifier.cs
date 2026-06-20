@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Formats.Asn1;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -213,7 +214,33 @@ internal static class PdfSignatureVerifier
         for (var i = 0; i < result.Length; i++)
             result[i] = (byte)((HexNibble(hex[i * 2]) << 4) | HexNibble(hex[(i * 2) + 1]));
 
-        // Strip trailing zero bytes (padding from reserved space)
+        // The /Contents hex literal is zero-padded to fill the reserved space, so the
+        // genuine PKCS#7 blob is followed by trailing 0x00 bytes that must be removed
+        // before CMS decoding. A real DER signature can itself legitimately END in 0x00
+        // (≈1-in-256 of random RSA/ECDSA output), so naively trimming all trailing zeros
+        // truncates a valid blob and breaks verification intermittently. Instead, read the
+        // self-describing length of the top-level DER SEQUENCE and slice to exactly that.
+        return TrimDerPadding(result);
+    }
+
+    // Returns the bytes up to the end of the first top-level DER/BER structure, discarding
+    // only the zero padding that follows it. Falls back to legacy trailing-zero trimming if
+    // the content is not parseable as a single ASN.1 value.
+    private static byte[] TrimDerPadding(byte[] result)
+    {
+        try
+        {
+            var reader = new AsnReader(result, AsnEncodingRules.BER);
+            var encoded = reader.PeekEncodedValue();
+            // encoded is a slice of `result`; its Length is the true blob size (header + content).
+            if (encoded.Length > 0 && encoded.Length <= result.Length)
+                return result[..encoded.Length];
+        }
+        catch (AsnContentException)
+        {
+            // Not valid ASN.1 (corrupt/truncated /Contents) — fall through to legacy behaviour.
+        }
+
         var len = result.Length;
         while (len > 0 && result[len - 1] == 0)
             len--;

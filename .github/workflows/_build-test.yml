@@ -52,8 +52,12 @@ jobs:
         shell: bash
         run: bash scripts/FetchNatives/fetch-natives.sh --rid ${{ inputs.rid }}
 
+      # FreeTypeSharp bundles the native FreeType2 binary for every RID except
+      # linux-arm64, so fetch-natives.sh only materializes files for that one RID.
+      # Uploading for any other RID would hit an empty directory and fail
+      # (if-no-files-found: error). Gate the upload to linux-arm64 accordingly.
       - name: Upload native binary artifact
-        if: ${{ inputs.upload-natives }}
+        if: ${{ inputs.upload-natives && inputs.rid == 'linux-arm64' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: natives-${{ inputs.rid }}

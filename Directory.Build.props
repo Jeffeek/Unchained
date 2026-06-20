@@ -47,7 +47,11 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>pdf;pdf-engine;pdf-parser;dotnet;csharp;document-processing</PackageTags>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageIcon>nuget_logo.png</PackageIcon>
+    <!-- Per-package icon: each project supplies its own nuget_logo.png next to its
+         .csproj. Only declare PackageIcon when that file is present, so pack never
+         fails with NU5046 for a package whose icon has not been added yet. The
+         matching <None Pack="true"> item below is likewise guarded by Exists(). -->
+    <PackageIcon Condition="Exists('$(MSBuildProjectDirectory)\nuget_logo.png')">nuget_logo.png</PackageIcon>
   </PropertyGroup>
 
   <!-- Include third-party notices in every NuGet package (FTL, SIL OFL, BSD attribution) -->
@@ -55,6 +59,23 @@
     <None Include="$(MSBuildThisFileDirectory)THIRD_PARTY_NOTICES.md"
           Pack="true" PackagePath="\" Visible="false"
           Condition="Exists('$(MSBuildThisFileDirectory)THIRD_PARTY_NOTICES.md')" />
+  </ItemGroup>
+
+  <!-- Pack the per-package icon referenced by PackageIcon. Each packable project
+       supplies its own nuget_logo.png next to its .csproj; PackagePath="\" places it
+       at the package root to match the <PackageIcon>nuget_logo.png</PackageIcon>
+       reference above. -->
+  <ItemGroup Condition="'$(IsPackable)' != 'false' And Exists('$(MSBuildProjectDirectory)\nuget_logo.png')">
+    <None Include="$(MSBuildProjectDirectory)\nuget_logo.png"
+          Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!-- Pack the README referenced by PackageReadmeFile. Each packable project must
+       provide its own README.md (next to its .csproj); it is placed at the package
+       root to match the <PackageReadmeFile>README.md</PackageReadmeFile> reference. -->
+  <ItemGroup Condition="'$(IsPackable)' != 'false' And Exists('$(MSBuildProjectDirectory)\README.md')">
+    <None Include="$(MSBuildProjectDirectory)\README.md"
+          Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
 </Project>
