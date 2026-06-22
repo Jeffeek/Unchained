@@ -425,6 +425,19 @@ public sealed class FormFillerTests : PdfTestBase
     }
 
     [Fact]
+    public async Task Fill_BtnParentKid_TruthyValue_UsesKidWidgetApState()
+    {
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithBtnParentKidAcroForm("Group", "On"),
+            TestContext.Current.CancellationToken
+        );
+        // The parent holds /FT /Btn; the on-state appearance lives on the widget kid's /AP.
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Group"] = "yes" }, TestContext.Current.CancellationToken);
+
+        doc.GetFormFields().ShouldContain(static f => f.Name == "Group" && f.Value == "On");
+    }
+
+    [Fact]
     public async Task Flatten_AppearanceField_PageWithExistingContents_AppendsStream()
     {
         await using var doc = await LoadAsync(

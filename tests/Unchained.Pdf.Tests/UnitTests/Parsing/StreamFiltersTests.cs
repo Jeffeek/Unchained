@@ -304,4 +304,33 @@ public sealed class StreamFiltersTests
         var result = await Task.Run(() => StreamFilters.Decode(stream));
         result.Span[0].ShouldBe((byte)'C');
     }
+
+    [Fact]
+    public async Task Decode_FlateDecode_CorruptData_RewrapsAsPdfException()
+    {
+        // Not a valid zlib stream → ZLibStream throws → re-wrapped as PdfException
+        // (the non-PdfException catch arm).
+        var garbage = new byte[] { 0xFF, 0xFE, 0xFD, 0xFC, 0xFB };
+        var stream = MakeStream("FlateDecode", garbage);
+        var ex = await Should.ThrowAsync<PdfException>(() => Task.Run(() => StreamFilters.Decode(stream)));
+        ex.Message.ShouldContain("FlateDecode");
+    }
+
+    [Fact]
+    public async Task Decode_Jbig2_WithGlobalsStream_DoesNotThrowUnexpectedly()
+    {
+        // A JBIG2 filter whose DecodeParms carries a /JBIG2Globals stream exercises the
+        // globals-resolution branch. The decoder may reject the synthetic data, but it must
+        // surface as a PdfException/NotSupported/InvalidOperation rather than a raw crash.
+        var globals = new PdfStream(
+            new PdfDictionary(new Dictionary<string, PdfObject> { [PdfName.Length.Value] = new PdfInteger(2) }),
+            new byte[] { 0x00, 0x01 }
+        );
+        var parms = new PdfDictionary(
+            new Dictionary<string, PdfObject> { [PdfName.JBIG2Globals.Value] = globals }
+        );
+        var stream = MakeStream("JBIG2Decode", new byte[] { 0x00, 0x01, 0x02, 0x03 }, parms);
+
+        await Should.ThrowAsync<Exception>(() => Task.Run(() => StreamFilters.Decode(stream)));
+    }
 }

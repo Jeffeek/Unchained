@@ -129,4 +129,40 @@ public sealed class OoxmlEngineTests
         engine.Dispose();
         Should.Throw<ObjectDisposedException>(() => engine.Save());
     }
+
+    [Fact]
+    public void Open_WordprocessingPackage_DetectsWordFormat()
+    {
+        byte[] bytes;
+        using (var engine = OoxmlEngine.Create(OoxmlFormat.Wordprocessing))
+        {
+            var doc = (WordprocessingDocument)engine.Package;
+            var main = doc.AddMainDocumentPart();
+            main.Document = new Document(new Body());
+            main.Document.Save();
+            bytes = engine.Save();
+        }
+
+        using var reopened = OoxmlEngine.Open(bytes, false);
+        reopened.Format.ShouldBe(OoxmlFormat.Wordprocessing);
+    }
+
+    [Fact]
+    public void Open_SpreadsheetPackage_DetectsSpreadsheetFormat()
+    {
+        byte[] bytes;
+        using (var engine = OoxmlEngine.Create(OoxmlFormat.Spreadsheet))
+        {
+            var doc = (SpreadsheetDocument)engine.Package;
+            var wbPart = doc.AddWorkbookPart();
+            wbPart.Workbook = new DocumentFormat.OpenXml.Spreadsheet.Workbook(
+                new DocumentFormat.OpenXml.Spreadsheet.Sheets()
+            );
+            wbPart.Workbook.Save();
+            bytes = engine.Save();
+        }
+
+        using var reopened = OoxmlEngine.Open(bytes, false);
+        reopened.Format.ShouldBe(OoxmlFormat.Spreadsheet);
+    }
 }

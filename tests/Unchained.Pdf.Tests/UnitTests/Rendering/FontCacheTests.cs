@@ -1,0 +1,109 @@
+using Shouldly;
+using Unchained.Drawing.Text;
+using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.IntegrationTests;
+using Xunit;
+
+namespace Unchained.Pdf.Tests.UnitTests.Rendering;
+
+/// <summary>
+///     Direct unit tests for <see cref="FontCache" /> — substitute-font selection across the Standard
+///     14 family, embedded-byte caching, the malformed-font fallback, and the
+///     <see cref="FontCache.DiagnoseGlyphRender" /> success/failure summaries. Requires the FreeType2
+///     native library; skipped when it is unavailable.
+/// </summary>
+public sealed class FontCacheTests : RendererTestBase
+{
+    [
+        Theory,
+        InlineData("Helvetica-Bold"),
+        InlineData("Helvetica-Oblique"),
+        InlineData("Arial-Italic"),
+        InlineData("Helvetica"),
+        InlineData("Calibri"),
+        InlineData("Times-Bold"),
+        InlineData("Times-Roman"),
+        InlineData("Courier"),
+        InlineData("Courier-BoldOblique"),
+        InlineData("SomeUnknownFont")
+    ]
+    public void GetFace_SubstituteFonts_ResolveWithoutThrowing(string fontName)
+    {
+        SkipIfNoFreeType();
+
+        using var cache = new FontCache();
+        var face = cache.GetFace(fontName);
+        face.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void GetFonts_SameKey_ReturnsCachedInstance()
+    {
+        SkipIfNoFreeType();
+
+        using var cache = new FontCache();
+        var first = cache.GetFonts("Helvetica");
+        var second = cache.GetFonts("Helvetica");
+
+        second.Face.ShouldBeSameAs(first.Face);
+        second.HbFont.ShouldBeSameAs(first.HbFont);
+    }
+
+    [Fact]
+    public void GetFonts_EmbeddedBytes_AreUsed()
+    {
+        SkipIfNoFreeType();
+
+        var bytes = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        using var cache = new FontCache();
+        var (face, _) = cache.GetFonts("Embedded+Font", bytes);
+        face.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void GetFonts_MalformedEmbeddedBytes_FallsBackToSubstitute()
+    {
+        SkipIfNoFreeType();
+
+        // Garbage "font" bytes: CreatePair throws, GetFonts falls back to the substitute font.
+        var garbage = new byte[256];
+        new Random(7).NextBytes(garbage);
+
+        using var cache = new FontCache();
+        var (face, _) = cache.GetFonts("Helvetica", garbage);
+        face.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Dispose_IsIdempotent()
+    {
+        SkipIfNoFreeType();
+
+        var cache = new FontCache();
+        cache.GetFace("Helvetica");
+        cache.Dispose();
+        Should.NotThrow(() => cache.Dispose());
+    }
+
+    [Fact]
+    public void DiagnoseGlyphRender_KnownGlyph_ReturnsOkSummary()
+    {
+        SkipIfNoFreeType();
+
+        using var cache = new FontCache();
+        var result = cache.DiagnoseGlyphRender("Helvetica", null, 'A', 24);
+        result.ShouldStartWith("OK:");
+        result.ShouldContain("glyphId=");
+    }
+
+    [Fact]
+    public void DiagnoseGlyphRender_ReturnsStringNeverThrows()
+    {
+        SkipIfNoFreeType();
+
+        using var cache = new FontCache();
+        // A control character may produce a .notdef glyph but must still return a summary string.
+        var result = cache.DiagnoseGlyphRender("Courier", null, '\0', 12);
+        result.ShouldNotBeNullOrEmpty();
+    }
+}

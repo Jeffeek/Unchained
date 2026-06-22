@@ -255,4 +255,73 @@ public sealed class PdfFunctionTests
         fn.ShouldNotBeNull();
         fn.Eval(1.0)[0].ShouldBe(1.0, 0.0001);
     }
+
+    [Fact]
+    public void Type3_EvalAtExactBound_RoutesToUpperSubFunction()
+    {
+        var sub0 = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
+        var sub1 = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(100.0),
+                ["C1"] = Array(200.0),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(3),
+                ["Domain"] = Array(0, 1),
+                ["Functions"] = new PdfArray([sub0, sub1]),
+                ["Bounds"] = Array(0.5),
+                ["Encode"] = Array(0, 1, 0, 1)
+            }
+        );
+        var fn = PdfFunction.Build(dict, Core());
+        fn.ShouldNotBeNull();
+
+        // At exactly the bound (0.5) and above, the upper sub-function (outputs 100–200) is used.
+        fn.Eval(0.5)[0].ShouldBeGreaterThanOrEqualTo(100.0);
+        fn.Eval(1.0)[0].ShouldBe(200.0, 0.5);
+    }
+
+    [Fact]
+    public void Type3_MissingEncode_UsesDefaultEncoding()
+    {
+        var sub = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(3),
+                ["Domain"] = Array(0, 1),
+                ["Functions"] = new PdfArray([sub]),
+                ["Bounds"] = Array()
+                // No /Encode → defaults are used per element.
+            }
+        );
+        var fn = PdfFunction.Build(dict, Core());
+        fn.ShouldNotBeNull();
+        fn.Eval(0.5)[0].ShouldBeInRange(0.0, 1.0);
+    }
 }

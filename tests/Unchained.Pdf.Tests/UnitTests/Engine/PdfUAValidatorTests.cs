@@ -241,4 +241,150 @@ public sealed class PdfUAValidatorTests
         PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
             .Violations.ShouldContain(static v => v.RuleId == "7.5");
     }
+
+    // ── §7.2 MarkInfo ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void MissingMarkInfo_ReportsViolation()
+    {
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) " +
+                               "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R >>";
+        var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>" };
+        PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
+            .Violations.ShouldContain(static v => v.RuleId == "7.2");
+    }
+
+    [Fact]
+    public void MarkInfoMarkedFalse_ReportsViolation()
+    {
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) /MarkInfo << /Marked false >> " +
+                               "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R >>";
+        var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>" };
+        PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
+            .Violations.ShouldContain(static v => v.RuleId == "7.2");
+    }
+
+    // ── §7.3 Document title ───────────────────────────────────────────────────
+
+    [Fact]
+    public void MissingDisplayDocTitle_ReportsViolation()
+    {
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) /MarkInfo << /Marked true >> " +
+                               "/StructTreeRoot 4 0 R >>";
+        var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>" };
+        PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
+            .Violations.ShouldContain(static v => v.RuleId == "7.3");
+    }
+
+    // ── §7.4 Language ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void MissingLang_ReportsViolation()
+    {
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /MarkInfo << /Marked true >> " +
+                               "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R >>";
+        var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>" };
+        PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
+            .Violations.ShouldContain(static v => v.RuleId == "7.4");
+    }
+
+    [Fact]
+    public void EmptyLang_ReportsViolation()
+    {
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang () /MarkInfo << /Marked true >> " +
+                               "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R >>";
+        var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>" };
+        PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
+            .Violations.ShouldContain(static v => v.RuleId == "7.4");
+    }
+
+    // ── §7.5 ParentTree / empty K ─────────────────────────────────────────────
+
+    [Fact]
+    public void StructTreeRoot_MissingParentTree_ReportsViolation()
+    {
+        var bodies = new List<string>
+        {
+            Catalog,
+            Pages,
+            PlainPage,
+            "<< /Type /StructTreeRoot /K [5 0 R] >>",
+            "<< /S /P >>"
+        };
+        PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
+            .Violations.ShouldContain(static v => v.RuleId == "7.5");
+    }
+
+    [Fact]
+    public void StructTreeRoot_NoChildren_ReportsViolation()
+    {
+        var bodies = new List<string>
+        {
+            Catalog,
+            Pages,
+            PlainPage,
+            "<< /Type /StructTreeRoot /ParentTree << /Nums [] >> >>"
+        };
+        PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
+            .Violations.ShouldContain(static v => v.RuleId == "7.5");
+    }
+
+    // ── §7.7 Widget tooltip ───────────────────────────────────────────────────
+
+    [Fact]
+    public void WidgetWithoutTu_ReportsTooltipWarning()
+    {
+        const string page = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Annots [6 0 R] >>";
+        var bodies = new List<string>
+        {
+            Catalog,
+            Pages,
+            page,
+            StructRoot(),
+            "<< /S /P >>",
+            "<< /Type /Annot /Subtype /Widget /Rect [0 0 10 10] >>"
+        };
+        PdfUAValidator.Validate(RawPdfBuilder.Build(bodies))
+            .Violations.ShouldContain(static v => v.RuleId == "7.7");
+    }
+
+    // ── §7.17 XMP metadata ────────────────────────────────────────────────────
+
+    [Fact]
+    public void MissingXmpMetadata_ReportsViolation()
+    {
+        // No /Metadata stream in the catalog → §7.17.
+        var result = Validate(StructRoot(), "<< /S /P >>");
+        result.Violations.ShouldContain(static v => v.RuleId == "7.17");
+    }
+
+    [Fact]
+    public void XmpWithoutPdfuaid_ReportsViolation()
+    {
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) /MarkInfo << /Marked true >> " +
+                               "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R /Metadata 6 0 R >>";
+        var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>", "<< >>" };
+        var xmp = System.Text.Encoding.UTF8.GetBytes(
+            "<?xpacket begin=\"\"?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\"></x:xmpmeta>"
+        );
+        var bytes = RawPdfBuilder.BuildWithStream(bodies, 6, "<< /Type /Metadata /Subtype /XML >>", xmp);
+
+        PdfUAValidator.Validate(bytes).Violations.ShouldContain(static v => v.RuleId == "7.17");
+    }
+
+    [Fact]
+    public void XmpWithPdfuaidPart1_NoXmpViolation()
+    {
+        const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) /MarkInfo << /Marked true >> " +
+                               "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R /Metadata 6 0 R >>";
+        var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>", "<< >>" };
+        var xmp = System.Text.Encoding.UTF8.GetBytes(
+            "<?xpacket begin=\"\"?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\">" +
+            "<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:pdfuaid=\"http://www.aiim.org/pdfua/ns/id/\">" +
+            "<rdf:Description><pdfuaid:part>1</pdfuaid:part></rdf:Description></rdf:RDF></x:xmpmeta>"
+        );
+        var bytes = RawPdfBuilder.BuildWithStream(bodies, 6, "<< /Type /Metadata /Subtype /XML >>", xmp);
+
+        PdfUAValidator.Validate(bytes).Violations.ShouldNotContain(static v => v.RuleId == "7.17");
+    }
 }

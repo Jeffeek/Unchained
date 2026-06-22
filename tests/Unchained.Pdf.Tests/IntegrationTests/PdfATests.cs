@@ -52,6 +52,27 @@ public sealed class PdfATests : PdfTestBase
     }
 
     [Fact]
+    public async Task Validate_MalformedPdf_ReportsStructureViolation()
+    {
+        // Bytes that start like a PDF but cannot be parsed → the catch(PdfException) arm reports 6.1.
+        var malformed = System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\nthis is not a valid pdf body");
+        var result = await Processor.ValidatePdfAAsync(malformed, ct: TestContext.Current.CancellationToken);
+        result.Violations.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Validate_Pdf17ForPdfA1_ReportsVersionViolation()
+    {
+        // SinglePage is %PDF-1.7; PDF/A-1 caps at 1.4 → version violation.
+        var result = await Processor.ValidatePdfAAsync(
+            PdfFixtures.SinglePage(),
+            PdfAProfile.PdfA1B,
+            TestContext.Current.CancellationToken
+        );
+        result.Violations.ShouldContain(static v => v.RuleId == "6.1.2");
+    }
+
+    [Fact]
     public async Task Validate_EncryptedPdf_ReportsEncryptionViolation()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
