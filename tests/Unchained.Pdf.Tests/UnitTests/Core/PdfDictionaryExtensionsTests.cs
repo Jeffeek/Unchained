@@ -37,6 +37,27 @@ public sealed class PdfDictionaryExtensionsTests
         new PdfDictionary().IsSubtype("Image").ShouldBeFalse();
 
     [Fact]
+    public void IsSubtype_NullDictionary_ReturnsFalse()
+    {
+        PdfDictionary? dict = null;
+        dict.IsSubtype("Image").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsPage_NullDictionary_ReturnsFalse()
+    {
+        PdfDictionary? dict = null;
+        dict.IsPage().ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsCatalog_NullDictionary_ReturnsFalse()
+    {
+        PdfDictionary? dict = null;
+        dict.IsCatalog().ShouldBeFalse();
+    }
+
+    [Fact]
     public void IsPage_PageDictionary_ReturnsTrue() =>
         Dict(("Type", PdfName.Page)).IsPage().ShouldBeTrue();
 

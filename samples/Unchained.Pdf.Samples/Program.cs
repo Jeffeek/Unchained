@@ -74,6 +74,7 @@ internal static class Program
         if (input is "a" or "all") return "all";
         if (int.TryParse(input, out var n) && n >= 1 && n <= Demos.Length)
             return Demos[n - 1].Key;
+
         return input.ToLowerInvariant();
     }
 
