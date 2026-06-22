@@ -36,7 +36,7 @@
     <PackageVersion Include="MudBlazor" Version="9.5.0" />
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
-    <PackageVersion Include="PDFiumCore" Version="150.0.7869" />
+    <PackageVersion Include="PDFiumCore" Version="151.0.7891" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
   <ItemGroup Label="PerformanceTests">
