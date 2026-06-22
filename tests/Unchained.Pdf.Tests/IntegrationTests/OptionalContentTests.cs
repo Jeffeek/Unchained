@@ -104,6 +104,36 @@ public sealed class OptionalContentTests : PdfTestBase
         );
     }
 
+    [Fact]
+    public async Task SetLayerVisibility_WhenNoDefaultConfig_Throws()
+    {
+        var editor = new OptionalContentEditor();
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithOptionalContentNoDefaultConfig(),
+            TestContext.Current.CancellationToken
+        );
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            editor.SetLayerVisibilityAsync(doc, 5, false, TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
+    public async Task SetLayerVisibility_IndirectOcProperties_PersistsAfterReload()
+    {
+        var editor = new OptionalContentEditor();
+        await using var doc = await LoadAsync(
+            PdfFixtures.WithIndirectOptionalContentProperties(),
+            TestContext.Current.CancellationToken
+        );
+
+        var layerOne = doc.GetLayers().Single(static l => l.Name == "Layer One");
+        await editor.SetLayerVisibilityAsync(doc, layerOne.ObjectNumber, false, TestContext.Current.CancellationToken);
+
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.GetLayers().Single(static l => l.Name == "Layer One").Visible.ShouldBeFalse();
+    }
+
     // ── Soft mask parsing ─────────────────────────────────────────────────────────
 
     [Fact]

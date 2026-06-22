@@ -387,6 +387,62 @@ public sealed class FormFillerTests : PdfTestBase
         doc.GetFormFields()[0].Value.ShouldBe("Carol");
     }
 
+    [Fact]
+    public async Task Fill_ChoiceField_WritesStringValue()
+    {
+        // ReSharper disable once RedundantArgumentDefaultValue
+        await using var doc = await LoadAsync(PdfFixtures.WithChoiceAcroForm("Choice"), TestContext.Current.CancellationToken);
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Choice"] = "Two" }, TestContext.Current.CancellationToken);
+
+        var field = doc.GetFormFields()[0];
+        field.FieldType.ShouldBe("Ch");
+        field.Value.ShouldBe("Two");
+    }
+
+    [Fact]
+    public async Task Fill_ChoiceField_SurvivesSaveReload()
+    {
+        // ReSharper disable once RedundantArgumentDefaultValue
+        await using var doc = await LoadAsync(PdfFixtures.WithChoiceAcroForm("Choice"), TestContext.Current.CancellationToken);
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Choice"] = "One" }, TestContext.Current.CancellationToken);
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.GetFormFields()[0].Value.ShouldBe("One");
+    }
+
+    [Fact]
+    public async Task Fill_BtnField_TruthyValue_WithApOnState_UsesDeclaredState()
+    {
+        await using var doc = await LoadAsync(
+            // ReSharper disable RedundantArgumentDefaultValue
+            PdfFixtures.WithBtnAcroFormAndOnState("Check", "On"),
+            // ReSharper restore RedundantArgumentDefaultValue
+            TestContext.Current.CancellationToken
+        );
+        await Filler.FillAsync(doc, new Dictionary<string, string> { ["Check"] = "true" }, TestContext.Current.CancellationToken);
+
+        // The "on" state comes from the field's /AP /N dictionary (the non-Off key).
+        doc.GetFormFields()[0].Value.ShouldBe("On");
+    }
+
+    [Fact]
+    public async Task Flatten_AppearanceField_PageWithExistingContents_AppendsStream()
+    {
+        await using var doc = await LoadAsync(
+            // ReSharper disable RedundantArgumentDefaultValue
+            PdfFixtures.WithAcroFormAppearanceAndPageContents("F", "v"),
+            // ReSharper restore RedundantArgumentDefaultValue
+            TestContext.Current.CancellationToken
+        );
+        await Filler.FlattenAsync(doc, TestContext.Current.CancellationToken);
+
+        doc.GetFormFields().ShouldBeEmpty();
+        doc.PageCount.ShouldBe(1);
+        // The page should still parse and now carry the merged content array.
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
+        reloaded.GetFormFields().ShouldBeEmpty();
+    }
+
     // ── Minimal stub to trigger wrong-type error paths ────────────────────────
 
     private sealed class FakeDocument : IPdfDocument

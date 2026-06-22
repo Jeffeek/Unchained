@@ -74,6 +74,79 @@ public sealed class LayoutAndSlideShowTests : PptxTestBase
         clone.Master.ShouldBe(master);
     }
 
+    [Fact]
+    public void CloneLayout_NullName_KeepsSourceName()
+    {
+        var doc = PptxFixtures.BlankPresentation();
+        var master = doc.Masters[0];
+        var source = master.Layouts[0];
+
+        var clone = master.Layouts.AddClone(source);
+
+        clone.Name.ShouldBe(source.Name);
+    }
+
+    [Fact]
+    public void CloneLayout_CopiesShapesByReference()
+    {
+        var doc = PptxFixtures.BlankPresentation();
+        var master = doc.Masters[0];
+        var source = master.Layouts.AddLayout("WithShapes", LayoutType.Blank);
+        source.Shapes.AddTextBox(Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1), "hi");
+
+        var clone = master.Layouts.AddClone(source, "Clone2");
+
+        clone.Shapes.Count.ShouldBe(source.Shapes.Count);
+        clone.Shapes.Count.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void Remove_RemovesLayoutFromCollection()
+    {
+        var doc = PptxFixtures.BlankPresentation();
+        var master = doc.Masters[0];
+        var layout = master.Layouts.AddLayout("ToRemove", LayoutType.Blank);
+        var before = master.Layouts.Count;
+
+        master.Layouts.Remove(layout);
+
+        master.Layouts.Count.ShouldBe(before - 1);
+        master.Layouts.FindByName("ToRemove").ShouldBeNull();
+    }
+
+    [Fact]
+    public void FindByType_ReturnsMatchingLayout()
+    {
+        var doc = PptxFixtures.BlankPresentation();
+        var master = doc.Masters[0];
+        master.Layouts.AddLayout("Custom TitleOnly", LayoutType.TitleOnly);
+
+        master.Layouts.FindByType(LayoutType.TitleOnly).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void FindByType_NoMatch_ReturnsNull()
+    {
+        var doc = PptxFixtures.BlankPresentation();
+        var master = doc.Masters[0];
+        master.Layouts.Where(static l => l.LayoutType == LayoutType.SectionHeader)
+            .ToList()
+            .ForEach(l => master.Layouts.Remove(l));
+
+        master.Layouts.FindByType(LayoutType.SectionHeader).ShouldBeNull();
+    }
+
+    [Fact]
+    public void NonGenericEnumerator_IteratesLayouts()
+    {
+        var doc = PptxFixtures.BlankPresentation();
+        var master = doc.Masters[0];
+
+        var count = master.Layouts.Cast<object>().Count();
+
+        count.ShouldBe(master.Layouts.Count);
+    }
+
     // ── Slide-show settings ──────────────────────────────────────────────────────
 
     [Fact]

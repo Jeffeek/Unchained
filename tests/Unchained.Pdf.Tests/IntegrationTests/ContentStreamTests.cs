@@ -89,4 +89,38 @@ public sealed class ContentStreamTests : IDisposable
 
         first.ShouldBe(second);
     }
+
+    [Fact]
+    public async Task GetContentOperators_FormXObjectDo_InlinesFormContent()
+    {
+        await using var doc = await _processor.LoadAsync(
+            new MemoryStream(PdfFixtures.WithFormXObjectDo()),
+            TestContext.Current.CancellationToken
+        );
+
+        var ops = doc.Pages[1].GetContentOperators();
+
+        // The form's "re"/"f" operators must be inlined; the Do is replaced by q/cm/<form>/Q.
+        ops.ShouldContain(static o => o.Name == "re");
+        ops.ShouldContain(static o => o.Name == "f");
+        ops.ShouldContain(static o => o.Name == "q");
+        ops.ShouldContain(static o => o.Name == "Q");
+        // The Do operator should have been expanded away.
+        ops.ShouldNotContain(static o => o.Name == "Do");
+    }
+
+    [Fact]
+    public async Task GetContentOperators_ContentStreamArray_ConcatenatesStreams()
+    {
+        await using var doc = await _processor.LoadAsync(
+            new MemoryStream(PdfFixtures.WithContentStreamArray()),
+            TestContext.Current.CancellationToken
+        );
+
+        var ops = doc.Pages[1].GetContentOperators();
+
+        // Both streams' fill operators must appear (two rectangles, two fills).
+        ops.Count(static o => o.Name == "re").ShouldBe(2);
+        ops.Count(static o => o.Name == "f").ShouldBe(2);
+    }
 }

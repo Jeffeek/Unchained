@@ -67,4 +67,56 @@ public sealed class DocumentPropertiesTests
         props.CustomProperties.Count.ShouldBe(3);
         props.CustomProperties["int"].ShouldBe(42);
     }
+
+    [Fact]
+    public void ExtendedAndDateProperties_RoundTrip()
+    {
+        var printed = new DateTimeOffset(
+            2026,
+            2,
+            3,
+            4,
+            5,
+            6,
+            TimeSpan.Zero
+        );
+        var modified = new DateTimeOffset(
+            2026,
+            3,
+            4,
+            0,
+            0,
+            0,
+            TimeSpan.Zero
+        );
+        var props = new DocumentProperties
+        {
+            LastPrinted = printed,
+            Modified = modified,
+            Company = "Acme",
+            Manager = "Dana",
+            ApplicationName = "Unchained",
+            RevisionNumber = 7
+        };
+        props.LastPrinted.ShouldBe(printed);
+        props.Modified.ShouldBe(modified);
+        props.Company.ShouldBe("Acme");
+        props.Manager.ShouldBe("Dana");
+        props.ApplicationName.ShouldBe("Unchained");
+        props.RevisionNumber.ShouldBe(7);
+    }
+
+    [Fact]
+    public void Statistics_AreSettableInternally()
+    {
+        var props = new DocumentProperties
+        {
+            SlideCount = 10,
+            HiddenSlideCount = 2,
+            NoteCount = 3
+        };
+        props.SlideCount.ShouldBe(10);
+        props.HiddenSlideCount.ShouldBe(2);
+        props.NoteCount.ShouldBe(3);
+    }
 }

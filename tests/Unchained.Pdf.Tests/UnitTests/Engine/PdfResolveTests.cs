@@ -189,4 +189,89 @@ public sealed class PdfResolveTests
     [Fact]
     public void ResolveBaseSpaceName_DirectName_ReturnsName() =>
         Core().ResolveBaseSpaceName(PdfName.Get("DeviceCMYK")).ShouldBe("DeviceCMYK");
+
+    // ── Additional branch coverage ────────────────────────────────────────────
+
+    [Fact]
+    public void ResolveDictOrStreamDict_NonDictNonStream_ReturnsNull() =>
+        Core().ResolveDictOrStreamDict(new PdfInteger(7)).ShouldBeNull();
+
+    [Fact]
+    public void ResolveDictOrStreamDict_Null_ReturnsNull() =>
+        Core().ResolveDictOrStreamDict(null).ShouldBeNull();
+
+    private static PdfStream IccStream(int n)
+    {
+        var dict = new PdfDictionary(new Dictionary<string, PdfObject> { ["N"] = new PdfInteger(n) });
+        return new PdfStream(dict, ReadOnlyMemory<byte>.Empty);
+    }
+
+    [
+        Theory,
+        InlineData(1, "DeviceGray"),
+        InlineData(3, "DeviceRGB"),
+        InlineData(4, "DeviceCMYK")
+    ]
+    public void ReadColorSpace_IccBasedDirectStream_MapsByChannelCount(int n, string expected)
+    {
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ColorSpace"] = new PdfArray([PdfName.Get("ICCBased"), IccStream(n)])
+            }
+        );
+        Core().ReadColorSpace(dict).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void ReadColorSpace_IccBasedUnknownChannelCount_ReturnsNull()
+    {
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ColorSpace"] = new PdfArray([PdfName.Get("ICCBased"), IccStream(2)])
+            }
+        );
+        Core().ReadColorSpace(dict).ShouldBeNull();
+    }
+
+    [Fact]
+    public void ReadColorSpace_UnknownArrayKind_ReturnsNull()
+    {
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ColorSpace"] = new PdfArray([PdfName.Get("Separation"), PdfName.Get("DeviceRGB")])
+            }
+        );
+        Core().ReadColorSpace(dict).ShouldBeNull();
+    }
+
+    [
+        Theory,
+        InlineData(1, "DeviceGray"),
+        InlineData(3, "DeviceRGB"),
+        InlineData(4, "DeviceCMYK")
+    ]
+    public void ResolveBaseSpaceName_IccBasedDirectStream_MapsByChannelCount(int n, string expected)
+    {
+        var obj = new PdfArray([PdfName.Get("ICCBased"), IccStream(n)]);
+        Core().ResolveBaseSpaceName(obj).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void ResolveBaseSpaceName_Lab_MapsToDeviceRgb() =>
+        Core().ResolveBaseSpaceName(new PdfArray([PdfName.Get("Lab"), new PdfDictionary()])).ShouldBe("DeviceRGB");
+
+    [Fact]
+    public void ResolveBaseSpaceName_UnknownArrayKind_ReturnsNull() =>
+        Core().ResolveBaseSpaceName(new PdfArray([PdfName.Get("Pattern")])).ShouldBeNull();
+
+    [Fact]
+    public void ResolveBaseSpaceName_NonNameNonArray_ReturnsNull() =>
+        Core().ResolveBaseSpaceName(new PdfInteger(3)).ShouldBeNull();
+
+    [Fact]
+    public void ResolveBaseSpaceName_Null_ReturnsNull() =>
+        Core().ResolveBaseSpaceName(null).ShouldBeNull();
 }

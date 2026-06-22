@@ -112,4 +112,86 @@ public sealed class TableTests : PptxTestBase
         table.Grid.ColumnCount.ShouldBe(2);
         table.Grid.RowCount.ShouldBe(3);
     }
+
+    private static TableShape MakeTable(int columns, int rows)
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var widths = Enumerable.Range(0, columns).Select(static _ => Emu.FromInches(1)).ToArray();
+        var heights = Enumerable.Range(0, rows).Select(static _ => Emu.FromInches(0.5)).ToArray();
+        return doc.Slides[0].Shapes.AddTable(Emu.Zero, Emu.Zero, widths, heights);
+    }
+
+    [Fact]
+    public void MergeCells_Block_SetsAnchorSpanAndContinuations()
+    {
+        var table = MakeTable(3, 3);
+        table.MergeCells(0, 0, 1, 1);
+
+        var anchor = table[0, 0];
+        anchor.ColumnSpan.ShouldBe(2);
+        anchor.RowSpan.ShouldBe(2);
+        table[1, 0].IsHorizontalMergeContinuation.ShouldBeTrue();
+        table[0, 1].IsVerticalMergeContinuation.ShouldBeTrue();
+        table[1, 1].IsHorizontalMergeContinuation.ShouldBeTrue();
+        table[1, 1].IsVerticalMergeContinuation.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void MergeCells_ReversedCoordinates_AreNormalised()
+    {
+        var table = MakeTable(3, 3);
+        table.MergeCells(2, 2, 1, 1);
+        table[1, 1].ColumnSpan.ShouldBe(2);
+        table[1, 1].RowSpan.ShouldBe(2);
+    }
+
+    [Fact]
+    public void MergeCells_SingleCell_IsNoOp()
+    {
+        var table = MakeTable(2, 2);
+        table.MergeCells(0, 0, 0, 0);
+        table[0, 0].ColumnSpan.ShouldBe(1);
+        table[0, 0].RowSpan.ShouldBe(1);
+    }
+
+    [Fact]
+    public void MergeCells_OutOfRange_Throws()
+    {
+        var table = MakeTable(2, 2);
+        Should.Throw<ArgumentOutOfRangeException>(() => table.MergeCells(0, 0, 5, 5));
+    }
+
+    [Fact]
+    public void MergeCells_CellOverload_MergesBoundingBlock()
+    {
+        var table = MakeTable(3, 3);
+        table.MergeCells(table[0, 0], table[2, 1]);
+        table[0, 0].ColumnSpan.ShouldBe(3);
+        table[0, 0].RowSpan.ShouldBe(2);
+    }
+
+    [Fact]
+    public void MergeCells_CellOverload_ForeignCell_Throws()
+    {
+        var table = MakeTable(2, 2);
+        var other = MakeTable(2, 2);
+        Should.Throw<ArgumentException>(() => table.MergeCells(table[0, 0], other[1, 1]));
+    }
+
+    [Fact]
+    public void StyleFlags_AreSettable()
+    {
+        var table = MakeTable(2, 2);
+        table.HasTotalRow = true;
+        table.HasBandedRows = true;
+        table.HasBandedColumns = true;
+        table.HasFirstColumn = true;
+        table.HasLastColumn = true;
+
+        table.HasTotalRow.ShouldBeTrue();
+        table.HasBandedRows.ShouldBeTrue();
+        table.HasBandedColumns.ShouldBeTrue();
+        table.HasFirstColumn.ShouldBeTrue();
+        table.HasLastColumn.ShouldBeTrue();
+    }
 }

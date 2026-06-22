@@ -75,6 +75,7 @@ internal static class Program
         if (input is "a" or "all") return "all";
         if (int.TryParse(input, out var n) && n >= 1 && n <= Demos.Length)
             return Demos[n - 1].Key;
+
         return input.ToLowerInvariant();
     }
 
@@ -160,14 +161,11 @@ internal static class Program
         if (!File.Exists(source)) await CreateDeckAsync();
 
         var processor = new PresentationProcessor();
-        using var doc = await processor.LoadAsync(source);
+        await using var doc = await processor.LoadAsync(source);
 
         var index = 1;
-        foreach (var slide in doc.Slides)
-        {
-            var text = slide.GetAllText().Replace("\n", " | ");
+        foreach (var text in doc.Slides.Select(static slide => slide.GetAllText().Replace("\n", " | ")))
             Console.WriteLine($"  Slide {index++}: {text}");
-        }
     }
 
     /// <summary>Exports a presentation to PDF, per-slide SVG, and per-slide HTML.</summary>
@@ -177,7 +175,7 @@ internal static class Program
         if (!File.Exists(source)) await CreateDeckAsync();
 
         var processor = new PresentationProcessor();
-        using var doc = await processor.LoadAsync(source);
+        await using var doc = await processor.LoadAsync(source);
 
         // PDF.
         var pdfPath = Path.Combine(OutputDir, "deck.pdf");
@@ -191,6 +189,7 @@ internal static class Program
             var svgPath = Path.Combine(OutputDir, $"slide{i + 1}.svg");
             await File.WriteAllBytesAsync(svgPath, svgs[i]);
         }
+
         Console.WriteLine($"  SVG  → {svgs.Length} file(s) (slide1.svg …)");
 
         // HTML (one file per slide written into a directory).
@@ -207,7 +206,7 @@ internal static class Program
         if (!File.Exists(source)) await CreateDeckAsync();
 
         var processor = new PresentationProcessor();
-        using var doc = await processor.LoadAsync(source);
+        await using var doc = await processor.LoadAsync(source);
 
         PptxImage[] images;
         try
@@ -226,6 +225,7 @@ internal static class Program
             var path = Path.Combine(OutputDir, $"slide{i + 1}.png");
             await images[i].SaveAsync(path);
         }
+
         Console.WriteLine($"  Rendered {images.Length} slide(s) → slide1.png … ({images[0].WidthPx}×{images[0].HeightPx})");
     }
 
@@ -236,13 +236,13 @@ internal static class Program
         if (!File.Exists(source)) await CreateDeckAsync();
 
         var processor = new PresentationProcessor();
-        using var doc = await processor.LoadAsync(source);
+        await using var doc = await processor.LoadAsync(source);
 
         var path = Path.Combine(OutputDir, "deck-encrypted.pptx");
         await processor.SaveAsync(doc, path, new SaveOptions { Password = "open-sesame" });
         Console.WriteLine($"  Wrote AES-256 encrypted presentation → {Rel(path)}");
 
-        using var reopened = await processor.LoadAsync(path, new OpenOptions { Password = "open-sesame" });
+        await using var reopened = await processor.LoadAsync(path, new OpenOptions { Password = "open-sesame" });
         Console.WriteLine($"  Re-opened with password — {reopened.Slides.Count} slide(s) readable.");
     }
 
