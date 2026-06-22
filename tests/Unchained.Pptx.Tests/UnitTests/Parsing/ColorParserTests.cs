@@ -105,4 +105,87 @@ public sealed class ColorParserTests
         var parsed = ColorParser.Parse(new XElement(DmlNames.Dml + "wrap", written));
         parsed.Resolve(null).ShouldBe(0xFF123456u);
     }
+
+    [Fact]
+    public void Parse_SrgbClrWithInvalidHex_FallsThroughToGrey()
+    {
+        var xml = Wrap(new XElement(DmlNames.SrgbColor, new XAttribute("val", "NOTHEX")));
+        var color = ColorParser.Parse(xml);
+        color.Resolve(null).ShouldBe(0xFF808080u);
+    }
+
+    [Fact]
+    public void Parse_SystemColorWithInvalidLastClr_FallsThroughToGrey()
+    {
+        var sys = new XElement(
+            DmlNames.SystemColor,
+            new XAttribute("val", "windowText"),
+            new XAttribute("lastClr", "ZZZZZZ")
+        );
+        var color = ColorParser.Parse(Wrap(sys));
+        color.Resolve(null).ShouldBe(0xFF808080u);
+    }
+
+    [Fact]
+    public void Parse_SchemeClrWithLumOff_ReadsOffset()
+    {
+        var scheme = new XElement(
+            DmlNames.SchemeColor,
+            new XAttribute("val", "accent2"),
+            new XElement(DmlNames.LuminanceOffset, new XAttribute("val", "20000"))
+        );
+        var color = ColorParser.Parse(Wrap(scheme));
+        color.LuminanceOffset.ShouldBe(0.2, 0.001);
+    }
+
+    [Fact]
+    public void Parse_UnknownSchemeSlot_DefaultsToDark1()
+    {
+        var xml = Wrap(new XElement(DmlNames.SchemeColor, new XAttribute("val", "bogus")));
+        var color = ColorParser.Parse(xml);
+        color.ThemeSlot.ShouldBe(ThemeColorSlot.Dark1);
+    }
+
+    [
+        Theory,
+        InlineData("dk1", ThemeColorSlot.Dark1),
+        InlineData("lt1", ThemeColorSlot.Light1),
+        InlineData("dk2", ThemeColorSlot.Dark2),
+        InlineData("lt2", ThemeColorSlot.Light2),
+        InlineData("accent1", ThemeColorSlot.Accent1),
+        InlineData("accent2", ThemeColorSlot.Accent2),
+        InlineData("accent3", ThemeColorSlot.Accent3),
+        InlineData("accent4", ThemeColorSlot.Accent4),
+        InlineData("accent5", ThemeColorSlot.Accent5),
+        InlineData("accent6", ThemeColorSlot.Accent6),
+        InlineData("hlink", ThemeColorSlot.Hyperlink),
+        InlineData("folHlink", ThemeColorSlot.FollowedHyperlink)
+    ]
+    public void Parse_SchemeSlot_MapsAllSlots(string name, ThemeColorSlot expected)
+    {
+        var xml = Wrap(new XElement(DmlNames.SchemeColor, new XAttribute("val", name)));
+        ColorParser.Parse(xml).ThemeSlot.ShouldBe(expected);
+    }
+
+    [
+        Theory,
+        InlineData("white", 0xFFFFFFFFu),
+        InlineData("black", 0xFF000000u),
+        InlineData("green", 0xFF008000u),
+        InlineData("blue", 0xFF0000FFu),
+        InlineData("yellow", 0xFFFFFF00u),
+        InlineData("cyan", 0xFF00FFFFu),
+        InlineData("magenta", 0xFFFF00FFu),
+        InlineData("orange", 0xFFFFA500u),
+        InlineData("purple", 0xFF800080u),
+        InlineData("gray", 0xFF808080u),
+        InlineData("grey", 0xFF808080u),
+        InlineData("unknownname", 0xFF808080u)
+    ]
+    public void Parse_PresetColor_MapsAllKnownNames(string name, uint expected)
+    {
+        var prst = new XElement(DmlNames.PresetColor, new XAttribute("val", name));
+        var color = ColorParser.Parse(Wrap(prst));
+        color.Resolve(null).ShouldBe(expected);
+    }
 }

@@ -121,4 +121,58 @@ public sealed class ContentStreamParserInlineImageTests
         ops.Any(static o => o.Name == "BT").ShouldBeTrue();
         ops.Any(static o => o.Name == "ET").ShouldBeTrue();
     }
+
+    [Fact]
+    public void InlineImage_AsciiHexFilter_DecodesViaEiScan()
+    {
+        // 1×1 RGB red encoded as ASCIIHex "FF0000>". A filter is present, so the parser
+        // uses the EI-scan path (unknown encoded length) and runs ApplyInlineFilter.
+        var encoded = Encoding.Latin1.GetBytes("FF0000>");
+        var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 8 /F /AHx ID ", encoded, " EI");
+
+        var image = FirstInlineImage(data);
+        image.ShouldNotBeNull();
+        image.RgbData.ShouldBe([255, 0, 0]);
+    }
+
+    [Fact]
+    public void InlineImage_FilterArray_AppliesInSequence()
+    {
+        // Filter declared as an array of one abbreviated name.
+        var encoded = Encoding.Latin1.GetBytes("00FF00>");
+        var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 8 /F [/AHx] ID ", encoded, " EI");
+
+        var image = FirstInlineImage(data);
+        image.ShouldNotBeNull();
+        image.RgbData.ShouldBe([0, 255, 0]);
+    }
+
+    [Fact]
+    public void InlineImage_FullFilterName_Decodes()
+    {
+        var encoded = Encoding.Latin1.GetBytes("0000FF>");
+        var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 8 /Filter /ASCIIHexDecode ID ", encoded, " EI");
+
+        var image = FirstInlineImage(data);
+        image.ShouldNotBeNull();
+        image.RgbData.ShouldBe([0, 0, 255]);
+    }
+
+    [Fact]
+    public void InlineImage_UnsupportedFormat_NotEmitted()
+    {
+        // 2 bpc RGB is not a supported ConvertToRgb path → null → no inline image emitted.
+        var pixels = "\0\0\0"u8.ToArray();
+        var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 2 ID ", pixels, " EI");
+        FirstInlineImage(data).ShouldBeNull();
+    }
+
+    [Fact]
+    public void InlineImage_NoEiMarker_ReturnsNoImage()
+    {
+        // Filtered data with no EI marker → ExtractInlineImageBytes scans to end and returns empty.
+        var encoded = Encoding.Latin1.GetBytes("FF0000");
+        var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 8 /F /AHx ID ", encoded, string.Empty);
+        FirstInlineImage(data).ShouldBeNull();
+    }
 }

@@ -24,6 +24,34 @@ public sealed class PdfATests : PdfTestBase
     }
 
     [Fact]
+    public async Task Validate_NonEmbeddedFont_ReportsFontViolation()
+    {
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.WithPdfAViolations(), ct: TestContext.Current.CancellationToken);
+        result.Violations.ShouldContain(static v => v.RuleId == "6.3.3", "A non-embedded font must be reported.");
+    }
+
+    [Fact]
+    public async Task Validate_ProhibitedAnnotation_ReportsAnnotationViolation()
+    {
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.WithPdfAViolations(), ct: TestContext.Current.CancellationToken);
+        result.Violations.ShouldContain(static v => v.RuleId == "6.5.3", "A FileAttachment annotation must be reported.");
+    }
+
+    [Fact]
+    public async Task Validate_CatalogAdditionalActions_ReportsActionViolation()
+    {
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.WithPdfAViolations(), ct: TestContext.Current.CancellationToken);
+        result.Violations.ShouldContain(static v => v.RuleId == "6.6.1", "Catalog /AA must be reported.");
+    }
+
+    [Fact]
+    public async Task Validate_WidgetWithoutAppearance_ReportsViolation()
+    {
+        var result = await Processor.ValidatePdfAAsync(PdfFixtures.WithPdfAViolations(), ct: TestContext.Current.CancellationToken);
+        result.Violations.ShouldContain(static v => v.RuleId == "6.5.4", "A Widget without /AP must be reported.");
+    }
+
+    [Fact]
     public async Task Validate_EncryptedPdf_ReportsEncryptionViolation()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);

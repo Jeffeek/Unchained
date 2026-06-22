@@ -17,6 +17,14 @@ public sealed class NamedDestinationTests : PdfTestBase
     }
 
     [Fact]
+    public async Task GetNamedDestinations_LegacyDestsDict_ReturnsEntry()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.WithLegacyDests(), TestContext.Current.CancellationToken);
+        var dests = doc.GetNamedDestinations();
+        dests.ShouldContain(static d => d.Name == "intro");
+    }
+
+    [Fact]
     public async Task SetDestination_CanReadBack()
     {
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);

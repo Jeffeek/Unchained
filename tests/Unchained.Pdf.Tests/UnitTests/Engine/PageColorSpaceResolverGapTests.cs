@@ -205,4 +205,111 @@ public sealed class PageColorSpaceResolverGapTests
         var space = new PdfArray([new PdfInteger(1), new PdfInteger(2)]);
         PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", space)), Core()).ContainsKey("CS0").ShouldBeFalse();
     }
+
+    [Fact]
+    public void IccBased_WithExplicitAlternate_UsesAlternateName()
+    {
+        var iccStream = new PdfStream(
+            new PdfDictionary(new Dictionary<string, PdfObject> { ["Alternate"] = PdfName.Get("DeviceCMYK") }),
+            ReadOnlyMemory<byte>.Empty
+        );
+        var space = new PdfArray([PdfName.Get("ICCBased"), iccStream]);
+        var result = PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", space)), Core());
+        result["CS0"].Kind.ShouldBe("ICCBased");
+    }
+
+    [
+        Theory,
+        InlineData(1),
+        InlineData(3),
+        InlineData(4)
+    ]
+    public void IccBased_NoAlternate_InfersFromChannelCount(int n)
+    {
+        var iccStream = new PdfStream(
+            new PdfDictionary(new Dictionary<string, PdfObject> { ["N"] = new PdfInteger(n) }),
+            ReadOnlyMemory<byte>.Empty
+        );
+        var space = new PdfArray([PdfName.Get("ICCBased"), iccStream]);
+        PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", space)), Core())["CS0"].Kind.ShouldBe("ICCBased");
+    }
+
+    [Fact]
+    public void Separation_BuildsSeparationInfo()
+    {
+        // [/Separation /MyInk /DeviceCMYK <tint function>]
+        var tintFn = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = new PdfArray([new PdfInteger(0), new PdfInteger(1)]),
+                ["C0"] = new PdfArray([new PdfReal(0), new PdfReal(0), new PdfReal(0), new PdfReal(0)]),
+                ["C1"] = new PdfArray([new PdfReal(1), new PdfReal(0), new PdfReal(0), new PdfReal(0)]),
+                ["N"] = new PdfInteger(1)
+            }
+        );
+        var space = new PdfArray(
+            [PdfName.Get("Separation"), PdfName.Get("MyInk"), PdfName.Get("DeviceCMYK"), tintFn]
+        );
+        PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", space)), Core())["CS0"].Kind.ShouldBe("Separation");
+    }
+
+    [Fact]
+    public void DeviceN_BuildsDeviceNInfo()
+    {
+        var tintFn = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = new PdfArray([new PdfInteger(0), new PdfInteger(1)]),
+                ["C0"] = new PdfArray([new PdfReal(0), new PdfReal(0), new PdfReal(0)]),
+                ["C1"] = new PdfArray([new PdfReal(1), new PdfReal(1), new PdfReal(1)]),
+                ["N"] = new PdfInteger(1)
+            }
+        );
+        var names = new PdfArray([PdfName.Get("Ink1"), PdfName.Get("Ink2")]);
+        var space = new PdfArray(
+            [PdfName.Get("DeviceN"), names, PdfName.Get("DeviceRGB"), tintFn]
+        );
+        PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", space)), Core())["CS0"].Kind.ShouldBe("DeviceN");
+    }
+
+    [Fact]
+    public void Indexed_WithStreamLookup_BuildsPalette()
+    {
+        var lookupStream = new PdfStream(
+            new PdfDictionary(new Dictionary<string, PdfObject> { ["Length"] = new PdfInteger(6) }),
+            new byte[] { 0, 0, 0, 255, 255, 255 }
+        );
+        var space = new PdfArray(
+            [PdfName.Get("Indexed"), PdfName.Get("DeviceRGB"), new PdfInteger(1), lookupStream]
+        );
+        var result = PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", space)), Core());
+        result["CS0"].Kind.ShouldBe("Indexed");
+        result["CS0"].IndexedBaseChannels.ShouldBe(3);
+    }
+
+    [Fact]
+    public void Indexed_EmptyLookup_ReturnsNull()
+    {
+        // A lookup that is neither string nor stream → empty palette → null info → not stored.
+        var space = new PdfArray(
+            [PdfName.Get("Indexed"), PdfName.Get("DeviceRGB"), new PdfInteger(1), new PdfInteger(0)]
+        );
+        PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", space)), Core()).ContainsKey("CS0").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void PatternName_IsIgnored() =>
+        // Direct /Pattern name → null (handled elsewhere).
+        PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", PdfName.Get("Pattern"))), Core())
+            .ContainsKey("CS0")
+            .ShouldBeFalse();
+
+    [Fact]
+    public void NoResources_ReturnsEmpty()
+    {
+        var page = new PdfDictionary(new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page });
+        PageColorSpaceResolver.GetColorSpaces(page, Core()).ShouldBeEmpty();
+    }
 }

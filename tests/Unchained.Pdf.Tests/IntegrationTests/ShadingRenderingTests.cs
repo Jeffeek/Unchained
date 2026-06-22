@@ -49,6 +49,24 @@ public sealed class ShadingRenderingTests : RendererTestBase
     }
 
     [Fact]
+    public async Task AxialShadingWithAlpha_RendersWithoutError()
+    {
+        SkipIfNoFreeType();
+
+        // The shading is painted under a constant fill alpha (ca 0.5), exercising the
+        // BlendPixel branch of the gradient rasteriser.
+        await using var doc = await LoadAsync(PdfFixtures.WithAxialShadingAlpha(), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], new RenderOptions(96), TestContext.Current.CancellationToken);
+        var g = PdfTestConstants.DecodeGrayscale(png);
+
+        // The gradient is blended over a white page, so the top (white shading) stays bright
+        // and the bottom (black shading at 50% alpha) is a mid-grey, not pure black.
+        var h = g.GetLength(0);
+        RowMean(g, 2).ShouldBeGreaterThan(RowMean(g, h - 3), "top must remain lighter than bottom");
+        RowMean(g, h - 3).ShouldBeGreaterThan(60, "bottom is blended, not pure black");
+    }
+
+    [Fact]
     public void GetShadings_ParsesAxialShadingWithRamp()
     {
         // Verify the adapter exposes the shading with a populated colour ramp.
