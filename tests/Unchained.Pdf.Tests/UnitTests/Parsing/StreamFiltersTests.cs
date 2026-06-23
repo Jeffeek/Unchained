@@ -329,7 +329,7 @@ public sealed class StreamFiltersTests
         var parms = new PdfDictionary(
             new Dictionary<string, PdfObject> { [PdfName.JBIG2Globals.Value] = globals }
         );
-        var stream = MakeStream("JBIG2Decode", new byte[] { 0x00, 0x01, 0x02, 0x03 }, parms);
+        var stream = MakeStream("JBIG2Decode", [0x00, 0x01, 0x02, 0x03], parms);
 
         await Should.ThrowAsync<Exception>(() => Task.Run(() => StreamFilters.Decode(stream)));
     }

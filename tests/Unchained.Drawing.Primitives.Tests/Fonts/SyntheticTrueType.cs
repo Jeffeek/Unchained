@@ -58,7 +58,7 @@ internal static class SyntheticTrueType
         }
 
         var numTables = tables.Count;
-        var dirStart = 12;
+        const int dirStart = 12;
         var dataStart = dirStart + (numTables * 16);
 
         var total = dataStart + tables.Sum(static t => t.Data.Length);

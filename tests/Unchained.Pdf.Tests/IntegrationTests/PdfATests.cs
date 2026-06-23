@@ -55,7 +55,7 @@ public sealed class PdfATests : PdfTestBase
     public async Task Validate_MalformedPdf_ReportsStructureViolation()
     {
         // Bytes that start like a PDF but cannot be parsed → the catch(PdfException) arm reports 6.1.
-        var malformed = System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\nthis is not a valid pdf body");
+        var malformed = "%PDF-1.4\nthis is not a valid pdf body"u8.ToArray();
         var result = await Processor.ValidatePdfAAsync(malformed, ct: TestContext.Current.CancellationToken);
         result.Violations.ShouldNotBeEmpty();
     }

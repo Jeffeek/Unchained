@@ -364,9 +364,7 @@ public sealed class PdfUAValidatorTests
         const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) /MarkInfo << /Marked true >> " +
                                "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R /Metadata 6 0 R >>";
         var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>", "<< >>" };
-        var xmp = System.Text.Encoding.UTF8.GetBytes(
-            "<?xpacket begin=\"\"?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\"></x:xmpmeta>"
-        );
+        var xmp = "<?xpacket begin=\"\"?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\"></x:xmpmeta>"u8.ToArray();
         var bytes = RawPdfBuilder.BuildWithStream(bodies, 6, "<< /Type /Metadata /Subtype /XML >>", xmp);
 
         PdfUAValidator.Validate(bytes).Violations.ShouldContain(static v => v.RuleId == "7.17");

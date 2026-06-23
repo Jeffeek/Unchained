@@ -1,4 +1,3 @@
-using System.Collections;
 using Shouldly;
 using Unchained.Pptx.Slides;
 using Xunit;
@@ -85,9 +84,7 @@ public sealed class SectionCollectionTests
         var sections = new SectionCollection();
         sections.Add("A");
 
-        var count = 0;
-        foreach (var _ in (IEnumerable)sections)
-            count++;
+        var count = sections.Cast<object?>().Count();
 
         count.ShouldBe(1);
     }

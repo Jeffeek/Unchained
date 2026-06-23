@@ -194,7 +194,6 @@ public sealed class ContentStreamParserInlineImageTests
         // Garbage flate data: ApplyInlineFilter catches the decode error and returns raw bytes,
         // which then fail ConvertToRgb (wrong length) → no image emitted. Exercises the catch arm.
         byte[] garbage = [0xFF, 0xFE, 0xFD];
-        var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 8 /Fl ID ", garbage, " EI");
         // /Fl is not a recognised key (filter key is /F), so this is actually unfiltered; use /F.
         var filtered = Build("BI /W 4 /H 4 /CS /RGB /BPC 8 /F /Fl ID ", garbage, " EI");
         Should.NotThrow(() => ContentStreamParser.Parse(filtered));

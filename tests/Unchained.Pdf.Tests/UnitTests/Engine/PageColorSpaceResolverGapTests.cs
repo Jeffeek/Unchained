@@ -316,10 +316,26 @@ public sealed class PageColorSpaceResolverGapTests
     [Fact]
     public void DeeplyNestedForms_StopAtDepthLimit()
     {
+        var resources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["XObject"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["Fm"] = BuildLevel(0) })
+            }
+        );
+        var page = new PdfDictionary(
+            new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page, ["Resources"] = resources }
+        );
+
+        var result = PageColorSpaceResolver.GetColorSpaces(page, Core());
+        result.ContainsKey("CS0").ShouldBeTrue();
+        // Past the depth limit, the deepest level's space is not collected.
+        result.ContainsKey("CS12").ShouldBeFalse();
+        return;
+
         // Build 12 levels of nested form XObjects, each declaring a colour space. The resolver
         // stops recursing past depth 10, so the innermost spaces are not collected — but it must
         // not throw or hang, and the shallow spaces are still found.
-        PdfStream BuildLevel(int level)
+        static PdfStream BuildLevel(int level)
         {
             var resourceEntries = new Dictionary<string, PdfObject>
             {
@@ -345,20 +361,5 @@ public sealed class PageColorSpaceResolverGapTests
                 ReadOnlyMemory<byte>.Empty
             );
         }
-
-        var resources = new PdfDictionary(
-            new Dictionary<string, PdfObject>
-            {
-                ["XObject"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["Fm"] = BuildLevel(0) })
-            }
-        );
-        var page = new PdfDictionary(
-            new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page, ["Resources"] = resources }
-        );
-
-        var result = PageColorSpaceResolver.GetColorSpaces(page, Core());
-        result.ContainsKey("CS0").ShouldBeTrue();
-        // Past the depth limit, the deepest level's space is not collected.
-        result.ContainsKey("CS12").ShouldBeFalse();
     }
 }

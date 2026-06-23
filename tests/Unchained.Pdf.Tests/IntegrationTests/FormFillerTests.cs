@@ -428,7 +428,9 @@ public sealed class FormFillerTests : PdfTestBase
     public async Task Fill_BtnParentKid_TruthyValue_UsesKidWidgetApState()
     {
         await using var doc = await LoadAsync(
+            // ReSharper disable RedundantArgumentDefaultValue
             PdfFixtures.WithBtnParentKidAcroForm("Group", "On"),
+            // ReSharper restore RedundantArgumentDefaultValue
             TestContext.Current.CancellationToken
         );
         // The parent holds /FT /Btn; the on-state appearance lives on the widget kid's /AP.
