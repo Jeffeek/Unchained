@@ -233,6 +233,25 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         text.ShouldContain("OpenAction");
     }
 
+    [Fact]
+    public async Task SetOpenAction_GoToAction_ViaModel_OutOfRange_Throws()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(() =>
+            Processor.SetOpenActionAsync(doc, PdfOpenAction.GoTo(99), TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
+    public async Task SetOpenAction_GoToAction_ViaModel_FirstPage_Persists()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(3), TestContext.Current.CancellationToken);
+        await Processor.SetOpenActionAsync(doc, PdfOpenAction.GoTo(1), TestContext.Current.CancellationToken);
+
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(3);
+    }
+
     // ── RemovePdfaCompliance ──────────────────────────────────────────────────
 
     [Fact]

@@ -268,6 +268,76 @@ internal static class PdfFixtures
         Build(1, title, author);
 
     /// <summary>
+    ///     A Btn AcroForm field whose <c>/AP /N</c> on-state appearance lives on a widget kid rather
+    ///     than the field itself, and whose <c>/FT</c> is inherited by the kid from the parent.
+    ///     Exercises <c>FormFiller.OnStateName</c>'s kid-widget lookup and <c>FieldType</c>'s
+    ///     <c>/Parent</c> walk.
+    /// </summary>
+    public static byte[] WithBtnParentKidAcroForm(string fieldName = "Group", string onState = "On")
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        Ln(sb, "%PDF-1.7");
+
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "1 0 obj");
+        Ln(sb, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
+        Ln(sb, "endobj");
+
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "2 0 obj");
+        Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Ln(sb, "endobj");
+
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "3 0 obj");
+        Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Annots [5 0 R] >>");
+        Ln(sb, "endobj");
+
+        // Parent field: carries /FT /Btn and /Kids; no /AP of its own.
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "4 0 obj");
+        Ln(sb, $"<< /FT /Btn /T ({EscapeString(fieldName)}) /V /Off /Kids [5 0 R] >>");
+        Ln(sb, "endobj");
+
+        // Widget kid: inherits /FT from /Parent, carries the /AP /N on-state dictionary.
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "5 0 obj");
+        Ln(
+            sb,
+            $"<< /Type /Annot /Subtype /Widget /Parent 4 0 R /Rect [50 700 70 720]" +
+            $" /AP << /N << /{onState} 6 0 R /Off 7 0 R >> >> >>"
+        );
+        Ln(sb, "endobj");
+
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "6 0 obj");
+        Ln(sb, "<< /Type /XObject /Subtype /Form /BBox [0 0 20 20] /Length 0 >>");
+        sb.Append("stream\n");
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
+
+        offsets.Add(ByteLength(sb));
+        Ln(sb, "7 0 obj");
+        Ln(sb, "<< /Type /XObject /Subtype /Form /BBox [0 0 20 20] /Length 0 >>");
+        sb.Append("stream\n");
+        Ln(sb, "\nendstream");
+        Ln(sb, "endobj");
+
+        var xrefOffset = ByteLength(sb);
+        Ln(sb, "xref");
+        Ln(sb, "0 8");
+        Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        Ln(sb, "trailer");
+        Ln(sb, "<< /Size 8 /Root 1 0 R >>");
+        Ln(sb, "startxref");
+        Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    /// <summary>
     ///     A single-page PDF that deliberately violates several PDF/A-1b rules: a non-embedded
     ///     Type1 font (missing /FontDescriptor → §6.3.3), a prohibited /FileAttachment annotation
     ///     without the Print flag (§6.5.3), and a catalog /AA additional-actions dict (§6.6.1).

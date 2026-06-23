@@ -438,4 +438,25 @@ public sealed class FontUtilitiesTests : PdfTestBase
             "subset of 26 glyphs should be much smaller than full font"
         );
     }
+
+    [Fact]
+    public void TrueTypeSubsetter_ShortFont_ReturnsOriginal()
+    {
+        // Fewer than 12 bytes → the early guard returns the input unchanged.
+        var tiny = new byte[] { 0x00, 0x01, 0x02 };
+        TrueTypeSubsetter.Subset(tiny, new HashSet<int> { 1 }).ShouldBeSameAs(tiny);
+    }
+
+    [Fact]
+    public void TrueTypeSubsetter_CorruptFont_ReturnsOriginal()
+    {
+        // 16+ bytes with a plausible header but garbage table directory → SubsetCore throws,
+        // the catch returns the original bytes intact.
+        var corrupt = new byte[64];
+        corrupt[0] = 0x00;
+        corrupt[1] = 0x01;
+        corrupt[4] = 0x00;
+        corrupt[5] = 0x05; // claims 5 tables that do not exist
+        TrueTypeSubsetter.Subset(corrupt, new HashSet<int> { 1, 2, 3 }).ShouldBeSameAs(corrupt);
+    }
 }

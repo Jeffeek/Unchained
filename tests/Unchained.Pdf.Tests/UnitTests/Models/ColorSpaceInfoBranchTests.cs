@@ -120,4 +120,33 @@ public sealed class ColorSpaceInfoBranchTests
         Math.Abs(r - g).ShouldBeLessThan(40);
         Math.Abs(g - b).ShouldBeLessThan(40);
     }
+
+    [Fact]
+    public void Indexed_UnsupportedChannelCount_ReturnsGrey()
+    {
+        // 2 channels is not a supported palette entry size → grey fallback.
+        var info = ColorSpaceInfo.Indexed([0x10, 0x20], 2, "DeviceRGB");
+        info.ToRgb([0.0]).ShouldBe(((byte)128, (byte)128, (byte)128));
+    }
+
+    [Fact]
+    public void Indexed_NoComponents_ReturnsGrey()
+    {
+        var info = ColorSpaceInfo.Indexed([0x10, 0x20, 0x30], 3, "DeviceRGB");
+        info.ToRgb([]).ShouldBe(((byte)128, (byte)128, (byte)128));
+    }
+
+    [Fact]
+    public void UnknownSpace_ThreeComponents_TreatedAsRgb()
+    {
+        var info = new ColorSpaceInfo { Kind = "MysterySpace" };
+        info.ToRgb([1.0, 0.0, 0.0]).ShouldBe(((byte)255, (byte)0, (byte)0));
+    }
+
+    [Fact]
+    public void UnknownSpace_FewerThanThreeComponents_ReturnsGrey()
+    {
+        var info = new ColorSpaceInfo { Kind = "MysterySpace" };
+        info.ToRgb([0.5]).ShouldBe(((byte)128, (byte)128, (byte)128));
+    }
 }

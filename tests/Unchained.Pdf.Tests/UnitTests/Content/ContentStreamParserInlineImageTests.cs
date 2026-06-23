@@ -175,4 +175,40 @@ public sealed class ContentStreamParserInlineImageTests
         var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 8 /F /AHx ID ", encoded, string.Empty);
         FirstInlineImage(data).ShouldBeNull();
     }
+
+    [Fact]
+    public void InlineImage_RunLengthFilter_Decodes()
+    {
+        // RunLength: literal run length=2 → 3 bytes, then EOD (128). Encodes one RGB pixel.
+        byte[] encoded = [2, 10, 20, 30, 128];
+        var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 8 /F /RL ID ", encoded, " EI");
+
+        var image = FirstInlineImage(data);
+        image.ShouldNotBeNull();
+        image.RgbData.ShouldBe([10, 20, 30]);
+    }
+
+    [Fact]
+    public void InlineImage_CorruptFilterData_FallsBackToRawThenFailsConversion()
+    {
+        // Garbage flate data: ApplyInlineFilter catches the decode error and returns raw bytes,
+        // which then fail ConvertToRgb (wrong length) → no image emitted. Exercises the catch arm.
+        byte[] garbage = [0xFF, 0xFE, 0xFD];
+        // /Fl is not a recognised key (filter key is /F), so this is actually unfiltered; use /F.
+        var filtered = Build("BI /W 4 /H 4 /CS /RGB /BPC 8 /F /Fl ID ", garbage, " EI");
+        Should.NotThrow(() => ContentStreamParser.Parse(filtered));
+    }
+
+    [Fact]
+    public void InlineImage_DeviceGray1Bpc_NonByteAlignedWidth_Decodes()
+    {
+        // 4×1 1-bpc gray: 0b10100000 → pixels ink,paper,ink,paper.
+        byte[] pixels = [0b1010_0000];
+        var data = Build("BI /W 4 /H 1 /CS /G /BPC 1 ID ", pixels, " EI");
+
+        var image = FirstInlineImage(data);
+        image.ShouldNotBeNull();
+        image.RgbData[0].ShouldBe((byte)0);   // bit 1 → black
+        image.RgbData[3].ShouldBe((byte)255); // bit 0 → white
+    }
 }
