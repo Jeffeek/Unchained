@@ -157,4 +157,56 @@ public sealed class EmbeddedFilesTests : PdfTestBase
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
     }
+
+    [Fact]
+    public async Task GetEmbeddedFiles_NameTreeWithKids_TraversesIntermediateNodes()
+    {
+        // A /Names /EmbeddedFiles tree whose root has /Kids (the writer only ever emits a flat
+        // /Names leaf, so a hand-built PDF exercises the Kids branch and the UF-filename read).
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Kids [5 0 R] >> >> >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
+            "<< /Type /EmbeddedFile /Length 3 >>\nstream\nabc\nendstream",
+            "<< /Names [(note.txt) 6 0 R] >>",
+            "<< /Type /Filespec /F (note.txt) /Desc (a note) /EF << /F 4 0 R >> >>"
+        };
+        await using var doc = await LoadAsync(RawPdfBuilder.Build(bodies), TestContext.Current.CancellationToken);
+        var files = new EmbeddedFileEditor().GetEmbeddedFiles(doc);
+        files.ShouldHaveSingleItem();
+        files[0].Name.ShouldBe("note.txt");
+        files[0].Description.ShouldBe("a note");
+    }
+
+    [Fact]
+    public async Task AddEmbeddedFile_DuplicateName_ReplacesExistingEntry()
+    {
+        var editor = new EmbeddedFileEditor();
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+
+        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("dup", "dup.txt", null, null, "v1"u8.ToArray()), TestContext.Current.CancellationToken);
+        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("dup", "dup.txt", null, null, "v2"u8.ToArray()), TestContext.Current.CancellationToken);
+
+        // The duplicate-name skip means only one "dup" entry survives, with the newest data.
+        var files = editor.GetEmbeddedFiles(doc).Where(static f => f.Name == "dup").ToList();
+        files.ShouldHaveSingleItem();
+        Encoding.Latin1.GetString(files[0].Data).ShouldBe("v2");
+    }
+
+    [Fact]
+    public async Task RemoveEmbeddedFile_OneOfTwo_KeepsTheOther()
+    {
+        var editor = new EmbeddedFileEditor();
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+
+        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("a", "a.txt", null, null, "aa"u8.ToArray()), TestContext.Current.CancellationToken);
+        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("b", "b.txt", null, null, "bb"u8.ToArray()), TestContext.Current.CancellationToken);
+
+        await editor.RemoveEmbeddedFileAsync(doc, "a", TestContext.Current.CancellationToken);
+
+        var remaining = editor.GetEmbeddedFiles(doc);
+        remaining.ShouldHaveSingleItem();
+        remaining[0].Name.ShouldBe("b");
+    }
 }

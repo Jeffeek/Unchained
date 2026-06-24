@@ -149,4 +149,49 @@ public sealed class ColorSpaceInfoBranchTests
         var info = new ColorSpaceInfo { Kind = "MysterySpace" };
         info.ToRgb([0.5]).ShouldBe(((byte)128, (byte)128, (byte)128));
     }
+
+    [Fact]
+    public void CalRgb_NoMatrix_PassesGammaThroughDirectly()
+    {
+        // No XYZ matrix supplied → the else branch uses gamma-adjusted components as XYZ directly.
+        var info = ColorSpaceInfo.CalRgb([1.0, 1.0, 1.0], matrix: null);
+        var (r, g, b) = info.ToRgb([1.0, 1.0, 1.0]);
+        (r + g + b).ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void CalRgb_FewerThanThreeComponents_ReturnsGrey()
+    {
+        var info = ColorSpaceInfo.CalRgb([1.0, 1.0, 1.0], null);
+        info.ToRgb([0.5]).ShouldBe(((byte)128, (byte)128, (byte)128));
+    }
+
+    [Fact]
+    public void Lab_FewerThanThreeComponents_ReturnsGrey() =>
+        ColorSpaceInfo.Lab().ToRgb([50, 0]).ShouldBe(((byte)128, (byte)128, (byte)128));
+
+    [Fact]
+    public void DeviceCmyk_FewerThanFourComponents_ReturnsGrey() =>
+        ColorSpaceInfo.Device("DeviceCMYK").ToRgb([0.5, 0.5, 0.5]).ShouldBe(((byte)128, (byte)128, (byte)128));
+
+    [Fact]
+    public void DeviceRgb_FewerThanThreeComponents_ReturnsGrey() =>
+        ColorSpaceInfo.Device("DeviceRGB").ToRgb([0.5]).ShouldBe(((byte)128, (byte)128, (byte)128));
+
+    [Fact]
+    public void Separation_NullFunction_ReturnsGrey() =>
+        ColorSpaceInfo.Separation(null, "DeviceCMYK").ToRgb([1.0]).ShouldBe(((byte)128, (byte)128, (byte)128));
+
+    [Fact]
+    public void CalRgb_ZeroComponents_HitsLinearGammaBranch() =>
+        // All-zero input → linear sRGB 0 → Gamma() takes the v<=0.0031308 (12.92*v) branch → black.
+        ColorSpaceInfo.CalRgb([1.0, 1.0, 1.0], null).ToRgb([0.0, 0.0, 0.0]).ShouldBe(((byte)0, (byte)0, (byte)0));
+
+    [Fact]
+    public void Lab_ZeroLightness_HitsLinearGammaBranch()
+    {
+        // L=0,a=0,b=0 → near-zero XYZ → linear gamma branch → black-ish.
+        var (r, g, b) = ColorSpaceInfo.Lab().ToRgb([0.0, 0.0, 0.0]);
+        (r + g + b).ShouldBeLessThan(30);
+    }
 }

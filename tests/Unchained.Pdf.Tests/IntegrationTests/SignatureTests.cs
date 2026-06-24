@@ -243,6 +243,19 @@ public sealed class SignatureTests : PdfTestBase
     }
 
     [Fact]
+    public async Task Sign_EncryptedDocument_Throws()
+    {
+        using var cert = CreateSelfSignedCert();
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        using var encMs = new MemoryStream();
+        await Processor.SaveAsync(doc, encMs, new SaveOptions(Encryption: new EncryptionOptions("pw")), TestContext.Current.CancellationToken);
+
+        await using var encDoc = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "pw", TestContext.Current.CancellationToken);
+        using var outMs = new MemoryStream();
+        await Should.ThrowAsync<InvalidOperationException>(() => Processor.SignAsync(encDoc, cert, outMs));
+    }
+
+    [Fact]
     public async Task Sign_WithCustomSignatureOptions_AllFieldsRoundTrip()
     {
         using var cert = CreateSelfSignedCert("Eve Adams");

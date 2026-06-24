@@ -1,3 +1,4 @@
+using System.Text;
 using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -172,5 +173,180 @@ public sealed class PdfDocumentCoreHardeningTests
         using var core = PdfDocumentCore.Parse(PdfFixtures.SinglePage());
         var v = new PdfInteger(7);
         core.Dereference(v).ShouldBeSameAs(v);
+    }
+
+    [Fact]
+    public void IgnoreCorruptedObjects_CorruptBody_ReturnsPdfNull()
+    {
+        // Object 4 is unreferenced and has a body the value parser rejects (a bare array-end token).
+        // With the flag set, ResolveIndirect swallows the parse error and yields PdfNull.
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
+            "]" // malformed: ReadValue throws on an unexpected ArrayEnd token
+        };
+        using var core = PdfDocumentCore.Parse(RawPdfBuilder.Build(bodies));
+
+        Should.Throw<PdfException>(() => core.ResolveIndirect(4)); // throws without the flag
+
+        core.IgnoreCorruptedObjects = true;
+        core.ResolveIndirect(4).Value.ShouldBe(PdfNull.Instance);
+    }
+
+    [Fact]
+    public void GetPage_CatalogPagesPointsDirectlyAtPage_ReturnsThatPage()
+    {
+        // /Pages resolves to a node whose /Type is /Page (not /Pages) yet declares /Count 1.
+        // The root-node "type == Page" branch of FindPageInTree returns it directly.
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Page /Count 1 /MediaBox [0 0 10 10] >>"
+        };
+        using var core = PdfDocumentCore.Parse(RawPdfBuilder.Build(bodies));
+        core.PageCount.ShouldBe(1);
+        core.GetPage(1).GetName("Type").ShouldBe("Page");
+    }
+
+    [Fact]
+    public void GetPage_RootPageButWrongRemainingCount_Throws()
+    {
+        // /Pages resolves to a /Type /Page node but /Count is 2, so requesting page 2 walks the
+        // root-Page branch with remaining != 0 after the decrement → traversal error.
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Page /Count 2 /MediaBox [0 0 10 10] >>"
+        };
+        using var core = PdfDocumentCore.Parse(RawPdfBuilder.Build(bodies));
+        Should.Throw<PdfException>(() => core.GetPage(2));
+    }
+
+    [Fact]
+    public void Parse_InlineEncryptDict_UnsupportedHandler_Throws()
+    {
+        // An inline (direct) /Encrypt dictionary in the trailer hits the PdfDictionary branch of
+        // InitializeEncryption. A non-Standard /Filter is unsupported → PdfEncryptedException.
+        var bytes = BuildWithTrailerExtra("/Encrypt << /Filter /NonStandard /V 2 /R 3 >>");
+        Should.Throw<PdfEncryptedException>(() => PdfDocumentCore.Parse(bytes));
+    }
+
+    [Fact]
+    public void Parse_EncryptWrongType_Throws()
+    {
+        // /Encrypt as a bare name (neither indirect ref nor dictionary) → default branch throws.
+        var bytes = BuildWithTrailerExtra("/Encrypt /Bogus");
+        Should.Throw<PdfException>(() => PdfDocumentCore.Parse(bytes));
+    }
+
+    [Fact]
+    public void Repair_TrailerMissingRoot_ScansObjectsForCatalog()
+    {
+        // Trailer deliberately omits /Root, forcing Repair to scan resolved objects for a /Catalog.
+        var bytes = BuildNoRootTrailer();
+        using var core = PdfDocumentCore.Repair(bytes);
+        core.Catalog.GetName("Type").ShouldBe("Catalog");
+        core.PageCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Repair_TrailerMissingRoot_NoCatalogPresent_Throws()
+    {
+        // No object is a /Catalog and the trailer has no /Root → Repair cannot locate the catalog.
+        var bytes = BuildNoRootTrailer(includeCatalog: false);
+        Should.Throw<PdfException>(() => PdfDocumentCore.Repair(bytes));
+    }
+
+    [Fact]
+    public void Repair_TrailerMissingRoot_SkipsUnreadableObjectsDuringScan()
+    {
+        // Object 1 has a corrupt body; with no /Root the catalog scan resolves objects in order,
+        // the corrupt one throws and is swallowed by the scan's try/catch, then object 2's catalog
+        // is found. Exercises the "skip unreadable objects" branch of Repair.
+        var bodies = new[]
+        {
+            "]",                                                      // 1: malformed → scan skips it
+            "<< /Type /Catalog /Pages 3 0 R >>",                     // 2: the real catalog
+            "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",             // 3: pages
+            "<< /Type /Page /Parent 3 0 R /MediaBox [0 0 10 10] >>"  // 4: page
+        };
+        var withRoot = RawPdfBuilder.Build(bodies);
+        // Strip "/Root 1 0 R " from the trailer so Repair must scan for the catalog.
+        var text = Encoding.Latin1.GetString(withRoot).Replace("/Root 1 0 R ", string.Empty);
+        using var core = PdfDocumentCore.Repair(Encoding.Latin1.GetBytes(text));
+        core.Catalog.GetName("Type").ShouldBe("Catalog");
+    }
+
+    // Builds a minimal single-page PDF and appends <paramref name="extra"/> inside the trailer
+    // dictionary (before the closing >>). Used to inject inline /Encrypt entries.
+    private static byte[] BuildWithTrailerExtra(string extra)
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        PdfFixtures.Ln(sb, "%PDF-1.7");
+
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "1 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
+
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "2 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Ln(sb, "endobj");
+
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "3 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>");
+        PdfFixtures.Ln(sb, "endobj");
+
+        var xrefOffset = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, "0 4");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
+        PdfFixtures.Ln(sb, $"<< /Size 4 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] {extra} >>");
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    // Builds a single-page PDF whose trailer has NO /Root entry, forcing Repair's object scan.
+    private static byte[] BuildNoRootTrailer(bool includeCatalog = true)
+    {
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        PdfFixtures.Ln(sb, "%PDF-1.7");
+
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "1 0 obj");
+        PdfFixtures.Ln(sb, includeCatalog ? "<< /Type /Catalog /Pages 2 0 R >>" : "<< /Type /NotACatalog >>");
+        PdfFixtures.Ln(sb, "endobj");
+
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "2 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Ln(sb, "endobj");
+
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "3 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>");
+        PdfFixtures.Ln(sb, "endobj");
+
+        var xrefOffset = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, "0 4");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
+        PdfFixtures.Ln(sb, "<< /Size 4 /ID [<AABBCCDD><AABBCCDD>] >>"); // no /Root
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xrefOffset.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
     }
 }

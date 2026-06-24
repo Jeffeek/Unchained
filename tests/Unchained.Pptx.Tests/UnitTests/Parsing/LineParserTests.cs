@@ -41,8 +41,15 @@ public sealed class LineParserTests
         Theory,
         InlineData("dot", LineDashStyle.Dot),
         InlineData("dash", LineDashStyle.Dash),
+        InlineData("dashDot", LineDashStyle.DashDot),
         InlineData("lgDash", LineDashStyle.LongDash),
+        InlineData("lgDashDot", LineDashStyle.LongDashDot),
+        InlineData("lgDashDotDot", LineDashStyle.LongDashDotDot),
+        InlineData("sysDash", LineDashStyle.SystemDash),
         InlineData("sysDot", LineDashStyle.SystemDot),
+        InlineData("sysDashDot", LineDashStyle.SystemDashDot),
+        InlineData("sysDashDotDot", LineDashStyle.SystemDashDotDot),
+        InlineData("solid", LineDashStyle.Solid),
         InlineData("unknown", LineDashStyle.Solid)
     ]
     public void Parse_DashStyle_Mapped(string value, LineDashStyle expected)
@@ -55,6 +62,48 @@ public sealed class LineParserTests
         var line = new LineFormat();
         LineParser.Parse(parent, line);
         line.DashStyle.ShouldBe(expected);
+    }
+
+    [
+        Theory,
+        InlineData("triangle", ArrowHeadType.Triangle),
+        InlineData("stealth", ArrowHeadType.Stealth),
+        InlineData("diamond", ArrowHeadType.Diamond),
+        InlineData("oval", ArrowHeadType.Oval),
+        InlineData("arrow", ArrowHeadType.Open),
+        InlineData("open", ArrowHeadType.Open),
+        InlineData("none", ArrowHeadType.None),
+        InlineData("unknown", ArrowHeadType.None)
+    ]
+    public void Parse_ArrowType_Mapped(string value, ArrowHeadType expected)
+    {
+        var ln = new XElement(
+            DmlNames.Line,
+            new XElement(DmlNames.HeadEnd, new XAttribute("type", value))
+        );
+        var parent = new XElement(DmlNames.Dml + "spPr", ln);
+        var line = new LineFormat();
+        LineParser.Parse(parent, line);
+        line.HeadArrow.HeadType.ShouldBe(expected);
+    }
+
+    [
+        Theory,
+        InlineData("sm", ArrowHeadSize.Small),
+        InlineData("lg", ArrowHeadSize.Large),
+        InlineData("med", ArrowHeadSize.Medium),
+        InlineData("unknown", ArrowHeadSize.Medium)
+    ]
+    public void Parse_ArrowSize_Mapped(string value, ArrowHeadSize expected)
+    {
+        var ln = new XElement(
+            DmlNames.Line,
+            new XElement(DmlNames.HeadEnd, new XAttribute("type", "triangle"), new XAttribute("w", value))
+        );
+        var parent = new XElement(DmlNames.Dml + "spPr", ln);
+        var line = new LineFormat();
+        LineParser.Parse(parent, line);
+        line.HeadArrow.Width.ShouldBe(expected);
     }
 
     [Fact]

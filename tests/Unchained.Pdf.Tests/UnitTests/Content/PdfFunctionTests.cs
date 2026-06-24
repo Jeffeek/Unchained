@@ -324,4 +324,98 @@ public sealed class PdfFunctionTests
         fn.ShouldNotBeNull();
         fn.Eval(0.5)[0].ShouldBeInRange(0.0, 1.0);
     }
+
+    [Fact]
+    public void Build_DepthBeyondLimit_ReturnsNull()
+    {
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0)
+            }
+        );
+        // depth > 16 short-circuits to null (recursion guard).
+        PdfFunction.Build(dict, Core(), depth: 17).ShouldBeNull();
+    }
+
+    [Fact]
+    public void Build_FromIndirectReference_ResolvesAndBuilds()
+    {
+        // Build a document whose object 5 is a type-2 function dictionary, then build from a
+        // reference to it so the indirect-resolution branch (obj is PdfIndirectReference) runs.
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
+            "<< /Foo 1 >>",
+            "<< /FunctionType 2 /Domain [0 1] /C0 [0.0] /C1 [1.0] /N 1 >>"
+        };
+        using var core = PdfDocumentCore.Parse(RawPdfBuilder.Build(bodies));
+        var fn = PdfFunction.Build(new PdfIndirectReference(5, 0), core);
+        fn.ShouldNotBeNull();
+        fn.Eval(1.0)[0].ShouldBe(1.0, 0.0001);
+    }
+
+    [Fact]
+    public void Type2_MissingDomain_DefaultsToZeroOne()
+    {
+        // No /Domain → the `?? [0,1]` fallback runs; N absent → `?? 1.0`.
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0)
+            }
+        );
+        var fn = PdfFunction.Build(dict, Core());
+        fn.ShouldNotBeNull();
+        fn.Eval(0.5)[0].ShouldBe(0.5, 0.0001);
+    }
+
+    [Fact]
+    public void Type3_MissingBounds_DefaultsToEmpty()
+    {
+        // /Functions present, no /Bounds and no /Encode → both `?? []` fallbacks run.
+        var sub = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0)
+            }
+        );
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(3),
+                ["Functions"] = new PdfArray([sub])
+            }
+        );
+        var fn = PdfFunction.Build(dict, Core());
+        fn.ShouldNotBeNull();
+        fn.Eval(0.5)[0].ShouldBeInRange(0.0, 1.0);
+    }
+
+    [Fact]
+    public void Type2_MissingN_DefaultsToLinear()
+    {
+        var dict = Dict(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = Array(0, 1),
+                ["C0"] = Array(0.0),
+                ["C1"] = Array(1.0)
+                // No /N → defaults to 1.0 (linear).
+            }
+        );
+        var fn = PdfFunction.Build(dict, Core());
+        fn.ShouldNotBeNull();
+        fn.Eval(0.5)[0].ShouldBe(0.5, 0.0001);
+    }
 }

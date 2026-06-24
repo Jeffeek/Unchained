@@ -167,6 +167,52 @@ public sealed class PageRendererContentTests : RendererTestBase
     }
 
     [Fact]
+    public async Task TextInvisibleMode_PaintsNothing()
+    {
+        SkipIfNoFreeType();
+        var fontData = LoadDejaVuSansRegular();
+        // Tr 3 = invisible text (used for OCR layers) → no pixels painted.
+        var pdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 40 Tf 3 Tr 0 0 0 rg 10 40 Td (X) Tj ET");
+        var n = await NonWhiteAsync(pdf);
+        n.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task TextClipMode_AddsToClipWithoutThrowing()
+    {
+        SkipIfNoFreeType();
+        var fontData = LoadDejaVuSansRegular();
+        // Tr 7 = add-to-clip (no fill/stroke); then fill the page — only the glyph shape paints.
+        var pdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 60 Tf 7 Tr 10 30 Td (O) Tj ET 0 0 0 rg 0 0 100 100 re f");
+        var n = await NonWhiteAsync(pdf);
+        // Clipped fill paints within the glyph outline only — fewer pixels than a full-page fill.
+        n.ShouldBeGreaterThan(0);
+        n.ShouldBeLessThan(100 * 100);
+    }
+
+    [Fact]
+    public async Task TextNextLineShowOperator_Renders()
+    {
+        SkipIfNoFreeType();
+        var fontData = LoadDejaVuSansRegular();
+        // ' operator = move to next line then show text.
+        var pdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 24 Tf 10 60 Td 14 TL (Line) ' ET");
+        var n = await NonWhiteAsync(pdf);
+        n.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task TextNextLineWithSpacingShowOperator_Renders()
+    {
+        SkipIfNoFreeType();
+        var fontData = LoadDejaVuSansRegular();
+        // " operator = set word+char spacing, move to next line, then show. Operands: aw ac string.
+        var pdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 24 Tf 10 60 Td 14 TL 2 1 (A B) \" ET");
+        var n = await NonWhiteAsync(pdf);
+        n.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
     public async Task TextWithRiseAndCharSpacing_Renders()
     {
         SkipIfNoFreeType();

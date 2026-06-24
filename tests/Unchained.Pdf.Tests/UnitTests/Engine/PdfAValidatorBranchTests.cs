@@ -178,4 +178,36 @@ public sealed class PdfAValidatorBranchTests
         var result = Validate(PlainCatalog);
         result.Violations.ShouldNotContain(static v => v.RuleId == "6.1.2");
     }
+
+    // ── §6.1 file-structure / header edge cases ──────────────────────────────
+
+    [Fact]
+    public void ShortFile_ReportsStructureViolation() =>
+        // Too short to parse → the structure-parse guard reports a §6.1 violation.
+        PdfAValidator.Validate("%PD"u8.ToArray(), PdfAProfile.PdfA1B)
+            .Violations.ShouldContain(static v => v.RuleId.StartsWith("6.1"));
+
+    [Fact]
+    public void NonPdfBytes_ReportsStructureViolation() =>
+        PdfAValidator.Validate("NOTAPDF-HEADER-XX"u8.ToArray(), PdfAProfile.PdfA1B)
+            .Violations.ShouldContain(static v => v.RuleId.StartsWith("6.1"));
+
+    [Fact]
+    public void UnparseableVersion_ButValidStructure_ReportsVersionViolation() =>
+        // Structure parses (xref/trailer) but the header version "x.y" is unparseable →
+        // CheckPdfVersion reaches the double.TryParse failure branch and reports §6.1.2.
+        PdfAValidator.Validate(RawPdfBuilder.Build([PlainCatalog, Pages, PlainPage], "x.y"), PdfAProfile.PdfA1B)
+            .Violations.ShouldContain(static v => v.RuleId == "6.1.2");
+
+    [Fact]
+    public void Pdf17_ExceedsPdfA1Limit_ReportsVersionViolation() =>
+        // ReSharper disable once RedundantArgumentDefaultValue
+        PdfAValidator.Validate(RawPdfBuilder.Build([PlainCatalog, Pages, PlainPage], "1.7"), PdfAProfile.PdfA1B)
+            .Violations.ShouldContain(static v => v.RuleId == "6.1.2");
+
+    [Fact]
+    public void Pdf17_WithinPdfA2Limit_NoVersionViolation() =>
+        // ReSharper disable once RedundantArgumentDefaultValue
+        PdfAValidator.Validate(RawPdfBuilder.Build([PlainCatalog, Pages, PlainPage], "1.7"), PdfAProfile.PdfA2B)
+            .Violations.ShouldNotContain(static v => v.RuleId == "6.1.2");
 }

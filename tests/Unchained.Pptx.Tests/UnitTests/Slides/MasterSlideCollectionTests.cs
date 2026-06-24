@@ -51,4 +51,13 @@ public sealed class MasterSlideCollectionTests
         var count = collection.Cast<object?>().Count();
         count.ShouldBe(1);
     }
+
+    [Fact]
+    public void NonGenericEnumerator_ExplicitInterface_Iterates()
+    {
+        var collection = new MasterSlideCollection { new MasterSlide() };
+        System.Collections.IEnumerable nonGeneric = collection;
+        var count = nonGeneric.Cast<object?>().Count();
+        count.ShouldBe(1);
+    }
 }

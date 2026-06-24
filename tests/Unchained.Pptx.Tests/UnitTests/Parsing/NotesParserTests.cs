@@ -91,4 +91,21 @@ public sealed class NotesParserTests
         NotesParser.Parse(root, notes);
         notes.RawElement.ShouldBeSameAs(root);
     }
+
+    [Fact]
+    public void Parse_BodyPlaceholderWithoutTextBody_BreaksWithoutFrame()
+    {
+        // Body placeholder shape but no <p:txBody> → the break path leaves the frame unset.
+        var ph = new XElement(PmlNames.Placeholder, new XAttribute("type", "body"));
+        var sp = new XElement(
+            PmlNames.Shape,
+            new XElement(
+                PmlNames.NonVisualShapeProperties,
+                new XElement(PmlNames.ApplicationNonVisualProperties, ph)
+            )
+        );
+        var notes = new NotesSlide();
+        NotesParser.Parse(NotesRoot(sp), notes);
+        notes.NotesTextFrame.ShouldBeNull();
+    }
 }

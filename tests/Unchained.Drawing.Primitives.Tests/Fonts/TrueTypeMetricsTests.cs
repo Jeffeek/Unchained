@@ -154,4 +154,65 @@ public sealed class TrueTypeMetricsTests
 
         TrueTypeMetrics.Read(font).ShouldBe(TrueTypeMetrics.HelveticaFallback);
     }
+
+    [Fact]
+    public void Read_NonThousandUnitsPerEm_ScalesMetricsToThousand()
+    {
+        // unitsPerEm 2048 → scale 1000/2048; a 1024-unit ascender becomes ~500.
+        var font = SyntheticTrueType.Build(
+            unitsPerEm: 2048,
+            os2Version: 2,
+            typoAscender: 1024,
+            typoDescender: -512,
+            capHeight: 1024,
+            weightClass: 400,
+            includeOs2: true,
+            includeHhea: true
+        );
+
+        var m = TrueTypeMetrics.Read(font);
+        m.ShouldNotBeNull();
+        m.Ascent.ShouldBe(500);
+        m.Descent.ShouldBe(-250);
+    }
+
+    [Fact]
+    public void Read_ZeroUnitsPerEm_DefaultsToThousand()
+    {
+        // unitsPerEm 0 is invalid → parser defaults it to 1000 (scale 1, no division by zero).
+        var font = SyntheticTrueType.Build(
+            unitsPerEm: 0,
+            os2Version: 2,
+            typoAscender: 700,
+            typoDescender: -200,
+            capHeight: 650,
+            weightClass: 400,
+            includeOs2: true,
+            includeHhea: true
+        );
+
+        var m = TrueTypeMetrics.Read(font);
+        m.ShouldNotBeNull();
+        m.Ascent.ShouldBe(700);
+    }
+
+    [Fact]
+    public void Read_HeavyWeightClass_RaisesStemV()
+    {
+        // A bold weight class (700) produces a larger StemV than the default 80.
+        var font = SyntheticTrueType.Build(
+            unitsPerEm: 1000,
+            os2Version: 2,
+            typoAscender: 750,
+            typoDescender: -250,
+            capHeight: 700,
+            weightClass: 700,
+            includeOs2: true,
+            includeHhea: true
+        );
+
+        var m = TrueTypeMetrics.Read(font);
+        m.ShouldNotBeNull();
+        m.StemV.ShouldBeGreaterThan(80);
+    }
 }
