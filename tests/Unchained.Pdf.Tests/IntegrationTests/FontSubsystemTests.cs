@@ -393,6 +393,74 @@ public sealed class FontUtilitiesTests : PdfTestBase
         );
     }
 
+    [Fact]
+    public async Task SubsetFontsAsync_RawFontFile2_CollectsGlyphsAndSubsets()
+    {
+        // A doc whose FontFile2 is an UNFILTERED stream of real DejaVu bytes, referenced by /F1 and
+        // shown via Tj and a TJ array. This drives CollectUsedGlyphs' operator walk (Tf/Tj/TJ arms)
+        // and the simple-font glyph collection, and lets TrueTypeSubsetter actually shrink the font.
+        var font = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        var pdf = BuildDocWithRawFontFile2(font, "BT /F1 12 Tf 50 700 Td (Hello) Tj [(Wo) -10 (rld)] TJ ET");
+
+        await using var doc = await LoadAsync(pdf, TestContext.Current.CancellationToken);
+
+        await Should.NotThrowAsync(() => Processor.SubsetFontsAsync(doc, TestContext.Current.CancellationToken));
+
+        // The document must still round-trip after the subset pass (which walks Tf/Tj/TJ operators
+        // and collects glyphs from the raw embedded font).
+        using var after = new MemoryStream();
+        await Processor.SaveAsync(doc, after, ct: TestContext.Current.CancellationToken);
+        after.Length.ShouldBeGreaterThan(0);
+        await using var reloaded = await LoadAsync(after.ToArray(), TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
+    }
+
+    // Builds a single-page PDF with an UNFILTERED (raw binary) /FontFile2 stream so the subsetter
+    // can parse and shrink it. Objects: 1 Catalog, 2 Pages, 3 Page, 4 content, 5 Font, 6 Descriptor,
+    // 7 FontFile2 (raw). Assembled via MemoryStream because the font bytes are binary.
+    private static byte[] BuildDocWithRawFontFile2(byte[] fontBytes, string content)
+    {
+        var cs = System.Text.Encoding.Latin1.GetBytes(content);
+        using var ms = new MemoryStream();
+        var offsets = new long[8];
+
+        void Text(string s) => ms.Write(System.Text.Encoding.Latin1.GetBytes(s));
+        void Line(string s) { Text(s); ms.WriteByte((byte)'\n'); }
+
+        Line("%PDF-1.7");
+        Line("%\xE2\xE3\xCF\xD3");
+        offsets[1] = ms.Position;
+        Line("1 0 obj"); Line("<< /Type /Catalog /Pages 2 0 R >>"); Line("endobj");
+        offsets[2] = ms.Position;
+        Line("2 0 obj"); Line("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Line("endobj");
+        offsets[3] = ms.Position;
+        Line("3 0 obj");
+        Line("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R");
+        Line("   /Resources << /Font << /F1 5 0 R >> >> >>");
+        Line("endobj");
+        offsets[4] = ms.Position;
+        Line("4 0 obj"); Line($"<< /Length {cs.Length} >>"); Line("stream"); ms.Write(cs); Line(""); Line("endstream"); Line("endobj");
+        offsets[5] = ms.Position;
+        Line("5 0 obj");
+        Line("<< /Type /Font /Subtype /TrueType /BaseFont /DejaVuSans /FontDescriptor 6 0 R >>");
+        Line("endobj");
+        offsets[6] = ms.Position;
+        Line("6 0 obj");
+        Line("<< /Type /FontDescriptor /FontName /DejaVuSans /Flags 32 /FontFile2 7 0 R >>");
+        Line("endobj");
+        offsets[7] = ms.Position;
+        Line("7 0 obj");
+        Line($"<< /Length {fontBytes.Length} /Length1 {fontBytes.Length} >>");
+        Line("stream"); ms.Write(fontBytes); Line(""); Line("endstream"); Line("endobj");
+
+        var xref = ms.Position;
+        Line("xref"); Line("0 8"); Line("0000000000 65535 f ");
+        for (var i = 1; i <= 7; i++) Line($"{offsets[i]:D10} 00000 n ");
+        Line("trailer"); Line("<< /Size 8 /Root 1 0 R >>"); Line("startxref"); Line(xref.ToString());
+        Text("%%EOF");
+        return ms.ToArray();
+    }
+
     // ── TrueTypeSubsetter unit tests ─────────────────────────────────────────────
 
     [Fact]

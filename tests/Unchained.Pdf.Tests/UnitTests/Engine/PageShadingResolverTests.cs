@@ -107,6 +107,43 @@ public sealed class PageShadingResolverTests
     }
 
     [Fact]
+    public void ShadingEntryNotDictOrStream_IsSkipped()
+    {
+        // A /Shading entry that resolves to a bare integer is neither dict nor stream → BuildShading
+        // returns null (the `_ => null` arm) and the name is not collected.
+        PageShadingResolver.GetShadings(PageWithShading(("S", new PdfInteger(7))), Core())
+            .ContainsKey("S").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void AxialShading_TwoComponentFunction_NonCmyk_UsesGreyRamp()
+    {
+        // A type-2 function with 2-element C0/C1 over a non-CMYK colour space yields a 2-component
+        // result, hitting the ComponentsToRgb `_ => (128,128,128)` grey fallback for every ramp entry.
+        var fn = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = new PdfArray([new PdfInteger(0), new PdfInteger(1)]),
+                ["C0"] = new PdfArray([new PdfReal(0), new PdfReal(0)]),
+                ["C1"] = new PdfArray([new PdfReal(1), new PdfReal(1)]),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
+        var shading = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ShadingType"] = new PdfInteger(2),
+                ["ColorSpace"] = PdfName.Get("DeviceRGB"),
+                ["Coords"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(100), new PdfInteger(0)]),
+                ["Function"] = fn
+            }
+        );
+        var result = PageShadingResolver.GetShadings(PageWithShading(("S", shading)), Core());
+        result["S"].ShadingType.ShouldBe(2);
+    }
+
+    [Fact]
     public void AxialShading_MissingCoords_IsSkipped()
     {
         var bad = new PdfDictionary(

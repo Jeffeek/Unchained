@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Presentation;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Shouldly;
 using Unchained.Ooxml.Engine;
+using Unchained.Ooxml.Opc;
 using Xunit;
 
 namespace Unchained.Ooxml.Tests.UnitTests.Engine;
@@ -52,6 +53,18 @@ public sealed class OoxmlEngineTests
     [Fact]
     public void Open_GarbageBytes_Throws() =>
         Should.Throw<Exception>(static () => OoxmlEngine.Open([1, 2, 3, 4], false));
+
+    [Fact]
+    public void Open_ValidOpcPackageWithNoRecognizedMainPart_Throws()
+    {
+        // A structurally valid OPC package whose only part is not a presentation/document/workbook
+        // main part → DetectFormat falls through to the "could not determine format" throw.
+        var package = OpcPackage.CreateEmpty();
+        package.AddOrReplacePart("/custom/part.xml", "application/xml", "<root/>"u8.ToArray());
+        var bytes = package.Save();
+
+        Should.Throw<OoXmlException>(() => OoxmlEngine.Open(bytes, false));
+    }
 
     [Fact]
     public void Save_LeavesEngineUsable()
