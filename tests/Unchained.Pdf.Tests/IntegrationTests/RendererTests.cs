@@ -182,4 +182,42 @@ public sealed class RendererTests : RendererTestBase
             "Lower JPEG quality should produce a smaller file"
         );
     }
+
+    // ── Page rotation ─────────────────────────────────────────────────────────
+
+    private static byte[] RotatedPage(int rotate)
+    {
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Rotate {rotate} /Contents 4 0 R >>",
+            "<< /Length 15 >>\nstream\n0 0 50 50 re f\nendstream"
+        };
+        return RawPdfBuilder.Build(bodies);
+    }
+
+    [
+        Theory,
+        InlineData(0),
+        InlineData(90),
+        InlineData(180),
+        InlineData(270)
+    ]
+    public async Task RenderPage_Rotated_ProducesPngWithSwappedDimensions(int rotate)
+    {
+        SkipIfNoFreeType();
+
+        await using var doc = await LoadAsync(RotatedPage(rotate), TestContext.Current.CancellationToken);
+        var png = await Renderer!.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
+        png[..8].ShouldBe(PdfTestConstants.PngSignature);
+
+        var w = PdfTestConstants.PngWidth(png);
+        var h = PdfTestConstants.PngHeight(png);
+        // MediaBox is 200×100; for 90/270 the canvas dimensions swap.
+        if (rotate is 90 or 270)
+            w.ShouldBeLessThan(h);
+        else
+            w.ShouldBeGreaterThan(h);
+    }
 }

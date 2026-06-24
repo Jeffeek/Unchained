@@ -208,6 +208,43 @@ public sealed class PdfATests : PdfTestBase
         await Should.ThrowAsync<InvalidOperationException>(() => Processor.ConvertToPdfAAsync(encDoc, outMs));
     }
 
+    [
+        Theory,
+        InlineData(PdfAProfile.PdfA1B, "1", "B"),
+        InlineData(PdfAProfile.PdfA1A, "1", "A"),
+        InlineData(PdfAProfile.PdfA2B, "2", "B"),
+        InlineData(PdfAProfile.PdfA2U, "2", "U"),
+        InlineData(PdfAProfile.PdfA3B, "3", "B")
+    ]
+    public async Task ConvertToPdfA_AllProfiles_WritePartAndConformance(
+        PdfAProfile profile,
+        string part,
+        string conformance
+    )
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+        await Processor.ConvertToPdfAAsync(doc, ms, profile, TestContext.Current.CancellationToken);
+
+        var xmp = Encoding.UTF8.GetString(ms.ToArray());
+        xmp.ShouldContain($"part>{part}");
+        xmp.ShouldContain($"conformance>{conformance}");
+    }
+
+    [Fact]
+    public async Task ConvertToPdfA_NonWidgetAnnotationWithoutPrintFlag_SetsPrintBit()
+    {
+        // The WithPdfAViolations fixture carries a /FileAttachment annotation with no Print flag;
+        // conversion sets bit 3 (value 4) on it (FixAnnotationFlags path).
+        await using var doc = await LoadAsync(PdfFixtures.WithPdfAViolations(), TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+        await Processor.ConvertToPdfAAsync(doc, ms, PdfAProfile.PdfA2B, TestContext.Current.CancellationToken);
+
+        // Reload and confirm the document still parses (the Print-flag rewrite did not corrupt it).
+        await using var reloaded = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), ct: TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
+    }
+
     // ── Validation — profiles ─────────────────────────────────────────────────
 
     [

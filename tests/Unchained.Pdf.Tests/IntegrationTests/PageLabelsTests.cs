@@ -127,4 +127,26 @@ public sealed class PageLabelsTests : PdfTestBase
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         editor.GetPageLabels(reloaded)[0].Style.ShouldBe(style);
     }
+
+    [Fact]
+    public async Task GetPageLabels_NumberTreeWithKids_TraversesIntermediateNodes()
+    {
+        // A /PageLabels number tree whose root has /Kids pointing at leaf nodes with /Nums.
+        // The flat writer never emits this shape, so a hand-built PDF exercises the Kids branch.
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R /PageLabels << /Kids [5 0 R 6 0 R] >> >>",
+            "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
+            "<< /Nums [0 << /S /r >>] >>",
+            "<< /Nums [1 << /S /D /St 5 >>] >>"
+        };
+        await using var doc = await LoadAsync(RawPdfBuilder.Build(bodies), TestContext.Current.CancellationToken);
+        var labels = new PageLabelEditor().GetPageLabels(doc);
+        labels.Count.ShouldBe(2);
+        labels[0].Style.ShouldBe(PageLabelStyle.RomanLower);
+        labels[1].Style.ShouldBe(PageLabelStyle.Decimal);
+        labels[1].FirstLabelNumber.ShouldBe(5);
+    }
 }

@@ -261,8 +261,19 @@ public sealed class TextWriterTests
         Theory,
         InlineData(TextUnderlineType.Double),
         InlineData(TextUnderlineType.Heavy),
-        InlineData(TextUnderlineType.Wavy),
+        InlineData(TextUnderlineType.Dotted),
+        InlineData(TextUnderlineType.DottedHeavy),
+        InlineData(TextUnderlineType.Dash),
+        InlineData(TextUnderlineType.DashHeavy),
+        InlineData(TextUnderlineType.DashLong),
+        InlineData(TextUnderlineType.DashLongHeavy),
         InlineData(TextUnderlineType.DotDash),
+        InlineData(TextUnderlineType.DotDashHeavy),
+        InlineData(TextUnderlineType.DotDotDash),
+        InlineData(TextUnderlineType.DotDotDashHeavy),
+        InlineData(TextUnderlineType.Wavy),
+        InlineData(TextUnderlineType.WavyHeavy),
+        InlineData(TextUnderlineType.WavyDouble),
         InlineData(TextUnderlineType.Words)
     ]
     public void RoundTrip_UnderlineVariants_Preserved(TextUnderlineType underline)
@@ -379,8 +390,13 @@ public sealed class TextWriterTests
     [
         Theory,
         InlineData(NumberedBulletStyle.ArabicPeriod),
+        InlineData(NumberedBulletStyle.ArabicParenthesis),
         InlineData(NumberedBulletStyle.RomanUpperCase),
-        InlineData(NumberedBulletStyle.LetterLowerCasePeriod)
+        InlineData(NumberedBulletStyle.RomanLowerCase),
+        InlineData(NumberedBulletStyle.LetterUpperCasePeriod),
+        InlineData(NumberedBulletStyle.LetterLowerCasePeriod),
+        InlineData(NumberedBulletStyle.LetterUpperCase),
+        InlineData(NumberedBulletStyle.LetterLowerCase)
     ]
     public void RoundTrip_NumberedBulletStyles_Preserved(NumberedBulletStyle style)
     {
@@ -435,5 +451,31 @@ public sealed class TextWriterTests
 
         var result = RoundTrip(frame);
         result.Paragraphs[0].Runs.Any(static r => r.Field == FieldType.Date).ShouldBeTrue();
+    }
+
+    [
+        Theory,
+        InlineData(FieldType.SlideNumber),
+        InlineData(FieldType.Date),
+        InlineData(FieldType.Time),
+        InlineData(FieldType.TotalSlides)
+    ]
+    public void WriteField_AllFieldTypes_EmitField(FieldType fieldType)
+    {
+        var frame = new TextFrame();
+        frame.Paragraphs.Add().Runs.Add("x").Field = fieldType;
+
+        var el = TextWriter.WriteAsShape(frame);
+        el.Descendants().Any(static e => e.Name.LocalName == "fld").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Write_BottomVerticalAnchor_EmitsAnchorAttribute()
+    {
+        var frame = new TextFrame { Format = { VerticalAnchor = TextAnchor.Bottom } };
+        frame.Paragraphs.Add("x");
+
+        var result = RoundTrip(frame);
+        result.Format.VerticalAnchor.ShouldBe(TextAnchor.Bottom);
     }
 }

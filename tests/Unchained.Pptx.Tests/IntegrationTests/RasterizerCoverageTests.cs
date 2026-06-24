@@ -4,6 +4,7 @@ using Unchained.Drawing.Encoders;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Text;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models.Shapes;
@@ -207,6 +208,42 @@ public sealed class RasterizerCoverageTests : PptxTestBase
         conn.FlipHorizontal = true;
         conn.FlipVertical = true;
         conn.Line.SetSolid(ColorSpec.FromRgb(10, 20, 30));
+
+        var image = await RenderAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [
+        Theory,
+        InlineData(ArrowHeadSize.Small),
+        InlineData(ArrowHeadSize.Medium),
+        InlineData(ArrowHeadSize.Large)
+    ]
+    public async Task ConnectorArrowheadSizes_Render(ArrowHeadSize size)
+    {
+        // Exercises the head-length and head-width size-switch arms (Small=6/3, Large=14/7, else 10/5).
+        var doc = PptxFixtures.WithSlides(1);
+        var conn = doc.Slides[0]
+            .Shapes.AddConnector(ConnectorType.Straight, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(4), Emu.FromInches(2));
+        conn.Line.SetSolid(ColorSpec.FromRgb(0, 0, 0), 2);
+        conn.Line.HeadArrow.HeadType = ArrowHeadType.Triangle;
+        conn.Line.HeadArrow.Width = size;
+        conn.Line.HeadArrow.Length = size;
+
+        var image = await RenderAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ConnectorZeroLength_WithArrowhead_DoesNotThrow()
+    {
+        // A degenerate (zero-size) connector means the arrowhead direction length < 1, hitting the
+        // early-return guard in the arrowhead drawer.
+        var doc = PptxFixtures.WithSlides(1);
+        var conn = doc.Slides[0]
+            .Shapes.AddConnector(ConnectorType.Straight, Emu.FromInches(1), Emu.FromInches(1), new Emu(0), new Emu(0));
+        conn.Line.SetSolid(ColorSpec.FromRgb(0, 0, 0), 2);
+        conn.Line.HeadArrow.HeadType = ArrowHeadType.Triangle;
 
         var image = await RenderAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -481,6 +518,63 @@ public sealed class RasterizerCoverageTests : PptxTestBase
         AddChart(doc, ChartType.BarClustered, true, true, 3);
 
         var image = await RenderLargeAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    // ── Embedded-font resolution (SlideRasterizer.Text.ResolveEmbeddedFont/ResolveStyle) ─────
+
+    private static byte[] BundledDejaVu()
+    {
+        var asm = typeof(Drawing.Text.FontCache).Assembly;
+        using var stream = asm.GetManifestResourceStream("Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
+                           ?? throw new InvalidOperationException("DejaVuSans-Regular.ttf not found.");
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        return ms.ToArray();
+    }
+
+    [
+        Theory,
+        InlineData(false, false, EmbeddedFontStyle.Regular),
+        InlineData(true, false, EmbeddedFontStyle.Bold),
+        InlineData(false, true, EmbeddedFontStyle.Italic),
+        InlineData(true, true, EmbeddedFontStyle.BoldItalic)
+    ]
+    public async Task EmbeddedFontRun_ResolvesByStyle_Renders(bool bold, bool italic, EmbeddedFontStyle style)
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var fontBytes = BundledDejaVu();
+        doc.Media.AddFont(new EmbeddedFont { Typeface = "Bundled", Style = style, Data = fontBytes });
+
+        var tb = doc.Slides[0]
+            .Shapes.AddTextBox(Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(5), Emu.FromInches(2));
+        var run = tb.TextFrame.Paragraphs.Add().Runs.Add("Embedded styled text");
+        run.Format.LatinFont = "Bundled";
+        run.Format.Bold = bold ? InheritableBool.True : InheritableBool.False;
+        run.Format.Italic = italic ? InheritableBool.True : InheritableBool.False;
+
+        var image = await RenderAsync(doc);
+        image.Data.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task MasterAndLayoutBackdropShapes_RenderBeneathSlideContent()
+    {
+        // Non-placeholder shapes on the master and layout are composited under the slide's own
+        // shapes (the master/layout backdrop loops in SlideRasterizer.Render).
+        var doc = PptxFixtures.WithSlides(1);
+        var slide = doc.Slides[0];
+
+        var masterRect = slide.Layout.Master.Shapes.AddShape(AutoShapeType.Rectangle, Emu.FromInches(0), Emu.FromInches(0), Emu.FromInches(10), Emu.FromInches(7));
+        masterRect.Fill.SetSolid(ColorSpec.FromRgb(0xEE, 0xEE, 0xEE));
+
+        var layoutRect = slide.Layout.Shapes.AddShape(AutoShapeType.Rectangle, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(3), Emu.FromInches(2));
+        layoutRect.Fill.SetSolid(ColorSpec.FromRgb(0xCC, 0xDD, 0xEE));
+
+        var slideRect = slide.Shapes.AddShape(AutoShapeType.Ellipse, Emu.FromInches(2), Emu.FromInches(2), Emu.FromInches(2), Emu.FromInches(2));
+        slideRect.Fill.SetSolid(ColorSpec.FromRgb(0x33, 0x66, 0x99));
+
+        var image = await RenderAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 }

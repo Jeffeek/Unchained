@@ -1503,71 +1503,59 @@ internal static class PdfFixtures
         var csBytes = Encoding.Latin1.GetBytes(cs);
 
         using var ms = new MemoryStream();
-        Line("%PDF-1.7");
-        Line("%\xE2\xE3\xCF\xD3");
+        Line(ms, "%PDF-1.7");
+        Line(ms, "%\xE2\xE3\xCF\xD3");
 
-        var o1 = Pos();
-        Line("1 0 obj");
-        Line("<< /Type /Catalog /Pages 2 0 R >>");
-        Line("endobj");
-        var o2 = Pos();
-        Line("2 0 obj");
-        Line("<< /Type /Pages /Kids [5 0 R] /Count 1 >>");
-        Line("endobj");
+        var o1 = Pos(ms);
+        Line(ms, "1 0 obj");
+        Line(ms, "<< /Type /Catalog /Pages 2 0 R >>");
+        Line(ms, "endobj");
+        var o2 = Pos(ms);
+        Line(ms, "2 0 obj");
+        Line(ms, "<< /Type /Pages /Kids [5 0 R] /Count 1 >>");
+        Line(ms, "endobj");
 
         // Object 3 — content stream
-        var o3 = Pos();
-        Line("3 0 obj");
-        Line($"<< /Length {csBytes.Length} >>");
-        Line("stream");
-        Binary(csBytes);
-        Line(string.Empty);
-        Line("endstream");
-        Line("endobj");
+        var o3 = Pos(ms);
+        Line(ms, "3 0 obj");
+        Line(ms, $"<< /Length {csBytes.Length} >>");
+        Line(ms, "stream");
+        Binary(ms, csBytes);
+        Line(ms, string.Empty);
+        Line(ms, "endstream");
+        Line(ms, "endobj");
 
         // Object 4 — Image XObject (FlateDecode, binary stream)
-        var o4 = Pos();
-        Line("4 0 obj");
-        Line($"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
-        Line($"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length {compressed.Length} >>");
-        Line("stream");
-        Binary(compressed);
-        Line(string.Empty);
-        Line("endstream");
-        Line("endobj");
+        var o4 = Pos(ms);
+        Line(ms, "4 0 obj");
+        Line(ms, $"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
+        Line(ms, $"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length {compressed.Length} >>");
+        Line(ms, "stream");
+        Binary(ms, compressed);
+        Line(ms, string.Empty);
+        Line(ms, "endstream");
+        Line(ms, "endobj");
 
         // Object 5 — Page
-        var o5 = Pos();
-        Line("5 0 obj");
-        Line("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
-        Line("   /Resources << /XObject << /Im1 4 0 R >> >> >>");
-        Line("endobj");
+        var o5 = Pos(ms);
+        Line(ms, "5 0 obj");
+        Line(ms, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
+        Line(ms, "   /Resources << /XObject << /Im1 4 0 R >> >> >>");
+        Line(ms, "endobj");
 
-        var xref = Pos();
-        Line("xref");
-        Line("0 6");
-        Line("0000000000 65535 f ");
+        var xref = Pos(ms);
+        Line(ms, "xref");
+        Line(ms, "0 6");
+        Line(ms, "0000000000 65535 f ");
         foreach (var o in new[] { o1, o2, o3, o4, o5 })
-            Line($"{o:D10} 00000 n ");
-        Line("trailer");
-        Line("<< /Size 6 /Root 1 0 R >>");
-        Line("startxref");
-        Line(xref.ToString());
-        Text("%%EOF");
+            Line(ms, $"{o:D10} 00000 n ");
+        Line(ms, "trailer");
+        Line(ms, "<< /Size 6 /Root 1 0 R >>");
+        Line(ms, "startxref");
+        Line(ms, xref.ToString());
+        Text(ms, "%%EOF");
 
         return ms.ToArray();
-
-        void Text(string s) => ms.Write(Encoding.Latin1.GetBytes(s));
-
-        void Line(string s)
-        {
-            Text(s);
-            ms.WriteByte((byte)'\n');
-        }
-
-        void Binary(byte[] b) => ms.Write(b);
-
-        long Pos() => ms.Position;
     }
 
     private static byte[] BuildWithMultipleAcroFormFields(IReadOnlyList<(string name, string value)> fields)
@@ -1813,86 +1801,75 @@ internal static class PdfFixtures
         // identical byte sequences in both stream objects.
         using var ms = new MemoryStream();
 
-        Line("%PDF-1.7");
-        Line("%\xE2\xE3\xCF\xD3");
+        Line(ms, "%PDF-1.7");
+        Line(ms, "%\xE2\xE3\xCF\xD3");
 
         // Object 1 — Catalog
-        var o1 = Pos();
-        Line("1 0 obj");
-        Line("<< /Type /Catalog /Pages 2 0 R >>");
-        Line("endobj");
+        var o1 = Pos(ms);
+        Line(ms, "1 0 obj");
+        Line(ms, "<< /Type /Catalog /Pages 2 0 R >>");
+        Line(ms, "endobj");
 
         // Object 2 — Pages
-        var o2 = Pos();
-        Line("2 0 obj");
-        Line("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-        Line("endobj");
+        var o2 = Pos(ms);
+        Line(ms, "2 0 obj");
+        Line(ms, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Line(ms, "endobj");
 
         // Object 3 — content stream (paints Im1 only)
         var cs = $"q {width * 10} 0 0 {height * 10} 0 0 cm /Im1 Do Q";
         var csBytes = Encoding.Latin1.GetBytes(cs);
-        var o3 = Pos();
-        Line("3 0 obj");
-        Line($"<< /Length {csBytes.Length} >>");
-        Line("stream");
-        Binary(csBytes);
-        Line(string.Empty);
-        Line("endstream");
-        Line("endobj");
+        var o3 = Pos(ms);
+        Line(ms, "3 0 obj");
+        Line(ms, $"<< /Length {csBytes.Length} >>");
+        Line(ms, "stream");
+        Binary(ms, csBytes);
+        Line(ms, string.Empty);
+        Line(ms, "endstream");
+        Line(ms, "endobj");
 
         // Object 4 — first image XObject (raw, no filter)
-        var o4 = Pos();
-        Line("4 0 obj");
-        Line($"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
-        Line($"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length {rgbData.Length} >>");
-        Line("stream");
-        Binary(rgbData);
-        Line(string.Empty);
-        Line("endstream");
-        Line("endobj");
+        var o4 = Pos(ms);
+        Line(ms, "4 0 obj");
+        Line(ms, $"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
+        Line(ms, $"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length {rgbData.Length} >>");
+        Line(ms, "stream");
+        Binary(ms, rgbData);
+        Line(ms, string.Empty);
+        Line(ms, "endstream");
+        Line(ms, "endobj");
 
         // Object 5 — Page (references both Im1 and Im2 in Resources)
-        var o5 = Pos();
-        Line("5 0 obj");
-        Line("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
-        Line("   /Resources << /XObject << /Im1 4 0 R /Im2 6 0 R >> >> >>");
-        Line("endobj");
+        var o5 = Pos(ms);
+        Line(ms, "5 0 obj");
+        Line(ms, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
+        Line(ms, "   /Resources << /XObject << /Im1 4 0 R /Im2 6 0 R >> >> >>");
+        Line(ms, "endobj");
 
         // Object 6 — second image XObject with identical pixel data
-        var o6 = Pos();
-        Line("6 0 obj");
-        Line($"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
-        Line($"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length {rgbData.Length} >>");
-        Line("stream");
-        Binary(rgbData);
-        Line(string.Empty);
-        Line("endstream");
-        Line("endobj");
+        var o6 = Pos(ms);
+        Line(ms, "6 0 obj");
+        Line(ms, $"<< /Type /XObject /Subtype /Image /Width {width} /Height {height}");
+        Line(ms, $"   /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length {rgbData.Length} >>");
+        Line(ms, "stream");
+        Binary(ms, rgbData);
+        Line(ms, string.Empty);
+        Line(ms, "endstream");
+        Line(ms, "endobj");
 
-        var xref = Pos();
-        Line("xref");
-        Line("0 7");
-        Line("0000000000 65535 f ");
+        var xref = Pos(ms);
+        Line(ms, "xref");
+        Line(ms, "0 7");
+        Line(ms, "0000000000 65535 f ");
         foreach (var o in new[] { o1, o2, o3, o4, o5, o6 })
-            Line($"{o:D10} 00000 n ");
-        Line("trailer");
-        Line("<< /Size 7 /Root 1 0 R >>");
-        Line("startxref");
-        Line(xref.ToString());
-        Text("%%EOF");
+            Line(ms, $"{o:D10} 00000 n ");
+        Line(ms, "trailer");
+        Line(ms, "<< /Size 7 /Root 1 0 R >>");
+        Line(ms, "startxref");
+        Line(ms, xref.ToString());
+        Text(ms, "%%EOF");
 
         return ms.ToArray();
-
-        void Text(string s) => ms.Write(Encoding.Latin1.GetBytes(s));
-
-        void Line(string s)
-        {
-            Text(s);
-            ms.WriteByte((byte)'\n');
-        }
-
-        void Binary(byte[] b) => ms.Write(b);
-        long Pos() => ms.Position;
     }
 
     // Builds a single-page PDF with two separate font-program stream objects that
@@ -2266,4 +2243,16 @@ internal static class PdfFixtures
     internal static void Ln(StringBuilder b, string line) => b.Append(line).Append('\n');
 
     internal static int Len(StringBuilder b) => Encoding.Latin1.GetByteCount(b.ToString());
+
+    internal static void Text(MemoryStream ms, string s) => ms.Write(Encoding.Latin1.GetBytes(s));
+
+    internal static void Line(MemoryStream ms, string s)
+    {
+        Text(ms, s);
+        ms.WriteByte((byte)'\n');
+    }
+
+    internal static void Binary(MemoryStream ms, byte[] b) => ms.Write(b);
+
+    internal static long Pos(MemoryStream ms) => ms.Position;
 }

@@ -145,48 +145,40 @@ public sealed class HarfBuzzShapingTests : RendererTestBase
     {
         using var ms = new MemoryStream();
 
-        Line("%PDF-1.7");
-        Line("%\xE2\xE3\xCF\xD3");
-        var o1 = Pos();
-        Line("1 0 obj");
-        Line("<< /Type /Catalog /Pages 2 0 R >>");
-        Line("endobj");
-        var o2 = Pos();
-        Line("2 0 obj");
-        Line("<< /Type /Pages /Kids [4 0 R] /Count 1 >>");
-        Line("endobj");
+        PdfFixtures.Line(ms, "%PDF-1.7");
+        PdfFixtures.Line(ms, "%\xE2\xE3\xCF\xD3");
+        var o1 = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "1 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
+        var o2 = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "2 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Pages /Kids [4 0 R] /Count 1 >>");
+        PdfFixtures.Line(ms, "endobj");
         var csBytes = Encoding.Latin1.GetByteCount(contentStream);
-        var o3 = Pos();
-        Line("3 0 obj");
-        Line($"<< /Length {csBytes} >>");
-        Line("stream");
-        Line(contentStream);
-        Line("endstream");
-        Line("endobj");
-        var o4 = Pos();
-        Line("4 0 obj");
-        Line("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
-        Line("   /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /UnknownFontXYZ >> >> >> >>");
-        Line("endobj");
-        var xref = Pos();
-        Line("xref");
-        Line("0 5");
-        Line("0000000000 65535 f ");
+        var o3 = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "3 0 obj");
+        PdfFixtures.Line(ms, $"<< /Length {csBytes} >>");
+        PdfFixtures.Line(ms, "stream");
+        PdfFixtures.Line(ms, contentStream);
+        PdfFixtures.Line(ms, "endstream");
+        PdfFixtures.Line(ms, "endobj");
+        var o4 = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "4 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
+        PdfFixtures.Line(ms, "   /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /UnknownFontXYZ >> >> >> >>");
+        PdfFixtures.Line(ms, "endobj");
+        var xref = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "xref");
+        PdfFixtures.Line(ms, "0 5");
+        PdfFixtures.Line(ms, "0000000000 65535 f ");
         foreach (var o in new[] { o1, o2, o3, o4 })
-            Line($"{o:D10} 00000 n ");
-        Line("trailer");
-        Line("<< /Size 5 /Root 1 0 R >>");
-        Line("startxref");
-        Line(xref.ToString());
+            PdfFixtures.Line(ms, $"{o:D10} 00000 n ");
+        PdfFixtures.Line(ms, "trailer");
+        PdfFixtures.Line(ms, "<< /Size 5 /Root 1 0 R >>");
+        PdfFixtures.Line(ms, "startxref");
+        PdfFixtures.Line(ms, xref.ToString());
         ms.Write(Encoding.Latin1.GetBytes("%%EOF"));
         return ms.ToArray();
-
-        long Pos() => ms.Position;
-
-        void Line(string s)
-        {
-            ms.Write(Encoding.Latin1.GetBytes(s));
-            ms.WriteByte((byte)'\n');
-        }
     }
 }

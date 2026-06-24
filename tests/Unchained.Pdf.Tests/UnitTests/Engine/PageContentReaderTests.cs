@@ -135,4 +135,44 @@ public sealed class PageContentReaderTests
         ops.ShouldContain(static o => o.Name == "re");
         ops.ShouldNotContain(static o => o.Name == "Do");
     }
+
+    [Fact]
+    public void GetContentOperators_FormDecodeThrows_EmitsBalancedQWithoutContent()
+    {
+        // Form XObject whose /Filter is invalid → StreamFilters.Decode throws; the catch emits a
+        // balancing Q and skips the form content (lines 104-108).
+        var form = new PdfStream(
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Subtype"] = PdfName.Get("Form"),
+                    ["Filter"] = PdfName.Get("NonexistentFilter")
+                }
+            ),
+            System.Text.Encoding.Latin1.GetBytes("garbage")
+        );
+        var resources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["XObject"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["Fm0"] = form })
+            }
+        );
+        var page = Page(("Contents", ContentStream("/Fm0 Do")), ("Resources", resources));
+
+        var ops = PageContentReader.GetContentOperators(page, Core());
+        // q opened, decode failed → Q emitted, no form body operators, Do consumed.
+        ops.ShouldContain(static o => o.Name == "q");
+        ops.ShouldContain(static o => o.Name == "Q");
+        ops.ShouldNotContain(static o => o.Name == "Do");
+    }
+
+    [Fact]
+    public void GetContentOperators_ContentsReferenceToNonStream_ReturnsEmpty()
+    {
+        // /Contents is an array element referencing an object that resolves to a non-stream →
+        // TryResolveStream yields nothing (line 152).
+        var page = Page(("Contents", new PdfArray([new PdfIndirectReference(1, 0)])));
+        // Object 1 in the single-page fixture is the catalog dictionary, not a stream.
+        PageContentReader.GetContentOperators(page, Core()).ShouldBeEmpty();
+    }
 }

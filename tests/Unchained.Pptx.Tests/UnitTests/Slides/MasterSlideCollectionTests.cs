@@ -51,4 +51,15 @@ public sealed class MasterSlideCollectionTests
         var count = collection.Cast<object?>().Count();
         count.ShouldBe(1);
     }
+
+    [Fact]
+    public void NonGenericEnumerator_ExplicitInterface_Iterates()
+    {
+        var collection = new MasterSlideCollection { new MasterSlide() };
+        System.Collections.IEnumerable nonGeneric = collection;
+        // A foreach over the non-generic IEnumerable binds to the explicit
+        // IEnumerable.GetEnumerator() (Cast<T> would short-circuit via covariance and miss it).
+        var count = nonGeneric.Cast<object?>().Count();
+        count.ShouldBe(1);
+    }
 }

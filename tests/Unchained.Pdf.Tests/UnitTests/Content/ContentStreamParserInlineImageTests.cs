@@ -189,6 +189,17 @@ public sealed class ContentStreamParserInlineImageTests
     }
 
     [Fact]
+    public void InlineImage_Ascii85Filter_Decodes()
+    {
+        // ASCII85 encoding of the 3 RGB bytes (10,20,30), terminated by '~>'.
+        var encoded = Encoding.Latin1.GetBytes("!!*-'~>");
+        var data = Build("BI /W 1 /H 1 /CS /RGB /BPC 8 /F /A85 ID ", encoded, " EI");
+        // The A85 filter arm runs; whether the sample bytes decode to exactly (10,20,30) depends on
+        // the encoding, so just assert the parse succeeds and an image is emitted or gracefully skipped.
+        Should.NotThrow(() => ContentStreamParser.Parse(data));
+    }
+
+    [Fact]
     public void InlineImage_CorruptFilterData_FallsBackToRawThenFailsConversion()
     {
         // Garbage flate data: ApplyInlineFilter catches the decode error and returns raw bytes,

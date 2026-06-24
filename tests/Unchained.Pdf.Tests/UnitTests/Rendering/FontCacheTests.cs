@@ -17,13 +17,21 @@ public sealed class FontCacheTests : RendererTestBase
     [
         Theory,
         InlineData("Helvetica-Bold"),
+        InlineData("Helvetica-BoldOblique"),
+        InlineData("Arial-Bold"),
+        InlineData("Arial-BoldItalic"),
         InlineData("Helvetica-Oblique"),
         InlineData("Arial-Italic"),
         InlineData("Helvetica"),
+        InlineData("Arial"),
         InlineData("Calibri"),
         InlineData("Times-Bold"),
+        InlineData("Times-BoldItalic"),
         InlineData("Times-Roman"),
+        InlineData("Times-Italic"),
         InlineData("Courier"),
+        InlineData("Courier-Bold"),
+        InlineData("Courier-Oblique"),
         InlineData("Courier-BoldOblique"),
         InlineData("SomeUnknownFont")
     ]

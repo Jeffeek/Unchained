@@ -70,6 +70,35 @@ public sealed class PageRendererPathsHardeningTests : RendererTestBase
     }
 
     [Fact]
+    public async Task RoundJoin_ThickPolyline_Paints()
+    {
+        SkipIfNoFreeType();
+        // j 1 = round join → FillCircle at the interior vertex (case 1 of DrawLineJoin).
+        var n = await NonWhiteAsync(Page100("0 0 0 RG 8 w 1 j 10 10 m 50 80 l 90 10 l S"));
+        n.ShouldBeGreaterThan(50);
+    }
+
+    [Fact]
+    public async Task OutOfSpecJoin_FallsIntoMiterDefaultCase()
+    {
+        SkipIfNoFreeType();
+        // j 3 is out of spec (valid values 0/1/2). It passes the non-zero guard and lands in the
+        // DrawLineJoin `default` (miter) arm, which extends the outer edges to the intersection.
+        var n = await NonWhiteAsync(Page100("0 0 0 RG 6 w 3 j 10 M 10 10 m 50 80 l 90 10 l S"));
+        n.ShouldBeGreaterThan(50);
+    }
+
+    [Fact]
+    public async Task OutOfSpecJoin_NearStraightSegments_HitsParallelGuard()
+    {
+        SkipIfNoFreeType();
+        // Nearly-collinear segments make the miter sinHalf ~ 0, exercising the parallel-segments
+        // early break in the miter default arm.
+        var n = await NonWhiteAsync(Page100("0 0 0 RG 6 w 3 j 10 M 10 50 m 50 50 l 90 50 l S"));
+        n.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
     public async Task MiterJoin_ThickPolyline_Paints()
     {
         SkipIfNoFreeType();

@@ -48,7 +48,12 @@ public sealed class LineWriterTests
         InlineData(LineDashStyle.Dash, "dash"),
         InlineData(LineDashStyle.DashDot, "dashDot"),
         InlineData(LineDashStyle.LongDash, "lgDash"),
-        InlineData(LineDashStyle.SystemDash, "sysDash")
+        InlineData(LineDashStyle.LongDashDot, "lgDashDot"),
+        InlineData(LineDashStyle.LongDashDotDot, "lgDashDotDot"),
+        InlineData(LineDashStyle.SystemDash, "sysDash"),
+        InlineData(LineDashStyle.SystemDot, "sysDot"),
+        InlineData(LineDashStyle.SystemDashDot, "sysDashDot"),
+        InlineData(LineDashStyle.SystemDashDotDot, "sysDashDotDot")
     ]
     public void Write_DashStyle_EmitsPresetDash(LineDashStyle style, string expected)
     {
@@ -56,6 +61,38 @@ public sealed class LineWriterTests
         var ln = WriteLine(line);
         var dash = ln.Elements().Single(static e => e.Name.LocalName == "prstDash");
         dash.Attribute("val")!.Value.ShouldBe(expected);
+    }
+
+    [
+        Theory,
+        InlineData(ArrowHeadType.Triangle, "triangle"),
+        InlineData(ArrowHeadType.Stealth, "stealth"),
+        InlineData(ArrowHeadType.Diamond, "diamond"),
+        InlineData(ArrowHeadType.Oval, "oval"),
+        InlineData(ArrowHeadType.Open, "arrow")
+    ]
+    public void Write_HeadArrowType_EmitsType(ArrowHeadType type, string expected)
+    {
+        var line = new LineFormat { HeadArrow = { HeadType = type } };
+        var ln = WriteLine(line);
+        ln.Elements()
+            .Single(static e => e.Name.LocalName == "headEnd")
+            .Attribute("type")!.Value.ShouldBe(expected);
+    }
+
+    [
+        Theory,
+        InlineData(ArrowHeadSize.Small, "sm"),
+        InlineData(ArrowHeadSize.Large, "lg"),
+        InlineData(ArrowHeadSize.Medium, "med")
+    ]
+    public void Write_ArrowSize_EmitsSizeToken(ArrowHeadSize size, string expected)
+    {
+        var line = new LineFormat { HeadArrow = { HeadType = ArrowHeadType.Triangle, Width = size, Length = size } };
+        var ln = WriteLine(line);
+        var head = ln.Elements().Single(static e => e.Name.LocalName == "headEnd");
+        head.Attribute("w")!.Value.ShouldBe(expected);
+        head.Attribute("len")!.Value.ShouldBe(expected);
     }
 
     [Fact]

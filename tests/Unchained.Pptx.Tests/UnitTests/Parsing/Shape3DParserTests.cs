@@ -75,6 +75,22 @@ public sealed class Shape3DParserTests
     }
 
     [Fact]
+    public void Parse_ExtrusionAndContourColours_AreParsed()
+    {
+        var sp3d = new XElement(
+            DmlNames.Dml + "sp3d",
+            new XElement(DmlNames.Dml + "extrusionClr", new XElement(DmlNames.Dml + "srgbClr", new XAttribute("val", "FF0000"))),
+            new XElement(DmlNames.Dml + "contourClr", new XElement(DmlNames.Dml + "srgbClr", new XAttribute("val", "00FF00")))
+        );
+        var parent = new XElement(DmlNames.Dml + "spPr", sp3d);
+        var threeD = new Shape3DFormat();
+        Shape3DParser.Parse(parent, threeD);
+
+        threeD.ExtrusionColor.ShouldNotBeNull();
+        threeD.ContourColor.ShouldNotBeNull();
+    }
+
+    [Fact]
     public void RoundTrip_ThroughWriterAndParser()
     {
         var original = new Shape3DFormat
