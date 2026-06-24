@@ -25,77 +25,66 @@ public sealed class FontMutatorRawFontTests : RendererTestBase
         using var ms = new MemoryStream();
         var offsets = new long[7];
 
-        Line("%PDF-1.7");
-        Line("%\xE2\xE3\xCF\xD3");
+        PdfFixtures.Line(ms, "%PDF-1.7");
+        PdfFixtures.Line(ms, "%\xE2\xE3\xCF\xD3");
 
-        offsets[0] = Pos();
-        Line("1 0 obj");
-        Line("<< /Type /Catalog /Pages 2 0 R >>");
-        Line("endobj");
+        offsets[0] = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "1 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
 
-        offsets[1] = Pos();
-        Line("2 0 obj");
-        Line("<< /Type /Pages /Kids [7 0 R] /Count 1 >>");
-        Line("endobj");
+        offsets[1] = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "2 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Pages /Kids [7 0 R] /Count 1 >>");
+        PdfFixtures.Line(ms, "endobj");
 
-        offsets[2] = Pos();
-        Line("3 0 obj");
-        Line($"<< /Length {csBytes.Length} >>");
-        Line("stream");
-        Binary(csBytes);
-        Line(string.Empty);
-        Line("endstream");
-        Line("endobj");
+        offsets[2] = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "3 0 obj");
+        PdfFixtures.Line(ms, $"<< /Length {csBytes.Length} >>");
+        PdfFixtures.Line(ms, "stream");
+        PdfFixtures.Binary(ms, csBytes);
+        PdfFixtures.Line(ms, string.Empty);
+        PdfFixtures.Line(ms, "endstream");
+        PdfFixtures.Line(ms, "endobj");
 
-        offsets[3] = Pos();
-        Line("4 0 obj");
-        Line($"<< /Type /FontDescriptor /FontName /{baseFont} /Flags 32 /FontFile2 5 0 R >>");
-        Line("endobj");
+        offsets[3] = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "4 0 obj");
+        PdfFixtures.Line(ms, $"<< /Type /FontDescriptor /FontName /{baseFont} /Flags 32 /FontFile2 5 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
 
         // Object 5 — raw (no filter) embedded font program.
-        offsets[4] = Pos();
-        Line("5 0 obj");
-        Line($"<< /Length {ttf.Length} /Length1 {ttf.Length} >>");
-        Line("stream");
-        Binary(ttf);
-        Line(string.Empty);
-        Line("endstream");
-        Line("endobj");
+        offsets[4] = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "5 0 obj");
+        PdfFixtures.Line(ms, $"<< /Length {ttf.Length} /Length1 {ttf.Length} >>");
+        PdfFixtures.Line(ms, "stream");
+        PdfFixtures.Binary(ms, ttf);
+        PdfFixtures.Line(ms, string.Empty);
+        PdfFixtures.Line(ms, "endstream");
+        PdfFixtures.Line(ms, "endobj");
 
-        offsets[5] = Pos();
-        Line("6 0 obj");
-        Line($"<< /Type /Font /Subtype /TrueType /BaseFont /{baseFont} /FontDescriptor 4 0 R >>");
-        Line("endobj");
+        offsets[5] = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "6 0 obj");
+        PdfFixtures.Line(ms, $"<< /Type /Font /Subtype /TrueType /BaseFont /{baseFont} /FontDescriptor 4 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
 
-        offsets[6] = Pos();
-        Line("7 0 obj");
-        Line("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
-        Line("   /Resources << /Font << /F1 6 0 R >> >> >>");
-        Line("endobj");
+        offsets[6] = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "7 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R");
+        PdfFixtures.Line(ms, "   /Resources << /Font << /F1 6 0 R >> >> >>");
+        PdfFixtures.Line(ms, "endobj");
 
-        var xref = Pos();
-        Line("xref");
-        Line("0 8");
-        Line("0000000000 65535 f ");
-        foreach (var o in offsets) Line($"{o:D10} 00000 n ");
-        Line("trailer");
-        Line("<< /Size 8 /Root 1 0 R >>");
-        Line("startxref");
-        Line(xref.ToString());
-        Text("%%EOF");
+        var xref = PdfFixtures.Pos(ms);
+        PdfFixtures.Line(ms, "xref");
+        PdfFixtures.Line(ms, "0 8");
+        PdfFixtures.Line(ms, "0000000000 65535 f ");
+        foreach (var o in offsets) PdfFixtures.Line(ms, $"{o:D10} 00000 n ");
+        PdfFixtures.Line(ms, "trailer");
+        PdfFixtures.Line(ms, "<< /Size 8 /Root 1 0 R >>");
+        PdfFixtures.Line(ms, "startxref");
+        PdfFixtures.Line(ms, xref.ToString());
+        PdfFixtures.Text(ms, "%%EOF");
 
         return ms.ToArray();
-
-        void Text(string s) => ms.Write(Encoding.Latin1.GetBytes(s));
-
-        void Line(string s)
-        {
-            Text(s);
-            ms.WriteByte((byte)'\n');
-        }
-
-        void Binary(byte[] b) => ms.Write(b);
-        long Pos() => ms.Position;
     }
 
     [Fact]

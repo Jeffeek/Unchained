@@ -107,13 +107,12 @@ public sealed class PageShadingResolverTests
     }
 
     [Fact]
-    public void ShadingEntryNotDictOrStream_IsSkipped()
-    {
+    public void ShadingEntryNotDictOrStream_IsSkipped() =>
         // A /Shading entry that resolves to a bare integer is neither dict nor stream → BuildShading
         // returns null (the `_ => null` arm) and the name is not collected.
         PageShadingResolver.GetShadings(PageWithShading(("S", new PdfInteger(7))), Core())
-            .ContainsKey("S").ShouldBeFalse();
-    }
+            .ContainsKey("S")
+            .ShouldBeFalse();
 
     [Fact]
     public void AxialShading_TwoComponentFunction_NonCmyk_UsesGreyRamp()

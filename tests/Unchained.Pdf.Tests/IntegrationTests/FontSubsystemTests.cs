@@ -424,40 +424,57 @@ public sealed class FontUtilitiesTests : PdfTestBase
         using var ms = new MemoryStream();
         var offsets = new long[8];
 
-        void Text(string s) => ms.Write(System.Text.Encoding.Latin1.GetBytes(s));
-        void Line(string s) { Text(s); ms.WriteByte((byte)'\n'); }
-
-        Line("%PDF-1.7");
-        Line("%\xE2\xE3\xCF\xD3");
+        PdfFixtures.Line(ms, "%PDF-1.7");
+        PdfFixtures.Line(ms, "%\xE2\xE3\xCF\xD3");
         offsets[1] = ms.Position;
-        Line("1 0 obj"); Line("<< /Type /Catalog /Pages 2 0 R >>"); Line("endobj");
+        PdfFixtures.Line(ms, "1 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
         offsets[2] = ms.Position;
-        Line("2 0 obj"); Line("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"); Line("endobj");
+        PdfFixtures.Line(ms, "2 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Line(ms, "endobj");
         offsets[3] = ms.Position;
-        Line("3 0 obj");
-        Line("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R");
-        Line("   /Resources << /Font << /F1 5 0 R >> >> >>");
-        Line("endobj");
+        PdfFixtures.Line(ms, "3 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R");
+        PdfFixtures.Line(ms, "   /Resources << /Font << /F1 5 0 R >> >> >>");
+        PdfFixtures.Line(ms, "endobj");
         offsets[4] = ms.Position;
-        Line("4 0 obj"); Line($"<< /Length {cs.Length} >>"); Line("stream"); ms.Write(cs); Line(""); Line("endstream"); Line("endobj");
+        PdfFixtures.Line(ms, "4 0 obj");
+        PdfFixtures.Line(ms, $"<< /Length {cs.Length} >>");
+        PdfFixtures.Line(ms, "stream");
+        ms.Write(cs);
+        PdfFixtures.Line(ms, "");
+        PdfFixtures.Line(ms, "endstream");
+        PdfFixtures.Line(ms, "endobj");
         offsets[5] = ms.Position;
-        Line("5 0 obj");
-        Line("<< /Type /Font /Subtype /TrueType /BaseFont /DejaVuSans /FontDescriptor 6 0 R >>");
-        Line("endobj");
+        PdfFixtures.Line(ms, "5 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Font /Subtype /TrueType /BaseFont /DejaVuSans /FontDescriptor 6 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
         offsets[6] = ms.Position;
-        Line("6 0 obj");
-        Line("<< /Type /FontDescriptor /FontName /DejaVuSans /Flags 32 /FontFile2 7 0 R >>");
-        Line("endobj");
+        PdfFixtures.Line(ms, "6 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /FontDescriptor /FontName /DejaVuSans /Flags 32 /FontFile2 7 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
         offsets[7] = ms.Position;
-        Line("7 0 obj");
-        Line($"<< /Length {fontBytes.Length} /Length1 {fontBytes.Length} >>");
-        Line("stream"); ms.Write(fontBytes); Line(""); Line("endstream"); Line("endobj");
+        PdfFixtures.Line(ms, "7 0 obj");
+        PdfFixtures.Line(ms, $"<< /Length {fontBytes.Length} /Length1 {fontBytes.Length} >>");
+        PdfFixtures.Line(ms, "stream");
+        ms.Write(fontBytes);
+        PdfFixtures.Line(ms, "");
+        PdfFixtures.Line(ms, "endstream");
+        PdfFixtures.Line(ms, "endobj");
 
         var xref = ms.Position;
-        Line("xref"); Line("0 8"); Line("0000000000 65535 f ");
-        for (var i = 1; i <= 7; i++) Line($"{offsets[i]:D10} 00000 n ");
-        Line("trailer"); Line("<< /Size 8 /Root 1 0 R >>"); Line("startxref"); Line(xref.ToString());
-        Text("%%EOF");
+        PdfFixtures.Line(ms, "xref");
+        PdfFixtures.Line(ms, "0 8");
+        PdfFixtures.Line(ms, "0000000000 65535 f ");
+        for (var i = 1; i <= 7; i++)
+            PdfFixtures.Line(ms, $"{offsets[i]:D10} 00000 n ");
+        PdfFixtures.Line(ms, "trailer");
+        PdfFixtures.Line(ms, "<< /Size 8 /Root 1 0 R >>");
+        PdfFixtures.Line(ms, "startxref");
+        PdfFixtures.Line(ms, xref.ToString());
+        PdfFixtures.Line(ms, "%%EOF");
         return ms.ToArray();
     }
 
