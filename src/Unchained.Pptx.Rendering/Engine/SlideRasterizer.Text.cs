@@ -161,11 +161,9 @@ internal sealed partial class SlideRasterizer
             );
             var availH = shapeHeight - marginTop - marginBottom;
             var offset = availH - totalTextH;
-            if (anchor is TextAnchor.Middle
-                or TextAnchor.MiddleCentered)
-                startY = shapeY + marginTop + (int)(offset / 2.0);
-            else
-                startY = shapeY + marginTop + offset;
+            startY = anchor is TextAnchor.Middle or TextAnchor.MiddleCentered
+                ? shapeY + marginTop + (int)(offset / 2.0)
+                : shapeY + marginTop + offset;
             startY = Math.Max(shapeY + 2, startY);
         }
 
@@ -205,10 +203,8 @@ internal sealed partial class SlideRasterizer
 
             // Collect word tokens for word-wrap.
             var tokens = new List<(string Word, string FontName, byte[]? EmbBytes, double SizePt, byte R, byte G, byte B)>();
-            foreach (var run in paragraph.Runs)
+            foreach (var run in paragraph.Runs.Where(static run => !string.IsNullOrEmpty(run.Text)))
             {
-                if (string.IsNullOrEmpty(run.Text)) continue;
-
                 var fontSizePt = (run.Format.FontSizePoints ?? defaultFontSize) * fontScale;
                 byte textR, textG, textB;
                 if (run.Format.Fill is { Type: FillType.Solid, Solid: not null })
@@ -349,7 +345,7 @@ internal sealed partial class SlideRasterizer
         }
         catch
         {
-            return (int)(text.Length * pixelSize * 0.6);
+            return (int)(text.Length * (double)pixelSize * 0.6);
         }
     }
 
@@ -417,6 +413,8 @@ internal sealed partial class SlideRasterizer
                     break;
             }
         }
+        // A failed glyph shape/render must not crash the whole slide; skip the remaining text.
+        // ReSharper disable once EmptyGeneralCatchClause
         catch { }
 
         return cursorX;

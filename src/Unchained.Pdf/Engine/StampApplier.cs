@@ -53,14 +53,9 @@ public sealed class StampApplier : IStampApplier
 
         var swaps = new Dictionary<int, PdfIndirectObject>();
 
-        foreach (var obj in existing)
+        foreach (var obj in existing.Where(static o => o.Value is PdfDictionary d && d.IsPage()))
         {
-            if (obj.Value is not PdfDictionary pd)
-                continue;
-
-            if (!pd.IsPage())
-                continue;
-
+            var pd = (PdfDictionary)obj.Value;
             if (targetPageDict is not null && !ReferenceEquals(pd, targetPageDict))
                 continue;
 

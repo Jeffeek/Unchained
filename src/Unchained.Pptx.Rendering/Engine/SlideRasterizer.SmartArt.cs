@@ -64,7 +64,7 @@ internal sealed partial class SlideRasterizer
                         dpi
                     );
                 break;
-                case >= 3 and <= 6 when !hasChildren:
+                case >= 3 and <= 6:
                     RenderSmartArtCycle(
                         buffer,
                         flatTexts,

@@ -174,9 +174,9 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
                 {
                     var certBytes = Convert.FromBase64String(cert.Value.Trim());
 #if NET9_0_OR_GREATER
-                    var x509 = X509CertificateLoader.LoadCertificate(certBytes);
+                    using var x509 = X509CertificateLoader.LoadCertificate(certBytes);
 #else
-                    var x509 = new X509Certificate2(certBytes);
+                    using var x509 = new X509Certificate2(certBytes);
 #endif
                     signerName = x509.GetNameInfo(
                         X509NameType.SimpleName,

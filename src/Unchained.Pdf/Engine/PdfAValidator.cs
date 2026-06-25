@@ -292,10 +292,8 @@ internal static class PdfAValidator
             if (annots is null)
                 continue;
 
-            foreach (var elem in annots.Elements)
+            foreach (var dict in annots.Elements.Select(core.ResolveDict))
             {
-                var dict = core.ResolveDict(elem);
-
                 if (dict is null)
                     continue;
 
@@ -327,10 +325,9 @@ internal static class PdfAValidator
         CheckActionDict(core.Catalog[PdfName.OpenAction], core, "catalog /OpenAction", v);
 
         // Scan all objects for prohibited action dicts
-        foreach (var obj in core.CollectObjects())
+        foreach (var obj in core.CollectObjects().Where(static o => o.Value is PdfDictionary))
         {
-            if (obj.Value is not PdfDictionary dict)
-                continue;
+            var dict = (PdfDictionary)obj.Value;
 
             // Check /A entry (action on annotations, links, etc.)
             CheckActionDict(dict[PdfName.A], core, $"object {obj.ObjectNumber}", v, obj.ObjectNumber);

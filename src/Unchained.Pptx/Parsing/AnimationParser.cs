@@ -78,10 +78,9 @@ internal static class AnimationParser
                 if (effect == null) continue;
 
                 // Assign trigger based on group type and position
-                if (isFirst && isOnClick)
-                    effect.Trigger = EffectTrigger.OnClick;
-                else
-                    effect.Trigger = GetTrigger(effectPar.Element(pml + "cTn"));
+                effect.Trigger = isFirst && isOnClick
+                    ? EffectTrigger.OnClick
+                    : GetTrigger(effectPar.Element(pml + "cTn"));
 
                 // Add the fully-parsed effect (preserves duration, accel/decel, auto-reverse,
                 // repeat) rather than reconstructing it from a handful of fields.

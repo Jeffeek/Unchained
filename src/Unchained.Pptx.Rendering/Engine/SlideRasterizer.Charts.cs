@@ -477,7 +477,7 @@ internal sealed partial class SlideRasterizer
             var slice = 0;
             for (var i = 0; i < series.Values.Count; i++)
             {
-                if (!(frac >= bounds[i]) || !(frac < bounds[i + 1])) continue;
+                if (frac < bounds[i] || frac >= bounds[i + 1]) continue;
 
                 slice = i;
                 break;

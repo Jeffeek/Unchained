@@ -21,7 +21,7 @@ internal static class PngConstants
     /// <summary>8-byte PNG file signature (PNG spec §5.2).</summary>
     internal static readonly byte[] Signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
-    internal static uint[] CtcTable = BuildCrcTable();
+    internal static readonly uint[] CtcTable = BuildCrcTable();
 
     private static uint[] BuildCrcTable()
     {

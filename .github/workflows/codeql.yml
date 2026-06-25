@@ -7,8 +7,6 @@ on:
     - cron: '0 0 * * 1'  # Weekly — Monday 00:00 UTC
 
 permissions:
-  security-events: write
-  actions: read
   contents: read
 
 env:
@@ -21,6 +19,10 @@ jobs:
   analyze:
     name: Analyze (csharp)
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
 
     steps:
       - name: Harden the runner (Audit all outbound calls)

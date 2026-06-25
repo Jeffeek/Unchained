@@ -69,11 +69,9 @@ internal sealed partial class PageRenderer
         // Look up embedded font bytes by resource name first (the dict is keyed by
         // resource name like "F1", not by base font name like "Helvetica").
         byte[]? embeddedBytes = null;
-        if (embeddedFontBytes is not null)
-        {
-            if (!embeddedFontBytes.TryGetValue(_gs.FontResourceName, out embeddedBytes) || embeddedBytes is { Length: 0 })
-                embeddedFontBytes.TryGetValue(_gs.FontName, out embeddedBytes);
-        }
+        if (embeddedFontBytes is not null &&
+            ((embeddedFontBytes.TryGetValue(_gs.FontResourceName, out var b) && b is not { Length: 0 }) || embeddedFontBytes.TryGetValue(_gs.FontName, out b)))
+            embeddedBytes = b;
 
         var (ftFace, hbFont) = fonts.GetFonts(_gs.FontName, embeddedBytes);
 

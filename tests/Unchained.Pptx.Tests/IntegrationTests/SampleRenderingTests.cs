@@ -76,7 +76,7 @@ public sealed class SampleRenderingTests : PptxTestBase
                 switch (s)
                 {
                     case AutoShape a when !string.IsNullOrWhiteSpace(a.TextFrame.PlainText):
-                        parts.Add($"text:\"{Trunc(a.TextFrame.PlainText)}\"{Geom(s)}");
+                        parts.Add($"text:\"{Truncate(a.TextFrame.PlainText)}\"{Geom(s)}");
                     break;
                     case PictureShape { Image: not null } p:
                         parts.Add($"picture({p.Image.ContentType}){Geom(s)}");
@@ -109,7 +109,7 @@ public sealed class SampleRenderingTests : PptxTestBase
             return false;
         }
 
-        static string Trunc(string s) => s.Length <= 20 ? s : s[..20] + "...";
+        static string Truncate(string s) => s.Length <= 20 ? s : s[..20] + "...";
     }
 
     private static string Geom(Shape s) =>
