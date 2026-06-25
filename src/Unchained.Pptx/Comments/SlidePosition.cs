@@ -13,6 +13,7 @@ public readonly struct SlidePosition
     /// <summary>The vertical offset from the slide's top-left corner.</summary>
     public Emu Y { get; }
 
+    /// <summary>Initializes a new <see cref="SlidePosition" /> at the given EMU coordinates.</summary>
     /// <param name="x">Horizontal offset in EMU.</param>
     /// <param name="y">Vertical offset in EMU.</param>
     public SlidePosition(Emu x, Emu y)

@@ -252,7 +252,7 @@ internal static class MarkdownToPdfConverter
         {
             switch (inline)
             {
-                case LiteralInline lit: sb.Append(lit.Content.ToString()); break;
+                case LiteralInline lit: sb.Append(lit.Content); break;
                 case EmphasisInline em: sb.Append(ExtractInlineText(em)); break;
                 case CodeInline code: sb.Append(code.Content); break;
                 case LineBreakInline: sb.Append(' '); break;
