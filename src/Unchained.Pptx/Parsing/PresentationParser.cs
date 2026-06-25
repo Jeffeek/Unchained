@@ -211,11 +211,8 @@ internal sealed class PresentationParser
         var preserved = new PreservedContent();
 
         // VBA project — a presentation-level relationship to /ppt/vbaProject.bin.
-        foreach (var rel in presentationPart.Relationships)
+        foreach (var rel in presentationPart.Relationships.Where(static r => r.RelationshipType.Equals(PmlNames.RelTypeVbaProject, StringComparison.Ordinal)))
         {
-            if (!rel.RelationshipType.Equals(PmlNames.RelTypeVbaProject, StringComparison.Ordinal))
-                continue;
-
             var uri = presentationPart.ResolveUri(rel.TargetUri);
             var part = package.TryGetPart(uri);
             if (part == null) continue;
@@ -244,14 +241,8 @@ internal sealed class PresentationParser
         // Digital signatures — a package-level origin relationship plus the signature parts it
         // links to. Captured verbatim; any edit to the deck invalidates them in PowerPoint, but a
         // pure round-trip keeps the bytes intact.
-        foreach (var originRel in package.PackageRelationships)
+        foreach (var originRel in package.PackageRelationships.Where(static originRel => originRel.RelationshipType.Equals(PmlNames.RelTypeDigitalSignatureOrigin, StringComparison.Ordinal)))
         {
-            if (!originRel.RelationshipType.Equals(
-                    PmlNames.RelTypeDigitalSignatureOrigin,
-                    StringComparison.Ordinal
-                ))
-                continue;
-
             var originUri = "/" + originRel.TargetUri.TrimStart('/');
             var originPart = package.TryGetPart(originUri);
             if (originPart == null) continue;

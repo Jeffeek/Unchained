@@ -38,10 +38,9 @@ internal static class SmartArtParser
         // type, i.e. the default "parOf" kind). Transition/presentation connections are ignored.
         var childLinks = new Dictionary<string, List<(int Order, string DestId)>>(StringComparer.Ordinal);
         var cxnLst = dataModel.Element(DmlNames.DiagramConnectionList);
-        foreach (var cxn in cxnLst?.Elements(DmlNames.DiagramConnection) ?? [])
+        foreach (var cxn in (cxnLst?.Elements(DmlNames.DiagramConnection) ?? [])
+                 .Where(static cxn => (string?)cxn.Attribute("type") == null)) // skip presOf/presParOf/etc.
         {
-            if ((string?)cxn.Attribute("type") != null) continue; // skip presOf/presParOf/etc.
-
             var srcId = (string?)cxn.Attribute("srcId");
             var destId = (string?)cxn.Attribute("destId");
             if (srcId == null || destId == null) continue;

@@ -1,5 +1,6 @@
 using Unchained.Drawing.Primitives.Fonts;
 using Unchained.Pdf.Core;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Engine;
@@ -215,7 +216,7 @@ internal static class FontMutator
     // usedGlyphs: key = FontFile2 stream object number, value = set of glyph IDs used.
     private static void CollectUsedGlyphs(
         PdfDocumentAdapter adapter,
-        List<PdfIndirectObject> objects,
+        IEnumerable<PdfIndirectObject> objects,
         IDictionary<int, HashSet<int>> usedGlyphs
     )
     {
@@ -224,10 +225,9 @@ internal static class FontMutator
         // Build a map from Font dict object number → FontFile2 object number.
         var fontToFontFile = new Dictionary<int, int>();
 
-        foreach (var obj in objects)
+        foreach (var obj in objects.Where(static o => o.Value is PdfDictionary))
         {
-            if (obj.Value is not PdfDictionary dict)
-                continue;
+            var dict = (PdfDictionary)obj.Value;
 
             var type = dict.GetName("Type");
             switch (type)
@@ -264,9 +264,7 @@ internal static class FontMutator
 
             // Walk the font resources to find object numbers for the resource names.
             var resources = pageDict[PdfName.Resources];
-            var resDict = resources is PdfIndirectReference rr
-                ? adapter.Core.ResolveIndirect(rr.ObjectNumber).Value as PdfDictionary
-                : resources as PdfDictionary;
+            var resDict = adapter.Core.ResolveDict(resources);
             var fontResDict = resDict?[PdfName.Font] as PdfDictionary
                               ?? (resDict?[PdfName.Font] is PdfIndirectReference fr
                                   ? adapter.Core.ResolveIndirect(fr.ObjectNumber).Value as PdfDictionary

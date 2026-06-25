@@ -209,10 +209,8 @@ internal static class PptxToHtmlWriter
             };
             sb.Append($"<p class=\"para\" style=\"text-align:{align}\">");
 
-            foreach (var run in para.Runs)
+            foreach (var run in para.Runs.Where(static run => !string.IsNullOrEmpty(run.Text)))
             {
-                if (string.IsNullOrEmpty(run.Text)) continue;
-
                 var runStyle = new StringBuilder();
                 var fs = run.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt;
                 runStyle.Append($"font-size:{fs:F1}pt;");

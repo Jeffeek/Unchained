@@ -140,15 +140,11 @@ internal static class PdfAConverter
             };
             if (annots is null) continue;
 
-            foreach (var elem in annots.Elements)
+            foreach (var idx in annots.Elements
+                         .OfType<PdfIndirectReference>()
+                         .Select(r => objects.FindIndex(o => o.ObjectNumber == r.ObjectNumber))
+                         .Where(static idx => idx >= 0))
             {
-                if (elem is not PdfIndirectReference r)
-                    continue;
-
-                var idx = objects.FindIndex(o => o.ObjectNumber == r.ObjectNumber);
-                if (idx < 0)
-                    continue;
-
                 if (objects[idx].Value is not PdfDictionary annot)
                     continue;
 

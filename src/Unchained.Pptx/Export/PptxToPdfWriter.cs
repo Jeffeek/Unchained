@@ -95,6 +95,9 @@ internal static class PptxToPdfWriter
             // Fallback Helvetica for runs with no embedded font.
             var fallbackFontNum = AllocObj();
 
+            // Reused across slides to avoid allocating a StringBuilder per iteration.
+            var sb2 = new StringBuilder();
+
             // Write page + content objects
             for (var i = 0; i < slides.Count; i++)
             {
@@ -126,7 +129,7 @@ internal static class PptxToPdfWriter
                 WriteLn($"   /Contents {contentNums[i]} 0 R");
 
                 // Font resources: all embedded fonts + fallback.
-                var sb2 = new StringBuilder();
+                sb2.Clear();
                 sb2.Append("   /Resources << /Font <<");
                 sb2.Append($" /Fhv {fallbackFontNum} 0 R");
                 foreach (var (key, nums) in fontObjNums)
@@ -656,10 +659,8 @@ internal static class PptxToPdfWriter
                 var textSet = false;
                 var currentFontRef = initPdfFont;
 
-                foreach (var run in para.Runs)
+                foreach (var run in para.Runs.Where(static r => !string.IsNullOrEmpty(r.Text)))
                 {
-                    if (string.IsNullOrEmpty(run.Text)) continue;
-
                     var runFontSize = run.Format.FontSizePoints ?? fontSize;
                     var runFontRef = ResolvePdfFontRef(
                         run.Format,
@@ -727,12 +728,9 @@ internal static class PptxToPdfWriter
 
         private static void CollectImages(Slide slide, Dictionary<string, int> imageMap)
         {
-            foreach (var shape in slide.Shapes.OfType<PictureShape>())
-            {
-                if (shape.Image == null || string.IsNullOrEmpty(shape.Image.PartUri)) continue;
-
-                imageMap.TryAdd(shape.Image.PartUri, 0);
-            }
+            foreach (var shape in slide.Shapes.OfType<PictureShape>()
+                         .Where(static shape => shape.Image != null && !string.IsNullOrEmpty(shape.Image.PartUri)))
+                imageMap.TryAdd(shape.Image!.PartUri, 0);
         }
 
         private static Dictionary<string, int> CollectSlideImages(
@@ -741,11 +739,10 @@ internal static class PptxToPdfWriter
         )
         {
             var result = new Dictionary<string, int>();
-            foreach (var shape in slide.Shapes.OfType<PictureShape>())
+            foreach (var shape in slide.Shapes.OfType<PictureShape>()
+                         .Where(static shape => shape.Image != null && !string.IsNullOrEmpty(shape.Image.PartUri)))
             {
-                if (shape.Image == null || string.IsNullOrEmpty(shape.Image.PartUri)) continue;
-
-                var name = XObjectName(shape.Image.PartUri);
+                var name = XObjectName(shape.Image!.PartUri);
                 if (imageObjNums.TryGetValue(shape.Image.PartUri, out var num))
                     result[name] = num;
             }
@@ -759,11 +756,12 @@ internal static class PptxToPdfWriter
         )
         {
             var written = new HashSet<string>();
-            foreach (var shape in slide.Shapes.OfType<PictureShape>())
+            foreach (var shape in slide.Shapes.OfType<PictureShape>()
+                         .Where(static shape => shape.Image != null && !string.IsNullOrEmpty(shape.Image.PartUri))
+                         .Where(shape => written.Add(shape.Image!.PartUri)))
             {
-                if (shape.Image == null || string.IsNullOrEmpty(shape.Image.PartUri)) continue;
-                if (!written.Add(shape.Image.PartUri)) continue;
-                if (!imageObjNums.TryGetValue(shape.Image.PartUri, out var objNum)) continue;
+                if (!imageObjNums.TryGetValue(shape.Image!.PartUri, out var objNum))
+                    continue;
 
                 WriteImageXObject(
                     objNum,

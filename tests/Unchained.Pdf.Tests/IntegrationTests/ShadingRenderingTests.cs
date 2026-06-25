@@ -73,8 +73,7 @@ public sealed class ShadingRenderingTests : RendererTestBase
         var bytes = PdfFixtures.WithAxialShading();
         using var doc = Processor.LoadAsync(new MemoryStream(bytes)).GetAwaiter().GetResult();
         var shadings = doc.Pages[1].GetShadings();
-        shadings.ContainsKey("Sh1").ShouldBeTrue();
-        var sh = shadings["Sh1"];
+        shadings.TryGetValue("Sh1", out var sh).ShouldBeTrue();
         sh.ShadingType.ShouldBe(2);
         sh.ColorAt(0.0).R.ShouldBeLessThan((byte)30);     // black end
         sh.ColorAt(1.0).R.ShouldBeGreaterThan((byte)225); // white end
@@ -88,8 +87,7 @@ public sealed class ShadingRenderingTests : RendererTestBase
         var bytes = PdfFixtures.WithTilingPattern();
         using var doc = Processor.LoadAsync(new MemoryStream(bytes)).GetAwaiter().GetResult();
         var patterns = doc.Pages[1].GetTilingPatterns();
-        patterns.ContainsKey("P1").ShouldBeTrue();
-        var p = patterns["P1"];
+        patterns.TryGetValue("P1", out var p).ShouldBeTrue();
         p.PaintType.ShouldBe(1);
         p.XStep.ShouldBe(10, 0.01);
         p.Operators.ShouldContain(static o => o.Name == "re"); // cell draws a rectangle

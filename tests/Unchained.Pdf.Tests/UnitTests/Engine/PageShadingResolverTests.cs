@@ -55,8 +55,7 @@ public sealed class PageShadingResolverTests
     public void AxialShading_BuildsRampAndExtendFlags()
     {
         var result = PageShadingResolver.GetShadings(PageWithShading(("Sh1", AxialShading())), Core());
-        result.ContainsKey("Sh1").ShouldBeTrue();
-        var sh = result["Sh1"];
+        result.TryGetValue("Sh1", out var sh).ShouldBeTrue();
         sh.ShadingType.ShouldBe(2);
         sh.ExtendStart.ShouldBeTrue();
         sh.ExtendEnd.ShouldBeTrue();
@@ -177,8 +176,8 @@ public sealed class PageShadingResolverTests
         );
 
         var result = PageShadingResolver.GetShadings(page, Core());
-        result.ContainsKey("P1").ShouldBeTrue();
-        result["P1"].ShadingType.ShouldBe(2);
+        result.TryGetValue("P1", out var p1).ShouldBeTrue();
+        p1.ShadingType.ShouldBe(2);
     }
 
     [Fact]
@@ -218,10 +217,10 @@ public sealed class PageShadingResolverTests
         );
 
         var result = PageShadingResolver.GetTilingPatterns(page, Core());
-        result.ContainsKey("P1").ShouldBeTrue();
-        result["P1"].PaintType.ShouldBe(1);
-        result["P1"].XStep.ShouldBe(10, 0.01);
-        result["P1"].Operators.ShouldContain(static o => o.Name == "re");
+        result.TryGetValue("P1", out var p1).ShouldBeTrue();
+        p1.PaintType.ShouldBe(1);
+        p1.XStep.ShouldBe(10, 0.01);
+        p1.Operators.ShouldContain(static o => o.Name == "re");
     }
 
     [Fact]
@@ -255,9 +254,9 @@ public sealed class PageShadingResolverTests
             }
         );
         var result = PageShadingResolver.GetShadings(PageWithShading(("C1", cmyk)), Core());
-        result.ContainsKey("C1").ShouldBeTrue();
+        result.TryGetValue("C1", out var c1).ShouldBeTrue();
         // Full cyan at t=1 → low red.
-        result["C1"].ColorAt(1.0).R.ShouldBeLessThan((byte)80);
+        c1.ColorAt(1.0).R.ShouldBeLessThan((byte)80);
     }
 
     [Fact]

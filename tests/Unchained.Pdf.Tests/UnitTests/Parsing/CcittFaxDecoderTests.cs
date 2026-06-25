@@ -40,9 +40,10 @@ public sealed class CcittFaxDecoderTests
 
         const int rowBytes = 2;
         decoded.Length.ShouldBe(rowBytes * 16);
+        var sb = new StringBuilder(16);
         for (var row = 0; row < 16; row++)
         {
-            var sb = new StringBuilder(16);
+            sb.Clear();
             for (var col = 0; col < 16; col++)
             {
                 var bit = (decoded[(row * rowBytes) + (col >> 3)] >> (7 - (col & 7))) & 1;
@@ -83,9 +84,10 @@ public sealed class CcittFaxDecoderTests
 
         const int rowBytes = 2;
         decoded.Length.ShouldBe(rowBytes * 16);
+        var sb = new StringBuilder(16);
         for (var row = 0; row < 16; row++)
         {
-            var sb = new StringBuilder(16);
+            sb.Clear();
             for (var col = 0; col < 16; col++)
             {
                 var bit = (decoded[(row * rowBytes) + (col >> 3)] >> (7 - (col & 7))) & 1;

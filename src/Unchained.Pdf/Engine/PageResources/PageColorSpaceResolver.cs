@@ -22,7 +22,7 @@ internal static class PageColorSpaceResolver
         if (resources is null) return result;
 
         // Recurse into form XObjects as well (same pattern as CollectShadings).
-        CollectColorSpaces(core, resources, result, 0, (HashSet<int>)[]);
+        CollectColorSpaces(core, resources, result, 0, new HashSet<int>());
         return result;
     }
 
@@ -157,18 +157,14 @@ internal static class PageColorSpaceResolver
 
             case "CalGray" when arr.Count >= 2:
             {
-                var dict = arr[1] is PdfIndirectReference dgr
-                    ? core.ResolveIndirect(dgr.ObjectNumber).Value as PdfDictionary
-                    : arr[1] as PdfDictionary;
+                var dict = core.ResolveDict(arr[1]);
                 var gamma = (dict?[PdfName.Gamma]).ReadFloat();
                 return ColorSpaceInfo.CalGrayInfo(gamma > 0 ? gamma : 1.0);
             }
 
             case "CalRGB" when arr.Count >= 2:
             {
-                var dict = arr[1] is PdfIndirectReference dcr
-                    ? core.ResolveIndirect(dcr.ObjectNumber).Value as PdfDictionary
-                    : arr[1] as PdfDictionary;
+                var dict = core.ResolveDict(arr[1]);
                 var gammaArr = dict?[PdfName.Gamma] is PdfArray ga
                     ? ga.Elements.Select(static e => (double)e.ReadFloat()).ToArray()
                     : null;

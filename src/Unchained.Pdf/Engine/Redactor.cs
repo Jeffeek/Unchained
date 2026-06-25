@@ -71,18 +71,15 @@ public sealed class Redactor : IRedactor
             );
 
             // Replace /Contents with the single rebuilt stream (resources are preserved).
-            foreach (var obj in existing)
-            {
-                if (!ReferenceEquals(obj.Value, pageDict))
-                    continue;
+            var target = existing.FirstOrDefault(obj => ReferenceEquals(obj.Value, pageDict));
+            if (target is null)
+                continue;
 
-                var entries = new Dictionary<string, PdfObject>(((PdfDictionary)obj.Value).Entries)
-                {
-                    [PdfName.Contents.Value] = streamObj.ToReference()
-                };
-                swaps[obj.ObjectNumber] = new PdfIndirectObject(obj.ObjectNumber, obj.Generation, new PdfDictionary(entries));
-                break;
-            }
+            var entries = new Dictionary<string, PdfObject>(((PdfDictionary)target.Value).Entries)
+            {
+                [PdfName.Contents.Value] = streamObj.ToReference()
+            };
+            swaps[target.ObjectNumber] = new PdfIndirectObject(target.ObjectNumber, target.Generation, new PdfDictionary(entries));
         }
 
         var finalObjects = existing

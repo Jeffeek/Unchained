@@ -197,10 +197,8 @@ internal static class PptxToSvgWriter
 
             sb.Append($"<text x=\"{textX:F4}\" y=\"{cursorY:F4}\" text-anchor=\"{anchor}\">");
 
-            foreach (var run in para.Runs)
+            foreach (var run in para.Runs.Where(static run => !string.IsNullOrEmpty(run.Text)))
             {
-                if (string.IsNullOrEmpty(run.Text)) continue;
-
                 var fs = run.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt;
                 var weight = run.Format.Bold.Value == true ? "bold" : "normal";
                 var style = run.Format.Italic.Value == true ? "italic" : "normal";

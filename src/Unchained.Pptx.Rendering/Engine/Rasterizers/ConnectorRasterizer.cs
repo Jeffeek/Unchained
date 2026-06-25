@@ -113,7 +113,7 @@ internal static class ConnectorRasterizer
 
         var dx = tipX - fromX;
         var dy = tipY - fromY;
-        var len = Math.Sqrt((dx * dx) + (dy * dy));
+        var len = Math.Sqrt(((double)dx * dx) + ((double)dy * dy));
         if (len < 1) return;
 
         var ux = dx / len;

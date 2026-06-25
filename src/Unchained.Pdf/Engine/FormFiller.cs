@@ -208,12 +208,8 @@ public sealed class FormFiller : IFormFiller
         IDictionary<string, PdfIndirectObject> result
     )
     {
-        foreach (var elem in fields.Elements)
+        foreach (var obj in fields.Elements.OfType<PdfIndirectReference>().Select(r => existing.FirstOrDefault(o => o.ObjectNumber == r.ObjectNumber)))
         {
-            if (elem is not PdfIndirectReference r)
-                continue;
-
-            var obj = existing.FirstOrDefault(o => o.ObjectNumber == r.ObjectNumber);
             if (obj?.Value is not PdfDictionary dict)
                 continue;
 

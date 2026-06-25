@@ -194,11 +194,8 @@ public sealed class Slide
     /// </summary>
     public IEnumerable<HyperlinkReference> GetHyperlinks()
     {
-        foreach (var shape in EnumerateShapes(Shapes))
-        {
-            if (shape.ClickAction is { } action)
-                yield return new HyperlinkReference(this, shape, action);
-        }
+        foreach (var shape in EnumerateShapes(Shapes).Where(static shape => shape.ClickAction is not null))
+            yield return new HyperlinkReference(this, shape, shape.ClickAction!);
 
         yield break;
 

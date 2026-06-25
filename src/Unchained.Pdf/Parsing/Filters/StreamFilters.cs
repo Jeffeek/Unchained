@@ -27,9 +27,9 @@ internal static class StreamFilters
         var filter = stream.Dictionary[PdfName.Filter];
         if (filter is null) return stream.Data;
 
-        var names = filter switch
+        IReadOnlyList<PdfName> names = filter switch
         {
-            PdfName name => (IReadOnlyList<PdfName>)[name],
+            PdfName name => [name],
             PdfArray array => array.Elements.OfType<PdfName>().ToArray(),
             _ => throw new PdfException($"Invalid /Filter value: expected name or array, got {filter.GetType().Name}.")
         };

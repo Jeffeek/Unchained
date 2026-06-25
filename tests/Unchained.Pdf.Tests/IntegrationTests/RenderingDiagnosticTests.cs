@@ -65,8 +65,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         fontMap.ShouldNotBeEmpty("GetFontNameMap() should return at least one font");
         fontMap.ContainsKey("F1").ShouldBeTrue("F1 must be in font map");
 
-        embMap.ContainsKey("F1").ShouldBeTrue("F1 must be in embedded bytes map");
-        var embBytes = embMap["F1"];
+        embMap.TryGetValue("F1", out var embBytes).ShouldBeTrue("F1 must be in embedded bytes map");
         embBytes.ShouldNotBeNull("Embedded font bytes for F1 must not be null");
         embBytes.Length.ShouldBeGreaterThan(1000, "Embedded font data should be substantial");
         Log($"Embedded font bytes length: {embBytes.Length}");

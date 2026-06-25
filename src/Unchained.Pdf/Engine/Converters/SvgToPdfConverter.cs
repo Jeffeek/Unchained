@@ -87,7 +87,7 @@ internal static class SvgToPdfConverter
         var fontRef = acc.AddFont("Helvetica");
         var fontMap = new Dictionary<string, PdfIndirectReference> { ["F1"] = fontRef };
 
-        if (options.Tagged && taggedItems is not null)
+        if (taggedItems is not null)
             // ReSharper disable once BadListLineBreaks
         {
             acc.AddPage(
@@ -388,11 +388,12 @@ internal static class SvgToPdfConverter
             if (parts.Length != 6)
                 return;
 
-            foreach (var p in parts)
-            {
-                if (float.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
-                    w.Float(v);
-            }
+            var values = parts
+                .Select(static p => (ok: float.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out var v), v))
+                .Where(static t => t.ok)
+                .Select(static t => t.v);
+            foreach (var v in values)
+                w.Float(v);
 
             w.Op("cm"u8);
         }
@@ -533,13 +534,16 @@ internal static class SvgToPdfConverter
             if (d[j] == '-' || d[j] == '+')
                 j++;
 
-            while (j < d.Length && (char.IsDigit(d[j]) || d[j] == '.' || d[j] == 'e' || d[j] == 'E' || (j > i && (d[j] == '-' || d[j] == '+'))))
+            while (j < d.Length && IsNumberChar(d[j], j > i))
                 j++;
             result.Add(d[i..j]);
             i = j;
         }
 
         return result;
+
+        static bool IsNumberChar(char ch, bool afterStart) =>
+            char.IsDigit(ch) || ch == '.' || ch == 'e' || ch == 'E' || (afterStart && ch is '-' or '+');
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────

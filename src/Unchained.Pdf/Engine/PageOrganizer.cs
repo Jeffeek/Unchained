@@ -391,7 +391,7 @@ public sealed class PageOrganizer : IPageOrganizer
         var result = new List<int>();
         var pagesRef = core.Catalog[PdfName.Pages] as PdfIndirectReference
                        ?? throw new PdfException("Catalog missing /Pages reference.");
-        WalkTree(core, pagesRef, result, (HashSet<int>)[]);
+        WalkTree(core, pagesRef, result, new HashSet<int>());
         return result;
     }
 
@@ -414,11 +414,8 @@ public sealed class PageOrganizer : IPageOrganizer
 
         if (node.Get<PdfArray>(PdfName.Kids) is not { } kids) return;
 
-        foreach (var kid in kids.Elements)
-        {
-            if (kid is PdfIndirectReference kr)
-                WalkTree(core, kr, leaves, seen);
-        }
+        foreach (var kr in kids.Elements.OfType<PdfIndirectReference>())
+            WalkTree(core, kr, leaves, seen);
     }
 
     // Returns objNum → leaf dictionary with inheritable attributes (MediaBox/CropBox/
@@ -428,7 +425,7 @@ public sealed class PageOrganizer : IPageOrganizer
         var result = new Dictionary<int, PdfDictionary>();
         var pagesRef = core.Catalog[PdfName.Pages] as PdfIndirectReference
                        ?? throw new PdfException("Catalog missing /Pages reference.");
-        BakeWalk(core, pagesRef, new Dictionary<string, PdfObject>(), result, (HashSet<int>)[]);
+        BakeWalk(core, pagesRef, new Dictionary<string, PdfObject>(), result, new HashSet<int>());
         return result;
     }
 
@@ -445,18 +442,15 @@ public sealed class PageOrganizer : IPageOrganizer
 
         // Accumulate inheritable attributes this node provides for its descendants.
         var nextInherited = new Dictionary<string, PdfObject>(inherited);
-        foreach (var key in InheritableKeys)
-        {
-            if (node[key] is { } v)
-                nextInherited[key] = v;
-        }
+        foreach (var key in InheritableKeys.Where(key => node[key] is not null))
+            nextInherited[key] = node[key]!;
 
         if (node.IsPage())
         {
             var entries = new Dictionary<string, PdfObject>(node.Entries);
-            foreach (var key in InheritableKeys)
+            foreach (var key in InheritableKeys.Where(key => !entries.ContainsKey(key)))
             {
-                if (!entries.ContainsKey(key) && inherited.TryGetValue(key, out var v))
+                if (inherited.TryGetValue(key, out var v))
                     entries[key] = v;
             }
 
@@ -466,11 +460,8 @@ public sealed class PageOrganizer : IPageOrganizer
 
         if (node.Get<PdfArray>(PdfName.Kids) is not { } kids) return;
 
-        foreach (var kid in kids.Elements)
-        {
-            if (kid is PdfIndirectReference kr)
-                BakeWalk(core, kr, nextInherited, output, seen);
-        }
+        foreach (var kr in kids.Elements.OfType<PdfIndirectReference>())
+            BakeWalk(core, kr, nextInherited, output, seen);
     }
 
     // Object numbers of all /Type /Pages nodes (interior + root) — dropped on rebuild.
@@ -479,7 +470,7 @@ public sealed class PageOrganizer : IPageOrganizer
         var result = new HashSet<int>();
         var pagesRef = core.Catalog[PdfName.Pages] as PdfIndirectReference
                        ?? throw new PdfException("Catalog missing /Pages reference.");
-        CollectPagesNodes(core, pagesRef, result, (HashSet<int>)[]);
+        CollectPagesNodes(core, pagesRef, result, new HashSet<int>());
         return result;
     }
 
@@ -501,11 +492,8 @@ public sealed class PageOrganizer : IPageOrganizer
         if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
             return;
 
-        foreach (var kid in kids.Elements)
-        {
-            if (kid is PdfIndirectReference kr)
-                CollectPagesNodes(core, kr, nodes, seen);
-        }
+        foreach (var kr in kids.Elements.OfType<PdfIndirectReference>())
+            CollectPagesNodes(core, kr, nodes, seen);
     }
 
     // ── Misc helpers ──────────────────────────────────────────────────────────────

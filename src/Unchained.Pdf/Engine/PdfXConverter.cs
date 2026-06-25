@@ -68,11 +68,8 @@ internal static class PdfXConverter
         var infoRef = core.Trailer[PdfName.Info] as PdfIndirectReference;
         var infoObjNum = infoRef?.ObjectNumber ?? (maxObj + 3);
         var infoEntries = new Dictionary<string, PdfObject>();
-        if (infoRef is not null)
-        {
-            if (core.ResolveIndirect(infoRef.ObjectNumber).Value is PdfDictionary existingInfo)
-                infoEntries = new Dictionary<string, PdfObject>(existingInfo.Entries);
-        }
+        if (infoRef is not null && core.ResolveIndirect(infoRef.ObjectNumber).Value is PdfDictionary existingInfo)
+            infoEntries = new Dictionary<string, PdfObject>(existingInfo.Entries);
 
         infoEntries["GTS_PDFXVersion"] = PdfString.FromLatin1(VersionString(profile));
         if (!infoEntries.ContainsKey("Title"))

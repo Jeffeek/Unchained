@@ -124,12 +124,9 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
     /// <returns>A 32-bit ARGB value (0xAARRGGBB).</returns>
     public uint Resolve(ColorScheme? scheme)
     {
-        uint baseArgb;
-
-        if (Type == ColorSpecType.Rgb)
-            baseArgb = Rgb;
-        else
-            baseArgb = scheme?.Resolve(ThemeSlot) ?? OoxmlScaling.UnresolvedThemeColorArgb;
+        var baseArgb = Type == ColorSpecType.Rgb
+            ? Rgb
+            : scheme?.Resolve(ThemeSlot) ?? OoxmlScaling.UnresolvedThemeColorArgb;
 
         return Math.Abs(LuminanceModifier - 1.0) < DoubleComparisonTolerance && LuminanceOffset == 0.0
             ? baseArgb

@@ -239,19 +239,15 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         var defaultCfg = Core.ResolveDict(ocProps[PdfName.D]);
         if (defaultCfg?[PdfName.OFF] is PdfArray offArr)
         {
-            foreach (var e in offArr.Elements)
-            {
-                if (e is PdfIndirectReference offRef)
-                    off.Add(offRef.ObjectNumber);
-            }
+            foreach (var offRef in offArr.Elements.OfType<PdfIndirectReference>())
+                off.Add(offRef.ObjectNumber);
         }
 
         if (ocProps[PdfName.OCGs] is not PdfArray ocgs)
             return result;
 
-        foreach (var e in ocgs.Elements)
+        foreach (var r in ocgs.Elements.OfType<PdfIndirectReference>())
         {
-            if (e is not PdfIndirectReference r) continue;
             if (Core.ResolveIndirect(r.ObjectNumber).Value is not PdfDictionary ocg) continue;
 
             var name = ocg[PdfName.Name] is PdfString s
@@ -413,14 +409,8 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
             return;
 
-        foreach (var kid in kids.Elements)
-        {
-            var childDict = kid is PdfIndirectReference kr
-                ? Core.ResolveIndirect(kr.ObjectNumber).Value as PdfDictionary
-                : kid as PdfDictionary;
-            if (childDict is not null)
-                CollectNameTree(childDict, result);
-        }
+        foreach (var childDict in kids.Elements.Select(kid => Core.ResolveDict(kid)).Where(static x => x != null))
+            CollectNameTree(childDict!, result);
     }
 
     private IReadOnlyList<Bookmark> ReadOutlineLevel(PdfDictionary node)
@@ -536,13 +526,16 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         var seenHashes = new Dictionary<string, int>(StringComparer.Ordinal);
         var remapping = new Dictionary<int, int>();
 
-        foreach (var obj in objects)
+        // Only deduplicate unfiltered, non-empty content streams (plain operators).
+        var candidates = objects
+            .Where(static o =>
+                o.Value is PdfStream stream &&
+                stream.Dictionary[PdfName.Filter] is null &&
+                stream.Data.Length != 0
+            );
+        foreach (var obj in candidates)
         {
-            if (obj.Value is not PdfStream stream) continue;
-            // Only deduplicate unfiltered content streams (plain operators).
-            if (stream.Dictionary[PdfName.Filter] is not null) continue;
-            if (stream.Data.Length == 0) continue;
-
+            var stream = (PdfStream)obj.Value;
             var hash = Convert.ToBase64String(
                 SHA256.HashData(stream.Data.Span)
             );

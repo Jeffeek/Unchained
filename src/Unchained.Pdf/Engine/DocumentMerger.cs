@@ -95,31 +95,24 @@ public sealed class DocumentMerger : IDocumentMerger
             await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
             var bytes = ms.ToArray();
 
-            var core = PdfDocumentCore.Parse(bytes);
-            try
+            using var core = PdfDocumentCore.Parse(bytes);
+            var objects = core.CollectObjects();
+            var sourceMax = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
+            var offset = globalMax;
+
+            foreach (var remapped in from obj in objects
+                                     where !IsStructural(obj)
+                                     select (PdfIndirectObject)PdfObjectRemapper.Remap(obj, offset)
+                                     into remapped
+                                     select CopyStreamData(remapped))
             {
-                var objects = core.CollectObjects();
-                var sourceMax = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
-                var offset = globalMax;
+                globalObjects.Add(remapped);
 
-                foreach (var remapped in from obj in objects
-                                         where !IsStructural(obj)
-                                         select (PdfIndirectObject)PdfObjectRemapper.Remap(obj, offset)
-                                         into remapped
-                                         select CopyStreamData(remapped))
-                {
-                    globalObjects.Add(remapped);
-
-                    if (IsPageLeaf(remapped))
-                        pageRefs.Add(remapped.ToReference());
-                }
-
-                globalMax += sourceMax;
+                if (IsPageLeaf(remapped))
+                    pageRefs.Add(remapped.ToReference());
             }
-            finally
-            {
-                core.Dispose();
-            }
+
+            globalMax += sourceMax;
         }
 
         return BuildMergedDocument(globalObjects, pageRefs, globalMax, options);

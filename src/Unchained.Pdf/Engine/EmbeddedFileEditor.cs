@@ -109,13 +109,8 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
             return;
 
-        foreach (var kid in kids.Elements)
-        {
-            var childDict = kid is PdfIndirectReference kr
-                ? core.ResolveIndirect(kr.ObjectNumber).Value as PdfDictionary
-                : kid as PdfDictionary;
-            if (childDict is not null) CollectNameTree(childDict, core, result);
-        }
+        foreach (var childDict in kids.Elements.Select(core.ResolveDict).Where(static x => x != null))
+            CollectNameTree(childDict!, core, result);
     }
 
     private static EmbeddedFile? BuildEmbeddedFile(

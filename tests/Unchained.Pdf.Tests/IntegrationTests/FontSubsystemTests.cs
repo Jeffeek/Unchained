@@ -33,9 +33,9 @@ public sealed class FontSubsystemTests : RendererTestBase
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var fontBytes = doc.Pages[1].GetEmbeddedFontBytes();
-        fontBytes.ContainsKey("F1").ShouldBeTrue();
-        fontBytes["F1"].ShouldNotBeNull();
-        fontBytes["F1"]!.Length.ShouldBeGreaterThan(0);
+        fontBytes.TryGetValue("F1", out var f1Bytes).ShouldBeTrue();
+        f1Bytes.ShouldNotBeNull();
+        f1Bytes.Length.ShouldBeGreaterThan(0);
     }
 
     [Fact]
