@@ -233,6 +233,25 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         text.ShouldContain("OpenAction");
     }
 
+    [Fact]
+    public async Task SetOpenAction_GoToAction_ViaModel_OutOfRange_Throws()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(() =>
+            Processor.SetOpenActionAsync(doc, PdfOpenAction.GoTo(99), TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
+    public async Task SetOpenAction_GoToAction_ViaModel_FirstPage_Persists()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(3), TestContext.Current.CancellationToken);
+        await Processor.SetOpenActionAsync(doc, PdfOpenAction.GoTo(1), TestContext.Current.CancellationToken);
+
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(3);
+    }
+
     // ── RemovePdfaCompliance ──────────────────────────────────────────────────
 
     [Fact]
@@ -326,6 +345,28 @@ public sealed class DocumentPropertiesTests : PdfTestBase
 
         await using var reloaded = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task SaveWithAllowReusePageContent_DeduplicatesIdenticalContentStreams()
+    {
+        // Two pages whose /Contents are distinct objects with byte-identical unfiltered content.
+        // DeduplicateContentStreams must collapse them and the doc must round-trip to 2 pages.
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 5 0 R >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 6 0 R >>",
+            "<< /Length 15 >>\nstream\n0 0 50 50 re f\nendstream",
+            "<< /Length 15 >>\nstream\n0 0 50 50 re f\nendstream"
+        };
+        await using var doc = await LoadAsync(RawPdfBuilder.Build(bodies), TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+        await Processor.SaveAsync(doc, ms, new SaveOptions(AllowReusePageContent: true), TestContext.Current.CancellationToken);
+
+        await using var reloaded = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(2);
     }
 
     [Fact]

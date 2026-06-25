@@ -4,6 +4,7 @@ using Shouldly;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Engine;
+using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 
@@ -165,6 +166,105 @@ public sealed class DocumentProcessorSaveTests : IDisposable
         await Should.ThrowAsync<ArgumentException>(() =>
             _processor.SaveAsync(foreign.Object, new MemoryStream())
         );
+    }
+}
+
+public sealed class DocumentProcessorFilePathTests : IDisposable
+{
+    private readonly DocumentProcessor _processor = new();
+
+    public void Dispose() => _processor.Dispose();
+
+    [Fact]
+    public async Task LoadAsync_FromFilePath_LoadsDocument()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllBytesAsync(path, PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
+            await using var doc = await _processor.LoadAsync(path, TestContext.Current.CancellationToken);
+            doc.PageCount.ShouldBe(2);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task LoadAsync_FromFilePathWithPassword_RoundTrips()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            // Produce an encrypted file first.
+            await using (var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken))
+                await _processor.SaveAsync(doc, path, new SaveOptions(Encryption: new EncryptionOptions("secret")), TestContext.Current.CancellationToken);
+
+            await using var reloaded = await _processor.LoadAsync(path, "secret", TestContext.Current.CancellationToken);
+            reloaded.PageCount.ShouldBe(1);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertToPdfAAsync_ToFilePath_WritesFile()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
+            await _processor.ConvertToPdfAAsync(doc, path, ct: TestContext.Current.CancellationToken);
+            new FileInfo(path).Length.ShouldBeGreaterThan(0);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertToPdfXAsync_ToFilePath_WritesFile()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
+            await _processor.ConvertToPdfXAsync(doc, path, ct: TestContext.Current.CancellationToken);
+            new FileInfo(path).Length.ShouldBeGreaterThan(0);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ChangePasswordsAsync_ToStream_ProducesEncryptedOutput()
+    {
+        await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+        await _processor.ChangePasswordsAsync(doc, "u", "o", ms, ct: TestContext.Current.CancellationToken);
+        ms.Length.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ChangePasswordsAsync_ToFilePath_WritesFile()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
+            await _processor.ChangePasswordsAsync(doc, "u", "o", path, ct: TestContext.Current.CancellationToken);
+            new FileInfo(path).Length.ShouldBeGreaterThan(0);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 }
 

@@ -95,8 +95,9 @@ internal static class NotesWriter
             )
         );
 
-        // Notes text placeholder
-        var txBody = WriteNotesTextBody(notes, dml);
+        // Notes text placeholder. WriteNotesTextBody requires NotesTextFrame to be non-null;
+        // the early-out above guarantees it (NotesText is empty exactly when the frame is null).
+        var txBody = TextWriter.WriteAsShape(notes.NotesTextFrame!);
         spTree.Add(
             new XElement(
                 pml + "sp",
@@ -135,39 +136,5 @@ internal static class NotesWriter
         );
 
         return new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), notesEl);
-    }
-
-    private static XElement WriteNotesTextBody(NotesSlide notes, XNamespace dml)
-    {
-        // If a full text frame is available, use TextWriter; otherwise emit plain text
-        if (notes.NotesTextFrame != null)
-            return TextWriter.WriteAsShape(notes.NotesTextFrame);
-
-        // Plain text fallback
-        var txBody = new XElement(PmlNames.TextBody);
-        txBody.Add(new XElement(dml + "bodyPr"));
-        txBody.Add(new XElement(dml + "lstStyle"));
-
-        foreach (var line in notes.NotesText.Split('\n'))
-        {
-            var para = new XElement(dml + "p");
-            if (!string.IsNullOrEmpty(line))
-            {
-                var run = new XElement(dml + "r");
-                run.Add(
-                    new XElement(
-                        dml + "rPr",
-                        new XAttribute("lang", "en-US"),
-                        new XAttribute("dirty", "0")
-                    )
-                );
-                run.Add(new XElement(dml + "t", line));
-                para.Add(run);
-            }
-
-            txBody.Add(para);
-        }
-
-        return txBody;
     }
 }

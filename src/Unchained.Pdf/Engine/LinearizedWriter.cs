@@ -157,28 +157,14 @@ internal static class LinearizedWriter
         IReadOnlyList<PdfIndirectObject> objects
     )
     {
-        foreach (var obj in objects)
-        {
-            if (obj.Value is not PdfDictionary d)
-                continue;
-            if (!ReferenceEquals(d, dict))
-                continue;
-
+        foreach (var obj in objects.Where(o => o.Value is PdfDictionary d && ReferenceEquals(d, dict)))
             return new PdfIndirectReference(obj.ObjectNumber, obj.Generation);
-        }
 
         // Try resolving all Page-type objects.
-        foreach (var obj in objects)
-        {
-            if (obj.Value is not PdfDictionary d)
-                continue;
-            if (!d.IsPage())
-                continue;
-
-            return new PdfIndirectReference(obj.ObjectNumber, obj.Generation);
-        }
-
-        return null;
+        return objects
+            .Where(static o => o.Value is PdfDictionary d && d.IsPage())
+            .Select(static obj => new PdfIndirectReference(obj.ObjectNumber, obj.Generation))
+            .FirstOrDefault();
     }
 
     /// <summary>Recursively collects all indirect reference object numbers from a PdfObject graph.</summary>

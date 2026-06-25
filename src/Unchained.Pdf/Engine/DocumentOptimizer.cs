@@ -69,11 +69,9 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
         var seenHashes = new Dictionary<string, int>(StringComparer.Ordinal); // hash → canonical objNum
         var remapping = new Dictionary<int, int>();                           // old objNum → canonical objNum
 
-        foreach (var obj in existing)
+        foreach (var obj in existing.Where(static o => o.Value is PdfStream))
         {
-            if (obj.Value is not PdfStream stream)
-                continue;
-
+            var stream = (PdfStream)obj.Value;
             var key = ComputeKey(stream);
             if (seenHashes.TryGetValue(key, out var canonical))
                 remapping[obj.ObjectNumber] = canonical;

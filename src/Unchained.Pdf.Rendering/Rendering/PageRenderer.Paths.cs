@@ -177,10 +177,8 @@ internal sealed partial class PageRenderer
         var polys = new List<(double X, double Y)[]>(_subpaths.Count);
         var minY = double.MaxValue;
         var maxY = double.MinValue;
-        foreach (var sub in _subpaths)
+        foreach (var sub in _subpaths.Where(static s => s.Count >= 2))
         {
-            if (sub.Count < 2) continue;
-
             var pts = new (double X, double Y)[sub.Count];
             for (var i = 0; i < sub.Count; i++)
             {
@@ -214,7 +212,7 @@ internal sealed partial class PageRenderer
                     var (bx, by) = pts[(i + 1) % n];        // implicit close
                     if (Math.Abs(ay - by) < 0.05) continue; // horizontal edge contributes no crossing
                     // Half-open [min,max) so shared vertices aren't double-counted.
-                    if (!(sy >= Math.Min(ay, by)) || !(sy < Math.Max(ay, by))) continue;
+                    if (sy < Math.Min(ay, by) || sy >= Math.Max(ay, by)) continue;
 
                     var t = (sy - ay) / (by - ay);
                     var cx = ax + (t * (bx - ax));
@@ -598,11 +596,8 @@ internal sealed partial class PageRenderer
     {
         // Flatten every subpath to device-space point arrays.
         var polys = new List<(double X, double Y)[]>(_subpaths.Count);
-        foreach (var sub in _subpaths)
+        foreach (var sub in _subpaths.Where(static s => s.Count >= 2))
         {
-            if (sub.Count < 2)
-                continue;
-
             var pts = new (double X, double Y)[sub.Count];
             for (var i = 0; i < sub.Count; i++)
                 pts[i] = UToPixel(sub[i].X, sub[i].Y);

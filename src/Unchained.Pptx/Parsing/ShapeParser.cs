@@ -329,7 +329,7 @@ internal sealed class ShapeParser
 
         // Placeholder reference (<p:nvPr>/<p:ph>) — captures the role + index so the slide
         // parser can inherit geometry/formatting from the matching layout placeholder.
-        var ph = nvPrContainer?.Element(PmlNames.ApplicationNonVisualProperties)?.Element(PmlNames.Placeholder);
+        var ph = nvPrContainer!.Element(PmlNames.ApplicationNonVisualProperties)?.Element(PmlNames.Placeholder);
         if (ph == null) return;
 
         shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr("type"));

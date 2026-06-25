@@ -112,7 +112,7 @@ internal sealed class RasterBuffer(int width, int height)
                     if (Math.Abs(ay - by) < 0.05)
                         continue;
 
-                    if (!(sy >= Math.Min(ay, by)) || !(sy < Math.Max(ay, by)))
+                    if (sy < Math.Min(ay, by) || sy >= Math.Max(ay, by))
                         continue;
 
                     var t = (sy - ay) / (by - ay);

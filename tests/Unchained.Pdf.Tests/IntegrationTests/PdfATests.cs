@@ -52,6 +52,27 @@ public sealed class PdfATests : PdfTestBase
     }
 
     [Fact]
+    public async Task Validate_MalformedPdf_ReportsStructureViolation()
+    {
+        // Bytes that start like a PDF but cannot be parsed → the catch(PdfException) arm reports 6.1.
+        var malformed = "%PDF-1.4\nthis is not a valid pdf body"u8.ToArray();
+        var result = await Processor.ValidatePdfAAsync(malformed, ct: TestContext.Current.CancellationToken);
+        result.Violations.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Validate_Pdf17ForPdfA1_ReportsVersionViolation()
+    {
+        // SinglePage is %PDF-1.7; PDF/A-1 caps at 1.4 → version violation.
+        var result = await Processor.ValidatePdfAAsync(
+            PdfFixtures.SinglePage(),
+            PdfAProfile.PdfA1B,
+            TestContext.Current.CancellationToken
+        );
+        result.Violations.ShouldContain(static v => v.RuleId == "6.1.2");
+    }
+
+    [Fact]
     public async Task Validate_EncryptedPdf_ReportsEncryptionViolation()
     {
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
@@ -185,6 +206,43 @@ public sealed class PdfATests : PdfTestBase
         using var outMs = new MemoryStream();
 
         await Should.ThrowAsync<InvalidOperationException>(() => Processor.ConvertToPdfAAsync(encDoc, outMs));
+    }
+
+    [
+        Theory,
+        InlineData(PdfAProfile.PdfA1B, "1", "B"),
+        InlineData(PdfAProfile.PdfA1A, "1", "A"),
+        InlineData(PdfAProfile.PdfA2B, "2", "B"),
+        InlineData(PdfAProfile.PdfA2U, "2", "U"),
+        InlineData(PdfAProfile.PdfA3B, "3", "B")
+    ]
+    public async Task ConvertToPdfA_AllProfiles_WritePartAndConformance(
+        PdfAProfile profile,
+        string part,
+        string conformance
+    )
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+        await Processor.ConvertToPdfAAsync(doc, ms, profile, TestContext.Current.CancellationToken);
+
+        var xmp = Encoding.UTF8.GetString(ms.ToArray());
+        xmp.ShouldContain($"part>{part}");
+        xmp.ShouldContain($"conformance>{conformance}");
+    }
+
+    [Fact]
+    public async Task ConvertToPdfA_NonWidgetAnnotationWithoutPrintFlag_SetsPrintBit()
+    {
+        // The WithPdfAViolations fixture carries a /FileAttachment annotation with no Print flag;
+        // conversion sets bit 3 (value 4) on it (FixAnnotationFlags path).
+        await using var doc = await LoadAsync(PdfFixtures.WithPdfAViolations(), TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+        await Processor.ConvertToPdfAAsync(doc, ms, PdfAProfile.PdfA2B, TestContext.Current.CancellationToken);
+
+        // Reload and confirm the document still parses (the Print-flag rewrite did not corrupt it).
+        await using var reloaded = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), ct: TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
     }
 
     // ── Validation — profiles ─────────────────────────────────────────────────

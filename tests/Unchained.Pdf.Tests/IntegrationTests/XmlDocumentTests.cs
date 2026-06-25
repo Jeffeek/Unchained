@@ -139,6 +139,65 @@ public sealed class XmlDocumentTests : PdfTestBase
     }
 
     [Fact]
+    public async Task LoadFromXml_WithLine_ProducesLoadablePdf()
+    {
+        const string xml = """
+                           <Document>
+                             <Page width="595" height="842">
+                               <Line x1="72" y1="400" x2="523" y2="400" width="1.5" />
+                             </Page>
+                           </Document>
+                           """;
+
+        await using var doc = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
+        doc.PageCount.ShouldBe(1);
+
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task LoadFromXml_TableWithoutHeaders_ProducesLoadablePdf()
+    {
+        // Exercises the data-rows-only path of EmitTable (no <Header> elements).
+        const string xml = """
+                           <Document>
+                             <Page width="595" height="842">
+                               <Table x="72" y="600">
+                                 <Row><Cell>A</Cell><Cell>B</Cell></Row>
+                               </Table>
+                             </Page>
+                           </Document>
+                           """;
+
+        await using var doc = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
+        doc.PageCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task LoadFromXml_MixedContent_RoundTripsAndSaves()
+    {
+        // Heading + Paragraph + Table + Line in one page, then save/reload.
+        const string xml = """
+                           <Document>
+                             <Page width="595" height="842">
+                               <Heading level="1" font="Helvetica-Bold" size="22" x="72" y="780">Title</Heading>
+                               <Paragraph font="Helvetica" size="12" x="72" y="740">Body</Paragraph>
+                               <Table x="72" y="600">
+                                 <Header>H1</Header>
+                                 <Row><Cell>v1</Cell></Row>
+                               </Table>
+                               <Line x1="72" y1="500" x2="523" y2="500" width="0.5" />
+                             </Page>
+                           </Document>
+                           """;
+
+        await using var doc = await Processor.LoadFromXmlAsync(xml, TestContext.Current.CancellationToken);
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task LoadFromXml_InvalidRoot_ThrowsInvalidOperation()
     {
         const string xml = "<NotADocument><Page/></NotADocument>";

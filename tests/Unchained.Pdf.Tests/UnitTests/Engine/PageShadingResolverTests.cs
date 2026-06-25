@@ -55,8 +55,7 @@ public sealed class PageShadingResolverTests
     public void AxialShading_BuildsRampAndExtendFlags()
     {
         var result = PageShadingResolver.GetShadings(PageWithShading(("Sh1", AxialShading())), Core());
-        result.ContainsKey("Sh1").ShouldBeTrue();
-        var sh = result["Sh1"];
+        result.TryGetValue("Sh1", out var sh).ShouldBeTrue();
         sh.ShadingType.ShouldBe(2);
         sh.ExtendStart.ShouldBeTrue();
         sh.ExtendEnd.ShouldBeTrue();
@@ -107,6 +106,42 @@ public sealed class PageShadingResolverTests
     }
 
     [Fact]
+    public void ShadingEntryNotDictOrStream_IsSkipped() =>
+        // A /Shading entry that resolves to a bare integer is neither dict nor stream → BuildShading
+        // returns null (the `_ => null` arm) and the name is not collected.
+        PageShadingResolver.GetShadings(PageWithShading(("S", new PdfInteger(7))), Core())
+            .ContainsKey("S")
+            .ShouldBeFalse();
+
+    [Fact]
+    public void AxialShading_TwoComponentFunction_NonCmyk_UsesGreyRamp()
+    {
+        // A type-2 function with 2-element C0/C1 over a non-CMYK colour space yields a 2-component
+        // result, hitting the ComponentsToRgb `_ => (128,128,128)` grey fallback for every ramp entry.
+        var fn = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = new PdfArray([new PdfInteger(0), new PdfInteger(1)]),
+                ["C0"] = new PdfArray([new PdfReal(0), new PdfReal(0)]),
+                ["C1"] = new PdfArray([new PdfReal(1), new PdfReal(1)]),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
+        var shading = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ShadingType"] = new PdfInteger(2),
+                ["ColorSpace"] = PdfName.Get("DeviceRGB"),
+                ["Coords"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(100), new PdfInteger(0)]),
+                ["Function"] = fn
+            }
+        );
+        var result = PageShadingResolver.GetShadings(PageWithShading(("S", shading)), Core());
+        result["S"].ShadingType.ShouldBe(2);
+    }
+
+    [Fact]
     public void AxialShading_MissingCoords_IsSkipped()
     {
         var bad = new PdfDictionary(
@@ -141,8 +176,8 @@ public sealed class PageShadingResolverTests
         );
 
         var result = PageShadingResolver.GetShadings(page, Core());
-        result.ContainsKey("P1").ShouldBeTrue();
-        result["P1"].ShadingType.ShouldBe(2);
+        result.TryGetValue("P1", out var p1).ShouldBeTrue();
+        p1.ShadingType.ShouldBe(2);
     }
 
     [Fact]
@@ -182,10 +217,10 @@ public sealed class PageShadingResolverTests
         );
 
         var result = PageShadingResolver.GetTilingPatterns(page, Core());
-        result.ContainsKey("P1").ShouldBeTrue();
-        result["P1"].PaintType.ShouldBe(1);
-        result["P1"].XStep.ShouldBe(10, 0.01);
-        result["P1"].Operators.ShouldContain(static o => o.Name == "re");
+        result.TryGetValue("P1", out var p1).ShouldBeTrue();
+        p1.PaintType.ShouldBe(1);
+        p1.XStep.ShouldBe(10, 0.01);
+        p1.Operators.ShouldContain(static o => o.Name == "re");
     }
 
     [Fact]
@@ -193,5 +228,249 @@ public sealed class PageShadingResolverTests
     {
         var page = new PdfDictionary(new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page });
         PageShadingResolver.GetTilingPatterns(page, Core()).ShouldBeEmpty();
+    }
+
+    // ── Additional branch coverage ───────────────────────────────────────────────
+
+    [Fact]
+    public void AxialShading_CmykColorSpace_BuildsRamp()
+    {
+        var cmyk = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ShadingType"] = new PdfInteger(2),
+                ["ColorSpace"] = PdfName.Get("DeviceCMYK"),
+                ["Coords"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(0), new PdfInteger(100)]),
+                ["Function"] = new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        ["FunctionType"] = new PdfInteger(2),
+                        ["Domain"] = new PdfArray([new PdfInteger(0), new PdfInteger(1)]),
+                        ["C0"] = new PdfArray([new PdfReal(0), new PdfReal(0), new PdfReal(0), new PdfReal(0)]),
+                        ["C1"] = new PdfArray([new PdfReal(1), new PdfReal(0), new PdfReal(0), new PdfReal(0)]),
+                        ["N"] = new PdfReal(1.0)
+                    }
+                )
+            }
+        );
+        var result = PageShadingResolver.GetShadings(PageWithShading(("C1", cmyk)), Core());
+        result.TryGetValue("C1", out var c1).ShouldBeTrue();
+        // Full cyan at t=1 → low red.
+        c1.ColorAt(1.0).R.ShouldBeLessThan((byte)80);
+    }
+
+    [Fact]
+    public void NestedFormXObject_Shading_IsCollected()
+    {
+        var formResources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Shading"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["Inner"] = AxialShading() })
+            }
+        );
+        var form = new PdfStream(
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Subtype"] = PdfName.Get("Form"),
+                    ["Resources"] = formResources
+                }
+            ),
+            ReadOnlyMemory<byte>.Empty
+        );
+        var resources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["XObject"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["Fm0"] = form })
+            }
+        );
+        var page = new PdfDictionary(
+            new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page, ["Resources"] = resources }
+        );
+
+        PageShadingResolver.GetShadings(page, Core()).ContainsKey("Inner").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void NonFormXObject_IsIgnoredDuringShadingCollection()
+    {
+        var image = new PdfStream(
+            new PdfDictionary(new Dictionary<string, PdfObject> { ["Subtype"] = PdfName.Get("Image") }),
+            ReadOnlyMemory<byte>.Empty
+        );
+        var resources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["XObject"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["Im0"] = image })
+            }
+        );
+        var page = new PdfDictionary(
+            new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page, ["Resources"] = resources }
+        );
+
+        PageShadingResolver.GetShadings(page, Core()).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void NestedFormXObject_TilingPattern_IsCollected()
+    {
+        var cell = "0 0 5 5 re f"u8.ToArray();
+        var tile = new PdfStream(
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["PatternType"] = new PdfInteger(1),
+                    ["PaintType"] = new PdfInteger(2),
+                    ["BBox"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(5), new PdfInteger(5)]),
+                    ["XStep"] = new PdfInteger(5),
+                    ["YStep"] = new PdfInteger(5),
+                    ["Length"] = new PdfInteger(cell.Length)
+                }
+            ),
+            cell
+        );
+        var formResources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Pattern"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["TP"] = tile })
+            }
+        );
+        var form = new PdfStream(
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Subtype"] = PdfName.Get("Form"),
+                    ["Resources"] = formResources
+                }
+            ),
+            ReadOnlyMemory<byte>.Empty
+        );
+        var resources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["XObject"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["Fm0"] = form })
+            }
+        );
+        var page = new PdfDictionary(
+            new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page, ["Resources"] = resources }
+        );
+
+        PageShadingResolver.GetTilingPatterns(page, Core()).ContainsKey("TP").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AxialShading_DeviceGray_SingleChannelRamp()
+    {
+        // DeviceGray colour space with a single-component function → the (_, 1) ramp arm runs.
+        var grayFn = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["FunctionType"] = new PdfInteger(2),
+                ["Domain"] = new PdfArray([new PdfInteger(0), new PdfInteger(1)]),
+                ["C0"] = new PdfArray([new PdfReal(0)]),
+                ["C1"] = new PdfArray([new PdfReal(1)]),
+                ["N"] = new PdfReal(1.0)
+            }
+        );
+        var shading = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ShadingType"] = new PdfInteger(2),
+                ["ColorSpace"] = PdfName.Get("DeviceGray"),
+                ["Coords"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(100), new PdfInteger(0)]),
+                ["Function"] = grayFn
+            }
+        );
+        var result = PageShadingResolver.GetShadings(PageWithShading(("G1", shading)), Core());
+        result["G1"].ShadingType.ShouldBe(2);
+    }
+
+    [Fact]
+    public void AxialShading_NoFunction_UsesMidGreyRamp()
+    {
+        // No /Function → fn is null → the ramp falls back to [0.5,0.5,0.5] mid-grey per entry.
+        var shading = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ShadingType"] = new PdfInteger(2),
+                ["ColorSpace"] = PdfName.Get("DeviceRGB"),
+                ["Coords"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(100), new PdfInteger(0)])
+            }
+        );
+        var result = PageShadingResolver.GetShadings(PageWithShading(("N1", shading)), Core());
+        result["N1"].ShadingType.ShouldBe(2);
+    }
+
+    [Fact]
+    public void RadialShading_TooFewCoords_IsSkipped()
+    {
+        var shading = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ShadingType"] = new PdfInteger(3),
+                ["Coords"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(0)]), // need 6
+                ["Function"] = ExpFn()
+            }
+        );
+        PageShadingResolver.GetShadings(PageWithShading(("R", shading)), Core()).ContainsKey("R").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void MeshShadingType4_NonStream_IsSkipped()
+    {
+        // ShadingType 4 declared as a plain dictionary (not a stream) → returns null.
+        var shading = new PdfDictionary(
+            new Dictionary<string, PdfObject> { ["ShadingType"] = new PdfInteger(4) }
+        );
+        PageShadingResolver.GetShadings(PageWithShading(("M", shading)), Core()).ContainsKey("M").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Extend_NonArray_DefaultsToFalseFalse()
+    {
+        // /Extend present but not an array → ReadExtend returns (false,false).
+        var shading = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["ShadingType"] = new PdfInteger(2),
+                ["ColorSpace"] = PdfName.Get("DeviceRGB"),
+                ["Coords"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(100), new PdfInteger(0)]),
+                ["Function"] = ExpFn(),
+                ["Extend"] = new PdfInteger(0)
+            }
+        );
+        var sh = PageShadingResolver.GetShadings(PageWithShading(("E", shading)), Core())["E"];
+        sh.ExtendStart.ShouldBeFalse();
+        sh.ExtendEnd.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GetTilingPatterns_UndecodableStream_IsSkipped()
+    {
+        // A PatternType-1 stream whose /Filter throws on decode → the catch `continue` skips it.
+        var dict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Type"] = PdfName.Get("Pattern"),
+                ["PatternType"] = new PdfInteger(1),
+                ["PaintType"] = new PdfInteger(1),
+                ["BBox"] = new PdfArray([new PdfInteger(0), new PdfInteger(0), new PdfInteger(10), new PdfInteger(10)]),
+                ["XStep"] = new PdfInteger(10),
+                ["YStep"] = new PdfInteger(10),
+                ["Filter"] = PdfName.Get("JPXDecode"),
+                ["Length"] = new PdfInteger(3)
+            }
+        );
+        var stream = new PdfStream(dict, new byte[] { 1, 2, 3 });
+        var resources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["Pattern"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["P1"] = stream })
+            }
+        );
+        var page = new PdfDictionary(
+            new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page, ["Resources"] = resources }
+        );
+        PageShadingResolver.GetTilingPatterns(page, Core()).ContainsKey("P1").ShouldBeFalse();
     }
 }

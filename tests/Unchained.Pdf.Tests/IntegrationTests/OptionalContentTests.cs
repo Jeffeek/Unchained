@@ -150,9 +150,8 @@ public sealed class OptionalContentTests : PdfTestBase
         var softMasks = page.GetSoftMasks(pixW, pixH);
 
         softMasks.ShouldNotBeEmpty("expected GS1 soft mask entry to be parsed");
-        softMasks.ContainsKey("GS1").ShouldBeTrue("soft mask should be keyed by ExtGState name GS1");
+        softMasks.TryGetValue("GS1", out var sm).ShouldBeTrue("soft mask should be keyed by ExtGState name GS1");
 
-        var sm = softMasks["GS1"];
         sm.WidthPx.ShouldBe(pixW);
         sm.HeightPx.ShouldBe(pixH);
         sm.MaskType.ShouldBe("Alpha");
@@ -169,7 +168,7 @@ public sealed class OptionalContentTests : PdfTestBase
 
         var alphas = doc.Pages[1].GetExtGStateAlphas();
 
-        alphas.ContainsKey("GS1").ShouldBeTrue("GS1 ExtGState should be present");
-        alphas["GS1"].SoftMaskName.ShouldBe("GS1", "soft mask name should match ExtGState key");
+        alphas.TryGetValue("GS1", out var gs1Alpha).ShouldBeTrue("GS1 ExtGState should be present");
+        gs1Alpha.SoftMaskName.ShouldBe("GS1", "soft mask name should match ExtGState key");
     }
 }

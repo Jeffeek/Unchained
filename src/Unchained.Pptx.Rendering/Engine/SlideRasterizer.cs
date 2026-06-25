@@ -119,17 +119,11 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
     private static Dictionary<int, Shape> BuildLayoutPlaceholderMap(Slide slide)
     {
         var map = new Dictionary<int, Shape>();
-        foreach (var s in slide.Layout.Master.Shapes)
-        {
-            if (s.PlaceholderIndex.HasValue)
-                map.TryAdd(s.PlaceholderIndex.Value, s);
-        }
+        foreach (var s in slide.Layout.Master.Shapes.Where(static s => s.PlaceholderIndex.HasValue))
+            map.TryAdd(s.PlaceholderIndex!.Value, s);
 
-        foreach (var s in slide.Layout.Shapes)
-        {
-            if (s.PlaceholderIndex.HasValue)
-                map[s.PlaceholderIndex.Value] = s;
-        }
+        foreach (var s in slide.Layout.Shapes.Where(static s => s.PlaceholderIndex.HasValue))
+            map[s.PlaceholderIndex!.Value] = s;
 
         return map;
     }

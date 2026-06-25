@@ -474,7 +474,7 @@ internal static class JpegDecoder
                 for (var u = 0; u < 8; u++)
                 {
                     var cu = u == 0 ? 1.0 / Math.Sqrt(2) : 1.0;
-                    sum += cu * s[u] * Math.Cos(((2 * x) + 1) * u * Math.PI / 16.0);
+                    sum += cu * s[u] * Math.Cos(((2.0 * x) + 1) * u * Math.PI / 16.0);
                 }
 
                 o[x] = sum;

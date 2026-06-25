@@ -179,7 +179,7 @@ internal static class GrayscaleJpegBuilder
             {
                 var sum = 0d;
                 for (var x = 0; x < 8; x++)
-                    sum += block[r + x] * Math.Cos(((2 * x) + 1) * (double)u * Math.PI / 16d);
+                    sum += block[r + x] * Math.Cos(((2.0 * x) + 1) * u * Math.PI / 16d);
                 tmp[r + u] = (u == 0 ? 1.0 / Math.Sqrt(2) : 1d) * sum;
             }
         }
@@ -189,7 +189,7 @@ internal static class GrayscaleJpegBuilder
         {
             var sum = 0d;
             for (var y = 0; y < 8; y++)
-                sum += tmp[(y * 8) + col] * Math.Cos(((2 * y) + 1) * (double)v * Math.PI / 16d);
+                sum += tmp[(y * 8) + col] * Math.Cos(((2.0 * y) + 1) * v * Math.PI / 16d);
             output[(v * 8) + col] = 0.25 * (v == 0 ? 1d / Math.Sqrt(2) : 1d) * sum;
         }
 

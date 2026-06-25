@@ -314,12 +314,13 @@ internal sealed class PresentationWriter
             }
 
             // Assign relationship IDs for shape click-hyperlinks (recursing through groups).
-            foreach (var shape in EnumerateAllShapes(slide.Shapes))
-            {
-                if (shape.ClickAction is { } action && NeedsRelationship(action)
-                                                    && string.IsNullOrEmpty(action.RelationshipId))
-                    action.RelationshipId = $"rId{rId++}";
-            }
+            foreach (var shape in EnumerateAllShapes(slide.Shapes)
+                         .Where(static shape =>
+                             shape.ClickAction is { } action &&
+                             NeedsRelationship(action) &&
+                             string.IsNullOrEmpty(action.RelationshipId)
+                         ))
+                shape.ClickAction!.RelationshipId = $"rId{rId++}";
 
             // Assign relationship IDs for run-level hyperlinks across all text frames.
             foreach (var link in EnumerateRunHyperlinks(slide)
@@ -380,11 +381,9 @@ internal sealed class PresentationWriter
 
             // Shape click-hyperlinks (M-G): external URLs become External relationships;
             // internal slide jumps target the resolved slide part URI.
-            foreach (var shape in EnumerateAllShapes(slide.Shapes))
-            {
-                if (shape.ClickAction is { } action && NeedsRelationship(action))
-                    WriteHyperlinkRelationship(package, slides, slideUri, action);
-            }
+            foreach (var shape in EnumerateAllShapes(slide.Shapes)
+                         .Where(static shape => shape.ClickAction is { } action && NeedsRelationship(action)))
+                WriteHyperlinkRelationship(package, slides, slideUri, shape.ClickAction!);
 
             // Run-level hyperlinks (M-G).
             foreach (var link in EnumerateRunHyperlinks(slide).Where(RunLinkNeedsRelationship))
@@ -488,15 +487,12 @@ internal sealed class PresentationWriter
     }
 
     /// <summary>Yields every run-level hyperlink across a slide's text frames.</summary>
-    private static IEnumerable<RunHyperlink> EnumerateRunHyperlinks(Slide slide)
-    {
-        foreach (var run in ShapeTextWalker.EnumerateTextFrames(slide.Shapes)
-                     .SelectMany(static frame => frame.Paragraphs.SelectMany(static paragraph => paragraph.Runs)))
-        {
-            if (run.Format.Hyperlink is { } link)
-                yield return link;
-        }
-    }
+    private static IEnumerable<RunHyperlink> EnumerateRunHyperlinks(Slide slide) =>
+        from frame in ShapeTextWalker.EnumerateTextFrames(slide.Shapes)
+        from paragraph in frame.Paragraphs
+        from run in paragraph.Runs
+        where run.Format.Hyperlink is not null
+        select run.Format.Hyperlink!;
 
     private static bool RunLinkNeedsRelationship(RunHyperlink link) =>
         !string.IsNullOrEmpty(link.Url) || link.TargetSlideNumber.HasValue;

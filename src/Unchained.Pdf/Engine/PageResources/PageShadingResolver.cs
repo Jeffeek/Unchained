@@ -23,14 +23,14 @@ internal static class PageShadingResolver
         // Collect from the page resources and from every form XObject's resources, since
         // GetContentOperators inlines form content (so their sh/scn operators reach the
         // renderer) and those operators reference shading/pattern names declared on the form.
-        CollectShadings(core, resources, result, 0, (HashSet<int>)[]);
+        CollectShadings(core, resources, result, 0, new HashSet<int>());
         return result;
     }
 
     internal static IReadOnlyDictionary<string, TilingPatternInfo> GetTilingPatterns(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, TilingPatternInfo>();
-        CollectTilingPatterns(core, core.ResolveDict(page[PdfName.Resources]), result, 0, (HashSet<int>)[]);
+        CollectTilingPatterns(core, core.ResolveDict(page[PdfName.Resources]), result, 0, new HashSet<int>());
         return result;
     }
 

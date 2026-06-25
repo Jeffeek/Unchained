@@ -1,6 +1,8 @@
 using Shouldly;
 using Unchained.Ooxml.Media;
 using Unchained.Pptx.Media;
+using Unchained.Pptx.Shapes;
+using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Media;
@@ -116,4 +118,41 @@ public sealed class MediaStoreTests
         store.AddFont(new EmbeddedFont { Typeface = "Arial", Data = new byte[] { 1 } });
         store.FindFontData("ARIAL", EmbeddedFontStyle.Regular).ShouldNotBeNull();
     }
+
+    // ── RemoveUnused ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public void RemoveUnused_DropsUnreferencedImagesAudioAndVideo()
+    {
+        var doc = PptxFixtures.WithSlides(1);
+        var store = doc.Media;
+        var slide = doc.Slides[0];
+
+        // Referenced image inside a group shape (exercises CollectImages group recursion).
+        var usedImage = store.AddImage(new EmbeddedImage("image/png", new byte[] { 1 }));
+        var group = slide.Shapes.AddGroup();
+        group.Children.AddParsed(new PictureShape { Image = usedImage });
+
+        // Referenced audio + video directly on the slide (CollectMedia branches).
+        var usedAudio = store.AddAudio(new EmbeddedAudio { ContentType = "audio/mpeg" });
+        var usedVideo = store.AddVideo(new EmbeddedVideo { ContentType = "video/mp4" });
+        slide.Shapes.AddParsed(new AudioShape { Audio = usedAudio });
+        slide.Shapes.AddParsed(new VideoShape { Video = usedVideo });
+
+        // Unreferenced media that must be purged.
+        store.AddImage(new EmbeddedImage("image/png", new byte[] { 2 }));
+        store.AddAudio(new EmbeddedAudio { ContentType = "audio/wav" });
+        store.AddVideo(new EmbeddedVideo { ContentType = "video/avi" });
+
+        var removed = store.RemoveUnused(doc.Slides);
+
+        removed.ShouldBe(3);
+        store.Images.ShouldHaveSingleItem().ShouldBeSameAs(usedImage);
+        store.AudioFiles.ShouldHaveSingleItem().ShouldBeSameAs(usedAudio);
+        store.VideoFiles.ShouldHaveSingleItem().ShouldBeSameAs(usedVideo);
+    }
+
+    [Fact]
+    public void RemoveUnused_NullSlides_Throws() =>
+        Should.Throw<ArgumentNullException>(static () => Store().RemoveUnused(null!));
 }

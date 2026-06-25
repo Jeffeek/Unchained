@@ -52,22 +52,22 @@ internal static class TrueTypeSubsetter
         }
 
         // Require the essential subsetting tables.
-        if (!tables.ContainsKey("head") || !tables.ContainsKey("loca") ||
-            !tables.ContainsKey("glyf") || !tables.ContainsKey("maxp"))
+        if (!tables.TryGetValue("head", out var headTable) || !tables.TryGetValue("loca", out var locaTable) ||
+            !tables.TryGetValue("glyf", out var glyfTable) || !tables.TryGetValue("maxp", out var maxpTable))
             return b; // not a standard TrueType — skip subsetting
 
         // Read head: unitsPerEm, indexToLocFormat (0=short, 1=long).
-        var headOff = tables["head"].Offset;
+        var headOff = headTable.Offset;
         var indexToLocFormat = ReadS16(b, headOff + 50);
 
         // Read maxp: numGlyphs.
-        var maxpOff = tables["maxp"].Offset;
+        var maxpOff = maxpTable.Offset;
         var numGlyphs = ReadU16(b, maxpOff + 4);
         if (numGlyphs == 0) return b;
 
         // Read loca: array of numGlyphs+1 offsets into glyf.
-        var locaOff = tables["loca"].Offset;
-        var glyfOff = tables["glyf"].Offset;
+        var locaOff = locaTable.Offset;
+        var glyfOff = glyfTable.Offset;
 
         // Build full set of glyphs to keep (include .notdef + resolve composite components).
         var keepGlyphs = new HashSet<int> { 0 }; // always keep .notdef
@@ -150,13 +150,10 @@ internal static class TrueTypeSubsetter
 
         // Build new loca table.
         byte[] newLoca;
-        if (indexToLocFormat == 0)
-        {
-            // Short format: offsets are /2 (must fit in ushort).
-            // Fall back to long format if the new glyf is too large.
-            if (newGlyf.Length / 2 > 65535)
-                indexToLocFormat = 1;
-        }
+        // Short format: offsets are /2 (must fit in ushort).
+        // Fall back to long format if the new glyf is too large.
+        if (indexToLocFormat == 0 && newGlyf.Length / 2 > 65535)
+            indexToLocFormat = 1;
 
         if (indexToLocFormat == 0)
         {

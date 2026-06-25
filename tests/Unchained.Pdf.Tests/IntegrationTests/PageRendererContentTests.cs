@@ -167,6 +167,52 @@ public sealed class PageRendererContentTests : RendererTestBase
     }
 
     [Fact]
+    public async Task TextInvisibleMode_PaintsNothing()
+    {
+        SkipIfNoFreeType();
+        var fontData = LoadDejaVuSansRegular();
+        // Tr 3 = invisible text (used for OCR layers) → no pixels painted.
+        var pdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 40 Tf 3 Tr 0 0 0 rg 10 40 Td (X) Tj ET");
+        var n = await NonWhiteAsync(pdf);
+        n.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task TextClipMode_AddsToClipWithoutThrowing()
+    {
+        SkipIfNoFreeType();
+        var fontData = LoadDejaVuSansRegular();
+        // Tr 7 = add-to-clip (no fill/stroke); then fill the page — only the glyph shape paints.
+        var pdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 60 Tf 7 Tr 10 30 Td (O) Tj ET 0 0 0 rg 0 0 100 100 re f");
+        var n = await NonWhiteAsync(pdf);
+        // Clipped fill paints within the glyph outline only — fewer pixels than a full-page fill.
+        n.ShouldBeGreaterThan(0);
+        n.ShouldBeLessThan(100 * 100);
+    }
+
+    [Fact]
+    public async Task TextNextLineShowOperator_Renders()
+    {
+        SkipIfNoFreeType();
+        var fontData = LoadDejaVuSansRegular();
+        // ' operator = move to next line then show text.
+        var pdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 24 Tf 10 60 Td 14 TL (Line) ' ET");
+        var n = await NonWhiteAsync(pdf);
+        n.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task TextNextLineWithSpacingShowOperator_Renders()
+    {
+        SkipIfNoFreeType();
+        var fontData = LoadDejaVuSansRegular();
+        // " operator = set word+char spacing, move to next line, then show. Operands: aw ac string.
+        var pdf = PdfFixtures.WithEmbeddedFont(fontData, "BT /F1 24 Tf 10 60 Td 14 TL 2 1 (A B) \" ET");
+        var n = await NonWhiteAsync(pdf);
+        n.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
     public async Task TextWithRiseAndCharSpacing_Renders()
     {
         SkipIfNoFreeType();
@@ -220,6 +266,15 @@ public sealed class PageRendererContentTests : RendererTestBase
     {
         SkipIfNoFreeType();
         var n = await NonWhiteAsync(MeshShadingPdf());
+        n.ShouldBeGreaterThan(200);
+    }
+
+    [Fact]
+    public async Task MeshShading_WithConstantAlpha_BlendsAndPaints()
+    {
+        SkipIfNoFreeType();
+        // /ca 0.5 makes the mesh painter take the FillA < 255 alpha-blend branch.
+        var n = await NonWhiteAsync(MeshShadingWithAlphaPdf());
         n.ShouldBeGreaterThan(200);
     }
 
@@ -324,6 +379,68 @@ public sealed class PageRendererContentTests : RendererTestBase
         foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 6 /Root 1 0 R >>");
+        PdfFixtures.Ln(sb, "startxref");
+        PdfFixtures.Ln(sb, xref.ToString());
+        sb.Append("%%EOF");
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    // Like MeshShadingPdf but activates a constant fill alpha (/GS1 gs, /ca 0.5) before the mesh
+    // `sh`, so the mesh painter takes the FillA < 255 alpha-blend branch.
+    private static byte[] MeshShadingWithAlphaPdf()
+    {
+        byte[] mesh =
+        [
+            0, 0, 0, 255, 0, 0,
+            0, 255, 0, 0, 255, 0,
+            0, 128, 255, 0, 0, 255
+        ];
+
+        var sb = new StringBuilder();
+        var offsets = new List<int>();
+        PdfFixtures.Ln(sb, "%PDF-1.7");
+        PdfFixtures.Ln(sb, "%\xE2\xE3\xCF\xD3");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "1 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "2 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "3 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R");
+        PdfFixtures.Ln(sb, "   /Resources << /Shading << /Sh1 5 0 R >> /ExtGState << /GS1 6 0 R >> >> >>");
+        PdfFixtures.Ln(sb, "endobj");
+        const string content = "q /GS1 gs 0 0 100 100 re W n /Sh1 sh Q";
+        var cb = Encoding.Latin1.GetBytes(content);
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "4 0 obj");
+        PdfFixtures.Ln(sb, $"<< /Length {cb.Length} >>");
+        sb.Append("stream\n").Append(content);
+        PdfFixtures.Ln(sb, "\nendstream");
+        PdfFixtures.Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "5 0 obj");
+        PdfFixtures.Ln(sb, "<< /ShadingType 4 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8");
+        PdfFixtures.Ln(sb, "   /BitsPerFlag 8 /Decode [0 100 0 100 0 1 0 1 0 1]");
+        PdfFixtures.Ln(sb, $"   /Length {mesh.Length} >>");
+        sb.Append("stream\n");
+        foreach (var b in mesh) sb.Append((char)b);
+        PdfFixtures.Ln(sb, "\nendstream");
+        PdfFixtures.Ln(sb, "endobj");
+        offsets.Add(PdfFixtures.Len(sb));
+        PdfFixtures.Ln(sb, "6 0 obj");
+        PdfFixtures.Ln(sb, "<< /Type /ExtGState /ca 0.5 >>");
+        PdfFixtures.Ln(sb, "endobj");
+        var xref = PdfFixtures.Len(sb);
+        PdfFixtures.Ln(sb, "xref");
+        PdfFixtures.Ln(sb, "0 7");
+        PdfFixtures.Ln(sb, "0000000000 65535 f ");
+        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        PdfFixtures.Ln(sb, "trailer");
+        PdfFixtures.Ln(sb, "<< /Size 7 /Root 1 0 R >>");
         PdfFixtures.Ln(sb, "startxref");
         PdfFixtures.Ln(sb, xref.ToString());
         sb.Append("%%EOF");

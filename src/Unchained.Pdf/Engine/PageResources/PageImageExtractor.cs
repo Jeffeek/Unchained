@@ -55,7 +55,7 @@ internal static class PageImageExtractor
                         decode
                     );
             }
-            catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
+            catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException or PdfException)
             {
                 // Unsupported filter or malformed data — use gray placeholder.
                 rgb = BuildGrayPlaceholder(w, h);
@@ -117,7 +117,7 @@ internal static class PageImageExtractor
 
             return alpha;
         }
-        catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException)
+        catch (Exception ex) when (ex is NotImplementedException or NotSupportedException or InvalidOperationException or PdfException)
         {
             return null;
         }

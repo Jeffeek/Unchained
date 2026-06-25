@@ -312,4 +312,168 @@ public sealed class PageColorSpaceResolverGapTests
         var page = new PdfDictionary(new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page });
         PageColorSpaceResolver.GetColorSpaces(page, Core()).ShouldBeEmpty();
     }
+
+    [Fact]
+    public void DeeplyNestedForms_StopAtDepthLimit()
+    {
+        var resources = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                ["XObject"] = new PdfDictionary(new Dictionary<string, PdfObject> { ["Fm"] = BuildLevel(0) })
+            }
+        );
+        var page = new PdfDictionary(
+            new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page, ["Resources"] = resources }
+        );
+
+        var result = PageColorSpaceResolver.GetColorSpaces(page, Core());
+        result.ContainsKey("CS0").ShouldBeTrue();
+        // Past the depth limit, the deepest level's space is not collected.
+        result.ContainsKey("CS12").ShouldBeFalse();
+        return;
+
+        // Build 12 levels of nested form XObjects, each declaring a colour space. The resolver
+        // stops recursing past depth 10, so the innermost spaces are not collected — but it must
+        // not throw or hang, and the shallow spaces are still found.
+        static PdfStream BuildLevel(int level)
+        {
+            var resourceEntries = new Dictionary<string, PdfObject>
+            {
+                ["ColorSpace"] = new PdfDictionary(
+                    new Dictionary<string, PdfObject> { [$"CS{level}"] = new PdfArray([PdfName.Get("Lab"), new PdfDictionary()]) }
+                )
+            };
+            if (level < 12)
+            {
+                resourceEntries["XObject"] = new PdfDictionary(
+                    new Dictionary<string, PdfObject> { ["Fm"] = BuildLevel(level + 1) }
+                );
+            }
+
+            return new PdfStream(
+                new PdfDictionary(
+                    new Dictionary<string, PdfObject>
+                    {
+                        ["Subtype"] = PdfName.Get("Form"),
+                        ["Resources"] = new PdfDictionary(resourceEntries)
+                    }
+                ),
+                ReadOnlyMemory<byte>.Empty
+            );
+        }
+    }
+
+    [Fact]
+    public void ColorSpaceValue_AsIndirectReference_IsResolvedAndBuilt()
+    {
+        // CS0 maps to an indirect reference whose target is a [/Lab <<>>] array — exercises the
+        // indirect-resolution branch in both CollectColorSpaces and BuildColorSpaceInfo.
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /Resources << /ColorSpace << /CS0 5 0 R >> >> >>",
+            "<< /Foo 1 >>",
+            "[/Lab << >>]"
+        };
+        using var core = PdfDocumentCore.Parse(RawPdfBuilder.Build(bodies));
+        var page = core.GetPage(1);
+        var spaces = PageColorSpaceResolver.GetColorSpaces(page, core);
+        spaces.ContainsKey("CS0").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Indexed_LookupAsIndirectReference_IsResolved()
+    {
+        // The Indexed lookup table is an indirect reference to a string object (line 146 path).
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /Resources << /ColorSpace << /CS0 5 0 R >> >> >>",
+            @"(\377\000\000)", // 3-byte RGB palette string (object 4)
+            "[/Indexed /DeviceRGB 0 4 0 R]"
+        };
+        using var core = PdfDocumentCore.Parse(RawPdfBuilder.Build(bodies));
+        var page = core.GetPage(1);
+        var spaces = PageColorSpaceResolver.GetColorSpaces(page, core);
+        spaces.ContainsKey("CS0").ShouldBeTrue();
+    }
+
+    // Builds a single-page doc whose page colour-space CS0 array references object 5 for its
+    // sub-object (ICC stream / Cal dict), exercising the indirect-resolution ternary branches.
+    private static IReadOnlyDictionary<string, Unchained.Pdf.Models.ColorSpaceInfo> ResolveWithIndirectSubObject(
+        string cs0Array,
+        string object5Body
+    )
+    {
+        var bodies = new[]
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /Resources << /ColorSpace << /CS0 4 0 R >> >> >>",
+            cs0Array,
+            object5Body
+        };
+        var core = PdfDocumentCore.Parse(RawPdfBuilder.Build(bodies));
+        return PageColorSpaceResolver.GetColorSpaces(core.GetPage(1), core);
+    }
+
+    [Fact]
+    public void IccBased_StreamAsIndirectReference_IsResolved()
+    {
+        // arr[1] is "5 0 R"; object 5 is an ICC stream with /N 3.
+        var spaces = ResolveWithIndirectSubObject(
+            "[/ICCBased 5 0 R]",
+            "<< /N 3 /Length 0 >>\nstream\n\nendstream"
+        );
+        spaces.ContainsKey("CS0").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CalGray_DictAsIndirectReference_IsResolved()
+    {
+        var spaces = ResolveWithIndirectSubObject("[/CalGray 5 0 R]", "<< /Gamma 2.2 >>");
+        spaces.ContainsKey("CS0").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CalRgb_DictAsIndirectReference_IsResolved()
+    {
+        var spaces = ResolveWithIndirectSubObject(
+            "[/CalRGB 5 0 R]",
+            "<< /Gamma [1.0 1.0 1.0] /Matrix [0.4 0.2 0.0 0.3 0.7 0.1 0.1 0.0 0.9] >>"
+        );
+        spaces.ContainsKey("CS0").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CalRgb_NoMatrixNoGamma_BuildsInfo()
+    {
+        // Direct CalRGB dict with neither /Gamma nor /Matrix → both `is PdfArray ? : null` take the
+        // null branch.
+        var info = new PdfArray([PdfName.Get("CalRGB"), new PdfDictionary()]);
+        PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", info)), Core())
+            .ContainsKey("CS0")
+            .ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CalGray_NonDictSecondElement_DefaultsGamma()
+    {
+        // arr[1] is not a dictionary → `arr[1] as PdfDictionary` is null → gamma defaults to 1.0.
+        var info = new PdfArray([PdfName.Get("CalGray"), new PdfInteger(0)]);
+        PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", info)), Core())
+            .ContainsKey("CS0")
+            .ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CalRgb_NonDictSecondElement_BuildsInfo()
+    {
+        var info = new PdfArray([PdfName.Get("CalRGB"), new PdfInteger(0)]);
+        PageColorSpaceResolver.GetColorSpaces(PageWith(("CS0", info)), Core())
+            .ContainsKey("CS0")
+            .ShouldBeTrue();
+    }
 }

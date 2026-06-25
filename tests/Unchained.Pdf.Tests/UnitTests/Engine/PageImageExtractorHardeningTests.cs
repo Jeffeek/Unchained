@@ -227,4 +227,130 @@ public sealed class PageImageExtractorHardeningTests
         )["Im1"];
         img.RgbData[0].ShouldBe((byte)128);
     }
+
+    [Fact]
+    public void DeviceRgb_WithDecodeArray_AppliesInversion()
+    {
+        // /Decode [1 0 1 0 1 0] inverts each channel: sample 0 → 255.
+        var entries = new Dictionary<string, PdfObject>
+        {
+            ["Type"] = PdfName.Get("XObject"),
+            ["Subtype"] = PdfName.Get("Image"),
+            ["Width"] = new PdfInteger(1),
+            ["Height"] = new PdfInteger(1),
+            ["ColorSpace"] = PdfName.Get("DeviceRGB"),
+            ["BitsPerComponent"] = new PdfInteger(8),
+            ["Decode"] = new PdfArray(
+                [new PdfInteger(1), new PdfInteger(0), new PdfInteger(1), new PdfInteger(0), new PdfInteger(1), new PdfInteger(0)]
+            ),
+            ["Length"] = new PdfInteger(3)
+        };
+        var img = PageImageExtractor.GetImageXObjects(
+            PageWithImage(new PdfStream(new PdfDictionary(entries), "\0\0\0"u8.ToArray())),
+            Core()
+        )["Im1"];
+        img.RgbData[0].ShouldBe((byte)255); // inverted black → white
+    }
+
+    [Fact]
+    public void DeviceCmyk_EightBpcImage_ConvertsToRgb()
+    {
+        // 1×1 DeviceCMYK image, pure cyan (255,0,0,0) → RGB ≈ (0,255,255).
+        var img = PageImageExtractor.GetImageXObjects(
+            PageWithImage(Image(1, 1, 8, [0xFF, 0x00, 0x00, 0x00], PdfName.Get("DeviceCMYK"))),
+            Core()
+        )["Im1"];
+        img.RgbData[0].ShouldBeLessThan((byte)40);
+        img.RgbData[1].ShouldBeGreaterThan((byte)200);
+    }
+
+    [Fact]
+    public void DeviceGray_EightBpcImage_ReplicatesToRgb()
+    {
+        var img = PageImageExtractor.GetImageXObjects(
+            PageWithImage(Image(1, 1, 8, [200], PdfName.Get("DeviceGray"))),
+            Core()
+        )["Im1"];
+        img.RgbData[0].ShouldBe((byte)200);
+        img.RgbData[1].ShouldBe((byte)200);
+        img.RgbData[2].ShouldBe((byte)200);
+    }
+
+    [Fact]
+    public void DeclaredColorSpaceMismatch_ReInfersFromDataLength()
+    {
+        // Declared DeviceCMYK but 3 bytes for 1px → mismatch re-infers DeviceRGB from length.
+        var img = PageImageExtractor.GetImageXObjects(
+            PageWithImage(Image(1, 1, 8, [10, 20, 30], PdfName.Get("DeviceCMYK"))),
+            Core()
+        )["Im1"];
+        img.RgbData[0].ShouldBe((byte)10);
+        img.RgbData[1].ShouldBe((byte)20);
+        img.RgbData[2].ShouldBe((byte)30);
+    }
+
+    [Fact]
+    public void ImageWithUndecodableFilter_FallsBackToGreyPlaceholder()
+    {
+        // An unsupported /Filter makes StreamFilters.Decode throw (wrapped in PdfException) → the
+        // catch builds a grey placeholder for the whole image.
+        var entries = new Dictionary<string, PdfObject>
+        {
+            ["Type"] = PdfName.Get("XObject"),
+            ["Subtype"] = PdfName.Get("Image"),
+            ["Width"] = new PdfInteger(2),
+            ["Height"] = new PdfInteger(2),
+            ["ColorSpace"] = PdfName.Get("DeviceRGB"),
+            ["BitsPerComponent"] = new PdfInteger(8),
+            ["Filter"] = PdfName.Get("JPXDecode"), // raw bytes are not a valid JP2 codestream
+            ["Length"] = new PdfInteger(3)
+        };
+        var img = PageImageExtractor.GetImageXObjects(
+            PageWithImage(new PdfStream(new PdfDictionary(entries), new byte[] { 1, 2, 3 })),
+            Core()
+        )["Im1"];
+        // Decode failed → grey placeholder (128) for every pixel, image still present at 2×2.
+        img.Width.ShouldBe(2);
+        img.Height.ShouldBe(2);
+        img.RgbData.Length.ShouldBe(2 * 2 * 3);
+        img.RgbData[0].ShouldBe((byte)128);
+    }
+
+    [Fact]
+    public void SoftMaskWithUndecodableFilter_YieldsNoAlpha()
+    {
+        // SMask whose filter throws (PdfException) → ReadSoftMask catch returns null.
+        var maskStream = new PdfStream(
+            new PdfDictionary(
+                new Dictionary<string, PdfObject>
+                {
+                    ["Type"] = PdfName.Get("XObject"),
+                    ["Subtype"] = PdfName.Get("Image"),
+                    ["Width"] = new PdfInteger(1),
+                    ["Height"] = new PdfInteger(1),
+                    ["ColorSpace"] = PdfName.Get("DeviceGray"),
+                    ["BitsPerComponent"] = new PdfInteger(8),
+                    ["Filter"] = PdfName.Get("JPXDecode"),
+                    ["Length"] = new PdfInteger(2)
+                }
+            ),
+            new byte[] { 0xFF, 0x00 }
+        );
+        var entries = new Dictionary<string, PdfObject>
+        {
+            ["Type"] = PdfName.Get("XObject"),
+            ["Subtype"] = PdfName.Get("Image"),
+            ["Width"] = new PdfInteger(1),
+            ["Height"] = new PdfInteger(1),
+            ["ColorSpace"] = PdfName.Get("DeviceGray"),
+            ["BitsPerComponent"] = new PdfInteger(8),
+            ["Length"] = new PdfInteger(1),
+            ["SMask"] = maskStream
+        };
+        var img = PageImageExtractor.GetImageXObjects(
+            PageWithImage(new PdfStream(new PdfDictionary(entries), new byte[] { 200 })),
+            Core()
+        )["Im1"];
+        img.Alpha.ShouldBeNull();
+    }
 }

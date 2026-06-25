@@ -235,20 +235,19 @@ internal static class OpenXmlPresentationParser
         ShapeCollection target
     )
     {
-        foreach (var child in tree.ChildElements)
-        {
-            var shape = child switch
-            {
-                P.Shape sp => ReadAutoShape(sp, null, null, null),
-                P.GraphicFrame gf => gf.Graphic?.GraphicData?.Uri?.Value == DmlNames.GraphicDataTableUri
-                    ? ReadGraphicFrame(gf, null)
-                    : null,
-                P.ConnectionShape cxn => ReadConnector(cxn),
-                _ => null
-            };
-            if (shape is not null)
-                target.AddParsed(shape);
-        }
+        foreach (var shape in tree.ChildElements
+                     .Select(static child => child switch
+                         {
+                             P.Shape sp => ReadAutoShape(sp, null, null, null),
+                             P.GraphicFrame gf => gf.Graphic?.GraphicData?.Uri?.Value == DmlNames.GraphicDataTableUri
+                                 ? ReadGraphicFrame(gf, null)
+                                 : null,
+                             P.ConnectionShape cxn => ReadConnector(cxn),
+                             _ => null
+                         }
+                     )
+                     .Where(static shape => shape is not null))
+            target.AddParsed(shape!);
     }
 
     private static LayoutType MapLayoutType(string? type) => type switch
@@ -375,20 +374,19 @@ internal static class OpenXmlPresentationParser
         Dictionary<string, EmbeddedImage> imageCache
     )
     {
-        foreach (var child in tree.ChildElements)
-        {
-            var shape = child switch
-            {
-                P.Shape sp => ReadAutoShape(sp, slidePart, mediaStore, imageCache),
-                P.Picture pic => ReadPicture(pic, slidePart, mediaStore, imageCache),
-                P.GraphicFrame gf => ReadGraphicFrame(gf, slidePart),
-                P.GroupShape grp => ReadGroup(grp, slidePart, mediaStore, imageCache),
-                P.ConnectionShape cxn => ReadConnector(cxn),
-                _ => null // nvGrpSpPr, grpSpPr, and unknown elements are not shapes
-            };
-            if (shape is not null)
-                target.AddParsed(shape);
-        }
+        foreach (var shape in tree.ChildElements
+                     .Select(child => child switch
+                         {
+                             P.Shape sp => ReadAutoShape(sp, slidePart, mediaStore, imageCache),
+                             P.Picture pic => ReadPicture(pic, slidePart, mediaStore, imageCache),
+                             P.GraphicFrame gf => ReadGraphicFrame(gf, slidePart),
+                             P.GroupShape grp => ReadGroup(grp, slidePart, mediaStore, imageCache),
+                             P.ConnectionShape cxn => ReadConnector(cxn),
+                             _ => null // nvGrpSpPr, grpSpPr, and unknown elements are not shapes
+                         }
+                     )
+                     .Where(static shape => shape is not null))
+            target.AddParsed(shape!);
     }
 
     private static AutoShape ReadAutoShape(

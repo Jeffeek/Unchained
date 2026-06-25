@@ -228,6 +228,7 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
         return shape;
     }
 
+    /// <summary>Adds a chart frame of the given type at the specified position and size, and returns it.</summary>
     /// <param name="type">The visual type of the chart.</param>
     /// <param name="x">Horizontal position of the top-left corner.</param>
     /// <param name="y">Vertical position of the top-left corner.</param>

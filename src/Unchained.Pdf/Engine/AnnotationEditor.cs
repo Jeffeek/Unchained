@@ -56,10 +56,8 @@ public sealed class AnnotationEditor : IAnnotationEditor
         var targetDict = adapter.Core.GetPage(pageNumber);
         var swaps = new Dictionary<int, PdfIndirectObject>();
 
-        foreach (var obj in existing)
+        foreach (var obj in existing.Where(obj => ReferenceEquals(obj.Value, targetDict)))
         {
-            if (!ReferenceEquals(obj.Value, targetDict)) continue;
-
             var pd = (PdfDictionary)obj.Value;
             var existingAnnotations = ResolveAnnotArray(pd[PdfName.Annots], adapter.Core);
             var allAnnotations = existingAnnotations.Append(annotObj.ToReference()).ToArray();

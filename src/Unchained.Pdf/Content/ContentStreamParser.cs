@@ -281,13 +281,11 @@ internal static class ContentStreamParser
                 result.Add(n.Value);
             break;
             case PdfArray arr:
-                foreach (var e in arr.Elements)
-                {
-                    if (e is PdfName en)
-                        result.Add(en.Value);
-                }
+            {
+                result.AddRange(arr.Elements.OfType<PdfName>().Select(static en => en.Value));
 
-            break;
+                break;
+            }
         }
 
         return result;

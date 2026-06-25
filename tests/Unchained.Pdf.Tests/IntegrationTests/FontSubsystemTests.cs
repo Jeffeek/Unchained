@@ -33,9 +33,9 @@ public sealed class FontSubsystemTests : RendererTestBase
         var pdfBytes = PdfFixtures.WithEmbeddedFont(fontData);
         await using var doc = await LoadAsync(pdfBytes, TestContext.Current.CancellationToken);
         var fontBytes = doc.Pages[1].GetEmbeddedFontBytes();
-        fontBytes.ContainsKey("F1").ShouldBeTrue();
-        fontBytes["F1"].ShouldNotBeNull();
-        fontBytes["F1"]!.Length.ShouldBeGreaterThan(0);
+        fontBytes.TryGetValue("F1", out var f1Bytes).ShouldBeTrue();
+        f1Bytes.ShouldNotBeNull();
+        f1Bytes.Length.ShouldBeGreaterThan(0);
     }
 
     [Fact]
@@ -393,6 +393,91 @@ public sealed class FontUtilitiesTests : PdfTestBase
         );
     }
 
+    [Fact]
+    public async Task SubsetFontsAsync_RawFontFile2_CollectsGlyphsAndSubsets()
+    {
+        // A doc whose FontFile2 is an UNFILTERED stream of real DejaVu bytes, referenced by /F1 and
+        // shown via Tj and a TJ array. This drives CollectUsedGlyphs' operator walk (Tf/Tj/TJ arms)
+        // and the simple-font glyph collection, and lets TrueTypeSubsetter actually shrink the font.
+        var font = FontSubsystemTests.LoadBundledDejaVuBytesPublic();
+        var pdf = BuildDocWithRawFontFile2(font, "BT /F1 12 Tf 50 700 Td (Hello) Tj [(Wo) -10 (rld)] TJ ET");
+
+        await using var doc = await LoadAsync(pdf, TestContext.Current.CancellationToken);
+
+        await Should.NotThrowAsync(() => Processor.SubsetFontsAsync(doc, TestContext.Current.CancellationToken));
+
+        // The document must still round-trip after the subset pass (which walks Tf/Tj/TJ operators
+        // and collects glyphs from the raw embedded font).
+        using var after = new MemoryStream();
+        await Processor.SaveAsync(doc, after, ct: TestContext.Current.CancellationToken);
+        after.Length.ShouldBeGreaterThan(0);
+        await using var reloaded = await LoadAsync(after.ToArray(), TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
+    }
+
+    // Builds a single-page PDF with an UNFILTERED (raw binary) /FontFile2 stream so the subsetter
+    // can parse and shrink it. Objects: 1 Catalog, 2 Pages, 3 Page, 4 content, 5 Font, 6 Descriptor,
+    // 7 FontFile2 (raw). Assembled via MemoryStream because the font bytes are binary.
+    private static byte[] BuildDocWithRawFontFile2(byte[] fontBytes, string content)
+    {
+        var cs = System.Text.Encoding.Latin1.GetBytes(content);
+        using var ms = new MemoryStream();
+        var offsets = new long[8];
+
+        PdfFixtures.Line(ms, "%PDF-1.7");
+        PdfFixtures.Line(ms, "%\xE2\xE3\xCF\xD3");
+        offsets[1] = ms.Position;
+        PdfFixtures.Line(ms, "1 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Catalog /Pages 2 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
+        offsets[2] = ms.Position;
+        PdfFixtures.Line(ms, "2 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        PdfFixtures.Line(ms, "endobj");
+        offsets[3] = ms.Position;
+        PdfFixtures.Line(ms, "3 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R");
+        PdfFixtures.Line(ms, "   /Resources << /Font << /F1 5 0 R >> >> >>");
+        PdfFixtures.Line(ms, "endobj");
+        offsets[4] = ms.Position;
+        PdfFixtures.Line(ms, "4 0 obj");
+        PdfFixtures.Line(ms, $"<< /Length {cs.Length} >>");
+        PdfFixtures.Line(ms, "stream");
+        ms.Write(cs);
+        PdfFixtures.Line(ms, "");
+        PdfFixtures.Line(ms, "endstream");
+        PdfFixtures.Line(ms, "endobj");
+        offsets[5] = ms.Position;
+        PdfFixtures.Line(ms, "5 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /Font /Subtype /TrueType /BaseFont /DejaVuSans /FontDescriptor 6 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
+        offsets[6] = ms.Position;
+        PdfFixtures.Line(ms, "6 0 obj");
+        PdfFixtures.Line(ms, "<< /Type /FontDescriptor /FontName /DejaVuSans /Flags 32 /FontFile2 7 0 R >>");
+        PdfFixtures.Line(ms, "endobj");
+        offsets[7] = ms.Position;
+        PdfFixtures.Line(ms, "7 0 obj");
+        PdfFixtures.Line(ms, $"<< /Length {fontBytes.Length} /Length1 {fontBytes.Length} >>");
+        PdfFixtures.Line(ms, "stream");
+        ms.Write(fontBytes);
+        PdfFixtures.Line(ms, "");
+        PdfFixtures.Line(ms, "endstream");
+        PdfFixtures.Line(ms, "endobj");
+
+        var xref = ms.Position;
+        PdfFixtures.Line(ms, "xref");
+        PdfFixtures.Line(ms, "0 8");
+        PdfFixtures.Line(ms, "0000000000 65535 f ");
+        for (var i = 1; i <= 7; i++)
+            PdfFixtures.Line(ms, $"{offsets[i]:D10} 00000 n ");
+        PdfFixtures.Line(ms, "trailer");
+        PdfFixtures.Line(ms, "<< /Size 8 /Root 1 0 R >>");
+        PdfFixtures.Line(ms, "startxref");
+        PdfFixtures.Line(ms, xref.ToString());
+        PdfFixtures.Line(ms, "%%EOF");
+        return ms.ToArray();
+    }
+
     // ── TrueTypeSubsetter unit tests ─────────────────────────────────────────────
 
     [Fact]
@@ -437,5 +522,26 @@ public sealed class FontUtilitiesTests : PdfTestBase
             original.Length,
             "subset of 26 glyphs should be much smaller than full font"
         );
+    }
+
+    [Fact]
+    public void TrueTypeSubsetter_ShortFont_ReturnsOriginal()
+    {
+        // Fewer than 12 bytes → the early guard returns the input unchanged.
+        var tiny = new byte[] { 0x00, 0x01, 0x02 };
+        TrueTypeSubsetter.Subset(tiny, new HashSet<int> { 1 }).ShouldBeSameAs(tiny);
+    }
+
+    [Fact]
+    public void TrueTypeSubsetter_CorruptFont_ReturnsOriginal()
+    {
+        // 16+ bytes with a plausible header but garbage table directory → SubsetCore throws,
+        // the catch returns the original bytes intact.
+        var corrupt = new byte[64];
+        corrupt[0] = 0x00;
+        corrupt[1] = 0x01;
+        corrupt[4] = 0x00;
+        corrupt[5] = 0x05; // claims 5 tables that do not exist
+        TrueTypeSubsetter.Subset(corrupt, new HashSet<int> { 1, 2, 3 }).ShouldBeSameAs(corrupt);
     }
 }

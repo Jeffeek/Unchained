@@ -277,7 +277,7 @@ internal static class MeshShadingDecoder
 
             // For a fresh patch (flag 0) the first 4 control points are the corner curve
             // starts at indices 0, 3, 6, 9 (Coons/tensor share this corner ordering).
-            if (flag == 0 && newPoints >= 10 && newColors == 4)
+            if (flag == 0 && newPoints >= 10)
             {
                 var c0 = pts[0];
                 var c1 = pts[3];

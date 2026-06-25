@@ -197,4 +197,28 @@ public sealed class TableGeneratorTests : PdfTestBase
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => Generator.AppendTableAsync(doc, data, TableStyle.Default, cts.Token));
     }
+
+    [Fact]
+    public async Task AppendTableAsync_TaggedTableToExistingPages_InjectsStructureTree()
+    {
+        // Appending a Tagged table to a multi-page document exercises the catalog tagging-injection
+        // branch that combines existing page refs with the new ones into the parent tree.
+        await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
+        var simple = PdfFixtures.SimpleTableData(3);
+        var tagged = new TableData
+        {
+            Headers = simple.Headers,
+            Rows = simple.Rows,
+            Tagged = true,
+            Language = "en-US"
+        };
+
+        await Generator.AppendTableAsync(doc, tagged, TableStyle.Default, TestContext.Current.CancellationToken);
+
+        await using var ms = new MemoryStream();
+        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        var text = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        text.ShouldContain("/StructTreeRoot");
+        text.ShouldContain("/MarkInfo");
+    }
 }
