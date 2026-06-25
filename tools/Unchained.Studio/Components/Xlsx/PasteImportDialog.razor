@@ -1,0 +1,93 @@
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:480px; max-width:600px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.ContentPaste" Class="mr-2" Style="vertical-align:middle;"/>
+            Paste / Bulk Import
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.body2" Style="opacity:.7;">
+                Paste rows of data (copied from Excel or a CSV). Values are type-inferred (numbers, TRUE/FALSE, <code>=formulas</code>).
+            </MudText>
+            <div class="d-flex gap-2">
+                <MudTextField @bind-Value="_target" Label="Top-left cell" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width:140px;"/>
+                <MudSelect T="char" @bind-Value="_delimiter" Label="Delimiter" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="@('\t')">Tab</MudSelectItem>
+                    <MudSelectItem Value="@(',')">Comma</MudSelectItem>
+                    <MudSelectItem Value="@(';')">Semicolon</MudSelectItem>
+                </MudSelect>
+            </div>
+            <MudTextField @bind-Value="_text" Label="Pasted data" Variant="Variant.Outlined" Lines="10"
+                          HelperText="One row per line; cells separated by the chosen delimiter."/>
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Import" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Done">
+            Import
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public string InitialTarget { get; set; } = "A1";
+
+    [Parameter]
+    public EventCallback OnImported { get; set; }
+
+    private string _target = "A1";
+    private char _delimiter = '\t';
+    private string _text = string.Empty;
+    private string? _error;
+
+    protected override void OnInitialized() => _target = InitialTarget;
+
+    private async Task Import()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_text))
+        {
+            _error = "Nothing to import.";
+            return;
+        }
+
+        try
+        {
+            var origin = CellReference.FromA1(_target);
+            var lines = _text.Replace("\r\n", "\n").Split('\n', StringSplitOptions.None);
+
+            // Trim a single trailing empty line (common when pasting).
+            var rows = lines
+                .Where((line, i) => !(i == lines.Length - 1 && line.Length == 0))
+                .Select(line => line.Split(_delimiter).Cast<object?>());
+
+            Sheet.ImportRows(rows, origin.Row, origin.Column);
+            await OnImported.InvokeAsync();
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,617 @@
+@using System.Globalization
+@using System.Text
+@using Unchained.Xlsx.Cell
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Models.Drawings
+@using Unchained.Xlsx.Models.Styles
+@using Unchained.Xlsx.Styles
+@using Unchained.Xlsx.Worksheets
+@using HorizontalAlignment = Unchained.Xlsx.Models.Styles.HorizontalAlignment
+
+<div class="sheet-grid-wrapper">
+    <div class="sheet-grid-toolbar">
+        <MudText Typo="Typo.subtitle2" Class="mr-2">@Sheet.Name</MudText>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@SelectionLabel</MudChip>
+        <MudSpacer/>
+        <MudTooltip Text="Add display row">
+            <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" OnClick="AddRow"/>
+        </MudTooltip>
+        <MudTooltip Text="Add display column">
+            <MudIconButton Icon="@Icons.Material.Outlined.AddBox" Size="Size.Small" OnClick="AddColumn"/>
+        </MudTooltip>
+        <MudTooltip Text="Clear selection">
+            <MudIconButton Icon="@Icons.Material.Outlined.Backspace" Size="Size.Small" OnClick="ClearSelection"/>
+        </MudTooltip>
+    </div>
+
+    <div class="sheet-grid-scroll" @onmouseup="EndDrag" @onmouseleave="EndDrag" @onmousemove="OnGridMouseMove">
+        <table class="sheet-grid">
+            <thead>
+                <tr>
+                    <th class="sg-corner" @onclick="SelectAll"></th>
+                    @for (var c = 1; c <= _cols; c++)
+                    {
+                        var col = c;
+                        <th class="sg-col-head" style="@ColumnHeadStyle(col)" @onclick="() => SelectColumn(col)">
+                            <span>@CellReference.ColumnNumberToLetters(col)</span>
+                            <span class="sg-col-resize" @onmousedown:stopPropagation="true"
+                                  @onmousedown="(e) => StartColResize(col, e)"></span>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @for (var r = 1; r <= _rows; r++)
+                {
+                    var row = r;
+                    <tr style="@RowStyle(row)">
+                        <th class="sg-row-head" @onclick="() => SelectRow(row)">
+                            <span>@row</span>
+                            <span class="sg-row-resize" @onmousedown:stopPropagation="true"
+                                  @onmousedown="(e) => StartRowResize(row, e)"></span>
+                        </th>
+                        @for (var c = 1; c <= _cols; c++)
+                        {
+                            var col = c;
+                            var isEditing = _editRow == row && _editCol == col;
+                            <td class="@CellClass(row, col)" style="@CellStyle(row, col)"
+                                @onmousedown="(e) => OnCellMouseDown(row, col, e)"
+                                @onmouseover="() => OnCellMouseOver(row, col)"
+                                @ondblclick="() => BeginEdit(row, col)">
+                                @if (isEditing)
+                                {
+                                    <input class="sg-input"
+                                           value="@_editValue"
+                                           @ref="_editInput"
+                                           @oninput="CommitEditEvent"
+                                           @onblur="CommitEdit"
+                                           @onkeydown="OnEditKeyDown"/>
+                                }
+                                else
+                                {
+                                    @DisplayValue(row, col)
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @* Drawing overlay: images and charts float above the cell grid. *@
+        @foreach (var drawing in Sheet.Drawings)
+        {
+            var box = DrawingBox(drawing);
+            <div class="sg-drawing" style="@box">
+                @switch (drawing)
+                {
+                    case Unchained.Xlsx.Drawings.PictureDrawing pic:
+                        <img class="sg-drawing-img" src="@ImageDataUri(pic)" alt="@pic.Name"/>
+                        break;
+                    case Unchained.Xlsx.Drawings.ChartDrawing chart:
+                        <div class="sg-drawing-chart">
+                            <MudIcon Icon="@Icons.Material.Outlined.BarChart" Size="Size.Small"/>
+                            <span>@(string.IsNullOrEmpty(chart.Chart.Title) ? $"{chart.Chart.Type} chart" : chart.Chart.Title)</span>
+                        </div>
+                        break;
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    /// <summary>Raised when the active (anchor) cell changes; <see langword="null" /> when empty.</summary>
+    [Parameter]
+    public EventCallback<Cell?> CellSelected { get; set; }
+
+    /// <summary>Raised when the selected range changes (single cell = 1×1 range).</summary>
+    [Parameter]
+    public EventCallback<CellRange> SelectionChanged { get; set; }
+
+    /// <summary>Raised whenever an edit mutates the document so the host can flag it dirty.</summary>
+    [Parameter]
+    public EventCallback OnEdited { get; set; }
+
+    private const int MinRows = 30;
+    private const int MinCols = 12;
+    private const int PadRows = 8;
+    private const int PadCols = 4;
+
+    // Default Excel dimensions for rendering (8.43 chars ≈ 64px, 15pt ≈ 20px).
+    private const double DefaultColWidthChars = 8.43;
+    private const double PixelsPerChar = 7.0;
+    private const double ColWidthPadding = 5.0;
+    private const double DefaultRowHeightPoints = 15.0;
+    private const double PixelsPerPoint = 96.0 / 72.0;
+
+    private int _rows = MinRows;
+    private int _cols = MinCols;
+
+    // Selection: anchor (where selection started) + active (cursor). The rectangle between them is selected.
+    private int _anchorRow = 1;
+    private int _anchorCol = 1;
+    private int _activeRow = 1;
+    private int _activeCol = 1;
+    private bool _dragging;
+
+    private int _editRow = -1;
+    private int _editCol = -1;
+    private string _editValue = string.Empty;
+    private ElementReference _editInput;
+    private bool _focusPending;
+
+    // Resize drag state.
+    private int _resizeCol = -1;
+    private int _resizeRow = -1;
+    private double _resizeStartClient;
+    private double _resizeStartSize;
+
+    /// <summary>The currently-selected range (normalised).</summary>
+    public CellRange Selection =>
+        new(new CellReference(_anchorRow, _anchorCol), new CellReference(_activeRow, _activeCol));
+
+    private string SelectionLabel =>
+        _anchorRow == _activeRow && _anchorCol == _activeCol
+            ? new CellReference(_activeRow, _activeCol).ToA1()
+            : Selection.ToA1();
+
+    protected override void OnParametersSet() => RecalculateDimensions();
+
+    private void RecalculateDimensions()
+    {
+        var used = Sheet.GetUsedRange();
+        var usedRows = used?.BottomRight.Row ?? 0;
+        var usedCols = used?.BottomRight.Column ?? 0;
+        _rows = Math.Max(_rows, Math.Max(MinRows, usedRows + PadRows));
+        _cols = Math.Max(_cols, Math.Max(MinCols, usedCols + PadCols));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusPending)
+            return;
+
+        _focusPending = false;
+        try { await _editInput.FocusAsync(); }
+        catch { /* element may have been replaced — ignore */ }
+    }
+
+    // ── Display ──────────────────────────────────────────────────────────────
+
+    private string DisplayValue(int row, int col)
+    {
+        var cell = Sheet.GetCell(row, col);
+        return cell is null ? string.Empty : cell.GetFormattedString();
+    }
+
+    private string CellClass(int row, int col)
+    {
+        var cell = Sheet.GetCell(row, col);
+        var kind = cell?.CellType switch
+        {
+            CellType.Number => "sg-num",
+            CellType.Boolean => "sg-bool",
+            CellType.Error => "sg-err",
+            CellType.Formula => "sg-formula",
+            _ => string.Empty
+        };
+
+        var selected = InSelection(row, col);
+        var active = row == _activeRow && col == _activeCol;
+        var merged = cell?.IsMerged == true;
+        return $"sg-cell {kind} {(selected ? "sg-selected" : string.Empty)} {(active ? "sg-active" : string.Empty)} {(merged ? "sg-merged" : string.Empty)}"
+            .Replace("  ", " ").Trim();
+    }
+
+    /// <summary>Builds the inline CSS for a cell from its effective style (font/fill/alignment/border).</summary>
+    private string CellStyle(int row, int col)
+    {
+        var cell = Sheet.GetCell(row, col);
+        var sb = new StringBuilder();
+
+        if (cell is { StyleIndex: > 0 })
+        {
+            var styles = Sheet.Document.Styles;
+            var index = cell.StyleIndex;
+            var font = styles.GetFont(index);
+            var fill = styles.GetFill(index);
+            var border = styles.GetBorder(index);
+            var align = cell.GetEffectiveStyle().Alignment;
+
+            if (font.Bold) sb.Append("font-weight:bold;");
+            if (font.Italic) sb.Append("font-style:italic;");
+            if (font.Underline != FontUnderline.None || font.Strikethrough)
+            {
+                var deco = new List<string>(2);
+                if (font.Underline != FontUnderline.None) deco.Add("underline");
+                if (font.Strikethrough) deco.Add("line-through");
+                sb.Append("text-decoration:").Append(string.Join(' ', deco)).Append(';');
+            }
+
+            if (font.Color is { } fc) sb.Append("color:").Append(XlsxColor.ToHex(fc)).Append(';');
+            // SizePoints differs from the 11pt default → scale the cell font.
+            if (Math.Abs(font.SizePoints - 11.0) > 0.01) sb.Append("font-size:").Append((font.SizePoints / 11.0 * 0.8).ToString("0.##", CultureInfo.InvariantCulture)).Append("rem;");
+
+            if (fill.PatternType == FillPattern.Solid && fill.ForegroundColor is { } bg)
+                sb.Append("background-color:").Append(XlsxColor.ToHex(bg)).Append(';');
+
+            AppendAlignment(sb, align, cell.CellType);
+            AppendBorders(sb, border);
+        }
+
+        // Respect column width (px) when set.
+        return sb.ToString();
+    }
+
+    private static void AppendAlignment(StringBuilder sb, CellAlignment align, CellType type)
+    {
+        var horizontal = align.Horizontal switch
+        {
+            HorizontalAlignment.Left => "left",
+            HorizontalAlignment.Center or HorizontalAlignment.CenterAcrossSelection => "center",
+            HorizontalAlignment.Right => "right",
+            HorizontalAlignment.Justify or HorizontalAlignment.Distributed => "justify",
+            _ => null
+        };
+        if (horizontal != null) sb.Append("text-align:").Append(horizontal).Append(';');
+
+        var vertical = align.Vertical switch
+        {
+            VerticalAlignment.Top => "top",
+            VerticalAlignment.Center => "middle",
+            VerticalAlignment.Bottom => "bottom",
+            _ => null
+        };
+        if (vertical != null) sb.Append("vertical-align:").Append(vertical).Append(';');
+
+        if (align.WrapText) sb.Append("white-space:normal;");
+    }
+
+    private static void AppendBorders(StringBuilder sb, CellBorder border)
+    {
+        AppendEdge(sb, "border-left", border.Left);
+        AppendEdge(sb, "border-right", border.Right);
+        AppendEdge(sb, "border-top", border.Top);
+        AppendEdge(sb, "border-bottom", border.Bottom);
+    }
+
+    private static void AppendEdge(StringBuilder sb, string prop, BorderLine line)
+    {
+        if (line.Style == BorderStyle.None)
+            return;
+
+        var width = line.Style switch
+        {
+            BorderStyle.Thick or BorderStyle.Double => "3px",
+            BorderStyle.Medium or BorderStyle.MediumDashed or BorderStyle.MediumDashDot => "2px",
+            _ => "1px"
+        };
+        var css = line.Style switch
+        {
+            BorderStyle.Dashed or BorderStyle.MediumDashed or BorderStyle.DashDot or BorderStyle.DashDotDot => "dashed",
+            BorderStyle.Dotted or BorderStyle.Hair => "dotted",
+            BorderStyle.Double => "double",
+            _ => "solid"
+        };
+        var color = line.Color is { } c ? XlsxColor.ToHex(c) : "#000";
+        sb.Append(prop).Append(':').Append(width).Append(' ').Append(css).Append(' ').Append(color).Append(';');
+    }
+
+    private string ColumnHeadStyle(int col)
+    {
+        var width = Sheet.GetColumn(col)?.Width;
+        var px = (width ?? DefaultColWidthChars) * PixelsPerChar + ColWidthPadding;
+        return $"width:{px.ToString("0", CultureInfo.InvariantCulture)}px;min-width:{px.ToString("0", CultureInfo.InvariantCulture)}px;";
+    }
+
+    private string RowStyle(int row)
+    {
+        var height = Sheet.GetRow(row)?.Height;
+        var px = (height ?? DefaultRowHeightPoints) * PixelsPerPoint;
+        return $"height:{px.ToString("0", CultureInfo.InvariantCulture)}px;";
+    }
+
+    // ── Drawing overlay ─────────────────────────────────────────────────────────
+
+    private const double RowHeaderWidthPx = 44.0;
+    private const double EmusPerPixel = 9525.0; // 914400 EMU per inch / 96 dpi
+
+    private double ColumnWidthPx(int col) =>
+        (Sheet.GetColumn(col)?.Width ?? DefaultColWidthChars) * PixelsPerChar + ColWidthPadding;
+
+    private double RowHeightPx(int row) =>
+        (Sheet.GetRow(row)?.Height ?? DefaultRowHeightPoints) * PixelsPerPoint;
+
+    /// <summary>Left/top pixel offset of a cell's top-left corner within the scroll area.</summary>
+    private (double Left, double Top) CellOrigin(int row, int col)
+    {
+        var left = RowHeaderWidthPx;
+        for (var c = 1; c < col; c++) left += ColumnWidthPx(c);
+        var top = ColHeaderHeightPx;
+        for (var r = 1; r < row; r++) top += RowHeightPx(r);
+        return (left, top);
+    }
+
+    private const double ColHeaderHeightPx = 24.0;
+
+    /// <summary>Computes the absolute CSS box for a drawing from its anchor.</summary>
+    private string DrawingBox(Unchained.Xlsx.Drawings.WorksheetDrawing drawing)
+    {
+        var anchor = drawing.Anchor;
+        var (left, top) = CellOrigin(anchor.From.Row, anchor.From.Column);
+        left += anchor.FromOffsetX.Value / EmusPerPixel;
+        top += anchor.FromOffsetY.Value / EmusPerPixel;
+
+        double width, height;
+        if (anchor.AnchorType == DrawingAnchorType.TwoCell)
+        {
+            var (toLeft, toTop) = CellOrigin(anchor.To.Row, anchor.To.Column);
+            toLeft += anchor.ToOffsetX.Value / EmusPerPixel;
+            toTop += anchor.ToOffsetY.Value / EmusPerPixel;
+            width = Math.Max(20, toLeft - left);
+            height = Math.Max(20, toTop - top);
+        }
+        else
+        {
+            width = anchor.Width.Value / EmusPerPixel;
+            height = anchor.Height.Value / EmusPerPixel;
+        }
+
+        return string.Create(CultureInfo.InvariantCulture,
+            $"left:{left:0}px;top:{top:0}px;width:{width:0}px;height:{height:0}px;");
+    }
+
+    private static string ImageDataUri(Unchained.Xlsx.Drawings.PictureDrawing pic) =>
+        $"data:{pic.Image.ContentType};base64,{Convert.ToBase64String(pic.Image.Data.Span)}";
+
+    private bool InSelection(int row, int col)
+    {
+        var top = Math.Min(_anchorRow, _activeRow);
+        var bottom = Math.Max(_anchorRow, _activeRow);
+        var left = Math.Min(_anchorCol, _activeCol);
+        var right = Math.Max(_anchorCol, _activeCol);
+        return row >= top && row <= bottom && col >= left && col <= right;
+    }
+
+    // ── Selection (click, shift-click, drag) ────────────────────────────────────
+
+    private async Task OnCellMouseDown(int row, int col, MouseEventArgs e)
+    {
+        if (_editRow != -1)
+            await CommitEdit();
+
+        _activeRow = row;
+        _activeCol = col;
+        if (!e.ShiftKey)
+        {
+            _anchorRow = row;
+            _anchorCol = col;
+        }
+
+        _dragging = true;
+        await RaiseSelection();
+    }
+
+    private async Task OnCellMouseOver(int row, int col)
+    {
+        if (!_dragging)
+            return;
+        if (row == _activeRow && col == _activeCol)
+            return;
+
+        _activeRow = row;
+        _activeCol = col;
+        await RaiseSelection();
+    }
+
+    private async Task EndDrag()
+    {
+        if (_resizeCol != -1 || _resizeRow != -1)
+        {
+            await FinishResize();
+            return;
+        }
+
+        _dragging = false;
+    }
+
+    private Task SelectRow(int row)
+    {
+        _anchorRow = row;
+        _activeRow = row;
+        _anchorCol = 1;
+        _activeCol = _cols;
+        return RaiseSelection();
+    }
+
+    private Task SelectColumn(int col)
+    {
+        _anchorCol = col;
+        _activeCol = col;
+        _anchorRow = 1;
+        _activeRow = _rows;
+        return RaiseSelection();
+    }
+
+    private Task SelectAll()
+    {
+        _anchorRow = 1;
+        _anchorCol = 1;
+        _activeRow = _rows;
+        _activeCol = _cols;
+        return RaiseSelection();
+    }
+
+    private async Task RaiseSelection()
+    {
+        await CellSelected.InvokeAsync(Sheet.GetCell(_activeRow, _activeCol));
+        await SelectionChanged.InvokeAsync(Selection);
+    }
+
+    private async Task ClearSelection()
+    {
+        Sheet.ClearRange(Selection);
+        await OnEdited.InvokeAsync();
+        await CellSelected.InvokeAsync(null);
+    }
+
+    // ── Column / row resize ──────────────────────────────────────────────────
+
+    private void StartColResize(int col, MouseEventArgs e)
+    {
+        _resizeCol = col;
+        _resizeStartClient = e.ClientX;
+        _resizeStartSize = Sheet.GetColumn(col)?.Width ?? DefaultColWidthChars;
+        _dragging = false;
+    }
+
+    private void StartRowResize(int row, MouseEventArgs e)
+    {
+        _resizeRow = row;
+        _resizeStartClient = e.ClientY;
+        _resizeStartSize = Sheet.GetRow(row)?.Height ?? DefaultRowHeightPoints;
+        _dragging = false;
+    }
+
+    private async Task FinishResize()
+    {
+        // The final size is applied on the move handler; here we just clear state and persist.
+        _resizeCol = -1;
+        _resizeRow = -1;
+        await OnEdited.InvokeAsync();
+    }
+
+    // Wired from the scroll container's mousemove via OnGridMouseMove.
+    private async Task OnGridMouseMove(MouseEventArgs e)
+    {
+        if (_resizeCol != -1)
+        {
+            var deltaChars = (e.ClientX - _resizeStartClient) / PixelsPerChar;
+            var newWidth = Math.Max(0, _resizeStartSize + deltaChars);
+            Sheet.SetColumnWidth(_resizeCol, Math.Round(newWidth, 2));
+            StateHasChanged();
+        }
+        else if (_resizeRow != -1)
+        {
+            var deltaPoints = (e.ClientY - _resizeStartClient) / PixelsPerPoint;
+            var newHeight = Math.Max(1, _resizeStartSize + deltaPoints);
+            Sheet.SetRowHeight(_resizeRow, Math.Round(newHeight, 1));
+            StateHasChanged();
+        }
+    }
+
+    // ── Editing ──────────────────────────────────────────────────────────────
+
+    private void BeginEdit(int row, int col)
+    {
+        _anchorRow = _activeRow = row;
+        _anchorCol = _activeCol = col;
+        _editRow = row;
+        _editCol = col;
+        _dragging = false;
+
+        var cell = Sheet.GetCell(row, col);
+        _editValue = cell switch
+        {
+            null => string.Empty,
+            { FormulaText: { } f } => f,
+            _ => cell.CellType switch
+            {
+                CellType.Number => cell.GetDouble()?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                CellType.Boolean => cell.GetBoolean() == true ? "TRUE" : "FALSE",
+                _ => cell.GetString() ?? cell.GetFormattedString()
+            }
+        };
+
+        _focusPending = true;
+    }
+
+    private void CommitEditEvent(ChangeEventArgs e) => _editValue = e.Value?.ToString() ?? string.Empty;
+
+    private async Task CommitEdit()
+    {
+        if (_editRow == -1)
+            return;
+
+        var row = _editRow;
+        var col = _editCol;
+        _editRow = -1;
+        _editCol = -1;
+
+        ApplyEdit(row, col, _editValue);
+        RecalculateDimensions();
+
+        await OnEdited.InvokeAsync();
+        await CellSelected.InvokeAsync(Sheet.GetCell(row, col));
+    }
+
+    private async Task OnEditKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await CommitEdit();
+                if (_activeRow < _rows) { _activeRow++; _anchorRow = _activeRow; _anchorCol = _activeCol; }
+            break;
+            case "Escape":
+                _editRow = -1;
+                _editCol = -1;
+            break;
+            case "Tab":
+                await CommitEdit();
+                if (_activeCol < _cols) { _activeCol++; _anchorRow = _activeRow; _anchorCol = _activeCol; }
+            break;
+        }
+    }
+
+    /// <summary>Applies a raw text edit to a cell with type inference.</summary>
+    private void ApplyEdit(int row, int col, string raw)
+    {
+        if (string.IsNullOrEmpty(raw))
+        {
+            Sheet.ClearCell(row, col);
+            return;
+        }
+
+        if (raw.StartsWith('='))
+        {
+            Sheet.SetFormula(row, col, raw);
+            return;
+        }
+
+        if (bool.TryParse(raw, out var b))
+        {
+            Sheet.SetValue(row, col, b);
+            return;
+        }
+
+        // Avoid coercing zero-padded identifiers ("007") into numbers.
+        var looksNumeric = !(raw.Length > 1 && raw[0] == '0' && raw[1] != '.');
+        if (looksNumeric &&
+            double.TryParse(raw, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var d))
+        {
+            Sheet.SetValue(row, col, d);
+            return;
+        }
+
+        Sheet.SetValue(row, col, raw);
+    }
+
+    // ── Display dimensions ─────────────────────────────────────────────────────
+
+    private void AddRow() => _rows++;
+    private void AddColumn() => _cols++;
+
+    /// <summary>Re-reads cell content + forces a redraw (called by the host after external mutations).</summary>
+    public void Invalidate()
+    {
+        RecalculateDimensions();
+        StateHasChanged();
+    }
+
+}

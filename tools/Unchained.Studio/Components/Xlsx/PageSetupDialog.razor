@@ -1,0 +1,150 @@
+@using Unchained.Xlsx.Models.PageSetup
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:520px; max-width:620px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Print" Class="mr-2" Style="vertical-align:middle;"/>
+            Page Setup — @Sheet.Name
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true">
+            <MudTabPanel Text="Page" Icon="@Icons.Material.Outlined.Description">
+                <MudStack Spacing="2">
+                    <MudSelect T="PageOrientation" @bind-Value="_orientation" Label="Orientation" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var o in Enum.GetValues<PageOrientation>())
+                        {
+                            <MudSelectItem Value="o">@o</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudNumericField @bind-Value="_paperSize" Label="Paper size code (9 = A4, 1 = Letter)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+                    <MudNumericField @bind-Value="_scale" Label="Scale (% — 0 to use fit-to-pages)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" Max="400"/>
+                    <div class="d-flex gap-2">
+                        <MudNumericField @bind-Value="_fitWidth" Label="Fit to pages wide" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+                        <MudNumericField @bind-Value="_fitHeight" Label="Fit to pages tall" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+                    </div>
+                    <div class="d-flex flex-wrap gap-4">
+                        <MudCheckBox @bind-Value="_centerH" Dense="true">Centre horizontally</MudCheckBox>
+                        <MudCheckBox @bind-Value="_centerV" Dense="true">Centre vertically</MudCheckBox>
+                        <MudCheckBox @bind-Value="_bw" Dense="true">Black &amp; white</MudCheckBox>
+                        <MudCheckBox @bind-Value="_draft" Dense="true">Draft</MudCheckBox>
+                    </div>
+                    <MudSelect T="PrintOrder" @bind-Value="_printOrder" Label="Page order" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var p in Enum.GetValues<PrintOrder>())
+                        {
+                            <MudSelectItem Value="p">@p</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Margins" Icon="@Icons.Material.Outlined.BorderOuter">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.caption" Style="opacity:.6;">All values in inches.</MudText>
+                    <div class="d-flex gap-2">
+                        <MudNumericField @bind-Value="_mTop" Label="Top" Variant="Variant.Outlined" Margin="Margin.Dense" Format="0.##"/>
+                        <MudNumericField @bind-Value="_mBottom" Label="Bottom" Variant="Variant.Outlined" Margin="Margin.Dense" Format="0.##"/>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <MudNumericField @bind-Value="_mLeft" Label="Left" Variant="Variant.Outlined" Margin="Margin.Dense" Format="0.##"/>
+                        <MudNumericField @bind-Value="_mRight" Label="Right" Variant="Variant.Outlined" Margin="Margin.Dense" Format="0.##"/>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <MudNumericField @bind-Value="_mHeader" Label="Header" Variant="Variant.Outlined" Margin="Margin.Dense" Format="0.##"/>
+                        <MudNumericField @bind-Value="_mFooter" Label="Footer" Variant="Variant.Outlined" Margin="Margin.Dense" Format="0.##"/>
+                    </div>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Header/Footer" Icon="@Icons.Material.Outlined.Title">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.caption" Style="opacity:.6;">
+                        Excel codes: &amp;L left · &amp;C centre · &amp;R right · &amp;P page · &amp;N total · &amp;D date · &amp;A sheet · &amp;F file
+                    </MudText>
+                    <MudTextField @bind-Value="_oddHeader" Label="Header" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="e.g. &amp;CQuarterly Report"/>
+                    <MudTextField @bind-Value="_oddFooter" Label="Footer" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="e.g. &amp;CPage &amp;P of &amp;N"/>
+                </MudStack>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Check">Apply</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnApplied { get; set; }
+
+    private PageOrientation _orientation;
+    private int _paperSize;
+    private int _scale;
+    private int _fitWidth;
+    private int _fitHeight;
+    private bool _centerH, _centerV, _bw, _draft;
+    private PrintOrder _printOrder;
+
+    private double _mTop, _mBottom, _mLeft, _mRight, _mHeader, _mFooter;
+    private string _oddHeader = string.Empty;
+    private string _oddFooter = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        var ps = Sheet.PageSetup;
+        _orientation = ps.Orientation;
+        _paperSize = ps.PaperSize;
+        _scale = ps.Scale;
+        _fitWidth = ps.FitToWidth;
+        _fitHeight = ps.FitToHeight;
+        _centerH = ps.CenterHorizontally;
+        _centerV = ps.CenterVertically;
+        _bw = ps.BlackAndWhite;
+        _draft = ps.Draft;
+        _printOrder = ps.PrintOrder;
+
+        var m = Sheet.PageMargins;
+        _mTop = m.Top; _mBottom = m.Bottom; _mLeft = m.Left; _mRight = m.Right; _mHeader = m.Header; _mFooter = m.Footer;
+
+        var hf = Sheet.HeaderFooter;
+        _oddHeader = hf.OddHeader ?? string.Empty;
+        _oddFooter = hf.OddFooter ?? string.Empty;
+    }
+
+    private async Task Apply()
+    {
+        var ps = Sheet.PageSetup;
+        ps.Orientation = _orientation;
+        ps.PaperSize = _paperSize;
+        ps.Scale = _scale;
+        ps.FitToWidth = _fitWidth;
+        ps.FitToHeight = _fitHeight;
+        ps.CenterHorizontally = _centerH;
+        ps.CenterVertically = _centerV;
+        ps.BlackAndWhite = _bw;
+        ps.Draft = _draft;
+        ps.PrintOrder = _printOrder;
+
+        var m = Sheet.PageMargins;
+        m.Top = _mTop; m.Bottom = _mBottom; m.Left = _mLeft; m.Right = _mRight; m.Header = _mHeader; m.Footer = _mFooter;
+
+        var hf = Sheet.HeaderFooter;
+        hf.OddHeader = string.IsNullOrWhiteSpace(_oddHeader) ? null : _oddHeader;
+        hf.OddFooter = string.IsNullOrWhiteSpace(_oddFooter) ? null : _oddFooter;
+
+        await OnApplied.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,281 @@
+@using Unchained.Xlsx.Cell
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Models.Styles
+@using Unchained.Xlsx.Styles
+@using Unchained.Xlsx.Worksheets
+@using HorizontalAlignment = Unchained.Xlsx.Models.Styles.HorizontalAlignment
+@using VerticalAlignment = Unchained.Xlsx.Models.Styles.VerticalAlignment
+
+<MudDialog Style="min-width:520px; max-width:640px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.FormatPaint" Class="mr-2" Style="vertical-align:middle;"/>
+            Format Cells — @Range.ToA1()
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
+            <MudTabPanel Text="Font" Icon="@Icons.Material.Outlined.TextFields">
+                <MudStack Spacing="2">
+                    <MudTextField @bind-Value="_font.Name" Label="Font name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudNumericField @bind-Value="_font.SizePoints" Label="Size (pt)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="409"/>
+                    <div class="d-flex gap-4">
+                        <MudCheckBox @bind-Value="_font.Bold" Dense="true">Bold</MudCheckBox>
+                        <MudCheckBox @bind-Value="_font.Italic" Dense="true">Italic</MudCheckBox>
+                        <MudCheckBox @bind-Value="_font.Strikethrough" Dense="true">Strikethrough</MudCheckBox>
+                    </div>
+                    <MudSelect T="FontUnderline" @bind-Value="_font.Underline" Label="Underline" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var u in Enum.GetValues<FontUnderline>())
+                        {
+                            <MudSelectItem Value="u">@u</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="FontVerticalAlignment" @bind-Value="_font.VerticalAlignment" Label="Script" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var v in Enum.GetValues<FontVerticalAlignment>())
+                        {
+                            <MudSelectItem Value="v">@v</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudColorPicker @bind-Text="_fontColor" Label="Font colour" Variant="Variant.Outlined" Margin="Margin.Dense" Style="@($"color:{_fontColor}")"/>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Fill" Icon="@Icons.Material.Outlined.FormatColorFill">
+                <MudStack Spacing="2">
+                    <MudSelect T="FillPattern" @bind-Value="_fill.PatternType" Label="Pattern" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var p in Enum.GetValues<FillPattern>())
+                        {
+                            <MudSelectItem Value="p">@p</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudColorPicker @bind-Text="_fillFg" Label="Foreground colour" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudColorPicker @bind-Text="_fillBg" Label="Background colour (pattern only)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudText Typo="Typo.caption" Style="opacity:.6;">For a plain background colour, choose Solid + a foreground colour.</MudText>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Border" Icon="@Icons.Material.Outlined.BorderAll">
+                <MudStack Spacing="2">
+                    <MudSelect T="BorderStyle" @bind-Value="_borderStyle" Label="Line style" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var s in Enum.GetValues<BorderStyle>())
+                        {
+                            <MudSelectItem Value="s">@s</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudColorPicker @bind-Text="_borderColor" Label="Border colour" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <div class="d-flex flex-wrap gap-3">
+                        <MudCheckBox @bind-Value="_bLeft" Dense="true">Left</MudCheckBox>
+                        <MudCheckBox @bind-Value="_bRight" Dense="true">Right</MudCheckBox>
+                        <MudCheckBox @bind-Value="_bTop" Dense="true">Top</MudCheckBox>
+                        <MudCheckBox @bind-Value="_bBottom" Dense="true">Bottom</MudCheckBox>
+                    </div>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="SelectAllEdges">All edges</MudButton>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Alignment" Icon="@Icons.Material.Outlined.FormatAlignLeft">
+                <MudStack Spacing="2">
+                    <MudSelect T="HorizontalAlignment" @bind-Value="_align.Horizontal" Label="Horizontal" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var h in Enum.GetValues<HorizontalAlignment>())
+                        {
+                            <MudSelectItem Value="h">@h</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="VerticalAlignment" @bind-Value="_align.Vertical" Label="Vertical" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var v in Enum.GetValues<VerticalAlignment>())
+                        {
+                            <MudSelectItem Value="v">@v</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudNumericField @bind-Value="_align.TextRotation" Label="Text rotation (0–180; 255 = stacked)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" Max="255"/>
+                    <MudNumericField @bind-Value="_align.Indent" Label="Indent" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" Max="250"/>
+                    <div class="d-flex gap-4">
+                        <MudCheckBox @bind-Value="_align.WrapText" Dense="true">Wrap text</MudCheckBox>
+                        <MudCheckBox @bind-Value="_align.ShrinkToFit" Dense="true">Shrink to fit</MudCheckBox>
+                    </div>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Number" Icon="@Icons.Material.Outlined.Tag">
+                <MudStack Spacing="2">
+                    <MudSelect T="string" Value="_numberFormat" ValueChanged="OnPresetChosen" Label="Preset" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var preset in Presets)
+                        {
+                            <MudSelectItem Value="@preset.Code">@preset.Label</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudTextField @bind-Value="_numberFormat" Label="Format code" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  HelperText="Examples: 0.00 — #,##0 — 0% — dd/MM/yyyy — text uses the at-sign"/>
+                </MudStack>
+            </MudTabPanel>
+        </MudTabs>
+
+        <MudDivider Class="my-2"/>
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Apply</MudText>
+        <div class="d-flex flex-wrap gap-3">
+            <MudCheckBox @bind-Value="_applyFont" Dense="true">Font</MudCheckBox>
+            <MudCheckBox @bind-Value="_applyFill" Dense="true">Fill</MudCheckBox>
+            <MudCheckBox @bind-Value="_applyBorder" Dense="true">Border</MudCheckBox>
+            <MudCheckBox @bind-Value="_applyAlign" Dense="true">Alignment</MudCheckBox>
+            <MudCheckBox @bind-Value="_applyNumber" Dense="true">Number format</MudCheckBox>
+        </div>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Check">
+            Apply to @Range.ToA1()
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public CellRange Range { get; set; }
+
+    [Parameter]
+    public EventCallback OnApplied { get; set; }
+
+    private readonly CellFont _font = new();
+    private readonly CellFill _fill = new();
+    private readonly CellAlignment _align = new();
+
+    private string _fontColor = "#000000";
+    private string _fillFg = "#FFFF00";
+    private string _fillBg = "#FFFFFF";
+    private string _borderColor = "#000000";
+    private BorderStyle _borderStyle = BorderStyle.Thin;
+    private bool _bLeft, _bRight, _bTop, _bBottom;
+    private string _numberFormat = "General";
+
+    private bool _applyFont, _applyFill, _applyBorder, _applyAlign, _applyNumber;
+
+    private static readonly (string Label, string Code)[] Presets =
+    [
+        ("General", "General"),
+        ("Number (1234)", "0"),
+        ("Number 2dp (1234.00)", "0.00"),
+        ("Thousands (1,234)", "#,##0"),
+        ("Thousands 2dp (1,234.00)", "#,##0.00"),
+        ("Percent (75%)", "0%"),
+        ("Percent 2dp (75.00%)", "0.00%"),
+        ("Scientific", "0.00E+00"),
+        ("Currency ($)", "\"$\"#,##0.00"),
+        ("Date (dd/MM/yyyy)", "dd/MM/yyyy"),
+        ("Date (yyyy-MM-dd)", "yyyy-MM-dd"),
+        ("Time (HH:mm:ss)", "HH:mm:ss"),
+        ("Date+Time", "yyyy-MM-dd HH:mm"),
+        ("Text (@)", "@")
+    ];
+
+    protected override void OnInitialized()
+    {
+        // Seed editors from the anchor cell's current style, when present.
+        var cell = Sheet.GetCell(Range.TopLeft.Row, Range.TopLeft.Column);
+        if (cell is null)
+            return;
+
+        var book = Sheet.Document.Styles;
+        var font = book.GetFont(cell.StyleIndex);
+        _font.Name = font.Name;
+        _font.SizePoints = font.SizePoints;
+        _font.Bold = font.Bold;
+        _font.Italic = font.Italic;
+        _font.Strikethrough = font.Strikethrough;
+        _font.Underline = font.Underline;
+        _font.VerticalAlignment = font.VerticalAlignment;
+        _fontColor = XlsxColor.ToHex(font.Color);
+
+        var fill = book.GetFill(cell.StyleIndex);
+        _fill.PatternType = fill.PatternType;
+        _fillFg = XlsxColor.ToHex(fill.ForegroundColor, "#FFFF00");
+        _fillBg = XlsxColor.ToHex(fill.BackgroundColor, "#FFFFFF");
+
+        var align = cell.GetEffectiveStyle().Alignment;
+        _align.Horizontal = align.Horizontal;
+        _align.Vertical = align.Vertical;
+        _align.WrapText = align.WrapText;
+        _align.ShrinkToFit = align.ShrinkToFit;
+        _align.TextRotation = align.TextRotation;
+        _align.Indent = align.Indent;
+
+        _numberFormat = cell.NumberFormatCode;
+    }
+
+    private void OnPresetChosen(string code) => _numberFormat = code;
+
+    private void SelectAllEdges()
+    {
+        _bLeft = _bRight = _bTop = _bBottom = true;
+    }
+
+    private async Task Apply()
+    {
+        var anyEdge = _bLeft || _bRight || _bTop || _bBottom;
+
+        foreach (var reference in Range.Cells())
+        {
+            var cell = Sheet[reference.Row, reference.Column];
+
+            if (_applyFont)
+                cell.ApplyFont(f =>
+                {
+                    f.Name = _font.Name;
+                    f.SizePoints = _font.SizePoints;
+                    f.Bold = _font.Bold;
+                    f.Italic = _font.Italic;
+                    f.Strikethrough = _font.Strikethrough;
+                    f.Underline = _font.Underline;
+                    f.VerticalAlignment = _font.VerticalAlignment;
+                    f.Color = XlsxColor.FromHex(_fontColor);
+                });
+
+            if (_applyFill)
+                cell.ApplyFill(f =>
+                {
+                    f.PatternType = _fill.PatternType;
+                    f.ForegroundColor = XlsxColor.FromHex(_fillFg);
+                    f.BackgroundColor = _fill.PatternType is FillPattern.None or FillPattern.Solid
+                        ? f.BackgroundColor
+                        : XlsxColor.FromHex(_fillBg);
+                });
+
+            if (_applyBorder && anyEdge)
+                cell.ApplyBorder(b =>
+                {
+                    var line = new BorderLine { Style = _borderStyle, Color = XlsxColor.FromHex(_borderColor) };
+                    if (_bLeft) b.Left = line.Clone();
+                    if (_bRight) b.Right = line.Clone();
+                    if (_bTop) b.Top = line.Clone();
+                    if (_bBottom) b.Bottom = line.Clone();
+                });
+
+            if (_applyAlign)
+                cell.ApplyAlignment(a =>
+                {
+                    a.Horizontal = _align.Horizontal;
+                    a.Vertical = _align.Vertical;
+                    a.WrapText = _align.WrapText;
+                    a.ShrinkToFit = _align.ShrinkToFit;
+                    a.TextRotation = _align.TextRotation;
+                    a.Indent = _align.Indent;
+                });
+
+            if (_applyNumber && !string.IsNullOrWhiteSpace(_numberFormat))
+                cell.SetNumberFormat(_numberFormat);
+        }
+
+        await OnApplied.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

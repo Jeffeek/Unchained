@@ -1,0 +1,87 @@
+@using Unchained.Xlsx.Engine
+
+<MudDialog Style="min-width:480px; max-width:560px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Edit" Class="mr-2" Style="vertical-align:middle;"/>
+            Edit Workbook Properties
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudTextField @bind-Value="_title" Label="Title" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudTextField @bind-Value="_author" Label="Author" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudTextField @bind-Value="_subject" Label="Subject" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudTextField @bind-Value="_keywords" Label="Keywords" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2"/>
+            <MudTextField @bind-Value="_category" Label="Category" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudTextField @bind-Value="_company" Label="Company" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudTextField @bind-Value="_manager" Label="Manager" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Outlined.Check">
+            Apply
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public SpreadsheetDocument Document { get; set; } = null!;
+
+    /// <summary>Invoked after the properties are applied so the host can flag the model dirty.</summary>
+    [Parameter]
+    public EventCallback OnApplied { get; set; }
+
+    private string? _title;
+    private string? _author;
+    private string? _subject;
+    private string? _keywords;
+    private string? _description;
+    private string? _category;
+    private string? _company;
+    private string? _manager;
+
+    protected override void OnInitialized()
+    {
+        var p = Document.Properties;
+        _title = p.Title;
+        _author = p.Author;
+        _subject = p.Subject;
+        _keywords = p.Keywords;
+        _description = p.Description;
+        _category = p.Category;
+        _company = p.Company;
+        _manager = p.Manager;
+    }
+
+    private async Task Apply()
+    {
+        var p = Document.Properties;
+        p.Title = Blank(_title);
+        p.Author = Blank(_author);
+        p.Subject = Blank(_subject);
+        p.Keywords = Blank(_keywords);
+        p.Description = Blank(_description);
+        p.Category = Blank(_category);
+        p.Company = Blank(_company);
+        p.Manager = Blank(_manager);
+        p.Modified = DateTimeOffset.UtcNow;
+
+        await OnApplied.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private void Cancel() => MudDialog.Cancel();
+}

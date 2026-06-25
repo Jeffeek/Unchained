@@ -1,0 +1,78 @@
+@using Unchained.Xlsx.Engine
+<MudPaper Class="pptx-info-panel pa-3" Elevation="0" Style="border:1px solid var(--mud-palette-divider);">
+    <div class="d-flex align-center mb-2">
+        <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Class="mr-2"/>
+        <MudText Typo="Typo.subtitle2">Workbook</MudText>
+        <MudSpacer/>
+        @if (Document.WasLoadedEncrypted)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                     Icon="@Icons.Material.Outlined.Lock" Text="Encrypted"/>
+        }
+        @if (Document.Protection.IsProtected)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                     Icon="@Icons.Material.Outlined.Shield" Text="Protected"/>
+        }
+    </div>
+
+    <div class="pptx-info-grid">
+        @foreach (var stat in _stats)
+        {
+            <div class="pptx-stat">
+                <MudIcon Icon="@stat.Icon" Size="Size.Small" Class="pptx-stat-icon"/>
+                <div>
+                    <div class="pptx-stat-value">@stat.Value</div>
+                    <div class="pptx-stat-label">@stat.Label</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (_props.Count > 0)
+    {
+        <MudDivider Class="my-2"/>
+        <div class="pptx-info-props">
+            @foreach (var (label, value) in _props)
+            {
+                <div class="pptx-prop-row">
+                    <span class="pptx-prop-label">@label</span>
+                    <span class="pptx-prop-value">@value</span>
+                </div>
+            }
+        </div>
+    }
+</MudPaper>
+
+@code {
+
+    [Parameter]
+    public SpreadsheetDocument Document { get; set; } = null!;
+
+    private readonly List<(string Label, string Value, string Icon)> _stats = [];
+    private readonly List<(string Label, string Value)> _props = [];
+
+    protected override void OnParametersSet()
+    {
+        var hidden = Document.Sheets.Count(static s =>
+            s.State != Unchained.Xlsx.Models.Sheets.SheetState.Visible);
+        var tables = Document.Sheets.Sum(static s => s.Tables.Count);
+        var cells = Document.Sheets.Sum(static s => s.Rows.Sum(static r => r.Cells.Count));
+
+        _stats.Clear();
+        _stats.Add(("Sheets", Document.Sheets.Count.ToString(), Icons.Material.Outlined.GridOn));
+        _stats.Add(("Hidden", hidden.ToString(), Icons.Material.Outlined.VisibilityOff));
+        _stats.Add(("Named ranges", Document.DefinedNames.Count.ToString(), Icons.Material.Outlined.Sell));
+        _stats.Add(("Tables", tables.ToString(), Icons.Material.Outlined.TableRows));
+        _stats.Add(("Cells", cells.ToString(), Icons.Material.Outlined.Apps));
+        _stats.Add(("Date system", Document.Date1904 ? "1904" : "1900", Icons.Material.Outlined.CalendarMonth));
+
+        _props.Clear();
+        var p = Document.Properties;
+        if (!string.IsNullOrEmpty(p.Title)) _props.Add(("Title", p.Title!));
+        if (!string.IsNullOrEmpty(p.Author)) _props.Add(("Author", p.Author!));
+        if (p.Created is { } created) _props.Add(("Created", created.LocalDateTime.ToString("g")));
+        if (p.Modified is { } modified) _props.Add(("Modified", modified.LocalDateTime.ToString("g")));
+    }
+
+}

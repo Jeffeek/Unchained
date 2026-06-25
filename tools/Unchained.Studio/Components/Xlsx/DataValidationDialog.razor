@@ -1,0 +1,193 @@
+@using Unchained.Xlsx.DataValidation
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Models.DataValidation
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:560px; max-width:680px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Rule" Class="mr-2" Style="vertical-align:middle;"/>
+            Data Validation
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Existing rules</MudText>
+                @if (Sheet.DataValidations.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Style="opacity:.6;">No validation rules.</MudText>
+                }
+                else
+                {
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead><tr><th>Type</th><th>Ranges</th><th>Formula</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var rule in Sheet.DataValidations.ToList())
+                            {
+                                var dv = rule;
+                                <tr>
+                                    <td>@dv.Type</td>
+                                    <td>@string.Join(", ", dv.Ranges.Select(r => r.ToA1()))</td>
+                                    <td><code>@dv.Formula1</code></td>
+                                    <td>
+                                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                                       OnClick="() => Remove(dv)"/>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </div>
+
+            <MudDivider/>
+
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Add a rule</MudText>
+                <MudStack Spacing="2">
+                    <MudTextField @bind-Value="_range" Label="Range (A1)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudSelect T="DataValidationType" @bind-Value="_type" Label="Type" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var t in Enum.GetValues<DataValidationType>())
+                        {
+                            <MudSelectItem Value="t">@t</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    @if (_type == DataValidationType.List)
+                    {
+                        <MudTextField @bind-Value="_listItems" Label="List items (comma-separated)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      HelperText="e.g. Yes,No,Maybe — or a range like Sheet1!$A$1:$A$5"/>
+                    }
+                    else
+                    {
+                        <MudSelect T="DataValidationOperator" @bind-Value="_operator" Label="Operator" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var o in Enum.GetValues<DataValidationOperator>())
+                            {
+                                <MudSelectItem Value="o">@o</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudTextField @bind-Value="_formula1" Label="Formula 1 / value" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                        @if (_operator is DataValidationOperator.Between or DataValidationOperator.NotBetween)
+                        {
+                            <MudTextField @bind-Value="_formula2" Label="Formula 2 / upper bound" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                        }
+                    }
+
+                    <MudSelect T="DataValidationErrorStyle" @bind-Value="_errorStyle" Label="Error style" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var e in Enum.GetValues<DataValidationErrorStyle>())
+                        {
+                            <MudSelectItem Value="e">@e</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudTextField @bind-Value="_errorTitle" Label="Error title (optional)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudTextField @bind-Value="_errorMessage" Label="Error message (optional)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <div class="d-flex gap-4">
+                        <MudCheckBox @bind-Value="_allowBlank" Dense="true">Allow blank</MudCheckBox>
+                        <MudCheckBox @bind-Value="_showError" Dense="true">Show error alert</MudCheckBox>
+                    </div>
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add"
+                               OnClick="Add" Class="align-self-start">
+                        Add rule
+                    </MudButton>
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+                    }
+                </MudStack>
+            </div>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Done</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public string InitialRange { get; set; } = "A1";
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private string _range = "A1";
+    private DataValidationType _type = DataValidationType.List;
+    private DataValidationOperator _operator = DataValidationOperator.Between;
+    private string _listItems = string.Empty;
+    private string _formula1 = string.Empty;
+    private string _formula2 = string.Empty;
+    private DataValidationErrorStyle _errorStyle = DataValidationErrorStyle.Stop;
+    private string _errorTitle = string.Empty;
+    private string _errorMessage = string.Empty;
+    private bool _allowBlank = true;
+    private bool _showError = true;
+    private string? _error;
+
+    protected override void OnInitialized() => _range = InitialRange;
+
+    private async Task Add()
+    {
+        _error = null;
+        try
+        {
+            var range = CellRange.FromA1(_range);
+
+            if (_type == DataValidationType.List && !_listItems.Contains('!') && !_listItems.Contains('$'))
+            {
+                // Plain comma list → convenience helper builds the "..." formula.
+                var items = _listItems.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                var dv = Sheet.AddDropdownValidation(range, items);
+                ApplyMessages(dv);
+            }
+            else
+            {
+                var dv = new DataValidation
+                {
+                    Type = _type,
+                    Operator = _operator,
+                    Formula1 = _type == DataValidationType.List ? _listItems : _formula1,
+                    Formula2 = string.IsNullOrWhiteSpace(_formula2) ? null : _formula2,
+                    AllowBlank = _allowBlank,
+                    ShowErrorAlert = _showError,
+                    ErrorStyle = _errorStyle
+                };
+                dv.Ranges.Add(range);
+                ApplyMessages(dv);
+                Sheet.DataValidations.Add(dv);
+            }
+
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void ApplyMessages(DataValidation dv)
+    {
+        dv.AllowBlank = _allowBlank;
+        dv.ShowErrorAlert = _showError;
+        dv.ErrorStyle = _errorStyle;
+        dv.ErrorTitle = string.IsNullOrWhiteSpace(_errorTitle) ? null : _errorTitle;
+        dv.ErrorMessage = string.IsNullOrWhiteSpace(_errorMessage) ? null : _errorMessage;
+    }
+
+    private async Task Remove(DataValidation dv)
+    {
+        Sheet.DataValidations.Remove(dv);
+        await OnChanged.InvokeAsync();
+    }
+
+    private void Close() => MudDialog.Close();
+}

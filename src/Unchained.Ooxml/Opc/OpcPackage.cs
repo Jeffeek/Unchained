@@ -164,6 +164,10 @@ internal sealed class OpcPackage : IDisposable
                 new OpcRelationship(relationshipId, relationshipType, targetUri, isExternal)
             );
 
+    /// <summary>Removes all relationships from the specified source part.</summary>
+    public void ClearRelationships(string sourcePartUri) =>
+        GetPart(sourcePartUri).ClearRelationships();
+
     // ── Serialization ───────────────────────────────────────────────────────
 
     /// <summary>

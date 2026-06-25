@@ -2,6 +2,7 @@ using MudBlazor.Services;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Rendering.Engine;
 using Unchained.Pptx.Engine;
+using Unchained.Xlsx.Engine;
 using Unchained.Studio.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,7 @@ builder.Services.AddMudServices();
 builder.Services.AddSingleton<DocumentProcessor>();
 builder.Services.AddSingleton<PdfRenderer>();
 builder.Services.AddSingleton<PresentationProcessor>();
+builder.Services.AddSingleton<SpreadsheetProcessor>();
 
 // Studio services — scoped to one Blazor circuit (one browser tab)
 builder.Services.AddScoped<SessionStateService>();
