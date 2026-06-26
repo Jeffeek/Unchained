@@ -11,6 +11,7 @@
   <Folder Name="/samples/">
     <Project Path="samples/Unchained.Pdf.Samples/Unchained.Pdf.Samples.csproj" />
     <Project Path="samples/Unchained.Pptx.Samples/Unchained.Pptx.Samples.csproj" />
+    <Project Path="samples/Unchained.Xlsx.Samples/Unchained.Xlsx.Samples.csproj" />
   </Folder>
   <Folder Name="/Solution items/">
     <File Path=".editorconfig" />

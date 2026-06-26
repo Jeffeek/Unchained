@@ -323,6 +323,8 @@ internal static class FormulaFunctions
                     return FormulaValue.FromBoolean(false);
                 case BoolMode.Or when truthy:
                     return FormulaValue.FromBoolean(true);
+                case BoolMode.And:
+                case BoolMode.Or:
                 case BoolMode.Xor:
                 break;
                 default:
