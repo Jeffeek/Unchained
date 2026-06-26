@@ -1,17 +1,17 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Properties;
 using Unchained.Ooxml.Xml;
-using Unchained.Xlsx.Models;
 
-namespace Unchained.Xlsx.Writing;
+namespace Unchained.Ooxml.Properties;
 
 /// <summary>
 ///     Writes the OPC core properties (<c>docProps/core.xml</c>) and extended app properties
-///     (<c>docProps/app.xml</c>) from a <see cref="WorkbookProperties" />, creating the parts and
-///     their package relationships when absent.
+///     (<c>docProps/app.xml</c>) from an <see cref="OoXmlCoreProperties" /> instance,
+///     creating the parts and their package relationships when absent.
 /// </summary>
-internal static class WorkbookPropertiesWriter
+internal static class PropertiesWriter
 {
     private const string CoreUri = "/docProps/core.xml";
     private const string AppUri = "/docProps/app.xml";
@@ -28,13 +28,17 @@ internal static class WorkbookPropertiesWriter
     private static readonly XNamespace Xsi = "http://www.w3.org/2001/XMLSchema-instance";
     private static readonly XNamespace Ep = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties";
 
-    public static void Write(OpcPackage package, WorkbookProperties props)
+    /// <summary>
+    ///     Writes core properties to <c>docProps/core.xml</c> and, when <paramref name="writeApp"/> is
+    ///     provided, writes extended app properties to <c>docProps/app.xml</c>.
+    /// </summary>
+    public static void Write(OpcPackage package, OoXmlCoreProperties props, Action<OpcPackage, OoXmlCoreProperties>? writeApp = null)
     {
         WriteCore(package, props);
-        WriteApp(package, props);
+        writeApp?.Invoke(package, props);
     }
 
-    private static void WriteCore(OpcPackage package, WorkbookProperties props)
+    private static void WriteCore(OpcPackage package, OoXmlCoreProperties props)
     {
         var root = new XElement(
             Cp + "coreProperties",
@@ -53,25 +57,11 @@ internal static class WorkbookPropertiesWriter
         AddIfPresent(root, Cp + "contentStatus", props.ContentStatus);
         AddDate(root, Dcterms + "created", props.Created);
         AddDate(root, Dcterms + "modified", props.Modified);
+        AddDate(root, Cp + "lastPrinted", props.LastPrinted);
 
         var bytes = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
         package.AddOrReplacePart(CoreUri, CoreContentType, bytes);
-        EnsurePackageRelationship(package, CoreRelType, "docProps/core.xml");
-    }
-
-    private static void WriteApp(OpcPackage package, WorkbookProperties props)
-    {
-        var root = new XElement(
-            Ep + "Properties",
-            new XAttribute("xmlns", Ep.NamespaceName));
-
-        AddIfPresent(root, Ep + "Application", props.ApplicationName ?? "Unchained.Xlsx");
-        AddIfPresent(root, Ep + "Company", props.Company);
-        AddIfPresent(root, Ep + "Manager", props.Manager);
-
-        var bytes = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
-        package.AddOrReplacePart(AppUri, AppContentType, bytes);
-        EnsurePackageRelationship(package, AppRelType, "docProps/app.xml");
+        package.EnsurePackageRelationship(CoreRelType, "docProps/core.xml");
     }
 
     private static void AddIfPresent(XElement root, XName name, string? value)
@@ -90,20 +80,23 @@ internal static class WorkbookPropertiesWriter
             value.Value.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)));
     }
 
-    private static void EnsurePackageRelationship(OpcPackage package, string relType, string target)
+    /// <summary>
+    ///     Writes the extended app properties (<c>docProps/app.xml</c>) from an
+    ///     <see cref="OoXmlCoreProperties" /> instance, creating the part and its package
+    ///     relationship when absent.
+    /// </summary>
+    public static void WriteApp(OpcPackage package, OoXmlCoreProperties props, string defaultAppName)
     {
-        var exists = package.PackageRelationships
-            .Any(r => r.RelationshipType.Equals(relType, StringComparison.Ordinal));
-        if (exists)
-            return;
+        var root = new XElement(
+            Ep + "Properties",
+            new XAttribute("xmlns", Ep.NamespaceName));
 
-        var used = new HashSet<string>(package.PackageRelationships.Select(r => r.Id), StringComparer.Ordinal);
-        var n = 1;
-        string relId;
-        do
-            relId = $"rId{n++}";
-        while (!used.Add(relId));
+        AddIfPresent(root, Ep + "Application", props.ApplicationName ?? defaultAppName);
+        AddIfPresent(root, Ep + "Company", props.Company);
+        AddIfPresent(root, Ep + "Manager", props.Manager);
 
-        package.AddPackageRelationship(relId, relType, target);
+        var bytes = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
+        package.AddOrReplacePart(AppUri, AppContentType, bytes);
+        package.EnsurePackageRelationship(AppRelType, "docProps/app.xml");
     }
 }

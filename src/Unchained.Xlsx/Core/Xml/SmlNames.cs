@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Xlsx.Core.Xml;
 
@@ -12,8 +13,8 @@ internal static class SmlNames
 {
     private const string Sml = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     private const string Xdr = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing";
-    private const string Chart = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-    private const string Rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    private const string Chart = OoxmlNamespaces.Chart;
+    private const string Rel = OoxmlNamespaces.OfficeDocument;
 
     public static readonly XNamespace X = Sml;
     public static readonly XNamespace XDR = Xdr;
@@ -21,7 +22,7 @@ internal static class SmlNames
     public static readonly XNamespace R = Rel;
 
     // ── Relationship type URIs ─────────────────────────────────────────────────
-    private const string RelBase = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
+    private const string RelBase = OoxmlNamespaces.OfficeDocument + "/";
     public const string RelTypeOfficeDocument = RelBase + "officeDocument";
     public const string RelTypeWorksheet = RelBase + "worksheet";
     public const string RelTypeSharedStrings = RelBase + "sharedStrings";
@@ -49,9 +50,9 @@ internal static class SmlNames
     public const string ContentTypePivotTable = CtBase + "pivotTable+xml";
     public const string ContentTypePivotCacheDefinition = CtBase + "pivotCacheDefinition+xml";
     public const string ContentTypePivotCacheRecords = CtBase + "pivotCacheRecords+xml";
-    public const string ContentTypeTheme = "application/vnd.openxmlformats-officedocument.theme+xml";
+    public const string ContentTypeTheme = OoxmlContentTypes.Theme;
     public const string ContentTypeDrawing = "application/vnd.openxmlformats-officedocument.drawing+xml";
-    public const string ContentTypeChart = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
+    public const string ContentTypeChart = OoxmlContentTypes.Chart;
 
     // ── Workbook ───────────────────────────────────────────────────────────────
     public static readonly XName Workbook = X + "workbook";

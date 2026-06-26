@@ -1,7 +1,7 @@
-namespace Unchained.Xlsx.Models.Export;
+namespace Unchained.Ooxml;
 
-/// <summary>The OOXML conformance class used when saving a workbook.</summary>
-public enum XlsxConformance
+/// <summary>Controls OOXML conformance class when saving a package.</summary>
+public enum OoXmlConformance
 {
     /// <summary>
     ///     Transitional conformance (ECMA-376 1st edition compatible) — the broadest

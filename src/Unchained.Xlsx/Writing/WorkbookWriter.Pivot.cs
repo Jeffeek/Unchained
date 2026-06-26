@@ -41,20 +41,20 @@ internal static partial class WorkbookWriter
                 PivotWriter.WriteCacheDefinition(pivot, recordsRelId));
             package.ClearRelationships(pivot.CacheDefinitionUri);
             package.AddRelationship(pivot.CacheDefinitionUri, recordsRelId, SmlNames.RelTypePivotCacheRecords,
-                RelativeTo(pivot.CacheDefinitionUri, pivot.CacheRecordsUri));
+                RelativeTo(package, pivot.CacheDefinitionUri, pivot.CacheRecordsUri));
 
             // 3. Table definition part + table → cacheDefinition relationship.
             package.AddOrReplacePart(pivot.TablePartUri, SmlNames.ContentTypePivotTable, PivotWriter.WriteTableDefinition(pivot));
             package.ClearRelationships(pivot.TablePartUri);
             pivot.CacheDefinitionRelId = "rId1";
             package.AddRelationship(pivot.TablePartUri, pivot.CacheDefinitionRelId, SmlNames.RelTypePivotCacheDefinition,
-                RelativeTo(pivot.TablePartUri, pivot.CacheDefinitionUri));
+                RelativeTo(package, pivot.TablePartUri, pivot.CacheDefinitionUri));
 
             // 4. Worksheet → pivot table relationship.
             if (string.IsNullOrEmpty(pivot.TableRelationshipId))
                 pivot.TableRelationshipId = NextFreeRelIdFor(package, sheet.PartUri, "rIdPv");
             EnsureRelationship(package, sheet.PartUri, pivot.TableRelationshipId, SmlNames.RelTypePivotTable,
-                RelativeTo(sheet.PartUri, pivot.TablePartUri));
+                RelativeTo(package, sheet.PartUri, pivot.TablePartUri));
         }
     }
 

@@ -1,4 +1,4 @@
-using Unchained.Pptx.Models.Export;
+using Unchained.Ooxml;
 
 namespace Unchained.Pptx.Models;
 
@@ -12,9 +12,9 @@ public sealed record SaveOptions
 
     /// <summary>
     ///     The OOXML conformance class to target.
-    ///     Defaults to <see cref="PptxConformance.Transitional" /> for maximum compatibility.
+    ///     Defaults to <see cref="OoXmlConformance.Transitional" /> for maximum compatibility.
     /// </summary>
-    public PptxConformance Conformance { get; init; } = PptxConformance.Transitional;
+    public OoXmlConformance Conformance { get; init; } = OoXmlConformance.Transitional;
 
     /// <summary>
     ///     Controls when ZIP64 extensions are written.

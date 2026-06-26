@@ -1,6 +1,6 @@
-namespace Unchained.Xlsx.Models.Export;
+namespace Unchained.Ooxml;
 
-/// <summary>Controls how ZIP64 extensions are used when serializing a workbook package.</summary>
+/// <summary>Controls how ZIP64 extensions are used when serializing a package.</summary>
 public enum Zip64Policy
 {
     /// <summary>Use ZIP64 extensions only when the package exceeds the classic ZIP limits.</summary>

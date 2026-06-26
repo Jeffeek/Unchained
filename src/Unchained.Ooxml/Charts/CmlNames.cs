@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Ooxml.Charts;
 
@@ -16,8 +17,7 @@ public static class CmlNames
     public const string AttributeIndex = "idx";
 
     /// <summary>The DrawingML Chart main namespace.</summary>
-    public static readonly XNamespace Cml =
-        "http://schemas.openxmlformats.org/drawingml/2006/chart";
+    public static readonly XNamespace Cml = OoxmlNamespaces.Chart;
 
     // ── Structure ──────────────────────────────────────────────────────────────
     public static readonly XName ChartSpace = Cml + "chartSpace";

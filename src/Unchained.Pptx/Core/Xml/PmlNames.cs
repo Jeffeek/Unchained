@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Pptx.Core.Xml;
 
@@ -10,8 +11,8 @@ internal static class PmlNames
 {
     // ── Relationship type URIs ────────────────────────────────────────────────
 
-    private const string RelBase = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
-    private const string PkgRelBase = "http://schemas.openxmlformats.org/package/2006/relationships/";
+    private const string RelBase = OoxmlNamespaces.OfficeDocument + "/";
+    private const string PkgRelBase = OoxmlNamespaces.PackageRelationships + "/";
 
     /// <summary>Relationship type for the presentation part.</summary>
     public const string RelTypePresentation = RelBase + "officeDocument";
@@ -117,8 +118,7 @@ internal static class PmlNames
         "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml";
 
     /// <summary>Content type for a theme part.</summary>
-    public const string ContentTypeTheme =
-        "application/vnd.openxmlformats-officedocument.theme+xml";
+    public const string ContentTypeTheme = OoxmlContentTypes.Theme;
 
     /// <summary>Content type for a notes slide part.</summary>
     public const string ContentTypeNotesSlide =
@@ -129,16 +129,13 @@ internal static class PmlNames
         "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml";
 
     /// <summary>Content type for core properties.</summary>
-    public const string ContentTypeCoreProperties =
-        "application/vnd.openxmlformats-package.core-properties+xml";
+    public const string ContentTypeCoreProperties = OoxmlContentTypes.CoreProperties;
 
     /// <summary>Content type for extended (app) properties.</summary>
-    public const string ContentTypeExtendedProperties =
-        "application/vnd.openxmlformats-officedocument.extended-properties+xml";
+    public const string ContentTypeExtendedProperties = OoxmlContentTypes.ExtendedProperties;
 
     /// <summary>Content type for a chart part.</summary>
-    public const string ContentTypeChart =
-        "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
+    public const string ContentTypeChart = OoxmlContentTypes.Chart;
 
     /// <summary>Content type for a slide comment part.</summary>
     public const string ContentTypeComments =

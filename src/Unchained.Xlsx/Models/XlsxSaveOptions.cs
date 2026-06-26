@@ -1,12 +1,12 @@
-using Unchained.Xlsx.Models.Export;
+using Unchained.Ooxml;
 
 namespace Unchained.Xlsx.Models;
 
 /// <summary>Settings that control how a workbook is serialized to <c>.xlsx</c>.</summary>
 public sealed class XlsxSaveOptions
 {
-    /// <summary>The OOXML conformance class. Defaults to <see cref="XlsxConformance.Transitional" />.</summary>
-    public XlsxConformance Conformance { get; init; } = XlsxConformance.Transitional;
+    /// <summary>The OOXML conformance class. Defaults to <see cref="OoXmlConformance.Transitional" />.</summary>
+    public OoXmlConformance Conformance { get; init; } = OoXmlConformance.Transitional;
 
     /// <summary>The ZIP64 policy. Defaults to <see cref="Zip64Policy.IfNecessary" />.</summary>
     public Zip64Policy Zip64 { get; init; } = Zip64Policy.IfNecessary;

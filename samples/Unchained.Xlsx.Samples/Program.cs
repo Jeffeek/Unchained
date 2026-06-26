@@ -5,7 +5,6 @@ using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Models.Pivot;
 using Unchained.Xlsx.Models.Styles;
-using Unchained.Xlsx.Styles;
 
 namespace Unchained.Xlsx.Samples;
 
@@ -114,15 +113,17 @@ internal static class Program
             var cell = sheet[1, c + 1];
             cell.SetValue(headers[c]);
             cell.ApplyFont(static f =>
-            {
-                f.Bold = true;
-                f.Color = ColorSpec.FromRgb(255, 255, 255);
-            });
+                {
+                    f.Bold = true;
+                    f.Color = ColorSpec.FromRgb(255, 255, 255);
+                }
+            );
             cell.ApplyFill(static f =>
-            {
-                f.PatternType = FillPattern.Solid;
-                f.ForegroundColor = ColorSpec.FromRgb(31, 78, 121);
-            });
+                {
+                    f.PatternType = FillPattern.Solid;
+                    f.ForegroundColor = ColorSpec.FromRgb(31, 78, 121);
+                }
+            );
             cell.ApplyAlignment(static a => a.Horizontal = HorizontalAlignment.Center);
         }
 
@@ -315,6 +316,7 @@ internal static class Program
         var sourceRange = new CellRange(new CellReference(1, 1), new CellReference(rows.Length + 1, 3));
         var pivot = summary.PivotTables.Add(sourceRange, new CellReference(1, 1), "RegionTotals", sourceSheet: data);
         pivot.AddRowField("Region");
+        // ReSharper disable once RedundantArgumentDefaultValue
         pivot.AddDataField("Amount", PivotDataFunction.Sum);
 
         var path = Path.Combine(OutputDir, "pivot.xlsx");
@@ -394,6 +396,7 @@ internal static class Program
             {
                 var cell = sheet.GetCell(reference);
                 if (cell is null || cell.CellType == CellType.Empty) continue;
+
                 Console.WriteLine($"    {reference.ToA1(),-4} = {cell.GetFormattedString()}");
             }
         }

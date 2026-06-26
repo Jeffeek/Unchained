@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Properties;
 using Unchained.Ooxml.Xml;
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.Engine;
@@ -458,6 +459,6 @@ internal static partial class WorkbookWriter
         if (props == null)
             return;
 
-        WorkbookPropertiesWriter.Write(package, props);
+        PropertiesWriter.Write(package, props, (pkg, props) => PropertiesWriter.WriteApp(pkg, props, "Unchained.Xlsx"));
     }
 }

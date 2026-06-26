@@ -1,8 +1,8 @@
 using Shouldly;
-using Unchained.Pptx.Security;
+using Unchained.Ooxml.Security;
 using Xunit;
 
-namespace Unchained.Pptx.Tests.UnitTests.Security;
+namespace Unchained.Ooxml.Tests.UnitTests.Security;
 
 /// <summary>
 ///     Unit tests for <see cref="CfbDocument" /> — the minimal OLE Compound File Binary

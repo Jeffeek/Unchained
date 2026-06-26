@@ -1,6 +1,6 @@
+@using Unchained.Ooxml
 @using Unchained.Xlsx.Engine
 @using Unchained.Xlsx.Models
-@using Unchained.Xlsx.Models.Export
 @inject FileExportService Exporter
 @inject ISnackbar Snackbar
 
@@ -16,8 +16,8 @@
         <MudStack Spacing="2">
             <MudTextField @bind-Value="_fileName" Label="File name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
 
-            <MudSelect T="XlsxConformance" @bind-Value="_conformance" Label="Conformance" Variant="Variant.Outlined" Margin="Margin.Dense">
-                @foreach (var c in Enum.GetValues<XlsxConformance>())
+            <MudSelect T="OoXmlConformance" @bind-Value="_conformance" Label="Conformance" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var c in Enum.GetValues<OoXmlConformance>())
                 {
                     <MudSelectItem Value="c">@c</MudSelectItem>
                 }
@@ -69,7 +69,7 @@
     public string FileName { get; set; } = "workbook.xlsx";
 
     private string _fileName = "workbook.xlsx";
-    private XlsxConformance _conformance = XlsxConformance.Transitional;
+    private OoXmlConformance _conformance = OoXmlConformance.Transitional;
     private Zip64Policy _zip64 = Zip64Policy.IfNecessary;
     private bool _recalc = true;
     private bool _encrypt;

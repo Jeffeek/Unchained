@@ -1,3 +1,4 @@
+using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Opc;
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.Drawings;
@@ -49,10 +50,10 @@ internal static partial class WorkbookWriter
                 {
                     case PictureDrawing pic when string.IsNullOrEmpty(pic.MediaPartUri):
                     {
-                        var ext = ImageExtension(pic.Image.ContentType);
+                        var ext = ImageExtensions.Extension(pic.Image.ContentType);
                         string uri;
                         do
-                            uri = $"/xl/media/image{nextImage++}.{ext}";
+                            uri = $"/xl/media/image{nextImage++}{ext}";
                         while (!usedUris.Add(uri) || package.TryGetPart(uri) != null);
                         pic.MediaPartUri = uri;
                         break;
@@ -85,7 +86,7 @@ internal static partial class WorkbookWriter
 
             // 2. Sheet → drawing relationship (idempotent).
             EnsureRelationship(package, sheet.PartUri, sheet.DrawingRelationshipId, SmlNames.RelTypeDrawing,
-                RelativeTo(sheet.PartUri, sheet.DrawingPartUri));
+                RelativeTo(package, sheet.PartUri, sheet.DrawingPartUri));
 
             // 3. Each drawing's backing part + drawing → part relationship.
             package.ClearRelationships(sheet.DrawingPartUri);
@@ -96,13 +97,13 @@ internal static partial class WorkbookWriter
                     case PictureDrawing pic:
                         package.AddOrReplacePart(pic.MediaPartUri, pic.Image.ContentType, pic.Image.Data.ToArray());
                         package.AddRelationship(sheet.DrawingPartUri, drawing.RelationshipId, SmlNames.RelTypeImage,
-                            RelativeTo(sheet.DrawingPartUri, pic.MediaPartUri));
+                            RelativeTo(package, sheet.DrawingPartUri, pic.MediaPartUri));
                         break;
                     case ChartDrawing chart:
                         var bytes = chart.ChartPartData ?? Parsing.ChartXml.Write(chart.Chart);
                         package.AddOrReplacePart(chart.ChartPartUri, SmlNames.ContentTypeChart, bytes);
                         package.AddRelationship(sheet.DrawingPartUri, drawing.RelationshipId, SmlNames.RelTypeChart,
-                            RelativeTo(sheet.DrawingPartUri, chart.ChartPartUri));
+                            RelativeTo(package, sheet.DrawingPartUri, chart.ChartPartUri));
                         break;
                 }
             }
@@ -130,33 +131,6 @@ internal static partial class WorkbookWriter
         return relId;
     }
 
-    private static string RelativeTo(string fromPartUri, string targetUri)
-    {
-        // Both are absolute /xl/... paths. Compute a path relative to the source part's folder.
-        var fromDir = (Path.GetDirectoryName(fromPartUri) ?? "/").Replace('\\', '/').TrimEnd('/');
-        var fromSegments = fromDir.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var targetSegments = targetUri.TrimStart('/').Split('/');
-
-        // Find common prefix length.
-        var common = 0;
-        while (common < fromSegments.Length && common < targetSegments.Length - 1 &&
-               string.Equals(fromSegments[common], targetSegments[common], StringComparison.OrdinalIgnoreCase))
-            common++;
-
-        var ups = fromSegments.Length - common;
-        var rel = string.Concat(Enumerable.Repeat("../", ups)) + string.Join('/', targetSegments.Skip(common));
-        return rel;
-    }
-
-    private static string ImageExtension(string contentType) => contentType switch
-    {
-        "image/png" => "png",
-        "image/jpeg" => "jpeg",
-        "image/gif" => "gif",
-        "image/bmp" => "bmp",
-        "image/tiff" => "tiff",
-        "image/x-emf" => "emf",
-        "image/x-wmf" => "wmf",
-        _ => "png"
-    };
+    private static string RelativeTo(OpcPackage package, string fromPartUri, string targetUri) =>
+        package.GetRelativeUri(fromPartUri, targetUri);
 }

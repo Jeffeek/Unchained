@@ -1,5 +1,6 @@
 using System.Globalization;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Xlsx.Core.Xml;
 
@@ -17,13 +18,7 @@ internal static class SmlColor
     /// </summary>
     public static ColorSpec? FromHexArgb(string? hex)
     {
-        if (string.IsNullOrEmpty(hex))
-            return null;
-
-        // Some producers emit 6-digit RGB without the alpha byte.
-        var normalised = hex.Length == 6 ? "FF" + hex : hex;
-        if (normalised.Length != 8 ||
-            !uint.TryParse(normalised, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var argb))
+        if (!OoXmlHelper.TryParseHexArgb(hex!, out var argb))
             return null;
 
         return ColorSpec.FromArgb(

@@ -85,13 +85,8 @@ internal static class ColorParser
         return raw == null ? childName == DmlNames.LuminanceModifier ? 1.0 : 0.0 : raw.Value / (double)OoxmlScaling.PercentScale;
     }
 
-    private static bool TryParseHex(string hex, out uint value)
-    {
-        hex = hex.TrimStart('#');
-        if (hex.Length == 6)
-            hex = "FF" + hex;
-        return uint.TryParse(hex, NumberStyles.HexNumber, null, out value);
-    }
+    private static bool TryParseHex(string hex, out uint value) =>
+        OoXmlHelper.TryParseHexArgb(hex, out value);
 
     private static ThemeColorSlot ParseThemeSlot(string name) => name switch
     {
