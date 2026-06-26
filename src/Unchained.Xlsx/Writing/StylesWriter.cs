@@ -68,26 +68,26 @@ internal static class StylesWriter
             var underline = new XElement(SmlNames.FontUnderline);
             var literal = SmlEnums.ToLiteral(font.Underline);
             if (literal is not null and not "single")
-                underline.SetAttributeValue("val", literal);
+                underline.SetAttributeValue(DmlNames.AttributeValue, literal);
             element.Add(underline);
         }
 
         if (font.VerticalAlignment != FontVerticalAlignment.None)
         {
             element.Add(new XElement(SmlNames.FontVertAlign,
-                new XAttribute("val", SmlEnums.ToLiteral(font.VerticalAlignment)!)));
+                new XAttribute(DmlNames.AttributeValue, SmlEnums.ToLiteral(font.VerticalAlignment)!)));
         }
 
         element.Add(new XElement(SmlNames.FontSize,
-            new XAttribute("val", font.SizePoints.ToString(CultureInfo.InvariantCulture))));
+            new XAttribute(DmlNames.AttributeValue, font.SizePoints.ToString(CultureInfo.InvariantCulture))));
 
         if (font.Color is { } color)
             element.Add(new XElement(SmlNames.Color, new XAttribute("rgb", SmlColor.ToHexArgb(color))));
 
-        element.Add(new XElement(SmlNames.FontName, new XAttribute("val", font.Name)));
+        element.Add(new XElement(SmlNames.FontName, new XAttribute(DmlNames.AttributeValue, font.Name)));
 
         if (font.Scheme != null)
-            element.Add(new XElement(SmlNames.FontScheme, new XAttribute("val", font.Scheme)));
+            element.Add(new XElement(SmlNames.FontScheme, new XAttribute(DmlNames.AttributeValue, font.Scheme)));
 
         return element;
     }

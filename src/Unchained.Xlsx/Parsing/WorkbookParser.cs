@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Properties;
 using Unchained.Ooxml.Xml;
 using Unchained.Xlsx.Abstractions;
 using Unchained.Xlsx.Core;
@@ -142,8 +143,7 @@ internal static class WorkbookParser
     {
         var props = document.Properties;
 
-        var corePart = FindPartByRelType(package,
-            "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties");
+        var corePart = FindPartByRelType(package, OoxmlNamespaces.RelCoreProperties);
         if (corePart != null)
             ReadCoreProperties(props, OoXmlHelper.ParseXml(corePart.Data).Root);
 

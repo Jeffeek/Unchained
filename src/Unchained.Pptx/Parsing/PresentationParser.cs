@@ -355,7 +355,7 @@ internal sealed class PresentationParser
 
         var penClr = showPr.Element(pml + "penClr");
         var srgb = penClr?.Element(DmlNames.SolidFill)?.Element(DmlNames.SrgbColor);
-        settings.PenColorHex = (string?)srgb?.Attribute("val");
+        settings.PenColorHex = (string?)srgb?.Attribute(DmlNames.AttributeValue);
 
         return settings;
     }

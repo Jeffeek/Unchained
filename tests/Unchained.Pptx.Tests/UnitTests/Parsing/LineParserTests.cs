@@ -56,7 +56,7 @@ public sealed class LineParserTests
     {
         var ln = new XElement(
             DmlNames.Line,
-            new XElement(DmlNames.PresetDash, new XAttribute("val", value))
+            new XElement(DmlNames.PresetDash, new XAttribute(DmlNames.AttributeValue, value))
         );
         var parent = new XElement(DmlNames.Dml + "spPr", ln);
         var line = new LineFormat();
@@ -141,7 +141,7 @@ public sealed class LineParserTests
         var lnL = new XElement(
             DmlNames.Dml + "lnL",
             new XAttribute("w", "25400"),
-            new XElement(DmlNames.PresetDash, new XAttribute("val", "dash"))
+            new XElement(DmlNames.PresetDash, new XAttribute(DmlNames.AttributeValue, "dash"))
         );
         var line = new LineFormat();
         LineParser.ParseElement(lnL, line);

@@ -86,7 +86,7 @@ internal static partial class WorkbookWriter
 
             // 2. Sheet → drawing relationship (idempotent).
             EnsureRelationship(package, sheet.PartUri, sheet.DrawingRelationshipId, SmlNames.RelTypeDrawing,
-                RelativeTo(package, sheet.PartUri, sheet.DrawingPartUri));
+                package.GetRelativeUri(sheet.PartUri, sheet.DrawingPartUri));
 
             // 3. Each drawing's backing part + drawing → part relationship.
             package.ClearRelationships(sheet.DrawingPartUri);
@@ -97,13 +97,13 @@ internal static partial class WorkbookWriter
                     case PictureDrawing pic:
                         package.AddOrReplacePart(pic.MediaPartUri, pic.Image.ContentType, pic.Image.Data.ToArray());
                         package.AddRelationship(sheet.DrawingPartUri, drawing.RelationshipId, SmlNames.RelTypeImage,
-                            RelativeTo(package, sheet.DrawingPartUri, pic.MediaPartUri));
+                            package.GetRelativeUri(sheet.DrawingPartUri, pic.MediaPartUri));
                         break;
                     case ChartDrawing chart:
                         var bytes = chart.ChartPartData ?? Parsing.ChartXml.Write(chart.Chart);
                         package.AddOrReplacePart(chart.ChartPartUri, SmlNames.ContentTypeChart, bytes);
                         package.AddRelationship(sheet.DrawingPartUri, drawing.RelationshipId, SmlNames.RelTypeChart,
-                            RelativeTo(package, sheet.DrawingPartUri, chart.ChartPartUri));
+                            package.GetRelativeUri(sheet.DrawingPartUri, chart.ChartPartUri));
                         break;
                 }
             }
@@ -130,7 +130,4 @@ internal static partial class WorkbookWriter
         while (!used.Add(relId));
         return relId;
     }
-
-    private static string RelativeTo(OpcPackage package, string fromPartUri, string targetUri) =>
-        package.GetRelativeUri(fromPartUri, targetUri);
 }

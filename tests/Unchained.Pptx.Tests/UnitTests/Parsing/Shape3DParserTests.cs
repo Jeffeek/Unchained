@@ -79,8 +79,8 @@ public sealed class Shape3DParserTests
     {
         var sp3d = new XElement(
             DmlNames.Dml + "sp3d",
-            new XElement(DmlNames.Dml + "extrusionClr", new XElement(DmlNames.Dml + "srgbClr", new XAttribute("val", "FF0000"))),
-            new XElement(DmlNames.Dml + "contourClr", new XElement(DmlNames.Dml + "srgbClr", new XAttribute("val", "00FF00")))
+            new XElement(DmlNames.Dml + "extrusionClr", new XElement(DmlNames.Dml + "srgbClr", new XAttribute(DmlNames.AttributeValue, "FF0000"))),
+            new XElement(DmlNames.Dml + "contourClr", new XElement(DmlNames.Dml + "srgbClr", new XAttribute(DmlNames.AttributeValue, "00FF00")))
         );
         var parent = new XElement(DmlNames.Dml + "spPr", sp3d);
         var threeD = new Shape3DFormat();

@@ -42,7 +42,7 @@ public sealed class EffectParserTests
             new XAttribute("sy", "80000"),
             new XAttribute("algn", "br"),
             new XAttribute("rotWithShape", "1"),
-            new XElement(DmlNames.SrgbColor, new XAttribute("val", "808080"))
+            new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "808080"))
         );
         var effects = new EffectFormat();
         EffectParser.Parse(WithEffects(outer), effects);
@@ -80,7 +80,7 @@ public sealed class EffectParserTests
             new XAttribute("blurRad", "30000"),
             new XAttribute("dist", "20000"),
             new XAttribute("dir", "5400000"),
-            new XElement(DmlNames.SrgbColor, new XAttribute("val", "000000"))
+            new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "000000"))
         );
         var effects = new EffectFormat();
         EffectParser.Parse(WithEffects(inner), effects);
@@ -96,7 +96,7 @@ public sealed class EffectParserTests
         var glow = new XElement(
             A + "glow",
             new XAttribute("rad", "63500"),
-            new XElement(DmlNames.SrgbColor, new XAttribute("val", "FFFF00"))
+            new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "FFFF00"))
         );
         var effects = new EffectFormat();
         EffectParser.Parse(WithEffects(glow), effects);

@@ -10,9 +10,6 @@ namespace Unchained.Ooxml.Charts;
 /// </summary>
 public static class CmlNames
 {
-    /// <summary>Generic value attribute: <c>val</c>.</summary>
-    public const string AttributeValue = "val";
-
     /// <summary>Data point index attribute: <c>idx</c>.</summary>
     public const string AttributeIndex = "idx";
 
@@ -58,7 +55,7 @@ public static class CmlNames
     public static readonly XName Marker = Cml + "marker";
     public static readonly XName MarkerSymbol = Cml + "symbol";
     public static readonly XName Category = Cml + "cat";
-    public static readonly XName Values = Cml + "val";
+    public static readonly XName Values = Cml + DmlNames.AttributeValue;
     public static readonly XName XValues = Cml + "xVal";
     public static readonly XName YValues = Cml + "yVal";
     public static readonly XName StringLiteral = Cml + "strLit";

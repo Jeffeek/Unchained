@@ -42,20 +42,20 @@ public static class ChartXmlWriter
             new XAttribute(XNamespace.Xmlns + "r", r.NamespaceName)
         );
 
-        chartSpace.Add(new XElement(CmlNames.Language, new XAttribute(CmlNames.AttributeValue, "en-US")));
+        chartSpace.Add(new XElement(CmlNames.Language, new XAttribute(DmlNames.AttributeValue, "en-US")));
 
         var chartEl = new XElement(CmlNames.Chart);
 
         if (model.HasTitle)
             chartEl.Add(WriteTitle(model.Title, a));
 
-        chartEl.Add(new XElement(CmlNames.AutoTitleDeleted, new XAttribute(CmlNames.AttributeValue, model.HasTitle ? "0" : "1")));
+        chartEl.Add(new XElement(CmlNames.AutoTitleDeleted, new XAttribute(DmlNames.AttributeValue, model.HasTitle ? "0" : "1")));
         chartEl.Add(WritePlotArea(model, fillWriter));
 
         if (model.Legend.IsVisible)
             chartEl.Add(WriteLegend(model.Legend));
 
-        chartEl.Add(new XElement(CmlNames.PlotVisibleOnly, new XAttribute(CmlNames.AttributeValue, "1")));
+        chartEl.Add(new XElement(CmlNames.PlotVisibleOnly, new XAttribute(DmlNames.AttributeValue, "1")));
         chartSpace.Add(chartEl);
         return chartSpace;
     }
@@ -83,7 +83,7 @@ public static class ChartXmlWriter
             new XElement(CmlNames.Text, rich),
             new XElement(
                 CmlNames.Overlay,
-                new XAttribute(CmlNames.AttributeValue, "0")
+                new XAttribute(DmlNames.AttributeValue, "0")
             )
         );
     }
@@ -139,9 +139,9 @@ public static class ChartXmlWriter
             _ => ("col", "clustered")
         };
 
-        el.Add(new XElement(CmlNames.BarDirection, new XAttribute(CmlNames.AttributeValue, dir)));
-        el.Add(new XElement(CmlNames.Grouping, new XAttribute(CmlNames.AttributeValue, grouping)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "0")));
+        el.Add(new XElement(CmlNames.BarDirection, new XAttribute(DmlNames.AttributeValue, dir)));
+        el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
         for (var i = 0; i < model.Data.Series.Count; i++)
             el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, includeMarker: false, fw));
         AddAxisIds(el);
@@ -157,8 +157,8 @@ public static class ChartXmlWriter
             ChartType.LineFullStacked or ChartType.LineWithMarkersFullStacked => "percentStacked",
             _ => "standard"
         };
-        el.Add(new XElement(CmlNames.Grouping, new XAttribute(CmlNames.AttributeValue, grouping)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "0")));
+        el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
 
         var includeMarker = model.Type is ChartType.LineWithMarkers or ChartType.LineWithMarkersStacked
             or ChartType.LineWithMarkersFullStacked;
@@ -171,7 +171,7 @@ public static class ChartXmlWriter
     private static XElement WritePieChart(ChartModel model, Action<XElement, FillFormat>? fw)
     {
         var el = new XElement(CmlNames.PieChart);
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "1")));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "1")));
         var series = model.Data.Series.FirstOrDefault() ?? new ChartSeries();
         el.Add(WriteStandardSeries(series, 0, model.Data.Categories, includeMarker: false, fw));
         return el;
@@ -180,10 +180,10 @@ public static class ChartXmlWriter
     private static XElement WriteDoughnutChart(ChartModel model, Action<XElement, FillFormat>? fw)
     {
         var el = new XElement(CmlNames.DoughnutChart);
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "1")));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "1")));
         var series = model.Data.Series.FirstOrDefault() ?? new ChartSeries();
         el.Add(WriteStandardSeries(series, 0, model.Data.Categories, includeMarker: false, fw));
-        el.Add(new XElement(CmlNames.HoleSize, new XAttribute(CmlNames.AttributeValue, "50")));
+        el.Add(new XElement(CmlNames.HoleSize, new XAttribute(DmlNames.AttributeValue, "50")));
         return el;
     }
 
@@ -196,8 +196,8 @@ public static class ChartXmlWriter
             ChartType.AreaFullStacked => "percentStacked",
             _ => "standard"
         };
-        el.Add(new XElement(CmlNames.Grouping, new XAttribute(CmlNames.AttributeValue, grouping)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "0")));
+        el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
         for (var i = 0; i < model.Data.Series.Count; i++)
             el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, includeMarker: false, fw));
         AddAxisIds(el);
@@ -215,8 +215,8 @@ public static class ChartXmlWriter
             ChartType.ScatterWithSmoothLinesAndMarkers => "smoothMarker",
             _ => "marker"
         };
-        el.Add(new XElement(CmlNames.ScatterStyle, new XAttribute(CmlNames.AttributeValue, style)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "0")));
+        el.Add(new XElement(CmlNames.ScatterStyle, new XAttribute(DmlNames.AttributeValue, style)));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
         for (var i = 0; i < model.Data.Series.Count; i++)
             el.Add(WriteScatterSeries(model.Data.Series[i], i));
         AddAxisIds(el);
@@ -232,8 +232,8 @@ public static class ChartXmlWriter
             ChartType.RadarFilled => "filled",
             _ => "standard"
         };
-        el.Add(new XElement(CmlNames.RadarStyle, new XAttribute(CmlNames.AttributeValue, style)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "0")));
+        el.Add(new XElement(CmlNames.RadarStyle, new XAttribute(DmlNames.AttributeValue, style)));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
         for (var i = 0; i < model.Data.Series.Count; i++)
             el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, includeMarker: false, fw));
         AddAxisIds(el);
@@ -243,7 +243,7 @@ public static class ChartXmlWriter
     private static XElement WriteBubbleChart(ChartModel model)
     {
         var el = new XElement(CmlNames.BubbleChart);
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(CmlNames.AttributeValue, "0")));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
         for (var i = 0; i < model.Data.Series.Count; i++)
             el.Add(WriteScatterSeries(model.Data.Series[i], i));
         AddAxisIds(el);
@@ -252,8 +252,8 @@ public static class ChartXmlWriter
 
     private static void AddAxisIds(XContainer parent)
     {
-        parent.Add(new XElement(CmlNames.AxisId, new XAttribute(CmlNames.AttributeValue, CategoryAxisId)));
-        parent.Add(new XElement(CmlNames.AxisId, new XAttribute(CmlNames.AttributeValue, ValueAxisId)));
+        parent.Add(new XElement(CmlNames.AxisId, new XAttribute(DmlNames.AttributeValue, CategoryAxisId)));
+        parent.Add(new XElement(CmlNames.AxisId, new XAttribute(DmlNames.AttributeValue, ValueAxisId)));
     }
 
     // ── Series ────────────────────────────────────────────────────────────────
@@ -267,8 +267,8 @@ public static class ChartXmlWriter
     )
     {
         var ser = new XElement(CmlNames.Series);
-        ser.Add(new XElement(CmlNames.Index, new XAttribute(CmlNames.AttributeValue, index)));
-        ser.Add(new XElement(CmlNames.Order, new XAttribute(CmlNames.AttributeValue, index)));
+        ser.Add(new XElement(CmlNames.Index, new XAttribute(DmlNames.AttributeValue, index)));
+        ser.Add(new XElement(CmlNames.Order, new XAttribute(DmlNames.AttributeValue, index)));
         ser.Add(WriteSeriesName(series.Name));
 
         if (series.Fill is { } fill && fillWriter != null)
@@ -279,7 +279,7 @@ public static class ChartXmlWriter
         }
 
         if (includeMarker)
-            ser.Add(new XElement(CmlNames.Marker, new XElement(CmlNames.MarkerSymbol, new XAttribute(CmlNames.AttributeValue, "circle"))));
+            ser.Add(new XElement(CmlNames.Marker, new XElement(CmlNames.MarkerSymbol, new XAttribute(DmlNames.AttributeValue, "circle"))));
 
         if (series.DataLabels is { } dl)
             ser.Add(WriteDataLabels(dl));
@@ -296,8 +296,8 @@ public static class ChartXmlWriter
     private static XElement WriteScatterSeries(ChartSeries series, int index)
     {
         var ser = new XElement(CmlNames.Series);
-        ser.Add(new XElement(CmlNames.Index, new XAttribute(CmlNames.AttributeValue, index)));
-        ser.Add(new XElement(CmlNames.Order, new XAttribute(CmlNames.AttributeValue, index)));
+        ser.Add(new XElement(CmlNames.Index, new XAttribute(DmlNames.AttributeValue, index)));
+        ser.Add(new XElement(CmlNames.Order, new XAttribute(DmlNames.AttributeValue, index)));
         ser.Add(WriteSeriesName(series.Name));
 
         var xValues = series.XValues.Count > 0
@@ -316,12 +316,12 @@ public static class ChartXmlWriter
             dLbls.Add(new XElement(c + "numFmt", new XAttribute("formatCode", labels.NumberFormat), new XAttribute("sourceLinked", "0")));
 
         if (!string.IsNullOrEmpty(labels.Position))
-            dLbls.Add(new XElement(c + "dLblPos", new XAttribute(CmlNames.AttributeValue, labels.Position)));
-        dLbls.Add(new XElement(c + "showLegendKey", new XAttribute(CmlNames.AttributeValue, labels.ShowLegendKey ? "1" : "0")));
-        dLbls.Add(new XElement(c + "showVal", new XAttribute(CmlNames.AttributeValue, labels.ShowValue ? "1" : "0")));
-        dLbls.Add(new XElement(c + "showCatName", new XAttribute(CmlNames.AttributeValue, labels.ShowCategoryName ? "1" : "0")));
-        dLbls.Add(new XElement(c + "showSerName", new XAttribute(CmlNames.AttributeValue, labels.ShowSeriesName ? "1" : "0")));
-        dLbls.Add(new XElement(c + "showPercent", new XAttribute(CmlNames.AttributeValue, labels.ShowPercentage ? "1" : "0")));
+            dLbls.Add(new XElement(c + "dLblPos", new XAttribute(DmlNames.AttributeValue, labels.Position)));
+        dLbls.Add(new XElement(c + "showLegendKey", new XAttribute(DmlNames.AttributeValue, labels.ShowLegendKey ? "1" : "0")));
+        dLbls.Add(new XElement(c + "showVal", new XAttribute(DmlNames.AttributeValue, labels.ShowValue ? "1" : "0")));
+        dLbls.Add(new XElement(c + "showCatName", new XAttribute(DmlNames.AttributeValue, labels.ShowCategoryName ? "1" : "0")));
+        dLbls.Add(new XElement(c + "showSerName", new XAttribute(DmlNames.AttributeValue, labels.ShowSeriesName ? "1" : "0")));
+        dLbls.Add(new XElement(c + "showPercent", new XAttribute(DmlNames.AttributeValue, labels.ShowPercentage ? "1" : "0")));
         return dLbls;
     }
 
@@ -329,15 +329,15 @@ public static class ChartXmlWriter
     {
         var c = CmlNames.Cml;
         var tl = new XElement(c + "trendline");
-        tl.Add(new XElement(c + "trendlineType", new XAttribute(CmlNames.AttributeValue, trend.Type)));
+        tl.Add(new XElement(c + "trendlineType", new XAttribute(DmlNames.AttributeValue, trend.Type)));
         if (trend.Order is { } order)
-            tl.Add(new XElement(c + "order", new XAttribute(CmlNames.AttributeValue, order)));
+            tl.Add(new XElement(c + "order", new XAttribute(DmlNames.AttributeValue, order)));
         if (trend.Forward is { } fwd)
-            tl.Add(new XElement(c + "forward", new XAttribute(CmlNames.AttributeValue, Num(fwd))));
+            tl.Add(new XElement(c + "forward", new XAttribute(DmlNames.AttributeValue, Num(fwd))));
         if (trend.Backward is { } bwd)
-            tl.Add(new XElement(c + "backward", new XAttribute(CmlNames.AttributeValue, Num(bwd))));
-        tl.Add(new XElement(c + "dispRSqr", new XAttribute(CmlNames.AttributeValue, trend.DisplayRSquared ? "1" : "0")));
-        tl.Add(new XElement(c + "dispEq", new XAttribute(CmlNames.AttributeValue, trend.DisplayEquation ? "1" : "0")));
+            tl.Add(new XElement(c + "backward", new XAttribute(DmlNames.AttributeValue, Num(bwd))));
+        tl.Add(new XElement(c + "dispRSqr", new XAttribute(DmlNames.AttributeValue, trend.DisplayRSquared ? "1" : "0")));
+        tl.Add(new XElement(c + "dispEq", new XAttribute(DmlNames.AttributeValue, trend.DisplayEquation ? "1" : "0")));
         return tl;
     }
 
@@ -348,7 +348,7 @@ public static class ChartXmlWriter
     private static XElement WriteStringLiteral(IReadOnlyList<string> values)
     {
         var strLit = new XElement(CmlNames.StringLiteral);
-        strLit.Add(new XElement(CmlNames.PointCount, new XAttribute(CmlNames.AttributeValue, values.Count)));
+        strLit.Add(new XElement(CmlNames.PointCount, new XAttribute(DmlNames.AttributeValue, values.Count)));
         for (var i = 0; i < values.Count; i++)
         {
             strLit.Add(
@@ -367,7 +367,7 @@ public static class ChartXmlWriter
     {
         var numLit = new XElement(CmlNames.NumberLiteral);
         numLit.Add(new XElement(CmlNames.FormatCode, "General"));
-        numLit.Add(new XElement(CmlNames.PointCount, new XAttribute(CmlNames.AttributeValue, values.Count)));
+        numLit.Add(new XElement(CmlNames.PointCount, new XAttribute(DmlNames.AttributeValue, values.Count)));
         for (var i = 0; i < values.Count; i++)
         {
             numLit.Add(
@@ -388,16 +388,16 @@ public static class ChartXmlWriter
     {
         var catPos = type is ChartType.BarClustered or ChartType.BarStacked or ChartType.BarFullStacked ? "l" : "b";
         var ax = new XElement(CmlNames.CategoryAxis);
-        ax.Add(new XElement(CmlNames.AxisId, new XAttribute(CmlNames.AttributeValue, CategoryAxisId)));
+        ax.Add(new XElement(CmlNames.AxisId, new XAttribute(DmlNames.AttributeValue, CategoryAxisId)));
         ax.Add(WriteScaling(axis));
-        ax.Add(new XElement(CmlNames.Delete, new XAttribute(CmlNames.AttributeValue, axis.IsVisible ? "0" : "1")));
-        ax.Add(new XElement(CmlNames.AxisPosition, new XAttribute(CmlNames.AttributeValue, axis.Position ?? catPos)));
+        ax.Add(new XElement(CmlNames.Delete, new XAttribute(DmlNames.AttributeValue, axis.IsVisible ? "0" : "1")));
+        ax.Add(new XElement(CmlNames.AxisPosition, new XAttribute(DmlNames.AttributeValue, axis.Position ?? catPos)));
         if (axis.HasMajorGridlines) ax.Add(new XElement(CmlNames.Cml + "majorGridlines"));
         if (axis.HasMinorGridlines) ax.Add(new XElement(CmlNames.Cml + "minorGridlines"));
         if (!string.IsNullOrEmpty(axis.Title)) ax.Add(WriteAxisTitle(axis.Title));
         if (!string.IsNullOrEmpty(axis.NumberFormat))
             ax.Add(new XElement(CmlNames.Cml + "numFmt", new XAttribute("formatCode", axis.NumberFormat), new XAttribute("sourceLinked", "0")));
-        ax.Add(new XElement(CmlNames.CrossAxis, new XAttribute(CmlNames.AttributeValue, ValueAxisId)));
+        ax.Add(new XElement(CmlNames.CrossAxis, new XAttribute(DmlNames.AttributeValue, ValueAxisId)));
         return ax;
     }
 
@@ -405,20 +405,20 @@ public static class ChartXmlWriter
     {
         var valPos = type is ChartType.BarClustered or ChartType.BarStacked or ChartType.BarFullStacked ? "b" : "l";
         var ax = new XElement(CmlNames.ValueAxis);
-        ax.Add(new XElement(CmlNames.AxisId, new XAttribute(CmlNames.AttributeValue, ValueAxisId)));
+        ax.Add(new XElement(CmlNames.AxisId, new XAttribute(DmlNames.AttributeValue, ValueAxisId)));
         ax.Add(WriteScaling(axis));
-        ax.Add(new XElement(CmlNames.Delete, new XAttribute(CmlNames.AttributeValue, axis.IsVisible ? "0" : "1")));
-        ax.Add(new XElement(CmlNames.AxisPosition, new XAttribute(CmlNames.AttributeValue, axis.Position ?? valPos)));
+        ax.Add(new XElement(CmlNames.Delete, new XAttribute(DmlNames.AttributeValue, axis.IsVisible ? "0" : "1")));
+        ax.Add(new XElement(CmlNames.AxisPosition, new XAttribute(DmlNames.AttributeValue, axis.Position ?? valPos)));
         if (axis.HasMajorGridlines) ax.Add(new XElement(CmlNames.Cml + "majorGridlines"));
         if (axis.HasMinorGridlines) ax.Add(new XElement(CmlNames.Cml + "minorGridlines"));
         if (!string.IsNullOrEmpty(axis.Title)) ax.Add(WriteAxisTitle(axis.Title));
         if (!string.IsNullOrEmpty(axis.NumberFormat))
             ax.Add(new XElement(CmlNames.Cml + "numFmt", new XAttribute("formatCode", axis.NumberFormat), new XAttribute("sourceLinked", "0")));
-        ax.Add(new XElement(CmlNames.CrossAxis, new XAttribute(CmlNames.AttributeValue, CategoryAxisId)));
+        ax.Add(new XElement(CmlNames.CrossAxis, new XAttribute(DmlNames.AttributeValue, CategoryAxisId)));
         if (axis.MajorUnit is { } mu)
-            ax.Add(new XElement(CmlNames.Cml + "majorUnit", new XAttribute(CmlNames.AttributeValue, Num(mu))));
+            ax.Add(new XElement(CmlNames.Cml + "majorUnit", new XAttribute(DmlNames.AttributeValue, Num(mu))));
         if (axis.MinorUnit is { } nu)
-            ax.Add(new XElement(CmlNames.Cml + "minorUnit", new XAttribute(CmlNames.AttributeValue, Num(nu))));
+            ax.Add(new XElement(CmlNames.Cml + "minorUnit", new XAttribute(DmlNames.AttributeValue, Num(nu))));
         return ax;
     }
 
@@ -428,13 +428,13 @@ public static class ChartXmlWriter
             CmlNames.Scaling,
             new XElement(
                 CmlNames.Orientation,
-                new XAttribute(CmlNames.AttributeValue, "minMax")
+                new XAttribute(DmlNames.AttributeValue, "minMax")
             )
         );
         if (axis.Maximum is { } max)
-            scaling.Add(new XElement(CmlNames.Cml + "max", new XAttribute(CmlNames.AttributeValue, Num(max))));
+            scaling.Add(new XElement(CmlNames.Cml + "max", new XAttribute(DmlNames.AttributeValue, Num(max))));
         if (axis.Minimum is { } min)
-            scaling.Add(new XElement(CmlNames.Cml + "min", new XAttribute(CmlNames.AttributeValue, Num(min))));
+            scaling.Add(new XElement(CmlNames.Cml + "min", new XAttribute(DmlNames.AttributeValue, Num(min))));
         return scaling;
     }
 
@@ -454,7 +454,7 @@ public static class ChartXmlWriter
             ),
             new XElement(
                 CmlNames.Cml + "overlay",
-                new XAttribute(CmlNames.AttributeValue, "0")
+                new XAttribute(DmlNames.AttributeValue, "0")
             )
         );
     }
@@ -471,10 +471,10 @@ public static class ChartXmlWriter
         };
         return new XElement(
             CmlNames.Legend,
-            new XElement(CmlNames.LegendPosition, new XAttribute(CmlNames.AttributeValue, posVal)),
+            new XElement(CmlNames.LegendPosition, new XAttribute(DmlNames.AttributeValue, posVal)),
             new XElement(
                 CmlNames.Overlay,
-                new XAttribute(CmlNames.AttributeValue, legend.IsOverlay ? "1" : "0")
+                new XAttribute(DmlNames.AttributeValue, legend.IsOverlay ? "1" : "0")
             )
         );
     }

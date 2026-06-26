@@ -117,9 +117,9 @@ public sealed class TextParserUnitTests
             new XAttribute("indent", "-228600"),
             new XAttribute("lvl", "2"),
             new XAttribute("rtl", "1"),
-            new XElement(DmlNames.LineSpacing, new XElement(A + "spcPct", new XAttribute("val", "150000"))),
-            new XElement(DmlNames.SpaceBefore, new XElement(A + "spcPts", new XAttribute("val", "1200"))),
-            new XElement(DmlNames.SpaceAfter, new XElement(A + "spcPts", new XAttribute("val", "600")))
+            new XElement(DmlNames.LineSpacing, new XElement(A + "spcPct", new XAttribute(DmlNames.AttributeValue, "150000"))),
+            new XElement(DmlNames.SpaceBefore, new XElement(A + "spcPts", new XAttribute(DmlNames.AttributeValue, "1200"))),
+            new XElement(DmlNames.SpaceAfter, new XElement(A + "spcPts", new XAttribute(DmlNames.AttributeValue, "600")))
         );
         var para = new XElement(DmlNames.Paragraph, pPr, new XElement(DmlNames.Run, new XElement(DmlNames.Text, "x")));
         var txBody = new XElement(DmlNames.TextBody, para);
@@ -180,8 +180,8 @@ public sealed class TextParserUnitTests
         var pPr = new XElement(
             DmlNames.ParagraphProperties,
             new XElement(A + "buFont", new XAttribute("typeface", "Arial")),
-            new XElement(A + "buClr", new XElement(DmlNames.SrgbColor, new XAttribute("val", "FF0000"))),
-            new XElement(A + "buSzPct", new XAttribute("val", "75000")),
+            new XElement(A + "buClr", new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "FF0000"))),
+            new XElement(A + "buSzPct", new XAttribute(DmlNames.AttributeValue, "75000")),
             new XElement(A + "buAutoNum", new XAttribute("type", "romanUcPeriod"), new XAttribute("startAt", "3"))
         );
         var para = new XElement(DmlNames.Paragraph, pPr, new XElement(DmlNames.Run, new XElement(DmlNames.Text, "x")));
@@ -215,7 +215,7 @@ public sealed class TextParserUnitTests
             new XAttribute("spc", "150"),
             new XAttribute("baseline", "30000"),
             new XElement(DmlNames.LatinFont, new XAttribute("typeface", "Calibri")),
-            new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute("val", "00FF00")))
+            new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "00FF00")))
         );
         var run = new XElement(DmlNames.Run, rPr, new XElement(DmlNames.Text, "styled"));
         var para = new XElement(DmlNames.Paragraph, run);
@@ -232,7 +232,7 @@ public sealed class TextParserUnitTests
     {
         var pPr = new XElement(
             DmlNames.ParagraphProperties,
-            new XElement(DmlNames.LineSpacing, new XElement(A + "spcPts", new XAttribute("val", "2400")))
+            new XElement(DmlNames.LineSpacing, new XElement(A + "spcPts", new XAttribute(DmlNames.AttributeValue, "2400")))
         );
         var para = new XElement(DmlNames.Paragraph, pPr, new XElement(DmlNames.Run, new XElement(DmlNames.Text, "x")));
         var txBody = new XElement(DmlNames.TextBody, para);

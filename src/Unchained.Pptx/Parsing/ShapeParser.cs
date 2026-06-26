@@ -316,7 +316,7 @@ internal sealed class ShapeParser
                          .Select(static ext => ext.Elements().FirstOrDefault(static e => e.Name.LocalName == "decorative"))
                          .OfType<XElement>())
             {
-                shape.IsDecorative = decorative.GetAttrBool("val") ?? false;
+                shape.IsDecorative = decorative.GetAttrBool(DmlNames.AttributeValue) ?? false;
                 break;
             }
         }

@@ -887,7 +887,7 @@ internal sealed class PresentationWriter
                         DmlNames.SolidFill,
                         new XElement(
                             DmlNames.SrgbColor,
-                            new XAttribute("val", show.PenColorHex)
+                            new XAttribute(DmlNames.AttributeValue, show.PenColorHex)
                         )
                     )
                 )

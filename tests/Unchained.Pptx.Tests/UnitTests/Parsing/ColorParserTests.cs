@@ -15,7 +15,7 @@ public sealed class ColorParserTests
     [Fact]
     public void Parse_SrgbClr_ReturnsRgb()
     {
-        var xml = Wrap(new XElement(DmlNames.SrgbColor, new XAttribute("val", "4472C4")));
+        var xml = Wrap(new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "4472C4")));
         var color = ColorParser.Parse(xml);
         color.Type.ShouldBe(ColorSpecType.Rgb);
         color.Resolve(null).ShouldBe(0xFF4472C4u);
@@ -26,8 +26,8 @@ public sealed class ColorParserTests
     {
         var srgb = new XElement(
             DmlNames.SrgbColor,
-            new XAttribute("val", "FF0000"),
-            new XElement(DmlNames.Alpha, new XAttribute("val", "50000"))
+            new XAttribute(DmlNames.AttributeValue, "FF0000"),
+            new XElement(DmlNames.Alpha, new XAttribute(DmlNames.AttributeValue, "50000"))
         );
         var color = ColorParser.Parse(Wrap(srgb));
         // 50000/100000 * 255 ≈ 128.
@@ -38,7 +38,7 @@ public sealed class ColorParserTests
     [Fact]
     public void Parse_SchemeClr_ReturnsThemeSlot()
     {
-        var xml = Wrap(new XElement(DmlNames.SchemeColor, new XAttribute("val", "accent1")));
+        var xml = Wrap(new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "accent1")));
         var color = ColorParser.Parse(xml);
         color.Type.ShouldBe(ColorSpecType.ThemeSlot);
         color.ThemeSlot.ShouldBe(ThemeColorSlot.Accent1);
@@ -49,8 +49,8 @@ public sealed class ColorParserTests
     {
         var scheme = new XElement(
             DmlNames.SchemeColor,
-            new XAttribute("val", "dk1"),
-            new XElement(DmlNames.LuminanceModifier, new XAttribute("val", "50000"))
+            new XAttribute(DmlNames.AttributeValue, "dk1"),
+            new XElement(DmlNames.LuminanceModifier, new XAttribute(DmlNames.AttributeValue, "50000"))
         );
         var color = ColorParser.Parse(Wrap(scheme));
         color.LuminanceModifier.ShouldBe(0.5, 0.001);
@@ -61,7 +61,7 @@ public sealed class ColorParserTests
     {
         var sys = new XElement(
             DmlNames.SystemColor,
-            new XAttribute("val", "windowText"),
+            new XAttribute(DmlNames.AttributeValue, "windowText"),
             new XAttribute("lastClr", "00FF00")
         );
         var color = ColorParser.Parse(Wrap(sys));
@@ -71,7 +71,7 @@ public sealed class ColorParserTests
     [Fact]
     public void Parse_PresetColor_MapsKnownName()
     {
-        var prst = new XElement(DmlNames.PresetColor, new XAttribute("val", "red"));
+        var prst = new XElement(DmlNames.PresetColor, new XAttribute(DmlNames.AttributeValue, "red"));
         var color = ColorParser.Parse(Wrap(prst));
         color.Resolve(null).ShouldBe(0xFFFF0000u);
     }
@@ -109,7 +109,7 @@ public sealed class ColorParserTests
     [Fact]
     public void Parse_SrgbClrWithInvalidHex_FallsThroughToGrey()
     {
-        var xml = Wrap(new XElement(DmlNames.SrgbColor, new XAttribute("val", "NOTHEX")));
+        var xml = Wrap(new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "NOTHEX")));
         var color = ColorParser.Parse(xml);
         color.Resolve(null).ShouldBe(0xFF808080u);
     }
@@ -119,7 +119,7 @@ public sealed class ColorParserTests
     {
         var sys = new XElement(
             DmlNames.SystemColor,
-            new XAttribute("val", "windowText"),
+            new XAttribute(DmlNames.AttributeValue, "windowText"),
             new XAttribute("lastClr", "ZZZZZZ")
         );
         var color = ColorParser.Parse(Wrap(sys));
@@ -131,8 +131,8 @@ public sealed class ColorParserTests
     {
         var scheme = new XElement(
             DmlNames.SchemeColor,
-            new XAttribute("val", "accent2"),
-            new XElement(DmlNames.LuminanceOffset, new XAttribute("val", "20000"))
+            new XAttribute(DmlNames.AttributeValue, "accent2"),
+            new XElement(DmlNames.LuminanceOffset, new XAttribute(DmlNames.AttributeValue, "20000"))
         );
         var color = ColorParser.Parse(Wrap(scheme));
         color.LuminanceOffset.ShouldBe(0.2, 0.001);
@@ -141,7 +141,7 @@ public sealed class ColorParserTests
     [Fact]
     public void Parse_UnknownSchemeSlot_DefaultsToDark1()
     {
-        var xml = Wrap(new XElement(DmlNames.SchemeColor, new XAttribute("val", "bogus")));
+        var xml = Wrap(new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "bogus")));
         var color = ColorParser.Parse(xml);
         color.ThemeSlot.ShouldBe(ThemeColorSlot.Dark1);
     }
@@ -163,7 +163,7 @@ public sealed class ColorParserTests
     ]
     public void Parse_SchemeSlot_MapsAllSlots(string name, ThemeColorSlot expected)
     {
-        var xml = Wrap(new XElement(DmlNames.SchemeColor, new XAttribute("val", name)));
+        var xml = Wrap(new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, name)));
         ColorParser.Parse(xml).ThemeSlot.ShouldBe(expected);
     }
 
@@ -184,7 +184,7 @@ public sealed class ColorParserTests
     ]
     public void Parse_PresetColor_MapsAllKnownNames(string name, uint expected)
     {
-        var prst = new XElement(DmlNames.PresetColor, new XAttribute("val", name));
+        var prst = new XElement(DmlNames.PresetColor, new XAttribute(DmlNames.AttributeValue, name));
         var color = ColorParser.Parse(Wrap(prst));
         color.Resolve(null).ShouldBe(expected);
     }

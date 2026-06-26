@@ -41,20 +41,20 @@ internal static partial class WorkbookWriter
                 PivotWriter.WriteCacheDefinition(pivot, recordsRelId));
             package.ClearRelationships(pivot.CacheDefinitionUri);
             package.AddRelationship(pivot.CacheDefinitionUri, recordsRelId, SmlNames.RelTypePivotCacheRecords,
-                RelativeTo(package, pivot.CacheDefinitionUri, pivot.CacheRecordsUri));
+                package.GetRelativeUri(pivot.CacheDefinitionUri, pivot.CacheRecordsUri));
 
             // 3. Table definition part + table → cacheDefinition relationship.
             package.AddOrReplacePart(pivot.TablePartUri, SmlNames.ContentTypePivotTable, PivotWriter.WriteTableDefinition(pivot));
             package.ClearRelationships(pivot.TablePartUri);
             pivot.CacheDefinitionRelId = "rId1";
             package.AddRelationship(pivot.TablePartUri, pivot.CacheDefinitionRelId, SmlNames.RelTypePivotCacheDefinition,
-                RelativeTo(package, pivot.TablePartUri, pivot.CacheDefinitionUri));
+                package.GetRelativeUri(pivot.TablePartUri, pivot.CacheDefinitionUri));
 
             // 4. Worksheet → pivot table relationship.
             if (string.IsNullOrEmpty(pivot.TableRelationshipId))
                 pivot.TableRelationshipId = NextFreeRelIdFor(package, sheet.PartUri, "rIdPv");
             EnsureRelationship(package, sheet.PartUri, pivot.TableRelationshipId, SmlNames.RelTypePivotTable,
-                RelativeTo(package, sheet.PartUri, pivot.TablePartUri));
+                package.GetRelativeUri(sheet.PartUri, pivot.TablePartUri));
         }
     }
 
@@ -70,7 +70,7 @@ internal static partial class WorkbookWriter
         {
             var relId = NextFreeRelId(package.GetPart(WorkbookUri));
             package.AddRelationship(WorkbookUri, relId, SmlNames.RelTypePivotCacheDefinition,
-                RelativeToWorkbook(pivot.CacheDefinitionUri));
+                RelativeToWorkbook(package, pivot.CacheDefinitionUri));
             caches.Add(new XElement(SmlNames.X + "pivotCache",
                 new XAttribute("cacheId", pivot.CacheId.ToString(CultureInfo.InvariantCulture)),
                 new XAttribute(SmlNames.R + "id", relId)));

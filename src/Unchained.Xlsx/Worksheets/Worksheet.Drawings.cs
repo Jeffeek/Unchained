@@ -68,6 +68,26 @@ public sealed partial class Worksheet
         return chart;
     }
 
+    /// <summary>
+    ///     Re-reads <paramref name="dataRange" /> into <paramref name="chart" />'s model, replacing its
+    ///     current categories and series while preserving per-series fills where the series count is
+    ///     unchanged. Use after the source cells change or to repoint a chart at a different range.
+    /// </summary>
+    public void RebindChart(ChartDrawing chart, CellRange dataRange)
+    {
+        ArgumentNullException.ThrowIfNull(chart);
+
+        var previousFills = chart.Chart.Data.Series.Select(static s => s.Fill).ToList();
+        chart.Chart.Data.Categories.Clear();
+        chart.Chart.Data.Series.Clear();
+        PopulateChartData(chart.Chart, dataRange);
+
+        if (chart.Chart.Data.Series.Count != previousFills.Count)
+            return;
+        for (var i = 0; i < previousFills.Count; i++)
+            chart.Chart.Data.Series[i].Fill = previousFills[i];
+    }
+
     /// <summary>Reads <paramref name="range" /> into the chart model: column 1 = categories, each other column = a series.</summary>
     private void PopulateChartData(Ooxml.Charts.ChartModel model, CellRange range)
     {

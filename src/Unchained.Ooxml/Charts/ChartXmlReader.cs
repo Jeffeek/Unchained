@@ -85,21 +85,21 @@ public static class ChartXmlReader
 
     private static void ParseAxis(XContainer axEl, ChartAxis axis)
     {
-        var delete = axEl.Element(CmlNames.Cml + "delete")?.GetAttrInt(CmlNames.AttributeValue);
+        var delete = axEl.Element(CmlNames.Cml + "delete")?.GetAttrInt(DmlNames.AttributeValue);
         axis.IsVisible = delete is not 1;
 
         var scaling = axEl.Element(CmlNames.Scaling);
         if (scaling is not null)
         {
-            axis.Minimum = scaling.Element(CmlNames.Cml + "min")?.GetAttrDouble(CmlNames.AttributeValue);
-            axis.Maximum = scaling.Element(CmlNames.Cml + "max")?.GetAttrDouble(CmlNames.AttributeValue);
+            axis.Minimum = scaling.Element(CmlNames.Cml + "min")?.GetAttrDouble(DmlNames.AttributeValue);
+            axis.Maximum = scaling.Element(CmlNames.Cml + "max")?.GetAttrDouble(DmlNames.AttributeValue);
         }
 
-        axis.MajorUnit = axEl.Element(CmlNames.Cml + "majorUnit")?.GetAttrDouble(CmlNames.AttributeValue);
-        axis.MinorUnit = axEl.Element(CmlNames.Cml + "minorUnit")?.GetAttrDouble(CmlNames.AttributeValue);
+        axis.MajorUnit = axEl.Element(CmlNames.Cml + "majorUnit")?.GetAttrDouble(DmlNames.AttributeValue);
+        axis.MinorUnit = axEl.Element(CmlNames.Cml + "minorUnit")?.GetAttrDouble(DmlNames.AttributeValue);
         axis.HasMajorGridlines = axEl.Element(CmlNames.Cml + "majorGridlines") is not null;
         axis.HasMinorGridlines = axEl.Element(CmlNames.Cml + "minorGridlines") is not null;
-        axis.Position = axEl.Element(CmlNames.Cml + "axPos")?.GetAttr(CmlNames.AttributeValue);
+        axis.Position = axEl.Element(CmlNames.Cml + "axPos")?.GetAttr(DmlNames.AttributeValue);
         axis.NumberFormat = axEl.Element(CmlNames.Cml + "numFmt")?.GetAttr("formatCode");
 
         var titleRuns = axEl.Element(CmlNames.Title)
@@ -117,8 +117,8 @@ public static class ChartXmlReader
     {
         if (element.Name == CmlNames.BarChart)
         {
-            var dir = element.Element(CmlNames.BarDirection)?.GetAttr(CmlNames.AttributeValue, "col") ?? "col";
-            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(CmlNames.AttributeValue, "clustered") ?? "clustered";
+            var dir = element.Element(CmlNames.BarDirection)?.GetAttr(DmlNames.AttributeValue, "col") ?? "col";
+            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, "clustered") ?? "clustered";
             return ((dir, grouping) switch
             {
                 ("col", "clustered") => ChartType.ColumnClustered,
@@ -133,7 +133,7 @@ public static class ChartXmlReader
 
         if (element.Name == CmlNames.LineChart)
         {
-            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(CmlNames.AttributeValue, "standard") ?? "standard";
+            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, "standard") ?? "standard";
             var hasMarkers = element.Elements(CmlNames.Series).Any(static s => s.Element(CmlNames.Marker) != null);
             return ((grouping, hasMarkers) switch
             {
@@ -149,7 +149,7 @@ public static class ChartXmlReader
         if (element.Name == CmlNames.PieChart)
         {
             var hasExplosion = element.Elements(CmlNames.Series)
-                .Any(static s => s.Element(CmlNames.Cml + "explosion")?.GetAttrInt(CmlNames.AttributeValue) > 0);
+                .Any(static s => s.Element(CmlNames.Cml + "explosion")?.GetAttrInt(DmlNames.AttributeValue) > 0);
             return (hasExplosion ? ChartType.PieExploded : ChartType.Pie, true);
         }
 
@@ -158,7 +158,7 @@ public static class ChartXmlReader
 
         if (element.Name == CmlNames.AreaChart)
         {
-            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(CmlNames.AttributeValue, "standard") ?? "standard";
+            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, "standard") ?? "standard";
             return (grouping switch
             {
                 "stacked" => ChartType.AreaStacked,
@@ -169,7 +169,7 @@ public static class ChartXmlReader
 
         if (element.Name == CmlNames.ScatterChart)
         {
-            var style = element.Element(CmlNames.ScatterStyle)?.GetAttr(CmlNames.AttributeValue, "marker") ?? "marker";
+            var style = element.Element(CmlNames.ScatterStyle)?.GetAttr(DmlNames.AttributeValue, "marker") ?? "marker";
             return (style switch
             {
                 "line" => ChartType.ScatterWithStraightLines,
@@ -183,7 +183,7 @@ public static class ChartXmlReader
         // ReSharper disable once InvertIf
         if (element.Name == CmlNames.RadarChart)
         {
-            var style = element.Element(CmlNames.RadarStyle)?.GetAttr(CmlNames.AttributeValue, "standard") ?? "standard";
+            var style = element.Element(CmlNames.RadarStyle)?.GetAttr(DmlNames.AttributeValue, "standard") ?? "standard";
             return (style switch
             {
                 "marker" => ChartType.RadarWithMarkers,
@@ -247,12 +247,12 @@ public static class ChartXmlReader
             ShowSeriesName = Show("showSerName", false),
             ShowPercentage = Show("showPercent", false),
             ShowLegendKey = Show("showLegendKey", false),
-            Position = dLbls.Element(c + "dLblPos")?.GetAttr(CmlNames.AttributeValue),
+            Position = dLbls.Element(c + "dLblPos")?.GetAttr(DmlNames.AttributeValue),
             NumberFormat = dLbls.Element(c + "numFmt")?.GetAttr("formatCode")
         };
 
         bool Show(string name, bool dflt) =>
-            dLbls.Element(c + name)?.GetAttrInt(CmlNames.AttributeValue) is { } v ? v == 1 : dflt;
+            dLbls.Element(c + name)?.GetAttrInt(DmlNames.AttributeValue) is { } v ? v == 1 : dflt;
     }
 
     private static ChartTrendline ParseTrendline(XContainer tl)
@@ -260,12 +260,12 @@ public static class ChartXmlReader
         var c = CmlNames.Cml;
         return new ChartTrendline
         {
-            Type = tl.Element(c + "trendlineType")?.GetAttr(CmlNames.AttributeValue, "linear") ?? "linear",
-            Order = tl.Element(c + "order")?.GetAttrInt(CmlNames.AttributeValue),
-            Forward = tl.Element(c + "forward")?.GetAttrDouble(CmlNames.AttributeValue),
-            Backward = tl.Element(c + "backward")?.GetAttrDouble(CmlNames.AttributeValue),
-            DisplayEquation = tl.Element(c + "dispEq")?.GetAttrInt(CmlNames.AttributeValue) == 1,
-            DisplayRSquared = tl.Element(c + "dispRSqr")?.GetAttrInt(CmlNames.AttributeValue) == 1
+            Type = tl.Element(c + "trendlineType")?.GetAttr(DmlNames.AttributeValue, "linear") ?? "linear",
+            Order = tl.Element(c + "order")?.GetAttrInt(DmlNames.AttributeValue),
+            Forward = tl.Element(c + "forward")?.GetAttrDouble(DmlNames.AttributeValue),
+            Backward = tl.Element(c + "backward")?.GetAttrDouble(DmlNames.AttributeValue),
+            DisplayEquation = tl.Element(c + "dispEq")?.GetAttrInt(DmlNames.AttributeValue) == 1,
+            DisplayRSquared = tl.Element(c + "dispRSqr")?.GetAttrInt(DmlNames.AttributeValue) == 1
         };
     }
 
@@ -332,8 +332,8 @@ public static class ChartXmlReader
         }
 
         legend.IsVisible = true;
-        legend.IsOverlay = legendEl.Element(CmlNames.Overlay)?.GetAttrBool(CmlNames.AttributeValue) ?? false;
-        var posVal = legendEl.Element(CmlNames.LegendPosition)?.GetAttr(CmlNames.AttributeValue, "b") ?? "b";
+        legend.IsOverlay = legendEl.Element(CmlNames.Overlay)?.GetAttrBool(DmlNames.AttributeValue) ?? false;
+        var posVal = legendEl.Element(CmlNames.LegendPosition)?.GetAttr(DmlNames.AttributeValue, "b") ?? "b";
         legend.Position = posVal switch
         {
             "t" => ChartLegendPosition.Top,

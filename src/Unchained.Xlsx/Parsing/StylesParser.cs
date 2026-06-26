@@ -66,19 +66,19 @@ internal static class StylesParser
             Shadow = element.Child(SmlNames.FontShadow) != null,
             Condense = element.Child(SmlNames.FontCondense) != null,
             Extend = element.Child(SmlNames.FontExtend) != null,
-            SizePoints = element.Child(SmlNames.FontSize)?.GetAttrDouble("val") ?? 11,
-            Name = element.Child(SmlNames.FontName)?.GetAttr("val") ?? "Calibri",
-            Scheme = element.Child(SmlNames.FontScheme)?.GetAttr("val"),
+            SizePoints = element.Child(SmlNames.FontSize)?.GetAttrDouble(DmlNames.AttributeValue) ?? 11,
+            Name = element.Child(SmlNames.FontName)?.GetAttr(DmlNames.AttributeValue) ?? "Calibri",
+            Scheme = element.Child(SmlNames.FontScheme)?.GetAttr(DmlNames.AttributeValue),
             Color = SmlColor.FromHexArgb(element.Child(SmlNames.Color)?.GetAttr("rgb"))
         };
 
         var underline = element.Child(SmlNames.FontUnderline);
         if (underline != null)
-            font.Underline = SmlEnums.ParseUnderline(underline.GetAttr("val"));
+            font.Underline = SmlEnums.ParseUnderline(underline.GetAttr(DmlNames.AttributeValue));
 
         var vertAlign = element.Child(SmlNames.FontVertAlign);
         if (vertAlign != null)
-            font.VerticalAlignment = SmlEnums.ParseFontVerticalAlignment(vertAlign.GetAttr("val"));
+            font.VerticalAlignment = SmlEnums.ParseFontVerticalAlignment(vertAlign.GetAttr(DmlNames.AttributeValue));
 
         return font;
     }

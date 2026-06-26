@@ -369,7 +369,7 @@ internal static partial class WorkbookWriter
 
         foreach (var sheet in document.Sheets)
         {
-            var target = RelativeToWorkbook(sheet.PartUri);
+            var target = RelativeToWorkbook(package, sheet.PartUri);
             package.AddRelationship(WorkbookUri, sheet.RelationshipId, SmlNames.RelTypeWorksheet, target);
         }
 
@@ -416,10 +416,8 @@ internal static partial class WorkbookWriter
         return relId;
     }
 
-    private static string RelativeToWorkbook(string sheetUri) =>
-        sheetUri.StartsWith("/xl/", StringComparison.OrdinalIgnoreCase)
-            ? sheetUri["/xl/".Length..]
-            : sheetUri.TrimStart('/');
+    private static string RelativeToWorkbook(OpcPackage package, string sheetUri) =>
+        package.GetRelativeUri(WorkbookUri, sheetUri);
 
     // ── styles.xml ─────────────────────────────────────────────────────────────
 
