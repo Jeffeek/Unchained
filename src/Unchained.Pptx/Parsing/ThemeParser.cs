@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core;
+using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Themes;
 
 namespace Unchained.Pptx.Parsing;
@@ -23,7 +24,7 @@ internal static class ThemeParser
     {
         var theme = new PptxTheme
         {
-            Name = root.GetAttr("name", string.Empty)
+            Name = root.GetAttr(PmlNames.AttributeName, string.Empty)
         };
 
         var elements = root.Element(DmlNames.ThemeElements);
@@ -75,7 +76,7 @@ internal static class ThemeParser
     {
         var scheme = new FontScheme
         {
-            Name = fontScheme.GetAttr("name", string.Empty)
+            Name = fontScheme.GetAttr(PmlNames.AttributeName, string.Empty)
         };
 
         var major = fontScheme.Element(DmlNames.MajorFont);

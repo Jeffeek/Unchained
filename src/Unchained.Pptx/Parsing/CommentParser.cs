@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Core.Xml;
@@ -28,7 +29,7 @@ internal static class CommentParser
             var author = authors.FindById(authorId);
             if (author == null) continue;
 
-            var idxRaw = cm.GetAttr("idx");
+            var idxRaw = cm.GetAttr(CmlNames.AttributeIndex);
             if (!uint.TryParse(idxRaw, out var idx)) continue;
 
             // Update the author's last index so new comments don't conflict

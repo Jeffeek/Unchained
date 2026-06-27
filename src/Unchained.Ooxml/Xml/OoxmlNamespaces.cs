@@ -13,13 +13,10 @@ internal static class OoxmlNamespaces
     /// <summary>Package metadata base: <c>http://schemas.openxmlformats.org/package/2006/metadata</c></summary>
     public const string PackageMetadata = "http://schemas.openxmlformats.org/package/2006/metadata";
 
-    /// <summary>Core properties rel-type: <c>http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties</c></summary>
-    public const string RelCoreProperties = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
+    /// <summary>Core properties rel-type: <c>metadata/core-properties</c> (package level)</summary>
+    public const string RelCoreProperties = "metadata/core-properties";
 
-    /// <summary>Extended properties: <c>http://schemas.openxmlformats.org/officeDocument/2006/extended-properties</c></summary>
-    public const string ExtendedProperties = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties";
-
-    /// <summary>Extended properties rel-type: <c>extended-properties</c></summary>
+    /// <summary>Extended properties rel-type: <c>/extended-properties</c></summary>
     public const string RelExtendedProperties = "/extended-properties";
 
     /// <summary>Office document relationships: <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships</c></summary>

@@ -75,7 +75,7 @@ internal static class FillParser
 
     private static void ParsePattern(XElement patternElement, FillFormat fill)
     {
-        var preset = patternElement.GetAttr("prst", "pct5");
+        var preset = patternElement.GetAttr(DmlNames.AttributePreset, "pct5");
         var foreground = patternElement.Element(DmlNames.SolidFill) is { } fg
             ? ColorParser.Parse(fg)
             : default;

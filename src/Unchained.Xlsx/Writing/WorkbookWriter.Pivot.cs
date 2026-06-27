@@ -52,7 +52,7 @@ internal static partial class WorkbookWriter
 
             // 4. Worksheet → pivot table relationship.
             if (string.IsNullOrEmpty(pivot.TableRelationshipId))
-                pivot.TableRelationshipId = NextFreeRelIdFor(package, sheet.PartUri, "rIdPv");
+                pivot.TableRelationshipId = package.NextFreeRelId(sheet.PartUri, "rIdPv");
             EnsureRelationship(package, sheet.PartUri, pivot.TableRelationshipId, SmlNames.RelTypePivotTable,
                 package.GetRelativeUri(sheet.PartUri, pivot.TablePartUri));
         }

@@ -65,10 +65,10 @@ public sealed partial class Worksheet
             ShowErrorAlert = element.GetAttrBool("showErrorAlert") == true,
             ShowDropDown = element.GetAttrBool("showDropDown") != true, // attribute means "hide" in OOXML
             ErrorStyle = SmlEnums.ParseErrorStyle(element.GetAttr("errorStyle")),
-            ErrorTitle = element.GetAttr("errorTitle"),
-            ErrorMessage = element.GetAttr("error"),
-            PromptTitle = element.GetAttr("promptTitle"),
-            Prompt = element.GetAttr("prompt"),
+            ErrorTitle = element.GetAttr(SmlNames.AttributeErrorTitle),
+            ErrorMessage = element.GetAttr(SmlNames.AttributeErrorMessage),
+            PromptTitle = element.GetAttr(SmlNames.AttributePromptTitle),
+            Prompt = element.GetAttr(SmlNames.AttributePrompt),
             Formula1 = element.Child(SmlNames.Formula1)?.Value,
             Formula2 = element.Child(SmlNames.Formula2)?.Value
         };

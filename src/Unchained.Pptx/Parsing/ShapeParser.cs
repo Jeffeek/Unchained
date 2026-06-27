@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
@@ -332,8 +333,8 @@ internal sealed class ShapeParser
         var ph = nvPrContainer!.Element(PmlNames.ApplicationNonVisualProperties)?.Element(PmlNames.Placeholder);
         if (ph == null) return;
 
-        shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr("type"));
-        var idx = ph.GetAttrInt("idx");
+        shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr(PmlNames.AttributeType));
+        var idx = ph.GetAttrInt(CmlNames.AttributeIndex);
         if (idx.HasValue) shape.PlaceholderIndex = idx.Value;
     }
 

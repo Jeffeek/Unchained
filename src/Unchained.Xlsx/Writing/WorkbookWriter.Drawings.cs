@@ -33,7 +33,7 @@ internal static partial class WorkbookWriter
             }
 
             if (string.IsNullOrEmpty(sheet.DrawingRelationshipId))
-                sheet.DrawingRelationshipId = NextFreeRelIdFor(package, sheet.PartUri, "rIdDr");
+                sheet.DrawingRelationshipId = package.NextFreeRelId(sheet.PartUri, "rIdDr");
 
             // Assign each drawing a shape id + a rel id within the drawing part, plus backing-part URIs.
             var shapeId = 1;
@@ -117,17 +117,5 @@ internal static partial class WorkbookWriter
             return;
 
         package.AddRelationship(sourceUri, relId, relType, target);
-    }
-
-    private static string NextFreeRelIdFor(OpcPackage package, string partUri, string prefix)
-    {
-        var part = package.TryGetPart(partUri);
-        var used = new HashSet<string>(part?.Relationships.Select(r => r.Id) ?? [], StringComparer.Ordinal);
-        var n = 1;
-        string relId;
-        do
-            relId = $"{prefix}{n++}";
-        while (!used.Add(relId));
-        return relId;
     }
 }

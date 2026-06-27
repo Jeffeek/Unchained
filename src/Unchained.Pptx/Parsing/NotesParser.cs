@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Slides;
@@ -38,7 +39,7 @@ internal static class NotesParser
 
             var phType = phEl.GetAttr("type", string.Empty);
             // Notes text placeholder: type="body" or (type omitted) idx="1"
-            if (phType != "body" && phEl.GetAttr("idx") != "1") continue;
+            if (phType != "body" && phEl.GetAttr(CmlNames.AttributeIndex) != "1") continue;
 
             var txBody = sp.Element(pml + "txBody");
             if (txBody == null) break;

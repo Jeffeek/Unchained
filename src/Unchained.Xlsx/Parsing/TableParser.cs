@@ -18,12 +18,12 @@ internal static class TableParser
     public static ListObject Parse(XElement root)
     {
         var id = root.GetAttrInt("id", 0);
-        var name = root.GetAttr("name") ?? root.GetAttr("displayName") ?? $"Table{id}";
-        var range = CellRange.FromA1(root.GetAttr("ref") ?? "A1");
+        var name = root.GetAttr(SmlNames.AttributeName) ?? root.GetAttr(SmlNames.AttributeDisplayName) ?? $"Table{id}";
+        var range = CellRange.FromA1(root.GetAttr(SmlNames.AttributeRef) ?? "A1");
 
         var table = new ListObject(id, name, range)
         {
-            DisplayName = root.GetAttr("displayName") ?? name,
+            DisplayName = root.GetAttr(SmlNames.AttributeDisplayName) ?? name,
             ShowHeaderRow = root.GetAttrInt("headerRowCount", 1) > 0,
             ShowTotalsRow = root.GetAttrInt("totalsRowCount", 0) > 0
         };

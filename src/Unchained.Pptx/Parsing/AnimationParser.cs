@@ -100,7 +100,7 @@ internal static class AnimationParser
         if (!int.TryParse(presetIdRaw, out var presetId)) return null;
 
         var presetClass = ctn.GetAttr("presetClass", "entr");
-        var durRaw = ctn.GetAttr("dur");
+        var durRaw = ctn.GetAttr(PmlNames.AttributeDuration);
         var durationSeconds = 0.5;
         if (durRaw != null && int.TryParse(durRaw, out var durMs) && durMs > 0)
             durationSeconds = durMs / 1000.0;
@@ -113,7 +113,7 @@ internal static class AnimationParser
         double delay = 0;
         var condDelay = ctn.Element(pml + "stCondLst")
             ?.Element(pml + "cond")
-            ?.GetAttr("delay");
+            ?.GetAttr(PmlNames.AttributeDelay);
         if (condDelay != null && int.TryParse(condDelay, out var delayMs) && delayMs > 0)
             delay = delayMs / 1000.0;
 
@@ -169,7 +169,7 @@ internal static class AnimationParser
     private static bool IsClickGroup(XContainer groupCtn, XNamespace pml)
     {
         var cond = groupCtn.Element(pml + "stCondLst")?.Element(pml + "cond");
-        return cond?.GetAttr("delay") == "indefinite";
+        return cond?.GetAttr(PmlNames.AttributeDelay) == "indefinite";
     }
 
     private static EffectTrigger GetTrigger(XElement? ctn)

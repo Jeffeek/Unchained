@@ -31,7 +31,7 @@ internal sealed class LayoutParser(OpcPackage package)
 
         if (root == null) return layout;
 
-        layout.Name = root.GetAttr("name", string.Empty);
+        layout.Name = root.GetAttr(PmlNames.AttributeName, string.Empty);
         layout.LayoutType = ParseLayoutType(root.GetAttr("type", string.Empty));
         layout.RawElement = root;
 

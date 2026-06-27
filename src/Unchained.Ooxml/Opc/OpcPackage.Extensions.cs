@@ -48,4 +48,20 @@ internal static class OpcPackageExtensions
         var ups = fromSegments.Length - common;
         return string.Concat(Enumerable.Repeat("../", ups)) + string.Join('/', targetSegments.Skip(common));
     }
+
+    /// <summary>
+    ///     Finds the next free relationship identifier in <paramref name="partUri" /> using the
+    ///     given <paramref name="prefix" />, starting from <c>prefix1</c>.
+    /// </summary>
+    public static string NextFreeRelId(this OpcPackage package, string partUri, string prefix)
+    {
+        var part = package.GetPart(partUri);
+        var used = new HashSet<string>(part?.Relationships.Select(r => r.Id) ?? [], StringComparer.Ordinal);
+        var n = 1;
+        string id;
+        do
+            id = $"{prefix}{n++}";
+        while (!used.Add(id));
+        return id;
+    }
 }
