@@ -1,0 +1,51 @@
+@using Unchained.Pdf.Abstractions
+@using Unchained.Pdf.Models
+@using Unchained.Studio.Services
+@inject RenderingService Renderer
+@inject PdfiumReferenceRenderer Pdfium
+@inject IDialogService Dialogs
+
+<div class="preview-panel">
+    <PreviewPanel Document="Document"
+                  DocumentBytes="DocumentBytes"
+                  FileName="FileName"
+                  CurrentPage="CurrentPage"
+                  PageCount="PageCount"
+                  CurrentPageChanged="CurrentPageChanged"/>
+</div>
+
+@code {
+
+    /// <summary>The loaded PDF document.</summary>
+    [Parameter]
+    public IPdfDocument Document { get; set; } = null!;
+
+    /// <summary>The raw bytes of the current document.</summary>
+    [Parameter]
+    public byte[] DocumentBytes { get; set; } = [];
+
+    /// <summary>The original file name.</summary>
+    [Parameter]
+    public string FileName { get; set; } = string.Empty;
+
+    /// <summary>The currently-displayed page (1-based).</summary>
+    [Parameter]
+    public int CurrentPage { get; set; }
+
+    /// <summary>The total number of pages in the document (used for navigation).</summary>
+    [Parameter]
+    public int PageCount { get; set; }
+
+    /// <summary>Called when the user navigates to a different page.</summary>
+    [Parameter]
+    public EventCallback<int> CurrentPageChanged { get; set; }
+
+    /// <summary>The playboard state (placeholder, extended by overlay-editing features).</summary>
+    [Parameter]
+    public PdfPlayboardState State { get; set; } = null!;
+
+    /// <summary>Raised when an overlay edit mutates the document.</summary>
+    [Parameter]
+    public Func<Task>? OnDirty { get; set; }
+
+}

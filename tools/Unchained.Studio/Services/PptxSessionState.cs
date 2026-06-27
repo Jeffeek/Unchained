@@ -34,6 +34,15 @@ public sealed class PptxSessionState : IAsyncDisposable
     public TreeNode? SelectedNode { get; set; }
     public int CurrentSlide { get; set; } = 1;
 
+    /// <summary>The playboard state for the current presentation.</summary>
+    public SlidePlayboardState PlayboardState { get; } = new();
+
+    /// <summary>
+    ///     Marks the session as dirty and triggers a refresh so the tree and UI reflect
+    ///     any in-place mutations made via the playboard.
+    /// </summary>
+    public async Task MarkDirtyAsync() => await RefreshAsync().ConfigureAwait(false);
+
     public ValueTask DisposeAsync() => Document.DisposeAsync();
 
     /// <summary>

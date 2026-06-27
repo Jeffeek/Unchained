@@ -1,0 +1,137 @@
+@using Unchained.Ooxml
+@using Unchained.Pptx.Engine
+@using Unchained.Pptx.Models
+@using Unchained.Pptx.Models.Shapes
+@using Unchained.Pptx.Shapes
+@using Unchained.Pptx.Slides
+@using Unchained.Studio
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:600px; max-width:720px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Add" Class="mr-2" Style="vertical-align:middle;"/>
+            Insert @KindLabel
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            @if (Kind == ShapeAddKind.AutoShape)
+            {
+                <MudText Typo="Typo.subtitle2">Choose a shape:</MudText>
+                <div class="shape-gallery">
+                    @foreach (var option in ShapeOptions)
+                    {
+                        var item = option;
+                        var selected = _selectedShape == item.Type;
+                        <MudPaper Class="@(selected ? "shape-gallery-tile shape-gallery-tile--selected" : "shape-gallery-tile")"
+                                  Elevation="@(selected ? 4 : 1)"
+                                  @onclick="@(() => _selectedShape = item.Type)">
+                            <MudIcon Icon="@item.Icon" Size="Size.Large"/>
+                            <MudText Typo="Typo.caption" Class="mt-1">@item.Label</MudText>
+                        </MudPaper>
+                    }
+                </div>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Style="opacity:.7;">
+                    A table will be inserted at the centre of the slide.
+                </MudText>
+                <div class="d-flex gap-2">
+                    <MudNumericField T="int" @bind-Value="_rows" Label="Rows" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="100"/>
+                    <MudNumericField T="int" @bind-Value="_columns" Label="Columns" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="20"/>
+                </div>
+            }
+
+            @if (_error != null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Insert" Color="Color.Primary" Variant="Variant.Filled">Insert</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public ShapeAddKind Kind { get; set; }
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public Slide Slide { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<Shape> OnInserted { get; set; }
+
+    private AutoShapeType? _selectedShape;
+    private int _rows = 3;
+    private int _columns = 3;
+    private string? _error;
+
+    private sealed record ShapeOption(AutoShapeType Type, string Label, string Icon);
+
+    private static readonly ShapeOption[] ShapeOptions =
+    [
+        new(AutoShapeType.Rectangle, "Rectangle", Icons.Material.Outlined.Square),
+        new(AutoShapeType.RoundedRectangle, "Rounded", Icons.Material.Outlined.RoundedCorner),
+        new(AutoShapeType.Ellipse, "Oval", Icons.Material.Outlined.Circle),
+        new(AutoShapeType.IsoscelesTriangle, "Triangle", Icons.Material.Outlined.ChangeHistory),
+        new(AutoShapeType.Diamond, "Diamond", Icons.Material.Outlined.Diamond),
+        new(AutoShapeType.Pentagon, "Pentagon", Icons.Material.Outlined.Pentagon),
+        new(AutoShapeType.Hexagon, "Hexagon", Icons.Material.Outlined.Hexagon),
+        new(AutoShapeType.Star5, "Star", Icons.Material.Outlined.Star),
+        new(AutoShapeType.Heart, "Heart", Icons.Material.Outlined.Favorite),
+        new(AutoShapeType.Cloud, "Cloud", Icons.Material.Outlined.Cloud),
+        new(AutoShapeType.RightArrow, "Arrow", Icons.Material.Outlined.ArrowForward),
+        new(AutoShapeType.FlowChartProcess, "Process", Icons.Material.Outlined.Crop169)
+    ];
+
+    private string KindLabel => Kind switch
+    {
+        ShapeAddKind.AutoShape => "AutoShape",
+        ShapeAddKind.Table => "Table",
+        _ => "Shape"
+    };
+
+    private async Task Insert()
+    {
+        _error = null;
+
+        if (Kind == ShapeAddKind.AutoShape)
+        {
+            if (!_selectedShape.HasValue)
+            {
+                _error = "Please select a shape.";
+                return;
+            }
+
+            var shape = Slide.Shapes.AddShape(_selectedShape.Value,
+                Emu.FromInches(1), Emu.FromInches(1),
+                Emu.FromInches(4), Emu.FromInches(3));
+            await OnInserted.InvokeAsync(shape);
+            MudDialog.Close();
+        }
+        else
+        {
+            var columnWidths = Enumerable.Repeat(Emu.FromInches(2.0), _columns).ToArray();
+            var rowHeights = Enumerable.Repeat(Emu.FromInches(0.4), _rows).ToArray();
+            var table = Slide.Shapes.AddTable(Emu.FromInches(1), Emu.FromInches(1), columnWidths, rowHeights);
+            await OnInserted.InvokeAsync(table);
+            MudDialog.Close();
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

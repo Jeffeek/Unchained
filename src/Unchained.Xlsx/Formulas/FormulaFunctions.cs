@@ -1226,9 +1226,9 @@ internal static class FormulaFunctions
         var sd = Math.Sqrt(nums.Sum(x => (x - mean) * (x - mean)) / (nums.Count - 1));
         if (sd == 0) return FormulaValue.FromError(CellError.DivisionByZero);
 
-        var n = nums.Count;
+        var n = (double)nums.Count;
         var sum = nums.Sum(x => Math.Pow((x - mean) / sd, 3));
-        return Number((double)n / ((n - 1) * (n - 2)) * sum);
+        return Number(n / ((n - 1.0) * (n - 2.0)) * sum);
     }
 
     private static FormulaValue TrimMean(IReadOnlyList<FormulaValue> values)
@@ -1321,7 +1321,7 @@ internal static class FormulaFunctions
         return unit switch
         {
             "Y" => Number((int)((end.Value - start.Value).Days / 365.25)),
-            "M" => Number(((end.Value.Year - start.Value.Year) * 12) + end.Value.Month - start.Value.Month),
+            "M" => Number(((end.Value.Year - start.Value.Year) * 12d) + end.Value.Month - start.Value.Month),
             "D" => Number((end.Value - start.Value).Days),
             "MD" => Number(Math.Abs(end.Value.Day - start.Value.Day)),
             _ => FormulaValue.FromError(CellError.Number)

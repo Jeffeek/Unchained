@@ -1,6 +1,10 @@
 @page "/xlsx"
+@using System.Globalization
 @using System.Text
+@using Unchained.Ooxml.Charts
+@using Unchained.Studio.Studio.Xlsx
 @using Unchained.Xlsx.Cell
+@using Unchained.Xlsx.Drawings
 @using Unchained.Xlsx.Export
 @using Unchained.Xlsx.Models
 @using Unchained.Xlsx.Models.Cell
@@ -74,7 +78,20 @@
                         <MudSpacer/>
                         <MudText Typo="Typo.caption" Style="opacity:.6;">@_selection.ToA1()</MudText>
                     </div>
+
+                    <FormulaBar @key="@($"fb-{state.CurrentSheet}-{_fbVersion}")"
+                                @ref="_formulaBar"
+                                Sheet="sheet"
+                                Reference="_formulaReference"
+                                CellText="_formulaText"
+                                IsActive="_formulaActive"
+                                Committed="OnFormulaCommitted"
+                                CellReferenceRequested="OnCellReferenceInserted"/>
                 }
+
+                <ChartSuggestions Sheet="sheet"
+                                  Selection="_selection"
+                                  ChartTypeSelected="OnChartTypeSelected"/>
 
                 <div class="sheet-tabbar">
                     @for (var i = 0; i < state.Document.Sheets.Count; i++)
@@ -103,7 +120,11 @@
                                Sheet="sheet"
                                CellSelected="OnCellSelected"
                                SelectionChanged="OnSelectionChanged"
-                               OnEdited="OnGridEdited"/>
+                               ChartSelected="OpenChartEditor"
+                               OnGenerateRequested="OpenGenerateData"
+                               OnEdited="OnGridEdited"
+                               FormulaActiveChanged="OnFormulaActiveChanged"
+                               FormulaBarRef="_formulaBar"/>
                 }
             </div>
 
@@ -200,6 +221,11 @@
     private bool _showTextPanel;
     private string? _extractedText;
     private int _gridVersion;
+    private int _fbVersion;
+    private CellReference _formulaReference = new(1, 1);
+    private string _formulaText = string.Empty;
+    private bool _formulaActive;
+    private FormulaBar? _formulaBar;
     private SheetGrid? _grid;
     private CellRange _selection = new(new CellReference(1, 1), new CellReference(1, 1));
 
@@ -297,17 +323,116 @@
         }
     }
 
-    private void OnCellSelected(Cell? cell) =>
+    private void OnCellSelected(Cell? cell)
+    {
         _selectedProperties = cell is null ? null : XlsxPropertyAdapter.ForCell(cell);
 
-    private void OnSelectionChanged(CellRange range) => _selection = range;
+        // Feed the formula bar.
+        if (Session.Xlsx is not null && Sheet is not null)
+        {
+            _formulaReference = cell is not null ? cell.Reference : new CellReference(1, 1);
+            _formulaText = cell is null
+                ? string.Empty
+                : cell.FormulaText ?? cell.CellType switch
+                {
+                    CellType.Number => cell.GetDouble()?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                    CellType.Boolean => cell.GetBoolean() == true ? "TRUE" : "FALSE",
+                    _ => cell.GetString() ?? cell.GetFormattedString()
+                };
+        }
+    }
+
+    private void OnSelectionChanged(CellRange range)
+    {
+        _selection = range;
+        // Point formula bar at the top-left cell of the new selection.
+        _formulaReference = range.TopLeft;
+        _formulaText = string.Empty;
+    }
+
+    private async Task OnCellReferenceInserted((CellReference Reference, int CursorPos) tuple)
+    {
+        // Keep the formula bar active and synced after cell reference insertion.
+        _formulaReference = tuple.Reference;
+        _formulaText = tuple.Reference.ToAbsoluteA1();
+    }
+
+    private async Task OnChartTypeSelected(Ooxml.Charts.ChartType type)
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(InsertChartDialog.Sheet), Sheet },
+            { nameof(InsertChartDialog.InitialRange), _selection.ToA1() },
+            { nameof(InsertChartDialog.InitialType), type },
+            { nameof(InsertChartDialog.OnInserted), AfterMutationAndGrid() }
+        };
+        await Dialogs.ShowAsync<InsertChartDialog>("Insert Chart", parameters, Wide());
+    }
+
+    private void OnFormulaActiveChanged(bool active) => _formulaActive = active;
 
     private async Task OnGridEdited()
     {
         if (Session.Xlsx is null)
             return;
+
+        // Live recalculation: evaluate all formulas so the grid shows computed values.
+        Session.Xlsx.Document.Recalculate();
+
         Session.Xlsx.MarkDirty();
         await InvokeAsync(StateHasChanged);
+        _fbVersion++;
+    }
+
+    private async Task OnFormulaCommitted(string text)
+    {
+        if (Sheet is null || Session.Xlsx is null)
+            return;
+
+        var row = _formulaReference.Row;
+        var col = _formulaReference.Column;
+
+        if (string.IsNullOrEmpty(text))
+        {
+            Sheet.ClearCell(row, col);
+        }
+        else if (text.StartsWith('='))
+        {
+            Sheet.SetFormula(row, col, text);
+        }
+        else if (bool.TryParse(text, out var b))
+        {
+            Sheet.SetValue(row, col, b);
+        }
+        else if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var d))
+        {
+            Sheet.SetValue(row, col, d);
+        }
+        else
+        {
+            Sheet.SetValue(row, col, text);
+        }
+
+        // Live recalculation.
+        Session.Xlsx.Document.Recalculate();
+        Session.Xlsx.MarkDirty();
+        _fbVersion++;
+        _gridVersion++;
+
+        // Refresh the formula bar text for the affected cell.
+        var cell = Sheet.GetCell(row, col);
+        _formulaText = cell switch
+        {
+            null => string.Empty,
+            { FormulaText: { } f } => f,
+            _ => cell.CellType switch
+            {
+                CellType.Number => cell.GetDouble()?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                CellType.Boolean => cell.GetBoolean() == true ? "TRUE" : "FALSE",
+                _ => cell.GetString() ?? cell.GetFormattedString()
+            }
+        };
     }
 
     private async Task RefreshTree()
@@ -566,6 +691,30 @@
             { nameof(InsertChartDialog.OnInserted), AfterMutationAndGrid() }
         };
         await Dialogs.ShowAsync<InsertChartDialog>("Insert Chart", parameters, Wide());
+    }
+
+    private async Task OpenGenerateData()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(GenerateDataDialog.Sheet), Sheet },
+            { nameof(GenerateDataDialog.Selection), _selection },
+            { nameof(GenerateDataDialog.OnGenerated), AfterMutationAndGrid() }
+        };
+        await Dialogs.ShowAsync<GenerateDataDialog>("Generate Data", parameters, Wide());
+    }
+
+    private async Task OpenChartEditor(Unchained.Xlsx.Drawings.ChartDrawing chart)
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(ChartEditDialog.Sheet), Sheet },
+            { nameof(ChartEditDialog.Chart), chart },
+            { nameof(ChartEditDialog.OnChanged), AfterMutationAndGrid() }
+        };
+        await Dialogs.ShowAsync<ChartEditDialog>("Edit Chart", parameters, Wide());
     }
 
     private async Task OpenSheetSettings()

@@ -1,0 +1,195 @@
+@using Unchained.Studio.Studio.Xlsx
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+
+<div class="formula-bar">
+    <div class="formula-bar-ref">@_referenceLabel</div>
+
+    <MudMenu @ref="_fxMenu" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+             ActivationEvent="@MouseEvent.LeftClick">
+        <ActivatorContent>
+            <MudTooltip Text="Insert function">
+                <MudIconButton Icon="@Icons.Material.Outlined.Functions" Size="Size.Small"/>
+            </MudTooltip>
+        </ActivatorContent>
+        <ChildContent>
+            <div class="fx-popover" @onkeydown:stopPropagation="true">
+                <MudTextField @bind-Value="_search" @bind-Value:after="OnSearchChanged"
+                              Placeholder="Search functions…" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Immediate="true" Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Outlined.Search" Class="fx-search"/>
+                <div class="fx-list">
+                    @foreach (var fn in _matches)
+                    {
+                        var item = fn;
+                        <div class="fx-item" @onclick="() => InsertFunction(item)">
+                            <div class="fx-item-head">
+                                <span class="fx-name">@item.Name</span>
+                                <span class="fx-sig">@item.Signature</span>
+                                <span class="fx-cat">@item.Category</span>
+                            </div>
+                            <div class="fx-desc">@item.Description</div>
+                        </div>
+                    }
+                    @if (_matches.Count == 0)
+                    {
+                        <div class="fx-empty">No matching functions.</div>
+                    }
+                </div>
+            </div>
+        </ChildContent>
+    </MudMenu>
+
+    <input class="formula-bar-input @(_isError ? "formula-bar-input--error" : string.Empty)"
+           @ref="_input"
+           value="@_text"
+           placeholder="Enter a value or =formula"
+           @oninput="OnInput"
+           @onkeydown="OnKeyDown"
+           disabled="@(Sheet is null)"/>
+
+    @if (_preview is not null)
+    {
+        <div class="formula-bar-preview @(_isError ? "formula-bar-preview--error" : string.Empty)"
+             title="@(_isError ? "Formula error" : "Evaluated result")">
+            <MudIcon Icon="@(_isError ? Icons.Material.Outlined.ErrorOutline : Icons.Material.Outlined.DragHandle)" Size="Size.Small"/>
+            <span>@_preview</span>
+        </div>
+    }
+</div>
+
+@code {
+
+    /// <summary>The active worksheet (for evaluating the formula in context).</summary>
+    [Parameter]
+    public Worksheet? Sheet { get; set; }
+
+    /// <summary>The active cell reference shown in the name box.</summary>
+    [Parameter]
+    public CellReference Reference { get; set; } = new(1, 1);
+
+    /// <summary>The current raw text of the active cell (value or <c>=formula</c>).</summary>
+    [Parameter]
+    public string CellText { get; set; } = string.Empty;
+
+    /// <summary>When <c>true</c>, the formula bar is actively being edited and can accept cell-reference insertion.</summary>
+    [Parameter]
+    public bool IsActive { get; set; }
+
+    /// <summary>Raised when the user commits the formula bar (Enter or function insert + Enter).</summary>
+    [Parameter]
+    public EventCallback<string> Committed { get; set; }
+
+    /// <summary>Raised when a cell is clicked while the formula bar is active. Insert the cell reference at the cursor position.</summary>
+    [Parameter]
+    public EventCallback<(CellReference Reference, int CursorPos)> CellReferenceRequested { get; set; }
+
+    private MudMenu _fxMenu = null!;
+    private ElementReference _input;
+    private string _text = string.Empty;
+    private string _search = string.Empty;
+    private string? _preview;
+    private bool _isError;
+    private List<FormulaFunctionInfo> _matches = FormulaCatalog.All.Take(40).ToList();
+    private string _lastSyncedCellText = string.Empty;
+
+    private string _referenceLabel => Reference.ToA1();
+
+    /// <summary>Called by the host when a cell is clicked while the formula bar is active.</summary>
+    public async Task OnCellClicked(CellReference reference, int cursorPos)
+    {
+        if (!IsActive)
+            return;
+        var a1 = reference.ToAbsoluteA1();
+        // Insert at cursor position.
+        var before = _text.Substring(0, cursorPos);
+        var after = _text.Substring(cursorPos);
+        _text = before + a1 + after;
+        _lastSyncedCellText = _text;
+        UpdatePreview();
+        await CellReferenceRequested.InvokeAsync((reference, cursorPos));
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Pull external cell text in only when the host changed it (e.g. new selection),
+        // never clobbering the user's in-progress typing.
+        if (CellText == _lastSyncedCellText)
+            return;
+        _lastSyncedCellText = CellText;
+        _text = CellText;
+        UpdatePreview();
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _text = e.Value?.ToString() ?? string.Empty;
+        UpdatePreview();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await Commit();
+            break;
+            case "Escape":
+                _text = CellText;
+                UpdatePreview();
+            break;
+        }
+    }
+
+    private async Task Commit()
+    {
+        _lastSyncedCellText = _text;
+        await Committed.InvokeAsync(_text);
+    }
+
+    private void OnSearchChanged()
+    {
+        _matches = FormulaCatalog.Search(_search).Take(60).ToList();
+    }
+
+    private async Task InsertFunction(FormulaFunctionInfo fn)
+    {
+        // Start a formula if not already one; append NAME( ready for arguments.
+        if (!_text.StartsWith('='))
+            _text = "=" + _text.TrimStart('=');
+        _text += $"{fn.Name}(";
+
+        UpdatePreview();
+        await _fxMenu.CloseMenuAsync();
+        try { await _input.FocusAsync(); }
+        catch { /* element may be re-rendering — ignore */ }
+    }
+
+    private void UpdatePreview()
+    {
+        _preview = null;
+        _isError = false;
+
+        if (Sheet is null || !_text.StartsWith('='))
+            return;
+
+        try
+        {
+            var result = Unchained.Xlsx.Engine.SpreadsheetDocument.EvaluateFormula(Sheet, _text);
+            _isError = result is Unchained.Xlsx.Models.Cell.CellError;
+            _preview = result switch
+            {
+                null => "(blank)",
+                double d => d.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+                bool b => b ? "TRUE" : "FALSE",
+                Unchained.Xlsx.Models.Cell.CellError err => $"#{err}",
+                _ => result.ToString()
+            };
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _preview = ex.Message;
+        }
+    }
+}

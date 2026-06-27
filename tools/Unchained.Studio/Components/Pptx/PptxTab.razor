@@ -2,6 +2,7 @@
 @using System.Text
 @using Unchained.Pptx.Rendering.Engine
 @using Unchained.Pptx.Rendering.Models
+@using Unchained.Studio.Components.Pptx
 @inject SessionStateService Session
 @inject FileExportService Exporter
 @inject IDialogService Dialogs
@@ -31,7 +32,7 @@
                               OnRefreshRequested="RefreshTree"/>
             </div>
 
-            <!-- CENTRE: slide preview -->
+            <!-- CENTRE: slide playboard -->
             <div class="panel-preview">
                 @if (_showInfo)
                 {
@@ -39,9 +40,14 @@
                         <PptxInfoPanel Document="state.Document"/>
                     </div>
                 }
-                <SlidePreviewPanel Document="state.Document"
-                                   CurrentSlide="state.CurrentSlide"
-                                   CurrentSlideChanged="s => state.CurrentSlide = s"/>
+                @if (state.Document.Slides.Count > 0)
+                {
+                    <SlidePlayboard @key="state.Document.GetHashCode() + state.CurrentSlide"
+                                    Document="state.Document"
+                                    Slide="state.Document.Slides[state.CurrentSlide - 1]"
+                                    State="state.PlayboardState"
+                                    OnDirty="OnPlayboardDirty"/>
+                }
             </div>
 
             <!-- RIGHT: properties -->
@@ -422,4 +428,16 @@
     private void ShowError(string message) =>
         Snackbar.Add(message, Severity.Error);
 
+    private async Task OnPlayboardDirty()
+    {
+        if (Session.Pptx is null) return;
+        try
+        {
+            await Session.Pptx.RefreshAsync();
+        }
+        catch
+        {
+            // Refresh failure is non-fatal; tree will still update via Refreshed event.
+        }
+    }
 }

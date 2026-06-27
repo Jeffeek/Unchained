@@ -1,0 +1,39 @@
+@using Unchained.Pptx.Animations
+@using Unchained.Pptx.Models
+@using Unchained.Pptx.Shapes
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:500px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit Text</MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTextField @bind-Value="_text" Label="Text" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Lines="6" MaxLines="20"/>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public string CurrentText { get; set; } = string.Empty;
+    [Parameter] public Action<string>? OnConfirm { get; set; }
+
+    private string _text = string.Empty;
+
+    protected override void OnInitialized() => _text = CurrentText;
+
+    private void Apply()
+    {
+        OnConfirm?.Invoke(_text);
+        MudDialog.Close(DialogResult.Ok(_text));
+    }
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,55 @@
+@using Unchained.Pptx.Models
+@using Unchained.Pptx.Engine
+@using Unchained.Pptx.Slides
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:480px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Slide Properties</MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_name" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudSwitch T="bool" @bind-Value="_hidden" Label="Hidden" Color="Color.Primary"/>
+            <MudText Typo="Typo.caption" Style="opacity:.6;">
+                Slide ID: @Slide.SlideId
+            </MudText>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled">Apply</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public PresentationDocument Document { get; set; } = null!;
+
+    [Parameter] public Slide Slide { get; set; } = null!;
+
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private string _name = string.Empty;
+    private bool _hidden;
+
+    protected override void OnInitialized()
+    {
+        _name = Slide.Name ?? string.Empty;
+        _hidden = Slide.IsHidden;
+    }
+
+    private async Task Apply()
+    {
+        Slide.Name = _name;
+        Slide.IsHidden = _hidden;
+        await OnChanged.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

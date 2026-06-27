@@ -1,0 +1,446 @@
+@using Unchained.Ooxml
+@using Unchained.Ooxml.Drawing
+@using Unchained.Ooxml.Text
+@using Unchained.Pptx.Engine
+@using Unchained.Pptx.Models.Shapes
+@using Unchained.Pptx.Rendering.Engine
+@using Unchained.Pptx.Shapes
+@using Unchained.Pptx.Slides
+@using Unchained.Studio
+@using Unchained.Studio.Services
+@using Unchained.Studio.Studio.Pptx
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<div class="playboard-container">
+    <!-- TOP TOOLBAR -->
+    <div class="playboard-toolbar">
+        <MudText Typo="Typo.subtitle2" Class="mr-2">@_slideName</MudText>
+        <MudSpacer/>
+        <MudMenu Label="Insert" StartIcon="@Icons.Material.Outlined.Add" Size="Size.Small" Dense="true">
+            <ChildContent>
+                <MudMenuItem Icon="@Icons.Material.Outlined.TextFields" OnClick="AddTextBox">TextBox</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.SquareFoot" OnClick="OpenShapeAddDialog">AutoShape</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.Image" OnClick="OpenPicturePicker">Picture</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.TableChart" OnClick="OpenTableDialog">Table</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.BarChart" OnClick="OpenChartDialog">Chart</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.Directions" OnClick="AddConnector">Connector</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+        <MudDivider Vertical="true"/>
+        <MudTooltip Text="Add slide">
+            <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" OnClick="AddSlide"/>
+        </MudTooltip>
+        <MudTooltip Text="Delete slide">
+            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" OnClick="DeleteSlide"/>
+        </MudTooltip>
+        <MudDivider Vertical="true"/>
+        <MudTooltip Text="Zoom out">
+            <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" OnClick="() => ZoomTo(Math.Max(0.25, _zoom - 0.25))"/>
+        </MudTooltip>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_zoomPercent%</MudChip>
+        <MudTooltip Text="Zoom in">
+            <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" OnClick="() => ZoomTo(Math.Min(4.0, _zoom + 0.25))"/>
+        </MudTooltip>
+        <MudDivider Vertical="true"/>
+        <MudTooltip Text="Transitions">
+            <MudIconButton Icon="@Icons.Material.Outlined.AutoAwesome" Size="Size.Small" OnClick="OpenTransitions"/>
+        </MudTooltip>
+        <MudTooltip Text="Master slides">
+            <MudIconButton Icon="@Icons.Material.Outlined.ViewComfy" Size="Size.Small" OnClick="OpenMasters"/>
+        </MudTooltip>
+        <MudTooltip Text="Slide properties">
+            <MudIconButton Icon="@Icons.Material.Outlined.Settings" Size="Size.Small" OnClick="OpenSlideProps"/>
+        </MudTooltip>
+    </div>
+
+    <!-- MAIN AREA: canvas + properties panel -->
+    <div class="playboard-body">
+        <!-- SLIDE CANVAS -->
+        <div class="playboard-canvas" @onwheel="OnWheel" @onkeydown="OnKeyDown">
+            @if (_rendering)
+            {
+                <div class="playboard-rendering">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Medium"/>
+                    <MudText Typo="Typo.caption" Class="mt-2">Rendering slide…</MudText>
+                </div>
+            }
+            @if (_renderError != null)
+            {
+                <MudAlert Severity="Severity.Error" Class="playboard-error">
+                    @(_renderError)
+                </MudAlert>
+            }
+            @if (_slideBytes is not null && _renderError is null)
+            {
+                <div class="playboard-image-wrap" style="transform:scale(@_zoom);transform-origin:top center;min-width:@_slideWidth px;min-height:@_slideHeight px;">
+                    <img class="playboard-image" src="@_slideDataUri" alt="@_slideName"/>
+
+                    <!-- SHAPE OVERLAY -->
+                    <div class="playboard-overlay" style="width:@_slideWidth px;height:@_slideHeight px;">
+                        @foreach (var shape in _slideShapes ?? [])
+                        {
+                            var isSelected = SelectedShape == shape;
+                            var cls = isSelected ? "playboard-shape playboard-shape--selected" : "playboard-shape";
+                            <div class="@cls"
+                                 style="@ShapeStyle(shape)"
+                                 @onclick="() => SelectShape(shape)"
+                                 @onmousedown="e => OnShapeMouseDown(shape, e)"
+                                 @ondblclick="() => OnShapeDoubleClick(shape)">
+                                @* Text preview for text shapes (hidden when selected) *@
+                                @if (shape is AutoShape autoShape && autoShape.IsTextBox && !isSelected)
+                                {
+                                    var text = autoShape.TextFrame.PlainText;
+                                    if (!string.IsNullOrEmpty(text))
+                                    {
+                                        <div class="playboard-shape-text" style="pointer-events:none;">
+                                            @(text.Length > 60 ? text[..60] + "…" : text)
+                                        </div>
+                                    }
+                                }
+
+                                @* Resize handles when selected *@
+                                @if (isSelected)
+                                {
+                                    @foreach (var handle in _handles)
+                                    {
+                                        <div class="@($"playboard-handle playboard-handle--{handle.Kind.ToString().ToLower()}")"
+                                             style="@HandleStyle(handle, shape)"
+                                             @onmousedown="e => OnHandleMouseDown(handle, e)"/>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- PROPERTIES PANEL -->
+        <div class="playboard-properties">
+            @if (SelectedShape is not null)
+            {
+                <ShapePropertiesPanel Shape="SelectedShape"
+                                      OnChanged="OnShapeChanged"
+                                      OnDelete="DeleteSelected"/>
+            }
+            else
+            {
+                <MudText Typo="Typo.caption" Class="pa-4" Style="opacity:.5;text-align:center;margin-top:32px;">
+                    Select a shape to edit its properties.<br/>
+                    Use the toolbar above to add new shapes.
+                </MudText>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public Slide Slide { get; set; } = null!;
+
+    [Parameter]
+    public SlidePlayboardState State { get; set; } = null!;
+
+    [Parameter]
+    public Func<Task>? OnDirty { get; set; }
+
+    private string _slideName = string.Empty;
+    private byte[]? _slideBytes;
+    private string _slideDataUri = string.Empty;
+    private int _slideWidth;
+    private int _slideHeight;
+    private bool _rendering;
+    private string? _renderError;
+    private List<Shape>? _slideShapes;
+    private double _zoom;
+    private readonly List<ResizeHandle> _handles = Enum.GetValues<ResizeHandleKind>().Select(k => new ResizeHandle(k, null!)).ToList();
+
+    private string _zoomPercent => ((int)(_zoom * 100)).ToString();
+    private Shape? SelectedShape => State.SelectedShape;
+
+    protected override void OnParametersSet()
+    {
+        _slideName = Slide.Name ?? "Slide";
+        _zoom = State.Zoom;
+        RenderSlideSync();
+    }
+
+    private void ZoomTo(double z)
+    {
+        _zoom = State.Zoom = Math.Round(z, 2);
+        StateHasChanged();
+    }
+
+    private void RenderSlideSync()
+    {
+        try
+        {
+            _rendering = true;
+            _renderError = null;
+            StateHasChanged();
+
+            var slideSize = Document.SlideSize;
+            var image = SlideRenderer.RenderAsync(Slide, slideSize, media: Document.Media).GetAwaiter().GetResult();
+            _slideWidth = image.WidthPx;
+            _slideHeight = image.HeightPx;
+            _slideBytes = image.Data.ToArray();
+            _slideDataUri = $"data:image/png;base64,{Convert.ToBase64String(_slideBytes)}";
+            _slideShapes = Slide.Shapes.ToList();
+        }
+        catch (Exception ex)
+        {
+            _renderError = $"Rendering failed: {ex.Message}";
+            _slideBytes = null;
+            _slideShapes = Slide.Shapes.ToList();
+        }
+        finally
+        {
+            _rendering = false;
+        }
+    }
+
+    private string ShapeStyle(Shape shape)
+    {
+        var left = shape.X.ToPixels(96);
+        var top = shape.Y.ToPixels(96);
+        var width = shape.Width.ToPixels(96);
+        var height = shape.Height.ToPixels(96);
+        return $"left:{left:0}px;top:{top:0}px;width:{width:0}px;height:{height:0}px;";
+    }
+
+    private string HandleStyle(ResizeHandle handle, Shape shape)
+    {
+        var left = shape.X.ToPixels(96);
+        var top = shape.Y.ToPixels(96);
+        var width = shape.Width.ToPixels(96);
+        var height = shape.Height.ToPixels(96);
+        var hs = 8.0;
+
+        return (handle.Kind) switch
+        {
+            ResizeHandleKind.TopLeft      => $"left:{left - hs / 2}px;top:{top - hs / 2}px;",
+            ResizeHandleKind.Top          => $"left:{left + width / 2 - hs / 2}px;top:{top - hs / 2}px;",
+            ResizeHandleKind.TopRight     => $"left:{left + width - hs / 2}px;top:{top - hs / 2}px;",
+            ResizeHandleKind.Right        => $"left:{left + width - hs / 2}px;top:{top + height / 2 - hs / 2}px;",
+            ResizeHandleKind.BottomRight  => $"left:{left + width - hs / 2}px;top:{top + height - hs / 2}px;",
+            ResizeHandleKind.Bottom       => $"left:{left + width / 2 - hs / 2}px;top:{top + height - hs / 2}px;",
+            ResizeHandleKind.BottomLeft   => $"left:{left - hs / 2}px;top:{top + height - hs / 2}px;",
+            ResizeHandleKind.Left         => $"left:{left - hs / 2}px;top:{top + height / 2 - hs / 2}px;",
+            _ => string.Empty
+        };
+    }
+
+    private void SelectShape(Shape shape)
+    {
+        State.SelectedShape = shape;
+        State.ClearSelection();
+        StateHasChanged();
+    }
+
+    private void OnShapeMouseDown(Shape shape, MouseEventArgs e)
+    {
+        if (e.Button == 0)
+        {
+            State.SelectedShape = shape;
+            State.IsDragging = true;
+            State.DragStart = (e.ClientX, e.ClientY);
+            State.DragOrigPos = (shape.X, shape.Y);
+            StateHasChanged();
+        }
+    }
+
+    private void OnHandleMouseDown(ResizeHandle handle, MouseEventArgs e)
+    {
+        if (SelectedShape is null) return;
+
+        State.IsResizing = true;
+        State.ActiveHandle = handle;
+        State.DragStart = (e.ClientX, e.ClientY);
+        State.DragOrigSize = (SelectedShape.Width, SelectedShape.Height);
+        StateHasChanged();
+    }
+
+    private async void OnShapeDoubleClick(Shape shape)
+    {
+        if (shape is AutoShape autoShape && autoShape.IsTextBox)
+        {
+            var text = autoShape.TextFrame.PlainText ?? string.Empty;
+            var result = await Dialogs.ShowAsync<InlineTextEditDialog>(
+                "Edit Text",
+                new DialogParameters { { nameof(InlineTextEditDialog.CurrentText), text } },
+                Small());
+            var outcome = await result.Result;
+            if (outcome is { Canceled: false, Data: string newText })
+            {
+                autoShape.TextFrame.PlainText = newText;
+                _slideShapes = Slide.Shapes.ToList();
+                RenderSlideSync();
+                State.InvokeDirty();
+            }
+        }
+    }
+
+    private void OnWheel(WheelEventArgs e)
+    {
+        var delta = e.DeltaY > 0 ? -0.1 : 0.1;
+        ZoomTo(Math.Clamp(_zoom + delta, 0.25, 4.0));
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (SelectedShape is null) return;
+
+        switch (e.Key)
+        {
+            case "Delete":
+            case "Backspace":
+                DeleteSelected();
+            break;
+        }
+    }
+
+    private void DeleteSelected()
+    {
+        if (SelectedShape is null) return;
+        Slide.Shapes.Remove(SelectedShape);
+        _slideShapes?.Remove(SelectedShape);
+        State.ClearSelection();
+        StateHasChanged();
+        State.InvokeDirty();
+    }
+
+    private void OnShapeChanged()
+    {
+        RenderSlideSync();
+        State.InvokeDirty();
+    }
+
+    // ── Shape addition ────────────────────────────────────────────────────
+
+    private void AddTextBox()
+    {
+        var box = Slide.Shapes.AddTextBox(
+            Emu.FromInches(1), Emu.FromInches(1),
+            Emu.FromInches(4), Emu.FromInches(1),
+            "Double-click to edit text");
+        State.OnShapeAdded(box);
+    }
+
+    private async void OpenShapeAddDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(ShapeAddDialog.Kind), ShapeAddKind.AutoShape },
+            { nameof(ShapeAddDialog.Document), Document },
+            { nameof(ShapeAddDialog.Slide), Slide },
+            { nameof(ShapeAddDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
+        };
+        await Dialogs.ShowAsync<ShapeAddDialog>("Insert AutoShape", parameters, Large());
+    }
+
+    private void OnShapeInserted(Shape shape)
+    {
+        State.OnShapeAdded(shape);
+        StateHasChanged();
+    }
+
+    private async void OpenPicturePicker()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(PictureInsertDialog.Document), Document },
+            { nameof(PictureInsertDialog.Slide), Slide },
+            { nameof(PictureInsertDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
+        };
+        await Dialogs.ShowAsync<PictureInsertDialog>("Insert Picture", parameters, Small());
+    }
+
+    private async void OpenTableDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(ShapeAddDialog.Kind), ShapeAddKind.Table },
+            { nameof(ShapeAddDialog.Document), Document },
+            { nameof(ShapeAddDialog.Slide), Slide },
+            { nameof(ShapeAddDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
+        };
+        await Dialogs.ShowAsync<ShapeAddDialog>("Insert Table", parameters, Small());
+    }
+
+    private void OpenChartDialog() =>
+        Snackbar.Add("Chart insertion coming soon", Severity.Info);
+
+    private void AddConnector()
+    {
+        var conn = Slide.Shapes.AddConnector(ConnectorType.Bent,
+            Emu.FromInches(1), Emu.FromInches(1),
+            Emu.FromInches(5), Emu.FromInches(5));
+        State.OnShapeAdded(conn);
+    }
+
+    // ── Slide operations ─────────────────────────────────────────────────
+
+    private void AddSlide()
+    {
+        var master = Document.Masters.FirstOrDefault();
+        if (master is null) { Snackbar.Add("No master slides available", Severity.Error); return; }
+        var layout = master.Layouts.FirstOrDefault();
+        if (layout is null) { Snackbar.Add("No layouts in master", Severity.Error); return; }
+        var newSlide = Document.Slides.AddBlank(layout);
+        newSlide.Name = $"Slide {Document.Slides.Count}";
+        State.InvokeDirty();
+        StateHasChanged();
+    }
+
+    private void DeleteSlide()
+    {
+        if (Document.Slides.Count <= 1) { Snackbar.Add("Cannot delete the only slide", Severity.Warning); return; }
+        Dialogs.ShowMessageBoxAsync("Delete slide", "Delete this slide?").ContinueWith(t =>
+        {
+            if (t.Result == true)
+            {
+                Document.Slides.RemoveAt(0);
+                State.InvokeDirty();
+                StateHasChanged();
+            }
+        });
+    }
+
+    // ── Dialogs ──────────────────────────────────────────────────────────
+
+    private async void OpenTransitions()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(TransitionsDialog.Slide), Slide },
+            { nameof(TransitionsDialog.OnChanged), EventCallback.Factory.Create(this, State.InvokeDirty) }
+        };
+        await Dialogs.ShowAsync<TransitionsDialog>("Slide Transitions", parameters, Small());
+    }
+
+    private async void OpenMasters()
+    {
+        var parameters = new DialogParameters { { nameof(SlideMasterViewer.Document), Document } };
+        await Dialogs.ShowAsync<SlideMasterViewer>("Master Slides", parameters, Wide());
+    }
+
+    private async void OpenSlideProps()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(SlidePropertiesDialog.Document), Document },
+            { nameof(SlidePropertiesDialog.Slide), Slide },
+            { nameof(SlidePropertiesDialog.OnChanged), EventCallback.Factory.Create(this, State.InvokeDirty) }
+        };
+        await Dialogs.ShowAsync<SlidePropertiesDialog>("Slide Properties", parameters, Small());
+    }
+
+    private static DialogOptions Small() => new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    private static DialogOptions Large() => new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+    private static DialogOptions Wide() => new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+}

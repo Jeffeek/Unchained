@@ -64,6 +64,9 @@
     public string InitialRange { get; set; } = "A1:B6";
 
     [Parameter]
+    public ChartType InitialType { get; set; }
+
+    [Parameter]
     public EventCallback OnInserted { get; set; }
 
     private ChartType _type = ChartType.ColumnClustered;
@@ -75,6 +78,7 @@
     protected override void OnInitialized()
     {
         _dataRange = InitialRange;
+        _type = InitialType;
         // Default the anchor to two columns right of the data range's right edge.
         if (CellRange.TryFromA1(_dataRange, out var range))
             _anchorCell = new CellReference(range.TopLeft.Row, range.BottomRight.Column + 2).ToA1();

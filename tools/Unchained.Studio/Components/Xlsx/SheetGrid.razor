@@ -13,6 +13,9 @@
         <MudText Typo="Typo.subtitle2" Class="mr-2">@Sheet.Name</MudText>
         <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@SelectionLabel</MudChip>
         <MudSpacer/>
+        <MudTooltip Text="Generate data…">
+            <MudIconButton Icon="@Icons.Material.Outlined.AutoAwesome" Size="Size.Small" OnClick="OnGenerateRequested"/>
+        </MudTooltip>
         <MudTooltip Text="Add display row">
             <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" OnClick="AddRow"/>
         </MudTooltip>
@@ -82,20 +85,24 @@
         @foreach (var drawing in Sheet.Drawings)
         {
             var box = DrawingBox(drawing);
-            <div class="sg-drawing" style="@box">
-                @switch (drawing)
-                {
-                    case Unchained.Xlsx.Drawings.PictureDrawing pic:
+            switch (drawing)
+            {
+                case Unchained.Xlsx.Drawings.PictureDrawing pic:
+                    <div class="sg-drawing" style="@box">
                         <img class="sg-drawing-img" src="@ImageDataUri(pic)" alt="@pic.Name"/>
-                        break;
-                    case Unchained.Xlsx.Drawings.ChartDrawing chart:
-                        <div class="sg-drawing-chart">
-                            <MudIcon Icon="@Icons.Material.Outlined.BarChart" Size="Size.Small"/>
-                            <span>@(string.IsNullOrEmpty(chart.Chart.Title) ? $"{chart.Chart.Type} chart" : chart.Chart.Title)</span>
+                    </div>
+                    break;
+                case Unchained.Xlsx.Drawings.ChartDrawing chart:
+                    <div class="sg-drawing sg-drawing--chart" style="@box"
+                         @onclick="() => OnChartClick(chart)"
+                         @onclick:stopPropagation="true">
+                        <ChartView Model="chart.Chart"/>
+                        <div class="sg-drawing-edit">
+                            <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"/>
                         </div>
-                        break;
-                }
-            </div>
+                    </div>
+                    break;
+            }
         }
     </div>
 </div>
@@ -116,6 +123,22 @@
     /// <summary>Raised whenever an edit mutates the document so the host can flag it dirty.</summary>
     [Parameter]
     public EventCallback OnEdited { get; set; }
+
+    /// <summary>Raised when a chart drawing is clicked, so the host can open the chart editor.</summary>
+    [Parameter]
+    public EventCallback<Unchained.Xlsx.Drawings.ChartDrawing> ChartSelected { get; set; }
+
+    /// <summary>Raised when the user clicks the generate button, requesting the generate-data dialog.</summary>
+    [Parameter]
+    public EventCallback OnGenerateRequested { get; set; }
+
+    /// <summary>Callback when the formula bar active state changes (user starts/stops editing).</summary>
+    [Parameter]
+    public EventCallback<bool> FormulaActiveChanged { get; set; }
+
+    /// <summary>The formula bar reference, for inserting cell references into the formula.</summary>
+    [Parameter]
+    public FormulaBar? FormulaBarRef { get; set; }
 
     private const int MinRows = 30;
     private const int MinCols = 12;
@@ -150,6 +173,9 @@
     private int _resizeRow = -1;
     private double _resizeStartClient;
     private double _resizeStartSize;
+
+    // Formula bar active state.
+    private bool _formulaActive;
 
     /// <summary>The currently-selected range (normalised).</summary>
     public CellRange Selection =>
@@ -369,6 +395,31 @@
     private static string ImageDataUri(Unchained.Xlsx.Drawings.PictureDrawing pic) =>
         $"data:{pic.Image.ContentType};base64,{Convert.ToBase64String(pic.Image.Data.Span)}";
 
+    private Task OnChartClick(Unchained.Xlsx.Drawings.ChartDrawing chart) => ChartSelected.InvokeAsync(chart);
+
+    private async Task OnCellClicked(int row, int col, MouseEventArgs e)
+    {
+        if (_editRow == row && _editCol == col)
+        {
+            // User clicked the cell being edited → insert reference at cursor.
+            _editRow = -1;
+            _editCol = -1;
+            _formulaActive = false;
+            await FormulaActiveChanged.InvokeAsync(false);
+            try { await _editInput.FocusAsync(); }
+            catch { /* cell was re-rendered, ignore */ }
+        }
+        else if (FormulaBarRef is not null && _formulaActive)
+        {
+            // User clicked a different cell while formula bar is active → insert reference.
+            await FormulaBarRef.OnCellClicked(new CellReference(row, col), _editValue.Length);
+        }
+        else
+        {
+            await OnCellMouseDown(row, col, e);
+        }
+    }
+
     private bool InSelection(int row, int col)
     {
         var top = Math.Min(_anchorRow, _activeRow);
@@ -514,6 +565,8 @@
         _editRow = row;
         _editCol = col;
         _dragging = false;
+        _formulaActive = true;
+        _ = FormulaActiveChanged.InvokeAsync(true);
 
         var cell = Sheet.GetCell(row, col);
         _editValue = cell switch
@@ -542,6 +595,8 @@
         var col = _editCol;
         _editRow = -1;
         _editCol = -1;
+        _formulaActive = false;
+        await FormulaActiveChanged.InvokeAsync(false);
 
         ApplyEdit(row, col, _editValue);
         RecalculateDimensions();

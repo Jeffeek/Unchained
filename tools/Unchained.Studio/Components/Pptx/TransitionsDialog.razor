@@ -1,0 +1,134 @@
+@using Unchained.Pptx.Animations
+@using Unchained.Pptx.Slides
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:520px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.DirectionsTransit" Class="mr-2"/>
+            Slide Transitions
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.caption" Style="opacity:.6;">
+                Transition effects for this slide.
+            </MudText>
+
+            <MudSelect T="TransitionType" @bind-Value="_type" Label="Effect" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="TransitionType.None">None</MudSelectItem>
+                <MudSelectItem Value="TransitionType.Fade">Fade</MudSelectItem>
+                <MudSelectItem Value="TransitionType.Push">Push</MudSelectItem>
+                <MudSelectItem Value="TransitionType.Wipe">Wipe</MudSelectItem>
+                <MudSelectItem Value="TransitionType.Split">Split</MudSelectItem>
+                <MudSelectItem Value="TransitionType.Reveal">Reveal</MudSelectItem>
+            </MudSelect>
+
+            <MudSelect T="TransitionDirection" @bind-Value="_direction" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="TransitionDirection.FromTop">From Top</MudSelectItem>
+                <MudSelectItem Value="TransitionDirection.FromBottom">From Bottom</MudSelectItem>
+                <MudSelectItem Value="TransitionDirection.FromLeft">From Left</MudSelectItem>
+                <MudSelectItem Value="TransitionDirection.FromRight">From Right</MudSelectItem>
+            </MudSelect>
+
+            <MudNumericField T="double" @bind-Value="_duration" Label="Duration (seconds)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" Max="60"/>
+            <MudSwitch T="bool" @bind-Value="_advanceOnTime" Label="Advance after time" Color="Color.Primary"/>
+            <MudNumericField T="double" @bind-Value="_advanceTime" Label="Time (seconds)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" Max="999" Disabled="!_advanceOnTime"/>
+            <MudSwitch T="bool" @bind-Value="_advanceOnClick" Label="Advance on click" Color="Color.Primary"/>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled">Apply</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public Slide Slide { get; set; } = null!;
+
+    [Parameter] public Action OnChanged { get; set; } = static () => { };
+
+    private TransitionType _type = TransitionType.None;
+    private TransitionDirection _direction = TransitionDirection.FromTop;
+    private double _duration = 0.5;
+    private bool _advanceOnTime;
+    private double _advanceTime = 5;
+    private bool _advanceOnClick = true;
+
+    protected override void OnInitialized()
+    {
+        var trans = Slide.Transition;
+        if (trans is not null)
+        {
+            _type = EffectToType(trans.Effect);
+            _direction = EffectToDirection(trans.Effect);
+            _duration = trans.DurationSeconds;
+            _advanceOnTime = trans.AutoAdvanceSeconds is not null;
+            _advanceTime = trans.AutoAdvanceSeconds ?? 5;
+            _advanceOnClick = trans.AdvanceOnClick;
+        }
+    }
+
+    private static TransitionType EffectToType(TransitionEffect effect) =>
+        (effect) switch
+        {
+            TransitionEffect.None          => TransitionType.None,
+            TransitionEffect.Fade          => TransitionType.Fade,
+            TransitionEffect.PushLeft      => TransitionType.Push,
+            TransitionEffect.PushRight     => TransitionType.Push,
+            TransitionEffect.PushUp        => TransitionType.Push,
+            TransitionEffect.PushDown      => TransitionType.Push,
+            TransitionEffect.WipeLeft      => TransitionType.Wipe,
+            TransitionEffect.WipeRight     => TransitionType.Wipe,
+            TransitionEffect.WipeUp        => TransitionType.Wipe,
+            TransitionEffect.WipeDown      => TransitionType.Wipe,
+            _ => TransitionType.None,
+        };
+
+    private static TransitionDirection EffectToDirection(TransitionEffect effect) =>
+        (effect) switch
+        {
+            TransitionEffect.PushLeft      => TransitionDirection.FromTop,
+            TransitionEffect.PushRight     => TransitionDirection.FromLeft,
+            TransitionEffect.PushUp        => TransitionDirection.FromBottom,
+            TransitionEffect.PushDown      => TransitionDirection.FromTop,
+            TransitionEffect.WipeLeft      => TransitionDirection.FromLeft,
+            TransitionEffect.WipeRight     => TransitionDirection.FromRight,
+            TransitionEffect.WipeUp        => TransitionDirection.FromTop,
+            TransitionEffect.WipeDown      => TransitionDirection.FromBottom,
+            _ => TransitionDirection.FromTop,
+        };
+
+    private TransitionEffect ComputeEffect() =>
+        (_type, _direction) switch
+        {
+            (TransitionType.None, _)          => TransitionEffect.None,
+            (TransitionType.Fade, _)          => TransitionEffect.Fade,
+            (TransitionType.Push, TransitionDirection.FromTop)    => TransitionEffect.PushDown,
+            (TransitionType.Push, TransitionDirection.FromBottom) => TransitionEffect.PushUp,
+            (TransitionType.Push, TransitionDirection.FromLeft)   => TransitionEffect.PushRight,
+            (TransitionType.Push, TransitionDirection.FromRight)  => TransitionEffect.PushLeft,
+            (TransitionType.Wipe, TransitionDirection.FromTop)    => TransitionEffect.WipeUp,
+            (TransitionType.Wipe, TransitionDirection.FromBottom) => TransitionEffect.WipeDown,
+            (TransitionType.Wipe, TransitionDirection.FromLeft)   => TransitionEffect.WipeLeft,
+            (TransitionType.Wipe, TransitionDirection.FromRight)  => TransitionEffect.WipeRight,
+            _ => TransitionEffect.None,
+        };
+
+    private async Task Apply()
+    {
+        Slide.Transition.Effect = ComputeEffect();
+        Slide.Transition.DurationSeconds = _duration;
+        Slide.Transition.AutoAdvanceSeconds = _advanceOnTime ? _advanceTime : null;
+        Slide.Transition.AdvanceOnClick = _advanceOnClick;
+        OnChanged();
+        MudDialog.Close();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
