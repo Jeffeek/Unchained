@@ -13,7 +13,7 @@ namespace Unchained.Pptx.Export;
 /// </summary>
 internal static class PptxToHtmlPlayerWriter
 {
-    private const double EmuToPx = EmuConversions.EmuToCssPx;
+    private const double EmuToPx = Emu.EmuToCssPx;
 
     public static byte[] Write(PresentationDocument document, HtmlPlayerSaveOptions options)
     {

@@ -19,6 +19,12 @@ internal static class OoxmlNamespaces
     /// <summary>Extended properties rel-type: <c>extended-properties</c></summary>
     public const string RelExtendedProperties = "extended-properties";
 
+    /// <summary>Full core-properties relationship URI.</summary>
+    public const string CorePropertiesFull = PackageRelationships + "/metadata/core-properties";
+
+    /// <summary>Full extended-properties relationship URI.</summary>
+    public const string ExtendedPropertiesFull = OfficeDocument + "/extended-properties";
+
     /// <summary>Office document relationships: <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships</c></summary>
     public const string OfficeDocument = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 

@@ -16,11 +16,11 @@ internal static class PropertiesWriter
     private const string CoreUri = "/docProps/core.xml";
     private const string AppUri = "/docProps/app.xml";
 
-    private const string CoreContentType = "application/vnd.openxmlformats-package.core-properties+xml";
-    private const string AppContentType = "application/vnd.openxmlformats-officedocument.extended-properties+xml";
+    private const string CoreContentType = OoxmlContentTypes.CoreProperties;
+    private const string AppContentType = OoxmlContentTypes.ExtendedProperties;
 
-    private const string CoreRelType = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
-    private const string AppRelType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties";
+    private const string CoreRelType = OoxmlNamespaces.CorePropertiesFull;
+    private const string AppRelType = OoxmlNamespaces.ExtendedPropertiesFull;
 
     private static readonly XNamespace Cp = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
     private static readonly XNamespace Dc = "http://purl.org/dc/elements/1.1/";

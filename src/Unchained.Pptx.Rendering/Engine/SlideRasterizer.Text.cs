@@ -274,8 +274,8 @@ internal sealed partial class SlideRasterizer
             ? fontName
             : fontName switch
             {
-                OoxmlScaling.ThemeMajorLatinFont => fontScheme.MajorFont.LatinFont is { Length: > 0 } mj ? mj : fontName,
-                OoxmlScaling.ThemeMinorLatinFont => fontScheme.MinorFont.LatinFont is { Length: > 0 } mn ? mn : fontName,
+                "+mj-lt" => fontScheme.MajorFont.LatinFont is { Length: > 0 } mj ? mj : fontName,
+                "+mn-lt" => fontScheme.MinorFont.LatinFont is { Length: > 0 } mn ? mn : fontName,
                 _ => fontName
             };
 

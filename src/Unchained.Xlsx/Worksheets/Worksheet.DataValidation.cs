@@ -78,47 +78,4 @@ public sealed partial class Worksheet
 
         return validation;
     }
-
-    internal static XElement WriteValidations(DataValidationCollection validations)
-    {
-        var container = new XElement(SmlNames.DataValidations,
-            new XAttribute("count", validations.Count.ToString(CultureInfo.InvariantCulture)));
-
-        foreach (var validation in validations)
-            container.Add(WriteValidation(validation));
-
-        return container;
-    }
-
-    private static XElement WriteValidation(DataValidation.DataValidation validation)
-    {
-        var element = new XElement(SmlNames.DataValidation);
-
-        var type = SmlEnums.ToLiteral(validation.Type);
-        if (type != null) element.SetAttributeValue("type", type);
-
-        var op = SmlEnums.ToLiteral(validation.Operator);
-        if (op != null) element.SetAttributeValue("operator", op);
-
-        if (validation.AllowBlank) element.SetAttributeValue("allowBlank", "1");
-        if (validation.ShowInputMessage) element.SetAttributeValue("showInputMessage", "1");
-        if (validation.ShowErrorAlert) element.SetAttributeValue("showErrorAlert", "1");
-        if (!validation.ShowDropDown) element.SetAttributeValue("showDropDown", "1");
-
-        var errorStyle = SmlEnums.ToLiteral(validation.ErrorStyle);
-        if (errorStyle != null) element.SetAttributeValue("errorStyle", errorStyle);
-        if (!string.IsNullOrEmpty(validation.ErrorTitle)) element.SetAttributeValue("errorTitle", validation.ErrorTitle);
-        if (!string.IsNullOrEmpty(validation.ErrorMessage)) element.SetAttributeValue("error", validation.ErrorMessage);
-        if (!string.IsNullOrEmpty(validation.PromptTitle)) element.SetAttributeValue("promptTitle", validation.PromptTitle);
-        if (!string.IsNullOrEmpty(validation.Prompt)) element.SetAttributeValue("prompt", validation.Prompt);
-
-        element.SetAttributeValue("sqref", string.Join(' ', validation.Ranges.Select(static r => r.ToA1())));
-
-        if (validation.Formula1 != null)
-            element.Add(new XElement(SmlNames.Formula1, validation.Formula1));
-        if (validation.Formula2 != null)
-            element.Add(new XElement(SmlNames.Formula2, validation.Formula2));
-
-        return element;
-    }
 }

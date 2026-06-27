@@ -107,26 +107,5 @@ public sealed partial class Worksheet
         }
     }
 
-    // ── Row operations ──────────────────────────────────────────────────────────
-
-    /// <summary>Sets a row's height in points, materialising the row if necessary.</summary>
-    public void SetRowHeight(int rowNumber, double heightPoints)
-    {
-        var row = Rows.GetOrCreateRow(rowNumber);
-        row.Height = heightPoints;
-        row.IsCustomHeight = true;
-    }
-
-    /// <summary>Hides the given row.</summary>
-    public void HideRow(int rowNumber) => Rows.GetOrCreateRow(rowNumber).IsHidden = true;
-
-    /// <summary>Shows the given row.</summary>
-    public void ShowRow(int rowNumber)
-    {
-        var row = Rows.GetRow(rowNumber);
-        if (row != null)
-            row.IsHidden = false;
-    }
-
     private void EnsureCellsParsedPublic() => _ = Rows;
 }

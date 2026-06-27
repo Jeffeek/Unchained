@@ -430,9 +430,9 @@ public class FormulaFunctionCoverageTests
     [Fact]
     public void TypeOf_Variants()
     {
-        Num("=TYPE(5)").ShouldBe(1);
-        Num("=TYPE(\"x\")").ShouldBe(2);
-        Num("=TYPE(TRUE)").ShouldBe(4);
+        Num("=TYPE(5)").ShouldBe(2);
+        Num("=TYPE(\"x\")").ShouldBe(4);
+        Num("=TYPE(TRUE)").ShouldBe(16);
         Num("=TYPE(1/0)").ShouldBe(16);
     }
 

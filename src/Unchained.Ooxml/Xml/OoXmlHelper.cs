@@ -9,12 +9,6 @@ namespace Unchained.Ooxml.Xml;
 /// </summary>
 internal static class OoXmlHelper
 {
-    // ── Element navigation ───────────────────────────────────────────────────
-
-    // ── EMU helpers ──────────────────────────────────────────────────────────
-
-    // ── Serialization helpers ─────────────────────────────────────────────────
-
     /// <summary>
     ///     Converts an <see cref="XDocument" /> to a UTF-8 byte array with an XML declaration.
     /// </summary>

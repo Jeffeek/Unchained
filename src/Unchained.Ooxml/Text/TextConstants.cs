@@ -52,6 +52,14 @@ internal static class TextConstants
     /// </summary>
     internal const string FallbackLatinFont = "Arial";
 
-    /// <summary>Bold variant of <see cref="FallbackLatinFont" />.</summary>
+    /// <summary>
+    ///     Bold variant of <see cref="FallbackLatinFont" />.
+    /// </summary>
     internal const string FallbackLatinFontBold = "Arial Bold";
+
+    /// <summary>Theme major Latin font reference token (<c>+mj-lt</c>).</summary>
+    internal const string ThemeMajorLatinFont = "+mj-lt";
+
+    /// <summary>Theme minor (body) Latin font reference token (<c>+mn-lt</c>).</summary>
+    internal const string ThemeMinorLatinFont = "+mn-lt";
 }

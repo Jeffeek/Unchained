@@ -18,8 +18,8 @@ internal static class Shape3DParser
         var sp3d = spPr?.Element(A + "sp3d");
         if (sp3d is null) return;
 
-        threeD.ExtrusionHeight = new Emu(sp3d.GetAttrLong("extrusionH", 0));
-        threeD.ContourWidth = new Emu(sp3d.GetAttrLong("contourW", 0));
+        threeD.ExtrusionHeight = sp3d.GetAttrEmu("extrusionH");
+        threeD.ContourWidth = sp3d.GetAttrEmu("contourW");
         threeD.Material = sp3d.GetAttr(PmlNames.AttributePrstMaterial);
 
         if (sp3d.Element(A + "bevelT") is { } bt) threeD.TopBevel = ParseBevel(bt);
@@ -30,8 +30,8 @@ internal static class Shape3DParser
 
     private static BevelFormat ParseBevel(XElement el) => new()
     {
-        Width = new Emu(el.GetAttrLong("w", 0)),
-        Height = new Emu(el.GetAttrLong("h", 0)),
+        Width = el.GetAttrEmu("w"),
+        Height = el.GetAttrEmu("h"),
         Preset = el.GetAttr("prst", "circle")
     };
 }

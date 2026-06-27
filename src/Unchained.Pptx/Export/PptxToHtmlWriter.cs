@@ -17,7 +17,7 @@ namespace Unchained.Pptx.Export;
 internal static class PptxToHtmlWriter
 {
     // EMU → CSS pixels at 96 DPI: 1 px = 914400/96 = 9525 EMU
-    private const double EmuToPx = EmuConversions.EmuToCssPx;
+    private const double EmuToPx = Emu.EmuToCssPx;
 
     /// <summary>
     ///     Returns a dictionary mapping slide file names to their HTML content bytes.

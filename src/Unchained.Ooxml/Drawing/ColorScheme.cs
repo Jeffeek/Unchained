@@ -42,6 +42,8 @@ public sealed class ColorScheme
     /// <summary>The colour used for visited (followed) hyperlink text.</summary>
     public ColorSpec FollowedHyperlinkColor { get; set; }
 
+    internal const uint UnresolvedThemeColorArgb = 0xFF808080u;
+
     /// <summary>Gets or sets a colour slot by its <see cref="ThemeColorSlot" /> identifier.</summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown for an unrecognised slot.</exception>
     public ColorSpec this[ThemeColorSlot slot]

@@ -38,8 +38,8 @@ internal static class CommentParser
 
             // Position
             var posEl = cm.Element(pml + "pos");
-            var posX = posEl != null ? new Emu(posEl.GetAttrLong("x", 0)) : Emu.Zero;
-            var posY = posEl != null ? new Emu(posEl.GetAttrLong("y", 0)) : Emu.Zero;
+            var posX = posEl != null ? posEl.GetAttrEmu("x") : Emu.Zero;
+            var posY = posEl != null ? posEl.GetAttrEmu("y") : Emu.Zero;
 
             // Timestamp
             var dtRaw = cm.GetAttr("dt");

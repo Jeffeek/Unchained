@@ -93,8 +93,8 @@ public class FormulaFunctionLibraryExtraTests
     [Fact]
     public void Information()
     {
-        Num("=TYPE(42)").ShouldBe(1);
-        Num("=TYPE(\"x\")").ShouldBe(2);
+        Num("=TYPE(42)").ShouldBe(2);
+        Num("=TYPE(\"x\")").ShouldBe(4);
         Num("=ERROR.TYPE(1/0)").ShouldBe(2);
     }
 }

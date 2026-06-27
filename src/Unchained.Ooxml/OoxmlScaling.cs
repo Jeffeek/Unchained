@@ -15,16 +15,4 @@ internal static class OoxmlScaling
 
     /// <summary>Alpha: fully opaque = 255 in 0–255 space → 100 000 in OOXML space.</summary>
     internal const int AlphaScale = 100_000;
-
-    /// <summary>
-    ///     Grey fallback ARGB (0xFF808080) returned when a theme colour slot cannot be resolved
-    ///     (e.g. the colour scheme has not been initialised).
-    /// </summary>
-    internal const uint UnresolvedThemeColorArgb = 0xFF808080u;
-
-    /// <summary>Theme major Latin font reference token (<c>+mj-lt</c>).</summary>
-    internal const string ThemeMajorLatinFont = "+mj-lt";
-
-    /// <summary>Theme minor (body) Latin font reference token (<c>+mn-lt</c>).</summary>
-    internal const string ThemeMinorLatinFont = "+mn-lt";
 }
