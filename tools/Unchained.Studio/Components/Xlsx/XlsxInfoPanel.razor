@@ -1,4 +1,5 @@
 @using Unchained.Xlsx.Engine
+@using Unchained.Xlsx.Models.Sheets
 <MudPaper Class="pptx-info-panel pa-3" Elevation="0" Style="border:1px solid var(--mud-palette-divider);">
     <div class="d-flex align-center mb-2">
         <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Class="mr-2"/>
@@ -55,7 +56,8 @@
     protected override void OnParametersSet()
     {
         var hidden = Document.Sheets.Count(static s =>
-            s.State != Unchained.Xlsx.Models.Sheets.SheetState.Visible);
+            s.State != SheetState.Visible
+        );
         var tables = Document.Sheets.Sum(static s => s.Tables.Count);
         var cells = Document.Sheets.Sum(static s => s.Rows.Sum(static r => r.Cells.Count));
 

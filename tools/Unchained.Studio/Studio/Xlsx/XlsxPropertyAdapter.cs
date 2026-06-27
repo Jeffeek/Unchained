@@ -1,9 +1,10 @@
+using Unchained.Ooxml.Properties;
+using Unchained.Studio.Models;
 using Unchained.Xlsx.Cell;
 using Unchained.Xlsx.DefinedNames;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Styles;
 using Unchained.Xlsx.Worksheets;
-using Unchained.Studio.Models;
 
 namespace Unchained.Studio.Studio.Xlsx;
 
@@ -23,7 +24,7 @@ public static class XlsxPropertyAdapter
             _ => PropertyBag.Empty(node.Label)
         };
 
-    private static PropertyBag ForProperties(WorkbookProperties props) => new()
+    private static PropertyBag ForProperties(OoXmlCoreProperties props) => new()
     {
         Title = "Workbook Properties",
         Groups =

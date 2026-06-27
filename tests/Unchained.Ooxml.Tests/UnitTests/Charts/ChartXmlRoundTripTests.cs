@@ -20,9 +20,17 @@ public sealed class ChartXmlRoundTripTests
 
     private static ChartModel SampleColumn()
     {
-        var model = new ChartModel { Type = ChartType.ColumnClustered, Title = "Sales", HasTitle = true };
-        model.Legend.IsVisible = true;
-        model.Legend.Position = ChartLegendPosition.Right;
+        var model = new ChartModel
+        {
+            Type = ChartType.ColumnClustered,
+            Title = "Sales",
+            HasTitle = true,
+            Legend =
+            {
+                IsVisible = true,
+                Position = ChartLegendPosition.Right
+            }
+        };
         model.Data.Categories.AddRange(["Jan", "Feb", "Mar"]);
         model.Data.Series.Add(new ChartSeries { Name = "2023", Values = { 10, 20, 30 } });
         model.Data.Series.Add(new ChartSeries { Name = "2024", Values = { 15, 25, 35 } });
@@ -97,8 +105,15 @@ public sealed class ChartXmlRoundTripTests
     [Fact]
     public void NoTitle_NoLegend_RoundTrips()
     {
-        var model = new ChartModel { Type = ChartType.Pie, HasTitle = false };
-        model.Legend.IsVisible = false;
+        var model = new ChartModel
+        {
+            Type = ChartType.Pie,
+            HasTitle = false,
+            Legend =
+            {
+                IsVisible = false
+            }
+        };
         model.Data.Categories.AddRange(["X", "Y"]);
         model.Data.Series.Add(new ChartSeries { Name = "s", Values = { 60, 40 } });
 

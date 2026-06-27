@@ -1,8 +1,10 @@
-using Unchained.Xlsx.Engine;
-using Unchained.Xlsx.Tables;
-using Unchained.Xlsx.Worksheets;
 using Unchained.Studio.Models;
 using Unchained.Xlsx.Abstractions;
+using Unchained.Xlsx.Drawings;
+using Unchained.Xlsx.Engine;
+using Unchained.Xlsx.Models.Sheets;
+using Unchained.Xlsx.Tables;
+using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Studio.Studio.Xlsx;
 
@@ -58,8 +60,8 @@ public static class XlsxTreeBuilder
     {
         var stateSuffix = sheet.State switch
         {
-            Unchained.Xlsx.Models.Sheets.SheetState.Hidden => " (hidden)",
-            Unchained.Xlsx.Models.Sheets.SheetState.VeryHidden => " (very hidden)",
+            SheetState.Hidden => " (hidden)",
+            SheetState.VeryHidden => " (very hidden)",
             _ => string.Empty
         };
 
@@ -80,13 +82,13 @@ public static class XlsxTreeBuilder
         return node;
     }
 
-    private static TreeNode BuildDrawingNode(Unchained.Xlsx.Drawings.WorksheetDrawing drawing)
+    private static TreeNode BuildDrawingNode(WorksheetDrawing drawing)
     {
         var (label, icon) = drawing switch
         {
-            Unchained.Xlsx.Drawings.PictureDrawing pic =>
+            PictureDrawing pic =>
                 ($"Image ({pic.Image.ContentType}) @ {pic.Anchor.From.ToA1()}", Icons.Image),
-            Unchained.Xlsx.Drawings.ChartDrawing chart =>
+            ChartDrawing chart =>
                 ($"{chart.Chart.Type} chart @ {chart.Anchor.From.ToA1()}", Icons.Chart),
             _ => ("Drawing", Icons.Image)
         };

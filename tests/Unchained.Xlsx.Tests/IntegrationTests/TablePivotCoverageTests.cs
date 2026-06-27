@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Shouldly;
+using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Models.Pivot;
 using Unchained.Xlsx.Tests.Helpers;
@@ -16,7 +17,7 @@ public class TablePivotCoverageTests
     public void Table_NoHeaders_UsesGenericColumnNames()
     {
         using var document = XlsxFixtures.WithSheets("Data");
-        var table = document.Sheets[0].AddTable(CellRange.FromA1("A1:C2"), hasHeaders: false);
+        var table = document.Sheets[0].AddTable(CellRange.FromA1("A1:C2"), false);
         table.Columns.Select(static c => c.Name).ShouldBe(["Column1", "Column2", "Column3"]);
     }
 
@@ -65,7 +66,7 @@ public class TablePivotCoverageTests
 
     // ── PivotTableCollection ─────────────────────────────────────────────────
 
-    private static Unchained.Xlsx.Engine.SpreadsheetDocument WithSource()
+    private static SpreadsheetDocument WithSource()
     {
         var document = XlsxFixtures.WithSheets("Data");
         var sheet = document.Sheets[0];
@@ -83,7 +84,8 @@ public class TablePivotCoverageTests
     {
         using var document = WithSource();
         Should.Throw<ArgumentException>(() =>
-            document.Sheets[0].PivotTables.Add(CellRange.FromA1("A1:B3"), CellReference.FromA1("E1"), ""));
+            document.Sheets[0].PivotTables.Add(CellRange.FromA1("A1:B3"), CellReference.FromA1("E1"), "")
+        );
     }
 
     [Fact]
@@ -95,7 +97,8 @@ public class TablePivotCoverageTests
         // Column 2 header is blank.
         sheet.SetValue(2, 2, 5.0);
         Should.Throw<ArgumentException>(() =>
-            sheet.PivotTables.Add(CellRange.FromA1("A1:B3"), CellReference.FromA1("E1"), "P"));
+            sheet.PivotTables.Add(CellRange.FromA1("A1:B3"), CellReference.FromA1("E1"), "P")
+        );
     }
 
     [Fact]
@@ -158,7 +161,11 @@ public class TablePivotCoverageTests
         pivot.AddDataField("Num");
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         archive.Entries.Any(static e => e.FullName.Contains("pivotCacheRecords")).ShouldBeTrue();
     }
 }

@@ -1,6 +1,6 @@
 using Unchained.Xlsx.Cell;
 using Unchained.Xlsx.Formatting;
-using Unchained.Xlsx.Models.Styles;
+using Unchained.Xlsx.Models;
 
 namespace Unchained.Xlsx.Styles;
 
@@ -12,19 +12,21 @@ namespace Unchained.Xlsx.Styles;
 /// </summary>
 public sealed class StyleBook
 {
-    private readonly List<CellFont> _fonts = [];
-    private readonly List<CellFill> _fills = [];
+    private readonly Dictionary<CellBorder, int> _borderLookup = new();
     private readonly List<CellBorder> _borders = [];
-    private readonly List<NumberFormat> _numberFormats = [];
-    private readonly List<CellXf> _cellXfs = [];
     private readonly List<CellXf> _cellStyleXfs = [];
-    private readonly List<NamedCellStyle> _namedStyles = [];
+    private readonly Dictionary<CellXf, int> _cellXfLookup = new();
+    private readonly List<CellXf> _cellXfs = [];
+    private readonly Dictionary<CellFill, int> _fillLookup = new();
+    private readonly List<CellFill> _fills = [];
 
     private readonly Dictionary<CellFont, int> _fontLookup = new();
-    private readonly Dictionary<CellFill, int> _fillLookup = new();
-    private readonly Dictionary<CellBorder, int> _borderLookup = new();
+    private readonly List<CellFont> _fonts = [];
+    private readonly List<NamedCellStyle> _namedStyles = [];
     private readonly Dictionary<string, int> _numberFormatLookup = new(StringComparer.Ordinal);
-    private readonly Dictionary<CellXf, int> _cellXfLookup = new();
+    private readonly List<NumberFormat> _numberFormats = [];
+
+    private int _nextCustomFormatId = NumberFormat.FirstCustomId;
 
     internal StyleBook() { }
 
@@ -52,8 +54,6 @@ public sealed class StyleBook
     /// <summary><see langword="true" /> once any table changed and the part must be rewritten on save.</summary>
     internal bool IsDirty { get; private set; }
 
-    private int _nextCustomFormatId = NumberFormat.FirstCustomId;
-
     // ── Creation ────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -69,7 +69,7 @@ public sealed class StyleBook
         book._borders.Add(new CellBorder());
         book._cellStyleXfs.Add(new CellXf());
         book._cellXfs.Add(new CellXf());
-        book._namedStyles.Add(new NamedCellStyle("Normal", 0, builtInId: 0));
+        book._namedStyles.Add(new NamedCellStyle("Normal", 0, 0));
         book.RebuildLookups();
         return book;
     }

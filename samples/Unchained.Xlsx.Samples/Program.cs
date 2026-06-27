@@ -1,10 +1,10 @@
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
+using Unchained.Xlsx.Drawings;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Models.Pivot;
-using Unchained.Xlsx.Models.Styles;
 
 namespace Unchained.Xlsx.Samples;
 
@@ -206,7 +206,8 @@ internal static class Program
         }
 
         var range = new CellRange(new CellReference(1, 1), new CellReference(items.Length + 1, 3));
-        var table = sheet.AddTable(range, hasHeaders: true);
+        // ReSharper disable once RedundantArgumentDefaultValue
+        var table = sheet.AddTable(range, true);
         table.Name = "Inventory";
         table.ShowBandedRows = true;
         table.ShowTotalsRow = true;
@@ -276,7 +277,7 @@ internal static class Program
         }
 
         var dataRange = new CellRange(new CellReference(1, 1), new CellReference(data.Length + 1, 2));
-        var anchor = Drawings.DrawingAnchor.TwoCell(new CellReference(1, 4), new CellReference(16, 12));
+        var anchor = DrawingAnchor.TwoCell(new CellReference(1, 4), new CellReference(16, 12));
         sheet.AddChart(ChartType.ColumnClustered, dataRange, anchor, "Units by Month");
 
         var path = Path.Combine(OutputDir, "chart.xlsx");
@@ -314,7 +315,7 @@ internal static class Program
 
         var summary = doc.Sheets.Add("Summary");
         var sourceRange = new CellRange(new CellReference(1, 1), new CellReference(rows.Length + 1, 3));
-        var pivot = summary.PivotTables.Add(sourceRange, new CellReference(1, 1), "RegionTotals", sourceSheet: data);
+        var pivot = summary.PivotTables.Add(sourceRange, new CellReference(1, 1), "RegionTotals", data);
         pivot.AddRowField("Region");
         // ReSharper disable once RedundantArgumentDefaultValue
         pivot.AddDataField("Amount", PivotDataFunction.Sum);
@@ -331,11 +332,11 @@ internal static class Program
     private static async Task CsvAsync()
     {
         const string csv = """
-            Name,Score,Passed
-            Ada,92,true
-            Linus,88,true
-            Grace,74,false
-            """;
+                           Name,Score,Passed
+                           Ada,92,true
+                           Linus,88,true
+                           Grace,74,false
+                           """;
 
         var csvPath = Path.Combine(OutputDir, "scores.csv");
         await File.WriteAllTextAsync(csvPath, csv);

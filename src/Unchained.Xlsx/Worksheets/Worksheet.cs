@@ -15,6 +15,12 @@ namespace Unchained.Xlsx.Worksheets;
 /// </remarks>
 public sealed partial class Worksheet
 {
+    // ── Validation ─────────────────────────────────────────────────────────────
+
+    private static readonly char[] InvalidNameChars = ['\\', '/', '?', '*', '[', ']', ':'];
+
+    private string _name;
+
     internal Worksheet(
         SpreadsheetDocument document,
         string name,
@@ -31,8 +37,6 @@ public sealed partial class Worksheet
         PartUri = partUri;
         State = state;
     }
-
-    private string _name;
 
     /// <summary>The owning workbook.</summary>
     internal SpreadsheetDocument Document { get; }
@@ -77,10 +81,6 @@ public sealed partial class Worksheet
 
     /// <summary>The tab colour, or <see langword="null" /> for the default (no colour).</summary>
     public ColorSpec? TabColor { get; set; }
-
-    // ── Validation ─────────────────────────────────────────────────────────────
-
-    private static readonly char[] InvalidNameChars = ['\\', '/', '?', '*', '[', ']', ':'];
 
     internal static void ValidateSheetName(string name)
     {

@@ -53,8 +53,12 @@ public class DrawingTests
         sheet.SetValue(3, 1, "Feb");
         sheet.SetValue(3, 2, 150.0);
 
-        sheet.AddChart(ChartType.ColumnClustered, CellRange.FromA1("A1:B3"),
-            DrawingAnchor.TwoCell(CellReference.FromA1("D1"), CellReference.FromA1("J15")), "Sales by Month");
+        sheet.AddChart(
+            ChartType.ColumnClustered,
+            CellRange.FromA1("A1:B3"),
+            DrawingAnchor.TwoCell(CellReference.FromA1("D1"), CellReference.FromA1("J15")),
+            "Sales by Month"
+        );
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var charts = reloaded.Sheets[0].Drawings.OfType<ChartDrawing>().ToList();
@@ -80,8 +84,11 @@ public class DrawingTests
         sheet.SetValue(3, 1, "B");
         sheet.SetValue(3, 2, 70.0);
 
-        sheet.AddChart(ChartType.Pie, CellRange.FromA1("A1:B3"),
-            DrawingAnchor.OneCell(CellReference.FromA1("D1")));
+        sheet.AddChart(
+            ChartType.Pie,
+            CellRange.FromA1("A1:B3"),
+            DrawingAnchor.OneCell(CellReference.FromA1("D1"))
+        );
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var chart = reloaded.Sheets[0].Drawings.OfType<ChartDrawing>().Single().Chart;
@@ -97,8 +104,11 @@ public class DrawingTests
         sheet.SetValue(1, 1, "X");
         sheet.SetValue(2, 1, 5.0);
         sheet.AddImage(TinyPng, "image/png", CellReference.FromA1("C1"));
-        sheet.AddChart(ChartType.Line, CellRange.FromA1("A1:A2"),
-            DrawingAnchor.OneCell(CellReference.FromA1("E1")));
+        sheet.AddChart(
+            ChartType.Line,
+            CellRange.FromA1("A1:A2"),
+            DrawingAnchor.OneCell(CellReference.FromA1("E1"))
+        );
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         reloaded.Sheets[0].Drawings.Count.ShouldBe(2);

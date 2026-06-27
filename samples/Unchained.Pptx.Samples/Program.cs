@@ -211,7 +211,7 @@ internal static class Program
         PptxImage[] images;
         try
         {
-            images = await SlideRenderer.RenderAllAsync(doc, new RenderOptions(WidthPx: 1280, HeightPx: 720));
+            images = await SlideRenderer.RenderAllAsync(doc, new RenderOptions(1280, 720));
         }
         catch (Exception ex)
         {

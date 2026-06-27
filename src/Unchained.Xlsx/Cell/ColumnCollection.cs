@@ -12,6 +12,8 @@ public sealed class ColumnCollection : IReadOnlyList<Column>
 {
     private readonly List<Column> _columns = [];
 
+    internal IEnumerable<Column> Ordered => _columns.OrderBy(static c => c.Min);
+
     /// <summary>The number of column definitions.</summary>
     public int Count => _columns.Count;
 
@@ -84,6 +86,4 @@ public sealed class ColumnCollection : IReadOnlyList<Column>
         };
 
     internal void AddExisting(Column column) => _columns.Add(column);
-
-    internal IEnumerable<Column> Ordered => _columns.OrderBy(static c => c.Min);
 }

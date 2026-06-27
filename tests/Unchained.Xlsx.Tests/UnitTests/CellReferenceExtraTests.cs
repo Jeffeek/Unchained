@@ -30,20 +30,20 @@ public class CellReferenceExtraTests
     [Fact]
     public void ColumnNumberToLetters_OutOfRange_Throws()
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => CellReference.ColumnNumberToLetters(0));
-        Should.Throw<ArgumentOutOfRangeException>(() => CellReference.ColumnNumberToLetters(CellReference.MaxColumn + 1));
+        Should.Throw<ArgumentOutOfRangeException>(static () => CellReference.ColumnNumberToLetters(0));
+        Should.Throw<ArgumentOutOfRangeException>(static () => CellReference.ColumnNumberToLetters(CellReference.MaxColumn + 1));
     }
 
     [Fact]
     public void ColumnLettersToNumber_Invalid_Throws()
     {
-        Should.Throw<FormatException>(() => CellReference.ColumnLettersToNumber(""));
-        Should.Throw<FormatException>(() => CellReference.ColumnLettersToNumber("A1"));
+        Should.Throw<FormatException>(static () => CellReference.ColumnLettersToNumber(""));
+        Should.Throw<FormatException>(static () => CellReference.ColumnLettersToNumber("A1"));
     }
 
     [Fact]
     public void FromA1_Invalid_Throws() =>
-        Should.Throw<FormatException>(() => CellReference.FromA1("not a ref"));
+        Should.Throw<FormatException>(static () => CellReference.FromA1("not a ref"));
 
     [Fact]
     public void Equals_Object_And_HashCode()
@@ -51,6 +51,7 @@ public class CellReferenceExtraTests
         var a = new CellReference(2, 3);
         var b = new CellReference(2, 3);
         a.Equals((object)b).ShouldBeTrue();
+        // ReSharper disable once SuspiciousTypeConversion.Global
         a.Equals("not a ref").ShouldBeFalse();
         a.GetHashCode().ShouldBe(b.GetHashCode());
     }

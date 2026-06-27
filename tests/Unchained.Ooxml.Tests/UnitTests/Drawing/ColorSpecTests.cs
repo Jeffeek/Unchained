@@ -76,6 +76,6 @@ public sealed class ColorSpecTests
     {
         var color = ColorSpec.FromTheme(ThemeColorSlot.Accent1);
         var resolved = color.Resolve(null);
-        resolved.ShouldBe(OoxmlScaling.UnresolvedThemeColorArgb);
+        resolved.ShouldBe(ColorScheme.UnresolvedThemeColorArgb);
     }
 }

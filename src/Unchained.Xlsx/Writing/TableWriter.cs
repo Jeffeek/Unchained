@@ -32,31 +32,40 @@ internal static class TableWriter
         {
             var filterRange = CellRange.FromCorners(
                 table.Range.TopLeft,
-                new CellReference(table.Range.TopLeft.Row, table.Range.BottomRight.Column));
+                new CellReference(table.Range.TopLeft.Row, table.Range.BottomRight.Column)
+            );
             root.Add(new XElement(SmlNames.AutoFilter, new XAttribute("ref", filterRange.ToA1())));
         }
 
-        var columns = new XElement(SmlNames.X + "tableColumns",
-            new XAttribute("count", table.Columns.Count.ToString(CultureInfo.InvariantCulture)));
+        var columns = new XElement(
+            SmlNames.X + "tableColumns",
+            new XAttribute("count", table.Columns.Count.ToString(CultureInfo.InvariantCulture))
+        );
         foreach (var column in table.Columns)
             columns.Add(WriteColumn(column));
         root.Add(columns);
 
-        root.Add(new XElement(SmlNames.X + "tableStyleInfo",
-            new XAttribute("name", table.StyleName),
-            new XAttribute("showFirstColumn", table.ShowFirstColumn ? "1" : "0"),
-            new XAttribute("showLastColumn", table.ShowLastColumn ? "1" : "0"),
-            new XAttribute("showRowStripes", table.ShowBandedRows ? "1" : "0"),
-            new XAttribute("showColumnStripes", table.ShowBandedColumns ? "1" : "0")));
+        root.Add(
+            new XElement(
+                SmlNames.X + "tableStyleInfo",
+                new XAttribute("name", table.StyleName),
+                new XAttribute("showFirstColumn", table.ShowFirstColumn ? "1" : "0"),
+                new XAttribute("showLastColumn", table.ShowLastColumn ? "1" : "0"),
+                new XAttribute("showRowStripes", table.ShowBandedRows ? "1" : "0"),
+                new XAttribute("showColumnStripes", table.ShowBandedColumns ? "1" : "0")
+            )
+        );
 
         return new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
     }
 
     private static XElement WriteColumn(ListColumn column)
     {
-        var element = new XElement(SmlNames.X + "tableColumn",
+        var element = new XElement(
+            SmlNames.X + "tableColumn",
             new XAttribute("id", column.Id.ToString(CultureInfo.InvariantCulture)),
-            new XAttribute("name", column.Name));
+            new XAttribute("name", column.Name)
+        );
 
         if (column.TotalsFunction != TotalsRowFunction.None)
             element.SetAttributeValue("totalsRowFunction", ToLiteral(column.TotalsFunction));

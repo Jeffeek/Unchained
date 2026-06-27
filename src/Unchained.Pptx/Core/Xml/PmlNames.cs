@@ -27,7 +27,7 @@ internal static class PmlNames
     public const string RelTypeSlideMaster = RelBase + "slideMaster";
 
     /// <summary>Relationship type for a theme part.</summary>
-    public const string RelTypeTheme = RelBase + "theme";
+    public const string RelTypeTheme = RelBase + OoxmlNamespaces.RelTheme;
 
     /// <summary>Relationship type for a notes slide part.</summary>
     public const string RelTypeNotesSlide = RelBase + "notesSlide";
@@ -36,7 +36,7 @@ internal static class PmlNames
     public const string RelTypeNotesMaster = RelBase + "notesMaster";
 
     /// <summary>Relationship type for an image.</summary>
-    public const string RelTypeImage = RelBase + "image";
+    public const string RelTypeImage = RelBase + OoxmlNamespaces.RelImage;
 
     /// <summary>Relationship type for an audio file.</summary>
     public const string RelTypeAudio = RelBase + "audio";
@@ -45,22 +45,22 @@ internal static class PmlNames
     public const string RelTypeVideo = RelBase + "video";
 
     /// <summary>Relationship type for a chart part.</summary>
-    public const string RelTypeChart = RelBase + "chart";
+    public const string RelTypeChart = RelBase + OoxmlNamespaces.RelChart;
 
     /// <summary>Relationship type for a slide comment part.</summary>
-    public const string RelTypeComments = RelBase + "comments";
+    public const string RelTypeComments = RelBase + OoxmlNamespaces.RelComments;
 
     /// <summary>Relationship type for the presentation-level comment authors part.</summary>
     public const string RelTypeCommentAuthors = RelBase + "commentAuthors";
 
     /// <summary>Relationship type for a hyperlink.</summary>
-    public const string RelTypeHyperlink = RelBase + "hyperlink";
+    public const string RelTypeHyperlink = RelBase + OoxmlNamespaces.RelHyperlink;
 
     /// <summary>Relationship type for core properties (package level).</summary>
-    public const string RelTypeCoreProperties = PkgRelBase + "metadata/core-properties";
+    public const string RelTypeCoreProperties = PkgRelBase + OoxmlNamespaces.RelCoreProperties;
 
     /// <summary>Relationship type for extended (app) properties.</summary>
-    public const string RelTypeExtendedProperties = RelBase + "extended-properties";
+    public const string RelTypeExtendedProperties = RelBase + OoxmlNamespaces.RelExtendedProperties;
 
     /// <summary>Relationship type for an embedded font part (<c>/ppt/fonts/*.fntdata</c>).</summary>
     public const string RelTypeFont = RelBase + "font";
@@ -196,6 +196,33 @@ internal static class PmlNames
 
     /// <summary>Hidden slide attribute: <c>show</c> (0 = hidden).</summary>
     public const string AttributeShow = "show";
+
+    /// <summary>Placeholder type attribute: <c>type</c></summary>
+    public const string AttributeType = "type";
+
+    /// <summary>Duration attribute: <c>dur</c></summary>
+    public const string AttributeDuration = "dur";
+
+    /// <summary>Delay attribute: <c>delay</c></summary>
+    public const string AttributeDelay = "delay";
+
+    /// <summary>Length attribute: <c>len</c></summary>
+    public const string AttributeLength = "len";
+
+    /// <summary>Width attribute: <c>w</c></summary>
+    public const string AttributeWidthPx = "w";
+
+    /// <summary>Height attribute: <c>h</c></summary>
+    public const string AttributeHeightPx = "h";
+
+    /// <summary>Vertical anchor: <c>anchor</c></summary>
+    public const string AttributeAnchor = "anchor";
+
+    /// <summary>Wrap text: <c>wrap</c></summary>
+    public const string AttributeWrap = "wrap";
+
+    /// <summary>Material preset: <c>prstMaterial</c></summary>
+    public const string AttributePrstMaterial = "prstMaterial";
 
     /// <summary>Width in EMU: <c>cx</c></summary>
     public const string AttributeWidth = "cx";

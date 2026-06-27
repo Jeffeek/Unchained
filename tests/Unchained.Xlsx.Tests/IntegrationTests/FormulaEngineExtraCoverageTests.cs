@@ -23,7 +23,7 @@ public class FormulaEngineExtraCoverageTests
 
     [Fact]
     public void UnaryPlus_OnReference() =>
-        Num("=+A1", d => d.Sheets[0].SetValue(1, 1, 7.0)).ShouldBe(7);
+        Num("=+A1", static d => d.Sheets[0].SetValue(1, 1, 7.0)).ShouldBe(7);
 
     [Fact]
     public void UnaryMinus_OnError_Propagates() =>
@@ -31,7 +31,7 @@ public class FormulaEngineExtraCoverageTests
 
     [Fact]
     public void Percent_OnReference() =>
-        Num("=A1%", d => d.Sheets[0].SetValue(1, 1, 50.0)).ShouldBe(0.5);
+        Num("=A1%", static d => d.Sheets[0].SetValue(1, 1, 50.0)).ShouldBe(0.5);
 
     // ── Whitespace & tokenizer edges ─────────────────────────────────────────
 
@@ -48,29 +48,41 @@ public class FormulaEngineExtraCoverageTests
 
     [Fact]
     public void RangeInArithmetic_CoercesToFirstValue() =>
-        Num("=A1:A2+0", d =>
-        {
-            d.Sheets[0].SetValue(1, 1, 5.0);
-            d.Sheets[0].SetValue(2, 1, 9.0);
-        }).ShouldBe(5);
+        Num(
+                "=A1:A2+0",
+                static d =>
+                {
+                    d.Sheets[0].SetValue(1, 1, 5.0);
+                    d.Sheets[0].SetValue(2, 1, 9.0);
+                }
+            )
+            .ShouldBe(5);
 
     [Fact]
     public void RangeInBooleanContext_UsesFirst() =>
-        Eval("=IF(A1:A2,\"yes\",\"no\")", d =>
-        {
-            d.Sheets[0].SetValue(1, 1, 1.0);
-            d.Sheets[0].SetValue(2, 1, 0.0);
-        }).ShouldBe("yes");
+        Eval(
+                "=IF(A1:A2,\"yes\",\"no\")",
+                static d =>
+                {
+                    d.Sheets[0].SetValue(1, 1, 1.0);
+                    d.Sheets[0].SetValue(2, 1, 0.0);
+                }
+            )
+            .ShouldBe("yes");
 
     // ── Sheet-qualified range ────────────────────────────────────────────────
 
     [Fact]
     public void SheetQualifiedRange_Sums() =>
-        Num("=SUM(Sheet2!A1:A2)", d =>
-        {
-            d.Sheets[1].SetValue(1, 1, 3.0);
-            d.Sheets[1].SetValue(2, 1, 4.0);
-        }).ShouldBe(7);
+        Num(
+                "=SUM(Sheet2!A1:A2)",
+                static d =>
+                {
+                    d.Sheets[1].SetValue(1, 1, 3.0);
+                    d.Sheets[1].SetValue(2, 1, 4.0);
+                }
+            )
+            .ShouldBe(7);
 
     // ── Defined names ────────────────────────────────────────────────────────
 

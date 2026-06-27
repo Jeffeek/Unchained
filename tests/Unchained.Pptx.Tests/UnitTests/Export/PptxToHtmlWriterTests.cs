@@ -2,6 +2,7 @@ using System.Text;
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Text;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;
@@ -31,7 +32,7 @@ public sealed class PptxToHtmlWriterTests
         shape.Line.WidthPoints = 2.0;
 
         var para = shape.TextFrame.Paragraphs[0];
-        para.Alignment = Ooxml.Text.TextAlignment.Center;
+        para.Alignment = TextAlignment.Center;
         var run = para.Runs[0];
         run.Format.Bold = InheritableBool.True;
         run.Format.Italic = InheritableBool.True;

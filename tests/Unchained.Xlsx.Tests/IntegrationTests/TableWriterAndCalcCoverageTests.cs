@@ -40,7 +40,7 @@ public class TableWriterAndCalcCoverageTests
         using var document = XlsxFixtures.WithSheets("Data");
         var sheet = document.Sheets[0];
         sheet.SetValue(1, 1, 1.0);
-        var table = sheet.AddTable(CellRange.FromA1("A1:A3"), hasHeaders: false);
+        sheet.AddTable(CellRange.FromA1("A1:A3"), false);
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         reloaded.Sheets[0].Tables[0].ShowHeaderRow.ShouldBeFalse();

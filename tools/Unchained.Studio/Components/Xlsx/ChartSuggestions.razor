@@ -1,0 +1,106 @@
+@using Unchained.Xlsx.Cell
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+@using ChartType = Unchained.Ooxml.Charts.ChartType
+@if (_suggestions.Count > 0)
+{
+    <div class="chart-suggestions">
+        <MudText Typo="Typo.caption" Class="mb-1" Style="opacity:.6;">Suggested charts</MudText>
+        @foreach (var s in _suggestions)
+        {
+            var item = s;
+            <MudChip T="string" Text="@item.Label" Color="Color.Primary" @onclick="() => OnSuggested(item.Type)" Style="cursor:pointer;"/>
+        }
+    </div>
+}
+
+@code {
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public CellRange Selection { get; set; }
+
+    [Parameter]
+    public EventCallback<ChartType> ChartTypeSelected { get; set; }
+
+    private List<ChartSuggestion> _suggestions = [];
+
+    protected override void OnParametersSet() => _suggestions = ComputeSuggestions(Sheet, Selection);
+
+    private Task OnSuggested(ChartType type) => ChartTypeSelected.InvokeAsync(type);
+
+    private static List<ChartSuggestion> ComputeSuggestions(Worksheet sheet, CellRange range)
+    {
+        var suggestions = new List<ChartSuggestion>();
+        var rows = range.RowCount;
+        var cols = range.ColumnCount;
+        var numericCells = 0;
+        var textCells = 0;
+
+        foreach (var cell in range.Cells().Select(ref2 => sheet.GetCell(ref2.Row, ref2.Column)).OfType<Cell>())
+        {
+            switch (cell.CellType)
+            {
+                case CellType.Number or CellType.Boolean:
+                    numericCells++;
+                break;
+                case CellType.String:
+                    textCells++;
+                break;
+            }
+        }
+
+        var total = numericCells + textCells;
+        if (total == 0) return suggestions;
+
+        var isNumerical = numericCells * 2 >= total;
+
+        if (isNumerical)
+        {
+            var firstColDates = 0;
+            var firstColNums = 0;
+            for (var r = 1; r <= range.BottomRight.Row; r++)
+            {
+                var cell = sheet.GetCell(r, range.TopLeft.Column);
+                // ReSharper disable once InvertIf
+                if (cell?.CellType == CellType.Number)
+                {
+                    firstColNums++;
+                    if (cell.GetDouble() is >= 30000 and <= 60000) firstColDates++;
+                }
+            }
+
+            if (firstColDates > 0 && firstColDates >= firstColNums / 2)
+            {
+                suggestions.Add(new ChartSuggestion(ChartType.Line, "Line chart", "Best for trends over time"));
+                suggestions.Add(new ChartSuggestion(ChartType.Area, "Area chart", "Shows magnitude over time"));
+            }
+            else
+                switch (cols)
+                {
+                    case >= 2:
+                        suggestions.Add(new ChartSuggestion(ChartType.ColumnClustered, "Column", "Compare values across categories"));
+                        suggestions.Add(new ChartSuggestion(ChartType.BarClustered, "Bar", "Compare values across categories"));
+                        suggestions.Add(new ChartSuggestion(ChartType.Line, "Line", "Show trends"));
+                    break;
+                    case 1 when rows <= 12:
+                        suggestions.Add(new ChartSuggestion(ChartType.Pie, "Pie", "Parts of a whole"));
+                        suggestions.Add(new ChartSuggestion(ChartType.ColumnClustered, "Column", "Compare values"));
+                    break;
+                }
+
+            if (cols >= 2)
+                suggestions.Add(new ChartSuggestion(ChartType.ScatterWithMarkersOnly, "Scatter", "Relationship between two variables"));
+        }
+        else
+        {
+            if (cols == 1 && rows <= 12)
+                suggestions.Add(new ChartSuggestion(ChartType.Pie, "Pie", "Distribution of categories"));
+        }
+
+        return suggestions;
+    }
+
+}

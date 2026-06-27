@@ -1,21 +1,22 @@
 using Shouldly;
-using Unchained.Xlsx.Models.Cell;
+using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Tests.Helpers;
+using Unchained.Xlsx.Worksheets;
 using Xunit;
 
 namespace Unchained.Xlsx.Tests.IntegrationTests;
 
 public class FormulaFunctionLibraryTests
 {
-    private static object? Eval(string formula, Action<Unchained.Xlsx.Worksheets.Worksheet>? setup = null)
+    private static object? Eval(string formula, Action<Worksheet>? setup = null)
     {
         using var document = XlsxFixtures.WithSheets("S");
         var sheet = document.Sheets[0];
         setup?.Invoke(sheet);
-        return Unchained.Xlsx.Engine.SpreadsheetDocument.EvaluateFormula(sheet, formula);
+        return SpreadsheetDocument.EvaluateFormula(sheet, formula);
     }
 
-    private static double? Num(string formula, Action<Unchained.Xlsx.Worksheets.Worksheet>? setup = null)
+    private static double? Num(string formula, Action<Worksheet>? setup = null)
         => Eval(formula, setup) is double d ? d : null;
 
     [
@@ -64,10 +65,14 @@ public class FormulaFunctionLibraryTests
         Num("=LARGE(A1:A5,2)", Fill).ShouldBe(40);
         Num("=SMALL(A1:A5,1)", Fill).ShouldBe(10);
         return;
-        static void Fill(Unchained.Xlsx.Worksheets.Worksheet s)
+
+        static void Fill(Worksheet s)
         {
-            s.SetValue(1, 1, 10.0); s.SetValue(2, 1, 50.0); s.SetValue(3, 1, 30.0);
-            s.SetValue(4, 1, 40.0); s.SetValue(5, 1, 20.0);
+            s.SetValue(1, 1, 10.0);
+            s.SetValue(2, 1, 50.0);
+            s.SetValue(3, 1, 30.0);
+            s.SetValue(4, 1, 40.0);
+            s.SetValue(5, 1, 20.0);
         }
     }
 
@@ -103,28 +108,38 @@ public class FormulaFunctionLibraryTests
     }
 
     [Fact]
-    public void Lookup_Vlookup()
-    {
-        Eval("=VLOOKUP(\"B\",A1:B3,2,FALSE)", s =>
-        {
-            s.SetValue(1, 1, "A"); s.SetValue(1, 2, 10.0);
-            s.SetValue(2, 1, "B"); s.SetValue(2, 2, 20.0);
-            s.SetValue(3, 1, "C"); s.SetValue(3, 2, 30.0);
-        }).ShouldBe(20.0);
-    }
+    public void Lookup_Vlookup() =>
+        Eval(
+                "=VLOOKUP(\"B\",A1:B3,2,FALSE)",
+                static s =>
+                {
+                    s.SetValue(1, 1, "A");
+                    s.SetValue(1, 2, 10.0);
+                    s.SetValue(2, 1, "B");
+                    s.SetValue(2, 2, 20.0);
+                    s.SetValue(3, 1, "C");
+                    s.SetValue(3, 2, 30.0);
+                }
+            )
+            .ShouldBe(20.0);
 
     [Fact]
     public void Lookup_IndexMatch()
     {
-        void Fill(Unchained.Xlsx.Worksheets.Worksheet s)
-        {
-            s.SetValue(1, 1, "X"); s.SetValue(2, 1, "Y"); s.SetValue(3, 1, "Z");
-            s.SetValue(1, 2, 100.0); s.SetValue(2, 2, 200.0); s.SetValue(3, 2, 300.0);
-        }
-
         Num("=MATCH(\"Y\",A1:A3,0)", Fill).ShouldBe(2);
         Num("=INDEX(B1:B3,2)", Fill).ShouldBe(200.0);
         Num("=INDEX(B1:B3,MATCH(\"Z\",A1:A3,0))", Fill).ShouldBe(300.0);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, "X");
+            s.SetValue(2, 1, "Y");
+            s.SetValue(3, 1, "Z");
+            s.SetValue(1, 2, 100.0);
+            s.SetValue(2, 2, 200.0);
+            s.SetValue(3, 2, 300.0);
+        }
     }
 
     [Fact]
@@ -133,15 +148,20 @@ public class FormulaFunctionLibraryTests
     [Fact]
     public void ConditionalAggregates()
     {
-        void Fill(Unchained.Xlsx.Worksheets.Worksheet s)
-        {
-            for (var i = 1; i <= 4; i++) { s.SetValue(i, 1, (double)(i * 10)); s.SetValue(i, 2, i <= 2 ? "A" : "B"); }
-        }
-
-        Num("=SUMIFS(A1:A4,B1:B4,\"A\")", Fill).ShouldBe(30);   // 10+20
+        Num("=SUMIFS(A1:A4,B1:B4,\"A\")", Fill).ShouldBe(30); // 10+20
         Num("=COUNTIFS(B1:B4,\"B\")", Fill).ShouldBe(2);
-        Num("=AVERAGEIF(A1:A4,\">15\")", Fill).ShouldBe(30);    // (20+30+40)/3
+        Num("=AVERAGEIF(A1:A4,\">15\")", Fill).ShouldBe(30); // (20+30+40)/3
         Num("=SUMPRODUCT(A1:A4,A1:A4)", Fill).ShouldBe(100 + 400 + 900 + 1600);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            for (var i = 1; i <= 4; i++)
+            {
+                s.SetValue(i, 1, i * 10);
+                s.SetValue(i, 2, i <= 2 ? "A" : "B");
+            }
+        }
     }
 
     [Fact]

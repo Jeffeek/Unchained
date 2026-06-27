@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Shouldly;
+using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Models.Pivot;
 using Unchained.Xlsx.Tests.Helpers;
@@ -9,7 +10,7 @@ namespace Unchained.Xlsx.Tests.IntegrationTests;
 
 public class PivotTableTests
 {
-    private static Unchained.Xlsx.Engine.SpreadsheetDocument WithSourceData()
+    private static SpreadsheetDocument WithSourceData()
     {
         var document = XlsxFixtures.WithSheets("Data");
         var sheet = document.Sheets[0];
@@ -42,18 +43,19 @@ public class PivotTableTests
         var pivot = sheet.AddPivotTable(CellRange.FromA1("A1:C5"), CellReference.FromA1("E1"), "SalesPivot");
 
         pivot.Fields.Count.ShouldBe(3);
-        pivot.Fields.Select(f => f.Name).ShouldBe(["Region", "Product", "Amount"]);
+        pivot.Fields.Select(static f => f.Name).ShouldBe(["Region", "Product", "Amount"]);
         // Region field should have captured distinct items.
-        pivot.Fields[0].Items.ShouldBe(["East", "West"], ignoreOrder: true);
+        pivot.Fields[0].Items.ShouldBe(["East", "West"], true);
     }
 
     [Fact]
     public void AddPivotTable_RejectsOverlappingTarget() =>
-        Should.Throw<ArgumentException>(() =>
-        {
-            using var document = WithSourceData();
-            document.Sheets[0].AddPivotTable(CellRange.FromA1("A1:C5"), CellReference.FromA1("B2"), "P");
-        });
+        Should.Throw<ArgumentException>(static () =>
+            {
+                using var document = WithSourceData();
+                document.Sheets[0].AddPivotTable(CellRange.FromA1("A1:C5"), CellReference.FromA1("B2"), "P");
+            }
+        );
 
     [Fact]
     public async Task PivotTable_RoundTrips()
@@ -62,7 +64,7 @@ public class PivotTableTests
         var pivot = document.Sheets[0].AddPivotTable(CellRange.FromA1("A1:C5"), CellReference.FromA1("E1"), "SalesPivot");
         pivot.AddRowField("Region");
         pivot.AddColumnField("Product");
-        pivot.AddDataField("Amount", PivotDataFunction.Sum);
+        pivot.AddDataField("Amount");
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var pivots = reloaded.Sheets[0].PivotTables;
@@ -80,10 +82,14 @@ public class PivotTableTests
         pivot.AddDataField("Amount");
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
-        archive.Entries.Any(e => e.FullName.Contains("pivotTables/pivotTable")).ShouldBeTrue();
-        archive.Entries.Any(e => e.FullName.Contains("pivotCache/pivotCacheDefinition")).ShouldBeTrue();
-        archive.Entries.Any(e => e.FullName.Contains("pivotCache/pivotCacheRecords")).ShouldBeTrue();
+#endif
+        archive.Entries.Any(static e => e.FullName.Contains("pivotTables/pivotTable")).ShouldBeTrue();
+        archive.Entries.Any(static e => e.FullName.Contains("pivotCache/pivotCacheDefinition")).ShouldBeTrue();
+        archive.Entries.Any(static e => e.FullName.Contains("pivotCache/pivotCacheRecords")).ShouldBeTrue();
     }
 
     [Fact]

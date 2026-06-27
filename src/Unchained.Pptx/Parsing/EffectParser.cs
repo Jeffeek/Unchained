@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Xml;
 
@@ -27,12 +26,12 @@ internal static class EffectParser
         if (effectLst.Element(A + "reflection") is { } refl)
             effects.Reflection = ParseReflection(refl);
         if (effectLst.Element(A + "softEdge") is { } soft)
-            effects.SoftEdge = new SoftEdgeEffect { Radius = new Emu(soft.GetAttrLong("rad", 0)) };
+            effects.SoftEdge = new SoftEdgeEffect { Radius = soft.GetAttrEmu("rad") };
         if (effectLst.Element(A + "blur") is { } blur)
         {
             effects.Blur = new BlurEffect
             {
-                Radius = new Emu(blur.GetAttrLong("rad", 0)),
+                Radius = blur.GetAttrEmu("rad"),
                 GrowBounds = blur.GetAttrBool("grow") ?? true
             };
         }
@@ -41,8 +40,8 @@ internal static class EffectParser
     private static OuterShadowEffect ParseOuterShadow(XElement el) => new()
     {
         Color = ColorParser.Parse(el),
-        BlurRadius = new Emu(el.GetAttrLong("blurRad", 0)),
-        Distance = new Emu(el.GetAttrLong("dist", 0)),
+        BlurRadius = el.GetAttrEmu("blurRad"),
+        Distance = el.GetAttrEmu("dist"),
         DirectionDegrees = AngleToDegrees(el.GetAttrInt("dir")),
         ScaleHorizontalPercent = PercentOrDefault(el.GetAttrInt("sx"), 100),
         ScaleVerticalPercent = PercentOrDefault(el.GetAttrInt("sy"), 100),
@@ -53,23 +52,23 @@ internal static class EffectParser
     private static InnerShadowEffect ParseInnerShadow(XElement el) => new()
     {
         Color = ColorParser.Parse(el),
-        BlurRadius = new Emu(el.GetAttrLong("blurRad", 0)),
-        Distance = new Emu(el.GetAttrLong("dist", 0)),
+        BlurRadius = el.GetAttrEmu("blurRad"),
+        Distance = el.GetAttrEmu("dist"),
         DirectionDegrees = AngleToDegrees(el.GetAttrInt("dir"))
     };
 
     private static GlowEffect ParseGlow(XElement el) => new()
     {
         Color = ColorParser.Parse(el),
-        Radius = new Emu(el.GetAttrLong("rad", 0))
+        Radius = el.GetAttrEmu("rad")
     };
 
     private static ReflectionEffect ParseReflection(XElement el) => new()
     {
-        BlurRadius = new Emu(el.GetAttrLong("blurRad", 0)),
+        BlurRadius = el.GetAttrEmu("blurRad"),
         StartOpacityPercent = PercentOrDefault(el.GetAttrInt("stA"), 100),
         EndOpacityPercent = PercentOrDefault(el.GetAttrInt("endA"), 0),
-        Distance = new Emu(el.GetAttrLong("dist", 0)),
+        Distance = el.GetAttrEmu("dist"),
         DirectionDegrees = AngleToDegrees(el.GetAttrInt("dir"))
     };
 

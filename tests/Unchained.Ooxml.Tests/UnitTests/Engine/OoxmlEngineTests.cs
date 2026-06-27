@@ -1,5 +1,6 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Presentation;
+using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Shouldly;
 using Unchained.Ooxml.Engine;
@@ -168,8 +169,8 @@ public sealed class OoxmlEngineTests
         {
             var doc = (SpreadsheetDocument)engine.Package;
             var wbPart = doc.AddWorkbookPart();
-            wbPart.Workbook = new DocumentFormat.OpenXml.Spreadsheet.Workbook(
-                new DocumentFormat.OpenXml.Spreadsheet.Sheets()
+            wbPart.Workbook = new Workbook(
+                new Sheets()
             );
             wbPart.Workbook.Save();
             bytes = engine.Save();

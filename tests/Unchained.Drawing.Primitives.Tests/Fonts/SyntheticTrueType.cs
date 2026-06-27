@@ -75,7 +75,7 @@ internal static class SyntheticTrueType
             var entry = dirStart + (i * 16);
             for (var c = 0; c < 4; c++)
                 font[entry + c] = (byte)tag[c];
-            BinaryPrimitives.WriteUInt32BigEndian(font.AsSpan(entry + 8), (uint)dataOffset); // offset
+            BinaryPrimitives.WriteUInt32BigEndian(font.AsSpan(entry + 8), (uint)dataOffset);   // offset
             BinaryPrimitives.WriteUInt32BigEndian(font.AsSpan(entry + 12), (uint)data.Length); // length
             data.CopyTo(font.AsSpan(dataOffset));
             dataOffset += data.Length;

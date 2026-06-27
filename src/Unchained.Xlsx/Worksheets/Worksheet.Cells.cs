@@ -1,40 +1,20 @@
+using System.Globalization;
 using Unchained.Xlsx.Cell;
 using Unchained.Xlsx.Models.Cell;
+using Unchained.Xlsx.Parsing;
 
 namespace Unchained.Xlsx.Worksheets;
 
 public sealed partial class Worksheet
 {
-    private readonly RowCollection _rows = new();
-    private bool _cellsParsed;
-
     /// <summary>The materialised rows of this sheet, in row order.</summary>
     public RowCollection Rows
     {
         get
         {
             EnsureCellsParsed();
-            return _rows;
+            return RowsInternal;
         }
-    }
-
-    // ── Cell access ─────────────────────────────────────────────────────────────
-
-    /// <summary>Returns the cell at the given 1-based row and column, or <see langword="null" /> if empty.</summary>
-    public Cell.Cell? GetCell(int row, int column) => GetCell(new CellReference(row, column));
-
-    /// <summary>Returns the cell at <paramref name="reference" />, or <see langword="null" /> if empty.</summary>
-    public Cell.Cell? GetCell(CellReference reference)
-    {
-        EnsureCellsParsed();
-        return _rows.GetRow(reference.Row)?.GetCell(reference.Column);
-    }
-
-    /// <summary>Returns the materialised row with the given number, or <see langword="null" /> if absent.</summary>
-    public Row? GetRow(int rowNumber)
-    {
-        EnsureCellsParsed();
-        return _rows.GetRow(rowNumber);
     }
 
     /// <summary>
@@ -46,7 +26,7 @@ public sealed partial class Worksheet
         get
         {
             EnsureCellsParsed();
-            return _rows.GetOrCreateRow(row).GetOrAddCell(this, column);
+            return RowsInternal.GetOrCreateRow(row).GetOrAddCell(this, column);
         }
     }
 
@@ -63,6 +43,40 @@ public sealed partial class Worksheet
     /// <summary>Returns the cell at the given reference, materialising it on demand.</summary>
     public Cell.Cell this[CellReference reference] => this[reference.Row, reference.Column];
 
+    // ── Writer accessors ────────────────────────────────────────────────────────
+
+    /// <summary>
+    ///     <see langword="true" /> once cells have been materialised. When false, the writer keeps the
+    ///     raw <c>&lt;sheetData&gt;</c> as-is rather than regenerating it.
+    /// </summary>
+    internal bool CellsMaterialised { get; private set; }
+
+    /// <summary><see langword="true" /> once columns have been materialised.</summary>
+    internal bool ColumnsMaterialised { get; private set; }
+
+    internal RowCollection RowsInternal { get; } = new();
+
+    internal ColumnCollection ColumnsInternal { get; } = new();
+
+    // ── Cell access ─────────────────────────────────────────────────────────────
+
+    /// <summary>Returns the cell at the given 1-based row and column, or <see langword="null" /> if empty.</summary>
+    public Cell.Cell? GetCell(int row, int column) => GetCell(new CellReference(row, column));
+
+    /// <summary>Returns the cell at <paramref name="reference" />, or <see langword="null" /> if empty.</summary>
+    public Cell.Cell? GetCell(CellReference reference)
+    {
+        EnsureCellsParsed();
+        return RowsInternal.GetRow(reference.Row)?.GetCell(reference.Column);
+    }
+
+    /// <summary>Returns the materialised row with the given number, or <see langword="null" /> if absent.</summary>
+    public Row? GetRow(int rowNumber)
+    {
+        EnsureCellsParsed();
+        return RowsInternal.GetRow(rowNumber);
+    }
+
     // ── Used range ───────────────────────────────────────────────────────────
 
     /// <summary>
@@ -76,19 +90,13 @@ public sealed partial class Worksheet
         int minRow = int.MaxValue, minCol = int.MaxValue, maxRow = 0, maxCol = 0;
         var any = false;
 
-        foreach (var row in _rows.AllRows)
+        foreach (var cell in RowsInternal.AllRows.SelectMany(static row => row.CellsInternal.Where(static cell => !cell.IsEffectivelyEmpty)))
         {
-            foreach (var cell in row.CellsInternal)
-            {
-                if (cell.IsEffectivelyEmpty)
-                    continue;
-
-                any = true;
-                minRow = Math.Min(minRow, cell.Row);
-                maxRow = Math.Max(maxRow, cell.Row);
-                minCol = Math.Min(minCol, cell.Column);
-                maxCol = Math.Max(maxCol, cell.Column);
-            }
+            any = true;
+            minRow = Math.Min(minRow, cell.Row);
+            maxRow = Math.Max(maxRow, cell.Row);
+            minCol = Math.Min(minCol, cell.Column);
+            maxCol = Math.Max(maxCol, cell.Column);
         }
 
         return any
@@ -110,7 +118,7 @@ public sealed partial class Worksheet
             for (var c = used.Value.TopLeft.Column; c <= used.Value.BottomRight.Column; c++)
             {
                 var cell = GetCell(r, c);
-                fields.Add(cell?.GetString() ?? cell?.GetDouble()?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty);
+                fields.Add(cell?.GetString() ?? cell?.GetDouble()?.ToString(CultureInfo.InvariantCulture) ?? string.Empty);
             }
 
             lines.Add(string.Join('\t', fields));
@@ -123,26 +131,11 @@ public sealed partial class Worksheet
 
     private void EnsureCellsParsed()
     {
-        if (_cellsParsed)
+        if (CellsMaterialised)
             return;
 
-        _cellsParsed = true;
+        CellsMaterialised = true;
         if (RawElement != null)
-            Parsing.WorksheetParser.ParseCells(this, RawElement, _rows);
+            WorksheetParser.ParseCells(this, RawElement, RowsInternal);
     }
-
-    // ── Writer accessors ────────────────────────────────────────────────────────
-
-    /// <summary>
-    ///     <see langword="true" /> once cells have been materialised. When false, the writer keeps the
-    ///     raw <c>&lt;sheetData&gt;</c> as-is rather than regenerating it.
-    /// </summary>
-    internal bool CellsMaterialised => _cellsParsed;
-
-    /// <summary><see langword="true" /> once columns have been materialised.</summary>
-    internal bool ColumnsMaterialised => _columnsParsed;
-
-    internal RowCollection RowsInternal => _rows;
-
-    internal ColumnCollection ColumnsInternal => _columns;
 }

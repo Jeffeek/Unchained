@@ -1,28 +1,38 @@
+using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Xml;
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.Drawings;
 using Unchained.Xlsx.Models.Cell;
+using Unchained.Xlsx.Parsing;
 
 namespace Unchained.Xlsx.Worksheets;
 
 public sealed partial class Worksheet
 {
-    private DrawingCollection? _drawings;
-
     /// <summary>The drawings (pictures and charts) anchored on this worksheet.</summary>
     public DrawingCollection Drawings
     {
         get
         {
-            if (_drawings != null)
-                return _drawings;
+            if (DrawingsOrNull != null)
+                return DrawingsOrNull;
 
-            _drawings = new DrawingCollection();
-            ParseDrawings(_drawings);
-            return _drawings;
+            DrawingsOrNull = new DrawingCollection();
+            ParseDrawings(DrawingsOrNull);
+            return DrawingsOrNull;
         }
     }
+
+    internal bool DrawingsMaterialised => DrawingsOrNull != null;
+
+    internal DrawingCollection? DrawingsOrNull { get; private set; }
+
+    /// <summary>The OPC part URI of this sheet's drawing layer (assigned on write).</summary>
+    internal string DrawingPartUri { get; set; } = string.Empty;
+
+    /// <summary>The relationship id from this sheet to its drawing part (assigned on write).</summary>
+    internal string DrawingRelationshipId { get; set; } = string.Empty;
 
     /// <summary>Adds an image to the sheet at the given anchor and returns the picture drawing.</summary>
     public PictureDrawing AddImage(byte[] imageBytes, string contentType, DrawingAnchor anchor)
@@ -36,8 +46,13 @@ public sealed partial class Worksheet
     }
 
     /// <summary>Adds an image anchored to a single cell with a pixel size.</summary>
-    public PictureDrawing AddImage(byte[] imageBytes, string contentType, CellReference cell,
-        double widthPixels = 480, double heightPixels = 288) =>
+    public PictureDrawing AddImage(
+        byte[] imageBytes,
+        string contentType,
+        CellReference cell,
+        double widthPixels = 480,
+        double heightPixels = 288
+    ) =>
         AddImage(imageBytes, contentType, DrawingAnchor.OneCell(cell, widthPixels, heightPixels));
 
     /// <summary>
@@ -46,7 +61,7 @@ public sealed partial class Worksheet
     ///     become series. Data values are snapshotted as chart literals at creation time.
     /// </summary>
     public ChartDrawing AddChart(
-        Ooxml.Charts.ChartType type,
+        ChartType type,
         CellRange dataRange,
         DrawingAnchor anchor,
         string? title = null
@@ -54,8 +69,14 @@ public sealed partial class Worksheet
     {
         ArgumentNullException.ThrowIfNull(anchor);
 
-        var chart = new ChartDrawing { Anchor = anchor };
-        chart.Chart.Type = type;
+        var chart = new ChartDrawing
+        {
+            Anchor = anchor,
+            Chart =
+            {
+                Type = type
+            }
+        };
         if (!string.IsNullOrEmpty(title))
         {
             chart.Chart.Title = title;
@@ -84,43 +105,33 @@ public sealed partial class Worksheet
 
         if (chart.Chart.Data.Series.Count != previousFills.Count)
             return;
+
         for (var i = 0; i < previousFills.Count; i++)
             chart.Chart.Data.Series[i].Fill = previousFills[i];
     }
 
     /// <summary>Reads <paramref name="range" /> into the chart model: column 1 = categories, each other column = a series.</summary>
-    private void PopulateChartData(Ooxml.Charts.ChartModel model, CellRange range)
+    private void PopulateChartData(ChartModel model, CellRange range)
     {
         var topRow = range.TopLeft.Row;
         var leftCol = range.TopLeft.Column;
-        var hasHeaderRow = true;
 
         // Categories from the first column (skip the header cell).
-        for (var r = topRow + (hasHeaderRow ? 1 : 0); r <= range.BottomRight.Row; r++)
+        for (var r = topRow + 1; r <= range.BottomRight.Row; r++)
             model.Data.Categories.Add(GetCell(r, leftCol)?.GetFormattedString() ?? string.Empty);
 
         // One series per remaining column.
         for (var c = leftCol + 1; c <= range.BottomRight.Column; c++)
         {
-            var series = new Ooxml.Charts.ChartSeries
+            var series = new ChartSeries
             {
                 Name = GetCell(topRow, c)?.GetFormattedString() ?? CellReference.ColumnNumberToLetters(c)
             };
-            for (var r = topRow + (hasHeaderRow ? 1 : 0); r <= range.BottomRight.Row; r++)
+            for (var r = topRow + 1; r <= range.BottomRight.Row; r++)
                 series.Values.Add(GetCell(r, c)?.GetDouble() ?? 0);
             model.Data.Series.Add(series);
         }
     }
-
-    internal bool DrawingsMaterialised => _drawings != null;
-
-    internal DrawingCollection? DrawingsOrNull => _drawings;
-
-    /// <summary>The OPC part URI of this sheet's drawing layer (assigned on write).</summary>
-    internal string DrawingPartUri { get; set; } = string.Empty;
-
-    /// <summary>The relationship id from this sheet to its drawing part (assigned on write).</summary>
-    internal string DrawingRelationshipId { get; set; } = string.Empty;
 
     private void ParseDrawings(DrawingCollection drawings)
     {
@@ -141,6 +152,6 @@ public sealed partial class Worksheet
         if (drawingPart == null)
             return;
 
-        Parsing.DrawingParser.Parse(Document, drawingPart, drawingUri, OoXmlHelper.ParseXml(drawingPart.Data).Root!, drawings);
+        DrawingParser.Parse(Document, drawingPart, drawingUri, OoXmlHelper.ParseXml(drawingPart.Data).Root!, drawings);
     }
 }

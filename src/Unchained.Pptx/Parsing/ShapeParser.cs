@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
@@ -332,8 +333,8 @@ internal sealed class ShapeParser
         var ph = nvPrContainer!.Element(PmlNames.ApplicationNonVisualProperties)?.Element(PmlNames.Placeholder);
         if (ph == null) return;
 
-        shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr("type"));
-        var idx = ph.GetAttrInt("idx");
+        shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr(PmlNames.AttributeType));
+        var idx = ph.GetAttrInt(CmlNames.AttributeIndex);
         if (idx.HasValue) shape.PlaceholderIndex = idx.Value;
     }
 
@@ -396,15 +397,15 @@ internal sealed class ShapeParser
         var chOff = xfrm.Element(DmlNames.ChildOffset);
         if (chOff != null)
         {
-            group.ChildOffsetX = new Emu(chOff.GetAttrLong(DmlNames.AttributeX, 0));
-            group.ChildOffsetY = new Emu(chOff.GetAttrLong(DmlNames.AttributeY, 0));
+            group.ChildOffsetX = chOff.GetAttrEmu(DmlNames.AttributeX);
+            group.ChildOffsetY = chOff.GetAttrEmu(DmlNames.AttributeY);
         }
 
         var chExt = xfrm.Element(DmlNames.ChildExtent);
         if (chExt == null) return;
 
-        group.ChildExtentWidth = new Emu(chExt.GetAttrLong(DmlNames.AttributeWidth, 0));
-        group.ChildExtentHeight = new Emu(chExt.GetAttrLong(DmlNames.AttributeHeight, 0));
+        group.ChildExtentWidth = chExt.GetAttrEmu(DmlNames.AttributeWidth);
+        group.ChildExtentHeight = chExt.GetAttrEmu(DmlNames.AttributeHeight);
     }
 
     private static void ReadTransformFromXfrm(XElement xfrm, Shape shape)
@@ -412,15 +413,15 @@ internal sealed class ShapeParser
         var off = xfrm.Element(DmlNames.Offset);
         if (off != null)
         {
-            shape.X = new Emu(off.GetAttrLong(DmlNames.AttributeX, 0));
-            shape.Y = new Emu(off.GetAttrLong(DmlNames.AttributeY, 0));
+            shape.X = off.GetAttrEmu(DmlNames.AttributeX);
+            shape.Y = off.GetAttrEmu(DmlNames.AttributeY);
         }
 
         var ext = xfrm.Element(DmlNames.Extents);
         if (ext != null)
         {
-            shape.Width = new Emu(ext.GetAttrLong(DmlNames.AttributeWidth, 0));
-            shape.Height = new Emu(ext.GetAttrLong(DmlNames.AttributeHeight, 0));
+            shape.Width = ext.GetAttrEmu(DmlNames.AttributeWidth);
+            shape.Height = ext.GetAttrEmu(DmlNames.AttributeHeight);
         }
 
         var rot = xfrm.GetAttrInt(DmlNames.AttributeRotation);

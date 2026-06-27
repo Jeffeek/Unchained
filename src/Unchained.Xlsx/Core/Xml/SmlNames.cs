@@ -16,27 +16,22 @@ internal static class SmlNames
     private const string Chart = OoxmlNamespaces.Chart;
     private const string Rel = OoxmlNamespaces.OfficeDocument;
 
-    public static readonly XNamespace X = Sml;
-    public static readonly XNamespace XDR = Xdr;
-    public static readonly XNamespace CH = Chart;
-    public static readonly XNamespace R = Rel;
-
     // ── Relationship type URIs ─────────────────────────────────────────────────
     private const string RelBase = OoxmlNamespaces.OfficeDocument + "/";
     public const string RelTypeOfficeDocument = RelBase + "officeDocument";
     public const string RelTypeWorksheet = RelBase + "worksheet";
     public const string RelTypeSharedStrings = RelBase + "sharedStrings";
     public const string RelTypeStyles = RelBase + "styles";
-    public const string RelTypeTheme = RelBase + "theme";
+    public const string RelTypeTheme = RelBase + OoxmlNamespaces.RelTheme;
     public const string RelTypeDrawing = RelBase + "drawing";
-    public const string RelTypeChart = RelBase + "chart";
+    public const string RelTypeChart = RelBase + OoxmlNamespaces.RelChart;
     public const string RelTypeTable = RelBase + "table";
     public const string RelTypePivotTable = RelBase + "pivotTable";
     public const string RelTypePivotCacheDefinition = RelBase + "pivotCacheDefinition";
     public const string RelTypePivotCacheRecords = RelBase + "pivotCacheRecords";
-    public const string RelTypeImage = RelBase + "image";
-    public const string RelTypeComments = RelBase + "comments";
-    public const string RelTypeHyperlink = RelBase + "hyperlink";
+    public const string RelTypeImage = RelBase + OoxmlNamespaces.RelImage;
+    public const string RelTypeComments = RelBase + OoxmlNamespaces.RelComments;
+    public const string RelTypeHyperlink = RelBase + OoxmlNamespaces.RelHyperlink;
     public const string RelTypeVmlDrawing = RelBase + "vmlDrawing";
 
     // ── Content types ──────────────────────────────────────────────────────────
@@ -53,6 +48,20 @@ internal static class SmlNames
     public const string ContentTypeTheme = OoxmlContentTypes.Theme;
     public const string ContentTypeDrawing = "application/vnd.openxmlformats-officedocument.drawing+xml";
     public const string ContentTypeChart = OoxmlContentTypes.Chart;
+
+    // ── Attribute names ──────────────────────────────────────────────────────
+    public const string AttributeName = "name";
+    public const string AttributeDisplayName = "displayName";
+    public const string AttributeRef = "ref";
+    public const string AttributeErrorTitle = "errorTitle";
+    public const string AttributeErrorMessage = "error";
+    public const string AttributePromptTitle = "promptTitle";
+    public const string AttributePrompt = "prompt";
+
+    public static readonly XNamespace X = Sml;
+    public static readonly XNamespace XDR = Xdr;
+    public static readonly XNamespace CH = Chart;
+    public static readonly XNamespace R = Rel;
 
     // ── Workbook ───────────────────────────────────────────────────────────────
     public static readonly XName Workbook = X + "workbook";

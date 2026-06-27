@@ -1,0 +1,128 @@
+@using Unchained.Ooxml
+@using Unchained.Ooxml.Media
+@using Unchained.Pptx.Engine
+@using Unchained.Pptx.Shapes
+@using Unchained.Pptx.Slides
+
+<MudDialog Style="min-width:500px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Image" Class="mr-2"/>
+            Insert Picture
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudFileUpload T="IBrowserFile" FilesChanged="OnFile" Accept=".png,.jpg,.jpeg,.gif,.bmp">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.UploadFile">
+                    Choose image…
+                </MudButton>
+            </MudFileUpload>
+
+            @if (_fileName != null)
+            {
+                <MudText Typo="Typo.body2">
+                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-1"/>
+                    @_fileName (@(_bytes!.Length / 1024) KB)
+                </MudText>
+            }
+
+            <div class="d-flex gap-2">
+                <MudNumericField @bind-Value="_x" Label="X (in)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+                <MudNumericField @bind-Value="_y" Label="Y (in)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+            </div>
+            <div class="d-flex gap-2">
+                <MudNumericField @bind-Value="_width" Label="Width (in)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1"/>
+                <MudNumericField @bind-Value="_height" Label="Height (in)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1"/>
+            </div>
+
+            @if (_error != null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Insert" Color="Color.Primary" Variant="Variant.Filled" Disabled="@(_bytes is null)">Insert</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public Slide Slide { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<Shape> OnInserted { get; set; }
+
+    private byte[]? _bytes;
+    private string? _fileName;
+    private string? _contentType;
+    private double _x = 1;
+    private double _y = 1;
+    private double _width = 3;
+    private double _height = 2;
+    private string? _error;
+
+    private const long MaxBytes = 16L * 1024 * 1024;
+
+    private async Task OnFile(IBrowserFile? file)
+    {
+        _error = null;
+        if (file is null) return;
+
+        if (file.Size > MaxBytes)
+        {
+            _error = $"Image too large ({file.Size / 1024 / 1024} MB). Max 16 MB.";
+            return;
+        }
+
+        try
+        {
+            using var ms = new MemoryStream();
+            await using var stream = file.OpenReadStream(MaxBytes);
+            await stream.CopyToAsync(ms);
+            _bytes = ms.ToArray();
+            _fileName = file.Name;
+            _contentType = string.IsNullOrEmpty(file.ContentType) ? GuessContentType(file.Name) : file.ContentType;
+        }
+        catch (Exception ex) { _error = $"Failed to read file: {ex.Message}"; }
+    }
+
+    private async Task Insert()
+    {
+        if (_bytes is null || _contentType is null) return;
+
+        try
+        {
+            var img = new EmbeddedImage(_contentType, _bytes);
+            var pic = Slide.Shapes.AddPicture(
+                img,
+                Emu.FromInches(_x),
+                Emu.FromInches(_y),
+                Emu.FromInches(_width),
+                Emu.FromInches(_height)
+            );
+            await OnInserted.InvokeAsync(pic);
+            MudDialog.Close();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private static string GuessContentType(string name)
+    {
+        var ext = Path.GetExtension(name).ToLowerInvariant();
+        return ext switch { ".png" => "image/png", ".jpg" or ".jpeg" => "image/jpeg", ".gif" => "image/gif", ".bmp" => "image/bmp", _ => "image/png" };
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

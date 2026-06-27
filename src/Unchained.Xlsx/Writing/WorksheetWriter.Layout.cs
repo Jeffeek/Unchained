@@ -50,8 +50,13 @@ internal static partial class WorksheetWriter
         if (sheet.DrawingsOrNull!.Count == 0 || string.IsNullOrEmpty(sheet.DrawingRelationshipId))
             return;
 
-        InsertOrdered(root, new XElement(SmlNames.Drawing,
-            new XAttribute(SmlNames.R + "id", sheet.DrawingRelationshipId)));
+        InsertOrdered(
+            root,
+            new XElement(
+                SmlNames.Drawing,
+                new XAttribute(SmlNames.R + "id", sheet.DrawingRelationshipId)
+            )
+        );
     }
 
     private static void RewriteTableParts(Worksheet sheet, XElement root)
@@ -65,8 +70,10 @@ internal static partial class WorksheetWriter
         if (tables.Count == 0)
             return;
 
-        var tableParts = new XElement(SmlNames.TableParts,
-            new XAttribute("count", tables.Count.ToString(CultureInfo.InvariantCulture)));
+        var tableParts = new XElement(
+            SmlNames.TableParts,
+            new XAttribute("count", tables.Count.ToString(CultureInfo.InvariantCulture))
+        );
         foreach (var table in tables)
             tableParts.Add(new XElement(SmlNames.TablePart, new XAttribute(SmlNames.R + "id", table.RelationshipId)));
 
@@ -81,8 +88,10 @@ internal static partial class WorksheetWriter
 
         root.Child(SmlNames.SheetViews)?.Remove();
 
-        var sheetView = new XElement(SmlNames.SheetView,
-            new XAttribute("workbookViewId", "0"));
+        var sheetView = new XElement(
+            SmlNames.SheetView,
+            new XAttribute("workbookViewId", "0")
+        );
         if (!view.ShowGridLines) sheetView.SetAttributeValue("showGridLines", "0");
         if (!view.ShowRowColHeaders) sheetView.SetAttributeValue("showRowColHeaders", "0");
         if (view.ShowFormulas) sheetView.SetAttributeValue("showFormulas", "1");
@@ -91,9 +100,11 @@ internal static partial class WorksheetWriter
         if (view.FrozenPanes is { } frozen && (frozen.FrozenRows > 0 || frozen.FrozenColumns > 0))
         {
             var topLeft = new CellReference(frozen.FrozenRows + 1, frozen.FrozenColumns + 1).ToA1();
-            var pane = new XElement(SmlNames.Pane,
+            var pane = new XElement(
+                SmlNames.Pane,
                 new XAttribute("state", "frozen"),
-                new XAttribute("topLeftCell", topLeft));
+                new XAttribute("topLeftCell", topLeft)
+            );
             if (frozen.FrozenColumns > 0) pane.SetAttributeValue("xSplit", frozen.FrozenColumns.ToString(CultureInfo.InvariantCulture));
             if (frozen.FrozenRows > 0) pane.SetAttributeValue("ySplit", frozen.FrozenRows.ToString(CultureInfo.InvariantCulture));
             sheetView.Add(pane);
@@ -143,13 +154,18 @@ internal static partial class WorksheetWriter
             return;
 
         root.Child(SmlNames.PageMargins)?.Remove();
-        InsertOrdered(root, new XElement(SmlNames.PageMargins,
-            new XAttribute("left", margins.Left.ToString(CultureInfo.InvariantCulture)),
-            new XAttribute("right", margins.Right.ToString(CultureInfo.InvariantCulture)),
-            new XAttribute("top", margins.Top.ToString(CultureInfo.InvariantCulture)),
-            new XAttribute("bottom", margins.Bottom.ToString(CultureInfo.InvariantCulture)),
-            new XAttribute("header", margins.Header.ToString(CultureInfo.InvariantCulture)),
-            new XAttribute("footer", margins.Footer.ToString(CultureInfo.InvariantCulture))));
+        InsertOrdered(
+            root,
+            new XElement(
+                SmlNames.PageMargins,
+                new XAttribute("left", margins.Left.ToString(CultureInfo.InvariantCulture)),
+                new XAttribute("right", margins.Right.ToString(CultureInfo.InvariantCulture)),
+                new XAttribute("top", margins.Top.ToString(CultureInfo.InvariantCulture)),
+                new XAttribute("bottom", margins.Bottom.ToString(CultureInfo.InvariantCulture)),
+                new XAttribute("header", margins.Header.ToString(CultureInfo.InvariantCulture)),
+                new XAttribute("footer", margins.Footer.ToString(CultureInfo.InvariantCulture))
+            )
+        );
     }
 
     private static void WritePageSetup(Worksheet sheet, XElement root)
@@ -203,14 +219,14 @@ internal static partial class WorksheetWriter
             InsertOrdered(root, element);
     }
 
-    private static void AddHeaderFooterChild(XElement parent, XName name, string? value)
+    private static void AddHeaderFooterChild(XContainer parent, XName name, string? value)
     {
         if (!string.IsNullOrEmpty(value))
             parent.Add(new XElement(name, value));
     }
 
     /// <summary>Inserts <paramref name="element" /> at the schema-correct position among the worksheet children.</summary>
-    private static void InsertOrdered(XElement root, XElement element)
+    private static void InsertOrdered(XContainer root, XElement element)
     {
         var targetIndex = Array.IndexOf(WorksheetChildOrder, element.Name.LocalName);
         if (targetIndex < 0)
@@ -220,14 +236,13 @@ internal static partial class WorksheetWriter
         }
 
         // Find the first existing child whose order index is greater than ours and insert before it.
-        foreach (var existing in root.Elements())
+        foreach (var existing in from existing in root.Elements()
+                                 let existingIndex = Array.IndexOf(WorksheetChildOrder, existing.Name.LocalName)
+                                 where existingIndex > targetIndex
+                                 select existing)
         {
-            var existingIndex = Array.IndexOf(WorksheetChildOrder, existing.Name.LocalName);
-            if (existingIndex > targetIndex)
-            {
-                existing.AddBeforeSelf(element);
-                return;
-            }
+            existing.AddBeforeSelf(element);
+            return;
         }
 
         root.Add(element);

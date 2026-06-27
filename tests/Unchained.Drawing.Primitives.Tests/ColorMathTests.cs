@@ -37,7 +37,7 @@ public sealed class ColorMathTests
         Theory,
         InlineData(0.0, (byte)0),
         InlineData(1.0, (byte)255),
-        InlineData(0.5, (byte)128), // 127.5 rounds to 128 (away-from-zero)
+        InlineData(0.5, (byte)128),
         InlineData(0.5019607843, (byte)128)
     ]
     public void ToByteRounded_RoundsToNearest(double value, byte expected) =>
@@ -69,5 +69,15 @@ public sealed class ColorMathTests
         r.ShouldBe((byte)0xFF);
         g.ShouldBe((byte)0xFF);
         b.ShouldBe((byte)0xFF);
+    }
+
+    [Fact]
+    public void UnpackArgb_TransparentBlack()
+    {
+        var (a, r, g, b) = ColorMath.UnpackArgb(0x00000000u);
+        a.ShouldBe((byte)0x00);
+        r.ShouldBe((byte)0x00);
+        g.ShouldBe((byte)0x00);
+        b.ShouldBe((byte)0x00);
     }
 }

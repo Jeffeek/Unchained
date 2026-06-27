@@ -1,3 +1,4 @@
+using System.Text;
 using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
@@ -217,7 +218,7 @@ public sealed class TableGeneratorTests : PdfTestBase
 
         await using var ms = new MemoryStream();
         await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
-        var text = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/StructTreeRoot");
         text.ShouldContain("/MarkInfo");
     }

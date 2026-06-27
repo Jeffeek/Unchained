@@ -12,9 +12,9 @@ namespace Unchained.Xlsx.SharedStrings;
 /// </summary>
 internal sealed class SharedStringsTable
 {
-    private readonly List<string> _strings = [];
     private readonly Dictionary<string, int> _lookup = new(StringComparer.Ordinal);
     private readonly List<XElement?> _rawElements = [];
+    private readonly List<string> _strings = [];
 
     /// <summary>The number of unique strings in the table.</summary>
     public int Count => _strings.Count;
@@ -76,8 +76,10 @@ internal sealed class SharedStringsTable
             return direct.Value;
 
         // Rich text: <si><r><t>...</t></r>...</si>
-        return string.Concat(si.Children(SmlNames.RichRun)
-            .Select(static r => r.Child(SmlNames.Text)?.Value ?? string.Empty));
+        return string.Concat(
+            si.Children(SmlNames.RichRun)
+                .Select(static r => r.Child(SmlNames.Text)?.Value ?? string.Empty)
+        );
     }
 
     // ── Serialize ──────────────────────────────────────────────────────────────
@@ -88,7 +90,8 @@ internal sealed class SharedStringsTable
             SmlNames.Sst,
             new XAttribute("xmlns", SmlNames.X.NamespaceName),
             new XAttribute("count", _strings.Count),
-            new XAttribute("uniqueCount", _strings.Count));
+            new XAttribute("uniqueCount", _strings.Count)
+        );
 
         for (var i = 0; i < _strings.Count; i++)
         {

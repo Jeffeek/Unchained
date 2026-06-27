@@ -43,6 +43,11 @@ public sealed class Row
 
     internal int CellCount => _cells.Count;
 
+    /// <summary><see langword="true" /> when the row has no cells and no non-default properties.</summary>
+    internal bool IsEffectivelyEmpty =>
+        _cells.Count == 0 && !IsHidden && Height is null && !IsCustomHeight &&
+        OutlineLevel == 0 && StyleIndex is null;
+
     internal Cell? GetCell(int column) => _cells.GetValueOrDefault(column);
 
     internal Cell GetOrAddCell(Worksheet worksheet, int column)
@@ -58,9 +63,4 @@ public sealed class Row
     internal void AddCell(Cell cell) => _cells[cell.Column] = cell;
 
     internal void RemoveCell(int column) => _cells.Remove(column);
-
-    /// <summary><see langword="true" /> when the row has no cells and no non-default properties.</summary>
-    internal bool IsEffectivelyEmpty =>
-        _cells.Count == 0 && !IsHidden && Height is null && !IsCustomHeight &&
-        OutlineLevel == 0 && StyleIndex is null;
 }

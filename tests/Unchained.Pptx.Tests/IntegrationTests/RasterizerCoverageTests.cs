@@ -1,6 +1,7 @@
 using Shouldly;
 using Unchained.Drawing;
 using Unchained.Drawing.Encoders;
+using Unchained.Drawing.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
@@ -525,7 +526,7 @@ public sealed class RasterizerCoverageTests : PptxTestBase
 
     private static byte[] BundledDejaVu()
     {
-        var asm = typeof(Drawing.Text.FontCache).Assembly;
+        var asm = typeof(FontCache).Assembly;
         using var stream = asm.GetManifestResourceStream("Unchained.Drawing.Text.Fonts.DejaVuSans-Regular.ttf")
                            ?? throw new InvalidOperationException("DejaVuSans-Regular.ttf not found.");
         using var ms = new MemoryStream();

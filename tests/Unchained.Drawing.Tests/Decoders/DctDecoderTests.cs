@@ -19,7 +19,7 @@ public sealed class DctDecoderTests
     [Fact]
     public void Decode_GrayscaleJpeg_ExpandsToRgb()
     {
-        var jpeg = GrayscaleJpegBuilder.Build(16, 16, gray: 180);
+        var jpeg = GrayscaleJpegBuilder.Build(16, 16, 180);
 
         var rgb = DctDecoder.Decode(jpeg);
 

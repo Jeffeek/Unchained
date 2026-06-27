@@ -1,0 +1,221 @@
+@using Unchained.Ooxml.Charts
+@using Unchained.Ooxml.Drawing
+@using Unchained.Xlsx.Drawings
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+@using ChartType = Unchained.Ooxml.Charts.ChartType
+
+<MudDialog Style="min-width:520px; max-width:680px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Tune" Class="mr-2" Style="vertical-align:middle;"/>
+            Edit Chart
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true">
+            <MudTabPanel Text="General">
+                <MudStack Spacing="3" Class="pa-4">
+                    <MudTextField @bind-Value="_title" Label="Title" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudSwitch T="bool" @bind-Value="_hasTitle" Label="Show title" Color="Color.Primary"/>
+
+                    <MudSelect T="ChartType" @bind-Value="_type" Label="Chart type" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="ChartType.ColumnClustered">Column (clustered)</MudSelectItem>
+                        <MudSelectItem Value="ChartType.ColumnStacked">Column (stacked)</MudSelectItem>
+                        <MudSelectItem Value="ChartType.BarClustered">Bar (clustered)</MudSelectItem>
+                        <MudSelectItem Value="ChartType.BarStacked">Bar (stacked)</MudSelectItem>
+                        <MudSelectItem Value="ChartType.Line">Line</MudSelectItem>
+                        <MudSelectItem Value="ChartType.LineWithMarkers">Line with markers</MudSelectItem>
+                        <MudSelectItem Value="ChartType.Area">Area</MudSelectItem>
+                        <MudSelectItem Value="ChartType.Pie">Pie</MudSelectItem>
+                        <MudSelectItem Value="ChartType.Doughnut">Doughnut</MudSelectItem>
+                    </MudSelect>
+
+                    <MudDivider/>
+                    <MudSwitch T="bool" @bind-Value="_legendVisible" Label="Show legend" Color="Color.Primary"/>
+                    <MudSelect T="ChartLegendPosition" @bind-Value="_legendPosition" Label="Legend position"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="!_legendVisible">
+                        <MudSelectItem Value="ChartLegendPosition.Bottom">Bottom</MudSelectItem>
+                        <MudSelectItem Value="ChartLegendPosition.Top">Top</MudSelectItem>
+                        <MudSelectItem Value="ChartLegendPosition.Left">Left</MudSelectItem>
+                        <MudSelectItem Value="ChartLegendPosition.Right">Right</MudSelectItem>
+                        <MudSelectItem Value="ChartLegendPosition.TopRight">Top-right</MudSelectItem>
+                    </MudSelect>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Data">
+                <MudStack Spacing="3" Class="pa-4">
+                    <MudText Typo="Typo.body2" Style="opacity:.7;">
+                        Repoint the chart at a different cell range. The first column supplies category
+                        labels; the header row supplies series names.
+                    </MudText>
+                    <MudTextField @bind-Value="_dataRange" Label="Source data range (A1)" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" HelperText="e.g. A1:B6"/>
+                    <MudButton OnClick="RebindData" Variant="Variant.Outlined" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Outlined.Refresh">
+                        Reload data from range
+                    </MudButton>
+
+                    <MudDivider/>
+                    <MudText Typo="Typo.subtitle2">Series</MudText>
+                    @for (var i = 0; i < _model.Data.Series.Count; i++)
+                    {
+                        var index = i;
+                        var series = _model.Data.Series[index];
+                        <div class="d-flex align-center gap-2">
+                            <MudTextField T="string" Value="series.Name"
+                                          ValueChanged="@(v => series.Name = v ?? string.Empty)"
+                                          Label="@($"Series {index + 1}")" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                            @* ReSharper disable once CSharpWarnings::CS8619 *@
+                            <MudColorPicker Label="Colour" Text="@SeriesColor(index)"
+                                            TextChanged="@(c => SetSeriesColor(index, c))"
+                                            Variant="Variant.Outlined" Margin="Margin.Dense"
+                                            Style="max-width:170px;"/>
+                        </div>
+                    }
+                    @if (_model.Data.Series.Count == 0)
+                    {
+                        <MudText Typo="Typo.caption" Style="opacity:.6;">No series. Reload from a range above.</MudText>
+                    }
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Axes" Disabled="@AxisDisabled">
+                <MudStack Spacing="3" Class="pa-4">
+                    <MudText Typo="Typo.subtitle2">Value axis</MudText>
+                    <MudTextField @bind-Value="_valueAxisTitle" Label="Title" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <div class="d-flex gap-2">
+                        <MudNumericField T="double?" @bind-Value="_valueMin" Label="Minimum" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"/>
+                        <MudNumericField T="double?" @bind-Value="_valueMax" Label="Maximum" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"/>
+                    </div>
+                    <MudSwitch T="bool" @bind-Value="_valueGridlines" Label="Major gridlines" Color="Color.Primary"/>
+                    <MudDivider/>
+                    <MudText Typo="Typo.subtitle2">Category axis</MudText>
+                    <MudTextField @bind-Value="_categoryAxisTitle" Label="Title" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                </MudStack>
+            </MudTabPanel>
+        </MudTabs>
+
+        @if (_error != null)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Error" Class="px-4">@_error</MudText>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Delete" Color="Color.Error" Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Delete">
+            Delete chart
+        </MudButton>
+        <MudSpacer/>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled">Apply</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public ChartDrawing Chart { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private ChartModel _model = null!;
+    private string _title = string.Empty;
+    private bool _hasTitle = true;
+    private ChartType _type;
+    private bool _legendVisible = true;
+    private ChartLegendPosition _legendPosition = ChartLegendPosition.Bottom;
+    private string _dataRange = string.Empty;
+    private string _valueAxisTitle = string.Empty;
+    private string _categoryAxisTitle = string.Empty;
+    private double? _valueMin;
+    private double? _valueMax;
+    private bool _valueGridlines;
+    private string? _error;
+
+    private bool AxisDisabled =>
+        _type is ChartType.Pie or ChartType.PieExploded or ChartType.Doughnut or ChartType.DoughnutExploded;
+
+    protected override void OnInitialized()
+    {
+        _model = Chart.Chart;
+        _title = _model.Title;
+        _hasTitle = _model.HasTitle;
+        _type = _model.Type;
+        _legendVisible = _model.Legend.IsVisible;
+        _legendPosition = _model.Legend.Position;
+        _valueAxisTitle = _model.ValueAxis.Title ?? string.Empty;
+        _categoryAxisTitle = _model.CategoryAxis.Title ?? string.Empty;
+        _valueMin = _model.ValueAxis.Minimum;
+        _valueMax = _model.ValueAxis.Maximum;
+        _valueGridlines = _model.ValueAxis.HasMajorGridlines;
+    }
+
+    private string SeriesColor(int index)
+    {
+        var fill = _model.Data.Series[index].Fill;
+        return fill is { Type: FillType.Solid, Solid.Color: var color } ? XlsxColor.ToHex(color) : "#4472C4";
+    }
+
+    private void SetSeriesColor(int index, string? hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex))
+            return;
+
+        (_model.Data.Series[index].Fill ??= new FillFormat()).SetSolid(XlsxColor.FromHex(hex));
+    }
+
+    private void RebindData()
+    {
+        _error = null;
+        if (!CellRange.TryFromA1(_dataRange, out var range))
+        {
+            _error = "Invalid data range.";
+            return;
+        }
+
+        try
+        {
+            Sheet.RebindChart(Chart, range);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task Apply()
+    {
+        _model.Title = _title;
+        _model.HasTitle = _hasTitle;
+        _model.Type = _type;
+        _model.Legend.IsVisible = _legendVisible;
+        _model.Legend.Position = _legendPosition;
+        _model.ValueAxis.Title = string.IsNullOrWhiteSpace(_valueAxisTitle) ? null : _valueAxisTitle;
+        _model.CategoryAxis.Title = string.IsNullOrWhiteSpace(_categoryAxisTitle) ? null : _categoryAxisTitle;
+        _model.ValueAxis.Minimum = _valueMin;
+        _model.ValueAxis.Maximum = _valueMax;
+        _model.ValueAxis.HasMajorGridlines = _valueGridlines;
+
+        await OnChanged.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private async Task Delete()
+    {
+        Sheet.Drawings.Remove(Chart);
+        await OnChanged.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

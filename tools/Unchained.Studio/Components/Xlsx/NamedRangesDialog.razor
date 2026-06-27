@@ -1,7 +1,6 @@
 @using Unchained.Xlsx.DefinedNames
 @using Unchained.Xlsx.Engine
 @using Unchained.Xlsx.Worksheets
-
 <MudDialog Style="min-width:560px; max-width:720px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -22,22 +21,26 @@
                 {
                     <MudSimpleTable Dense="true" Hover="true">
                         <thead>
-                            <tr><th>Name</th><th>Refers to</th><th>Scope</th><th></th></tr>
+                        <tr>
+                            <th>Name</th><th>Refers to</th><th>Scope</th><th></th>
+                        </tr>
                         </thead>
                         <tbody>
-                            @foreach (var name in Document.DefinedNames.ToList())
-                            {
-                                var n = name;
-                                <tr>
-                                    <td>@n.Name</td>
-                                    <td><code>@n.Formula</code></td>
-                                    <td>@(n.IsWorkbookScoped ? "Workbook" : $"Sheet #{n.LocalSheetId}")</td>
-                                    <td>
-                                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
-                                                       OnClick="() => Remove(n)"/>
-                                    </td>
-                                </tr>
-                            }
+                        @foreach (var name in Document.DefinedNames.ToList())
+                        {
+                            var n = name;
+                            <tr>
+                                <td>@n.Name</td>
+                                <td>
+                                    <code>@n.Formula</code>
+                                </td>
+                                <td>@(n.IsWorkbookScoped ? "Workbook" : $"Sheet #{n.LocalSheetId}")</td>
+                                <td>
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                                   OnClick="() => Remove(n)"/>
+                                </td>
+                            </tr>
+                        }
                         </tbody>
                     </MudSimpleTable>
                 }
@@ -124,10 +127,10 @@
         }
     }
 
-    private async Task Remove(DefinedName name)
+    private Task Remove(DefinedName name)
     {
         Document.DefinedNames.Remove(name);
-        await OnChanged.InvokeAsync();
+        return OnChanged.InvokeAsync();
     }
 
     private void Close() => MudDialog.Close();

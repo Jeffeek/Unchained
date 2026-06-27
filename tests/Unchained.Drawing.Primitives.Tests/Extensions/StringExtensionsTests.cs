@@ -23,4 +23,16 @@ public sealed class StringExtensionsTests
     ]
     public void RoundTrip_PreservesString(string source) =>
         source.ToUtf8Span().FromUtf8Span().ShouldBe(source);
+
+    [Fact]
+    public void RoundTrip_SingleNullByte() =>
+        "\0".ToUtf8Span().FromUtf8Span().ShouldBe("\0");
+
+    [Fact]
+    public void RoundTrip_TwoByteUTF8Sequence() =>
+        "".ToUtf8Span().FromUtf8Span().ShouldBe("");
+
+    [Fact]
+    public void RoundTrip_SurrogatePair() =>
+        "😀".ToUtf8Span().FromUtf8Span().ShouldBe("😀");
 }

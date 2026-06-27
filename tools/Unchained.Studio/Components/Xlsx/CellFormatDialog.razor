@@ -1,10 +1,9 @@
-@using Unchained.Xlsx.Cell
+@using Unchained.Xlsx.Models
 @using Unchained.Xlsx.Models.Cell
-@using Unchained.Xlsx.Models.Styles
 @using Unchained.Xlsx.Styles
 @using Unchained.Xlsx.Worksheets
-@using HorizontalAlignment = Unchained.Xlsx.Models.Styles.HorizontalAlignment
-@using VerticalAlignment = Unchained.Xlsx.Models.Styles.VerticalAlignment
+@using HorizontalAlignment = Unchained.Xlsx.Models.HorizontalAlignment
+@using VerticalAlignment = Unchained.Xlsx.Models.VerticalAlignment
 
 <MudDialog Style="min-width:520px; max-width:640px;">
     <TitleContent>
@@ -210,64 +209,69 @@
         _numberFormat = cell.NumberFormatCode;
     }
 
-    private void OnPresetChosen(string code) => _numberFormat = code;
-
-    private void SelectAllEdges()
+    private void OnPresetChosen(string? code)
     {
-        _bLeft = _bRight = _bTop = _bBottom = true;
+        if (code == null)
+            return;
+
+        _numberFormat = code;
     }
+
+    private void SelectAllEdges() => _bLeft = _bRight = _bTop = _bBottom = true;
 
     private async Task Apply()
     {
         var anyEdge = _bLeft || _bRight || _bTop || _bBottom;
 
-        foreach (var reference in Range.Cells())
+        foreach (var cell in Range.Cells().Select(reference => Sheet[reference.Row, reference.Column]))
         {
-            var cell = Sheet[reference.Row, reference.Column];
-
             if (_applyFont)
                 cell.ApplyFont(f =>
-                {
-                    f.Name = _font.Name;
-                    f.SizePoints = _font.SizePoints;
-                    f.Bold = _font.Bold;
-                    f.Italic = _font.Italic;
-                    f.Strikethrough = _font.Strikethrough;
-                    f.Underline = _font.Underline;
-                    f.VerticalAlignment = _font.VerticalAlignment;
-                    f.Color = XlsxColor.FromHex(_fontColor);
-                });
+                    {
+                        f.Name = _font.Name;
+                        f.SizePoints = _font.SizePoints;
+                        f.Bold = _font.Bold;
+                        f.Italic = _font.Italic;
+                        f.Strikethrough = _font.Strikethrough;
+                        f.Underline = _font.Underline;
+                        f.VerticalAlignment = _font.VerticalAlignment;
+                        f.Color = XlsxColor.FromHex(_fontColor);
+                    }
+                );
 
             if (_applyFill)
                 cell.ApplyFill(f =>
-                {
-                    f.PatternType = _fill.PatternType;
-                    f.ForegroundColor = XlsxColor.FromHex(_fillFg);
-                    f.BackgroundColor = _fill.PatternType is FillPattern.None or FillPattern.Solid
-                        ? f.BackgroundColor
-                        : XlsxColor.FromHex(_fillBg);
-                });
+                    {
+                        f.PatternType = _fill.PatternType;
+                        f.ForegroundColor = XlsxColor.FromHex(_fillFg);
+                        f.BackgroundColor = _fill.PatternType is FillPattern.None or FillPattern.Solid
+                            ? f.BackgroundColor
+                            : XlsxColor.FromHex(_fillBg);
+                    }
+                );
 
             if (_applyBorder && anyEdge)
                 cell.ApplyBorder(b =>
-                {
-                    var line = new BorderLine { Style = _borderStyle, Color = XlsxColor.FromHex(_borderColor) };
-                    if (_bLeft) b.Left = line.Clone();
-                    if (_bRight) b.Right = line.Clone();
-                    if (_bTop) b.Top = line.Clone();
-                    if (_bBottom) b.Bottom = line.Clone();
-                });
+                    {
+                        var line = new BorderLine { Style = _borderStyle, Color = XlsxColor.FromHex(_borderColor) };
+                        if (_bLeft) b.Left = line.Clone();
+                        if (_bRight) b.Right = line.Clone();
+                        if (_bTop) b.Top = line.Clone();
+                        if (_bBottom) b.Bottom = line.Clone();
+                    }
+                );
 
             if (_applyAlign)
                 cell.ApplyAlignment(a =>
-                {
-                    a.Horizontal = _align.Horizontal;
-                    a.Vertical = _align.Vertical;
-                    a.WrapText = _align.WrapText;
-                    a.ShrinkToFit = _align.ShrinkToFit;
-                    a.TextRotation = _align.TextRotation;
-                    a.Indent = _align.Indent;
-                });
+                    {
+                        a.Horizontal = _align.Horizontal;
+                        a.Vertical = _align.Vertical;
+                        a.WrapText = _align.WrapText;
+                        a.ShrinkToFit = _align.ShrinkToFit;
+                        a.TextRotation = _align.TextRotation;
+                        a.Indent = _align.Indent;
+                    }
+                );
 
             if (_applyNumber && !string.IsNullOrWhiteSpace(_numberFormat))
                 cell.SetNumberFormat(_numberFormat);

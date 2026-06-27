@@ -3,7 +3,7 @@ using System.Text;
 using Shouldly;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
-using Unchained.Xlsx.Models.Pivot;
+using Unchained.Xlsx.Models.Drawings;
 using Unchained.Xlsx.Tests.Helpers;
 using Xunit;
 
@@ -12,8 +12,6 @@ namespace Unchained.Xlsx.Tests.IntegrationTests;
 /// <summary>Drives PivotParser and DrawingParser branches via reload of saved/injected parts.</summary>
 public class PivotDrawingParserCoverageTests
 {
-    private const string Ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-
     private static SpreadsheetDocument WithPivot()
     {
         var document = XlsxFixtures.WithSheets("Data");
@@ -74,38 +72,63 @@ public class PivotDrawingParserCoverageTests
 
         using var ms = new MemoryStream();
         await ms.WriteAsync(bytes);
-        string? drawingPath = null;
-        using (var probe = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: true))
+        string? drawingPath;
+#if NET10_0_OR_GREATER
+        await using (var probe = new ZipArchive(ms, ZipArchiveMode.Read, true))
             drawingPath = probe.Entries.FirstOrDefault(static e => e.FullName.Contains("drawings/drawing"))?.FullName;
+#else
+        using (var probe = new ZipArchive(ms, ZipArchiveMode.Read, true))
+            drawingPath = probe.Entries.FirstOrDefault(static e => e.FullName.Contains("drawings/drawing"))?.FullName;
+#endif
 
         drawingPath.ShouldNotBeNull();
 
         // Read the embed rel id from the existing drawing so the rewritten one stays valid.
         string embedId;
-        using (var read = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: true))
+#if NET10_0_OR_GREATER
+        await using (var read = new ZipArchive(ms, ZipArchiveMode.Read, true))
+        {
+            using var r = new StreamReader(await read.GetEntry(drawingPath)!.OpenAsync());
+            var xml = await r.ReadToEndAsync(TestContext.Current.CancellationToken);
+            var idx = xml.IndexOf("r:embed=\"", StringComparison.Ordinal) + 9;
+            embedId = xml[idx..xml.IndexOf('"', idx)];
+        }
+#else
+        using (var read = new ZipArchive(ms, ZipArchiveMode.Read, true))
         {
             using var r = new StreamReader(read.GetEntry(drawingPath)!.Open());
             var xml = await r.ReadToEndAsync(TestContext.Current.CancellationToken);
             var idx = xml.IndexOf("r:embed=\"", StringComparison.Ordinal) + 9;
             embedId = xml[idx..xml.IndexOf('"', idx)];
         }
+#endif
 
         var absolute =
-            $$"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:absoluteAnchor><xdr:pos x="100" y="200"/><xdr:ext cx="900000" cy="900000"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="Pic"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="{{embedId}}"/></xdr:blipFill><xdr:spPr/></xdr:pic><xdr:clientData/></xdr:absoluteAnchor></xdr:wsDr>""";
+            $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:absoluteAnchor><xdr:pos x="100" y="200"/><xdr:ext cx="900000" cy="900000"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="Pic"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="{embedId}"/></xdr:blipFill><xdr:spPr/></xdr:pic><xdr:clientData/></xdr:absoluteAnchor></xdr:wsDr>""";
 
-        using (var update = new ZipArchive(ms, ZipArchiveMode.Update, leaveOpen: true))
+#if NET10_0_OR_GREATER
+        await using (var update = new ZipArchive(ms, ZipArchiveMode.Update, true))
         {
             update.GetEntry(drawingPath)!.Delete();
             var entry = update.CreateEntry(drawingPath);
-            using var w = new StreamWriter(entry.Open(), new UTF8Encoding(false));
+            await using var w = new StreamWriter(await entry.OpenAsync(), new UTF8Encoding(false));
             await w.WriteAsync(absolute);
         }
+#else
+        using (var update = new ZipArchive(ms, ZipArchiveMode.Update, true))
+        {
+            update.GetEntry(drawingPath)!.Delete();
+            var entry = update.CreateEntry(drawingPath);
+            await using var w = new StreamWriter(entry.Open(), new UTF8Encoding(false));
+            await w.WriteAsync(absolute);
+        }
+#endif
 
         using var processor = new SpreadsheetProcessor();
         using var reloaded = await processor.LoadAsync(ms.ToArray(), cancellationToken: TestContext.Current.CancellationToken);
         var pictures = reloaded.Sheets[0].Drawings.Pictures.ToList();
         pictures.Count.ShouldBe(1);
-        pictures[0].Anchor.AnchorType.ShouldBe(Models.Drawings.DrawingAnchorType.Absolute);
+        pictures[0].Anchor.AnchorType.ShouldBe(DrawingAnchorType.Absolute);
     }
 
     [Fact]
@@ -119,20 +142,35 @@ public class PivotDrawingParserCoverageTests
         using var ms = new MemoryStream();
         await ms.WriteAsync(bytes);
         string drawingPath;
-        using (var probe = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: true))
+#if NET10_0_OR_GREATER
+        await using (var probe = new ZipArchive(ms, ZipArchiveMode.Read, true))
             drawingPath = probe.Entries.First(static e => e.FullName.Contains("drawings/drawing")).FullName;
+#else
+        using (var probe = new ZipArchive(ms, ZipArchiveMode.Read, true))
+            drawingPath = probe.Entries.First(static e => e.FullName.Contains("drawings/drawing")).FullName;
+#endif
 
         // A pic element with no <a:blip r:embed> → ReadPicture returns null and is skipped.
-        var noEmbed =
-            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="900000" cy="900000"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="P"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill/><xdr:spPr/></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>""";
+        const string noEmbed = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="900000" cy="900000"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="P"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill/><xdr:spPr/></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>""";
 
-        using (var update = new ZipArchive(ms, ZipArchiveMode.Update, leaveOpen: true))
+#if NET10_0_OR_GREATER
+        await using (var update = new ZipArchive(ms, ZipArchiveMode.Update, true))
         {
             update.GetEntry(drawingPath)!.Delete();
             var entry = update.CreateEntry(drawingPath);
-            using var w = new StreamWriter(entry.Open(), new UTF8Encoding(false));
+            await using var w = new StreamWriter(await entry.OpenAsync(), new UTF8Encoding(false));
             await w.WriteAsync(noEmbed);
         }
+#else
+        using (var update = new ZipArchive(ms, ZipArchiveMode.Update, true))
+        {
+            update.GetEntry(drawingPath)!.Delete();
+            var entry = update.CreateEntry(drawingPath);
+            await using var w = new StreamWriter(entry.Open(), new UTF8Encoding(false));
+            await w.WriteAsync(noEmbed);
+        }
+#endif
+
 
         using var processor = new SpreadsheetProcessor();
         using var reloaded = await processor.LoadAsync(ms.ToArray(), cancellationToken: TestContext.Current.CancellationToken);

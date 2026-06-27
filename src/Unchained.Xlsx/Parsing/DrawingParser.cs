@@ -61,7 +61,7 @@ internal static class DrawingParser
         }
     }
 
-    private static DrawingAnchor ReadAnchor(XElement anchorEl, DrawingAnchorType type)
+    private static DrawingAnchor ReadAnchor(XContainer anchorEl, DrawingAnchorType type)
     {
         var anchor = new DrawingAnchor { AnchorType = type };
 
@@ -89,16 +89,15 @@ internal static class DrawingParser
         }
 
         var pos = anchorEl.Element(Xdr + "pos");
-        if (pos != null)
-        {
-            anchor.OffsetX = new Emu(LongAttr(pos, "x"));
-            anchor.OffsetY = new Emu(LongAttr(pos, "y"));
-        }
+        if (pos == null) return anchor;
+
+        anchor.OffsetX = new Emu(LongAttr(pos, "x"));
+        anchor.OffsetY = new Emu(LongAttr(pos, "y"));
 
         return anchor;
     }
 
-    private static CellReference MarkerCell(XElement marker)
+    private static CellReference MarkerCell(XContainer marker)
     {
         var col = IntElement(marker, "col");
         var row = IntElement(marker, "row");

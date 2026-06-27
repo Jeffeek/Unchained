@@ -86,7 +86,7 @@ internal static class FillWriter
     {
         var pattFill = new XElement(
             DmlNames.PatternFill,
-            new XAttribute("prst", PatternPresetToString(pattern.Preset))
+            new XAttribute("prst", LineStyles.PatternPresetToString(pattern.Preset))
         );
 
         var fg = new XElement(DmlNames.SolidFill);
@@ -119,23 +119,4 @@ internal static class FillWriter
         );
         return blipFill;
     }
-
-    private static string PatternPresetToString(PatternPreset preset) => preset switch
-    {
-        PatternPreset.Percent5 => "pct5",
-        PatternPreset.Percent10 => "pct10",
-        PatternPreset.Percent20 => "pct20",
-        PatternPreset.Percent25 => "pct25",
-        PatternPreset.Percent30 => "pct30",
-        PatternPreset.Percent40 => "pct40",
-        PatternPreset.Percent50 => "pct50",
-        PatternPreset.Percent60 => "pct60",
-        PatternPreset.Percent70 => "pct70",
-        PatternPreset.Percent75 => "pct75",
-        PatternPreset.Percent80 => "pct80",
-        PatternPreset.Percent90 => "pct90",
-        PatternPreset.HorizontalLines => "horz",
-        PatternPreset.VerticalLines => "vert",
-        _ => "pct5"
-    };
 }

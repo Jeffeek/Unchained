@@ -1,5 +1,6 @@
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Models.Pivot;
+using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Xlsx.Pivot;
 
@@ -12,8 +13,11 @@ namespace Unchained.Xlsx.Pivot;
 /// </summary>
 public sealed class PivotTable
 {
-    private readonly List<PivotField> _fields = [];
+    /// <summary>Resolves a worksheet by name (supplied by the worksheet collection).</summary>
+    public delegate Worksheet? SpreadsheetCallback(string sheetName);
+
     private readonly List<PivotDataField> _dataFields = [];
+    private readonly List<PivotField> _fields = [];
 
     internal PivotTable(string name, int cacheId, CellRange sourceRange, CellReference target, string sourceSheet)
     {
@@ -43,13 +47,13 @@ public sealed class PivotTable
     public IReadOnlyList<PivotField> Fields => _fields;
 
     /// <summary>The fields placed on the row axis, in order.</summary>
-    public IEnumerable<PivotField> RowFields => _fields.Where(f => f.Axis == PivotAxis.Row);
+    public IEnumerable<PivotField> RowFields => _fields.Where(static f => f.Axis == PivotAxis.Row);
 
     /// <summary>The fields placed on the column axis, in order.</summary>
-    public IEnumerable<PivotField> ColumnFields => _fields.Where(f => f.Axis == PivotAxis.Column);
+    public IEnumerable<PivotField> ColumnFields => _fields.Where(static f => f.Axis == PivotAxis.Column);
 
     /// <summary>The fields placed on the page (report filter) axis.</summary>
-    public IEnumerable<PivotField> PageFields => _fields.Where(f => f.Axis == PivotAxis.Page);
+    public IEnumerable<PivotField> PageFields => _fields.Where(static f => f.Axis == PivotAxis.Page);
 
     /// <summary>The data (values) fields.</summary>
     public IReadOnlyList<PivotDataField> DataFields => _dataFields;
@@ -66,6 +70,7 @@ public sealed class PivotTable
 
     /// <summary>Raw preserved part bytes when loaded from a file (used for verbatim round-trip).</summary>
     internal byte[]? TablePartData { get; set; }
+
     internal byte[]? CacheDefinitionData { get; set; }
     internal byte[]? CacheRecordsData { get; set; }
 
@@ -135,9 +140,6 @@ public sealed class PivotTable
         CacheDefinitionData = null;
         CacheRecordsData = null;
     }
-
-    /// <summary>Resolves a worksheet by name (supplied by the worksheet collection).</summary>
-    public delegate Worksheets.Worksheet? SpreadsheetCallback(string sheetName);
 
     internal void AddFieldRaw(PivotField field) => _fields.Add(field);
     internal void AddDataFieldRaw(PivotDataField field) => _dataFields.Add(field);

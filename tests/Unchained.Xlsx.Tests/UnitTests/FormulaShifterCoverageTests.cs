@@ -14,9 +14,9 @@ public class FormulaShifterCoverageTests
         InlineData("A1", 1, 0, "A2"),
         InlineData("A1", 0, 1, "B1"),
         InlineData("A1", 2, 3, "D3"),
-        InlineData("$A$1", 5, 5, "$A$1"),       // both absolute → unchanged
-        InlineData("$A1", 0, 4, "$A1"),         // column absolute, no row delta
-        InlineData("A$1", 4, 0, "A$1")          // row absolute, no column delta
+        InlineData("$A$1", 5, 5, "$A$1"), // both absolute → unchanged
+        InlineData("$A1", 0, 4, "$A1"),   // column absolute, no row delta
+        InlineData("A$1", 4, 0, "A$1")    // row absolute, no column delta
     ]
     public void ShiftRelative_AppliesDeltas(string formula, int rowDelta, int columnDelta, string expected) =>
         FormulaShifter.ShiftRelative(formula, rowDelta, columnDelta).ShouldBe(expected);
@@ -56,9 +56,7 @@ public class FormulaShifterCoverageTests
         FormulaShifter.Shift("A5", FormulaShifter.Axis.Column, 5, 1).ShouldBe("A5");
 
     [Fact]
-    public void Shift_RowInsert_PushesRefIntoRefErrorAtMax()
-    {
+    public void Shift_RowInsert_PushesRefIntoRefErrorAtMax() =>
         // A reference at the maximum row pushed further down overflows → #REF!.
         FormulaShifter.Shift("A1048576", FormulaShifter.Axis.Row, 1, 1).ShouldBe("#REF!");
-    }
 }

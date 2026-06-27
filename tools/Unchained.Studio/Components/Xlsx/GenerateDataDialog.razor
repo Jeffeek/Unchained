@@ -1,0 +1,156 @@
+@using System.Globalization
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+<MudDialog Style="min-width:480px; max-width:600px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.AutoAwesome" Class="mr-2" Style="vertical-align:middle;"/>
+            Generate Data
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2" Style="opacity:.7;">
+                Fill the selected range (@SelectionA1) with generated data.
+            </MudText>
+
+            <MudSelect T="DataGenerationType" @bind-Value="_type" Label="Data type" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="DataGenerationType.Sequence">Sequence (1, 2, 3, …)</MudSelectItem>
+                <MudSelectItem Value="DataGenerationType.RandomNumber">Random number</MudSelectItem>
+                <MudSelectItem Value="DataGenerationType.RandomInteger">Random integer</MudSelectItem>
+                <MudSelectItem Value="DataGenerationType.Date">Date</MudSelectItem>
+                <MudSelectItem Value="DataGenerationType.DateTime">Date + time</MudSelectItem>
+                <MudSelectItem Value="DataGenerationType.Decimal">Decimal sequence</MudSelectItem>
+            </MudSelect>
+
+            <div class="d-flex gap-2">
+                <MudTextField @bind-Value="_start" Label="Start value" Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1"/>
+                <MudTextField @bind-Value="_step" Label="Step" Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1"/>
+            </div>
+
+            @if (_type is not DataGenerationType.RandomNumber and DataGenerationType.RandomInteger)
+            {
+                <div class="d-flex gap-2">
+                    <MudNumericField T="double" @bind-Value="_min" Label="Min" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudNumericField T="double" @bind-Value="_max" Label="Max" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                </div>
+            }
+
+            <MudSelect T="FillDirection" @bind-Value="_direction" Label="Fill direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="FillDirection.Down">Down (column)</MudSelectItem>
+                <MudSelectItem Value="FillDirection.Right">Right (row)</MudSelectItem>
+            </MudSelect>
+
+            @if (_error != null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Generate" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.AutoAwesome">
+            Generate
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public CellRange Selection { get; set; }
+
+    [Parameter]
+    public EventCallback OnGenerated { get; set; }
+
+    private DataGenerationType _type = DataGenerationType.Sequence;
+    private string _start = "1";
+    private string _step = "1";
+    private double _min;
+    private double _max = 100;
+    private FillDirection _direction = FillDirection.Down;
+    private string? _error;
+
+    private string SelectionA1 => Selection.ToA1();
+
+    private void Generate()
+    {
+        _error = null;
+
+        var start = ParseStart();
+        var step = ParseStep();
+        var current = start;
+
+        try
+        {
+            for (var r = 0; r < Selection.RowCount; r++)
+            {
+                for (var c = 0; c < Selection.ColumnCount; c++)
+                {
+                    var row = Selection.TopLeft.Row + (((r * Selection.ColumnCount) + c) / (_direction == FillDirection.Down ? 1 : Selection.ColumnCount));
+                    var col = Selection.TopLeft.Column + (((r * Selection.ColumnCount) + c) % (_direction == FillDirection.Down ? Selection.ColumnCount : 1));
+
+                    // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+                    switch (_type)
+                    {
+                        case DataGenerationType.Sequence:
+                        case DataGenerationType.Decimal:
+                            Sheet.SetValue(row, col, current);
+                            current += step;
+                        break;
+                        case DataGenerationType.RandomNumber:
+                        case DataGenerationType.RandomInteger:
+                        {
+                            var rng = new Random();
+                            var val = (rng.NextDouble() * (_max - _min)) + _min;
+                            if (_type == DataGenerationType.RandomInteger)
+                                val = Math.Round(val);
+                            Sheet.SetValue(row, col, val);
+                            break;
+                        }
+                        case DataGenerationType.Date:
+                        case DataGenerationType.DateTime:
+                            Sheet.SetValue(row, col, current);
+                            current += step;
+                        break;
+                    }
+                }
+            }
+
+            MudDialog.Close();
+            OnGenerated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private double ParseStart()
+    {
+        if (double.TryParse(_start, CultureInfo.InvariantCulture, out var v))
+            return v;
+        if (DateTime.TryParse(_start, out var dt))
+            return dt.ToOADate();
+
+        return 1;
+    }
+
+    private double ParseStep()
+    {
+        if (double.TryParse(_step, CultureInfo.InvariantCulture, out var v))
+            return v;
+
+        return 1;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

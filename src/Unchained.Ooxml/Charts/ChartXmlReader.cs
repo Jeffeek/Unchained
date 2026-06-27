@@ -8,8 +8,8 @@ namespace Unchained.Ooxml.Charts;
 /// <summary>
 ///     Parses a <c>c:chartSpace</c> XML root into a <see cref="ChartModel" />. Only cached / literal
 ///     data is read (workbook references are read from their embedded cache). Shared by every format
-///     that embeds charts. A caller-supplied <paramref name="fillReader" /> hook (passed to
-///     <see cref="Parse" />) injects format-specific per-series fill parsing; pass <see langword="null" />
+///     that embeds charts. A caller-supplied hook (passed to
+///     Parse) injects format-specific per-series fill parsing; pass <see langword="null" />
 ///     to skip per-series fills.
 /// </summary>
 public static class ChartXmlReader

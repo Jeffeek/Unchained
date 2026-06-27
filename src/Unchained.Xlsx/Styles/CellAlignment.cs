@@ -1,4 +1,4 @@
-using Unchained.Xlsx.Models.Styles;
+using Unchained.Xlsx.Models;
 
 namespace Unchained.Xlsx.Styles;
 
@@ -39,9 +39,6 @@ public sealed class CellAlignment : IEquatable<CellAlignment>
         !WrapText && !ShrinkToFit && TextRotation == 0 && Indent == 0 &&
         ReadingOrder == ReadingOrder.ContextDependent && !JustifyLastLine;
 
-    /// <summary>Returns a shallow copy of this alignment.</summary>
-    public CellAlignment Clone() => (CellAlignment)MemberwiseClone();
-
     /// <inheritdoc />
     public bool Equals(CellAlignment? other) =>
         other != null &&
@@ -54,10 +51,24 @@ public sealed class CellAlignment : IEquatable<CellAlignment>
         ReadingOrder == other.ReadingOrder &&
         JustifyLastLine == other.JustifyLastLine;
 
+    /// <summary>Returns a shallow copy of this alignment.</summary>
+    public CellAlignment Clone() => (CellAlignment)MemberwiseClone();
+
     /// <inheritdoc />
     public override bool Equals(object? obj) => Equals(obj as CellAlignment);
 
     /// <inheritdoc />
     public override int GetHashCode() =>
-        HashCode.Combine(Horizontal, Vertical, WrapText, ShrinkToFit, TextRotation, Indent, ReadingOrder, JustifyLastLine);
+        HashCode.Combine(
+            // ReSharper disable NonReadonlyMemberInGetHashCode
+            Horizontal,
+            Vertical,
+            WrapText,
+            ShrinkToFit,
+            TextRotation,
+            Indent,
+            ReadingOrder,
+            JustifyLastLine
+            // ReSharper restore NonReadonlyMemberInGetHashCode
+        );
 }

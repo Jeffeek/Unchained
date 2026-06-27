@@ -23,9 +23,9 @@ internal sealed partial class SlideRasterizer
             y,
             width,
             height,
-            255,
-            255,
-            255
+            RenderingConstants.White,
+            RenderingConstants.White,
+            RenderingConstants.White
         );
         DrawBorder(
             buffer,
@@ -33,9 +33,9 @@ internal sealed partial class SlideRasterizer
             y,
             width,
             height,
-            180,
-            180,
-            180
+            RenderingConstants.BorderMuted,
+            RenderingConstants.BorderMuted,
+            RenderingConstants.BorderMuted
         );
 
         var model = shape.Chart;
@@ -52,9 +52,9 @@ internal sealed partial class SlideRasterizer
                 width - 12,
                 14.0,
                 dpi,
-                60,
-                60,
-                60
+                RenderingConstants.TextAxis,
+                RenderingConstants.TextAxis,
+                RenderingConstants.TextAxis
             );
             titleH = (int)(18 * dpi / RenderingConstants.PointsPerInch);
         }
@@ -195,9 +195,9 @@ internal sealed partial class SlideRasterizer
                     36,
                     8.0,
                     dpi,
-                    100,
-                    100,
-                    100
+                    RenderingConstants.TextAxis,
+                    RenderingConstants.TextAxis,
+                    RenderingConstants.TextAxis
                 );
             }
             else
@@ -220,9 +220,9 @@ internal sealed partial class SlideRasterizer
                     36,
                     8.0,
                     dpi,
-                    100,
-                    100,
-                    100
+                    RenderingConstants.TextAxis,
+                    RenderingConstants.TextAxis,
+                    RenderingConstants.TextAxis
                 );
             }
         }
@@ -267,9 +267,9 @@ internal sealed partial class SlideRasterizer
                         28,
                         7.0,
                         dpi,
-                        80,
-                        80,
-                        80
+                        RenderingConstants.LabelGrey,
+                        RenderingConstants.LabelGrey,
+                        RenderingConstants.LabelGrey
                     );
                 }
                 else
@@ -283,9 +283,9 @@ internal sealed partial class SlideRasterizer
                         36,
                         7.0,
                         dpi,
-                        80,
-                        80,
-                        80
+                        RenderingConstants.LabelGrey,
+                        RenderingConstants.LabelGrey,
+                        RenderingConstants.LabelGrey
                     );
                 }
             }
@@ -326,9 +326,9 @@ internal sealed partial class SlideRasterizer
                 80,
                 8.0,
                 dpi,
-                60,
-                60,
-                60
+                RenderingConstants.LabelGrey,
+                RenderingConstants.LabelGrey,
+                RenderingConstants.LabelGrey
             );
             cursorX += 90;
             if (cursorX > x + width - 20) break;

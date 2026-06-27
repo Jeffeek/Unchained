@@ -106,7 +106,8 @@
             await Exporter.TriggerDownloadAsync(
                 ms.ToArray(),
                 _fileName,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
             MudDialog.Close();
         }
         catch (Exception ex)

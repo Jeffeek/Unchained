@@ -22,8 +22,8 @@ internal static class StylesParser
         ReadFonts(root, book);
         ReadFills(root, book);
         ReadBorders(root, book);
-        ReadXfs(root.Child(SmlNames.CellStyleXfs), book, isCellStyle: true);
-        ReadXfs(root.Child(SmlNames.CellXfs), book, isCellStyle: false);
+        ReadXfs(root.Child(SmlNames.CellStyleXfs), book, true);
+        ReadXfs(root.Child(SmlNames.CellXfs), book, false);
         ReadNamedStyles(root, book);
 
         book.RebuildLookups();

@@ -42,11 +42,11 @@ internal static class TextParser
     {
         if (bodyPr == null) return;
 
-        var anchor = bodyPr.GetAttr("anchor");
+        var anchor = bodyPr.GetAttr(PmlNames.AttributeAnchor);
         if (anchor != null)
             format.VerticalAnchor = ParseAnchor(anchor);
 
-        var wrap = bodyPr.GetAttr("wrap");
+        var wrap = bodyPr.GetAttr(PmlNames.AttributeWrap);
         if (wrap != null)
             format.WrapText = wrap != "none";
 
@@ -81,7 +81,7 @@ internal static class TextParser
 
         // WordArt text warp (<a:prstTxWarp prst="...">).
         var warp = bodyPr.Element(DmlNames.Dml + "prstTxWarp");
-        var warpPreset = warp?.GetAttr("prst");
+        var warpPreset = warp?.GetAttr(DmlNames.AttributePreset);
         if (!string.IsNullOrEmpty(warpPreset))
             format.Warp = new TextWarpFormat { Preset = warpPreset };
     }

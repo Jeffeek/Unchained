@@ -56,4 +56,17 @@ public sealed class Matrix2DTests
         x.ShouldBe(7);
         y.ShouldBe(10);
     }
+
+    [Fact]
+    public void Multiply_Associative()
+    {
+        var a = Matrix2D.Translate(1, 2);
+        var b = Matrix2D.Translate(3, 4);
+        var c = Matrix2D.Translate(5, 6);
+
+        var left = Matrix2D.Multiply(Matrix2D.Multiply(a, b), c);
+        var right = Matrix2D.Multiply(a, Matrix2D.Multiply(b, c));
+
+        left.ShouldBe(right);
+    }
 }

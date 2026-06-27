@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using Shouldly;
 using Unchained.Drawing.Primitives.Fonts;
 using Unchained.Drawing.Text;
@@ -420,7 +421,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
     // 7 FontFile2 (raw). Assembled via MemoryStream because the font bytes are binary.
     private static byte[] BuildDocWithRawFontFile2(byte[] fontBytes, string content)
     {
-        var cs = System.Text.Encoding.Latin1.GetBytes(content);
+        var cs = Encoding.Latin1.GetBytes(content);
         using var ms = new MemoryStream();
         var offsets = new long[8];
 

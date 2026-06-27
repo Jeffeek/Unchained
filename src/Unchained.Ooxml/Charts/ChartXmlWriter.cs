@@ -9,7 +9,7 @@ namespace Unchained.Ooxml.Charts;
 ///     Serializes a <see cref="ChartModel" /> to a <c>c:chartSpace</c> XML tree. The chart part XML
 ///     is identical across formats (PPTX, XLSX), so this is the single shared implementation. Data is
 ///     written as inline literals (<c>c:numLit</c> / <c>c:strLit</c>) so no embedded workbook is
-///     required. A caller-supplied <paramref name="fillWriter" /> hook (passed to <see cref="Write" />)
+///     required. A caller-supplied hook (passed to <see cref="Write" />)
 ///     injects format-specific per-series fill (<c>c:spPr</c>) serialization; pass <see langword="null" />
 ///     to omit per-series fills.
 /// </summary>
@@ -143,7 +143,7 @@ public static class ChartXmlWriter
         el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
         el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
         for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, includeMarker: false, fw));
+            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, false, fw));
         AddAxisIds(el);
         return el;
     }
@@ -173,7 +173,7 @@ public static class ChartXmlWriter
         var el = new XElement(CmlNames.PieChart);
         el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "1")));
         var series = model.Data.Series.FirstOrDefault() ?? new ChartSeries();
-        el.Add(WriteStandardSeries(series, 0, model.Data.Categories, includeMarker: false, fw));
+        el.Add(WriteStandardSeries(series, 0, model.Data.Categories, false, fw));
         return el;
     }
 
@@ -182,7 +182,7 @@ public static class ChartXmlWriter
         var el = new XElement(CmlNames.DoughnutChart);
         el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "1")));
         var series = model.Data.Series.FirstOrDefault() ?? new ChartSeries();
-        el.Add(WriteStandardSeries(series, 0, model.Data.Categories, includeMarker: false, fw));
+        el.Add(WriteStandardSeries(series, 0, model.Data.Categories, false, fw));
         el.Add(new XElement(CmlNames.HoleSize, new XAttribute(DmlNames.AttributeValue, "50")));
         return el;
     }
@@ -199,7 +199,7 @@ public static class ChartXmlWriter
         el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
         el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
         for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, includeMarker: false, fw));
+            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, false, fw));
         AddAxisIds(el);
         return el;
     }
@@ -235,7 +235,7 @@ public static class ChartXmlWriter
         el.Add(new XElement(CmlNames.RadarStyle, new XAttribute(DmlNames.AttributeValue, style)));
         el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
         for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, includeMarker: false, fw));
+            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, false, fw));
         AddAxisIds(el);
         return el;
     }

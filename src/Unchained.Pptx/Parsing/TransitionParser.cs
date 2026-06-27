@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Animations;
+using Unchained.Pptx.Core.Xml;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -16,7 +17,7 @@ internal static class TransitionParser
     public static void Parse(XElement transitionEl, SlideTransition transition)
     {
         // Duration / speed
-        var durRaw = transitionEl.GetAttr("dur");
+        var durRaw = transitionEl.GetAttr(PmlNames.AttributeDuration);
         if (durRaw != null && int.TryParse(durRaw, out var durMs))
             transition.DurationSeconds = durMs / 1000.0;
         else

@@ -1,12 +1,11 @@
 using Unchained.Drawing;
 using Unchained.Drawing.Decoders;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Ooxml.Media;
 
 namespace Unchained.Pptx.Rendering.Engine.Rasterizers;
 
 /// <summary>
-///     Decodes embedded slide images (PNG / JPEG / SVG) to packed RGB and blits scaled RGB
+///     Decodes embedded slide images (PNG / JPEG / GIF / SVG) to packed RGB and blits scaled RGB
 ///     into a raster buffer with nearest-neighbour sampling. Pure and state-free; extracted
 ///     from <see cref="SlideRasterizer" />.
 /// </summary>
@@ -55,6 +54,8 @@ internal static class SlideImageDecoder
             return PngDecoder.TryDecodeToRgb(bytes, out width, out height);
         if (IsJpeg(bytes))
             return JpegDecoder.TryDecodeToRgb(bytes, out width, out height);
+        if (GifDecoder.IsGif(bytes))
+            return GifDecoder.TryDecodeToRgb(bytes, out width, out height);
 
         if (!IsSvg(bytes)) return null;
 
@@ -87,9 +88,27 @@ internal static class SlideImageDecoder
         var start = (bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) ? 3 : 0;
         // Look for <svg or <?xml within the first 512 bytes.
         var searchLen = Math.Min(bytes.Length - start, 512);
-        var text = bytes.Slice(start, searchLen).FromUtf8Span();
-        return text.Contains("<svg", StringComparison.OrdinalIgnoreCase) ||
-               (text.Contains("<?xml", StringComparison.OrdinalIgnoreCase) &&
-                text.Contains("svg", StringComparison.OrdinalIgnoreCase));
+        var trimmed = bytes.Slice(start, searchLen);
+        while (trimmed.Length > 0 && trimmed[0] <= 32) trimmed = trimmed[1..];
+        switch (trimmed.Length)
+        {
+            case >= 4 when trimmed[0] == '<' && trimmed[1] == 's' && trimmed[2] == 'v' && trimmed[3] == 'g':
+                return true;
+            case >= 5 when trimmed[0] == '<' && trimmed[1] == '?' && trimmed[2] == 'x' && trimmed[3] == 'm' && trimmed[4] == 'l':
+            {
+                // Skip <?xml...?> to reach the root element.
+                var close = trimmed.IndexOf("?>"u8);
+                if (close >= 0)
+                {
+                    var afterDecl = trimmed[(close + 2)..];
+                    while (afterDecl.Length > 0 && afterDecl[0] <= 32) afterDecl = afterDecl[1..];
+                    if (afterDecl.Length >= 4 && afterDecl[0] == '<' && afterDecl[1] == 's' && afterDecl[2] == 'v' && afterDecl[3] == 'g') return true;
+                }
+
+                break;
+            }
+        }
+
+        return false;
     }
 }

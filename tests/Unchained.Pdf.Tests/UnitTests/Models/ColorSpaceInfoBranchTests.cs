@@ -154,7 +154,7 @@ public sealed class ColorSpaceInfoBranchTests
     public void CalRgb_NoMatrix_PassesGammaThroughDirectly()
     {
         // No XYZ matrix supplied → the else branch uses gamma-adjusted components as XYZ directly.
-        var info = ColorSpaceInfo.CalRgb([1.0, 1.0, 1.0], matrix: null);
+        var info = ColorSpaceInfo.CalRgb([1.0, 1.0, 1.0], null);
         var (r, g, b) = info.ToRgb([1.0, 1.0, 1.0]);
         (r + g + b).ShouldBeGreaterThan(0);
     }

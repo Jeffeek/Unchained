@@ -1,8 +1,8 @@
 using Shouldly;
 using Unchained.Ooxml.Drawing;
 using Unchained.Xlsx.Core.Xml;
+using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
-using Unchained.Xlsx.Models.Styles;
 using Unchained.Xlsx.Styles;
 using Xunit;
 
@@ -47,6 +47,7 @@ public class StyleModelTests
         a.Equals((object)b).ShouldBeTrue();
         a.Equals(c).ShouldBeFalse();
         a.Equals(null).ShouldBeFalse();
+        // ReSharper disable once SuspiciousTypeConversion.Global
         a.Equals("not a fill").ShouldBeFalse();
         a.GetHashCode().ShouldBe(b.GetHashCode());
     }

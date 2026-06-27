@@ -7,13 +7,22 @@ public sealed partial class Cell
 {
     private StyleBook StyleBook => _worksheet.Document.Styles;
 
+    /// <summary>The effective number-format code applied to this cell (e.g. "0.00", "General").</summary>
+    public string NumberFormatCode => StyleBook.GetNumberFormatCode(StyleIndex);
+
+    // ── Merge ────────────────────────────────────────────────────────────────
+
+    /// <summary>The merged range whose top-left corner is this cell, or <see langword="null" />.</summary>
+    public CellRange? MergeRange =>
+        _worksheet.MergedCells.Cast<CellRange?>().FirstOrDefault(r => r!.Value.TopLeft == Reference);
+
+    /// <summary><see langword="true" /> when this cell lies within any merged range.</summary>
+    public bool IsMerged => _worksheet.MergedCells.RangeContaining(Reference) != null;
+
     // ── Effective style resolution ──────────────────────────────────────────────
 
     /// <summary>Returns the resolved cell format that <see cref="StyleIndex" /> points at.</summary>
     public CellXf GetEffectiveStyle() => StyleBook.GetCellXf(StyleIndex);
-
-    /// <summary>The effective number-format code applied to this cell (e.g. "0.00", "General").</summary>
-    public string NumberFormatCode => StyleBook.GetNumberFormatCode(StyleIndex);
 
     // ── Mutating style helpers ───────────────────────────────────────────────────
 
@@ -105,13 +114,4 @@ public sealed partial class Cell
         modify(xf);
         return StyleBook.GetOrAddCellXf(xf);
     }
-
-    // ── Merge ────────────────────────────────────────────────────────────────
-
-    /// <summary>The merged range whose top-left corner is this cell, or <see langword="null" />.</summary>
-    public CellRange? MergeRange =>
-        _worksheet.MergedCells.Cast<CellRange?>().FirstOrDefault(r => r!.Value.TopLeft == Reference);
-
-    /// <summary><see langword="true" /> when this cell lies within any merged range.</summary>
-    public bool IsMerged => _worksheet.MergedCells.RangeContaining(Reference) != null;
 }

@@ -32,13 +32,12 @@ public sealed class TrueTypeMetricsTests
         TrueTypeMetrics.Read([]).ShouldBe(TrueTypeMetrics.HelveticaFallback);
 
     [Fact]
-    public void Read_GarbageBytes_DoesNotThrow()
+    public void Read_GarbageBytes_ReturnsFallback()
     {
         var garbage = new byte[64];
         new Random(1).NextBytes(garbage);
 
-        // Whatever it returns, it must not throw on malformed input.
-        Should.NotThrow(() => TrueTypeMetrics.Read(garbage));
+        TrueTypeMetrics.Read(garbage).ShouldBe(TrueTypeMetrics.HelveticaFallback);
     }
 
     [Fact]
@@ -73,14 +72,14 @@ public sealed class TrueTypeMetricsTests
     public void Read_FontWithOs2V2_UsesTypographicMetricsAndCapHeight()
     {
         var font = SyntheticTrueType.Build(
-            unitsPerEm: 1000,
-            os2Version: 2,
-            typoAscender: 800,
-            typoDescender: -200,
-            capHeight: 700,
-            weightClass: 400,
-            includeOs2: true,
-            includeHhea: true
+            1000,
+            2,
+            800,
+            -200,
+            700,
+            400,
+            true,
+            true
         );
 
         var m = TrueTypeMetrics.Read(font);
@@ -96,14 +95,14 @@ public sealed class TrueTypeMetricsTests
     public void Read_FontWithOs2V1_EstimatesCapHeightFromAscent()
     {
         var font = SyntheticTrueType.Build(
-            unitsPerEm: 1000,
-            os2Version: 1,
-            typoAscender: 750,
-            typoDescender: -250,
-            capHeight: 0,
-            weightClass: 700,
-            includeOs2: true,
-            includeHhea: true
+            1000,
+            1,
+            750,
+            -250,
+            0,
+            700,
+            true,
+            true
         );
 
         var m = TrueTypeMetrics.Read(font);
@@ -118,16 +117,16 @@ public sealed class TrueTypeMetricsTests
     public void Read_FontWithoutOs2_FallsBackToHhea()
     {
         var font = SyntheticTrueType.Build(
-            unitsPerEm: 2048,
-            os2Version: 0,
-            typoAscender: 0,
-            typoDescender: 0,
-            capHeight: 0,
-            weightClass: 0,
-            includeOs2: false,
-            includeHhea: true,
-            hheaAscender: 1638,
-            hheaDescender: -410
+            2048,
+            0,
+            0,
+            0,
+            0,
+            0,
+            false,
+            true,
+            1638,
+            -410
         );
 
         var m = TrueTypeMetrics.Read(font);
@@ -142,14 +141,14 @@ public sealed class TrueTypeMetricsTests
     public void Read_FontWithNeitherOs2NorHhea_ReturnsFallback()
     {
         var font = SyntheticTrueType.Build(
-            unitsPerEm: 1000,
-            os2Version: 0,
-            typoAscender: 0,
-            typoDescender: 0,
-            capHeight: 0,
-            weightClass: 0,
-            includeOs2: false,
-            includeHhea: false
+            1000,
+            0,
+            0,
+            0,
+            0,
+            0,
+            false,
+            false
         );
 
         TrueTypeMetrics.Read(font).ShouldBe(TrueTypeMetrics.HelveticaFallback);
@@ -160,14 +159,14 @@ public sealed class TrueTypeMetricsTests
     {
         // unitsPerEm 2048 → scale 1000/2048; a 1024-unit ascender becomes ~500.
         var font = SyntheticTrueType.Build(
-            unitsPerEm: 2048,
-            os2Version: 2,
-            typoAscender: 1024,
-            typoDescender: -512,
-            capHeight: 1024,
-            weightClass: 400,
-            includeOs2: true,
-            includeHhea: true
+            2048,
+            2,
+            1024,
+            -512,
+            1024,
+            400,
+            true,
+            true
         );
 
         var m = TrueTypeMetrics.Read(font);
@@ -181,14 +180,14 @@ public sealed class TrueTypeMetricsTests
     {
         // unitsPerEm 0 is invalid → parser defaults it to 1000 (scale 1, no division by zero).
         var font = SyntheticTrueType.Build(
-            unitsPerEm: 0,
-            os2Version: 2,
-            typoAscender: 700,
-            typoDescender: -200,
-            capHeight: 650,
-            weightClass: 400,
-            includeOs2: true,
-            includeHhea: true
+            0,
+            2,
+            700,
+            -200,
+            650,
+            400,
+            true,
+            true
         );
 
         var m = TrueTypeMetrics.Read(font);
@@ -199,20 +198,20 @@ public sealed class TrueTypeMetricsTests
     [Fact]
     public void Read_HeavyWeightClass_RaisesStemV()
     {
-        // A bold weight class (700) produces a larger StemV than the default 80.
+        // WeightClass 700 → pow(700/65, 2) + 50 = 165 (clamped within [10, 340]).
         var font = SyntheticTrueType.Build(
-            unitsPerEm: 1000,
-            os2Version: 2,
-            typoAscender: 750,
-            typoDescender: -250,
-            capHeight: 700,
-            weightClass: 700,
-            includeOs2: true,
-            includeHhea: true
+            1000,
+            2,
+            750,
+            -250,
+            700,
+            700,
+            true,
+            true
         );
 
         var m = TrueTypeMetrics.Read(font);
         m.ShouldNotBeNull();
-        m.StemV.ShouldBeGreaterThan(80);
+        m.StemV.ShouldBe(165);
     }
 }

@@ -6,6 +6,8 @@ namespace Unchained.Ooxml.Drawing;
 /// </summary>
 public sealed class ColorScheme
 {
+    internal const uint UnresolvedThemeColorArgb = 0xFF808080u;
+
     /// <summary>Dark 1 — typically the darkest colour, used for text.</summary>
     public ColorSpec Dark1 { get; set; }
 

@@ -3,10 +3,12 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Properties;
 using Unchained.Ooxml.Xml;
+using Unchained.Xlsx.Abstractions;
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Sheets;
+using Unchained.Xlsx.Styles;
 
 namespace Unchained.Xlsx.Writing;
 
@@ -21,6 +23,10 @@ internal static partial class WorkbookWriter
 {
     private const string WorkbookUri = "/xl/workbook.xml";
     private const string StylesUri = "/xl/styles.xml";
+
+    // ── sharedStrings.xml ──────────────────────────────────────────────────────
+
+    private const string SharedStringsUri = "/xl/sharedStrings.xml";
 
     public static byte[] Write(SpreadsheetDocument document, XlsxSaveOptions options)
     {
@@ -45,17 +51,19 @@ internal static partial class WorkbookWriter
 
     // ── Sheet identity assignment ───────────────────────────────────────────────
 
-    private static void AssignSheetIdentities(OpcPackage package, SpreadsheetDocument document)
+    private static void AssignSheetIdentities(OpcPackage package, ISpreadsheetDocument document)
     {
         var usedUris = new HashSet<string>(
-            document.Sheets.Where(s => !string.IsNullOrEmpty(s.PartUri)).Select(s => s.PartUri),
-            StringComparer.OrdinalIgnoreCase);
+            document.Sheets.Where(static s => !string.IsNullOrEmpty(s.PartUri)).Select(static s => s.PartUri),
+            StringComparer.OrdinalIgnoreCase
+        );
 
         var nextSheet = 1;
         var nextRel = 1;
         var usedRelIds = new HashSet<string>(
-            document.Sheets.Where(s => !string.IsNullOrEmpty(s.RelationshipId)).Select(s => s.RelationshipId),
-            StringComparer.Ordinal);
+            document.Sheets.Where(static s => !string.IsNullOrEmpty(s.RelationshipId)).Select(static s => s.RelationshipId),
+            StringComparer.Ordinal
+        );
 
         foreach (var sheet in document.Sheets)
         {
@@ -68,18 +76,17 @@ internal static partial class WorkbookWriter
                 sheet.PartUri = uri;
             }
 
-            if (string.IsNullOrEmpty(sheet.RelationshipId))
-            {
-                string relId;
-                do
-                    relId = $"rId{nextRel++}";
-                while (!usedRelIds.Add(relId));
-                sheet.RelationshipId = relId;
-            }
+            if (!string.IsNullOrEmpty(sheet.RelationshipId)) continue;
+
+            string relId;
+            do
+                relId = $"rId{nextRel++}";
+            while (!usedRelIds.Add(relId));
+            sheet.RelationshipId = relId;
         }
     }
 
-    private static void WriteWorksheetParts(OpcPackage package, SpreadsheetDocument document)
+    private static void WriteWorksheetParts(OpcPackage package, ISpreadsheetDocument document)
     {
         foreach (var sheet in document.Sheets)
         {
@@ -98,7 +105,7 @@ internal static partial class WorkbookWriter
 
     // ── Tables (ListObjects) ────────────────────────────────────────────────────
 
-    private static void AssignTableIdentities(OpcPackage package, SpreadsheetDocument document)
+    private static void AssignTableIdentities(OpcPackage package, ISpreadsheetDocument document)
     {
         var nextTableNumber = 1;
         var usedUris = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -137,7 +144,7 @@ internal static partial class WorkbookWriter
         }
     }
 
-    private static void WriteTableParts(OpcPackage package, SpreadsheetDocument document)
+    private static void WriteTableParts(OpcPackage package, ISpreadsheetDocument document)
     {
         foreach (var sheet in document.Sheets)
         {
@@ -150,11 +157,10 @@ internal static partial class WorkbookWriter
 
                 var hasRel = package.GetRelationships(sheet.PartUri)
                     .Any(r => r.Id == table.RelationshipId);
-                if (!hasRel)
-                {
-                    var target = RelativeToSheet(table.PartUri);
-                    package.AddRelationship(sheet.PartUri, table.RelationshipId, SmlNames.RelTypeTable, target);
-                }
+                if (hasRel) continue;
+
+                var target = RelativeToSheet(table.PartUri);
+                package.AddRelationship(sheet.PartUri, table.RelationshipId, SmlNames.RelTypeTable, target);
             }
         }
     }
@@ -164,22 +170,18 @@ internal static partial class WorkbookWriter
             ? "../" + tableUri["/xl/".Length..]
             : tableUri;
 
-    private static void RemoveOrphanedWorksheetParts(OpcPackage package, SpreadsheetDocument document)
+    private static void RemoveOrphanedWorksheetParts(OpcPackage package, ISpreadsheetDocument document)
     {
-        var live = new HashSet<string>(document.Sheets.Select(s => s.PartUri), StringComparer.OrdinalIgnoreCase);
+        var live = new HashSet<string>(document.Sheets.Select(static s => s.PartUri), StringComparer.OrdinalIgnoreCase);
         var orphans = package.Parts
-            .Where(p => p.ContentType.Equals(SmlNames.ContentTypeWorksheet, StringComparison.Ordinal))
+            .Where(static p => p.ContentType.Equals(SmlNames.ContentTypeWorksheet, StringComparison.Ordinal))
             .Where(p => !live.Contains(p.Uri))
-            .Select(p => p.Uri)
+            .Select(static p => p.Uri)
             .ToList();
 
         foreach (var uri in orphans)
             package.RemovePart(uri);
     }
-
-    // ── sharedStrings.xml ──────────────────────────────────────────────────────
-
-    private const string SharedStringsUri = "/xl/sharedStrings.xml";
 
     private static void WriteSharedStrings(OpcPackage package, SpreadsheetDocument document)
     {
@@ -195,7 +197,7 @@ internal static partial class WorkbookWriter
 
     // ── workbook.xml ─────────────────────────────────────────────────────────
 
-    private static void WriteWorkbookPart(OpcPackage package, SpreadsheetDocument document, XlsxSaveOptions options)
+    private static void WriteWorkbookPart(OpcPackage package, ISpreadsheetDocument document, XlsxSaveOptions options)
     {
         var existing = package.TryGetPart(WorkbookUri);
         var root = existing != null
@@ -235,7 +237,7 @@ internal static partial class WorkbookWriter
             new XAttribute(XNamespace.Xmlns + "r", SmlNames.R.NamespaceName)
         );
 
-    private static void WriteDateSystem(XElement root, SpreadsheetDocument document)
+    private static void WriteDateSystem(XElement root, ISpreadsheetDocument document)
     {
         var workbookPr = root.Child(SmlNames.WorkbookPr);
         if (!document.Date1904)
@@ -254,7 +256,7 @@ internal static partial class WorkbookWriter
         workbookPr.SetAttributeValue("date1904", "1");
     }
 
-    private static void WriteSheetList(XElement root, SpreadsheetDocument document)
+    private static void WriteSheetList(XElement root, ISpreadsheetDocument document)
     {
         root.Child(SmlNames.Sheets)?.Remove();
 
@@ -265,7 +267,8 @@ internal static partial class WorkbookWriter
                 SmlNames.Sheet,
                 new XAttribute("name", sheet.Name),
                 new XAttribute("sheetId", sheet.SheetId.ToString(CultureInfo.InvariantCulture)),
-                new XAttribute(SmlNames.R + "id", sheet.RelationshipId));
+                new XAttribute(SmlNames.R + "id", sheet.RelationshipId)
+            );
 
             if (sheet.State != SheetState.Visible)
                 element.SetAttributeValue("state", sheet.State == SheetState.Hidden ? "hidden" : "veryHidden");
@@ -284,7 +287,7 @@ internal static partial class WorkbookWriter
             root.AddFirst(sheets);
     }
 
-    private static void WriteDefinedNames(XElement root, SpreadsheetDocument document)
+    private static void WriteDefinedNames(XElement root, ISpreadsheetDocument document)
     {
         root.Child(SmlNames.DefinedNames)?.Remove();
 
@@ -295,9 +298,11 @@ internal static partial class WorkbookWriter
         var definedNames = new XElement(SmlNames.DefinedNames);
         foreach (var name in names)
         {
-            var element = new XElement(SmlNames.DefinedName,
+            var element = new XElement(
+                SmlNames.DefinedName,
                 new XAttribute("name", name.Name),
-                name.Formula);
+                name.Formula
+            );
 
             if (name.LocalSheetId is { } sheetId)
                 element.SetAttributeValue("localSheetId", sheetId.ToString(CultureInfo.InvariantCulture));
@@ -317,7 +322,7 @@ internal static partial class WorkbookWriter
             root.Add(definedNames);
     }
 
-    private static void WriteWorkbookProtection(XElement root, SpreadsheetDocument document)
+    private static void WriteWorkbookProtection(XElement root, ISpreadsheetDocument document)
     {
         root.Child(SmlNames.WorkbookProtection)?.Remove();
 
@@ -355,21 +360,21 @@ internal static partial class WorkbookWriter
 
     // ── workbook.xml.rels ──────────────────────────────────────────────────────
 
-    private static void WriteWorkbookRelationships(OpcPackage package, SpreadsheetDocument document)
+    private static void WriteWorkbookRelationships(OpcPackage package, ISpreadsheetDocument document)
     {
         var workbookPart = package.GetPart(WorkbookUri);
 
         // Preserve every relationship that is not a worksheet relationship (styles, sharedStrings,
         // theme, pivotCache, …); worksheet rels are rebuilt from the live sheet list.
         var preserved = workbookPart.Relationships
-            .Where(r => !r.RelationshipType.Equals(SmlNames.RelTypeWorksheet, StringComparison.Ordinal))
+            .Where(static r => !r.RelationshipType.Equals(SmlNames.RelTypeWorksheet, StringComparison.Ordinal))
             .ToList();
 
         package.ClearRelationships(WorkbookUri);
 
         foreach (var sheet in document.Sheets)
         {
-            var target = RelativeToWorkbook(package, sheet.PartUri);
+            var target = RelativeToWorkbook(sheet.PartUri);
             package.AddRelationship(WorkbookUri, sheet.RelationshipId, SmlNames.RelTypeWorksheet, target);
         }
 
@@ -386,7 +391,7 @@ internal static partial class WorkbookWriter
             return;
 
         var hasRel = workbookPart.Relationships
-            .Any(r => r.RelationshipType.Equals(SmlNames.RelTypeSharedStrings, StringComparison.Ordinal));
+            .Any(static r => r.RelationshipType.Equals(SmlNames.RelTypeSharedStrings, StringComparison.Ordinal));
         if (hasRel)
             return;
 
@@ -397,7 +402,7 @@ internal static partial class WorkbookWriter
     private static void EnsureStylesRelationship(OpcPackage package, OpcPart workbookPart)
     {
         var hasStyles = workbookPart.Relationships
-            .Any(r => r.RelationshipType.Equals(SmlNames.RelTypeStyles, StringComparison.Ordinal));
+            .Any(static r => r.RelationshipType.Equals(SmlNames.RelTypeStyles, StringComparison.Ordinal));
         if (hasStyles)
             return;
 
@@ -407,7 +412,7 @@ internal static partial class WorkbookWriter
 
     private static string NextFreeRelId(OpcPart part)
     {
-        var used = new HashSet<string>(part.Relationships.Select(r => r.Id), StringComparer.Ordinal);
+        var used = new HashSet<string>(part.Relationships.Select(static r => r.Id), StringComparer.Ordinal);
         var n = 1;
         string relId;
         do
@@ -416,8 +421,7 @@ internal static partial class WorkbookWriter
         return relId;
     }
 
-    private static string RelativeToWorkbook(OpcPackage package, string sheetUri) =>
-        package.GetRelativeUri(WorkbookUri, sheetUri);
+    private static string RelativeToWorkbook(string sheetUri) => OpcPackage.GetRelativeUri(WorkbookUri, sheetUri);
 
     // ── styles.xml ─────────────────────────────────────────────────────────────
 
@@ -433,7 +437,7 @@ internal static partial class WorkbookWriter
         }
 
         if (package.TryGetPart(StylesUri) == null)
-            package.AddOrReplacePart(StylesUri, SmlNames.ContentTypeStyles, StylesWriter.Write(Styles.StyleBook.CreateDefault()));
+            package.AddOrReplacePart(StylesUri, SmlNames.ContentTypeStyles, StylesWriter.Write(StyleBook.CreateDefault()));
     }
 
     // ── Minimal package for CreateBlank ─────────────────────────────────────────
@@ -451,12 +455,10 @@ internal static partial class WorkbookWriter
 
     // ── Document properties ──────────────────────────────────────────────────
 
-    private static void WriteProperties(OpcPackage package, SpreadsheetDocument document)
+    private static void WriteProperties(OpcPackage package, ISpreadsheetDocument document)
     {
         var props = document.Properties;
-        if (props == null)
-            return;
 
-        PropertiesWriter.Write(package, props, (pkg, props) => PropertiesWriter.WriteApp(pkg, props, "Unchained.Xlsx"));
+        PropertiesWriter.Write(package, props, static (pkg, innerProps) => PropertiesWriter.WriteApp(pkg, innerProps, "Unchained.Xlsx"));
     }
 }

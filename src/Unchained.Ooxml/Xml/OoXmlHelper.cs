@@ -9,12 +9,6 @@ namespace Unchained.Ooxml.Xml;
 /// </summary>
 internal static class OoXmlHelper
 {
-    // ── Element navigation ───────────────────────────────────────────────────
-
-    // ── EMU helpers ──────────────────────────────────────────────────────────
-
-    // ── Serialization helpers ─────────────────────────────────────────────────
-
     /// <summary>
     ///     Converts an <see cref="XDocument" /> to a UTF-8 byte array with an XML declaration.
     /// </summary>
@@ -44,6 +38,31 @@ internal static class OoXmlHelper
     /// </summary>
     public static int DegreesToOoxmlRotation(double degrees) =>
         (int)(degrees * 60_000);
+
+    // ── OOXML-specific helpers ────────────────────────────────────────────────
+
+    /// <summary>
+    ///     Parses an OOXML hex ARGB colour string (with optional leading <c>#</c> and 6-digit RGB)
+    ///     into a <c>uint</c>. Returns <see langword="false" /> when the input is null, empty,
+    ///     or does not represent a valid 6- or 8-digit hex colour.
+    /// </summary>
+    public static bool TryParseHexArgb(string hex, out uint argb)
+    {
+        if (string.IsNullOrEmpty(hex))
+        {
+            argb = 0u;
+            return false;
+        }
+
+        var h = hex.StartsWith('#') ? hex[1..] : hex;
+        if (h.Length == 6) h = "FF" + h;
+        if (h.Length == 8 && uint.TryParse(h, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out argb))
+            return true;
+
+        argb = 0u;
+        return false;
+    }
+
     // ── Attribute reading ────────────────────────────────────────────────────
 
     extension(XElement element)
@@ -160,22 +179,5 @@ internal static class OoXmlHelper
         /// </summary>
         public Emu GetAttrEmu(string attributeName) =>
             new(GetAttrLong(element, attributeName) ?? 0L);
-    }
-
-    // ── OOXML-specific helpers ────────────────────────────────────────────────
-
-    /// <summary>
-    ///     Parses an OOXML hex ARGB colour string (with optional leading <c>#</c> and 6-digit RGB)
-    ///     into a <c>uint</c>. Returns <see langword="false" /> when the input is null, empty,
-    ///     or does not represent a valid 6- or 8-digit hex colour.
-    /// </summary>
-    public static bool TryParseHexArgb(string hex, out uint argb)
-    {
-        if (string.IsNullOrEmpty(hex)) { argb = 0u; return false; }
-        var h = hex.StartsWith('#') ? hex.Substring(1) : hex;
-        if (h.Length == 6) h = "FF" + h;
-        if (h.Length != 8 || !uint.TryParse(h, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out argb))
-        { argb = 0u; return false; }
-        return true;
     }
 }

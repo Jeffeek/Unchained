@@ -3,7 +3,6 @@ using System.Xml.Linq;
 using Shouldly;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Xml;
-using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Parsing;
 using Xunit;
 

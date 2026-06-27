@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Slides;
@@ -117,7 +118,7 @@ internal static class NotesWriter
                         new XElement(
                             pml + "ph",
                             new XAttribute("type", "body"),
-                            new XAttribute("idx", "1")
+                            new XAttribute(CmlNames.AttributeIndex, "1")
                         )
                     )
                 ),

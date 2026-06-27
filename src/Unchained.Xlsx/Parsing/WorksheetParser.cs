@@ -3,7 +3,9 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Xlsx.Cell;
 using Unchained.Xlsx.Core.Xml;
+using Unchained.Xlsx.Formulas;
 using Unchained.Xlsx.Models.Cell;
+using Unchained.Xlsx.SharedStrings;
 using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Xlsx.Parsing;
@@ -79,7 +81,7 @@ internal static class WorksheetParser
     private static void ReadCellValue(
         XElement cellElement,
         Cell.Cell cell,
-        SharedStrings.SharedStringsTable sharedStrings,
+        SharedStringsTable sharedStrings,
         IDictionary<int, (CellReference Origin, string Formula)> sharedMasters
     )
     {
@@ -90,7 +92,14 @@ internal static class WorksheetParser
         if (formulaElement != null)
         {
             // ReSharper disable once BadListLineBreaks
-            ReadFormulaCell(cell, formulaElement, valueElement, type, sharedStrings, sharedMasters);
+            ReadFormulaCell(
+                cell,
+                formulaElement,
+                valueElement,
+                type,
+                sharedStrings,
+                sharedMasters
+            );
             return;
         }
 
@@ -131,7 +140,7 @@ internal static class WorksheetParser
         XElement formulaElement,
         XElement? valueElement,
         string? type,
-        SharedStrings.SharedStringsTable sharedStrings,
+        SharedStringsTable sharedStrings,
         IDictionary<int, (CellReference Origin, string Formula)> sharedMasters
     )
     {
@@ -163,7 +172,7 @@ internal static class WorksheetParser
                 // Continuation cell — shift the master formula by the row/column offset.
                 var rowDelta = cell.Reference.Row - master.Origin.Row;
                 var colDelta = cell.Reference.Column - master.Origin.Column;
-                cell.Formula = Formulas.FormulaShifter.ShiftRelative(master.Formula, rowDelta, colDelta);
+                cell.Formula = FormulaShifter.ShiftRelative(master.Formula, rowDelta, colDelta);
             }
             else
                 cell.Formula = string.Empty;

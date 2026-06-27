@@ -1,5 +1,4 @@
-using Unchained.Xlsx.Models.DataValidation;
-using Unchained.Xlsx.Models.Styles;
+using Unchained.Xlsx.Models;
 
 namespace Unchained.Xlsx.Core.Xml;
 

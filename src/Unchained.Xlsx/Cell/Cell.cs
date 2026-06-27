@@ -11,6 +11,15 @@ namespace Unchained.Xlsx.Cell;
 public sealed partial class Cell
 {
     private readonly Worksheet _worksheet;
+    internal CellError? Error;
+    internal string? Formula;
+
+    // ── Backing storage ─────────────────────────────────────────────────────────
+    // A numeric cell stores its value in _number; string/error literals in _text; a
+    // formula cell stores its formula in _formula plus an optional cached result.
+
+    internal double Number;
+    internal string? Text;
 
     internal Cell(Worksheet worksheet, CellReference reference)
     {
@@ -29,15 +38,6 @@ public sealed partial class Cell
 
     /// <summary>The kind of value this cell holds.</summary>
     public CellType CellType { get; internal set; } = CellType.Empty;
-
-    // ── Backing storage ─────────────────────────────────────────────────────────
-    // A numeric cell stores its value in _number; string/error literals in _text; a
-    // formula cell stores its formula in _formula plus an optional cached result.
-
-    internal double Number;
-    internal string? Text;
-    internal string? Formula;
-    internal CellError? Error;
 
     /// <summary>The zero-based index into the workbook style table (<c>cellXfs</c>).</summary>
     public int StyleIndex { get; set; }
@@ -82,6 +82,10 @@ public sealed partial class Cell
 
     /// <summary>The range an array formula applies to, when <see cref="IsArrayFormula" /> is true.</summary>
     public CellRange? ArrayFormulaRange { get; internal set; }
+
+    /// <summary><see langword="true" /> when this cell holds nothing worth serializing.</summary>
+    internal bool IsEffectivelyEmpty =>
+        CellType == CellType.Empty && Formula is null && StyleIndex == 0;
 
     // ── Typed getters ─────────────────────────────────────────────────────────
 
@@ -170,8 +174,4 @@ public sealed partial class Cell
         Error = error;
         Text = null;
     }
-
-    /// <summary><see langword="true" /> when this cell holds nothing worth serializing.</summary>
-    internal bool IsEffectivelyEmpty =>
-        CellType == CellType.Empty && Formula is null && StyleIndex == 0;
 }

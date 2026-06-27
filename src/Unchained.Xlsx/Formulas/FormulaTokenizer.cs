@@ -6,11 +6,11 @@ namespace Unchained.Xlsx.Formulas;
 internal enum FormulaTokenType
 {
     Number, Text, Boolean, Error,
-    CellOrName,      // A1, $B$2, or a defined name / function name
-    Function,        // identifier immediately followed by '('
-    Operator,        // + - * / ^ & = <> < > <= >= %
-    Colon,           // range operator
-    Comma,           // argument separator
+    CellOrName, // A1, $B$2, or a defined name / function name
+    Function,   // identifier immediately followed by '('
+    Operator,   // + - * / ^ & = <> < > <= >= %
+    Colon,      // range operator
+    Comma,      // argument separator
     OpenParen, CloseParen,
     End
 }

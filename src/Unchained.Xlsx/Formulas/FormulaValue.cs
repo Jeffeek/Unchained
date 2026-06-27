@@ -30,7 +30,8 @@ internal readonly struct FormulaValue
         CellError error,
         IReadOnlyList<FormulaValue>? array,
         int rows,
-        int columns)
+        int columns
+    )
     {
         Kind = kind;
         Number = number;
@@ -56,27 +57,93 @@ internal readonly struct FormulaValue
     public int Columns { get; }
 
     // ReSharper disable BadListLineBreaks
-    public static readonly FormulaValue Blank = new(FormulaValueKind.Blank, 0, null, false, default, null, 0, 0);
+    public static readonly FormulaValue Blank = new(
+        FormulaValueKind.Blank,
+        0,
+        null,
+        false,
+        default,
+        null,
+        0,
+        0
+    );
     // ReSharper restore BadListLineBreaks
 
     // ReSharper disable BadListLineBreaks
-    public static FormulaValue FromNumber(double value) => new(FormulaValueKind.Number, value, null, false, default, null, 0, 0);
-    public static FormulaValue FromText(string value) => new(FormulaValueKind.Text, 0, value, false, default, null, 0, 0);
-    public static FormulaValue FromBoolean(bool value) => new(FormulaValueKind.Boolean, value ? 1 : 0, null, value, default, null, 0, 0);
-    public static FormulaValue FromError(CellError error) => new(FormulaValueKind.Error, 0, null, false, error, null, 0, 0);
+    public static FormulaValue FromNumber(double value) => new(
+        FormulaValueKind.Number,
+        value,
+        null,
+        false,
+        default,
+        null,
+        0,
+        0
+    );
+
+    public static FormulaValue FromText(string value) => new(
+        FormulaValueKind.Text,
+        0,
+        value,
+        false,
+        default,
+        null,
+        0,
+        0
+    );
+
+    public static FormulaValue FromBoolean(bool value) => new(
+        FormulaValueKind.Boolean,
+        value ? 1 : 0,
+        null,
+        value,
+        default,
+        null,
+        0,
+        0
+    );
+
+    public static FormulaValue FromError(CellError error) => new(
+        FormulaValueKind.Error,
+        0,
+        null,
+        false,
+        error,
+        null,
+        0,
+        0
+    );
 
     // ReSharper restore BadListLineBreaks
 
     /// <summary>Creates a 1-D array (single column) from a flat list.</summary>
     public static FormulaValue FromArray(IReadOnlyList<FormulaValue> values) =>
         // ReSharper disable BadListLineBreaks
-        new(FormulaValueKind.Array, 0, null, false, default, values, values.Count, values.Count == 0 ? 0 : 1);
+        new(
+            FormulaValueKind.Array,
+            0,
+            null,
+            false,
+            default,
+            values,
+            values.Count,
+            values.Count == 0 ? 0 : 1
+        );
     // ReSharper restore BadListLineBreaks
 
     /// <summary>Creates a 2-D array from a row-major flat list with explicit dimensions.</summary>
     public static FormulaValue FromGrid(IReadOnlyList<FormulaValue> rowMajor, int rows, int columns) =>
         // ReSharper disable BadListLineBreaks
-        new(FormulaValueKind.Array, 0, null, false, default, rowMajor, rows, columns);
+        new(
+            FormulaValueKind.Array,
+            0,
+            null,
+            false,
+            default,
+            rowMajor,
+            rows,
+            columns
+        );
     // ReSharper restore BadListLineBreaks
 
     public bool IsError => Kind == FormulaValueKind.Error;

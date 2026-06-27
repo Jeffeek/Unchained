@@ -1,6 +1,6 @@
 using Shouldly;
 using Unchained.Ooxml.Drawing;
-using Unchained.Xlsx.Models.Styles;
+using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Styles;
 using Unchained.Xlsx.Tests.Helpers;
 using Xunit;
@@ -16,17 +16,18 @@ public class StyleCoverageTests
         using var document = XlsxFixtures.WithSheets("Data");
         var cell = document.Sheets[0][1, 1];
         cell.SetValue("styled");
-        cell.ApplyFont(f =>
-        {
-            f.Name = "Arial";
-            f.SizePoints = 16;
-            f.Bold = true;
-            f.Italic = true;
-            f.Underline = FontUnderline.Double;
-            f.Strikethrough = true;
-            f.Color = ColorSpec.FromRgb(0xC0, 0x00, 0x00);
-            f.VerticalAlignment = FontVerticalAlignment.Superscript;
-        });
+        cell.ApplyFont(static f =>
+            {
+                f.Name = "Arial";
+                f.SizePoints = 16;
+                f.Bold = true;
+                f.Italic = true;
+                f.Underline = FontUnderline.Double;
+                f.Strikethrough = true;
+                f.Color = ColorSpec.FromRgb(0xC0, 0x00, 0x00);
+                f.VerticalAlignment = FontVerticalAlignment.Superscript;
+            }
+        );
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var font = reloaded.Styles.GetFont(reloaded.Sheets[0].GetCell(1, 1)!.StyleIndex);
@@ -46,12 +47,13 @@ public class StyleCoverageTests
         using var document = XlsxFixtures.WithSheets("Data");
         var cell = document.Sheets[0][1, 1];
         cell.SetValue(1.0);
-        cell.ApplyFill(f =>
-        {
-            f.PatternType = FillPattern.LightGrid;
-            f.ForegroundColor = ColorSpec.FromRgb(0x10, 0x20, 0x30);
-            f.BackgroundColor = ColorSpec.FromRgb(0xFF, 0xFF, 0x00);
-        });
+        cell.ApplyFill(static f =>
+            {
+                f.PatternType = FillPattern.LightGrid;
+                f.ForegroundColor = ColorSpec.FromRgb(0x10, 0x20, 0x30);
+                f.BackgroundColor = ColorSpec.FromRgb(0xFF, 0xFF, 0x00);
+            }
+        );
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var fill = reloaded.Styles.GetFill(reloaded.Sheets[0].GetCell(1, 1)!.StyleIndex);
@@ -66,15 +68,16 @@ public class StyleCoverageTests
         using var document = XlsxFixtures.WithSheets("Data");
         var cell = document.Sheets[0][1, 1];
         cell.SetValue(1.0);
-        cell.ApplyBorder(b =>
-        {
-            b.Left = new BorderLine { Style = BorderStyle.Thin };
-            b.Right = new BorderLine { Style = BorderStyle.Medium };
-            b.Top = new BorderLine { Style = BorderStyle.Dashed };
-            b.Bottom = new BorderLine { Style = BorderStyle.Double };
-            b.Diagonal = new BorderLine { Style = BorderStyle.Thin };
-            b.DiagonalUp = true;
-        });
+        cell.ApplyBorder(static b =>
+            {
+                b.Left = new BorderLine { Style = BorderStyle.Thin };
+                b.Right = new BorderLine { Style = BorderStyle.Medium };
+                b.Top = new BorderLine { Style = BorderStyle.Dashed };
+                b.Bottom = new BorderLine { Style = BorderStyle.Double };
+                b.Diagonal = new BorderLine { Style = BorderStyle.Thin };
+                b.DiagonalUp = true;
+            }
+        );
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var border = reloaded.Styles.GetBorder(reloaded.Sheets[0].GetCell(1, 1)!.StyleIndex);
@@ -111,12 +114,13 @@ public class StyleCoverageTests
         using var document = XlsxFixtures.WithSheets("Data");
         var cell = document.Sheets[0][1, 1];
         cell.SetValue("x");
-        cell.ApplyAlignment(a =>
-        {
-            a.Horizontal = HorizontalAlignment.Right;
-            a.Indent = 2;
-            a.TextRotation = 45;
-        });
+        cell.ApplyAlignment(static a =>
+            {
+                a.Horizontal = HorizontalAlignment.Right;
+                a.Indent = 2;
+                a.TextRotation = 45;
+            }
+        );
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var alignment = reloaded.Sheets[0].GetCell(1, 1)!.GetEffectiveStyle().Alignment;

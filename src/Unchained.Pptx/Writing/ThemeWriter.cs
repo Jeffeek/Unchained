@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Themes;
@@ -148,7 +149,7 @@ internal static class ThemeWriter
                 )
             )
         );
-        lnStyleLst.Add(new XElement(DmlNames.Line, new XAttribute(DmlNames.AttributeLineWidth, 12700)));
+        lnStyleLst.Add(new XElement(DmlNames.Line, new XAttribute(DmlNames.AttributeLineWidth, (int)Emu.EmusPerPoint)));
         lnStyleLst.Add(new XElement(DmlNames.Line, new XAttribute(DmlNames.AttributeLineWidth, 19050)));
         scheme.Add(lnStyleLst);
 

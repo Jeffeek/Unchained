@@ -17,8 +17,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="bblanchon.PDFium.Linux" />
+    <PackageReference Include="bblanchon.PDFium.macOS" />
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="PDFiumCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Unchained.Studio.Tests" />
   </ItemGroup>
 
 </Project>

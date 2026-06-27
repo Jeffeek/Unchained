@@ -1,15 +1,18 @@
 using System.Collections;
 using Unchained.Xlsx.Models.Cell;
+using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Xlsx.Pivot;
 
 /// <summary>The pivot tables anchored on a worksheet.</summary>
 public sealed class PivotTableCollection : IReadOnlyList<PivotTable>
 {
-    private readonly Worksheets.Worksheet _worksheet;
     private readonly List<PivotTable> _pivots = [];
+    private readonly Worksheet _worksheet;
 
-    internal PivotTableCollection(Worksheets.Worksheet worksheet) => _worksheet = worksheet;
+    internal PivotTableCollection(Worksheet worksheet) => _worksheet = worksheet;
+
+    internal IReadOnlyList<PivotTable> All => _pivots;
 
     /// <summary>The number of pivot tables.</summary>
     public int Count => _pivots.Count;
@@ -32,7 +35,7 @@ public sealed class PivotTableCollection : IReadOnlyList<PivotTable>
     ///     the cache. The source range is taken from <paramref name="sourceSheet" /> (defaults to this sheet).
     /// </summary>
     /// <exception cref="ArgumentException">When the range is empty, headers are blank, or the target overlaps the source.</exception>
-    public PivotTable Add(CellRange sourceRange, CellReference targetCell, string name, Worksheets.Worksheet? sourceSheet = null)
+    public PivotTable Add(CellRange sourceRange, CellReference targetCell, string name, Worksheet? sourceSheet = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         var source = sourceSheet ?? _worksheet;
@@ -73,8 +76,6 @@ public sealed class PivotTableCollection : IReadOnlyList<PivotTable>
 
     internal void AddExisting(PivotTable pivot) => _pivots.Add(pivot);
 
-    internal IReadOnlyList<PivotTable> All => _pivots;
-
-    private PivotTable.SpreadsheetCallback NameResolver(Worksheets.Worksheet fallback) =>
+    private PivotTable.SpreadsheetCallback NameResolver(Worksheet fallback) =>
         sheetName => _worksheet.Document.Sheets.Find(sheetName) ?? fallback;
 }

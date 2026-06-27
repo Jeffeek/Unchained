@@ -5,6 +5,9 @@ namespace Unchained.Xlsx.Models;
 /// <summary>Settings that control how a workbook is serialized to <c>.xlsx</c>.</summary>
 public sealed class XlsxSaveOptions
 {
+    /// <summary>The default save options.</summary>
+    public static readonly XlsxSaveOptions Default = new();
+
     /// <summary>The OOXML conformance class. Defaults to <see cref="OoXmlConformance.Transitional" />.</summary>
     public OoXmlConformance Conformance { get; init; } = OoXmlConformance.Transitional;
 
@@ -22,7 +25,4 @@ public sealed class XlsxSaveOptions
     ///     evaluate formulas itself.
     /// </summary>
     public bool RecalcAll { get; init; } = true;
-
-    /// <summary>The default save options.</summary>
-    public static readonly XlsxSaveOptions Default = new();
 }

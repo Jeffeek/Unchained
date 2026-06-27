@@ -549,7 +549,7 @@ public sealed class RasterBufferTests
             2,
             2,
             glyph,
-            invertRows: false,
+            false,
             255,
             255,
             255
@@ -571,7 +571,7 @@ public sealed class RasterBufferTests
             2,
             2,
             glyph,
-            invertRows: false,
+            false,
             255,
             255,
             255
@@ -594,7 +594,7 @@ public sealed class RasterBufferTests
             2,
             2,
             glyph,
-            invertRows: true,
+            true,
             255,
             255,
             255
@@ -614,7 +614,7 @@ public sealed class RasterBufferTests
                 [(0, 0), (20, 0), (20, 20), (0, 20)],
                 [(6, 6), (14, 6), (14, 14), (6, 14)]
             ],
-            evenOdd: true
+            true
         );
         buffer.FillRect(
             0,
@@ -634,8 +634,8 @@ public sealed class RasterBufferTests
     {
         var buffer = new RasterBuffer(20, 20);
         buffer.Clear();
-        buffer.SetClipPolygons([[(0, 0), (10, 0), (10, 10), (0, 10)]], evenOdd: false);
-        buffer.SetClipPolygons([[(5, 5), (15, 5), (15, 15), (5, 15)]], evenOdd: false);
+        buffer.SetClipPolygons([[(0, 0), (10, 0), (10, 10), (0, 10)]], false);
+        buffer.SetClipPolygons([[(5, 5), (15, 5), (15, 15), (5, 15)]], false);
         buffer.FillRect(
             0,
             0,
@@ -654,7 +654,7 @@ public sealed class RasterBufferTests
     {
         var buffer = new RasterBuffer(10, 10);
         buffer.Clear();
-        buffer.SetClipPolygons([], evenOdd: false);
+        buffer.SetClipPolygons([], false);
         buffer.FillRect(
             0,
             0,
@@ -672,7 +672,7 @@ public sealed class RasterBufferTests
     public void ClipBounds_EmptyPolygonClip_ReturnsEmptyRect()
     {
         var buffer = new RasterBuffer(10, 10);
-        buffer.SetClipPolygons([], evenOdd: false);
+        buffer.SetClipPolygons([], false);
         buffer.ClipBounds().ShouldBe((0, 0, 0, 0));
     }
 

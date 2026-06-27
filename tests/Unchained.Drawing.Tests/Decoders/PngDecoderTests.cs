@@ -90,9 +90,9 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             2,
             2,
-            colorType: 0,
-            channels: 1,
-            scanlines: rows
+            0,
+            1,
+            rows
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out var h);
@@ -112,9 +112,9 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             2,
             1,
-            colorType: 2,
-            channels: 3,
-            scanlines: rows
+            2,
+            3,
+            rows
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out _);
@@ -131,9 +131,9 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             2,
             1,
-            colorType: 4,
-            channels: 2,
-            scanlines: rows
+            4,
+            2,
+            rows
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out _);
@@ -150,9 +150,9 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             1,
             1,
-            colorType: 6,
-            channels: 4,
-            scanlines: rows
+            6,
+            4,
+            rows
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out _);
@@ -169,10 +169,10 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             2,
             1,
-            colorType: 3,
-            channels: 1,
-            scanlines: rows,
-            palette: palette
+            3,
+            1,
+            rows,
+            palette
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out _);
@@ -188,9 +188,9 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             2,
             1,
-            colorType: 3,
-            channels: 1,
-            scanlines: rows
+            3,
+            1,
+            rows
         );
         PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
     }
@@ -204,10 +204,10 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             1,
             1,
-            colorType: 3,
-            channels: 1,
-            scanlines: rows,
-            palette: palette
+            3,
+            1,
+            rows,
+            palette
         );
         PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
     }
@@ -221,10 +221,10 @@ public sealed class PngDecoderTests
         var png = BuildPngFiltered(
             3,
             1,
-            colorType: 2,
-            channels: 3,
-            filterType: 1,
-            filteredRows: raw
+            2,
+            3,
+            1,
+            raw
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out _);
@@ -238,13 +238,13 @@ public sealed class PngDecoderTests
     public void UpFilter_IsReversed()
     {
         // 1×2 grayscale, Up filter on row 1: row0=100, row1 stored delta 5 → 105.
-        var row0 = "\0d"u8.ToArray();   // filter None, value 100
-        byte[] row1 = [2, 5];     // filter Up, delta 5
+        var row0 = "\0d"u8.ToArray(); // filter None, value 100
+        byte[] row1 = [2, 5];         // filter Up, delta 5
         var png = BuildPngRawScanLines(
             1,
             2,
-            colorType: 0,
-            scanLines: (byte[][])[row0, row1]
+            0,
+            (byte[][])[row0, row1]
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out _);
@@ -262,8 +262,8 @@ public sealed class PngDecoderTests
         var png = BuildPngRawScanLines(
             2,
             1,
-            colorType: 0,
-            scanLines: (byte[][])[row]
+            0,
+            (byte[][])[row]
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out _);
@@ -281,8 +281,8 @@ public sealed class PngDecoderTests
         var png = BuildPngRawScanLines(
             2,
             1,
-            colorType: 0,
-            scanLines: (byte[][])[row]
+            0,
+            (byte[][])[row]
         );
 
         var rgb = PngDecoder.TryDecodeToRgb(png, out var w, out _);
@@ -297,9 +297,9 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             1,
             1,
-            colorType: 0,
-            channels: 1,
-            scanlines: "\0\0"u8.ToArray(),
+            0,
+            1,
+            "\0\0"u8.ToArray(),
             bitDepth: 16
         );
         PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
@@ -311,9 +311,9 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             1,
             1,
-            colorType: 0,
-            channels: 1,
-            scanlines: [0],
+            0,
+            1,
+            [0],
             interlace: 1
         );
         PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
@@ -326,9 +326,9 @@ public sealed class PngDecoderTests
         var png = BuildPng(
             1,
             1,
-            colorType: 5,
-            channels: 1,
-            scanlines: [0]
+            5,
+            1,
+            [0]
         );
         PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
     }
@@ -343,9 +343,9 @@ public sealed class PngDecoderTests
             ms,
             1,
             1,
-            bitDepth: 8,
-            colorType: 0,
-            interlace: 0
+            8,
+            0,
+            0
         );
         WriteChunk(ms, PngConstants.IDAT, [0x00, 0x01, 0x02, 0x03]);
         WriteChunk(ms, PngConstants.IEND, []);
@@ -361,7 +361,7 @@ public sealed class PngDecoderTests
         var png = BuildPngRawConcat(
             4,
             4,
-            colorType: 2,
+            2,
             tooShort
         );
         PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
@@ -378,9 +378,9 @@ public sealed class PngDecoderTests
             ms,
             1,
             1,
-            bitDepth: 8,
-            colorType: 0,
-            interlace: 0
+            8,
+            0,
+            0
         );
         WriteChunk(ms, PngConstants.TRNS, [0x00, 0x10]);
         WriteChunk(ms, PngConstants.IDAT, idat);
@@ -461,7 +461,7 @@ public sealed class PngDecoderTests
             colorType,
             0,
             Deflate(raw),
-            palette: null
+            null
         );
     }
 
@@ -483,7 +483,7 @@ public sealed class PngDecoderTests
             colorType,
             0,
             Deflate(raw.ToArray()),
-            palette: null
+            null
         );
     }
 
@@ -501,7 +501,7 @@ public sealed class PngDecoderTests
             colorType,
             0,
             Deflate(raw),
-            palette: null
+            null
         );
 
     private static byte[] BuildScanLines(
@@ -589,7 +589,7 @@ public sealed class PngDecoderTests
     private static byte[] Deflate(byte[] raw)
     {
         using var ms = new MemoryStream();
-        using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+        using (var zlib = new ZLibStream(ms, CompressionLevel.Optimal, true))
             zlib.Write(raw);
         return ms.ToArray();
     }

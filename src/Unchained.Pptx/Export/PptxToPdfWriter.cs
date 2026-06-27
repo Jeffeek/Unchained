@@ -23,7 +23,7 @@ namespace Unchained.Pptx.Export;
 internal static class PptxToPdfWriter
 {
     // EMU → points: 1 pt = 12700 EMU
-    private const double EmuToPoints = EmuConversions.EmuToPoints;
+    private const double EmuToPoints = Emu.EmuToPoints;
 
     /// <summary>
     ///     Generates a PDF from <paramref name="document" /> and returns the raw bytes.

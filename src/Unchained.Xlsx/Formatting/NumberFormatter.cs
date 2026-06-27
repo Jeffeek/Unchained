@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 
 namespace Unchained.Xlsx.Formatting;
 
@@ -79,7 +80,7 @@ internal static class NumberFormatter
     private static List<string> SplitSections(string formatCode)
     {
         var sections = new List<string>();
-        var current = new System.Text.StringBuilder();
+        var current = new StringBuilder();
         var inQuotes = false;
 
         foreach (var c in formatCode)
@@ -184,7 +185,7 @@ internal static class NumberFormatter
     /// <summary>Translates a (simple) Excel date/time format code into a .NET custom format string.</summary>
     private static string ToNetDateFormat(string excel)
     {
-        var result = new System.Text.StringBuilder(excel.Length);
+        var result = new StringBuilder(excel.Length);
         var hasAmPm = excel.Contains("AM/PM", StringComparison.OrdinalIgnoreCase);
         var inQuotes = false;
         var lastTimeUnit = '\0'; // tracks whether we just saw an hour, for m = minutes

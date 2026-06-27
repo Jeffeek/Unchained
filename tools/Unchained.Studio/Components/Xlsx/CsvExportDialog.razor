@@ -72,7 +72,7 @@
             {
                 "utf8bom" => (Encoding.UTF8, true),
                 "unicode" => (Encoding.Unicode, true),
-                _ => (new UTF8Encoding(encoderShouldEmitUTF8Identifier: false) as Encoding, false)
+                _ => (new UTF8Encoding(false), false)
             };
 
             var options = new CsvSaveOptions

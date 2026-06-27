@@ -21,9 +21,31 @@ public readonly struct Emu : IEquatable<Emu>, IComparable<Emu>
 
     // ── Conversion constants ────────────────────────────────────────────────
 
-    private const long EmusPerInch = 914_400;
-    private const long EmusPerCentimetre = 360_000;
-    private const long EmusPerPoint = 12_700;
+    /// <summary>EMUs per inch (914 400).</summary>
+    public const long EmusPerInch = 914_400;
+
+    /// <summary>EMUs per centimetre (360 000).</summary>
+    public const long EmusPerCentimetre = 360_000;
+
+    /// <summary>EMUs per typographic point (12 700).</summary>
+    public const long EmusPerPoint = 12_700;
+
+    /// <summary>EMUs per CSS/screen pixel at 96 DPI (9 525).</summary>
+    public const long EmusPerCssPixel96Dpi = 9_525;
+
+    // ── Conversion helpers (inverse of factory methods) ─────────────────────
+
+    /// <summary>Multiplier to convert EMU to inches.</summary>
+    public const double EmuToInch = 1.0 / EmusPerInch;
+
+    /// <summary>Multiplier to convert EMU to centimetres.</summary>
+    public const double EmuToCentimetre = 1.0 / EmusPerCentimetre;
+
+    /// <summary>Multiplier to convert EMU to points.</summary>
+    public const double EmuToPoints = 1.0 / EmusPerPoint;
+
+    /// <summary>Multiplier to convert EMU to CSS pixels at 96 DPI.</summary>
+    public const double EmuToCssPx = 1.0 / EmusPerCssPixel96Dpi;
 
     // ── Factory methods ─────────────────────────────────────────────────────
 

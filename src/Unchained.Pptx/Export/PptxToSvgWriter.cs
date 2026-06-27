@@ -18,7 +18,7 @@ namespace Unchained.Pptx.Export;
 internal static class PptxToSvgWriter
 {
     // EMU → SVG user units (points): 1 pt = 12700 EMU
-    private const double EmuToPt = EmuConversions.EmuToPoints;
+    private const double EmuToPt = Emu.EmuToPoints;
 
     /// <summary>
     ///     Returns the SVG bytes for a single slide.

@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml.Charts;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Core.Xml;
 
@@ -27,7 +28,7 @@ internal static class CommentWriter
                 pml + "cm",
                 new XAttribute("authorId", comment.Author.Id),
                 new XAttribute("dt", comment.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")),
-                new XAttribute("idx", comment.Index)
+                new XAttribute(CmlNames.AttributeIndex, comment.Index)
             );
 
             cm.Add(

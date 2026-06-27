@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
-using Unchained.Ooxml.Properties;
 using Unchained.Ooxml.Xml;
 
 namespace Unchained.Ooxml.Properties;
@@ -16,11 +15,11 @@ internal static class PropertiesWriter
     private const string CoreUri = "/docProps/core.xml";
     private const string AppUri = "/docProps/app.xml";
 
-    private const string CoreContentType = "application/vnd.openxmlformats-package.core-properties+xml";
-    private const string AppContentType = "application/vnd.openxmlformats-officedocument.extended-properties+xml";
+    private const string CoreContentType = OoxmlContentTypes.CoreProperties;
+    private const string AppContentType = OoxmlContentTypes.ExtendedProperties;
 
-    private const string CoreRelType = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
-    private const string AppRelType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties";
+    private const string CoreRelType = OoxmlNamespaces.CorePropertiesFull;
+    private const string AppRelType = OoxmlNamespaces.ExtendedPropertiesFull;
 
     private static readonly XNamespace Cp = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
     private static readonly XNamespace Dc = "http://purl.org/dc/elements/1.1/";
@@ -29,7 +28,7 @@ internal static class PropertiesWriter
     private static readonly XNamespace Ep = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties";
 
     /// <summary>
-    ///     Writes core properties to <c>docProps/core.xml</c> and, when <paramref name="writeApp"/> is
+    ///     Writes core properties to <c>docProps/core.xml</c> and, when <paramref name="writeApp" /> is
     ///     provided, writes extended app properties to <c>docProps/app.xml</c>.
     /// </summary>
     public static void Write(OpcPackage package, OoXmlCoreProperties props, Action<OpcPackage, OoXmlCoreProperties>? writeApp = null)
@@ -45,7 +44,8 @@ internal static class PropertiesWriter
             new XAttribute(XNamespace.Xmlns + "cp", Cp.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "dc", Dc.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "dcterms", Dcterms.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "xsi", Xsi.NamespaceName));
+            new XAttribute(XNamespace.Xmlns + "xsi", Xsi.NamespaceName)
+        );
 
         AddIfPresent(root, Dc + "title", props.Title);
         AddIfPresent(root, Dc + "subject", props.Subject);
@@ -64,20 +64,24 @@ internal static class PropertiesWriter
         package.EnsurePackageRelationship(CoreRelType, "docProps/core.xml");
     }
 
-    private static void AddIfPresent(XElement root, XName name, string? value)
+    private static void AddIfPresent(XContainer root, XName name, string? value)
     {
         if (!string.IsNullOrEmpty(value))
             root.Add(new XElement(name, value));
     }
 
-    private static void AddDate(XElement root, XName name, DateTimeOffset? value)
+    private static void AddDate(XContainer root, XName name, DateTimeOffset? value)
     {
         if (value is null)
             return;
 
-        root.Add(new XElement(name,
-            new XAttribute(Xsi + "type", "dcterms:W3CDTF"),
-            value.Value.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)));
+        root.Add(
+            new XElement(
+                name,
+                new XAttribute(Xsi + "type", "dcterms:W3CDTF"),
+                value.Value.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)
+            )
+        );
     }
 
     /// <summary>
@@ -89,7 +93,8 @@ internal static class PropertiesWriter
     {
         var root = new XElement(
             Ep + "Properties",
-            new XAttribute("xmlns", Ep.NamespaceName));
+            new XAttribute("xmlns", Ep.NamespaceName)
+        );
 
         AddIfPresent(root, Ep + "Application", props.ApplicationName ?? defaultAppName);
         AddIfPresent(root, Ep + "Company", props.Company);

@@ -22,12 +22,12 @@ internal static class LineParser
         // Width in EMU → convert to points (1 pt = 12700 EMU)
         var widthEmu = ln.GetAttrInt(DmlNames.AttributeLineWidth);
         if (widthEmu.HasValue)
-            line.WidthPoints = widthEmu.Value / (double)EmuConversions.EmuPerPoint;
+            line.WidthPoints = widthEmu.Value / (double)Emu.EmusPerPoint;
 
         // Dash style
         var dash = ln.Element(DmlNames.PresetDash);
         if (dash != null)
-            line.DashStyle = ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, "solid"));
+            line.DashStyle = LineStyles.ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, "solid"));
 
         // Fill (colour of the line itself)
         FillParser.Parse(ln, line.Fill);
@@ -36,18 +36,18 @@ internal static class LineParser
         var head = ln.Element(DmlNames.HeadEnd);
         if (head != null)
         {
-            line.HeadArrow.HeadType = ParseArrowType(head.GetAttr("type", "none"));
-            line.HeadArrow.Width = ParseArrowSize(head.GetAttr("w", "med"));
-            line.HeadArrow.Length = ParseArrowSize(head.GetAttr("len", "med"));
+            line.HeadArrow.HeadType = LineStyles.ParseArrowType(head.GetAttr("type", "none"));
+            line.HeadArrow.Width = LineStyles.ParseArrowSize(head.GetAttr("w", "med"));
+            line.HeadArrow.Length = LineStyles.ParseArrowSize(head.GetAttr("len", "med"));
         }
 
         // Tail arrowhead
         var tail = ln.Element(DmlNames.TailEnd);
         if (tail == null) return;
 
-        line.TailArrow.HeadType = ParseArrowType(tail.GetAttr("type", "none"));
-        line.TailArrow.Width = ParseArrowSize(tail.GetAttr("w", "med"));
-        line.TailArrow.Length = ParseArrowSize(tail.GetAttr("len", "med"));
+        line.TailArrow.HeadType = LineStyles.ParseArrowType(tail.GetAttr("type", "none"));
+        line.TailArrow.Width = LineStyles.ParseArrowSize(tail.GetAttr("w", "med"));
+        line.TailArrow.Length = LineStyles.ParseArrowSize(tail.GetAttr("len", "med"));
     }
 
     /// <summary>
@@ -58,47 +58,12 @@ internal static class LineParser
     {
         var widthEmu = lineEl.GetAttrInt(DmlNames.AttributeLineWidth);
         if (widthEmu.HasValue)
-            line.WidthPoints = widthEmu.Value / (double)EmuConversions.EmuPerPoint;
+            line.WidthPoints = widthEmu.Value / (double)Emu.EmusPerPoint;
 
         var dash = lineEl.Element(DmlNames.PresetDash);
         if (dash != null)
-            line.DashStyle = ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, "solid"));
+            line.DashStyle = LineStyles.ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, "solid"));
 
         FillParser.Parse(lineEl, line.Fill);
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static LineDashStyle ParseDashStyle(string value) => value switch
-    {
-        "solid" => LineDashStyle.Solid,
-        "dot" => LineDashStyle.Dot,
-        "dash" => LineDashStyle.Dash,
-        "dashDot" => LineDashStyle.DashDot,
-        "lgDash" => LineDashStyle.LongDash,
-        "lgDashDot" => LineDashStyle.LongDashDot,
-        "lgDashDotDot" => LineDashStyle.LongDashDotDot,
-        "sysDash" => LineDashStyle.SystemDash,
-        "sysDot" => LineDashStyle.SystemDot,
-        "sysDashDot" => LineDashStyle.SystemDashDot,
-        "sysDashDotDot" => LineDashStyle.SystemDashDotDot,
-        _ => LineDashStyle.Solid
-    };
-
-    private static ArrowHeadType ParseArrowType(string value) => value switch
-    {
-        "triangle" => ArrowHeadType.Triangle,
-        "stealth" => ArrowHeadType.Stealth,
-        "diamond" => ArrowHeadType.Diamond,
-        "oval" => ArrowHeadType.Oval,
-        "arrow" or "open" => ArrowHeadType.Open,
-        _ => ArrowHeadType.None
-    };
-
-    private static ArrowHeadSize ParseArrowSize(string value) => value switch
-    {
-        "sm" => ArrowHeadSize.Small,
-        "lg" => ArrowHeadSize.Large,
-        _ => ArrowHeadSize.Medium
-    };
 }

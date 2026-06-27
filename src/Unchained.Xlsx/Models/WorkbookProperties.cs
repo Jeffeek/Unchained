@@ -6,6 +6,4 @@ namespace Unchained.Xlsx.Models;
 ///     Metadata properties of a workbook, drawn from the OPC core properties
 ///     (<c>docProps/core.xml</c>) and the extended app properties (<c>docProps/app.xml</c>).
 /// </summary>
-public sealed class WorkbookProperties : OoXmlCoreProperties
-{
-}
+public sealed class WorkbookProperties : OoXmlCoreProperties;

@@ -1,8 +1,9 @@
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Opc;
+using Unchained.Xlsx.Abstractions;
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.Drawings;
-using Unchained.Xlsx.Engine;
+using Unchained.Xlsx.Parsing;
 
 namespace Unchained.Xlsx.Writing;
 
@@ -11,18 +12,15 @@ internal static partial class WorkbookWriter
     // ── Drawing identity assignment ─────────────────────────────────────────────
     // Runs before worksheet XML is written so each sheet's <drawing r:id> can reference its part.
 
-    private static void AssignDrawingIdentities(OpcPackage package, SpreadsheetDocument document)
+    private static void AssignDrawingIdentities(OpcPackage package, ISpreadsheetDocument document)
     {
         var nextDrawing = 1;
         var nextChart = 1;
         var nextImage = 1;
         var usedUris = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var sheet in document.Sheets)
+        foreach (var sheet in document.Sheets.Where(static sheet => sheet.DrawingsMaterialised && sheet.DrawingsOrNull!.Count != 0))
         {
-            if (!sheet.DrawingsMaterialised || sheet.DrawingsOrNull!.Count == 0)
-                continue;
-
             if (string.IsNullOrEmpty(sheet.DrawingPartUri))
             {
                 string uri;
@@ -33,7 +31,7 @@ internal static partial class WorkbookWriter
             }
 
             if (string.IsNullOrEmpty(sheet.DrawingRelationshipId))
-                sheet.DrawingRelationshipId = NextFreeRelIdFor(package, sheet.PartUri, "rIdDr");
+                sheet.DrawingRelationshipId = package.NextFreeRelId(sheet.PartUri, "rIdDr");
 
             // Assign each drawing a shape id + a rel id within the drawing part, plus backing-part URIs.
             var shapeId = 1;
@@ -72,7 +70,7 @@ internal static partial class WorkbookWriter
         }
     }
 
-    private static void WriteDrawingParts(OpcPackage package, SpreadsheetDocument document)
+    private static void WriteDrawingParts(OpcPackage package, ISpreadsheetDocument document)
     {
         foreach (var sheet in document.Sheets)
         {
@@ -85,8 +83,13 @@ internal static partial class WorkbookWriter
             package.AddOrReplacePart(sheet.DrawingPartUri, SmlNames.ContentTypeDrawing, DrawingWriter.Write(drawings));
 
             // 2. Sheet → drawing relationship (idempotent).
-            EnsureRelationship(package, sheet.PartUri, sheet.DrawingRelationshipId, SmlNames.RelTypeDrawing,
-                package.GetRelativeUri(sheet.PartUri, sheet.DrawingPartUri));
+            EnsureRelationship(
+                package,
+                sheet.PartUri,
+                sheet.DrawingRelationshipId,
+                SmlNames.RelTypeDrawing,
+                OpcPackage.GetRelativeUri(sheet.PartUri, sheet.DrawingPartUri)
+            );
 
             // 3. Each drawing's backing part + drawing → part relationship.
             package.ClearRelationships(sheet.DrawingPartUri);
@@ -96,15 +99,23 @@ internal static partial class WorkbookWriter
                 {
                     case PictureDrawing pic:
                         package.AddOrReplacePart(pic.MediaPartUri, pic.Image.ContentType, pic.Image.Data.ToArray());
-                        package.AddRelationship(sheet.DrawingPartUri, drawing.RelationshipId, SmlNames.RelTypeImage,
-                            package.GetRelativeUri(sheet.DrawingPartUri, pic.MediaPartUri));
-                        break;
+                        package.AddRelationship(
+                            sheet.DrawingPartUri,
+                            drawing.RelationshipId,
+                            SmlNames.RelTypeImage,
+                            OpcPackage.GetRelativeUri(sheet.DrawingPartUri, pic.MediaPartUri)
+                        );
+                    break;
                     case ChartDrawing chart:
-                        var bytes = chart.ChartPartData ?? Parsing.ChartXml.Write(chart.Chart);
+                        var bytes = chart.ChartPartData ?? ChartXml.Write(chart.Chart);
                         package.AddOrReplacePart(chart.ChartPartUri, SmlNames.ContentTypeChart, bytes);
-                        package.AddRelationship(sheet.DrawingPartUri, drawing.RelationshipId, SmlNames.RelTypeChart,
-                            package.GetRelativeUri(sheet.DrawingPartUri, chart.ChartPartUri));
-                        break;
+                        package.AddRelationship(
+                            sheet.DrawingPartUri,
+                            drawing.RelationshipId,
+                            SmlNames.RelTypeChart,
+                            OpcPackage.GetRelativeUri(sheet.DrawingPartUri, chart.ChartPartUri)
+                        );
+                    break;
                 }
             }
         }
@@ -117,17 +128,5 @@ internal static partial class WorkbookWriter
             return;
 
         package.AddRelationship(sourceUri, relId, relType, target);
-    }
-
-    private static string NextFreeRelIdFor(OpcPackage package, string partUri, string prefix)
-    {
-        var part = package.TryGetPart(partUri);
-        var used = new HashSet<string>(part?.Relationships.Select(r => r.Id) ?? [], StringComparer.Ordinal);
-        var n = 1;
-        string relId;
-        do
-            relId = $"{prefix}{n++}";
-        while (!used.Add(relId));
-        return relId;
     }
 }

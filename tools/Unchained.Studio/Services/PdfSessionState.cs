@@ -31,10 +31,22 @@ public sealed class PdfSessionState : IAsyncDisposable
     public TreeNode? SelectedNode { get; set; }
     public int CurrentPage { get; set; } = 1;
 
+    /// <summary>The playboard state for the current document.</summary>
+    public PdfPlayboardState PlayboardState { get; } = new();
+
+    public bool IsDirty { get; private set; }
+
     // Injected so RefreshAsync can invalidate stale render cache entries
     internal RenderingService? RenderCache { private get; set; }
 
     public ValueTask DisposeAsync() => Document.DisposeAsync();
+
+    public void MarkDirty()
+    {
+        IsDirty = true;
+        Tree = PdfTreeBuilder.Build(Document, FileName);
+        Refreshed?.Invoke();
+    }
 
     /// <summary>
     ///     Raised after <see cref="RefreshAsync" /> completes so that UI components

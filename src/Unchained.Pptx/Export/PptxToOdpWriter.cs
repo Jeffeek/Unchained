@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
+using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Text;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
@@ -111,7 +112,7 @@ internal static class PptxToOdpWriter
         {
             case PictureShape { Image: not null } pic when options.EmbedImages:
             {
-                var ext = MimeToExtension(pic.Image.ContentType);
+                var ext = ImageExtensions.Extension(pic.Image.ContentType);
                 var path = $"Pictures/image{images.Count + 1}{ext}";
                 images.Add((path, pic.Image.Data.ToArray(), pic.Image.ContentType));
 
@@ -302,14 +303,4 @@ internal static class PptxToOdpWriter
         using var s = entry.Open();
         s.Write(data, 0, data.Length);
     }
-
-    private static string MimeToExtension(string mime) => mime switch
-    {
-        "image/png" => ".png",
-        "image/jpeg" => ".jpg",
-        "image/gif" => ".gif",
-        "image/bmp" => ".bmp",
-        "image/tiff" => ".tif",
-        _ => ".dat"
-    };
 }

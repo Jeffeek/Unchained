@@ -41,7 +41,8 @@ public sealed class OpcPartTests
     {
         var part = Part("/ppt/presentation.xml");
         const string type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
-        part.AddRelationship(new OpcRelationship("rId1", type, "slides/slide1.xml", isExternal: false));
+        // ReSharper disable once RedundantArgumentDefaultValue
+        part.AddRelationship(new OpcRelationship("rId1", type, "slides/slide1.xml", false));
 
         part.FindRelationship(type).ShouldNotBeNull();
         part.FindRelationships(type).Count.ShouldBe(1);
@@ -53,8 +54,10 @@ public sealed class OpcPartTests
     {
         var part = Part("/ppt/presentation.xml");
         const string type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
-        part.AddRelationship(new OpcRelationship("rId1", type, "slides/slide1.xml", isExternal: false));
-        part.AddRelationship(new OpcRelationship("rId2", type, "slides/slide2.xml", isExternal: false));
+        // ReSharper disable RedundantArgumentDefaultValue
+        part.AddRelationship(new OpcRelationship("rId1", type, "slides/slide1.xml", false));
+        part.AddRelationship(new OpcRelationship("rId2", type, "slides/slide2.xml", false));
+        // ReSharper restore RedundantArgumentDefaultValue
 
         part.FindRelationships(type).Count.ShouldBe(2);
     }

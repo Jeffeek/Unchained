@@ -6,6 +6,10 @@
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
+    <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
+    <PackageVersion Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
+    <PackageVersion Include="System.IO.Packaging" Version="10.0.2" />
   </ItemGroup>
   <!-- ── Unchained.Pdf — image / document processing ──────────────────────── -->
   <ItemGroup Label="Unchained.Pdf">
@@ -37,6 +41,8 @@
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="151.0.7891" />
+    <PackageVersion Include="bblanchon.PDFium.Linux" Version="151.0.7891" />
+    <PackageVersion Include="bblanchon.PDFium.macOS" Version="151.0.7891" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
   <ItemGroup Label="PerformanceTests">
@@ -56,4 +62,11 @@
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="coverlet.msbuild" Version="10.0.1" />
   </ItemGroup>
+  <!-- ── Studio tests — Blazor component (bUnit) + browser E2E (Playwright) ──── -->
+  <ItemGroup Label="StudioTests">
+    <PackageVersion Include="bunit" Version="2.7.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
+  </ItemGroup>
 </Project>
+

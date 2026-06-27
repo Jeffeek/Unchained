@@ -8,7 +8,6 @@ using Unchained.Xlsx.Core;
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.DefinedNames;
 using Unchained.Xlsx.Engine;
-using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Sheets;
 using Unchained.Xlsx.Worksheets;
 
@@ -101,7 +100,14 @@ internal static class WorkbookParser
             var partUri = ResolveSheetUri(workbookPart, relId);
 
             // ReSharper disable once BadListLineBreaks
-            var sheet = new Worksheet(document, name, sheetId, relId, partUri, state);
+            var sheet = new Worksheet(
+                document,
+                name,
+                sheetId,
+                relId,
+                partUri,
+                state
+            );
 
             if (!string.IsNullOrEmpty(partUri))
             {
@@ -139,16 +145,21 @@ internal static class WorkbookParser
 
     // ── Document properties ──────────────────────────────────────────────────
 
-    private static void ReadProperties(SpreadsheetDocument document, OpcPackage package)
+    private static void ReadProperties(ISpreadsheetDocument document, OpcPackage package)
     {
         var props = document.Properties;
 
-        var corePart = FindPartByRelType(package, OoxmlNamespaces.RelCoreProperties);
+        var corePart = FindPartByRelType(
+            package,
+            OoxmlNamespaces.PackageRelationships + "/" + OoxmlNamespaces.RelCoreProperties
+        );
         if (corePart != null)
             ReadCoreProperties(props, OoXmlHelper.ParseXml(corePart.Data).Root);
 
-        var appPart = FindPartByRelType(package,
-            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties");
+        var appPart = FindPartByRelType(
+            package,
+            OoxmlNamespaces.OfficeDocument + "/" + OoxmlNamespaces.RelExtendedProperties
+        );
         if (appPart != null)
             ReadAppProperties(props, OoXmlHelper.ParseXml(appPart.Data).Root);
     }
@@ -164,7 +175,7 @@ internal static class WorkbookParser
         return package.TryGetPart(uri);
     }
 
-    private static void ReadCoreProperties(WorkbookProperties props, XElement? root)
+    private static void ReadCoreProperties(OoXmlCoreProperties props, XContainer? root)
     {
         if (root == null) return;
 
@@ -184,7 +195,7 @@ internal static class WorkbookParser
         props.Modified = ParseDate((string?)root.Element(dcterms + "modified"));
     }
 
-    private static void ReadAppProperties(WorkbookProperties props, XElement? root)
+    private static void ReadAppProperties(OoXmlCoreProperties props, XContainer? root)
     {
         if (root == null) return;
 
@@ -195,8 +206,12 @@ internal static class WorkbookParser
     }
 
     private static DateTimeOffset? ParseDate(string? raw) =>
-        DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture,
-            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var value)
+        DateTimeOffset.TryParse(
+            raw,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var value
+        )
             ? value
             : null;
 }

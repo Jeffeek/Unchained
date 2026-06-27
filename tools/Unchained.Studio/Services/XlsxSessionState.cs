@@ -1,6 +1,6 @@
-using Unchained.Xlsx.Engine;
 using Unchained.Studio.Models;
 using Unchained.Studio.Studio.Xlsx;
+using Unchained.Xlsx.Engine;
 
 namespace Unchained.Studio.Services;
 
@@ -45,14 +45,14 @@ public sealed class XlsxSessionState : IAsyncDisposable
     /// <summary><see langword="true" /> when the in-memory model has unsaved edits vs <see cref="CurrentBytes" />.</summary>
     public bool IsDirty { get; private set; }
 
-    /// <summary>Raised after the tree or model changes so the UI can re-render.</summary>
-    public event Action? Refreshed;
-
     public ValueTask DisposeAsync()
     {
         Document.Dispose();
         return ValueTask.CompletedTask;
     }
+
+    /// <summary>Raised after the tree or model changes so the UI can re-render.</summary>
+    public event Action? Refreshed;
 
     public static async Task<XlsxSessionState> CreateAsync(
         SpreadsheetProcessor processor,

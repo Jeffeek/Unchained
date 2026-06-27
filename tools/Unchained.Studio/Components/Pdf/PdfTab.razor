@@ -39,14 +39,16 @@
                               OnRefreshRequested="RefreshTree"/>
             </div>
 
-            <!-- CENTRE: preview -->
+            <!-- CENTRE: playboard -->
             <div class="panel-preview">
-                <PreviewPanel Document="state.Document"
+                <PdfPlayboard Document="state.Document"
                               DocumentBytes="state.CurrentBytes"
                               FileName="state.FileName"
                               CurrentPage="state.CurrentPage"
                               PageCount="state.Document.PageCount"
-                              CurrentPageChanged="p => state.CurrentPage = p"/>
+                              CurrentPageChanged="p => state.CurrentPage = p"
+                              State="state.PlayboardState"
+                              OnDirty="OnPlayboardDirty"/>
 
                 <!-- Text extraction panel -->
                 @if (_showTextPanel)
@@ -723,5 +725,11 @@
 
     private void ShowError(string message) =>
         Snackbar.Add(message, Severity.Error);
+
+    private Task OnPlayboardDirty()
+    {
+        Session.Pdf?.MarkDirty();
+        return Task.CompletedTask;
+    }
 
 }

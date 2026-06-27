@@ -790,7 +790,8 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
         using var rs = new StreamReader(entry.Open());
         var ct = rs.ReadToEnd();
         // Add the slide1.xml override before </Types>.
-        const string slideOverride = "<Override PartName=\"/ppt/slides/slide1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"/>";
+        const string slideOverride =
+            "<Override PartName=\"/ppt/slides/slide1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"/>";
         return ct.Replace("</Types>", slideOverride + "</Types>");
     }
 

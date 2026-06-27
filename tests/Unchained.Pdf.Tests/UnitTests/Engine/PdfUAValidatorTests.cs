@@ -1,3 +1,4 @@
+using System.Text;
 using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
@@ -376,7 +377,7 @@ public sealed class PdfUAValidatorTests
         const string catalog = "<< /Type /Catalog /Pages 2 0 R /Lang (en-US) /MarkInfo << /Marked true >> " +
                                "/ViewerPreferences << /DisplayDocTitle true >> /StructTreeRoot 4 0 R /Metadata 6 0 R >>";
         var bodies = new List<string> { catalog, Pages, PlainPage, StructRoot(), "<< /S /P >>", "<< >>" };
-        var xmp = System.Text.Encoding.UTF8.GetBytes(
+        var xmp = Encoding.UTF8.GetBytes(
             "<?xpacket begin=\"\"?><x:xmpmeta xmlns:x=\"adobe:ns:meta/\">" +
             "<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:pdfuaid=\"http://www.aiim.org/pdfua/ns/id/\">" +
             "<rdf:Description><pdfuaid:part>1</pdfuaid:part></rdf:Description></rdf:RDF></x:xmpmeta>"

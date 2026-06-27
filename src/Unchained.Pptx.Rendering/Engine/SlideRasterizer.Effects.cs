@@ -44,22 +44,23 @@ internal sealed partial class SlideRasterizer
     private static int ComputeWarpOffset(string preset, double t, int height)
     {
         var amplitude = height * 0.25; // max 25% of height
-        return preset.ToLowerInvariant() switch
+        var p = preset.ToLowerInvariant();
+        return (p.EndsWith("archup", StringComparison.Ordinal) || p.EndsWith("archdown", StringComparison.Ordinal)) switch
         {
-            var p when p.Contains("archup") || p.Contains("arch") =>
-                // Arch up: sine curve, max offset at centre.
+            // Arch presets: sine curve, max offset at centre.
+            true when p.Contains("archup") =>
                 (int)(-amplitude * Math.Sin(Math.PI * t)),
-            var p when p.Contains("archdown") =>
+            true =>
                 (int)(amplitude * Math.Sin(Math.PI * t)),
-            var p when p.Contains("wave") =>
+            _ when p.Contains("wave") =>
                 (int)(amplitude * 0.5 * Math.Sin(2 * Math.PI * t)),
-            var p when p.Contains("circle") =>
+            _ when p.Contains("circle") =>
                 (int)(-amplitude * Math.Sin(Math.PI * t)),
-            var p when p.Contains("chevron") =>
+            _ when p.Contains("chevron") =>
                 t < 0.5
                     ? (int)(-amplitude * (t * 2))
                     : (int)(-amplitude * ((1 - t) * 2)),
-            var p when p.Contains("inflate") =>
+            _ when p.Contains("inflate") =>
                 (int)(-amplitude * Math.Sin(Math.PI * t) * 0.5),
             _ => 0
         };
@@ -151,7 +152,7 @@ internal sealed partial class SlideRasterizer
         if (baseA == 0) return;
 
         // Convert EMU offsets to pixels.
-        var scale = dpi / EmuConversions.EmuPerInch; // EMU → inches → px
+        var scale = dpi / Emu.EmusPerInch; // EMU → inches → px
         var dist = shadow.Distance.Value * scale;
         var angleRad = shadow.DirectionDegrees * Math.PI / 180.0;
         var offX = (int)(dist * Math.Cos(angleRad));

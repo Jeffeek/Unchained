@@ -25,7 +25,7 @@ public class CellRangeExtraTests
 
     [Fact]
     public void FromA1_NullOrEmpty_Throws() =>
-        Should.Throw<ArgumentException>(() => CellRange.FromA1(""));
+        Should.Throw<ArgumentException>(static () => CellRange.FromA1(""));
 
     [
         Theory,
@@ -55,7 +55,8 @@ public class CellRangeExtraTests
     {
         CellRange.EntireSheet.TopLeft.ShouldBe(new CellReference(1, 1));
         CellRange.EntireSheet.BottomRight.ShouldBe(
-            new CellReference(CellReference.MaxRow, CellReference.MaxColumn));
+            new CellReference(CellReference.MaxRow, CellReference.MaxColumn)
+        );
     }
 
     [Fact]
@@ -93,6 +94,7 @@ public class CellRangeExtraTests
         (a != c).ShouldBeTrue();
         a.Equals(b).ShouldBeTrue();
         a.Equals((object)b).ShouldBeTrue();
+        // ReSharper disable once SuspiciousTypeConversion.Global
         a.Equals("not a range").ShouldBeFalse();
         a.GetHashCode().ShouldBe(b.GetHashCode());
     }

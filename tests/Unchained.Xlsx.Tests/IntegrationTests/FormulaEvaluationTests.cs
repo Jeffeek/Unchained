@@ -2,13 +2,14 @@ using Shouldly;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Tests.Helpers;
+using Unchained.Xlsx.Worksheets;
 using Xunit;
 
 namespace Unchained.Xlsx.Tests.IntegrationTests;
 
 public class FormulaEvaluationTests
 {
-    private static double? Eval(string formula, Action<Worksheets.Worksheet>? setup = null)
+    private static double? Eval(string formula, Action<Worksheet>? setup = null)
     {
         using var document = XlsxFixtures.WithSheets("S");
         var sheet = document.Sheets[0];
@@ -58,49 +59,57 @@ public class FormulaEvaluationTests
     }
 
     [Fact]
-    public void RangeAggregation_OverCells()
-    {
-        Eval("=SUM(A1:A3)", s =>
-        {
-            s.SetValue(1, 1, 10.0);
-            s.SetValue(2, 1, 20.0);
-            s.SetValue(3, 1, 30.0);
-        }).ShouldBe(60);
-    }
+    public void RangeAggregation_OverCells() =>
+        Eval(
+                "=SUM(A1:A3)",
+                static s =>
+                {
+                    s.SetValue(1, 1, 10.0);
+                    s.SetValue(2, 1, 20.0);
+                    s.SetValue(3, 1, 30.0);
+                }
+            )
+            .ShouldBe(60);
 
     [Fact]
-    public void CellReferences_Resolve()
-    {
-        Eval("=A1*B1+5", s =>
-        {
-            s.SetValue(1, 1, 4.0);
-            s.SetValue(1, 2, 3.0);
-        }).ShouldBe(17);
-    }
+    public void CellReferences_Resolve() =>
+        Eval(
+                "=A1*B1+5",
+                static s =>
+                {
+                    s.SetValue(1, 1, 4.0);
+                    s.SetValue(1, 2, 3.0);
+                }
+            )
+            .ShouldBe(17);
 
     [Fact]
-    public void SumIf_FiltersByCriterion()
-    {
-        Eval("=SUMIF(A1:A4,\">15\")", s =>
-        {
-            s.SetValue(1, 1, 10.0);
-            s.SetValue(2, 1, 20.0);
-            s.SetValue(3, 1, 30.0);
-            s.SetValue(4, 1, 5.0);
-        }).ShouldBe(50);
-    }
+    public void SumIf_FiltersByCriterion() =>
+        Eval(
+                "=SUMIF(A1:A4,\">15\")",
+                static s =>
+                {
+                    s.SetValue(1, 1, 10.0);
+                    s.SetValue(2, 1, 20.0);
+                    s.SetValue(3, 1, 30.0);
+                    s.SetValue(4, 1, 5.0);
+                }
+            )
+            .ShouldBe(50);
 
     [Fact]
-    public void CountIf_CountsMatches()
-    {
-        Eval("=COUNTIF(A1:A4,\">15\")", s =>
-        {
-            s.SetValue(1, 1, 10.0);
-            s.SetValue(2, 1, 20.0);
-            s.SetValue(3, 1, 30.0);
-            s.SetValue(4, 1, 5.0);
-        }).ShouldBe(2);
-    }
+    public void CountIf_CountsMatches() =>
+        Eval(
+                "=COUNTIF(A1:A4,\">15\")",
+                static s =>
+                {
+                    s.SetValue(1, 1, 10.0);
+                    s.SetValue(2, 1, 20.0);
+                    s.SetValue(3, 1, 30.0);
+                    s.SetValue(4, 1, 5.0);
+                }
+            )
+            .ShouldBe(2);
 
     [Fact]
     public void TextFunctions()

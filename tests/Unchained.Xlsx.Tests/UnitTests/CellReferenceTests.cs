@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Xlsx;
 using Unchained.Xlsx.Models.Cell;
 using Xunit;
 

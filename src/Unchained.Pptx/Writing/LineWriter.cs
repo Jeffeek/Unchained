@@ -24,7 +24,7 @@ internal static class LineWriter
             ln.Add(
                 new XAttribute(
                     DmlNames.AttributeLineWidth,
-                    (int)(line.WidthPoints.Value * EmuConversions.EmuPerPoint)
+                    (int)(line.WidthPoints.Value * Emu.EmusPerPoint)
                 )
             );
         }
@@ -38,7 +38,7 @@ internal static class LineWriter
             ln.Add(
                 new XElement(
                     DmlNames.PresetDash,
-                    new XAttribute(DmlNames.AttributeValue, DashStyleToString(line.DashStyle))
+                    new XAttribute(DmlNames.AttributeValue, LineStyles.DashStyleToString(line.DashStyle))
                 )
             );
         }
@@ -65,40 +65,8 @@ internal static class LineWriter
     private static XElement WriteArrow(XName elementName, ArrowFormat arrow) =>
         new(
             elementName,
-            new XAttribute("type", ArrowTypeToString(arrow.HeadType)),
-            new XAttribute("w", ArrowSizeToString(arrow.Width)),
-            new XAttribute("len", ArrowSizeToString(arrow.Length))
+            new XAttribute("type", LineStyles.ArrowTypeToString(arrow.HeadType)),
+            new XAttribute("w", LineStyles.ArrowSizeToString(arrow.Width)),
+            new XAttribute("len", LineStyles.ArrowSizeToString(arrow.Length))
         );
-
-    private static string DashStyleToString(LineDashStyle style) => style switch
-    {
-        LineDashStyle.Dot => "dot",
-        LineDashStyle.Dash => "dash",
-        LineDashStyle.DashDot => "dashDot",
-        LineDashStyle.LongDash => "lgDash",
-        LineDashStyle.LongDashDot => "lgDashDot",
-        LineDashStyle.LongDashDotDot => "lgDashDotDot",
-        LineDashStyle.SystemDash => "sysDash",
-        LineDashStyle.SystemDot => "sysDot",
-        LineDashStyle.SystemDashDot => "sysDashDot",
-        LineDashStyle.SystemDashDotDot => "sysDashDotDot",
-        _ => "solid"
-    };
-
-    private static string ArrowTypeToString(ArrowHeadType type) => type switch
-    {
-        ArrowHeadType.Triangle => "triangle",
-        ArrowHeadType.Stealth => "stealth",
-        ArrowHeadType.Diamond => "diamond",
-        ArrowHeadType.Oval => "oval",
-        ArrowHeadType.Open => "arrow",
-        _ => "none"
-    };
-
-    private static string ArrowSizeToString(ArrowHeadSize size) => size switch
-    {
-        ArrowHeadSize.Small => "sm",
-        ArrowHeadSize.Large => "lg",
-        _ => "med"
-    };
 }

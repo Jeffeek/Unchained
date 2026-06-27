@@ -8,6 +8,7 @@ using Xunit;
 namespace Unchained.Xlsx.Tests.IntegrationTests;
 
 /// <summary>Covers the file-path I/O overloads on the processor and worksheet CSV export.</summary>
+// ReSharper disable once ClassCanBeSealed.Global
 public class FileIoCoverageTests
 {
     private static string TempPath(string extension) =>
@@ -58,8 +59,7 @@ public class FileIoCoverageTests
     public async Task LoadFromCsv_EmptyPath_Throws()
     {
         using var processor = new SpreadsheetProcessor();
-        await Should.ThrowAsync<ArgumentException>(
-            async () => await processor.LoadFromCsvAsync("  ", cancellationToken: TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentException>(async () => await processor.LoadFromCsvAsync("  ", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -67,16 +67,14 @@ public class FileIoCoverageTests
     {
         using var document = XlsxFixtures.WithSheets("Data");
         using var processor = new SpreadsheetProcessor();
-        await Should.ThrowAsync<ArgumentException>(
-            async () => await processor.SaveAsync(document, "  ", cancellationToken: TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentException>(() => processor.SaveAsync(document, "  ", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task SaveAsync_NullDocumentToFile_Throws()
     {
         using var processor = new SpreadsheetProcessor();
-        await Should.ThrowAsync<ArgumentNullException>(
-            async () => await processor.SaveAsync(null!, "x.xlsx", cancellationToken: TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => processor.SaveAsync(null!, "x.xlsx", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -94,8 +92,7 @@ public class FileIoCoverageTests
     public async Task Worksheet_SaveAsCsv_EmptyPath_Throws()
     {
         using var document = XlsxFixtures.WithSheets("Data");
-        await Should.ThrowAsync<ArgumentException>(
-            async () => await document.Sheets[0].SaveAsCsvAsync("  ", cancellationToken: TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentException>(() => document.Sheets[0].SaveAsCsvAsync("  ", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -107,7 +104,10 @@ public class FileIoCoverageTests
             await File.WriteAllTextAsync(path, "a;b;c\r\n", TestContext.Current.CancellationToken);
             using var processor = new SpreadsheetProcessor();
             using var document = await processor.LoadFromCsvAsync(
-                path, new CsvLoadOptions { Delimiter = ';' }, TestContext.Current.CancellationToken);
+                path,
+                new CsvLoadOptions { Delimiter = ';' },
+                TestContext.Current.CancellationToken
+            );
             document.Sheets[0].GetCell(1, 3)!.GetString().ShouldBe("c");
         }
         finally
