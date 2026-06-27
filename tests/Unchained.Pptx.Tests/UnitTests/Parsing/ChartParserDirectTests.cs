@@ -21,7 +21,7 @@ public sealed class ChartParserDirectTests
     private static readonly XNamespace A = DmlNames.Dml;
 
     private static XElement Val(string name, object value) =>
-        new(C + name, new XAttribute(CmlNames.AttributeValue, value));
+        new(C + name, new XAttribute(DmlNames.AttributeValue, value));
 
     private static XElement Pt(int idx, string v) =>
         new(CmlNames.Point, new XAttribute(CmlNames.AttributeIndex, idx), new XElement(CmlNames.PointValue, v));
@@ -423,7 +423,7 @@ public sealed class ChartParserDirectTests
     [Fact]
     public void Parse_Series_WithSolidFill_PopulatesFill()
     {
-        var spPr = new XElement(A + "spPr", new XElement(DmlNames.SolidFill, new XElement(A + "srgbClr", new XAttribute("val", "FF0000"))));
+        var spPr = new XElement(A + "spPr", new XElement(DmlNames.SolidFill, new XElement(A + "srgbClr", new XAttribute(DmlNames.AttributeValue, "FF0000"))));
         var bar = new XElement(CmlNames.BarChart, SeriesWith(spPr, new XElement(CmlNames.Values, NumLit(1.0))));
         var model = ParseChartSpace(ChartSpace(bar));
         model.Data.Series[0].Fill.ShouldNotBeNull();
@@ -448,7 +448,7 @@ public sealed class ChartParserDirectTests
             Val("showSerName", 1),
             Val("showPercent", 1),
             Val("showLegendKey", 1),
-            new XElement(C + "dLblPos", new XAttribute(CmlNames.AttributeValue, "outEnd")),
+            new XElement(C + "dLblPos", new XAttribute(DmlNames.AttributeValue, "outEnd")),
             new XElement(C + "numFmt", new XAttribute("formatCode", "0%"))
         );
         var bar = new XElement(CmlNames.BarChart, SeriesWith(dLbls, new XElement(CmlNames.Values, NumLit(1.0))));

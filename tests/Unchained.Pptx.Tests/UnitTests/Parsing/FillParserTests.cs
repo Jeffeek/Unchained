@@ -35,7 +35,7 @@ public sealed class FillParserTests
     {
         var solid = new XElement(
             DmlNames.SolidFill,
-            new XElement(DmlNames.SrgbColor, new XAttribute("val", "FF0000"))
+            new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "FF0000"))
         );
         var parent = new XElement(DmlNames.Dml + "spPr", solid);
         var fill = new FillFormat();
@@ -55,12 +55,12 @@ public sealed class FillParserTests
                 new XElement(
                     DmlNames.GradientStop,
                     new XAttribute("pos", "0"),
-                    new XElement(DmlNames.SrgbColor, new XAttribute("val", "000000"))
+                    new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "000000"))
                 ),
                 new XElement(
                     DmlNames.GradientStop,
                     new XAttribute("pos", "100000"),
-                    new XElement(DmlNames.SrgbColor, new XAttribute("val", "FFFFFF"))
+                    new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "FFFFFF"))
                 )
             )
         );
@@ -80,7 +80,7 @@ public sealed class FillParserTests
         var pattern = new XElement(
             DmlNames.PatternFill,
             new XAttribute("prst", "horz"),
-            new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute("val", "000000")))
+            new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "000000")))
         );
         var parent = new XElement(DmlNames.Dml + "spPr", pattern);
         var fill = new FillFormat();
@@ -146,7 +146,7 @@ public sealed class FillParserTests
                 new XElement(
                     DmlNames.GradientStop,
                     new XAttribute("pos", "0"),
-                    new XElement(DmlNames.SrgbColor, new XAttribute("val", "000000"))
+                    new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "000000"))
                 )
             ),
             new XElement(
@@ -185,8 +185,8 @@ public sealed class FillParserTests
         var pattern = new XElement(
             DmlNames.PatternFill,
             new XAttribute("prst", "cross"),
-            new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute("val", "112233"))),
-            new XElement(DmlNames.Dml + "bgClr", new XElement(DmlNames.SrgbColor, new XAttribute("val", "445566")))
+            new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "112233"))),
+            new XElement(DmlNames.Dml + "bgClr", new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "445566")))
         );
         var parent = new XElement(DmlNames.Dml + "spPr", pattern);
         var fill = new FillFormat();

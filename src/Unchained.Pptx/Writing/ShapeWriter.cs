@@ -383,7 +383,7 @@ internal static class ShapeWriter
                         new XAttribute("uri", "{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"),
                         new XElement(
                             a16 + "decorative",
-                            new XAttribute("val", "1")
+                            new XAttribute(DmlNames.AttributeValue, "1")
                         )
                     )
                 )

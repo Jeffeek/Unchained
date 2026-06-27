@@ -1,0 +1,95 @@
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:420px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.TableRows" Class="mr-2" Style="vertical-align:middle;"/>
+            Rows &amp; Columns
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true">
+            <MudTabPanel Text="Rows" Icon="@Icons.Material.Outlined.TableRows">
+                <MudStack Spacing="2">
+                    <MudNumericField @bind-Value="_row" Label="Row number" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1"/>
+                    <MudNumericField @bind-Value="_rowHeight" Label="Height (points)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="SetRowHeight">Set height</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="() => HideRow(true)">Hide</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="() => HideRow(false)">Show</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="InsertRow">Insert above</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="DeleteRow">Delete</MudButton>
+                    </div>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Columns" Icon="@Icons.Material.Outlined.ViewColumn">
+                <MudStack Spacing="2">
+                    <MudNumericField @bind-Value="_col" Label="Column number" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1"/>
+                    <MudNumericField @bind-Value="_colWidth" Label="Width (characters)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="SetColWidth">Set width</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="() => HideCol(true)">Hide</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="() => HideCol(false)">Show</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="InsertCol">Insert before</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="DeleteCol">Delete</MudButton>
+                    </div>
+                </MudStack>
+            </MudTabPanel>
+        </MudTabs>
+        <MudText Typo="Typo.caption" Style="opacity:.6;" Class="mt-2">@_status</MudText>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Done</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public int InitialRow { get; set; } = 1;
+
+    [Parameter]
+    public int InitialColumn { get; set; } = 1;
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private int _row = 1;
+    private int _col = 1;
+    private double _rowHeight = 15;
+    private double _colWidth = 8.43;
+    private string _status = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _row = InitialRow;
+        _col = InitialColumn;
+    }
+
+    private async Task SetRowHeight() { Sheet.SetRowHeight(_row, _rowHeight); await Changed($"Row {_row} height set to {_rowHeight}pt"); }
+    private async Task HideRow(bool hide) { if (hide) Sheet.HideRow(_row); else Sheet.ShowRow(_row); await Changed($"Row {_row} {(hide ? "hidden" : "shown")}"); }
+    private async Task InsertRow() { Sheet.InsertRow(_row); await Changed($"Inserted row at {_row}"); }
+    private async Task DeleteRow() { Sheet.DeleteRow(_row); await Changed($"Deleted row {_row}"); }
+
+    private async Task SetColWidth() { Sheet.SetColumnWidth(_col, _colWidth); await Changed($"Column {_col} width set to {_colWidth}"); }
+    private async Task HideCol(bool hide) { if (hide) Sheet.HideColumn(_col); else Sheet.ShowColumn(_col); await Changed($"Column {_col} {(hide ? "hidden" : "shown")}"); }
+    private async Task InsertCol() { Sheet.InsertColumn(_col); await Changed($"Inserted column at {_col}"); }
+    private async Task DeleteCol() { Sheet.DeleteColumn(_col); await Changed($"Deleted column {_col}"); }
+
+    private async Task Changed(string message)
+    {
+        _status = message;
+        await OnChanged.InvokeAsync();
+    }
+
+    private void Close() => MudDialog.Close();
+}

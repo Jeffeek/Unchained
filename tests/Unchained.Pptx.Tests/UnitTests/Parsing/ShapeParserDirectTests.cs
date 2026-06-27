@@ -211,7 +211,7 @@ public sealed class ShapeParserDirectTests
             new XAttribute("title", "the title"),
             new XElement(
                 A + "extLst",
-                new XElement(A + "ext", new XElement(A + "decorative", new XAttribute("val", "1")))
+                new XElement(A + "ext", new XElement(A + "decorative", new XAttribute(DmlNames.AttributeValue, "1")))
             ),
             new XElement(DmlNames.HyperlinkClick, new XAttribute(R + "id", "rId3"), new XAttribute("tooltip", "go"))
         );
@@ -401,10 +401,10 @@ public sealed class ShapeParserDirectTests
         );
         var tcPr = new XElement(
             DmlNames.TableCellProperties,
-            new XElement(A + "lnL", new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "000000")))),
-            new XElement(A + "lnR", new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "111111")))),
-            new XElement(A + "lnT", new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "222222")))),
-            new XElement(A + "lnB", new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute("val", "333333"))))
+            new XElement(A + "lnL", new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute(DmlNames.AttributeValue, "000000")))),
+            new XElement(A + "lnR", new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute(DmlNames.AttributeValue, "111111")))),
+            new XElement(A + "lnT", new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute(DmlNames.AttributeValue, "222222")))),
+            new XElement(A + "lnB", new XElement(A + "solidFill", new XElement(A + "srgbClr", new XAttribute(DmlNames.AttributeValue, "333333"))))
         );
         var cell = new XElement(
             DmlNames.TableCell,

@@ -12,7 +12,7 @@ internal static class DmlNames
     public const string GraphicDataTableUri = "http://schemas.openxmlformats.org/drawingml/2006/table";
 
     /// <summary>DrawingML chart namespace URI (used as <c>uri</c> attribute on <c>&lt;a:graphicData&gt;</c>).</summary>
-    public const string GraphicDataChartUri = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+    public const string GraphicDataChartUri = OoxmlNamespaces.Chart;
 
     /// <summary>DrawingML diagram (SmartArt) namespace URI (used as <c>uri</c> on <c>&lt;a:graphicData&gt;</c>).</summary>
     public const string GraphicDataDiagramUri = "http://schemas.openxmlformats.org/drawingml/2006/diagram";

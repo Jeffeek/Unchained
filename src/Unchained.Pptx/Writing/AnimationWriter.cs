@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Core.Xml;
 
@@ -269,7 +270,7 @@ internal static class AnimationWriter
             setBhvr,
             new XElement(
                 Pml + "to",
-                new XElement(Pml + "strVal", new XAttribute("val", visValue))
+                new XElement(Pml + "strVal", new XAttribute(DmlNames.AttributeValue, visValue))
             )
         );
     }

@@ -11,6 +11,7 @@ using Unchained.Pptx.Engine;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
+using Unchained.Ooxml.Security;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 
@@ -38,7 +39,14 @@ internal sealed class PresentationParser
             if (string.IsNullOrEmpty(options?.Password))
                 throw new PptxEncryptedException();
 
-            data = AgileEncryption.Decrypt(data, options.Password);
+            try
+            {
+                data = AgileEncryption.Decrypt(data, options.Password);
+            }
+            catch (OoXmlEncryptedException ex)
+            {
+                throw new PptxEncryptedException(ex.Message, ex);
+            }
         }
 
         OpcPackage package;
@@ -347,7 +355,7 @@ internal sealed class PresentationParser
 
         var penClr = showPr.Element(pml + "penClr");
         var srgb = penClr?.Element(DmlNames.SolidFill)?.Element(DmlNames.SrgbColor);
-        settings.PenColorHex = (string?)srgb?.Attribute("val");
+        settings.PenColorHex = (string?)srgb?.Attribute(DmlNames.AttributeValue);
 
         return settings;
     }

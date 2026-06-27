@@ -1,0 +1,53 @@
+<MudDialog Style="min-width:320px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.DriveFileRenameOutline" Class="mr-2" Style="vertical-align:middle;"/>
+            Rename Sheet
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTextField @bind-Value="_name"
+                      Label="Sheet name"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      HelperText="Max 31 chars; cannot contain \ / ? * [ ] :"
+                      OnKeyDown="OnKeyDown"
+                      @ref="_field"/>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Confirm" Color="Color.Primary" Variant="Variant.Filled">Rename</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string CurrentName { get; set; } = string.Empty;
+
+    private string _name = string.Empty;
+    private MudTextField<string>? _field;
+
+    protected override void OnInitialized() => _name = CurrentName;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _field is not null)
+            await _field.FocusAsync();
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            Confirm();
+    }
+
+    private void Confirm() => MudDialog.Close(DialogResult.Ok(_name));
+    private void Cancel() => MudDialog.Cancel();
+}

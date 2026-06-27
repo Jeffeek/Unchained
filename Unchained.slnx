@@ -11,6 +11,7 @@
   <Folder Name="/samples/">
     <Project Path="samples/Unchained.Pdf.Samples/Unchained.Pdf.Samples.csproj" />
     <Project Path="samples/Unchained.Pptx.Samples/Unchained.Pptx.Samples.csproj" />
+    <Project Path="samples/Unchained.Xlsx.Samples/Unchained.Xlsx.Samples.csproj" />
   </Folder>
   <Folder Name="/Solution items/">
     <File Path=".editorconfig" />
@@ -49,6 +50,9 @@
     <Project Path="src/Unchained.Pptx.Rendering/Unchained.Pptx.Rendering.csproj" />
     <Project Path="src/Unchained.Pptx/Unchained.Pptx.csproj" />
   </Folder>
+  <Folder Name="/src/Ooxml/Xlsx/">
+    <Project Path="src/Unchained.Xlsx/Unchained.Xlsx.csproj" />
+  </Folder>
   <Folder Name="/src/Pdf/">
     <Project Path="src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj" />
     <Project Path="src/Unchained.Pdf/Unchained.Pdf.csproj" />
@@ -60,6 +64,7 @@
     <Project Path="tests/Unchained.Pdf.Tests/Unchained.Pdf.Tests.csproj" />
     <Project Path="tests/Unchained.PerformanceTests/Unchained.PerformanceTests.csproj" />
     <Project Path="tests/Unchained.Pptx.Tests/Unchained.Pptx.Tests.csproj" />
+    <Project Path="tests/Unchained.Xlsx.Tests/Unchained.Xlsx.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/Unchained.Studio/Unchained.Studio.csproj" />

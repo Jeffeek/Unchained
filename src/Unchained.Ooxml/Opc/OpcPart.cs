@@ -41,6 +41,9 @@ internal sealed class OpcPart
     internal void AddRelationship(OpcRelationship relationship) =>
         _relationships.Add(relationship);
 
+    /// <summary>Removes all relationships defined for this part.</summary>
+    internal void ClearRelationships() => _relationships.Clear();
+
     /// <summary>
     ///     Finds the first relationship with the given type, or <see langword="null" /> if none exists.
     /// </summary>

@@ -161,4 +161,21 @@ internal static class OoXmlHelper
         public Emu GetAttrEmu(string attributeName) =>
             new(GetAttrLong(element, attributeName) ?? 0L);
     }
+
+    // ── OOXML-specific helpers ────────────────────────────────────────────────
+
+    /// <summary>
+    ///     Parses an OOXML hex ARGB colour string (with optional leading <c>#</c> and 6-digit RGB)
+    ///     into a <c>uint</c>. Returns <see langword="false" /> when the input is null, empty,
+    ///     or does not represent a valid 6- or 8-digit hex colour.
+    /// </summary>
+    public static bool TryParseHexArgb(string hex, out uint argb)
+    {
+        if (string.IsNullOrEmpty(hex)) { argb = 0u; return false; }
+        var h = hex.StartsWith('#') ? hex.Substring(1) : hex;
+        if (h.Length == 6) h = "FF" + h;
+        if (h.Length != 8 || !uint.TryParse(h, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out argb))
+        { argb = 0u; return false; }
+        return true;
+    }
 }

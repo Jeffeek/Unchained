@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <PackageTags>xlsx;excel;spreadsheet;ooxml;dotnet;csharp;document-processing</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageId>Unchained.Xlsx</PackageId>
+    <Description>Open-source XLSX (SpreadsheetML) processing library for .NET — MIT licensed. Read, write, style, and export Excel workbooks with no native dependencies.</Description>
+    <IsUserFacingPackage>true</IsUserFacingPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unchained.Ooxml\Unchained.Ooxml.csproj" />
+    <ProjectReference Include="..\Unchained.Drawing.Primitives\Unchained.Drawing.Primitives.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Unchained.Xlsx.Tests" />
+  </ItemGroup>
+
+</Project>

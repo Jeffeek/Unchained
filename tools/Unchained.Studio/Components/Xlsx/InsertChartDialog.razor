@@ -1,0 +1,112 @@
+@using Unchained.Ooxml.Charts
+@using Unchained.Xlsx.Drawings
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+@using ChartType = Unchained.Ooxml.Charts.ChartType
+
+<MudDialog Style="min-width:480px; max-width:600px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.BarChart" Class="mr-2" Style="vertical-align:middle;"/>
+            Insert Chart
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2" Style="opacity:.7;">
+                The first column of the data range supplies category labels; the header row supplies series names.
+            </MudText>
+
+            <MudSelect T="ChartType" @bind-Value="_type" Label="Chart type" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="ChartType.ColumnClustered">Column (clustered)</MudSelectItem>
+                <MudSelectItem Value="ChartType.ColumnStacked">Column (stacked)</MudSelectItem>
+                <MudSelectItem Value="ChartType.BarClustered">Bar (clustered)</MudSelectItem>
+                <MudSelectItem Value="ChartType.Line">Line</MudSelectItem>
+                <MudSelectItem Value="ChartType.LineWithMarkers">Line with markers</MudSelectItem>
+                <MudSelectItem Value="ChartType.Pie">Pie</MudSelectItem>
+                <MudSelectItem Value="ChartType.Doughnut">Doughnut</MudSelectItem>
+                <MudSelectItem Value="ChartType.Area">Area</MudSelectItem>
+                <MudSelectItem Value="ChartType.ScatterWithMarkersOnly">Scatter</MudSelectItem>
+                <MudSelectItem Value="ChartType.Radar">Radar</MudSelectItem>
+            </MudSelect>
+
+            <MudTextField @bind-Value="_dataRange" Label="Data range (A1 notation)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          HelperText="e.g. A1:B6"/>
+            <MudTextField @bind-Value="_title" Label="Chart title (optional)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudTextField @bind-Value="_anchorCell" Label="Anchor cell" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          HelperText="Top-left cell where the chart is placed"/>
+
+            @if (_error != null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Insert" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Add">
+            Insert
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public string InitialRange { get; set; } = "A1:B6";
+
+    [Parameter]
+    public EventCallback OnInserted { get; set; }
+
+    private ChartType _type = ChartType.ColumnClustered;
+    private string _dataRange = "A1:B6";
+    private string _title = string.Empty;
+    private string _anchorCell = "D2";
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        _dataRange = InitialRange;
+        // Default the anchor to two columns right of the data range's right edge.
+        if (CellRange.TryFromA1(_dataRange, out var range))
+            _anchorCell = new CellReference(range.TopLeft.Row, range.BottomRight.Column + 2).ToA1();
+    }
+
+    private async Task Insert()
+    {
+        _error = null;
+        if (!CellRange.TryFromA1(_dataRange, out var range))
+        {
+            _error = "Invalid data range.";
+            return;
+        }
+
+        if (!CellReference.TryFromA1(_anchorCell, out var cell))
+        {
+            _error = "Invalid anchor cell.";
+            return;
+        }
+
+        try
+        {
+            var anchor = DrawingAnchor.OneCell(cell, 480, 288);
+            Sheet.AddChart(_type, range, anchor, string.IsNullOrWhiteSpace(_title) ? null : _title);
+            await OnInserted.InvokeAsync();
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

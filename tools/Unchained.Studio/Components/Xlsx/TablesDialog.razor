@@ -1,0 +1,145 @@
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Models.Tables
+@using Unchained.Xlsx.Tables
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:560px; max-width:720px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.TableView" Class="mr-2" Style="vertical-align:middle;"/>
+            Tables (ListObjects)
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Existing tables</MudText>
+                @if (Sheet.Tables.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Style="opacity:.6;">No tables on this sheet.</MudText>
+                }
+                else
+                {
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead>
+                            <tr><th>Name</th><th>Range</th><th>Columns</th><th>Style</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var table in Sheet.Tables.ToList())
+                            {
+                                var t = table;
+                                <tr>
+                                    <td>@t.DisplayName</td>
+                                    <td>@t.Range.ToA1()</td>
+                                    <td>@t.Columns.Count</td>
+                                    <td>
+                                        <MudText Typo="Typo.caption">@t.StyleName</MudText>
+                                        @if (t.ShowTotalsRow) { <MudChip T="string" Size="Size.Small" Text="totals"/> }
+                                    </td>
+                                    <td>
+                                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                                       OnClick="() => RemoveTable(t)"/>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </div>
+
+            <MudDivider/>
+
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Add a table</MudText>
+                <MudStack Spacing="2">
+                    <MudTextField @bind-Value="_range" Label="Range (A1 notation)" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="e.g. A1:D20"/>
+                    <MudTextField @bind-Value="_name" Label="Name (optional)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudSelect T="string" @bind-Value="_style" Label="Table style" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var s in Styles)
+                        {
+                            <MudSelectItem Value="@s">@s</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <div class="d-flex gap-4 flex-wrap">
+                        <MudCheckBox @bind-Value="_hasHeaders" Dense="true">Header row</MudCheckBox>
+                        <MudCheckBox @bind-Value="_totals" Dense="true">Totals row</MudCheckBox>
+                        <MudCheckBox @bind-Value="_bandedRows" Dense="true">Banded rows</MudCheckBox>
+                        <MudCheckBox @bind-Value="_bandedCols" Dense="true">Banded columns</MudCheckBox>
+                    </div>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add"
+                               OnClick="AddTable" Class="align-self-start">
+                        Add table
+                    </MudButton>
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+                    }
+                </MudStack>
+            </div>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Done</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public string InitialRange { get; set; } = "A1:D10";
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private string _range = "A1:D10";
+    private string _name = string.Empty;
+    private string _style = "TableStyleMedium2";
+    private bool _hasHeaders = true;
+    private bool _totals;
+    private bool _bandedRows = true;
+    private bool _bandedCols;
+    private string? _error;
+
+    private static readonly string[] Styles =
+    [
+        "TableStyleLight1", "TableStyleLight9", "TableStyleMedium2", "TableStyleMedium9",
+        "TableStyleMedium16", "TableStyleDark1"
+    ];
+
+    protected override void OnInitialized() => _range = InitialRange;
+
+    private async Task AddTable()
+    {
+        _error = null;
+        try
+        {
+            var range = CellRange.FromA1(_range);
+            var table = Sheet.Tables.Add(range, string.IsNullOrWhiteSpace(_name) ? null : _name, _hasHeaders);
+            table.StyleName = _style;
+            table.ShowTotalsRow = _totals;
+            table.ShowBandedRows = _bandedRows;
+            table.ShowBandedColumns = _bandedCols;
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task RemoveTable(ListObject table)
+    {
+        Sheet.RemoveTable(table);
+        await OnChanged.InvokeAsync();
+    }
+
+    private void Close() => MudDialog.Close();
+}

@@ -794,3 +794,220 @@ html, body {
 
 .home-cap-name { font-weight: 600; font-size: 0.85rem; }
 .home-cap-desc { font-size: 0.74rem; opacity: 0.6; }
+
+/* ── XLSX sheet tab bar ──────────────────────────────────────────────────── */
+.sheet-tabbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    overflow-x: auto;
+    flex: 0 0 auto;
+}
+
+.sheet-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 6px 6px 0 0;
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    user-select: none;
+}
+
+.sheet-tab:hover { background: rgba(92, 107, 192, 0.08); }
+
+.sheet-tab--active {
+    background: var(--mud-palette-surface);
+    border-color: var(--mud-palette-divider);
+    border-bottom-color: var(--mud-palette-primary);
+    font-weight: 600;
+}
+
+.sheet-tab--hidden .sheet-tab-label { opacity: 0.5; font-style: italic; }
+
+.sheet-tab-close {
+    opacity: 0.45;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.sheet-tab-close:hover { opacity: 1; color: var(--mud-palette-error); }
+
+/* ── XLSX live grid ──────────────────────────────────────────────────────── */
+.sheet-grid-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.sheet-grid-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    flex: 0 0 auto;
+}
+
+.sheet-grid-scroll {
+    flex: 1 1 auto;
+    overflow: auto;
+    min-height: 0;
+    position: relative;
+}
+
+/* ── XLSX drawing overlay (images & charts float above the cell grid) ────── */
+.sg-drawing {
+    position: absolute;
+    z-index: 5;
+    border: 1px solid var(--mud-palette-lines-default);
+    box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    background: var(--mud-palette-surface);
+    overflow: hidden;
+    pointer-events: none;
+}
+.sg-drawing-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sg-drawing-chart {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    opacity: 0.85;
+    background: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(92,107,192,0.06) 8px, rgba(92,107,192,0.06) 16px);
+}
+
+.sheet-grid {
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    table-layout: fixed;
+}
+
+.sheet-grid th,
+.sheet-grid td {
+    border: 1px solid var(--mud-palette-divider);
+    height: 24px;
+}
+
+.sheet-grid .sg-corner {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    background: var(--mud-palette-background-grey);
+    width: 44px;
+    min-width: 44px;
+}
+
+.sheet-grid .sg-col-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--mud-palette-background-grey);
+    font-weight: 600;
+    text-align: center;
+    min-width: 90px;
+    width: 90px;
+}
+
+.sheet-grid .sg-row-head {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--mud-palette-background-grey);
+    font-weight: 600;
+    text-align: center;
+    width: 44px;
+    min-width: 44px;
+}
+
+.sheet-grid .sg-cell {
+    padding: 1px 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: cell;
+    max-width: 220px;
+}
+
+.sheet-grid .sg-num,
+.sheet-grid .sg-formula { text-align: right; font-variant-numeric: tabular-nums; }
+.sheet-grid .sg-bool { text-align: center; }
+.sheet-grid .sg-err { color: var(--mud-palette-error); text-align: center; }
+.sheet-grid .sg-formula { color: var(--mud-palette-primary); }
+
+.sheet-grid .sg-selected {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+    background: rgba(92, 107, 192, 0.06);
+}
+
+.sheet-grid .sg-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font: inherit;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+/* ── XLSX grid: range selection + header affordances ─────────────────────── */
+.sheet-grid .sg-col-head,
+.sheet-grid .sg-row-head,
+.sheet-grid .sg-corner { cursor: pointer; }
+.sheet-grid .sg-col-head:hover,
+.sheet-grid .sg-row-head:hover { background: rgba(92, 107, 192, 0.18); }
+
+.sheet-grid .sg-active {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+.sheet-grid .sg-merged { font-style: italic; }
+
+/* ── XLSX formatting toolbar ──────────────────────────────────────────────── */
+.xlsx-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px 6px;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    flex: 0 0 auto;
+}
+
+/* ── XLSX grid: resize handles + style rendering ─────────────────────────── */
+.sheet-grid .sg-col-head { position: relative; }
+.sheet-grid .sg-row-head { position: relative; }
+.sheet-grid .sg-col-resize {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+}
+.sheet-grid .sg-row-resize {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    cursor: row-resize;
+    user-select: none;
+}
+.sheet-grid .sg-col-resize:hover,
+.sheet-grid .sg-row-resize:hover { background: var(--mud-palette-primary); opacity: 0.5; }
+/* Prevent text selection while drag-selecting a range. */
+.sheet-grid-scroll { user-select: none; }

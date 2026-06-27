@@ -1,0 +1,134 @@
+@using Unchained.Xlsx.DefinedNames
+@using Unchained.Xlsx.Engine
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:560px; max-width:720px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Sell" Class="mr-2" Style="vertical-align:middle;"/>
+            Named Ranges
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Defined names</MudText>
+                @if (Document.DefinedNames.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Style="opacity:.6;">No defined names.</MudText>
+                }
+                else
+                {
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead>
+                            <tr><th>Name</th><th>Refers to</th><th>Scope</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var name in Document.DefinedNames.ToList())
+                            {
+                                var n = name;
+                                <tr>
+                                    <td>@n.Name</td>
+                                    <td><code>@n.Formula</code></td>
+                                    <td>@(n.IsWorkbookScoped ? "Workbook" : $"Sheet #{n.LocalSheetId}")</td>
+                                    <td>
+                                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                                       OnClick="() => Remove(n)"/>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </div>
+
+            <MudDivider/>
+
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Add a name</MudText>
+                <MudStack Spacing="2">
+                    <MudTextField @bind-Value="_name" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudTextField @bind-Value="_formula" Label="Refers to" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  HelperText="@($"e.g. {CurrentSheetName}!$A$1:$C$10")"/>
+                    <MudTextField @bind-Value="_comment" Label="Comment (optional)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                    <MudSelect T="bool" @bind-Value="_sheetScoped" Label="Scope" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="false">Workbook</MudSelectItem>
+                        <MudSelectItem Value="true">This sheet (@CurrentSheetName)</MudSelectItem>
+                    </MudSelect>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add"
+                               OnClick="Add" Class="align-self-start">
+                        Add name
+                    </MudButton>
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+                    }
+                </MudStack>
+            </div>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">Done</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public SpreadsheetDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet CurrentSheet { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private string _name = string.Empty;
+    private string _formula = string.Empty;
+    private string _comment = string.Empty;
+    private bool _sheetScoped;
+    private string? _error;
+
+    private string CurrentSheetName => CurrentSheet.Name;
+
+    private async Task Add()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_formula))
+        {
+            _error = "Name and formula are required.";
+            return;
+        }
+
+        try
+        {
+            var comment = string.IsNullOrWhiteSpace(_comment) ? null : _comment;
+            if (_sheetScoped)
+                Document.DefinedNames.AddSheetScoped(_name, _formula, CurrentSheet);
+            else
+                Document.DefinedNames.Add(_name, _formula, comment);
+
+            _name = string.Empty;
+            _formula = string.Empty;
+            _comment = string.Empty;
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task Remove(DefinedName name)
+    {
+        Document.DefinedNames.Remove(name);
+        await OnChanged.InvokeAsync();
+    }
+
+    private void Close() => MudDialog.Close();
+}

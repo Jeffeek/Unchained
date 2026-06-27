@@ -10,7 +10,9 @@ using Unchained.Pptx.Engine;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Parsing;
+using Unchained.Ooxml.Properties;
 using Unchained.Pptx.Security;
+using Unchained.Ooxml.Security;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 using SaveOptions = Unchained.Pptx.Models.SaveOptions;
@@ -131,20 +133,17 @@ internal sealed class PresentationWriter
         if (preserved is { IsEmpty: false })
             WritePreservedContent(package, preserved, contentTypes);
 
-        // Write core properties
-        WriteCoreProperties(package, properties, contentTypes);
-
-        // Package-level relationships
+        // Package-level relationships — add presentation first so EnsurePackageRelationship
+        // (called by PropertiesWriter.WriteCore) picks rId2 rather than conflicting with rId1.
         package.AddPackageRelationship(
             "rId1",
             PmlNames.RelTypePresentation,
             PresentationPartUri.TrimStart('/')
         );
-        package.AddPackageRelationship(
-            "rId2",
-            PmlNames.RelTypeCoreProperties,
-            CorePropsPartUri.TrimStart('/')
-        );
+
+        // Write core properties (calls EnsurePackageRelationship internally)
+        PropertiesWriter.Write(package, properties, WriteAppForPptx);
+        contentTypes.Register("/docProps/core.xml", PmlNames.ContentTypeCoreProperties);
 
         var zipBytes = package.Save();
 
@@ -223,7 +222,7 @@ internal sealed class PresentationWriter
                     masterUri,
                     layout.RelationshipId.Length > 0 ? layout.RelationshipId : "rId1",
                     PmlNames.RelTypeSlideLayout,
-                    RelativeUri(masterUri, layoutUri)
+                    package.GetRelativeUri(masterUri, layoutUri)
                 );
             }
         }
@@ -264,7 +263,7 @@ internal sealed class PresentationWriter
                 layoutUri,
                 "rId1",
                 PmlNames.RelTypeSlideMaster,
-                RelativeUri(layoutUri, layout.Master.PartUri)
+                package.GetRelativeUri(layoutUri, layout.Master.PartUri)
             );
 
             layoutUris[layout] = layoutUri;
@@ -341,7 +340,7 @@ internal sealed class PresentationWriter
                 slideUri,
                 "rId1",
                 PmlNames.RelTypeSlideLayout,
-                RelativeUri(slideUri, slide.Layout.PartUri)
+                package.GetRelativeUri(slideUri, slide.Layout.PartUri)
             );
 
             foreach (var shape in slide.Shapes.OfType<PictureShape>()
@@ -351,7 +350,7 @@ internal sealed class PresentationWriter
                     slideUri,
                     shape.Image!.RelationshipId,
                     PmlNames.RelTypeImage,
-                    RelativeUri(slideUri, shape.Image.PartUri)
+                    package.GetRelativeUri(slideUri, shape.Image.PartUri)
                 );
             }
 
@@ -369,7 +368,7 @@ internal sealed class PresentationWriter
                     slideUri,
                     chartShape.RelationshipId,
                     PmlNames.RelTypeChart,
-                    RelativeUri(slideUri, chartShape.PartUri)
+                    package.GetRelativeUri(slideUri, chartShape.PartUri)
                 );
             }
 
@@ -406,7 +405,7 @@ internal sealed class PresentationWriter
                         slideUri,
                         $"rId{rId++}",
                         PmlNames.RelTypeNotesSlide,
-                        RelativeUri(slideUri, notesUri)
+                        package.GetRelativeUri(slideUri, notesUri)
                     );
                 }
             }
@@ -429,7 +428,7 @@ internal sealed class PresentationWriter
                     // ReSharper disable once RedundantAssignment
                     $"rId{rId++}",
                     PmlNames.RelTypeComments,
-                    RelativeUri(slideUri, commentsUri)
+                    package.GetRelativeUri(slideUri, commentsUri)
                 );
             }
         }
@@ -481,7 +480,7 @@ internal sealed class PresentationWriter
                 slideUri,
                 action.RelationshipId,
                 PmlNames.RelTypeSlide,
-                RelativeUri(slideUri, targetUri)
+                package.GetRelativeUri(slideUri, targetUri)
             );
         }
     }
@@ -523,7 +522,7 @@ internal sealed class PresentationWriter
                 slideUri,
                 link.RelationshipId,
                 PmlNames.RelTypeSlide,
-                RelativeUri(slideUri, targetUri)
+                package.GetRelativeUri(slideUri, targetUri)
             );
         }
     }
@@ -623,7 +622,7 @@ internal sealed class PresentationWriter
 
         package.AddOrReplacePart(partUri, contentType, data);
         contentTypes.Register(partUri, contentType);
-        package.AddRelationship(slideUri, relationshipId, relType, RelativeUri(slideUri, partUri));
+        package.AddRelationship(slideUri, relationshipId, relType, package.GetRelativeUri(slideUri, partUri));
     }
 
     private static void WriteCommentAuthors(
@@ -753,7 +752,7 @@ internal sealed class PresentationWriter
                 PresentationPartUri,
                 rId,
                 PmlNames.RelTypeSlideMaster,
-                RelativeUri(PresentationPartUri, master.PartUri)
+                package.GetRelativeUri(PresentationPartUri, master.PartUri)
             );
             rIdCounter++;
         }
@@ -769,7 +768,7 @@ internal sealed class PresentationWriter
                 PresentationPartUri,
                 rId,
                 PmlNames.RelTypeSlide,
-                RelativeUri(PresentationPartUri, slide.PartUri)
+                package.GetRelativeUri(PresentationPartUri, slide.PartUri)
             );
         }
 
@@ -780,7 +779,7 @@ internal sealed class PresentationWriter
                 PresentationPartUri,
                 $"rId{rIdCounter++}",
                 PmlNames.RelTypeCommentAuthors,
-                RelativeUri(PresentationPartUri, CommentAuthorsPartUri)
+                package.GetRelativeUri(PresentationPartUri, CommentAuthorsPartUri)
             );
         }
 
@@ -792,7 +791,7 @@ internal sealed class PresentationWriter
                 // ReSharper disable once RedundantAssignment
                 $"rId{rIdCounter++}",
                 PmlNames.RelTypePresProps,
-                RelativeUri(PresentationPartUri, PresPropsPartUri)
+                package.GetRelativeUri(PresentationPartUri, PresPropsPartUri)
             );
         }
     }
@@ -833,7 +832,7 @@ internal sealed class PresentationWriter
                     PresentationPartUri,
                     $"rId{presRelIndex++}",
                     anchor.Type,
-                    RelativeUri(PresentationPartUri, anchor.Target),
+                    package.GetRelativeUri(PresentationPartUri, anchor.Target),
                     anchor.IsExternal
                 );
             }
@@ -888,7 +887,7 @@ internal sealed class PresentationWriter
                         DmlNames.SolidFill,
                         new XElement(
                             DmlNames.SrgbColor,
-                            new XAttribute("val", show.PenColorHex)
+                            new XAttribute(DmlNames.AttributeValue, show.PenColorHex)
                         )
                     )
                 )
@@ -960,110 +959,13 @@ internal sealed class PresentationWriter
         return new XElement(pml + "extLst", ext);
     }
 
-    // ── Core properties ───────────────────────────────────────────────────────
+    // ── Properties helpers ────────────────────────────────────────────────────
 
-    private static void WriteCoreProperties(
-        OpcPackage package,
-        DocumentProperties properties,
-        ContentTypeMap contentTypes
-    )
-    {
-        var cp = XNamespace.Get(
-            "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
-        );
-        var dc = XNamespace.Get("http://purl.org/dc/elements/1.1/");
-        var dcterms = XNamespace.Get("http://purl.org/dc/terms/");
-        var xsi = XNamespace.Get("http://www.w3.org/2001/XMLSchema-instance");
-
-        var root = new XElement(
-            cp + "coreProperties",
-            new XAttribute(XNamespace.Xmlns + "cp", cp.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "dc", dc.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "dcterms", dcterms.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "xsi", xsi.NamespaceName)
-        );
-
-        if (properties.Title != null)
-            root.Add(new XElement(dc + "title", properties.Title));
-        if (properties.Subject != null)
-            root.Add(new XElement(dc + "subject", properties.Subject));
-        if (properties.Author != null)
-            root.Add(new XElement(dc + "creator", properties.Author));
-        if (properties.Keywords != null)
-            root.Add(new XElement(cp + "keywords", properties.Keywords));
-        if (properties.Description != null)
-            root.Add(new XElement(dc + "description", properties.Description));
-        if (properties.LastModifiedBy != null)
-            root.Add(new XElement(cp + "lastModifiedBy", properties.LastModifiedBy));
-        if (properties.Category != null)
-            root.Add(new XElement(cp + "category", properties.Category));
-        if (properties.ContentStatus != null)
-            root.Add(new XElement(cp + "contentStatus", properties.ContentStatus));
-
-        var now = DateTimeOffset.UtcNow;
-        root.Add(
-            new XElement(
-                dcterms + "created",
-                new XAttribute(xsi + "type", "dcterms:W3CDTF"),
-                (properties.Created ?? now).ToString("yyyy-MM-ddTHH:mm:ssZ")
-            )
-        );
-        root.Add(
-            new XElement(
-                dcterms + "modified",
-                new XAttribute(xsi + "type", "dcterms:W3CDTF"),
-                (properties.Modified ?? now).ToString("yyyy-MM-ddTHH:mm:ssZ")
-            )
-        );
-
-        var doc = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root);
-        package.AddOrReplacePart(
-            CorePropsPartUri,
-            PmlNames.ContentTypeCoreProperties,
-            doc.ToUtf8Bytes()
-        );
-        contentTypes.Register(CorePropsPartUri, PmlNames.ContentTypeCoreProperties);
-    }
+    private static void WriteAppForPptx(OpcPackage package, OoXmlCoreProperties properties) =>
+        PropertiesWriter.WriteApp(package, properties, "Unchained.Pptx");
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /// <summary>
-    ///     Returns a relative URI from <paramref name="sourceUri" /> to <paramref name="targetUri" />.
-    ///     Both must be absolute OPC part URIs starting with '/'.
-    /// </summary>
-    private static string RelativeUri(string sourceUri, string targetUri)
-    {
-        var sourceDir = Path.GetDirectoryName(sourceUri)?.Replace('\\', '/') ?? "/";
-        if (!sourceDir.EndsWith('/')) sourceDir += '/';
-
-        if (targetUri.StartsWith(sourceDir, StringComparison.OrdinalIgnoreCase))
-            return targetUri[sourceDir.Length..];
-
-        // Walk up — remove empty entries so the trailing '/' doesn't add a phantom level
-        var sourceParts = sourceDir.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var targetParts = targetUri.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var common = 0;
-
-        while (common < sourceParts.Length &&
-               common < targetParts.Length &&
-               sourceParts[common].Equals(targetParts[common], StringComparison.OrdinalIgnoreCase))
-            common++;
-
-        var up = string.Concat(Enumerable.Repeat("../", sourceParts.Length - common));
-        var down = string.Join("/", targetParts.Skip(common));
-        return up + down;
-    }
-
-    private static string ExtensionForContentType(string contentType) => contentType switch
-    {
-        "image/png" => ".png",
-        "image/jpeg" or "image/jpg" => ".jpeg",
-        "image/gif" => ".gif",
-        "image/bmp" => ".bmp",
-        "image/tiff" => ".tiff",
-        "image/svg+xml" => ".svg",
-        "image/x-emf" or "image/emf" => ".emf",
-        "image/x-wmf" or "image/wmf" => ".wmf",
-        _ => ".bin"
-    };
+    private static string ExtensionForContentType(string contentType) =>
+        Unchained.Ooxml.Media.ImageExtensions.Extension(contentType);
 }

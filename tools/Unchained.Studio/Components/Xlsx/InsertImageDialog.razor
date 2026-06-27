@@ -1,0 +1,137 @@
+@using Unchained.Xlsx.Drawings
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:460px; max-width:560px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Image" Class="mr-2" Style="vertical-align:middle;"/>
+            Insert Image
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudFileUpload T="IBrowserFile" FilesChanged="OnFile" Accept=".png,.jpg,.jpeg,.gif,.bmp">
+                <ActivatorContent>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.UploadFile">
+                        Choose image…
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+
+            @if (_fileName != null)
+            {
+                <MudText Typo="Typo.body2">
+                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-1"/>
+                    @_fileName (@(_bytes!.Length / 1024) KB)
+                </MudText>
+            }
+
+            <MudTextField @bind-Value="_anchorCell" Label="Anchor cell" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          HelperText="Top-left cell the image is pinned to"/>
+            <div class="d-flex gap-2">
+                <MudNumericField @bind-Value="_width" Label="Width (px)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="16"/>
+                <MudNumericField @bind-Value="_height" Label="Height (px)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="16"/>
+            </div>
+
+            @if (_error != null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@_error</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Insert" Color="Color.Primary" Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Outlined.Add" Disabled="@(_bytes is null)">
+            Insert
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public string InitialAnchor { get; set; } = "A1";
+
+    [Parameter]
+    public EventCallback OnInserted { get; set; }
+
+    private byte[]? _bytes;
+    private string? _fileName;
+    private string? _contentType;
+    private string _anchorCell = "A1";
+    private int _width = 360;
+    private int _height = 240;
+    private string? _error;
+
+    private const long MaxBytes = 16L * 1024 * 1024;
+
+    protected override void OnInitialized() => _anchorCell = InitialAnchor;
+
+    private async Task OnFile(IBrowserFile? file)
+    {
+        _error = null;
+        if (file is null)
+            return;
+
+        if (file.Size > MaxBytes)
+        {
+            _error = $"Image too large ({file.Size / 1024 / 1024} MB). Max 16 MB.";
+            return;
+        }
+
+        try
+        {
+            using var ms = new MemoryStream();
+            await using var stream = file.OpenReadStream(MaxBytes);
+            await stream.CopyToAsync(ms);
+            _bytes = ms.ToArray();
+            _fileName = file.Name;
+            _contentType = string.IsNullOrEmpty(file.ContentType) ? GuessContentType(file.Name) : file.ContentType;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to read file: {ex.Message}";
+        }
+    }
+
+    private async Task Insert()
+    {
+        if (_bytes is null || _contentType is null)
+            return;
+
+        if (!CellReference.TryFromA1(_anchorCell, out var cell))
+        {
+            _error = "Invalid anchor cell.";
+            return;
+        }
+
+        Sheet.AddImage(_bytes, _contentType, cell, _width, _height);
+        await OnInserted.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private static string GuessContentType(string name)
+    {
+        var ext = Path.GetExtension(name).ToLowerInvariant();
+        return ext switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            _ => "image/png"
+        };
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

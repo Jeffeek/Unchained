@@ -1,0 +1,119 @@
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:480px; max-width:560px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.GridView" Class="mr-2" Style="vertical-align:middle;"/>
+            Sheet View &amp; Layout — @Sheet.Name
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Tab colour</MudText>
+                <MudColorPicker @bind-Text="_tabColor" Label="Tab colour" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                <MudCheckBox @bind-Value="_noTabColor" Dense="true">No tab colour</MudCheckBox>
+            </div>
+
+            <MudDivider/>
+
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">View</MudText>
+                <div class="d-flex flex-wrap gap-4">
+                    <MudCheckBox @bind-Value="_gridLines" Dense="true">Grid lines</MudCheckBox>
+                    <MudCheckBox @bind-Value="_headers" Dense="true">Row/col headers</MudCheckBox>
+                    <MudCheckBox @bind-Value="_formulas" Dense="true">Show formulas</MudCheckBox>
+                </div>
+                <MudNumericField @bind-Value="_zoom" Label="Zoom (%)" Variant="Variant.Outlined" Margin="Margin.Dense" Min="10" Max="400"/>
+            </div>
+
+            <MudDivider/>
+
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Freeze panes</MudText>
+                <div class="d-flex gap-2">
+                    <MudNumericField @bind-Value="_freezeRows" Label="Frozen rows" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+                    <MudNumericField @bind-Value="_freezeCols" Label="Frozen columns" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0"/>
+                </div>
+            </div>
+
+            <MudDivider/>
+
+            <div>
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Auto-filter</MudText>
+                <MudTextField @bind-Value="_autoFilter" Label="Filter range (A1, blank = none)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            </div>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Check">Apply</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnApplied { get; set; }
+
+    private string _tabColor = "#4472C4";
+    private bool _noTabColor;
+    private bool _gridLines = true;
+    private bool _headers = true;
+    private bool _formulas;
+    private int _zoom = 100;
+    private int _freezeRows;
+    private int _freezeCols;
+    private string _autoFilter = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _noTabColor = Sheet.TabColor is null;
+        _tabColor = XlsxColor.ToHex(Sheet.TabColor, "#4472C4");
+
+        var view = Sheet.View;
+        _gridLines = view.ShowGridLines;
+        _headers = view.ShowRowColHeaders;
+        _formulas = view.ShowFormulas;
+        _zoom = view.ZoomScale;
+        _freezeRows = view.FrozenPanes?.FrozenRows ?? 0;
+        _freezeCols = view.FrozenPanes?.FrozenColumns ?? 0;
+
+        _autoFilter = Sheet.AutoFilter?.ToA1() ?? string.Empty;
+    }
+
+    private async Task Apply()
+    {
+        Sheet.TabColor = _noTabColor ? null : XlsxColor.FromHex(_tabColor);
+
+        var view = Sheet.View;
+        view.ShowGridLines = _gridLines;
+        view.ShowRowColHeaders = _headers;
+        view.ShowFormulas = _formulas;
+        view.ZoomScale = _zoom;
+
+        if (_freezeRows > 0 || _freezeCols > 0)
+            Sheet.FreezePanes(_freezeRows, _freezeCols);
+        else
+            view.FrozenPanes = null;
+
+        if (string.IsNullOrWhiteSpace(_autoFilter))
+            Sheet.RemoveAutoFilter();
+        else
+            Sheet.SetAutoFilter(CellRange.FromA1(_autoFilter));
+
+        await OnApplied.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

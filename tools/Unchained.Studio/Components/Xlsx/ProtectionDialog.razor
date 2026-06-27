@@ -1,0 +1,118 @@
+@using Unchained.Xlsx.Engine
+@using Unchained.Xlsx.Worksheets
+
+<MudDialog Style="min-width:480px; max-width:560px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Shield" Class="mr-2" Style="vertical-align:middle;"/>
+            Protection
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true">
+            <MudTabPanel Text="Sheet" Icon="@Icons.Material.Outlined.GridOn">
+                <MudStack Spacing="2">
+                    <MudCheckBox @bind-Value="_sheetProtected" Dense="true" Color="Color.Primary">Protect this sheet</MudCheckBox>
+                    <MudTextField @bind-Value="_sheetPassword" Label="Password (optional)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  InputType="InputType.Password" Disabled="@(!_sheetProtected)"/>
+                    <MudText Typo="Typo.subtitle2" Class="mt-2">Allow users to…</MudText>
+                    <div class="d-flex flex-wrap gap-3">
+                        <MudCheckBox @bind-Value="_selLocked" Dense="true" Disabled="@(!_sheetProtected)">Select locked cells</MudCheckBox>
+                        <MudCheckBox @bind-Value="_selUnlocked" Dense="true" Disabled="@(!_sheetProtected)">Select unlocked cells</MudCheckBox>
+                        <MudCheckBox @bind-Value="_formatCells" Dense="true" Disabled="@(!_sheetProtected)">Format cells</MudCheckBox>
+                        <MudCheckBox @bind-Value="_insRows" Dense="true" Disabled="@(!_sheetProtected)">Insert rows</MudCheckBox>
+                        <MudCheckBox @bind-Value="_insCols" Dense="true" Disabled="@(!_sheetProtected)">Insert columns</MudCheckBox>
+                        <MudCheckBox @bind-Value="_delRows" Dense="true" Disabled="@(!_sheetProtected)">Delete rows</MudCheckBox>
+                        <MudCheckBox @bind-Value="_delCols" Dense="true" Disabled="@(!_sheetProtected)">Delete columns</MudCheckBox>
+                        <MudCheckBox @bind-Value="_sort" Dense="true" Disabled="@(!_sheetProtected)">Sort</MudCheckBox>
+                        <MudCheckBox @bind-Value="_filter" Dense="true" Disabled="@(!_sheetProtected)">Use auto-filter</MudCheckBox>
+                    </div>
+                </MudStack>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Workbook" Icon="@Icons.Material.Outlined.MenuBook">
+                <MudStack Spacing="2">
+                    <MudCheckBox @bind-Value="_lockStructure" Dense="true" Color="Color.Primary">Lock structure (no add/remove/rename/reorder sheets)</MudCheckBox>
+                    <MudCheckBox @bind-Value="_lockWindows" Dense="true">Lock windows</MudCheckBox>
+                    <MudTextField @bind-Value="_wbPassword" Label="Workbook password (optional)" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Password"/>
+                </MudStack>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Check">Apply</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public SpreadsheetDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnApplied { get; set; }
+
+    private bool _sheetProtected;
+    private string _sheetPassword = string.Empty;
+    private bool _selLocked = true, _selUnlocked = true, _formatCells, _insRows, _insCols, _delRows, _delCols, _sort, _filter;
+
+    private bool _lockStructure, _lockWindows;
+    private string _wbPassword = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        var p = Sheet.Protection;
+        _sheetProtected = p.IsProtected;
+        _selLocked = p.AllowSelectLockedCells;
+        _selUnlocked = p.AllowSelectUnlockedCells;
+        _formatCells = p.AllowFormatCells;
+        _insRows = p.AllowInsertRows;
+        _insCols = p.AllowInsertColumns;
+        _delRows = p.AllowDeleteRows;
+        _delCols = p.AllowDeleteColumns;
+        _sort = p.AllowSort;
+        _filter = p.AllowAutoFilter;
+
+        var w = Document.Protection;
+        _lockStructure = w.LockStructure;
+        _lockWindows = w.LockWindows;
+    }
+
+    private async Task Apply()
+    {
+        var p = Sheet.Protection;
+        if (_sheetProtected)
+            p.Protect(string.IsNullOrEmpty(_sheetPassword) ? null : _sheetPassword);
+        else
+            p.Unprotect();
+
+        p.AllowSelectLockedCells = _selLocked;
+        p.AllowSelectUnlockedCells = _selUnlocked;
+        p.AllowFormatCells = _formatCells;
+        p.AllowInsertRows = _insRows;
+        p.AllowInsertColumns = _insCols;
+        p.AllowDeleteRows = _delRows;
+        p.AllowDeleteColumns = _delCols;
+        p.AllowSort = _sort;
+        p.AllowAutoFilter = _filter;
+
+        if (_lockStructure || _lockWindows)
+            Document.Protection.Protect(string.IsNullOrEmpty(_wbPassword) ? null : _wbPassword, _lockStructure, _lockWindows);
+        else
+            Document.Protection.Unprotect();
+
+        await OnApplied.InvokeAsync();
+        MudDialog.Close();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

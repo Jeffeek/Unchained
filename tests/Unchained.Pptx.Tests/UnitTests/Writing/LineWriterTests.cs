@@ -1,6 +1,7 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Writing;
 using Xunit;
 
@@ -60,7 +61,7 @@ public sealed class LineWriterTests
         var line = new LineFormat { DashStyle = style };
         var ln = WriteLine(line);
         var dash = ln.Elements().Single(static e => e.Name.LocalName == "prstDash");
-        dash.Attribute("val")!.Value.ShouldBe(expected);
+        dash.Attribute(DmlNames.AttributeValue)!.Value.ShouldBe(expected);
     }
 
     [

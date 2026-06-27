@@ -1,0 +1,101 @@
+@using System.Text
+@using Unchained.Xlsx.Models
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Worksheets
+@inject FileExportService Exporter
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:460px; max-width:560px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.GridOn" Class="mr-2" Style="vertical-align:middle;"/>
+            Export CSV — @Sheet.Name
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudSelect T="string" @bind-Value="_delimiter" Label="Delimiter" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="@(",")">Comma (,)</MudSelectItem>
+                <MudSelectItem Value="@(";")">Semicolon (;)</MudSelectItem>
+                <MudSelectItem Value="@("\t")">Tab</MudSelectItem>
+                <MudSelectItem Value="@("|")">Pipe (|)</MudSelectItem>
+            </MudSelect>
+
+            <MudSelect T="string" @bind-Value="_encoding" Label="Encoding" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="@("utf8")">UTF-8</MudSelectItem>
+                <MudSelectItem Value="@("utf8bom")">UTF-8 with BOM</MudSelectItem>
+                <MudSelectItem Value="@("unicode")">UTF-16 (Unicode)</MudSelectItem>
+            </MudSelect>
+
+            <div class="d-flex flex-wrap gap-4">
+                <MudCheckBox @bind-Value="_quoteAll" Dense="true">Quote all fields</MudCheckBox>
+                <MudCheckBox @bind-Value="_quoteDelimited" Dense="true">Quote fields with delimiter</MudCheckBox>
+            </div>
+
+            <MudTextField @bind-Value="_dateFormat" Label="Date format" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+            <MudTextField @bind-Value="_range" Label="Range (A1, blank = used range)" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Export" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Download">
+            Export
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Worksheet Sheet { get; set; } = null!;
+
+    [Parameter]
+    public string FileName { get; set; } = "workbook.xlsx";
+
+    private string _delimiter = ",";
+    private string _encoding = "utf8";
+    private bool _quoteAll;
+    private bool _quoteDelimited = true;
+    private string _dateFormat = "yyyy-MM-dd";
+    private string _range = string.Empty;
+
+    private async Task Export()
+    {
+        try
+        {
+            var (encoding, bom) = _encoding switch
+            {
+                "utf8bom" => (Encoding.UTF8, true),
+                "unicode" => (Encoding.Unicode, true),
+                _ => (new UTF8Encoding(encoderShouldEmitUTF8Identifier: false) as Encoding, false)
+            };
+
+            var options = new CsvSaveOptions
+            {
+                Delimiter = _delimiter[0],
+                Encoding = encoding,
+                WriteBom = bom,
+                QuoteAllFields = _quoteAll,
+                QuoteFieldsWithDelimiter = _quoteDelimited,
+                DateFormat = _dateFormat,
+                Range = string.IsNullOrWhiteSpace(_range) ? null : CellRange.FromA1(_range)
+            };
+
+            var bytes = Sheet.ToCsv(options);
+            var baseName = Path.GetFileNameWithoutExtension(FileName);
+            await Exporter.TriggerDownloadAsync(bytes, $"{baseName}-{Sheet.Name}.csv", "text/csv");
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"CSV export failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

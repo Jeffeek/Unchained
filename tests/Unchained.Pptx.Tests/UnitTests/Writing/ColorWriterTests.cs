@@ -1,5 +1,6 @@
 using Shouldly;
 using Unchained.Ooxml.Drawing;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Writing;
 using Xunit;
 
@@ -12,7 +13,7 @@ public sealed class ColorWriterTests
     {
         var el = ColorWriter.Write(ColorSpec.FromRgb(0x44, 0x72, 0xC4));
         el.Name.LocalName.ShouldBe("srgbClr");
-        el.Attribute("val")!.Value.ShouldBe("4472C4");
+        el.Attribute(DmlNames.AttributeValue)!.Value.ShouldBe("4472C4");
     }
 
     [Fact]
@@ -20,10 +21,10 @@ public sealed class ColorWriterTests
     {
         var el = ColorWriter.Write(ColorSpec.FromArgb(0x80, 0xFF, 0x00, 0x00));
         el.Name.LocalName.ShouldBe("srgbClr");
-        el.Attribute("val")!.Value.ShouldBe("FF0000");
+        el.Attribute(DmlNames.AttributeValue)!.Value.ShouldBe("FF0000");
         var alpha = el.Elements().Single(static e => e.Name.LocalName == "alpha");
         // 0x80 / 255 * 100000 ≈ 50196.
-        int.Parse(alpha.Attribute("val")!.Value).ShouldBeInRange(49000, 51000);
+        int.Parse(alpha.Attribute(DmlNames.AttributeValue)!.Value).ShouldBeInRange(49000, 51000);
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public sealed class ColorWriterTests
     {
         var el = ColorWriter.Write(ColorSpec.FromTheme(slot));
         el.Name.LocalName.ShouldBe("schemeClr");
-        el.Attribute("val")!.Value.ShouldBe(expected);
+        el.Attribute(DmlNames.AttributeValue)!.Value.ShouldBe(expected);
     }
 
     [Fact]
@@ -59,7 +60,7 @@ public sealed class ColorWriterTests
         var el = ColorWriter.Write(color);
         var lumMod = el.Elements().SingleOrDefault(static e => e.Name.LocalName == "lumMod");
         lumMod.ShouldNotBeNull();
-        lumMod.Attribute("val")!.Value.ShouldBe("50000");
+        lumMod.Attribute(DmlNames.AttributeValue)!.Value.ShouldBe("50000");
     }
 
     [Fact]
@@ -69,6 +70,6 @@ public sealed class ColorWriterTests
         var el = ColorWriter.Write(color);
         var lumOff = el.Elements().SingleOrDefault(static e => e.Name.LocalName == "lumOff");
         lumOff.ShouldNotBeNull();
-        lumOff.Attribute("val")!.Value.ShouldBe("20000");
+        lumOff.Attribute(DmlNames.AttributeValue)!.Value.ShouldBe("20000");
     }
 }

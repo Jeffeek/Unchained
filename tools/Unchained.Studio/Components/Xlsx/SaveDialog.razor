@@ -1,0 +1,119 @@
+@using Unchained.Ooxml
+@using Unchained.Xlsx.Engine
+@using Unchained.Xlsx.Models
+@inject FileExportService Exporter
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:460px; max-width:560px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Download" Class="mr-2" Style="vertical-align:middle;"/>
+            Download Workbook
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudTextField @bind-Value="_fileName" Label="File name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+
+            <MudSelect T="OoXmlConformance" @bind-Value="_conformance" Label="Conformance" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var c in Enum.GetValues<OoXmlConformance>())
+                {
+                    <MudSelectItem Value="c">@c</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="Zip64Policy" @bind-Value="_zip64" Label="ZIP64 policy" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var z in Enum.GetValues<Zip64Policy>())
+                {
+                    <MudSelectItem Value="z">@z</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudCheckBox @bind-Value="_recalc" Dense="true">Flag formulas for recalculation on open</MudCheckBox>
+
+            <MudDivider Class="my-1"/>
+            <MudText Typo="Typo.subtitle2">Encryption</MudText>
+            <MudCheckBox @bind-Value="_encrypt" Dense="true" Color="Color.Primary">Encrypt with AES-256 (password)</MudCheckBox>
+            <MudTextField @bind-Value="_password" Label="Password" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          InputType="InputType.Password" Disabled="@(!_encrypt)"/>
+            @if (Document.WasLoadedEncrypted && !_encrypt)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    This workbook was loaded encrypted. Saving without a password produces a decrypted file.
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Save" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Outlined.Download">
+            Download
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public SpreadsheetProcessor Processor { get; set; } = null!;
+
+    [Parameter]
+    public SpreadsheetDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public string FileName { get; set; } = "workbook.xlsx";
+
+    private string _fileName = "workbook.xlsx";
+    private OoXmlConformance _conformance = OoXmlConformance.Transitional;
+    private Zip64Policy _zip64 = Zip64Policy.IfNecessary;
+    private bool _recalc = true;
+    private bool _encrypt;
+    private string _password = string.Empty;
+
+    protected override void OnInitialized() =>
+        _fileName = Path.GetExtension(FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase)
+            ? FileName
+            : Path.ChangeExtension(FileName, ".xlsx");
+
+    private async Task Save()
+    {
+        if (_encrypt && string.IsNullOrEmpty(_password))
+        {
+            Snackbar.Add("Enter a password or uncheck encryption.", Severity.Warning);
+            return;
+        }
+
+        var options = new XlsxSaveOptions
+        {
+            Conformance = _conformance,
+            Zip64 = _zip64,
+            RecalcAll = _recalc,
+            Password = _encrypt ? _password : null
+        };
+
+        try
+        {
+            if (!_encrypt)
+                Document.RemoveEncryption();
+
+            using var ms = new MemoryStream();
+            await Processor.SaveAsync(Document, ms, options);
+            await Exporter.TriggerDownloadAsync(
+                ms.ToArray(),
+                _fileName,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

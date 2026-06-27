@@ -1,0 +1,727 @@
+@page "/xlsx"
+@using System.Text
+@using Unchained.Xlsx.Cell
+@using Unchained.Xlsx.Export
+@using Unchained.Xlsx.Models
+@using Unchained.Xlsx.Models.Cell
+@using Unchained.Xlsx.Models.Sheets
+@using Unchained.Xlsx.Models.Styles
+@using Unchained.Xlsx.Styles
+@using Unchained.Xlsx.Worksheets
+@inject SessionStateService Session
+@inject FileExportService Exporter
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<div class="studio-tab">
+    @if (Session.Xlsx is null)
+    {
+        <div class="drop-zone-page">
+            <FileDropZone Title="Drop an XLSX here"
+                          Subtitle="Supports Excel .xlsx (OOXML) and .csv. Legacy binary .xls is not supported."
+                          Icon="@Icons.Material.Outlined.TableChart"
+                          Accept=".xlsx,.csv"
+                          OnFileLoaded="LoadFile"
+                          OnError="ShowError"/>
+            <div class="mt-4" style="text-align:center;">
+                <MudButton StartIcon="@Icons.Material.Outlined.NoteAdd"
+                           Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="CreateBlank">
+                    Create a blank workbook
+                </MudButton>
+            </div>
+        </div>
+    }
+    else
+    {
+        var state = Session.Xlsx;
+        var sheet = ActiveSheet(state);
+
+        <div class="three-panel">
+            <!-- LEFT: tree -->
+            <div class="panel-tree">
+                <DocumentTree Root="state.Tree"
+                              SelectedNodeChanged="OnNodeSelected"
+                              OnRefreshRequested="RefreshTree"/>
+            </div>
+
+            <!-- CENTRE: toolbar + sheet tabs + grid -->
+            <div class="panel-preview">
+                @if (_showInfo)
+                {
+                    <div class="pptx-info-strip">
+                        <XlsxInfoPanel Document="state.Document"/>
+                    </div>
+                }
+
+                @if (sheet is not null)
+                {
+                    <div class="xlsx-toolbar">
+                        <MudTooltip Text="Bold"><MudIconButton Icon="@Icons.Material.Outlined.FormatBold" Size="Size.Small" OnClick="() => QuickFont(f => f.Bold = !f.Bold)"/></MudTooltip>
+                        <MudTooltip Text="Italic"><MudIconButton Icon="@Icons.Material.Outlined.FormatItalic" Size="Size.Small" OnClick="() => QuickFont(f => f.Italic = !f.Italic)"/></MudTooltip>
+                        <MudTooltip Text="Underline"><MudIconButton Icon="@Icons.Material.Outlined.FormatUnderlined" Size="Size.Small" OnClick="() => QuickFont(f => f.Underline = f.Underline == FontUnderline.None ? FontUnderline.Single : FontUnderline.None)"/></MudTooltip>
+                        <MudDivider Vertical="true" Class="ops-divider"/>
+                        <MudTooltip Text="Align left"><MudIconButton Icon="@Icons.Material.Outlined.FormatAlignLeft" Size="Size.Small" OnClick="() => QuickAlign(a => a.Horizontal = Unchained.Xlsx.Models.Styles.HorizontalAlignment.Left)"/></MudTooltip>
+                        <MudTooltip Text="Align centre"><MudIconButton Icon="@Icons.Material.Outlined.FormatAlignCenter" Size="Size.Small" OnClick="() => QuickAlign(a => a.Horizontal = Unchained.Xlsx.Models.Styles.HorizontalAlignment.Center)"/></MudTooltip>
+                        <MudTooltip Text="Align right"><MudIconButton Icon="@Icons.Material.Outlined.FormatAlignRight" Size="Size.Small" OnClick="() => QuickAlign(a => a.Horizontal = Unchained.Xlsx.Models.Styles.HorizontalAlignment.Right)"/></MudTooltip>
+                        <MudTooltip Text="Wrap text"><MudIconButton Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" OnClick="() => QuickAlign(a => a.WrapText = !a.WrapText)"/></MudTooltip>
+                        <MudDivider Vertical="true" Class="ops-divider"/>
+                        <MudTooltip Text="Thin box border"><MudIconButton Icon="@Icons.Material.Outlined.BorderAll" Size="Size.Small" OnClick="QuickBorderAll"/></MudTooltip>
+                        <MudTooltip Text="Merge selection"><MudIconButton Icon="@Icons.Material.Outlined.CallMerge" Size="Size.Small" OnClick="MergeSelection"/></MudTooltip>
+                        <MudTooltip Text="Unmerge selection"><MudIconButton Icon="@Icons.Material.Outlined.CallSplit" Size="Size.Small" OnClick="UnmergeSelection"/></MudTooltip>
+                        <MudDivider Vertical="true" Class="ops-divider"/>
+                        <MudTooltip Text="Format cells…"><MudIconButton Icon="@Icons.Material.Outlined.FormatPaint" Size="Size.Small" OnClick="OpenFormatDialog"/></MudTooltip>
+                        <MudSpacer/>
+                        <MudText Typo="Typo.caption" Style="opacity:.6;">@_selection.ToA1()</MudText>
+                    </div>
+                }
+
+                <div class="sheet-tabbar">
+                    @for (var i = 0; i < state.Document.Sheets.Count; i++)
+                    {
+                        var index = i;
+                        var ws = state.Document.Sheets[index];
+                        var active = index + 1 == state.CurrentSheet;
+                        <div class="@($"sheet-tab {(active ? "sheet-tab--active" : "")} {(ws.State != SheetState.Visible ? "sheet-tab--hidden" : "")}")"
+                             @onclick="() => SelectSheet(index + 1)">
+                            <span class="sheet-tab-label" @ondblclick="() => RenameSheet(ws)">@ws.Name</span>
+                            @if (state.Document.Sheets.Count > 1)
+                            {
+                                <span class="sheet-tab-close" @onclick:stopPropagation="true" @onclick="() => DeleteSheet(ws)">×</span>
+                            }
+                        </div>
+                    }
+                    <MudTooltip Text="Add sheet">
+                        <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" OnClick="AddSheet"/>
+                    </MudTooltip>
+                </div>
+
+                @if (sheet is not null)
+                {
+                    <SheetGrid @key="@($"{state.CurrentSheet}-{_gridVersion}")"
+                               @ref="_grid"
+                               Sheet="sheet"
+                               CellSelected="OnCellSelected"
+                               SelectionChanged="OnSelectionChanged"
+                               OnEdited="OnGridEdited"/>
+                }
+            </div>
+
+            <!-- RIGHT: properties -->
+            <div class="panel-properties">
+                <PropertiesPanel Bag="_selectedProperties"/>
+            </div>
+        </div>
+
+        <!-- BOTTOM: operations bar -->
+        <div class="operations-bar">
+            <div class="ops-group">
+                <MudMenu Label="Sheet" StartIcon="@Icons.Material.Outlined.GridOn" Variant="Variant.Text" Size="Size.Small" Dense="true">
+                    <MudMenuItem Icon="@Icons.Material.Outlined.ArrowUpward" OnClick="() => MoveSheet(-1)">Move left</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.ArrowDownward" OnClick="() => MoveSheet(1)">Move right</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.VisibilityOff" OnClick="ToggleHidden">@(sheet?.State == SheetState.Visible ? "Hide" : "Show")</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.DriveFileRenameOutline" OnClick="() => RenameSheet(sheet!)">Rename…</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.GridView" OnClick="OpenSheetSettings">View &amp; layout…</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.Print" OnClick="OpenPageSetup">Page setup…</MudMenuItem>
+                </MudMenu>
+                <MudMenu Label="Edit" StartIcon="@Icons.Material.Outlined.Edit" Variant="Variant.Text" Size="Size.Small" Dense="true">
+                    <MudMenuItem Icon="@Icons.Material.Outlined.TableRows" OnClick="OpenRowColumnDialog">Rows &amp; columns…</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.ContentPaste" OnClick="OpenPasteImport">Paste / bulk import…</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.FormatPaint" OnClick="OpenFormatDialog">Format cells…</MudMenuItem>
+                </MudMenu>
+                <MudMenu Label="Insert" StartIcon="@Icons.Material.Outlined.AddChart" Variant="Variant.Text" Size="Size.Small" Dense="true">
+                    <MudMenuItem Icon="@Icons.Material.Outlined.Image" OnClick="OpenInsertImage">Image…</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.BarChart" OnClick="OpenInsertChart">Chart…</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.TableView" OnClick="OpenTablesDialog">Tables…</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.Sell" OnClick="OpenNamedRangesDialog">Named ranges…</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Outlined.Rule" OnClick="OpenDataValidationDialog">Data validation…</MudMenuItem>
+                </MudMenu>
+            </div>
+            <MudDivider Vertical="true" Class="ops-divider"/>
+            <div class="ops-group">
+                <MudButton StartIcon="@Icons.Material.Outlined.Description" Variant="Variant.Text" Size="Size.Small" OnClick="OpenMetadataDialog">Metadata…</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.Shield" Variant="Variant.Text" Size="Size.Small" OnClick="OpenProtectionDialog">Protection…</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.TextSnippet" Variant="Variant.Text" Size="Size.Small" OnClick="ExtractText">Extract text</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.GridOn" Variant="Variant.Text" Size="Size.Small" OnClick="OpenCsvExport">CSV…</MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.Refresh" Variant="Variant.Text" Size="Size.Small" OnClick="RefreshTree">Recalc model</MudButton>
+                <MudToggleIconButton @bind-Toggled="_showInfo"
+                                     Icon="@Icons.Material.Outlined.Info"
+                                     ToggledIcon="@Icons.Material.Filled.Info"
+                                     Size="Size.Small"
+                                     title="Toggle workbook info"/>
+            </div>
+            <MudDivider Vertical="true" Class="ops-divider"/>
+            <div class="ops-group ops-group--right">
+                @if (state.IsDirty)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="Unsaved edits"/>
+                }
+                <MudButton StartIcon="@Icons.Material.Outlined.Download"
+                           Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           OnClick="OpenSaveDialog">
+                    Download…
+                </MudButton>
+                <MudButton StartIcon="@Icons.Material.Outlined.Close"
+                           Variant="Variant.Text" Size="Size.Small" Color="Color.Error"
+                           OnClick="CloseDocument">
+                    Close
+                </MudButton>
+            </div>
+        </div>
+
+        @if (_showTextPanel)
+        {
+            <div class="text-panel">
+                <div class="text-panel-toolbar">
+                    <MudText Typo="Typo.subtitle2">Extracted Text — @(sheet?.Name)</MudText>
+                    <MudSpacer/>
+                    <MudIconButton Icon="@Icons.Material.Outlined.Download" Size="Size.Small" OnClick="DownloadText" title="Download as .txt"/>
+                    <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="() => _showTextPanel = false"/>
+                </div>
+                <textarea class="text-content" readonly>@_extractedText</textarea>
+            </div>
+        }
+    }
+
+    @if (_busy)
+    {
+        <div class="loading-overlay">
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary"/>
+            <MudText Typo="Typo.body1" Class="mt-3">@_busyMessage</MudText>
+        </div>
+    }
+</div>
+
+@code {
+    private PropertyBag? _selectedProperties;
+    private bool _busy;
+    private string _busyMessage = string.Empty;
+    private bool _showInfo;
+    private bool _showTextPanel;
+    private string? _extractedText;
+    private int _gridVersion;
+    private SheetGrid? _grid;
+    private CellRange _selection = new(new CellReference(1, 1), new CellReference(1, 1));
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        if (Session.Xlsx is not null)
+            Session.Xlsx.Refreshed += OnSessionRefreshed;
+    }
+
+    private void OnSessionRefreshed() => InvokeAsync(StateHasChanged);
+
+    private static Worksheet? ActiveSheet(XlsxSessionState state)
+    {
+        var index = Math.Clamp(state.CurrentSheet, 1, state.Document.Sheets.Count) - 1;
+        return index >= 0 && index < state.Document.Sheets.Count ? state.Document.Sheets[index] : null;
+    }
+
+    private Worksheet? Sheet => Session.Xlsx is null ? null : ActiveSheet(Session.Xlsx);
+
+    // ── Load / create ────────────────────────────────────────────────────────
+
+    private async Task LoadFile((byte[] Bytes, string FileName) file)
+    {
+        if (file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+        {
+            await ImportCsvFile(file);
+            return;
+        }
+
+        SetBusy("Loading workbook…");
+        try
+        {
+            DetachSession();
+            await Session.LoadXlsxAsync(file.Bytes, file.FileName);
+            AttachSession();
+            ShowInfo($"Loaded {file.FileName}");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to load workbook: {ex.Message}");
+        }
+        finally
+        {
+            ClearBusy();
+        }
+    }
+
+    private async Task ImportCsvFile((byte[] Bytes, string FileName) file)
+    {
+        SetBusy("Importing CSV…");
+        try
+        {
+            DetachSession();
+            using var processor = new Unchained.Xlsx.Engine.SpreadsheetProcessor();
+            using var importedStream = new MemoryStream(file.Bytes);
+            using var imported = await processor.LoadFromCsvAsync(importedStream);
+            using var outStream = new MemoryStream();
+            await processor.SaveAsync(imported, outStream);
+
+            var name = Path.ChangeExtension(file.FileName, ".xlsx");
+            await Session.LoadXlsxAsync(outStream.ToArray(), name);
+            AttachSession();
+            ShowInfo($"Imported {file.FileName}");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"CSV import failed: {ex.Message}");
+        }
+        finally
+        {
+            ClearBusy();
+        }
+    }
+
+    private async Task CreateBlank()
+    {
+        DetachSession();
+        await Session.CreateBlankXlsxAsync();
+        AttachSession();
+        ShowInfo("Created a blank workbook");
+    }
+
+    // ── Tree / selection ────────────────────────────────────────────────────
+
+    private void OnNodeSelected(TreeNode? node)
+    {
+        _selectedProperties = node is null ? null : XlsxPropertyAdapter.Build(node);
+
+        if (node is { NodeType: TreeNodeType.Sheet, Payload: Worksheet ws } && Session.Xlsx is not null)
+        {
+            var idx = Session.Xlsx.Document.Sheets.IndexOf(ws);
+            if (idx >= 0)
+                SelectSheet(idx + 1);
+        }
+    }
+
+    private void OnCellSelected(Cell? cell) =>
+        _selectedProperties = cell is null ? null : XlsxPropertyAdapter.ForCell(cell);
+
+    private void OnSelectionChanged(CellRange range) => _selection = range;
+
+    private async Task OnGridEdited()
+    {
+        if (Session.Xlsx is null)
+            return;
+        Session.Xlsx.MarkDirty();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshTree()
+    {
+        if (Session.Xlsx is null)
+            return;
+
+        SetBusy("Recalculating…");
+        try
+        {
+            await Session.Xlsx.RefreshAsync();
+            _gridVersion++;
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Refresh failed: {ex.Message}");
+        }
+        finally
+        {
+            ClearBusy();
+        }
+    }
+
+    // ── Quick formatting (toolbar) ─────────────────────────────────────────────
+
+    private async Task QuickFont(Action<CellFont> mutate)
+    {
+        await ApplyToSelection(cell => cell.ApplyFont(mutate));
+    }
+
+    private async Task QuickAlign(Action<CellAlignment> mutate)
+    {
+        await ApplyToSelection(cell => cell.ApplyAlignment(mutate));
+    }
+
+    private async Task QuickBorderAll()
+    {
+        await ApplyToSelection(cell => cell.ApplyBorder(b => b.SetAllEdges(BorderStyle.Thin)));
+    }
+
+    private async Task ApplyToSelection(Action<Cell> action)
+    {
+        if (Sheet is null)
+            return;
+
+        foreach (var reference in _selection.Cells())
+            action(Sheet[reference.Row, reference.Column]);
+
+        Session.Xlsx!.MarkDirty();
+        _grid?.Invalidate();
+    }
+
+    private async Task MergeSelection()
+    {
+        if (Sheet is null) return;
+        Sheet.MergeCells(_selection);
+        Session.Xlsx!.MarkDirty();
+        _grid?.Invalidate();
+    }
+
+    private async Task UnmergeSelection()
+    {
+        if (Sheet is null) return;
+        Sheet.UnmergeCells(_selection);
+        Session.Xlsx!.MarkDirty();
+        _grid?.Invalidate();
+    }
+
+    private async Task OpenFormatDialog()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(CellFormatDialog.Sheet), Sheet },
+            { nameof(CellFormatDialog.Range), _selection },
+            { nameof(CellFormatDialog.OnApplied), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<CellFormatDialog>("Format Cells", parameters, Wide());
+    }
+
+    // ── Sheet management ────────────────────────────────────────────────────
+
+    private void SelectSheet(int number)
+    {
+        if (Session.Xlsx is null)
+            return;
+        Session.Xlsx.CurrentSheet = number;
+        _selectedProperties = null;
+        _selection = new CellRange(new CellReference(1, 1), new CellReference(1, 1));
+        StateHasChanged();
+    }
+
+    private void AddSheet()
+    {
+        if (Session.Xlsx is null)
+            return;
+
+        var doc = Session.Xlsx.Document;
+        doc.Sheets.Add(UniqueSheetName(doc));
+        Session.Xlsx.CurrentSheet = doc.Sheets.Count;
+        Session.Xlsx.MarkDirty();
+        _gridVersion++;
+    }
+
+    private async Task DeleteSheet(Worksheet sheet)
+    {
+        if (Session.Xlsx is null || Session.Xlsx.Document.Sheets.Count <= 1)
+            return;
+
+        var confirmed = await Dialogs.ShowMessageBoxAsync(
+            "Delete sheet",
+            $"Delete '{sheet.Name}'? This cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (confirmed != true)
+            return;
+
+        Session.Xlsx.Document.Sheets.Remove(sheet);
+        Session.Xlsx.CurrentSheet = Math.Clamp(Session.Xlsx.CurrentSheet, 1, Session.Xlsx.Document.Sheets.Count);
+        Session.Xlsx.MarkDirty();
+        _gridVersion++;
+    }
+
+    private async Task RenameSheet(Worksheet sheet)
+    {
+        if (Session.Xlsx is null)
+            return;
+
+        var parameters = new DialogParameters { { nameof(RenameSheetDialog.CurrentName), sheet.Name } };
+        var dialog = await Dialogs.ShowAsync<RenameSheetDialog>("Rename Sheet", parameters,
+            new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseOnEscapeKey = true });
+        var result = await dialog.Result;
+        if (result is not { Canceled: false, Data: string newName } || string.IsNullOrWhiteSpace(newName))
+            return;
+
+        try
+        {
+            sheet.Name = newName;
+            Session.Xlsx.MarkDirty();
+        }
+        catch (ArgumentException ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void MoveSheet(int delta)
+    {
+        if (Sheet is null || Session.Xlsx is null)
+            return;
+
+        var current = Session.Xlsx.Document.Sheets.IndexOf(Sheet);
+        var target = Math.Clamp(current + delta, 0, Session.Xlsx.Document.Sheets.Count - 1);
+        if (target == current)
+            return;
+
+        Session.Xlsx.Document.Sheets.MoveTo(Sheet, target);
+        Session.Xlsx.CurrentSheet = target + 1;
+        Session.Xlsx.MarkDirty();
+    }
+
+    private void ToggleHidden()
+    {
+        if (Sheet is null || Session.Xlsx is null)
+            return;
+
+        if (Sheet.State == SheetState.Visible &&
+            Session.Xlsx.Document.Sheets.Count(static s => s.State == SheetState.Visible) <= 1)
+        {
+            ShowError("A workbook must keep at least one visible sheet.");
+            return;
+        }
+
+        Sheet.State = Sheet.State == SheetState.Visible ? SheetState.Hidden : SheetState.Visible;
+        Session.Xlsx.MarkDirty();
+    }
+
+    private static string UniqueSheetName(Unchained.Xlsx.Engine.SpreadsheetDocument doc)
+    {
+        var n = doc.Sheets.Count + 1;
+        string name;
+        do { name = $"Sheet{n++}"; }
+        while (doc.Sheets.Find(name) is not null);
+        return name;
+    }
+
+    // ── Dialog launchers ────────────────────────────────────────────────────
+
+    private async Task OpenRowColumnDialog()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(RowColumnDialog.Sheet), Sheet },
+            { nameof(RowColumnDialog.InitialRow), _selection.TopLeft.Row },
+            { nameof(RowColumnDialog.InitialColumn), _selection.TopLeft.Column },
+            { nameof(RowColumnDialog.OnChanged), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<RowColumnDialog>("Rows & Columns", parameters, Small());
+    }
+
+    private async Task OpenTablesDialog()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(TablesDialog.Sheet), Sheet },
+            { nameof(TablesDialog.InitialRange), _selection.ToA1() },
+            { nameof(TablesDialog.OnChanged), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<TablesDialog>("Tables", parameters, Wide());
+    }
+
+    private async Task OpenNamedRangesDialog()
+    {
+        if (Sheet is null || Session.Xlsx is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(NamedRangesDialog.Document), Session.Xlsx.Document },
+            { nameof(NamedRangesDialog.CurrentSheet), Sheet },
+            { nameof(NamedRangesDialog.OnChanged), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<NamedRangesDialog>("Named Ranges", parameters, Wide());
+    }
+
+    private async Task OpenDataValidationDialog()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(DataValidationDialog.Sheet), Sheet },
+            { nameof(DataValidationDialog.InitialRange), _selection.ToA1() },
+            { nameof(DataValidationDialog.OnChanged), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<DataValidationDialog>("Data Validation", parameters, Wide());
+    }
+
+    private async Task OpenInsertImage()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(InsertImageDialog.Sheet), Sheet },
+            { nameof(InsertImageDialog.InitialAnchor), _selection.TopLeft.ToA1() },
+            { nameof(InsertImageDialog.OnInserted), AfterMutationAndGrid() }
+        };
+        await Dialogs.ShowAsync<InsertImageDialog>("Insert Image", parameters, Small());
+    }
+
+    private async Task OpenInsertChart()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(InsertChartDialog.Sheet), Sheet },
+            { nameof(InsertChartDialog.InitialRange), _selection.ToA1() },
+            { nameof(InsertChartDialog.OnInserted), AfterMutationAndGrid() }
+        };
+        await Dialogs.ShowAsync<InsertChartDialog>("Insert Chart", parameters, Wide());
+    }
+
+    private async Task OpenSheetSettings()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(SheetSettingsDialog.Sheet), Sheet },
+            { nameof(SheetSettingsDialog.OnApplied), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<SheetSettingsDialog>("Sheet View & Layout", parameters, Small());
+    }
+
+    private async Task OpenPageSetup()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(PageSetupDialog.Sheet), Sheet },
+            { nameof(PageSetupDialog.OnApplied), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<PageSetupDialog>("Page Setup", parameters, Wide());
+    }
+
+    private async Task OpenProtectionDialog()
+    {
+        if (Sheet is null || Session.Xlsx is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(ProtectionDialog.Document), Session.Xlsx.Document },
+            { nameof(ProtectionDialog.Sheet), Sheet },
+            { nameof(ProtectionDialog.OnApplied), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<ProtectionDialog>("Protection", parameters, Small());
+    }
+
+    private async Task OpenPasteImport()
+    {
+        if (Sheet is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(PasteImportDialog.Sheet), Sheet },
+            { nameof(PasteImportDialog.InitialTarget), _selection.TopLeft.ToA1() },
+            { nameof(PasteImportDialog.OnImported), AfterMutationAndGrid() }
+        };
+        await Dialogs.ShowAsync<PasteImportDialog>("Paste / Bulk Import", parameters, Wide());
+    }
+
+    private async Task OpenMetadataDialog()
+    {
+        if (Session.Xlsx is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(MetadataDialog.Document), Session.Xlsx.Document },
+            { nameof(MetadataDialog.OnApplied), AfterMutation() }
+        };
+        await Dialogs.ShowAsync<MetadataDialog>("Edit Properties", parameters, Small());
+    }
+
+    private async Task OpenCsvExport()
+    {
+        if (Sheet is null || Session.Xlsx is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(CsvExportDialog.Sheet), Sheet },
+            { nameof(CsvExportDialog.FileName), Session.Xlsx.FileName }
+        };
+        await Dialogs.ShowAsync<CsvExportDialog>("Export CSV", parameters, Small());
+    }
+
+    private async Task OpenSaveDialog()
+    {
+        if (Session.Xlsx is null) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(SaveDialog.Processor), Session.Xlsx.Processor },
+            { nameof(SaveDialog.Document), Session.Xlsx.Document },
+            { nameof(SaveDialog.FileName), Session.Xlsx.FileName }
+        };
+        await Dialogs.ShowAsync<SaveDialog>("Download Workbook", parameters, Small());
+    }
+
+    // ── Extract text ────────────────────────────────────────────────────────
+
+    private void ExtractText()
+    {
+        if (Sheet is null)
+            return;
+
+        _extractedText = Sheet.GetAllText();
+        _showTextPanel = true;
+    }
+
+    private async Task DownloadText()
+    {
+        if (_extractedText is null)
+            return;
+        await Exporter.TriggerDownloadAsync(
+            Encoding.UTF8.GetBytes(_extractedText),
+            Path.ChangeExtension(Session.Xlsx?.FileName ?? "workbook", ".txt"),
+            "text/plain");
+    }
+
+    private async Task CloseDocument()
+    {
+        DetachSession();
+        await Session.CloseXlsxAsync();
+        _selectedProperties = null;
+        _showTextPanel = false;
+        _extractedText = null;
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    private EventCallback AfterMutation() => EventCallback.Factory.Create(this, () =>
+    {
+        Session.Xlsx?.MarkDirty();
+    });
+
+    private EventCallback AfterMutationAndGrid() => EventCallback.Factory.Create(this, () =>
+    {
+        Session.Xlsx?.MarkDirty();
+        _gridVersion++;
+    });
+
+    private static DialogOptions Small() =>
+        new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private static DialogOptions Wide() =>
+        new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    private void AttachSession()
+    {
+        if (Session.Xlsx is not null)
+            Session.Xlsx.Refreshed += OnSessionRefreshed;
+    }
+
+    private void DetachSession()
+    {
+        if (Session.Xlsx is not null)
+            Session.Xlsx.Refreshed -= OnSessionRefreshed;
+    }
+
+    private void SetBusy(string message)
+    {
+        _busy = true;
+        _busyMessage = message;
+        StateHasChanged();
+    }
+
+    private void ClearBusy()
+    {
+        _busy = false;
+        StateHasChanged();
+    }
+
+    private void ShowInfo(string message) => Snackbar.Add(message, Severity.Info);
+    private void ShowError(string message) => Snackbar.Add(message, Severity.Error);
+}
