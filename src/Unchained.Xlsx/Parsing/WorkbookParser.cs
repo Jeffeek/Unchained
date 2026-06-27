@@ -143,12 +143,13 @@ internal static class WorkbookParser
     {
         var props = document.Properties;
 
-        var corePart = FindPartByRelType(package, OoxmlNamespaces.RelCoreProperties);
+        var corePart = FindPartByRelType(package,
+            OoxmlNamespaces.PackageRelationships + "/" + OoxmlNamespaces.RelCoreProperties);
         if (corePart != null)
             ReadCoreProperties(props, OoXmlHelper.ParseXml(corePart.Data).Root);
 
         var appPart = FindPartByRelType(package,
-            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties");
+            OoxmlNamespaces.OfficeDocument + "/" + OoxmlNamespaces.RelExtendedProperties);
         if (appPart != null)
             ReadAppProperties(props, OoXmlHelper.ParseXml(appPart.Data).Root);
     }

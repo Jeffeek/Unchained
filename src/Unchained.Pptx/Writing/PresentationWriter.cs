@@ -222,7 +222,7 @@ internal sealed class PresentationWriter
                     masterUri,
                     layout.RelationshipId.Length > 0 ? layout.RelationshipId : "rId1",
                     PmlNames.RelTypeSlideLayout,
-                    package.GetRelativeUri(masterUri, layoutUri)
+                    OpcPackage.GetRelativeUri(masterUri, layoutUri)
                 );
             }
         }
@@ -263,7 +263,7 @@ internal sealed class PresentationWriter
                 layoutUri,
                 "rId1",
                 PmlNames.RelTypeSlideMaster,
-                package.GetRelativeUri(layoutUri, layout.Master.PartUri)
+                OpcPackage.GetRelativeUri(layoutUri, layout.Master.PartUri)
             );
 
             layoutUris[layout] = layoutUri;
@@ -340,7 +340,7 @@ internal sealed class PresentationWriter
                 slideUri,
                 "rId1",
                 PmlNames.RelTypeSlideLayout,
-                package.GetRelativeUri(slideUri, slide.Layout.PartUri)
+                OpcPackage.GetRelativeUri(slideUri, slide.Layout.PartUri)
             );
 
             foreach (var shape in slide.Shapes.OfType<PictureShape>()
@@ -350,7 +350,7 @@ internal sealed class PresentationWriter
                     slideUri,
                     shape.Image!.RelationshipId,
                     PmlNames.RelTypeImage,
-                    package.GetRelativeUri(slideUri, shape.Image.PartUri)
+                    OpcPackage.GetRelativeUri(slideUri, shape.Image.PartUri)
                 );
             }
 
@@ -368,7 +368,7 @@ internal sealed class PresentationWriter
                     slideUri,
                     chartShape.RelationshipId,
                     PmlNames.RelTypeChart,
-                    package.GetRelativeUri(slideUri, chartShape.PartUri)
+                    OpcPackage.GetRelativeUri(slideUri, chartShape.PartUri)
                 );
             }
 
@@ -405,7 +405,7 @@ internal sealed class PresentationWriter
                         slideUri,
                         $"rId{rId++}",
                         PmlNames.RelTypeNotesSlide,
-                        package.GetRelativeUri(slideUri, notesUri)
+                        OpcPackage.GetRelativeUri(slideUri, notesUri)
                     );
                 }
             }
@@ -428,7 +428,7 @@ internal sealed class PresentationWriter
                     // ReSharper disable once RedundantAssignment
                     $"rId{rId++}",
                     PmlNames.RelTypeComments,
-                    package.GetRelativeUri(slideUri, commentsUri)
+                    OpcPackage.GetRelativeUri(slideUri, commentsUri)
                 );
             }
         }
@@ -480,7 +480,7 @@ internal sealed class PresentationWriter
                 slideUri,
                 action.RelationshipId,
                 PmlNames.RelTypeSlide,
-                package.GetRelativeUri(slideUri, targetUri)
+                OpcPackage.GetRelativeUri(slideUri, targetUri)
             );
         }
     }
@@ -522,7 +522,7 @@ internal sealed class PresentationWriter
                 slideUri,
                 link.RelationshipId,
                 PmlNames.RelTypeSlide,
-                package.GetRelativeUri(slideUri, targetUri)
+                OpcPackage.GetRelativeUri(slideUri, targetUri)
             );
         }
     }
@@ -622,7 +622,7 @@ internal sealed class PresentationWriter
 
         package.AddOrReplacePart(partUri, contentType, data);
         contentTypes.Register(partUri, contentType);
-        package.AddRelationship(slideUri, relationshipId, relType, package.GetRelativeUri(slideUri, partUri));
+        package.AddRelationship(slideUri, relationshipId, relType, OpcPackage.GetRelativeUri(slideUri, partUri));
     }
 
     private static void WriteCommentAuthors(
@@ -752,7 +752,7 @@ internal sealed class PresentationWriter
                 PresentationPartUri,
                 rId,
                 PmlNames.RelTypeSlideMaster,
-                package.GetRelativeUri(PresentationPartUri, master.PartUri)
+                OpcPackage.GetRelativeUri(PresentationPartUri, master.PartUri)
             );
             rIdCounter++;
         }
@@ -768,7 +768,7 @@ internal sealed class PresentationWriter
                 PresentationPartUri,
                 rId,
                 PmlNames.RelTypeSlide,
-                package.GetRelativeUri(PresentationPartUri, slide.PartUri)
+                OpcPackage.GetRelativeUri(PresentationPartUri, slide.PartUri)
             );
         }
 
@@ -779,7 +779,7 @@ internal sealed class PresentationWriter
                 PresentationPartUri,
                 $"rId{rIdCounter++}",
                 PmlNames.RelTypeCommentAuthors,
-                package.GetRelativeUri(PresentationPartUri, CommentAuthorsPartUri)
+                OpcPackage.GetRelativeUri(PresentationPartUri, CommentAuthorsPartUri)
             );
         }
 
@@ -791,7 +791,7 @@ internal sealed class PresentationWriter
                 // ReSharper disable once RedundantAssignment
                 $"rId{rIdCounter++}",
                 PmlNames.RelTypePresProps,
-                package.GetRelativeUri(PresentationPartUri, PresPropsPartUri)
+                OpcPackage.GetRelativeUri(PresentationPartUri, PresPropsPartUri)
             );
         }
     }
@@ -832,7 +832,7 @@ internal sealed class PresentationWriter
                     PresentationPartUri,
                     $"rId{presRelIndex++}",
                     anchor.Type,
-                    package.GetRelativeUri(PresentationPartUri, anchor.Target),
+                    OpcPackage.GetRelativeUri(PresentationPartUri, anchor.Target),
                     anchor.IsExternal
                 );
             }

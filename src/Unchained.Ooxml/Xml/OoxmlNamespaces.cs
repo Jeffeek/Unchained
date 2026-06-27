@@ -16,8 +16,8 @@ internal static class OoxmlNamespaces
     /// <summary>Core properties rel-type: <c>metadata/core-properties</c> (package level)</summary>
     public const string RelCoreProperties = "metadata/core-properties";
 
-    /// <summary>Extended properties rel-type: <c>/extended-properties</c></summary>
-    public const string RelExtendedProperties = "/extended-properties";
+    /// <summary>Extended properties rel-type: <c>extended-properties</c></summary>
+    public const string RelExtendedProperties = "extended-properties";
 
     /// <summary>Office document relationships: <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships</c></summary>
     public const string OfficeDocument = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -47,23 +47,23 @@ internal static class OoxmlNamespaces
     /// <summary>DrawingML table: <c>http://schemas.openxmlformats.org/drawingml/2006/table</c></summary>
     public const string Table = DrawingML + "/table";
 
-    // ── Relationship-type suffixes (append to OfficeDocument or PackageRelationships) ──
+    // ── Relationship-type suffixes (append to OfficeDocument/PackageRelationships + '/') ──
 
-    /// <summary>Image: <c>/image</c></summary>
-    public const string RelImage = "/image";
+    /// <summary>Image: <c>image</c></summary>
+    public const string RelImage = "image";
 
-    /// <summary>Chart: <c>/chart</c></summary>
-    public const string RelChart = "/chart";
+    /// <summary>Chart: <c>chart</c></summary>
+    public const string RelChart = "chart";
 
-    /// <summary>Hyperlink: <c>/hyperlink</c></summary>
-    public const string RelHyperlink = "/hyperlink";
+    /// <summary>Hyperlink: <c>hyperlink</c></summary>
+    public const string RelHyperlink = "hyperlink";
 
-    /// <summary>Theme: <c>/theme</c></summary>
-    public const string RelTheme = "/theme";
+    /// <summary>Theme: <c>theme</c></summary>
+    public const string RelTheme = "theme";
 
-    /// <summary>Comments: <c>/comments</c></summary>
-    public const string RelComments = "/comments";
+    /// <summary>Comments: <c>comments</c></summary>
+    public const string RelComments = "comments";
 
-    /// <summary>Digital signature: <c>/digital-signature</c></summary>
-    public const string RelDigitalSignature = "/digital-signature";
+    /// <summary>Digital signature: <c>digital-signature</c></summary>
+    public const string RelDigitalSignature = "digital-signature";
 }

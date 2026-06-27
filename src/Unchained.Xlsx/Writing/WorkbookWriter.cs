@@ -416,8 +416,7 @@ internal static partial class WorkbookWriter
         return relId;
     }
 
-    private static string RelativeToWorkbook(OpcPackage package, string sheetUri) =>
-        package.GetRelativeUri(WorkbookUri, sheetUri);
+    private static string RelativeToWorkbook(OpcPackage package, string sheetUri) => OpcPackage.GetRelativeUri(WorkbookUri, sheetUri);
 
     // ── styles.xml ─────────────────────────────────────────────────────────────
 

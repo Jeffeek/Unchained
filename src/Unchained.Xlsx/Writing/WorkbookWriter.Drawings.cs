@@ -1,5 +1,6 @@
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Opc;
+using Unchained.Xlsx.Abstractions;
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.Drawings;
 using Unchained.Xlsx.Engine;
@@ -11,7 +12,7 @@ internal static partial class WorkbookWriter
     // ── Drawing identity assignment ─────────────────────────────────────────────
     // Runs before worksheet XML is written so each sheet's <drawing r:id> can reference its part.
 
-    private static void AssignDrawingIdentities(OpcPackage package, SpreadsheetDocument document)
+    private static void AssignDrawingIdentities(OpcPackage package, ISpreadsheetDocument document)
     {
         var nextDrawing = 1;
         var nextChart = 1;
@@ -72,7 +73,7 @@ internal static partial class WorkbookWriter
         }
     }
 
-    private static void WriteDrawingParts(OpcPackage package, SpreadsheetDocument document)
+    private static void WriteDrawingParts(OpcPackage package, ISpreadsheetDocument document)
     {
         foreach (var sheet in document.Sheets)
         {
@@ -86,7 +87,7 @@ internal static partial class WorkbookWriter
 
             // 2. Sheet → drawing relationship (idempotent).
             EnsureRelationship(package, sheet.PartUri, sheet.DrawingRelationshipId, SmlNames.RelTypeDrawing,
-                package.GetRelativeUri(sheet.PartUri, sheet.DrawingPartUri));
+                OpcPackage.GetRelativeUri(sheet.PartUri, sheet.DrawingPartUri));
 
             // 3. Each drawing's backing part + drawing → part relationship.
             package.ClearRelationships(sheet.DrawingPartUri);
@@ -97,13 +98,13 @@ internal static partial class WorkbookWriter
                     case PictureDrawing pic:
                         package.AddOrReplacePart(pic.MediaPartUri, pic.Image.ContentType, pic.Image.Data.ToArray());
                         package.AddRelationship(sheet.DrawingPartUri, drawing.RelationshipId, SmlNames.RelTypeImage,
-                            package.GetRelativeUri(sheet.DrawingPartUri, pic.MediaPartUri));
+                            OpcPackage.GetRelativeUri(sheet.DrawingPartUri, pic.MediaPartUri));
                         break;
                     case ChartDrawing chart:
                         var bytes = chart.ChartPartData ?? Parsing.ChartXml.Write(chart.Chart);
                         package.AddOrReplacePart(chart.ChartPartUri, SmlNames.ContentTypeChart, bytes);
                         package.AddRelationship(sheet.DrawingPartUri, drawing.RelationshipId, SmlNames.RelTypeChart,
-                            package.GetRelativeUri(sheet.DrawingPartUri, chart.ChartPartUri));
+                            OpcPackage.GetRelativeUri(sheet.DrawingPartUri, chart.ChartPartUri));
                         break;
                 }
             }
