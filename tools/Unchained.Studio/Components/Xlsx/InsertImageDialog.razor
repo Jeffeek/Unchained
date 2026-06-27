@@ -1,7 +1,5 @@
-@using Unchained.Xlsx.Drawings
 @using Unchained.Xlsx.Models.Cell
 @using Unchained.Xlsx.Worksheets
-
 <MudDialog Style="min-width:460px; max-width:560px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -13,11 +11,9 @@
     <DialogContent>
         <MudStack Spacing="3">
             <MudFileUpload T="IBrowserFile" FilesChanged="OnFile" Accept=".png,.jpg,.jpeg,.gif,.bmp">
-                <ActivatorContent>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.UploadFile">
-                        Choose image…
-                    </MudButton>
-                </ActivatorContent>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.UploadFile">
+                    Choose image…
+                </MudButton>
             </MudFileUpload>
 
             @if (_fileName != null)

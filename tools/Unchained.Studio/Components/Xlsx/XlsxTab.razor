@@ -1,17 +1,17 @@
 @page "/xlsx"
 @using System.Globalization
 @using System.Text
-@using Unchained.Ooxml.Charts
-@using Unchained.Studio.Studio.Xlsx
+@using Unchained.Xlsx.Abstractions
 @using Unchained.Xlsx.Cell
 @using Unchained.Xlsx.Drawings
-@using Unchained.Xlsx.Export
+@using Unchained.Xlsx.Engine
 @using Unchained.Xlsx.Models
 @using Unchained.Xlsx.Models.Cell
 @using Unchained.Xlsx.Models.Sheets
-@using Unchained.Xlsx.Models.Styles
 @using Unchained.Xlsx.Styles
 @using Unchained.Xlsx.Worksheets
+@using ChartType = Unchained.Ooxml.Charts.ChartType
+@using HorizontalAlignment = Unchained.Xlsx.Models.HorizontalAlignment
 @inject SessionStateService Session
 @inject FileExportService Exporter
 @inject IDialogService Dialogs
@@ -61,20 +61,42 @@
                 @if (sheet is not null)
                 {
                     <div class="xlsx-toolbar">
-                        <MudTooltip Text="Bold"><MudIconButton Icon="@Icons.Material.Outlined.FormatBold" Size="Size.Small" OnClick="() => QuickFont(f => f.Bold = !f.Bold)"/></MudTooltip>
-                        <MudTooltip Text="Italic"><MudIconButton Icon="@Icons.Material.Outlined.FormatItalic" Size="Size.Small" OnClick="() => QuickFont(f => f.Italic = !f.Italic)"/></MudTooltip>
-                        <MudTooltip Text="Underline"><MudIconButton Icon="@Icons.Material.Outlined.FormatUnderlined" Size="Size.Small" OnClick="() => QuickFont(f => f.Underline = f.Underline == FontUnderline.None ? FontUnderline.Single : FontUnderline.None)"/></MudTooltip>
+                        <MudTooltip Text="Bold">
+                            <MudIconButton Icon="@Icons.Material.Outlined.FormatBold" Size="Size.Small" OnClick="() => QuickFont(static f => f.Bold = !f.Bold)"/>
+                        </MudTooltip>
+                        <MudTooltip Text="Italic">
+                            <MudIconButton Icon="@Icons.Material.Outlined.FormatItalic" Size="Size.Small" OnClick="() => QuickFont(static f => f.Italic = !f.Italic)" />
+                        </MudTooltip>
+                        <MudTooltip Text="Underline">
+                            <MudIconButton Icon="@Icons.Material.Outlined.FormatUnderlined" Size="Size.Small" OnClick="() => QuickFont(static f => f.Underline = f.Underline == FontUnderline.None ? FontUnderline.Single : FontUnderline.None)" />
+                        </MudTooltip>
                         <MudDivider Vertical="true" Class="ops-divider"/>
-                        <MudTooltip Text="Align left"><MudIconButton Icon="@Icons.Material.Outlined.FormatAlignLeft" Size="Size.Small" OnClick="() => QuickAlign(a => a.Horizontal = Unchained.Xlsx.Models.Styles.HorizontalAlignment.Left)"/></MudTooltip>
-                        <MudTooltip Text="Align centre"><MudIconButton Icon="@Icons.Material.Outlined.FormatAlignCenter" Size="Size.Small" OnClick="() => QuickAlign(a => a.Horizontal = Unchained.Xlsx.Models.Styles.HorizontalAlignment.Center)"/></MudTooltip>
-                        <MudTooltip Text="Align right"><MudIconButton Icon="@Icons.Material.Outlined.FormatAlignRight" Size="Size.Small" OnClick="() => QuickAlign(a => a.Horizontal = Unchained.Xlsx.Models.Styles.HorizontalAlignment.Right)"/></MudTooltip>
-                        <MudTooltip Text="Wrap text"><MudIconButton Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" OnClick="() => QuickAlign(a => a.WrapText = !a.WrapText)"/></MudTooltip>
+                        <MudTooltip Text="Align left">
+                            <MudIconButton Icon="@Icons.Material.Outlined.FormatAlignLeft" Size="Size.Small" OnClick="() => QuickAlign(static a => a.Horizontal = HorizontalAlignment.Left)" />
+                        </MudTooltip>
+                        <MudTooltip Text="Align centre">
+                            <MudIconButton Icon="@Icons.Material.Outlined.FormatAlignCenter" Size="Size.Small" OnClick="() => QuickAlign(static a => a.Horizontal = HorizontalAlignment.Center)" />
+                        </MudTooltip>
+                        <MudTooltip Text="Align right">
+                            <MudIconButton Icon="@Icons.Material.Outlined.FormatAlignRight" Size="Size.Small" OnClick="() => QuickAlign(static a => a.Horizontal = HorizontalAlignment.Right)" />
+                        </MudTooltip>
+                        <MudTooltip Text="Wrap text">
+                            <MudIconButton Icon="@Icons.Material.Outlined.WrapText" Size="Size.Small" OnClick="() => QuickAlign(static a => a.WrapText = !a.WrapText)" />
+                        </MudTooltip>
                         <MudDivider Vertical="true" Class="ops-divider"/>
-                        <MudTooltip Text="Thin box border"><MudIconButton Icon="@Icons.Material.Outlined.BorderAll" Size="Size.Small" OnClick="QuickBorderAll"/></MudTooltip>
-                        <MudTooltip Text="Merge selection"><MudIconButton Icon="@Icons.Material.Outlined.CallMerge" Size="Size.Small" OnClick="MergeSelection"/></MudTooltip>
-                        <MudTooltip Text="Unmerge selection"><MudIconButton Icon="@Icons.Material.Outlined.CallSplit" Size="Size.Small" OnClick="UnmergeSelection"/></MudTooltip>
+                        <MudTooltip Text="Thin box border">
+                            <MudIconButton Icon="@Icons.Material.Outlined.BorderAll" Size="Size.Small" OnClick="QuickBorderAll"/>
+                        </MudTooltip>
+                        <MudTooltip Text="Merge selection">
+                            <MudIconButton Icon="@Icons.Material.Outlined.CallMerge" Size="Size.Small" OnClick="MergeSelection"/>
+                        </MudTooltip>
+                        <MudTooltip Text="Unmerge selection">
+                            <MudIconButton Icon="@Icons.Material.Outlined.CallSplit" Size="Size.Small" OnClick="UnmergeSelection"/>
+                        </MudTooltip>
                         <MudDivider Vertical="true" Class="ops-divider"/>
-                        <MudTooltip Text="Format cells…"><MudIconButton Icon="@Icons.Material.Outlined.FormatPaint" Size="Size.Small" OnClick="OpenFormatDialog"/></MudTooltip>
+                        <MudTooltip Text="Format cells…">
+                            <MudIconButton Icon="@Icons.Material.Outlined.FormatPaint" Size="Size.Small" OnClick="OpenFormatDialog"/>
+                        </MudTooltip>
                         <MudSpacer/>
                         <MudText Typo="Typo.caption" Style="opacity:.6;">@_selection.ToA1()</MudText>
                     </div>
@@ -113,6 +135,7 @@
                     </MudTooltip>
                 </div>
 
+                @* ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract *@
                 @if (sheet is not null)
                 {
                     <SheetGrid @key="@($"{state.CurrentSheet}-{_gridVersion}")"
@@ -223,7 +246,7 @@
     private int _gridVersion;
     private int _fbVersion;
     private CellReference _formulaReference = new(1, 1);
-    private string _formulaText = string.Empty;
+    public string FormulaText { get; private set; } = string.Empty;
     private bool _formulaActive;
     private FormulaBar? _formulaBar;
     private SheetGrid? _grid;
@@ -232,6 +255,7 @@
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender) return;
+
         if (Session.Xlsx is not null)
             Session.Xlsx.Refreshed += OnSessionRefreshed;
     }
@@ -241,7 +265,7 @@
     private static Worksheet? ActiveSheet(XlsxSessionState state)
     {
         var index = Math.Clamp(state.CurrentSheet, 1, state.Document.Sheets.Count) - 1;
-        return index >= 0 && index < state.Document.Sheets.Count ? state.Document.Sheets[index] : null;
+        return index < state.Document.Sheets.Count ? state.Document.Sheets[index] : null;
     }
 
     private Worksheet? Sheet => Session.Xlsx is null ? null : ActiveSheet(Session.Xlsx);
@@ -280,7 +304,7 @@
         try
         {
             DetachSession();
-            using var processor = new Unchained.Xlsx.Engine.SpreadsheetProcessor();
+            using var processor = new SpreadsheetProcessor();
             using var importedStream = new MemoryStream(file.Bytes);
             using var imported = await processor.LoadFromCsvAsync(importedStream);
             using var outStream = new MemoryStream();
@@ -315,12 +339,11 @@
     {
         _selectedProperties = node is null ? null : XlsxPropertyAdapter.Build(node);
 
-        if (node is { NodeType: TreeNodeType.Sheet, Payload: Worksheet ws } && Session.Xlsx is not null)
-        {
-            var idx = Session.Xlsx.Document.Sheets.IndexOf(ws);
-            if (idx >= 0)
-                SelectSheet(idx + 1);
-        }
+        if (node is not { NodeType: TreeNodeType.Sheet, Payload: Worksheet ws } || Session.Xlsx is null) return;
+
+        var idx = Session.Xlsx.Document.Sheets.IndexOf(ws);
+        if (idx >= 0)
+            SelectSheet(idx + 1);
     }
 
     private void OnCellSelected(Cell? cell)
@@ -328,18 +351,17 @@
         _selectedProperties = cell is null ? null : XlsxPropertyAdapter.ForCell(cell);
 
         // Feed the formula bar.
-        if (Session.Xlsx is not null && Sheet is not null)
-        {
-            _formulaReference = cell is not null ? cell.Reference : new CellReference(1, 1);
-            _formulaText = cell is null
-                ? string.Empty
-                : cell.FormulaText ?? cell.CellType switch
-                {
-                    CellType.Number => cell.GetDouble()?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                    CellType.Boolean => cell.GetBoolean() == true ? "TRUE" : "FALSE",
-                    _ => cell.GetString() ?? cell.GetFormattedString()
-                };
-        }
+        if (Session.Xlsx is null || Sheet is null) return;
+
+        _formulaReference = cell?.Reference ?? new CellReference(1, 1);
+        FormulaText = cell is null
+            ? string.Empty
+            : cell.FormulaText ?? cell.CellType switch
+            {
+                CellType.Number => cell.GetDouble()?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                CellType.Boolean => cell.GetBoolean() == true ? "TRUE" : "FALSE",
+                _ => cell.GetString() ?? cell.GetFormattedString()
+            };
     }
 
     private void OnSelectionChanged(CellRange range)
@@ -347,19 +369,21 @@
         _selection = range;
         // Point formula bar at the top-left cell of the new selection.
         _formulaReference = range.TopLeft;
-        _formulaText = string.Empty;
+        FormulaText = string.Empty;
     }
 
-    private async Task OnCellReferenceInserted((CellReference Reference, int CursorPos) tuple)
+    private Task OnCellReferenceInserted((CellReference Reference, int CursorPos) tuple)
     {
         // Keep the formula bar active and synced after cell reference insertion.
         _formulaReference = tuple.Reference;
-        _formulaText = tuple.Reference.ToAbsoluteA1();
+        FormulaText = tuple.Reference.ToAbsoluteA1();
+        return Task.CompletedTask;
     }
 
-    private async Task OnChartTypeSelected(Ooxml.Charts.ChartType type)
+    private async Task OnChartTypeSelected(ChartType type)
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(InsertChartDialog.Sheet), Sheet },
@@ -385,10 +409,10 @@
         _fbVersion++;
     }
 
-    private async Task OnFormulaCommitted(string text)
+    private Task OnFormulaCommitted(string text)
     {
         if (Sheet is null || Session.Xlsx is null)
-            return;
+            return Task.CompletedTask;
 
         var row = _formulaReference.Row;
         var col = _formulaReference.Column;
@@ -422,7 +446,7 @@
 
         // Refresh the formula bar text for the affected cell.
         var cell = Sheet.GetCell(row, col);
-        _formulaText = cell switch
+        FormulaText = cell switch
         {
             null => string.Empty,
             { FormulaText: { } f } => f,
@@ -433,6 +457,7 @@
                 _ => cell.GetString() ?? cell.GetFormattedString()
             }
         };
+        return Task.CompletedTask;
     }
 
     private async Task RefreshTree()
@@ -458,52 +483,49 @@
 
     // ── Quick formatting (toolbar) ─────────────────────────────────────────────
 
-    private async Task QuickFont(Action<CellFont> mutate)
-    {
-        await ApplyToSelection(cell => cell.ApplyFont(mutate));
-    }
+    private Task QuickFont(Action<CellFont> mutate) => ApplyToSelection(cell => cell.ApplyFont(mutate));
 
-    private async Task QuickAlign(Action<CellAlignment> mutate)
-    {
-        await ApplyToSelection(cell => cell.ApplyAlignment(mutate));
-    }
+    private Task QuickAlign(Action<CellAlignment> mutate) => ApplyToSelection(cell => cell.ApplyAlignment(mutate));
 
-    private async Task QuickBorderAll()
-    {
-        await ApplyToSelection(cell => cell.ApplyBorder(b => b.SetAllEdges(BorderStyle.Thin)));
-    }
+    private Task QuickBorderAll() => ApplyToSelection(static cell => cell.ApplyBorder(static b => b.SetAllEdges(BorderStyle.Thin)));
 
-    private async Task ApplyToSelection(Action<Cell> action)
+    private Task ApplyToSelection(Action<Cell> action)
     {
         if (Sheet is null)
-            return;
+            return Task.CompletedTask;
 
         foreach (var reference in _selection.Cells())
             action(Sheet[reference.Row, reference.Column]);
 
         Session.Xlsx!.MarkDirty();
         _grid?.Invalidate();
+        return Task.CompletedTask;
     }
 
-    private async Task MergeSelection()
+    private Task MergeSelection()
     {
-        if (Sheet is null) return;
+        if (Sheet is null) return Task.CompletedTask;
+
         Sheet.MergeCells(_selection);
         Session.Xlsx!.MarkDirty();
         _grid?.Invalidate();
+        return Task.CompletedTask;
     }
 
-    private async Task UnmergeSelection()
+    private Task UnmergeSelection()
     {
-        if (Sheet is null) return;
+        if (Sheet is null) return Task.CompletedTask;
+
         Sheet.UnmergeCells(_selection);
         Session.Xlsx!.MarkDirty();
         _grid?.Invalidate();
+        return Task.CompletedTask;
     }
 
     private async Task OpenFormatDialog()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(CellFormatDialog.Sheet), Sheet },
@@ -519,6 +541,7 @@
     {
         if (Session.Xlsx is null)
             return;
+
         Session.Xlsx.CurrentSheet = number;
         _selectedProperties = null;
         _selection = new CellRange(new CellReference(1, 1), new CellReference(1, 1));
@@ -545,7 +568,9 @@
         var confirmed = await Dialogs.ShowMessageBoxAsync(
             "Delete sheet",
             $"Delete '{sheet.Name}'? This cannot be undone.",
-            yesText: "Delete", cancelText: "Cancel");
+            "Delete",
+            cancelText: "Cancel"
+        );
         if (confirmed != true)
             return;
 
@@ -561,8 +586,11 @@
             return;
 
         var parameters = new DialogParameters { { nameof(RenameSheetDialog.CurrentName), sheet.Name } };
-        var dialog = await Dialogs.ShowAsync<RenameSheetDialog>("Rename Sheet", parameters,
-            new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseOnEscapeKey = true });
+        var dialog = await Dialogs.ShowAsync<RenameSheetDialog>(
+            "Rename Sheet",
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseOnEscapeKey = true }
+        );
         var result = await dialog.Result;
         if (result is not { Canceled: false, Data: string newName } || string.IsNullOrWhiteSpace(newName))
             return;
@@ -609,12 +637,12 @@
         Session.Xlsx.MarkDirty();
     }
 
-    private static string UniqueSheetName(Unchained.Xlsx.Engine.SpreadsheetDocument doc)
+    private static string UniqueSheetName(ISpreadsheetDocument doc)
     {
         var n = doc.Sheets.Count + 1;
         string name;
-        do { name = $"Sheet{n++}"; }
-        while (doc.Sheets.Find(name) is not null);
+        do { name = $"Sheet{n++}"; } while (doc.Sheets.Find(name) is not null);
+
         return name;
     }
 
@@ -623,6 +651,7 @@
     private async Task OpenRowColumnDialog()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(RowColumnDialog.Sheet), Sheet },
@@ -636,6 +665,7 @@
     private async Task OpenTablesDialog()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(TablesDialog.Sheet), Sheet },
@@ -648,6 +678,7 @@
     private async Task OpenNamedRangesDialog()
     {
         if (Sheet is null || Session.Xlsx is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(NamedRangesDialog.Document), Session.Xlsx.Document },
@@ -660,6 +691,7 @@
     private async Task OpenDataValidationDialog()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(DataValidationDialog.Sheet), Sheet },
@@ -672,6 +704,7 @@
     private async Task OpenInsertImage()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(InsertImageDialog.Sheet), Sheet },
@@ -684,6 +717,7 @@
     private async Task OpenInsertChart()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(InsertChartDialog.Sheet), Sheet },
@@ -696,6 +730,7 @@
     private async Task OpenGenerateData()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(GenerateDataDialog.Sheet), Sheet },
@@ -705,9 +740,10 @@
         await Dialogs.ShowAsync<GenerateDataDialog>("Generate Data", parameters, Wide());
     }
 
-    private async Task OpenChartEditor(Unchained.Xlsx.Drawings.ChartDrawing chart)
+    private async Task OpenChartEditor(ChartDrawing chart)
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(ChartEditDialog.Sheet), Sheet },
@@ -720,6 +756,7 @@
     private async Task OpenSheetSettings()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(SheetSettingsDialog.Sheet), Sheet },
@@ -731,6 +768,7 @@
     private async Task OpenPageSetup()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(PageSetupDialog.Sheet), Sheet },
@@ -742,6 +780,7 @@
     private async Task OpenProtectionDialog()
     {
         if (Sheet is null || Session.Xlsx is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(ProtectionDialog.Document), Session.Xlsx.Document },
@@ -754,6 +793,7 @@
     private async Task OpenPasteImport()
     {
         if (Sheet is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(PasteImportDialog.Sheet), Sheet },
@@ -766,6 +806,7 @@
     private async Task OpenMetadataDialog()
     {
         if (Session.Xlsx is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(MetadataDialog.Document), Session.Xlsx.Document },
@@ -777,6 +818,7 @@
     private async Task OpenCsvExport()
     {
         if (Sheet is null || Session.Xlsx is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(CsvExportDialog.Sheet), Sheet },
@@ -788,6 +830,7 @@
     private async Task OpenSaveDialog()
     {
         if (Session.Xlsx is null) return;
+
         var parameters = new DialogParameters
         {
             { nameof(SaveDialog.Processor), Session.Xlsx.Processor },
@@ -808,15 +851,12 @@
         _showTextPanel = true;
     }
 
-    private async Task DownloadText()
-    {
-        if (_extractedText is null)
-            return;
-        await Exporter.TriggerDownloadAsync(
+    private Task DownloadText() =>
+        _extractedText is null ? Task.CompletedTask : Exporter.TriggerDownloadAsync(
             Encoding.UTF8.GetBytes(_extractedText),
             Path.ChangeExtension(Session.Xlsx?.FileName ?? "workbook", ".txt"),
-            "text/plain");
-    }
+            "text/plain"
+        );
 
     private async Task CloseDocument()
     {
@@ -829,16 +869,22 @@
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 
-    private EventCallback AfterMutation() => EventCallback.Factory.Create(this, () =>
-    {
-        Session.Xlsx?.MarkDirty();
-    });
+    private EventCallback AfterMutation() => EventCallback.Factory.Create(
+        this,
+        () =>
+        {
+            Session.Xlsx?.MarkDirty();
+        }
+    );
 
-    private EventCallback AfterMutationAndGrid() => EventCallback.Factory.Create(this, () =>
-    {
-        Session.Xlsx?.MarkDirty();
-        _gridVersion++;
-    });
+    private EventCallback AfterMutationAndGrid() => EventCallback.Factory.Create(
+        this,
+        () =>
+        {
+            Session.Xlsx?.MarkDirty();
+            _gridVersion++;
+        }
+    );
 
     private static DialogOptions Small() =>
         new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };

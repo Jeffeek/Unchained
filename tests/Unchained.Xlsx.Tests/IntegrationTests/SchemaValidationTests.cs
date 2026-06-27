@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using Shouldly;
@@ -19,14 +20,14 @@ public class SchemaValidationTests
     {
         using var ms = new MemoryStream(bytes);
         using var doc = SpreadsheetDocument.Open(ms, false);
-        var validator = new OpenXmlValidator(DocumentFormat.OpenXml.FileFormatVersions.Office2019);
+        var validator = new OpenXmlValidator(FileFormatVersions.Office2019);
         // Materialise descriptions while the package is still open.
         return validator.Validate(doc)
-            .Select(e => $"[{e.Id}] {e.Part?.Uri}{e.Path?.XPath}: {e.Description}")
+            .Select(static e => $"[{e.Id}] {e.Part?.Uri}{e.Path?.XPath}: {e.Description}")
             .ToList();
     }
 
-    private static string Describe(IReadOnlyList<string> errors) => string.Join("\n", errors);
+    private static string Describe(IEnumerable<string> errors) => string.Join("\n", errors);
 
     [Fact]
     public async Task BlankWorkbook_IsSchemaValid()
@@ -54,11 +55,18 @@ public class SchemaValidationTests
     {
         using var document = XlsxFixtures.WithSheets("Data");
         var sheet = document.Sheets[0];
-        sheet.SetValue(1, 1, "Cat"); sheet.SetValue(1, 2, "Val");
-        sheet.SetValue(2, 1, "A"); sheet.SetValue(2, 2, 10.0);
-        sheet.SetValue(3, 1, "B"); sheet.SetValue(3, 2, 20.0);
-        sheet.AddChart(type, CellRange.FromA1("A1:B3"),
-            DrawingAnchor.OneCell(CellReference.FromA1("D1")), "Title");
+        sheet.SetValue(1, 1, "Cat");
+        sheet.SetValue(1, 2, "Val");
+        sheet.SetValue(2, 1, "A");
+        sheet.SetValue(2, 2, 10.0);
+        sheet.SetValue(3, 1, "B");
+        sheet.SetValue(3, 2, 20.0);
+        sheet.AddChart(
+            type,
+            CellRange.FromA1("A1:B3"),
+            DrawingAnchor.OneCell(CellReference.FromA1("D1")),
+            "Title"
+        );
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
         var errors = Validate(bytes);
@@ -69,7 +77,8 @@ public class SchemaValidationTests
     public async Task ImageWorkbook_IsSchemaValid()
     {
         var png = Convert.FromBase64String(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC");
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+        );
         using var document = XlsxFixtures.WithSheets("Data");
         document.Sheets[0].AddImage(png, "image/png", CellReference.FromA1("B2"));
 
@@ -83,9 +92,12 @@ public class SchemaValidationTests
     {
         using var document = XlsxFixtures.WithSheets("Data");
         var sheet = document.Sheets[0];
-        sheet.SetValue(1, 1, "Region"); sheet.SetValue(1, 2, "Amount");
-        sheet.SetValue(2, 1, "East"); sheet.SetValue(2, 2, 100.0);
-        sheet.SetValue(3, 1, "West"); sheet.SetValue(3, 2, 200.0);
+        sheet.SetValue(1, 1, "Region");
+        sheet.SetValue(1, 2, "Amount");
+        sheet.SetValue(2, 1, "East");
+        sheet.SetValue(2, 2, 100.0);
+        sheet.SetValue(3, 1, "West");
+        sheet.SetValue(3, 2, 200.0);
         var pivot = sheet.AddPivotTable(CellRange.FromA1("A1:B3"), CellReference.FromA1("D1"), "P");
         pivot.AddRowField("Region");
         pivot.AddDataField("Amount");

@@ -128,7 +128,9 @@ public class RowColumnCoverageTests
                 ["Name", "Age"],
                 ["Alice", 30.0]
             ],
-            1, 1);
+            1,
+            1
+        );
 
         sheet.GetCell(1, 1)!.GetString().ShouldBe("Name");
         sheet.GetCell(2, 2)!.GetDouble().ShouldBe(30.0);

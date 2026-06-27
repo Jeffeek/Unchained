@@ -31,17 +31,12 @@ public sealed partial class Worksheet
     {
         EnsureCellsParsedPublic();
 
-        var moved = new List<Row>();
-        foreach (var row in _rows.AllRows.OrderBy(static r => r.RowNumber))
-        {
-            if (delta < 0 && row.RowNumber == rowNumber)
-                continue; // dropped
+        var moved = (from row in RowsInternal.AllRows.OrderBy(static r => r.RowNumber)
+                     where delta >= 0 || row.RowNumber != rowNumber
+                     let newNumber = row.RowNumber >= rowNumber ? row.RowNumber + delta : row.RowNumber
+                     select newNumber == row.RowNumber ? row : RelocateRow(row, newNumber)).ToList();
 
-            var newNumber = row.RowNumber >= rowNumber ? row.RowNumber + delta : row.RowNumber;
-            moved.Add(newNumber == row.RowNumber ? row : RelocateRow(row, newNumber));
-        }
-
-        _rows.RenumberFrom(moved);
+        RowsInternal.RenumberFrom(moved);
         ShiftAllFormulas(FormulaShifter.Axis.Row, rowNumber, delta);
     }
 
@@ -49,7 +44,7 @@ public sealed partial class Worksheet
     {
         EnsureCellsParsedPublic();
 
-        foreach (var row in _rows.AllRows.ToList())
+        foreach (var row in RowsInternal.AllRows.ToList())
         {
             var cells = row.CellsInternal.OrderBy(static c => c.Column).ToList();
             foreach (var cell in cells)
@@ -61,7 +56,7 @@ public sealed partial class Worksheet
                     continue;
 
                 var newColumn = cell.Column >= columnNumber ? cell.Column + delta : cell.Column;
-                if (newColumn < 1 || newColumn > CellReference.MaxColumn)
+                if (newColumn is < 1 or > CellReference.MaxColumn)
                     continue;
 
                 row.AddCell(RelocateCell(cell, cell.Row, newColumn));
@@ -107,12 +102,11 @@ public sealed partial class Worksheet
 
     private void ShiftAllFormulas(FormulaShifter.Axis axis, int at, int delta)
     {
-        foreach (var row in _rows.AllRows)
-            foreach (var cell in row.CellsInternal)
-            {
-                if (cell.Formula != null)
-                    cell.Formula = FormulaShifter.Shift(cell.Formula, axis, at, delta);
-            }
+        foreach (var cell in RowsInternal.AllRows.SelectMany(static row => row.CellsInternal))
+        {
+            if (cell.Formula != null)
+                cell.Formula = FormulaShifter.Shift(cell.Formula, axis, at, delta);
+        }
     }
 
     // ── Row properties ──────────────────────────────────────────────────────────
@@ -132,7 +126,6 @@ public sealed partial class Worksheet
     public void ShowRow(int rowNumber)
     {
         var row = Rows.GetRow(rowNumber);
-        if (row != null)
-            row.IsHidden = false;
+        row?.IsHidden = false;
     }
 }

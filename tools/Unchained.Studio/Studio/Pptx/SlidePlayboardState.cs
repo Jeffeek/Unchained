@@ -1,5 +1,4 @@
 using Unchained.Ooxml;
-using Unchained.Pptx.Animations;
 using Unchained.Pptx.Shapes;
 
 namespace Unchained.Studio.Studio.Pptx;
@@ -32,7 +31,7 @@ public enum ResizeHandleKind
 /// </summary>
 public sealed class SlidePlayboardState
 {
-    /// <summary>Currently selected shape, or <see langword="null"/> when nothing is selected.</summary>
+    /// <summary>Currently selected shape, or <see langword="null" /> when nothing is selected.</summary>
     public Shape? SelectedShape { get; set; }
 
     /// <summary>Whether the user is currently dragging a shape body.</summary>
@@ -70,13 +69,13 @@ public sealed class SlidePlayboardState
     public event Action? Dirty;
 
     /// <summary>
-    ///     Invokes <see cref="Dirty"/>. Call from outside the type since events can only be
+    ///     Invokes <see cref="Dirty" />. Call from outside the type since events can only be
     ///     raised directly from within the declaring type.
     /// </summary>
     public void InvokeDirty() => Dirty?.Invoke();
 
     /// <summary>
-    ///     Raises <see cref="ShapeAdded"/> and <see cref="Dirty"/>.
+    ///     Raises <see cref="ShapeAdded" /> and <see cref="Dirty" />.
     /// </summary>
     public void OnShapeAdded(Shape shape)
     {

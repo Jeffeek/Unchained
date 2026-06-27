@@ -59,8 +59,6 @@ internal static partial class FormulaFunctions
         return caught ? ev.Evaluate(args[1]) : value;
     }
 
-    private enum BoolMode { And, Or, Xor }
-
     private static FormulaValue BoolAggregate(IEnumerable<FormulaNode> args, FormulaEvaluator ev, BoolMode mode)
     {
         var any = false;
@@ -96,4 +94,6 @@ internal static partial class FormulaFunctions
             _ => FormulaValue.FromBoolean(trueCount % 2 == 1)
         };
     }
+
+    private enum BoolMode { And, Or, Xor }
 }

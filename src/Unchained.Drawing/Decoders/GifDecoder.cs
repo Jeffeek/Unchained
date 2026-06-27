@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.Collections.Generic;
 
 namespace Unchained.Drawing.Decoders;
 
@@ -22,28 +21,36 @@ internal static class GifDecoder
         if (bytes.Length < 13) return null;
         if (!IsGif(bytes)) return null;
 
-        width = BinaryPrimitives.ReadInt16LittleEndian(bytes.Slice(6));
-        height = BinaryPrimitives.ReadInt16LittleEndian(bytes.Slice(8));
+        width = BinaryPrimitives.ReadInt16LittleEndian(bytes[6..]);
+        height = BinaryPrimitives.ReadInt16LittleEndian(bytes[8..]);
         if (width == 0 || height == 0) return null;
 
         var flags = bytes[10];
         var hasGct = (flags & 0x80) != 0;
         var gctSize = 1 << ((flags & 0x07) + 1);
-        var gct = hasGct ? ReadPalette(bytes.Slice(13), gctSize) : null;
-        var pos = hasGct ? 13 + gctSize * 3 : 13;
+        var gct = hasGct ? ReadPalette(bytes[13..], gctSize) : null;
+        var pos = hasGct ? 13 + (gctSize * 3) : 13;
 
         while (pos < bytes.Length)
         {
             var b = bytes[pos];
-            if (b == 0x2C)
+            switch (b)
             {
-                var rgb = DecodeImage(bytes, ref pos, width, height, gct);
-                return rgb;
+                case 0x2C:
+                {
+                    var rgb = DecodeImage(bytes, ref pos, width, height, gct);
+                    return rgb;
+                }
+                case 0x3B:
+                    return null;
+                case 0x21:
+                    pos = SkipExtension(bytes, pos);
+                break;
+                default:
+                    return null;
             }
-            if (b == 0x3B) return null;
-            if (b == 0x21) pos = SkipExtension(bytes, pos);
-            else return null;
         }
+
         return null;
     }
 
@@ -52,7 +59,8 @@ internal static class GifDecoder
         ref int pos,
         int width,
         int height,
-        byte[]? palette)
+        byte[]? palette
+    )
     {
         pos++;
         if (pos + 10 > bytes.Length) return null;
@@ -62,13 +70,12 @@ internal static class GifDecoder
         var hasLct = (imgFlags & 0x80) != 0;
         var lctSize = hasLct ? 1 << ((imgFlags & 0x07) + 1) : 0;
 
-        var pal = hasLct ? ReadPalette(bytes.Slice(pos), lctSize) : palette;
+        var pal = hasLct ? ReadPalette(bytes[pos..], lctSize) : palette;
         if (pal == null || pal.Length == 0) return null;
-        pos += lctSize * 3;
 
-        var minCodeSize = bytes[pos++];
+        pos += lctSize * 3;
+        pos++;
         var data = ReadSubBlocks(bytes, ref pos);
-        if (data == null) return null;
 
         // GIF LZW: code size starts at min_code_size + 1 but floored at 9.
         // The LzwDecoder defaults to earlyChange=1 which shifts threshold,
@@ -83,35 +90,38 @@ internal static class GifDecoder
             if (c < pal.Length / 3)
             {
                 rgb[i * 3] = pal[c * 3];
-                rgb[i * 3 + 1] = pal[c * 3 + 1];
-                rgb[i * 3 + 2] = pal[c * 3 + 2];
+                rgb[(i * 3) + 1] = pal[(c * 3) + 1];
+                rgb[(i * 3) + 2] = pal[(c * 3) + 2];
             }
             else
             {
                 rgb[i * 3] = 0;
-                rgb[i * 3 + 1] = 0;
-                rgb[i * 3 + 2] = 0;
+                rgb[(i * 3) + 1] = 0;
+                rgb[(i * 3) + 2] = 0;
             }
         }
+
         return rgb;
     }
 
     private static byte[] ReadPalette(ReadOnlySpan<byte> bytes, int count)
     {
         var size = count * 3;
-        return bytes.Slice(0, size).ToArray();
+        return bytes[..size].ToArray();
     }
 
-    private static byte[]? ReadSubBlocks(ReadOnlySpan<byte> bytes, ref int pos)
+    private static byte[] ReadSubBlocks(ReadOnlySpan<byte> bytes, ref int pos)
     {
         var outBytes = new List<byte>();
         while (pos < bytes.Length)
         {
             var blockSize = bytes[pos++];
             if (blockSize == 0) break;
+
             outBytes.AddRange(bytes.Slice(pos, blockSize));
             pos += blockSize;
         }
+
         return outBytes.ToArray();
     }
 
@@ -119,13 +129,16 @@ internal static class GifDecoder
     {
         pos++;
         if (pos >= bytes.Length) return -1;
+
         pos++;
         while (pos < bytes.Length)
         {
             var blockSize = bytes[pos++];
             if (blockSize == 0) break;
+
             pos += blockSize;
         }
+
         return pos;
     }
 
@@ -154,7 +167,7 @@ internal static class GifDecoder
         while (true)
         {
             var code = ReadBits(data, ref bitPos, codeWidth);
-            if (code < 0 || code == eoiCode) break;
+            if (code is < 0 or eoiCode) break;
 
             if (code == clearCode)
             {
@@ -182,6 +195,7 @@ internal static class GifDecoder
                 stack[sp++] = suffix[tmp];
                 tmp = prefix[tmp];
             }
+
             stack[sp++] = suffix[tmp];
 
             for (var i = sp - 1; i >= 0; i--)
@@ -194,12 +208,15 @@ internal static class GifDecoder
                     prefix[nextCode] = lastCode;
                     suffix[nextCode] = stack[sp - 1];
                 }
+
                 nextCode++;
-                if (codeWidth < 12 && nextCode >= (1 << codeWidth))
+                if (codeWidth < 12 && nextCode >= 1 << codeWidth)
                     codeWidth++;
             }
+
             lastCode = code;
         }
+
         return output;
     }
 
@@ -210,9 +227,11 @@ internal static class GifDecoder
         {
             var byteIdx = bitPos >> 3;
             if (byteIdx >= data.Length) return -1;
+
             result = (result << 1) | ((data[byteIdx] >> (7 - (bitPos & 7))) & 1);
             bitPos++;
         }
+
         return result;
     }
 }

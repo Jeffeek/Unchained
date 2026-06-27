@@ -59,7 +59,11 @@ public class PivotWriterCoverageTests
             pivot.AddDataField("Amount", function);
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         archive.Entries.Any(static e => e.FullName.Contains("pivotTable")).ShouldBeTrue();
     }
 
@@ -73,9 +77,17 @@ public class PivotWriterCoverageTests
         pivot.AddDataField("Amount");
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         var entry = archive.Entries.First(static e => e.FullName.Contains("pivotTables/pivotTable"));
+#if NET10_0_OR_GREATER
+        using var reader = new StreamReader(await entry.OpenAsync());
+#else
         using var reader = new StreamReader(entry.Open());
+#endif
         var xml = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
         xml.ShouldContain("pageFields");
     }
@@ -103,9 +115,17 @@ public class PivotWriterCoverageTests
         pivot.AddDataField("Num");
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         var entry = archive.Entries.First(static e => e.FullName.Contains("pivotCacheRecords"));
+#if NET10_0_OR_GREATER
+        using var reader = new StreamReader(await entry.OpenAsync());
+#else
         using var reader = new StreamReader(entry.Open());
+#endif
         var xml = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
         xml.ShouldContain("<");
     }
@@ -119,7 +139,7 @@ public class PivotWriterCoverageTests
         var before = pivot.Fields[0].Items.Count;
 
         // Resolver returns null → Refresh is a no-op.
-        pivot.Refresh(_ => null);
+        pivot.Refresh(static _ => null);
         pivot.Fields[0].Items.Count.ShouldBe(before);
     }
 

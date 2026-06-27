@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Xml;
 

@@ -74,7 +74,7 @@ public class FormulaEngineCoverageTests
     [
         Theory,
         InlineData("=\"apple\"<\"banana\"", true),
-        InlineData("=\"a\"=\"A\"", true),       // case-insensitive
+        InlineData("=\"a\"=\"A\"", true), // case-insensitive
         InlineData("=\"z\">\"a\"", true)
     ]
     public void TextComparison(string formula, bool expected) => Eval(formula).ShouldBe(expected);
@@ -102,22 +102,23 @@ public class FormulaEngineCoverageTests
 
     [Fact]
     public void CellReference_ReadsValue() =>
-        Num("=A1*2", d => d.Sheets[0].SetValue(1, 1, 21.0)).ShouldBe(42);
+        Num("=A1*2", static d => d.Sheets[0].SetValue(1, 1, 21.0)).ShouldBe(42);
 
     [Fact]
     public void RangeSum() =>
-        Num("=SUM(A1:A3)", d =>
-        {
-            d.Sheets[0].SetValue(1, 1, 1.0);
-            d.Sheets[0].SetValue(2, 1, 2.0);
-            d.Sheets[0].SetValue(3, 1, 3.0);
-        }).ShouldBe(6);
+        Num(
+                "=SUM(A1:A3)",
+                static d =>
+                {
+                    d.Sheets[0].SetValue(1, 1, 1.0);
+                    d.Sheets[0].SetValue(2, 1, 2.0);
+                    d.Sheets[0].SetValue(3, 1, 3.0);
+                }
+            )
+            .ShouldBe(6);
 
     [Fact]
-    public void SheetQualifiedReference()
-    {
-        Num("=Sheet2!A1+1", d => d.Sheets[1].SetValue(1, 1, 99.0)).ShouldBe(100);
-    }
+    public void SheetQualifiedReference() => Num("=Sheet2!A1+1", static d => d.Sheets[1].SetValue(1, 1, 99.0)).ShouldBe(100);
 
     [Fact]
     public void QuotedSheetQualifiedReference()
@@ -140,26 +141,22 @@ public class FormulaEngineCoverageTests
     // ── Reference to formula cell & circular detection ───────────────────────
 
     [Fact]
-    public void ReferenceToFormulaCell_EvaluatesChain()
-    {
-        Num("=A1+1", d =>
-        {
-            d.Sheets[0].SetValue(2, 1, 10.0);     // A2 = 10
-            d.Sheets[0].SetFormula(1, 1, "=A2*2"); // A1 = A2*2 = 20
-        }).ShouldBe(21);
-    }
+    public void ReferenceToFormulaCell_EvaluatesChain() =>
+        Num(
+                "=A1+1",
+                static d =>
+                {
+                    d.Sheets[0].SetValue(2, 1, 10.0);      // A2 = 10
+                    d.Sheets[0].SetFormula(1, 1, "=A2*2"); // A1 = A2*2 = 20
+                }
+            )
+            .ShouldBe(21);
 
     [Fact]
-    public void CircularReference_ReturnsReferenceError()
-    {
-        Eval("=A1", d => d.Sheets[0].SetFormula(1, 1, "=A1+1")).ShouldBe(CellError.Reference);
-    }
+    public void CircularReference_ReturnsReferenceError() => Eval("=A1", static d => d.Sheets[0].SetFormula(1, 1, "=A1+1")).ShouldBe(CellError.Reference);
 
     [Fact]
-    public void ReferenceToErrorCell_PropagatesError()
-    {
-        Eval("=A1+1", d => d.Sheets[0][1, 1].SetValue(CellError.Value)).ShouldBe(CellError.Value);
-    }
+    public void ReferenceToErrorCell_PropagatesError() => Eval("=A1+1", static d => d.Sheets[0][1, 1].SetValue(CellError.Value)).ShouldBe(CellError.Value);
 
     // ── Defined names ────────────────────────────────────────────────────────
 
@@ -179,5 +176,5 @@ public class FormulaEngineCoverageTests
     public void MalformedFormula_ReturnsNameError() => Eval("=1+").ShouldBe(CellError.Name);
 
     [Fact]
-    public void EmptyParens_NonFunction_DoesNotThrow() => Should.NotThrow(() => Eval("=()"));
+    public void EmptyParens_NonFunction_DoesNotThrow() => Should.NotThrow(static () => Eval("=()"));
 }

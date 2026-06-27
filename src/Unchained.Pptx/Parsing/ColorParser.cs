@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Drawing.Primitives;
 using Unchained.Ooxml;

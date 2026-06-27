@@ -1,6 +1,6 @@
 using Shouldly;
+using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
-using Unchained.Xlsx.Models.DataValidation;
 using Unchained.Xlsx.Tests.Helpers;
 using Xunit;
 

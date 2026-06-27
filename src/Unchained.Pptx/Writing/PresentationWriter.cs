@@ -1,6 +1,9 @@
 using System.Xml.Linq;
 using Unchained.Ooxml;
+using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Properties;
+using Unchained.Ooxml.Security;
 using Unchained.Ooxml.Text;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Comments;
@@ -10,9 +13,7 @@ using Unchained.Pptx.Engine;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Parsing;
-using Unchained.Ooxml.Properties;
 using Unchained.Pptx.Security;
-using Unchained.Ooxml.Security;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 using SaveOptions = Unchained.Pptx.Models.SaveOptions;
@@ -28,7 +29,6 @@ internal sealed class PresentationWriter
     // ── Part URI templates ────────────────────────────────────────────────────
 
     private const string PresentationPartUri = "/ppt/presentation.xml";
-    private const string CorePropsPartUri = "/docProps/core.xml";
 
     // ── Comment authors (M7) ─────────────────────────────────────────────────
 
@@ -967,5 +967,5 @@ internal sealed class PresentationWriter
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static string ExtensionForContentType(string contentType) =>
-        Unchained.Ooxml.Media.ImageExtensions.Extension(contentType);
+        ImageExtensions.Extension(contentType);
 }

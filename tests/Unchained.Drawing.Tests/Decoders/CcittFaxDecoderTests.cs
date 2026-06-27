@@ -66,7 +66,7 @@ public sealed class CcittFaxDecoderTests
     public void DecodeGroup4_BlackIs1_InvertsOutput()
     {
         var normal = CcittFaxDecoder.Decode(EncodedG4, -1, 16, 16).ToArray();
-        var inverted = CcittFaxDecoder.Decode(EncodedG4, -1, 16, 16, blackIs1: true).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG4, -1, 16, 16, true).ToArray();
 
         inverted.Length.ShouldBe(normal.Length);
         for (var i = 0; i < normal.Length; i++)
@@ -105,7 +105,7 @@ public sealed class CcittFaxDecoderTests
     public void DecodeGroup3_2D_BlackIs1_InvertsOutput()
     {
         var normal = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16).ToArray();
-        var inverted = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16, blackIs1: true).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16, true).ToArray();
 
         inverted.Length.ShouldBe(normal.Length);
         for (var i = 0; i < normal.Length; i++)
@@ -130,7 +130,7 @@ public sealed class CcittFaxDecoderTests
         // (whiteBit = !blackIs1) and again in WriteRow (isSet = blackIs1 ? !row : row).
         // The two negations cancel, so an all-white row reads back as all-set bits
         // regardless of blackIs1.
-        var decoded = CcittFaxDecoder.Decode(EncodedG31DWhite, 0, 8, 2, blackIs1: true).ToArray();
+        var decoded = CcittFaxDecoder.Decode(EncodedG31DWhite, 0, 8, 2, true).ToArray();
 
         decoded.Length.ShouldBe(2);
         RowBits(decoded, 0, 8).ShouldBe("11111111");
@@ -147,9 +147,9 @@ public sealed class CcittFaxDecoderTests
                 0,
                 8,
                 2,
-                blackIs1: false,
-                endOfBlock: true,
-                encodedByteAlign: true
+                false,
+                true,
+                true
             )
             .ToArray();
 

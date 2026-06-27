@@ -1,5 +1,5 @@
-using Unchained.Xlsx.Models.Cell;
 using System.Globalization;
+using Unchained.Xlsx.Models.Cell;
 
 namespace Unchained.Xlsx.Formulas;
 
@@ -18,7 +18,7 @@ internal static partial class FormulaFunctions
         if (table.Kind != FormulaValueKind.Array || table.Columns == 0)
             return FormulaValue.FromError(CellError.NotAvailable);
 
-        var matchRow = FindRow(table, key, approximate, column: 0);
+        var matchRow = FindRow(table, key, approximate, 0);
         return matchRow < 0
             ? FormulaValue.FromError(CellError.NotAvailable)
             : colIndex < 1 || colIndex > table.Columns

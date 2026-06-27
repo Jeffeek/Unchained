@@ -2,7 +2,6 @@
 @using System.Text
 @using Unchained.Pdf.Engine
 @using Unchained.Pdf.Models
-@using Unchained.Studio.Components.Pdf
 @inject SessionStateService Session
 @inject FileExportService Exporter
 @inject ISnackbar Snackbar
@@ -727,9 +726,10 @@
     private void ShowError(string message) =>
         Snackbar.Add(message, Severity.Error);
 
-    private async Task OnPlayboardDirty()
+    private Task OnPlayboardDirty()
     {
         Session.Pdf?.MarkDirty();
+        return Task.CompletedTask;
     }
 
 }

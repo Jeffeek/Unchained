@@ -1,7 +1,6 @@
 using System.Text;
 using Shouldly;
 using Unchained.Xlsx.Engine;
-using Unchained.Xlsx.Export;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Tests.Helpers;
 using Xunit;
@@ -11,7 +10,7 @@ namespace Unchained.Xlsx.Tests.IntegrationTests;
 public class CsvTests
 {
     [Fact]
-    public async Task ExportCsv_WritesDelimitedRows()
+    public void ExportCsv_WritesDelimitedRows()
     {
         using var document = XlsxFixtures.WithSheets("Data");
         var sheet = document.Sheets[0];
@@ -39,7 +38,7 @@ public class CsvTests
     [Fact]
     public async Task ImportCsv_ParsesAndInfersTypes()
     {
-        var csv = "Name,Age,Active\r\nAlice,30,TRUE\r\nBob,25,FALSE\r\n";
+        const string csv = "Name,Age,Active\r\nAlice,30,TRUE\r\nBob,25,FALSE\r\n";
         using var processor = new SpreadsheetProcessor();
         using var ms = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
@@ -54,7 +53,7 @@ public class CsvTests
     [Fact]
     public async Task ImportCsv_HandlesQuotedFields()
     {
-        var csv = "\"Smith, John\",42\r\n";
+        const string csv = "\"Smith, John\",42\r\n";
         using var processor = new SpreadsheetProcessor();
         using var ms = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
@@ -83,7 +82,7 @@ public class CsvTests
     [Fact]
     public async Task ImportCsv_TypeInferenceOff_KeepsStrings()
     {
-        var csv = "123,456\r\n";
+        const string csv = "123,456\r\n";
         using var processor = new SpreadsheetProcessor();
         using var ms = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 

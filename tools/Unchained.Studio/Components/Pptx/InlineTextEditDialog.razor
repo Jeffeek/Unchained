@@ -1,9 +1,3 @@
-@using Unchained.Pptx.Animations
-@using Unchained.Pptx.Models
-@using Unchained.Pptx.Shapes
-@inject IDialogService Dialogs
-@inject ISnackbar Snackbar
-
 <MudDialog Style="min-width:500px;">
     <TitleContent>
         <MudText Typo="Typo.h6">Edit Text</MudText>
@@ -21,10 +15,15 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
 
-    [Parameter] public string CurrentText { get; set; } = string.Empty;
-    [Parameter] public Action<string>? OnConfirm { get; set; }
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string CurrentText { get; set; } = string.Empty;
+
+    [Parameter]
+    public Action<string>? OnConfirm { get; set; }
 
     private string _text = string.Empty;
 
@@ -35,5 +34,6 @@
         OnConfirm?.Invoke(_text);
         MudDialog.Close(DialogResult.Ok(_text));
     }
+
     private void Cancel() => MudDialog.Cancel();
 }

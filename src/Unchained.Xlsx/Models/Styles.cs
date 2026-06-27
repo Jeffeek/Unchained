@@ -1,4 +1,4 @@
-namespace Unchained.Xlsx.Models.Styles;
+namespace Unchained.Xlsx.Models;
 
 /// <summary>The line style of a cell border edge.</summary>
 public enum BorderStyle

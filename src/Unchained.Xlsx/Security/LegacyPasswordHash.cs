@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Unchained.Xlsx.Security;
 
 /// <summary>
@@ -22,6 +24,6 @@ internal static class LegacyPasswordHash
         hash ^= password.Length;
         hash ^= 0xCE4B;
 
-        return hash.ToString("X4", System.Globalization.CultureInfo.InvariantCulture);
+        return hash.ToString("X4", CultureInfo.InvariantCulture);
     }
 }

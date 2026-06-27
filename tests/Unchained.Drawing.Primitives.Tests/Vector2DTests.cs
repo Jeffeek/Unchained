@@ -25,4 +25,12 @@ public sealed class Vector2DTests
     [Fact]
     public void Distance_SamePoint_IsZero() =>
         Vector2D.Distance(7, 7, 7, 7).ShouldBe(0);
+
+    [Fact]
+    public void Magnitude_VeryLargeValues_DoesNotOverflow() =>
+        Vector2D.Magnitude(1e100, 1e100).ShouldBeGreaterThan(1e100);
+
+    [Fact]
+    public void Magnitude_VerySmallValues_DoesNotUnderflow() =>
+        Vector2D.Magnitude(1e-100, 1e-100).ShouldBeGreaterThan(0);
 }

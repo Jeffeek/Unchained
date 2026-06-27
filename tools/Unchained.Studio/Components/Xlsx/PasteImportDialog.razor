@@ -1,6 +1,5 @@
 @using Unchained.Xlsx.Models.Cell
 @using Unchained.Xlsx.Worksheets
-
 <MudDialog Style="min-width:480px; max-width:600px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -72,7 +71,7 @@
         try
         {
             var origin = CellReference.FromA1(_target);
-            var lines = _text.Replace("\r\n", "\n").Split('\n', StringSplitOptions.None);
+            var lines = _text.Replace("\r\n", "\n").Split('\n');
 
             // Trim a single trailing empty line (common when pasting).
             var rows = lines

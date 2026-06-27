@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Tests.Helpers;
 using Unchained.Xlsx.Worksheets;
@@ -17,7 +18,7 @@ public class FormulaFunctionCoverageTests
         using var document = XlsxFixtures.WithSheets("S");
         var sheet = document.Sheets[0];
         setup?.Invoke(sheet);
-        return Unchained.Xlsx.Engine.SpreadsheetDocument.EvaluateFormula(sheet, formula);
+        return SpreadsheetDocument.EvaluateFormula(sheet, formula);
     }
 
     private static double? Num(string formula, Action<Worksheet>? setup = null)
@@ -113,31 +114,33 @@ public class FormulaFunctionCoverageTests
     [Fact]
     public void Counting()
     {
-        void Fill(Worksheet s)
+        Num("=COUNT(A1:A4)", Fill).ShouldBe(2); // number + boolean count as number
+        Num("=COUNTA(A1:A4)", Fill).ShouldBe(3);
+        Num("=COUNTBLANK(A1:A4)", Fill).ShouldBe(1);
+        return;
+
+        static void Fill(Worksheet s)
         {
             s.SetValue(1, 1, 10.0);
             s.SetValue(2, 1, "text");
             s.SetValue(3, 1, true);
             // (4,1) intentionally blank
         }
-
-        Num("=COUNT(A1:A4)", Fill).ShouldBe(2);       // number + boolean count as number
-        Num("=COUNTA(A1:A4)", Fill).ShouldBe(3);
-        Num("=COUNTBLANK(A1:A4)", Fill).ShouldBe(1);
     }
 
     [Fact]
     public void AverageA_And_MinMaxA_TreatTextAsZero()
     {
-        void Fill(Worksheet s)
+        Num("=AVERAGEA(A1:A2)", Fill).ShouldBe(5);
+        Num("=MINA(A1:A2)", Fill).ShouldBe(0);
+        Num("=MAXA(A1:A2)", Fill).ShouldBe(10);
+        return;
+
+        static void Fill(Worksheet s)
         {
             s.SetValue(1, 1, 10.0);
             s.SetValue(2, 1, "x"); // counts as 0 in *A variants
         }
-
-        Num("=AVERAGEA(A1:A2)", Fill).ShouldBe(5);
-        Num("=MINA(A1:A2)", Fill).ShouldBe(0);
-        Num("=MAXA(A1:A2)", Fill).ShouldBe(10);
     }
 
     [Fact]
@@ -154,37 +157,42 @@ public class FormulaFunctionCoverageTests
     [Fact]
     public void Percentile_And_PercentRank()
     {
-        void Fill(Worksheet s)
-        {
-            for (var i = 1; i <= 5; i++) s.SetValue(i, 1, (double)i);
-        }
-
         Num("=PERCENTILE(A1:A5,0.5)", Fill).ShouldBe(3);
         Num("=PERCENTRANK(A1:A5,3)", Fill).ShouldBe(0.5);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            for (var i = 1; i <= 5; i++) s.SetValue(i, 1, i);
+        }
     }
 
     [Fact]
     public void Rank_Ascending_And_Descending()
     {
-        void Fill(Worksheet s)
-        {
-            s.SetValue(1, 1, 10.0); s.SetValue(2, 1, 30.0); s.SetValue(3, 1, 20.0);
-        }
+        Num("=RANK(30,A1:A3)", Fill).ShouldBe(1);   // descending default
+        Num("=RANK(30,A1:A3,1)", Fill).ShouldBe(3); // ascending
+        return;
 
-        Num("=RANK(30,A1:A3)", Fill).ShouldBe(1);       // descending default
-        Num("=RANK(30,A1:A3,1)", Fill).ShouldBe(3);     // ascending
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, 10.0);
+            s.SetValue(2, 1, 30.0);
+            s.SetValue(3, 1, 20.0);
+        }
     }
 
     [Fact]
     public void Skew_And_TrimMean()
     {
-        void Fill(Worksheet s)
-        {
-            for (var i = 1; i <= 6; i++) s.SetValue(i, 1, (double)i);
-        }
-
         Num("=TRIMMEAN(A1:A6,0.5)", Fill)!.Value.ShouldBe(3.5, 1e-9);
         Num("=SKEW(A1:A6)", Fill).ShouldNotBeNull();
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            for (var i = 1; i <= 6; i++) s.SetValue(i, 1, i);
+        }
     }
 
     [Fact]
@@ -299,53 +307,70 @@ public class FormulaFunctionCoverageTests
     // ── Lookup error paths ───────────────────────────────────────────────────
 
     [Fact]
-    public void Vlookup_NotFound_ReturnsNotAvailable()
-    {
-        Eval("=VLOOKUP(\"Z\",A1:B2,2,FALSE)", s =>
-        {
-            s.SetValue(1, 1, "A"); s.SetValue(1, 2, 1.0);
-            s.SetValue(2, 1, "B"); s.SetValue(2, 2, 2.0);
-        }).ShouldBe(CellError.NotAvailable);
-    }
+    public void Vlookup_NotFound_ReturnsNotAvailable() =>
+        Eval(
+                "=VLOOKUP(\"Z\",A1:B2,2,FALSE)",
+                static s =>
+                {
+                    s.SetValue(1, 1, "A");
+                    s.SetValue(1, 2, 1.0);
+                    s.SetValue(2, 1, "B");
+                    s.SetValue(2, 2, 2.0);
+                }
+            )
+            .ShouldBe(CellError.NotAvailable);
 
     [Fact]
-    public void Vlookup_BadColumn_ReturnsReferenceError()
-    {
-        Eval("=VLOOKUP(\"A\",A1:B2,5,FALSE)", s =>
-        {
-            s.SetValue(1, 1, "A"); s.SetValue(1, 2, 1.0);
-            s.SetValue(2, 1, "B"); s.SetValue(2, 2, 2.0);
-        }).ShouldBe(CellError.Reference);
-    }
+    public void Vlookup_BadColumn_ReturnsReferenceError() =>
+        Eval(
+                "=VLOOKUP(\"A\",A1:B2,5,FALSE)",
+                static s =>
+                {
+                    s.SetValue(1, 1, "A");
+                    s.SetValue(1, 2, 1.0);
+                    s.SetValue(2, 1, "B");
+                    s.SetValue(2, 2, 2.0);
+                }
+            )
+            .ShouldBe(CellError.Reference);
 
     [Fact]
-    public void Hlookup_FindsAcrossColumns()
-    {
-        Eval("=HLOOKUP(\"B\",A1:C2,2,FALSE)", s =>
-        {
-            s.SetValue(1, 1, "A"); s.SetValue(1, 2, "B"); s.SetValue(1, 3, "C");
-            s.SetValue(2, 1, 10.0); s.SetValue(2, 2, 20.0); s.SetValue(2, 3, 30.0);
-        }).ShouldBe(20.0);
-    }
+    public void Hlookup_FindsAcrossColumns() =>
+        Eval(
+                "=HLOOKUP(\"B\",A1:C2,2,FALSE)",
+                static s =>
+                {
+                    s.SetValue(1, 1, "A");
+                    s.SetValue(1, 2, "B");
+                    s.SetValue(1, 3, "C");
+                    s.SetValue(2, 1, 10.0);
+                    s.SetValue(2, 2, 20.0);
+                    s.SetValue(2, 3, 30.0);
+                }
+            )
+            .ShouldBe(20.0);
 
     [Fact]
     public void Match_DescendingType()
     {
-        void Fill(Worksheet s)
-        {
-            s.SetValue(1, 1, 30.0); s.SetValue(2, 1, 20.0); s.SetValue(3, 1, 10.0);
-        }
-
         Num("=MATCH(20,A1:A3,-1)", Fill).ShouldBe(2);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, 30.0);
+            s.SetValue(2, 1, 20.0);
+            s.SetValue(3, 1, 10.0);
+        }
     }
 
     [Fact]
     public void Match_NotFound_ReturnsNotAvailable() =>
-        Eval("=MATCH(99,A1:A3,0)", s => s.SetValue(1, 1, 1.0)).ShouldBe(CellError.NotAvailable);
+        Eval("=MATCH(99,A1:A3,0)", static s => s.SetValue(1, 1, 1.0)).ShouldBe(CellError.NotAvailable);
 
     [Fact]
     public void Index_OutOfBounds_ReturnsReferenceError() =>
-        Eval("=INDEX(A1:A2,9)", s => s.SetValue(1, 1, 1.0)).ShouldBe(CellError.Reference);
+        Eval("=INDEX(A1:A2,9)", static s => s.SetValue(1, 1, 1.0)).ShouldBe(CellError.Reference);
 
     // ── Date / time breadth ──────────────────────────────────────────────────
 
@@ -362,9 +387,9 @@ public class FormulaFunctionCoverageTests
     public void Weekday_Variants()
     {
         // 2023-06-15 is a Thursday.
-        Num("=WEEKDAY(DATE(2023,6,15))").ShouldBe(5);    // Sunday=1
-        Num("=WEEKDAY(DATE(2023,6,15),2)").ShouldBe(4);  // Monday=1
-        Num("=WEEKDAY(DATE(2023,6,15),3)").ShouldBe(3);  // Monday=0
+        Num("=WEEKDAY(DATE(2023,6,15))").ShouldBe(5);   // Sunday=1
+        Num("=WEEKDAY(DATE(2023,6,15),2)").ShouldBe(4); // Monday=1
+        Num("=WEEKDAY(DATE(2023,6,15),3)").ShouldBe(3); // Monday=0
     }
 
     [Fact]
@@ -418,7 +443,7 @@ public class FormulaFunctionCoverageTests
     {
         Eval("=ISERROR(1/0)").ShouldBe(true);
         Eval("=ISERR(1/0)").ShouldBe(true);
-        Eval("=ISERR(NA())").ShouldBe(false);     // #N/A is not "err"
+        Eval("=ISERR(NA())").ShouldBe(false); // #N/A is not "err"
         Eval("=ISNUMBER(5)").ShouldBe(true);
         Eval("=ISTEXT(\"x\")").ShouldBe(true);
         Eval("=ISNONTEXT(5)").ShouldBe(true);

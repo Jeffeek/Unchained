@@ -49,8 +49,8 @@ internal static class GrayscaleJpegBuilder
         WriteApp0(ms);
         WriteDqt(ms, qt);
         WriteSof0(ms, width, height);
-        WriteDht(ms, DcLumBits, DcLumVals, acDc: 0, id: 0);
-        WriteDht(ms, AcLumBits, AcLumVals, acDc: 1, id: 0);
+        WriteDht(ms, DcLumBits, DcLumVals, 0, 0);
+        WriteDht(ms, AcLumBits, AcLumVals, 1, 0);
         if (restartInterval > 0) WriteDri(ms, restartInterval);
 
         WriteSos(ms);

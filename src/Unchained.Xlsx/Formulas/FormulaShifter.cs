@@ -12,13 +12,13 @@ namespace Unchained.Xlsx.Formulas;
 /// </summary>
 internal static partial class FormulaShifter
 {
+    public enum Axis { Row, Column }
+
     // Matches an optional sheet qualifier we must skip over, then a cell reference with optional
     // $ markers. We deliberately avoid matching references preceded by '!' handling here and instead
     // shift every bare A1 token; cross-sheet shifting is out of scope for v0.1.0.
     [GeneratedRegex(@"(\$?)([A-Za-z]{1,3})(\$?)(\d{1,7})", RegexOptions.CultureInvariant)]
     private static partial Regex CellRefPattern();
-
-    public enum Axis { Row, Column }
 
     /// <summary>
     ///     Returns <paramref name="formula" /> with references adjusted for an insert/delete of
@@ -30,8 +30,11 @@ internal static partial class FormulaShifter
         if (string.IsNullOrEmpty(formula))
             return formula;
 
-        return ProcessOutsideQuotes(formula, segment =>
-            CellRefPattern().Replace(segment, match => ShiftMatch(match, axis, at, count)));
+        return ProcessOutsideQuotes(
+            formula,
+            segment =>
+                CellRefPattern().Replace(segment, match => ShiftMatch(match, axis, at, count))
+        );
     }
 
     /// <summary>
@@ -44,8 +47,11 @@ internal static partial class FormulaShifter
         if (string.IsNullOrEmpty(formula) || (rowDelta == 0 && columnDelta == 0))
             return formula;
 
-        return ProcessOutsideQuotes(formula, segment =>
-            CellRefPattern().Replace(segment, match => ShiftMatchRelative(match, rowDelta, columnDelta)));
+        return ProcessOutsideQuotes(
+            formula,
+            segment =>
+                CellRefPattern().Replace(segment, match => ShiftMatchRelative(match, rowDelta, columnDelta))
+        );
     }
 
     private static string ShiftMatchRelative(Match match, int rowDelta, int columnDelta)
@@ -61,6 +67,7 @@ internal static partial class FormulaShifter
         int column;
         try { column = CellReference.ColumnLettersToNumber(letters); }
         catch (FormatException) { return match.Value; }
+
         if (column > CellReference.MaxColumn)
             return match.Value;
 
@@ -97,21 +104,27 @@ internal static partial class FormulaShifter
         if (column > CellReference.MaxColumn)
             return match.Value;
 
-        if (axis == Axis.Row && !rowAbsolute)
+        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+        switch (axis)
         {
-            if (count < 0 && row >= at && row < at - count)
-                return "#REF!"; // reference fell inside the deleted band
+            case Axis.Row when !rowAbsolute:
+            {
+                if (count < 0 && row >= at && row < at - count)
+                    return "#REF!"; // reference fell inside the deleted band
 
-            if (row >= at)
-                row += count;
-        }
-        else if (axis == Axis.Column && !colAbsolute)
-        {
-            if (count < 0 && column >= at && column < at - count)
-                return "#REF!";
+                if (row >= at)
+                    row += count;
+                break;
+            }
+            case Axis.Column when !colAbsolute:
+            {
+                if (count < 0 && column >= at && column < at - count)
+                    return "#REF!";
 
-            if (column >= at)
-                column += count;
+                if (column >= at)
+                    column += count;
+                break;
+            }
         }
 
         if (row is < 1 or > CellReference.MaxRow || column is < 1 or > CellReference.MaxColumn)
@@ -125,7 +138,10 @@ internal static partial class FormulaShifter
         return builder.ToString();
     }
 
-    /// <summary>Applies <paramref name="transform" /> only to the parts of <paramref name="formula" /> outside double-quoted strings.</summary>
+    /// <summary>
+    ///     Applies <paramref name="transform" /> only to the parts of <paramref name="formula" /> outside double-quoted
+    ///     strings.
+    /// </summary>
     private static string ProcessOutsideQuotes(string formula, Func<string, string> transform)
     {
         var result = new StringBuilder(formula.Length);

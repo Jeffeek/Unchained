@@ -1,4 +1,4 @@
-namespace Unchained.Xlsx.Models.DataValidation;
+namespace Unchained.Xlsx.Models;
 
 /// <summary>The severity style shown when data validation fails.</summary>
 public enum DataValidationErrorStyle

@@ -6,6 +6,8 @@ namespace Unchained.Ooxml.Drawing;
 /// </summary>
 public sealed class ColorScheme
 {
+    internal const uint UnresolvedThemeColorArgb = 0xFF808080u;
+
     /// <summary>Dark 1 — typically the darkest colour, used for text.</summary>
     public ColorSpec Dark1 { get; set; }
 
@@ -41,8 +43,6 @@ public sealed class ColorScheme
 
     /// <summary>The colour used for visited (followed) hyperlink text.</summary>
     public ColorSpec FollowedHyperlinkColor { get; set; }
-
-    internal const uint UnresolvedThemeColorArgb = 0xFF808080u;
 
     /// <summary>Gets or sets a colour slot by its <see cref="ThemeColorSlot" /> identifier.</summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown for an unrecognised slot.</exception>

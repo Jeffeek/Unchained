@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using Shouldly;
 using Unchained.Ooxml;
@@ -29,6 +30,8 @@ public sealed class SlideParserDirectTests
     private const string P = "xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"";
     private const string R = "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"";
     private const string A = "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"";
+
+    private const string EmptyTree = "<p:cSld><p:spTree></p:spTree></p:cSld>";
 
     // Builds a parser over a package holding the given slide XML; the supplied masters provide
     // the fallback/resolved layout. Returns both so tests can wire extra relationships first.
@@ -62,20 +65,18 @@ public sealed class SlideParserDirectTests
     private static void SetLayoutUri(SlideLayout layout, string uri) =>
         // PartUri is internal; the test assembly has InternalsVisibleTo so we set it directly.
         typeof(SlideLayout)
-            .GetProperty("PartUri", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!
+            .GetProperty("PartUri", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!
             .SetValue(layout, uri);
 
     private static string Slide(string body, string attrs = "") =>
         $"<p:sld {P} {R} {A}{(attrs.Length > 0 ? " " + attrs : string.Empty)}>{body}</p:sld>";
-
-    private const string EmptyTree = "<p:cSld><p:spTree></p:spTree></p:cSld>";
 
     // ── Missing / empty parts ─────────────────────────────────────────────────
 
     [Fact]
     public void Parse_MissingPart_ReturnsSlotSlideWithFallbackLayout()
     {
-        var (parser, _) = Build(slideXml: null, MasterWithLayout());
+        var (parser, _) = Build(null, MasterWithLayout());
         var slide = parser.Parse(SlideUri, "rId1", 7);
         slide.PartUri.ShouldBe(SlideUri);
         slide.RelationshipId.ShouldBe("rId1");
@@ -266,8 +267,8 @@ public sealed class SlideParserDirectTests
     [Fact]
     public void Parse_PlaceholderMatchesLayoutByIndex_InheritsGeometry()
     {
-        var master = MasterWithLayoutPlaceholder(PlaceholderType.Body, index: 1);
-        var (parser, _) = Build(SlidePlaceholder("body", idx: 1), master);
+        var master = MasterWithLayoutPlaceholder(PlaceholderType.Body, 1);
+        var (parser, _) = Build(SlidePlaceholder("body", 1), master);
         var slide = parser.Parse(SlideUri, "rId1", 1);
         var ph = slide.Shapes[0];
         ph.Width.Value.ShouldBeGreaterThan(0);
@@ -278,8 +279,8 @@ public sealed class SlideParserDirectTests
     public void Parse_PlaceholderMatchesLayoutByType_InheritsGeometry()
     {
         // No index on the slide placeholder → falls through to the by-type match.
-        var master = MasterWithLayoutPlaceholder(PlaceholderType.Body, index: null);
-        var (parser, _) = Build(SlidePlaceholder("body", idx: null), master);
+        var master = MasterWithLayoutPlaceholder(PlaceholderType.Body, null);
+        var (parser, _) = Build(SlidePlaceholder("body", null), master);
         var slide = parser.Parse(SlideUri, "rId1", 1);
         slide.Shapes[0].Width.Value.ShouldBeGreaterThan(0);
     }
@@ -288,8 +289,8 @@ public sealed class SlideParserDirectTests
     public void Parse_TitlePlaceholderMatchesCenteredTitle_InheritsGeometry()
     {
         // Slide has Title; layout has CenteredTitle → matched via the title-family branch.
-        var master = MasterWithLayoutPlaceholder(PlaceholderType.CenteredTitle, index: null);
-        var (parser, _) = Build(SlidePlaceholder("title", idx: null), master);
+        var master = MasterWithLayoutPlaceholder(PlaceholderType.CenteredTitle, null);
+        var (parser, _) = Build(SlidePlaceholder("title", null), master);
         var slide = parser.Parse(SlideUri, "rId1", 1);
         slide.Shapes[0].Height.Value.ShouldBeGreaterThan(0);
     }
@@ -298,8 +299,8 @@ public sealed class SlideParserDirectTests
     public void Parse_BodyLikePlaceholderMatchesObject_InheritsGeometry()
     {
         // Slide subtitle (body-like) matches a layout Object placeholder via the body-like branch.
-        var master = MasterWithLayoutPlaceholder(PlaceholderType.Object, index: null);
-        var (parser, _) = Build(SlidePlaceholder("subTitle", idx: null), master);
+        var master = MasterWithLayoutPlaceholder(PlaceholderType.Object, null);
+        var (parser, _) = Build(SlidePlaceholder("subTitle", null), master);
         var slide = parser.Parse(SlideUri, "rId1", 1);
         slide.Shapes[0].Width.Value.ShouldBeGreaterThan(0);
     }
@@ -308,8 +309,8 @@ public sealed class SlideParserDirectTests
     public void Parse_PlaceholderNoMatchingLayoutShape_LeavesGeometryUnset()
     {
         // Layout has only a Footer placeholder; slide Title cannot match any family → no inheritance.
-        var master = MasterWithLayoutPlaceholder(PlaceholderType.Footer, index: null);
-        var (parser, _) = Build(SlidePlaceholder("title", idx: null), master);
+        var master = MasterWithLayoutPlaceholder(PlaceholderType.Footer, null);
+        var (parser, _) = Build(SlidePlaceholder("title", null), master);
         var slide = parser.Parse(SlideUri, "rId1", 1);
         slide.Shapes[0].Width.Value.ShouldBe(0);
     }

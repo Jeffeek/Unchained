@@ -1,6 +1,6 @@
+using System.Globalization;
 using Unchained.Xlsx.Formatting;
 using Unchained.Xlsx.Models.Cell;
-using System.Globalization;
 
 namespace Unchained.Xlsx.Formulas;
 
@@ -215,8 +215,9 @@ internal static partial class FormulaFunctions
     private static FormulaValue GeoMean(IEnumerable<FormulaValue> values)
     {
         var nums = Nums(values).ToList();
-        if (nums.Count == 0) return FormulaValue.FromError(CellError.Number);
-        if (nums.Any(static x => x <= 0)) return FormulaValue.FromError(CellError.Number);
+        if (nums.Count == 0 || nums.Any(static x => x <= 0))
+            return FormulaValue.FromError(CellError.Number);
+
         return Number(Math.Exp(nums.Average(static x => Math.Log(x))));
     }
 
@@ -224,6 +225,7 @@ internal static partial class FormulaFunctions
     {
         var nums = Nums(values).ToList();
         if (nums.Count == 0) return FormulaValue.FromError(CellError.Number);
+
         var recip = nums.Sum(static x => 1.0 / x);
         return recip == 0 ? FormulaValue.FromError(CellError.DivisionByZero) : Number(nums.Count / recip);
     }
@@ -232,6 +234,7 @@ internal static partial class FormulaFunctions
     {
         var nums = Nums(values).ToList();
         if (nums.Count == 0) return FormulaValue.FromError(CellError.Number);
+
         var mean = nums.Average();
         return Number(nums.Sum(x => Math.Abs(x - mean)) / nums.Count);
     }
@@ -240,6 +243,7 @@ internal static partial class FormulaFunctions
     {
         var nums = Nums(values).ToList();
         if (nums.Count < 2) return FormulaValue.FromError(CellError.DivisionByZero);
+
         var mean = nums.Average();
         return Number(nums.Sum(x => (x - mean) * (x - mean)));
     }
@@ -248,46 +252,52 @@ internal static partial class FormulaFunctions
     {
         var arr = values[0].Flatten().Where(IsNumber).Select(FormulaEvaluator.ToNumber).OrderBy(static x => x).ToList();
         if (arr.Count == 0) return FormulaValue.FromError(CellError.Number);
+
         var x = Num(values, 1);
         var below = arr.Count(e => e < x);
-        var eq = arr.Count(e => e == x);
-        if (eq == 0) return Number(below / Math.Max(arr.Count - 1, 1));
-        return Number((below + 0.5 * eq) / Math.Max(arr.Count - 1, 1));
+        var eq = arr.Count(e => e.Equals(x));
+        return eq == 0
+            ? Number((double)below / Math.Max(arr.Count - 1, 1))
+            : Number((below + (0.5 * eq)) / Math.Max(arr.Count - 1, 1));
     }
 
     private static FormulaValue Quartile(IReadOnlyList<FormulaValue> values)
     {
         var arr = values[0].Flatten().Where(IsNumber).Select(FormulaEvaluator.ToNumber).OrderBy(static x => x).ToList();
         if (arr.Count == 0) return FormulaValue.FromError(CellError.Number);
+
         var q = Num(values, 1);
-        if (q < 0 || q > 4) return FormulaValue.FromError(CellError.Number);
+        if (q is < 0 or > 4) return FormulaValue.FromError(CellError.Number);
+
         var rank = q / 4.0 * (arr.Count - 1);
         var lo = (int)Math.Floor(rank);
         var hi = (int)Math.Ceiling(rank);
         if (hi >= arr.Count) hi = arr.Count - 1;
-        return Number(arr[lo] + (rank - lo) * (arr[hi] - arr[lo]));
+        return Number(arr[lo] + ((rank - lo) * (arr[hi] - arr[lo])));
     }
 
     private static FormulaValue Skew(IEnumerable<FormulaValue> values)
     {
         var nums = Nums(values).ToList();
         if (nums.Count < 3) return FormulaValue.FromError(CellError.Number);
+
         var mean = nums.Average();
         var n = (double)nums.Count;
         var s = Math.Pow(nums.Sum(x => Math.Pow(x - mean, 3)) / n, 1.0 / 3.0);
-        if (s == 0) return Number(0);
-        return Number(n * nums.Average(x => Math.Pow((x - mean) / s, 3)));
+        return s == 0 ? Number(0) : Number(n * nums.Average(x => Math.Pow((x - mean) / s, 3)));
     }
 
     private static FormulaValue TrimMean(IReadOnlyList<FormulaValue> values)
     {
         var nums = Nums(values).ToList();
         if (nums.Count < 2) return FormulaValue.FromError(CellError.Number);
+
         var percent = Math.Clamp(Num(values, 1), 0, 1);
         var count = (int)Math.Round(nums.Count * percent);
         if (count * 2 >= nums.Count) return FormulaValue.FromError(CellError.Number);
+
         nums.Sort();
-        return Number(nums[(count)..(nums.Count - count)].Average());
+        return Number(nums[count..^count].Average());
     }
 
     // ── Text helpers ────────────────────────────────────────────────────────────
@@ -381,7 +391,7 @@ internal static partial class FormulaFunctions
     {
         var x = Num(values, 0);
         var format = Text(values, 1);
-        try { return Str(NumberFormatter.Format(x, format, date1904: false)); }
+        try { return Str(NumberFormatter.Format(x, format, false)); }
         catch { return Str(x.ToString("G15", CultureInfo.InvariantCulture)); }
     }
 
@@ -390,8 +400,7 @@ internal static partial class FormulaFunctions
         var text = Text(values, 0);
         var delimiter = Text(values, 1);
         var instance = values.Count > 2 ? (int)Num(values, 2) : 1;
-        if (instance < 1) return Str(string.Empty);
-        if (string.IsNullOrEmpty(delimiter)) return Str(string.Empty);
+        if (instance < 1 || string.IsNullOrEmpty(delimiter)) return Str(string.Empty);
 
         var occurrences = 0;
         var start = 0;
@@ -399,16 +408,18 @@ internal static partial class FormulaFunctions
         {
             var pos = text.IndexOf(delimiter, start, StringComparison.Ordinal);
             if (pos < 0) break;
+
             if (++occurrences == instance)
             {
                 var end = before ? pos : text.Length;
                 var s = before ? start : pos + delimiter.Length;
                 return Str(text[s..end]);
             }
+
             start = pos + delimiter.Length;
         }
 
-        return before ? Str(string.Empty) : Str(string.Empty);
+        return Str(string.Empty);
     }
 
     private static FormulaValue Dollar(IReadOnlyList<FormulaValue> values)

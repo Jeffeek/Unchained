@@ -6,16 +6,10 @@ namespace Unchained.Studio.Tests.Helpers;
 public sealed class XlsxColorTests
 {
     [Fact]
-    public void ToHex_Null_ReturnsFallback()
-    {
-        XlsxColor.ToHex(null).ShouldBe("#000000");
-    }
+    public void ToHex_Null_ReturnsFallback() => XlsxColor.ToHex(null).ShouldBe("#000000");
 
     [Fact]
-    public void ToHex_NullWithCustomFallback_ReturnsCustom()
-    {
-        XlsxColor.ToHex(null, "#FFFFFF").ShouldBe("#FFFFFF");
-    }
+    public void ToHex_NullWithCustomFallback_ReturnsCustom() => XlsxColor.ToHex(null, "#FFFFFF").ShouldBe("#FFFFFF");
 
     [Fact]
     public void ToHex_Rgb_FormatsUppercaseHex()
@@ -25,10 +19,7 @@ public sealed class XlsxColorTests
     }
 
     [Fact]
-    public void ToHex_Red_FormatsCorrectly()
-    {
-        XlsxColor.ToHex(ColorSpec.FromRgb(255, 0, 0)).ShouldBe("#FF0000");
-    }
+    public void ToHex_Red_FormatsCorrectly() => XlsxColor.ToHex(ColorSpec.FromRgb(255, 0, 0)).ShouldBe("#FF0000");
 
     [
         Theory,

@@ -1,7 +1,6 @@
 using Shouldly;
 using Unchained.Xlsx.Core.Xml;
-using Unchained.Xlsx.Models.DataValidation;
-using Unchained.Xlsx.Models.Styles;
+using Unchained.Xlsx.Models;
 using Xunit;
 
 namespace Unchained.Xlsx.Tests.UnitTests;
@@ -95,7 +94,7 @@ public class SmlEnumsTests
     [Fact]
     public void Underline_ParseSpecialCases()
     {
-        SmlEnums.ParseUnderline(null).ShouldBe(FontUnderline.Single);   // <u/> with no val
+        SmlEnums.ParseUnderline(null).ShouldBe(FontUnderline.Single); // <u/> with no val
         SmlEnums.ParseUnderline("none").ShouldBe(FontUnderline.None);
         SmlEnums.ParseUnderline("bogus").ShouldBe(FontUnderline.Single);
     }

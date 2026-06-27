@@ -71,7 +71,7 @@ public sealed class NotesParserTests
     public void Parse_PlaceholderByIndex1_ReadsText()
     {
         var notes = new NotesSlide();
-        NotesParser.Parse(NotesRoot(BodyShape("idx notes", phType: null, idx: "1")), notes);
+        NotesParser.Parse(NotesRoot(BodyShape("idx notes", null, "1")), notes);
         notes.NotesText.ShouldBe("idx notes");
     }
 
@@ -79,7 +79,7 @@ public sealed class NotesParserTests
     public void Parse_NonBodyNonIndexPlaceholder_IsSkipped()
     {
         var notes = new NotesSlide();
-        NotesParser.Parse(NotesRoot(BodyShape("title text", phType: "title")), notes);
+        NotesParser.Parse(NotesRoot(BodyShape("title text", "title")), notes);
         notes.NotesText.ShouldBe(string.Empty);
     }
 

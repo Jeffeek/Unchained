@@ -1,5 +1,4 @@
 using Bunit;
-using MudBlazor;
 using MudBlazor.Services;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
@@ -19,56 +18,56 @@ public sealed class ChartViewTests : BunitContext
     [Fact]
     public void Render_BarChart_SvgRendered()
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(OoxmlChartType.ColumnClustered)));
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.ColumnClustered)));
         cut.Find("svg").ShouldNotBeNull();
     }
 
     [Fact]
     public void Render_PieChart_SvgRendered()
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(OoxmlChartType.Pie)));
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.Pie)));
         cut.Find("svg").ShouldNotBeNull();
     }
 
     [Fact]
     public void Render_DoughnutChart_SvgRendered()
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(OoxmlChartType.Doughnut)));
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.Doughnut)));
         cut.Find("svg").ShouldNotBeNull();
     }
 
     [Fact]
     public void Render_LineChart_SvgRendered()
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(OoxmlChartType.Line)));
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.Line)));
         cut.Find("svg").ShouldNotBeNull();
     }
 
     [Fact]
     public void Render_AreaChart_SvgRendered()
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(OoxmlChartType.Area)));
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.Area)));
         cut.Find("svg").ShouldNotBeNull();
     }
 
     [Fact]
     public void Render_StackedColumn_SvgRendered()
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(OoxmlChartType.ColumnStacked)));
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.ColumnStacked)));
         cut.Find("svg").ShouldNotBeNull();
     }
 
     [Fact]
     public void Render_ScatterChart_FallbackRendered()
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(OoxmlChartType.ScatterWithMarkersOnly)));
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.ScatterWithMarkersOnly)));
         cut.Markup.ShouldContain("preview unavailable");
     }
 
     [Fact]
     public void Render_RadarChart_FallbackRendered()
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(OoxmlChartType.Radar)));
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.Radar)));
         cut.Markup.ShouldContain("preview unavailable");
     }
 
@@ -79,7 +78,7 @@ public sealed class ChartViewTests : BunitContext
         model.Title = "Revenue";
         model.HasTitle = true;
 
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, model));
+        var cut = Render<ChartView>(pb => pb.Add(static c => c.Model, model));
 
         cut.Find("div.sg-chart-title").TextContent.ShouldContain("Revenue");
     }
@@ -90,7 +89,7 @@ public sealed class ChartViewTests : BunitContext
         var model = Bar(OoxmlChartType.BarClustered);
         model.HasTitle = false;
 
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, model));
+        var cut = Render<ChartView>(pb => pb.Add(static c => c.Model, model));
 
         cut.Markup.ShouldNotContain("sg-chart-title");
     }
@@ -103,8 +102,9 @@ public sealed class ChartViewTests : BunitContext
         fill.SetSolid(ColorSpec.FromRgb(0xAA, 0xBB, 0xCC));
         model.Data.Series[0].Fill = fill;
 
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, model));
+        var cut = Render<ChartView>(pb => pb.Add(static c => c.Model, model));
 
+        // ReSharper disable once StringLiteralTypo
         cut.Markup.ShouldContain("AABBCC");
     }
 
@@ -119,7 +119,7 @@ public sealed class ChartViewTests : BunitContext
     ]
     public void Render_SupportedTypes_NoFallback(OoxmlChartType type)
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(type)));
+        var cut = Render<ChartView>(pb => pb.Add(static c => c.Model, Bar(type)));
         cut.Markup.ShouldNotContain("preview unavailable");
     }
 
@@ -132,7 +132,7 @@ public sealed class ChartViewTests : BunitContext
     ]
     public void Render_UnsupportedTypes_Fallback(OoxmlChartType type)
     {
-        var cut = Render<ChartView>(pb => pb.Add(c => c.Model, Bar(type)));
+        var cut = Render<ChartView>(pb => pb.Add(static c => c.Model, Bar(type)));
         cut.Markup.ShouldContain("preview unavailable");
     }
 

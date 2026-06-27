@@ -17,18 +17,17 @@ internal sealed class FormulaParser
 
     private FormulaParser(List<FormulaToken> tokens) => _tokens = tokens;
 
+    private FormulaToken Current => _tokens[_pos];
+
     public static FormulaNode Parse(string formula)
     {
         var tokens = FormulaTokenizer.Tokenize(formula);
         var parser = new FormulaParser(tokens);
         var node = parser.ParseExpression(0);
-        if (parser.Current.Type != FormulaTokenType.End)
-            throw new FormulaParseException($"Unexpected token '{parser.Current.Text}'.");
-
-        return node;
+        return parser.Current.Type != FormulaTokenType.End
+            ? throw new FormulaParseException($"Unexpected token '{parser.Current.Text}'.")
+            : node;
     }
-
-    private FormulaToken Current => _tokens[_pos];
 
     private FormulaToken Advance() => _tokens[_pos++];
 
@@ -122,6 +121,11 @@ internal sealed class FormulaParser
                 Expect(FormulaTokenType.CloseParen);
                 return inner;
             }
+            case FormulaTokenType.Operator:
+            case FormulaTokenType.Colon:
+            case FormulaTokenType.Comma:
+            case FormulaTokenType.CloseParen:
+            case FormulaTokenType.End:
             default:
                 throw new FormulaParseException($"Unexpected token '{token.Text}'.");
         }

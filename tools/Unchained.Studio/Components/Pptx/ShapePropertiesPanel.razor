@@ -1,9 +1,6 @@
 @using Unchained.Ooxml
 @using Unchained.Ooxml.Drawing
-@using Unchained.Ooxml.Text
-@using Unchained.Pptx.Animations
 @using Unchained.Pptx.Shapes
-
 @if (Shape is not null)
 {
     <MudTabs Elevation="0" Rounded="true" Class="shape-props">
@@ -131,7 +128,7 @@
 @code {
 
     [Parameter]
-    public Shape Shape { get; set; } = null!;
+    public Shape? Shape { get; set; }
 
     [Parameter]
     public Action OnChanged { get; set; } = static () => { };
@@ -170,7 +167,6 @@
 
     private string _hyperlinkUrl = string.Empty;
 
-    private FillType _originalFillType = FillType.None;
     private ColorSpec? _originalFillColor;
     private ColorSpec? _originalFillFgColor;
     private ColorSpec? _originalFillBgColor;
@@ -179,12 +175,15 @@
 
     // Snapshot values before editing so "Cancel" can restore them.
     private (string Name, string AltText, Emu X, Emu Y, Emu Width, Emu Height, double Rotation,
-             bool FlipH, bool FlipV, bool Hidden, bool Decorative,
-             FillType FillType, LineStyle LineStyle,
-             string HyperlinkUrl)? _snapshot;
+        bool FlipH, bool FlipV, bool Hidden, bool Decorative,
+        FillType FillType, LineStyle LineStyle,
+        string HyperlinkUrl)? _snapshot;
 
     protected override void OnParametersSet()
     {
+        if (Shape == null)
+            return;
+
         _name = Shape.Name;
         _altText = Shape.AltText ?? string.Empty;
         _x = Shape.X.ToInches();
@@ -201,12 +200,11 @@
         _fgHex = XlsxColor.ToHex(Shape.Fill.Pattern?.ForegroundColor);
         _bgHex = XlsxColor.ToHex(Shape.Fill.Pattern?.BackgroundColor);
         _lineStyle = Shape.Line.Fill is { } ln
-            ? (ln.Solid?.Color is not null ? LineStyle.Single : LineStyle.NoLine)
+            ? ln.Solid?.Color is not null ? LineStyle.Single : LineStyle.NoLine
             : LineStyle.NoLine;
-        _lineColor = XlsxColor.ToHex(Shape.Line.Fill?.Solid?.Color);
+        _lineColor = XlsxColor.ToHex(Shape.Line.Fill.Solid?.Color);
         _originalLineWidthPoints = Shape.Line.WidthPoints;
-        _originalLineColor = Shape.Line.Fill?.Solid?.Color;
-        _originalFillType = Shape.Fill.Type;
+        _originalLineColor = Shape.Line.Fill.Solid?.Color;
         _originalFillColor = Shape.Fill.Solid?.Color;
         _originalFillFgColor = Shape.Fill.Pattern?.ForegroundColor;
         _originalFillBgColor = Shape.Fill.Pattern?.BackgroundColor;
@@ -219,13 +217,16 @@
         _hyperlinkUrl = Shape.ClickAction?.Url ?? string.Empty;
 
         _snapshot = (_name, _altText, Shape.X, Shape.Y, Shape.Width, Shape.Height, _rotation,
-                     _flipH, _flipV, _hidden, _decorative,
-                     _fillType, _lineStyle,
-                     _hyperlinkUrl);
+            _flipH, _flipV, _hidden, _decorative,
+            _fillType, _lineStyle,
+            _hyperlinkUrl);
     }
 
     private void Apply()
     {
+        if (Shape == null)
+            return;
+
         Shape.Name = _name;
         Shape.AltText = _altText;
         Shape.X = Emu.FromInches(_x);
@@ -243,6 +244,7 @@
             pf.ForegroundColor = XlsxColor.FromHex(_fgHex);
             pf.BackgroundColor = XlsxColor.FromHex(_bgHex);
         }
+
         if (_lineStyle != LineStyle.NoLine)
         {
             Shape.Line.SetSolid(XlsxColor.FromHex(_lineColor), _lineWidth);
@@ -251,6 +253,7 @@
         {
             Shape.Line.SetNone();
         }
+
         Shape.ClickAction = string.IsNullOrEmpty(_hyperlinkUrl) ? null : HyperlinkAction.ToUrl(_hyperlinkUrl);
         Shape.Effects.OuterShadow = _shadow ? new OuterShadowEffect() : null;
         Shape.Effects.Glow = _glow ? new GlowEffect() : null;
@@ -260,6 +263,9 @@
 
     private void Cancel()
     {
+        if (Shape == null)
+            return;
+
         if (_snapshot is { } snap)
         {
             Shape.Name = snap.Name;
@@ -273,24 +279,30 @@
             Shape.FlipVertical = snap.FlipV;
             Shape.IsHidden = snap.Hidden;
             Shape.IsDecorative = snap.Decorative;
-            // Restore Fill (FillFormat is read-only on Shape; restore its properties).
-            if (snap.FillType == FillType.None)
+
+            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+            switch (snap.FillType)
             {
-                Shape.Fill.SetNone();
-            }
-            else if (snap.FillType == FillType.Solid && _originalFillColor is not null)
-            {
-                Shape.Fill.SetSolid(_originalFillColor ?? ColorSpec.FromRgb(0, 0, 0));
-            }
-            else if (snap.FillType == FillType.Pattern)
-            {
-                Shape.Fill.SetSolid(_originalFillFgColor ?? ColorSpec.FromRgb(0, 0, 0));
-                if (Shape.Fill.Pattern is { } pf)
+                // Restore Fill (FillFormat is read-only on Shape; restore its properties).
+                case FillType.None:
+                    Shape.Fill.SetNone();
+                break;
+                case FillType.Solid when _originalFillColor is not null:
+                    Shape.Fill.SetSolid(_originalFillColor ?? ColorSpec.FromRgb(0, 0, 0));
+                break;
+                case FillType.Pattern:
                 {
-                    pf.ForegroundColor = _originalFillFgColor ?? ColorSpec.FromRgb(0, 0, 0);
-                    pf.BackgroundColor = _originalFillBgColor ?? ColorSpec.FromRgb(0xFF, 0xFF, 0xFF);
+                    Shape.Fill.SetSolid(_originalFillFgColor ?? ColorSpec.FromRgb(0, 0, 0));
+                    if (Shape.Fill.Pattern is { } pf)
+                    {
+                        pf.ForegroundColor = _originalFillFgColor ?? ColorSpec.FromRgb(0, 0, 0);
+                        pf.BackgroundColor = _originalFillBgColor ?? ColorSpec.FromRgb(0xFF, 0xFF, 0xFF);
+                    }
+
+                    break;
                 }
             }
+
             // Restore Line (LineFormat is read-only on Shape; restore its properties).
             if (snap.LineStyle == LineStyle.NoLine)
             {
@@ -300,11 +312,14 @@
             {
                 Shape.Line.SetSolid(lc, wp);
             }
+
             // Restore effects to their original state.
             Shape.Effects.OuterShadow = _originalShadow ? new OuterShadowEffect() : null;
             Shape.Effects.Glow = _originalGlow ? new GlowEffect() : null;
             Shape.Effects.Reflection = _originalReflection ? new ReflectionEffect() : null;
         }
+
         OnChanged();
     }
+
 }

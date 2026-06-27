@@ -16,11 +16,6 @@ internal static class SmlNames
     private const string Chart = OoxmlNamespaces.Chart;
     private const string Rel = OoxmlNamespaces.OfficeDocument;
 
-    public static readonly XNamespace X = Sml;
-    public static readonly XNamespace XDR = Xdr;
-    public static readonly XNamespace CH = Chart;
-    public static readonly XNamespace R = Rel;
-
     // ── Relationship type URIs ─────────────────────────────────────────────────
     private const string RelBase = OoxmlNamespaces.OfficeDocument + "/";
     public const string RelTypeOfficeDocument = RelBase + "officeDocument";
@@ -53,6 +48,20 @@ internal static class SmlNames
     public const string ContentTypeTheme = OoxmlContentTypes.Theme;
     public const string ContentTypeDrawing = "application/vnd.openxmlformats-officedocument.drawing+xml";
     public const string ContentTypeChart = OoxmlContentTypes.Chart;
+
+    // ── Attribute names ──────────────────────────────────────────────────────
+    public const string AttributeName = "name";
+    public const string AttributeDisplayName = "displayName";
+    public const string AttributeRef = "ref";
+    public const string AttributeErrorTitle = "errorTitle";
+    public const string AttributeErrorMessage = "error";
+    public const string AttributePromptTitle = "promptTitle";
+    public const string AttributePrompt = "prompt";
+
+    public static readonly XNamespace X = Sml;
+    public static readonly XNamespace XDR = Xdr;
+    public static readonly XNamespace CH = Chart;
+    public static readonly XNamespace R = Rel;
 
     // ── Workbook ───────────────────────────────────────────────────────────────
     public static readonly XName Workbook = X + "workbook";
@@ -163,13 +172,4 @@ internal static class SmlNames
     public static readonly XName FontShadow = X + "shadow";
     public static readonly XName FontCondense = X + "condense";
     public static readonly XName FontExtend = X + "extend";
-
-    // ── Attribute names ──────────────────────────────────────────────────────
-    public const string AttributeName = "name";
-    public const string AttributeDisplayName = "displayName";
-    public const string AttributeRef = "ref";
-    public const string AttributeErrorTitle = "errorTitle";
-    public const string AttributeErrorMessage = "error";
-    public const string AttributePromptTitle = "promptTitle";
-    public const string AttributePrompt = "prompt";
 }

@@ -9,7 +9,10 @@ namespace Unchained.Studio.Studio.Xlsx;
 /// </summary>
 public static class XlsxColor
 {
-    /// <summary>Returns the <c>#RRGGBB</c> hex string for <paramref name="color" />, or <paramref name="fallback" /> when null.</summary>
+    /// <summary>
+    ///     Returns the <c>#RRGGBB</c> hex string for <paramref name="color" />, or <paramref name="fallback" /> when
+    ///     null.
+    /// </summary>
     public static string ToHex(ColorSpec? color, string fallback = "#000000")
     {
         if (color is null)
@@ -25,13 +28,12 @@ public static class XlsxColor
         var clean = hex.TrimStart('#');
         if (clean.Length == 8) // ARGB → take RGB
             clean = clean[2..];
-        if (clean.Length != 6 || !uint.TryParse(clean, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgb))
-            return ColorSpec.FromRgb(0, 0, 0);
-
-        return ColorSpec.FromRgb(
-            (byte)((rgb >> 16) & 0xFF),
-            (byte)((rgb >> 8) & 0xFF),
-            (byte)(rgb & 0xFF)
-        );
+        return clean.Length != 6 || !uint.TryParse(clean, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgb)
+            ? ColorSpec.FromRgb(0, 0, 0)
+            : ColorSpec.FromRgb(
+                (byte)((rgb >> 16) & 0xFF),
+                (byte)((rgb >> 8) & 0xFF),
+                (byte)(rgb & 0xFF)
+            );
     }
 }

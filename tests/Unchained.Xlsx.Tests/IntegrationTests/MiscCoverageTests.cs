@@ -29,9 +29,17 @@ public class MiscCoverageTests
         document.Sheets[0].TabColor = ColorSpec.FromRgb(0x00, 0x80, 0x00);
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         var entry = archive.GetEntry("xl/worksheets/sheet1.xml")!;
+#if NET10_0_OR_GREATER
+        using var reader = new StreamReader(await entry.OpenAsync());
+#else
         using var reader = new StreamReader(entry.Open());
+#endif
         var xml = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
         xml.ShouldContain("tabColor");
     }
@@ -112,7 +120,11 @@ public class MiscCoverageTests
         pivot.AddDataField("Value");
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         archive.Entries.Any(static e => e.FullName.Contains("pivotCacheRecords")).ShouldBeTrue();
     }
 }

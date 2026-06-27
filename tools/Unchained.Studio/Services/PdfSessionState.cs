@@ -36,17 +36,17 @@ public sealed class PdfSessionState : IAsyncDisposable
 
     public bool IsDirty { get; private set; }
 
+    // Injected so RefreshAsync can invalidate stale render cache entries
+    internal RenderingService? RenderCache { private get; set; }
+
+    public ValueTask DisposeAsync() => Document.DisposeAsync();
+
     public void MarkDirty()
     {
         IsDirty = true;
         Tree = PdfTreeBuilder.Build(Document, FileName);
         Refreshed?.Invoke();
     }
-
-    // Injected so RefreshAsync can invalidate stale render cache entries
-    internal RenderingService? RenderCache { private get; set; }
-
-    public ValueTask DisposeAsync() => Document.DisposeAsync();
 
     /// <summary>
     ///     Raised after <see cref="RefreshAsync" /> completes so that UI components

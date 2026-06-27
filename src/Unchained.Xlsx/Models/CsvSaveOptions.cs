@@ -6,6 +6,9 @@ namespace Unchained.Xlsx.Models;
 /// <summary>Settings controlling CSV export of a worksheet.</summary>
 public sealed class CsvSaveOptions
 {
+    /// <summary>The default options.</summary>
+    public static readonly CsvSaveOptions Default = new();
+
     /// <summary>The field delimiter. Defaults to comma.</summary>
     public char Delimiter { get; init; } = ',';
 
@@ -38,7 +41,4 @@ public sealed class CsvSaveOptions
 
     /// <summary>The range to export, or <see langword="null" /> to export the used range.</summary>
     public CellRange? Range { get; init; }
-
-    /// <summary>The default options.</summary>
-    public static readonly CsvSaveOptions Default = new();
 }

@@ -23,19 +23,20 @@ public sealed class FormulaCatalogTests
     {
         var results = FormulaCatalog.Search("sum").ToList();
         results.ShouldNotBeEmpty();
-        results.All(f => f.Name.StartsWith("sum", StringComparison.OrdinalIgnoreCase)).ShouldBeTrue();
+        results.All(static f => f.Name.StartsWith("sum", StringComparison.OrdinalIgnoreCase)).ShouldBeTrue();
     }
 
     [Fact]
     public void Search_PrefixMatch_ExactMatchIncluded()
     {
         var results = FormulaCatalog.Search("SUM").ToList();
-        results.ShouldContain(f => f.Name == "SUM");
+        results.ShouldContain(static f => f.Name == "SUM");
     }
 
     [Fact]
     public void Search_NoMatch_ReturnsEmpty()
     {
+        // ReSharper disable once StringLiteralTypo
         var results = FormulaCatalog.Search("zzzznotarealfunction").ToList();
         results.ShouldBeEmpty();
     }
@@ -45,7 +46,7 @@ public sealed class FormulaCatalogTests
     {
         var results = FormulaCatalog.Search("=sum").ToList();
         results.ShouldNotBeEmpty();
-        results.ShouldContain(f => f.Name == "SUM");
+        results.ShouldContain(static f => f.Name == "SUM");
     }
 
     [Fact]
@@ -53,7 +54,9 @@ public sealed class FormulaCatalogTests
     {
         var results = FormulaCatalog.Search("A").ToList();
         for (var i = 1; i < results.Count; i++)
+        {
             string.Compare(results[i - 1].Name, results[i].Name, StringComparison.OrdinalIgnoreCase)
                 .ShouldBeLessThanOrEqualTo(0);
+        }
     }
 }

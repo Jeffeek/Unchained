@@ -1,11 +1,8 @@
 @using Unchained.Ooxml
 @using Unchained.Ooxml.Media
 @using Unchained.Pptx.Engine
-@using Unchained.Pptx.Models
 @using Unchained.Pptx.Shapes
 @using Unchained.Pptx.Slides
-@inject IDialogService Dialogs
-@inject ISnackbar Snackbar
 
 <MudDialog Style="min-width:500px;">
     <TitleContent>
@@ -18,11 +15,9 @@
     <DialogContent>
         <MudStack Spacing="3">
             <MudFileUpload T="IBrowserFile" FilesChanged="OnFile" Accept=".png,.jpg,.jpeg,.gif,.bmp">
-                <ActivatorContent>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.UploadFile">
-                        Choose image…
-                    </MudButton>
-                </ActivatorContent>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.UploadFile">
+                    Choose image…
+                </MudButton>
             </MudFileUpload>
 
             @if (_fileName != null)
@@ -56,13 +51,18 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
 
-    [Parameter] public PresentationDocument Document { get; set; } = null!;
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
 
-    [Parameter] public Slide Slide { get; set; } = null!;
+    [Parameter]
+    public PresentationDocument Document { get; set; } = null!;
 
-    [Parameter] public EventCallback<Shape> OnInserted { get; set; }
+    [Parameter]
+    public Slide Slide { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<Shape> OnInserted { get; set; }
 
     private byte[]? _bytes;
     private string? _fileName;
@@ -79,7 +79,13 @@
     {
         _error = null;
         if (file is null) return;
-        if (file.Size > MaxBytes) { _error = $"Image too large ({file.Size / 1024 / 1024} MB). Max 16 MB."; return; }
+
+        if (file.Size > MaxBytes)
+        {
+            _error = $"Image too large ({file.Size / 1024 / 1024} MB). Max 16 MB.";
+            return;
+        }
+
         try
         {
             using var ms = new MemoryStream();
@@ -95,12 +101,17 @@
     private async Task Insert()
     {
         if (_bytes is null || _contentType is null) return;
+
         try
         {
             var img = new EmbeddedImage(_contentType, _bytes);
-            var pic = Slide.Shapes.AddPicture(img,
-                Emu.FromInches(_x), Emu.FromInches(_y),
-                Emu.FromInches(_width), Emu.FromInches(_height));
+            var pic = Slide.Shapes.AddPicture(
+                img,
+                Emu.FromInches(_x),
+                Emu.FromInches(_y),
+                Emu.FromInches(_width),
+                Emu.FromInches(_height)
+            );
             await OnInserted.InvokeAsync(pic);
             MudDialog.Close();
         }

@@ -338,7 +338,7 @@ public sealed class PdfFunctionTests
             }
         );
         // depth > 16 short-circuits to null (recursion guard).
-        PdfFunction.Build(dict, Core(), depth: 17).ShouldBeNull();
+        PdfFunction.Build(dict, Core(), 17).ShouldBeNull();
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Models.PageSetup;
 using Unchained.Xlsx.Tests.Helpers;
@@ -103,7 +104,7 @@ public class WorksheetLayoutCoverageTests
     public async Task FreezeColumnsOnly_RoundTrips()
     {
         using var document = XlsxFixtures.WithSheets("Data");
-        document.Sheets[0].FreezePanes(rows: 0, columns: 3);
+        document.Sheets[0].FreezePanes(0, 3);
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var frozen = reloaded.Sheets[0].View.FrozenPanes;
@@ -120,10 +121,10 @@ public class WorksheetLayoutCoverageTests
 
         var decimalValidation = new DataValidation.DataValidation
         {
-            Type = Models.DataValidation.DataValidationType.Decimal,
-            Operator = Models.DataValidation.DataValidationOperator.GreaterThan,
+            Type = DataValidationType.Decimal,
+            Operator = DataValidationOperator.GreaterThan,
             Formula1 = "0.5",
-            ErrorStyle = Models.DataValidation.DataValidationErrorStyle.Warning,
+            ErrorStyle = DataValidationErrorStyle.Warning,
             PromptTitle = "Enter value",
             Prompt = "A decimal please",
             ShowInputMessage = true,
@@ -134,8 +135,8 @@ public class WorksheetLayoutCoverageTests
 
         var textLength = new DataValidation.DataValidation
         {
-            Type = Models.DataValidation.DataValidationType.TextLength,
-            Operator = Models.DataValidation.DataValidationOperator.LessThanOrEqual,
+            Type = DataValidationType.TextLength,
+            Operator = DataValidationOperator.LessThanOrEqual,
             Formula1 = "10"
         };
         textLength.Ranges.Add(CellRange.FromA1("B1:B10"));

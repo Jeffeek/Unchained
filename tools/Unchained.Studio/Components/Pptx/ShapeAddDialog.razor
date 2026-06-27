@@ -1,11 +1,8 @@
 @using Unchained.Ooxml
 @using Unchained.Pptx.Engine
-@using Unchained.Pptx.Models
 @using Unchained.Pptx.Models.Shapes
 @using Unchained.Pptx.Shapes
 @using Unchained.Pptx.Slides
-@using Unchained.Studio
-@inject ISnackbar Snackbar
 
 <MudDialog Style="min-width:600px; max-width:720px;">
     <TitleContent>
@@ -117,11 +114,14 @@
                 return;
             }
 
-            var shape = Slide.Shapes.AddShape(_selectedShape.Value,
-                Emu.FromInches(1), Emu.FromInches(1),
-                Emu.FromInches(4), Emu.FromInches(3));
+            var shape = Slide.Shapes.AddShape(
+                _selectedShape.Value,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(3)
+            );
             await OnInserted.InvokeAsync(shape);
-            MudDialog.Close();
         }
         else
         {
@@ -129,8 +129,9 @@
             var rowHeights = Enumerable.Repeat(Emu.FromInches(0.4), _rows).ToArray();
             var table = Slide.Shapes.AddTable(Emu.FromInches(1), Emu.FromInches(1), columnWidths, rowHeights);
             await OnInserted.InvokeAsync(table);
-            MudDialog.Close();
         }
+
+        MudDialog.Close();
     }
 
     private void Cancel() => MudDialog.Cancel();

@@ -1,6 +1,4 @@
-@using Unchained.Pptx.Models
 @using Unchained.Pptx.Engine
-@inject IDialogService Dialogs
 
 <MudDialog Style="min-width:600px; max-width:800px;">
     <TitleContent>
@@ -33,9 +31,12 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
 
-    [Parameter] public PresentationDocument Document { get; set; } = null!;
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public PresentationDocument Document { get; set; } = null!;
 
     private void Cancel() => MudDialog.Cancel();
 }

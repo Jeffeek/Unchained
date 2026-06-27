@@ -1,11 +1,17 @@
+using System.Globalization;
+using System.Text;
 using Unchained.Xlsx.Formatting;
 using Unchained.Xlsx.Models.Cell;
-using System.Globalization;
 
 namespace Unchained.Xlsx.Formulas;
 
 internal static partial class FormulaFunctions
 {
+    private static readonly (int Value, string Symbol)[] RomanTable =
+    [
+        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"),
+        (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")
+    ];
     // ── Date / time helpers ─────────────────────────────────────────────────────
 
     private static FormulaValue DateFn(IReadOnlyList<FormulaValue> values)
@@ -35,9 +41,9 @@ internal static partial class FormulaFunctions
         var dow = (int)date.Value.DayOfWeek; // Sunday = 0
         return type switch
         {
-            2 => Number(dow == 0 ? 7 : dow),       // Monday = 1
-            3 => Number((dow + 6) % 7),            // Monday = 0
-            _ => Number(dow + 1)                   // Sunday = 1
+            2 => Number(dow == 0 ? 7 : dow), // Monday = 1
+            3 => Number((dow + 6) % 7),      // Monday = 0
+            _ => Number(dow + 1)             // Sunday = 1
         };
     }
 
@@ -56,19 +62,16 @@ internal static partial class FormulaFunctions
         return Number(DateTimeSerializer.ToSerial(eom, false));
     }
 
-    private static FormulaValue TimeValue(IReadOnlyList<FormulaValue> values)
-    {
-        if (DateTime.TryParse(Text(values, 0), CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
-            return Number(d.TimeOfDay.TotalSeconds / 86400.0);
-        return FormulaValue.FromError(CellError.Value);
-    }
+    private static FormulaValue TimeValue(IReadOnlyList<FormulaValue> values) =>
+        DateTime.TryParse(Text(values, 0), CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+            ? Number(d.TimeOfDay.TotalSeconds / 86400.0)
+            : FormulaValue.FromError(CellError.Value);
 
     private static FormulaValue Days360(IReadOnlyList<FormulaValue> values)
     {
         var d1 = DateTimeSerializer.ToDateTime(Num(values, 0), false) ?? DateTime.MinValue;
         var d2 = DateTimeSerializer.ToDateTime(Num(values, 1), false) ?? DateTime.MinValue;
         var usa = values.Count > 2 && FormulaEvaluator.ToBoolean(values[2]);
-        var m1 = usa ? Math.Min(d1.Month, 12) : d1.Month;
         var day1 = d1.Day == 31 || (usa && d1.Day == 30) ? 30 : d1.Day;
         var day2 = d2.Day == 31 ? (usa ? 30 : 31) : d2.Day;
         return Number((360 * (d2.Year - d1.Year)) + (30 * (d2.Month - d1.Month)) + (day2 - day1));
@@ -92,7 +95,7 @@ internal static partial class FormulaFunctions
 
         var type = values.Count > 1 ? (int)Num(values, 1) : 1;
         var cal = type == 21 ? new GregorianCalendar(GregorianCalendarTypes.USEnglish) : new GregorianCalendar();
-        return Number(cal.GetWeekOfYear(date.Value, System.Globalization.CalendarWeekRule.FirstDay, (DayOfWeek)(type - 2)));
+        return Number(cal.GetWeekOfYear(date.Value, CalendarWeekRule.FirstDay, (DayOfWeek)(type - 2)));
     }
 
     private static FormulaValue IsoWeekNum(IReadOnlyList<FormulaValue> values)
@@ -111,7 +114,7 @@ internal static partial class FormulaFunctions
         var jan4Dow = (int)jan4.DayOfWeek;
         if (jan4Dow == 0) jan4Dow = 7;
         var mondayOfWk1 = jan4.AddDays(-(jan4Dow - 1));
-        var week = (int)((thursday - mondayOfWk1).Days / 7) + 1;
+        var week = ((thursday - mondayOfWk1).Days / 7) + 1;
         return Number(week);
     }
 
@@ -125,7 +128,7 @@ internal static partial class FormulaFunctions
         return unit switch
         {
             "D" => Number(Math.Floor(Num(values, 1)) - Math.Floor(Num(values, 0))),
-            "M" => Number((d2.Value.Year - d1.Value.Year) * 12 + d2.Value.Month - d1.Value.Month),
+            "M" => Number(((d2.Value.Year - d1.Value.Year) * 12) + d2.Value.Month - d1.Value.Month),
             "Y" => Number(d2.Value.Year - d1.Value.Year),
             "MD" => Number(d2.Value.Day - d1.Value.Day),
             "YM" => Number(d2.Value.Month - d1.Value.Month),
@@ -175,17 +178,11 @@ internal static partial class FormulaFunctions
         return result;
     }
 
-    private static readonly (int Value, string Symbol)[] RomanTable =
-    [
-        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"),
-        (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")
-    ];
-
     private static string ToRoman(int value)
     {
         if (value is <= 0 or > 3999) return string.Empty;
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         foreach (var (v, sym) in RomanTable)
         {
             while (value >= v)
@@ -221,7 +218,7 @@ internal static partial class FormulaFunctions
         const string digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         if (value == 0) return "0".PadLeft(Math.Max(1, minLength), '0');
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         var v = Math.Abs(value);
         while (v > 0)
         {
@@ -253,46 +250,52 @@ internal static partial class FormulaFunctions
     private static double Pmt(double rate, double nper, double pv, double fv = 0, int type = 0)
     {
         if (rate == 0) return -(pv + fv) / nper;
+
         var factor = Math.Pow(1 + rate, nper);
-        var annuity = pv * factor + fv;
-        return annuity * rate / (1 + rate * type) / (1 - factor);
+        var annuity = (pv * factor) + fv;
+        return annuity * rate / (1 + (rate * type)) / (1 - factor);
     }
 
     private static double Fv(double rate, double nper, double pmt, double pv = 0, int type = 0)
     {
-        if (rate == 0) return pv + pmt * nper;
+        if (rate == 0) return pv + (pmt * nper);
+
         var factor = Math.Pow(1 + rate, nper);
-        var annuity = pmt * (1 + rate * type) * (factor - 1) / rate;
-        return -(pv * factor + annuity);
+        var annuity = pmt * (1 + (rate * type)) * (factor - 1) / rate;
+        return -((pv * factor) + annuity);
     }
 
     private static double Pv(double rate, double nper, double pmt, double fv = 0, int type = 0)
     {
-        if (rate == 0) return -(fv + pmt * nper);
+        if (rate == 0) return -(fv + (pmt * nper));
+
         var factor = Math.Pow(1 + rate, nper);
-        var annuity = pmt * (1 + rate * type) * (factor - 1) / (rate * factor);
+        var annuity = pmt * (1 + (rate * type)) * (factor - 1) / (rate * factor);
         return -(fv + annuity);
     }
 
     private static double NPer(double rate, double pmt, double pv, double fv = 0)
     {
         if (rate == 0) return -(pv + fv) / pmt;
-        var numerator = pmt * (1 + rate) - fv * rate;
-        var denominator = pv * rate + pmt;
+
+        var numerator = (pmt * (1 + rate)) - (fv * rate);
+        var denominator = (pv * rate) + pmt;
         if (denominator == 0) return double.NaN;
+
         return Math.Log(numerator / denominator) / Math.Log(1 + rate);
     }
 
     private static FormulaValue Npv(IReadOnlyList<FormulaValue> values)
     {
         if (values.Count < 2) return FormulaValue.FromError(CellError.Value);
+
         var rate = Num(values, 0);
         if (rate < 0) return FormulaValue.FromError(CellError.Number);
+
         var cashflows = values.Skip(1).Select(FormulaEvaluator.ToNumber).ToList();
         if (cashflows.Count == 0) return Number(0);
-        double npv = 0;
-        for (var t = 0; t < cashflows.Count; t++)
-            npv += cashflows[t] / Math.Pow(1 + rate, t + 1);
+
+        var npv = cashflows.Select((t1, t) => t1 / Math.Pow(1 + rate, t + 1)).Sum();
         return Number(npv);
     }
 
@@ -301,6 +304,7 @@ internal static partial class FormulaFunctions
     private static FormulaValue TypeOf(IReadOnlyList<FormulaValue> values)
     {
         if (values.Count == 0) return Number(1);
+
         var v = values[0];
         return v.Kind switch
         {
@@ -316,6 +320,7 @@ internal static partial class FormulaFunctions
     private static FormulaValue ErrorType(IReadOnlyList<FormulaValue> values)
     {
         if (values.Count == 0 || !values[0].IsError) return FormulaValue.FromError(CellError.Value);
+
         return values[0].Error switch
         {
             CellError.Null => Number(1),
@@ -324,7 +329,6 @@ internal static partial class FormulaFunctions
             CellError.Reference => Number(4),
             CellError.Name => Number(5),
             CellError.Number => Number(6),
-            CellError.NotAvailable => Number(7),
             _ => Number(7)
         };
     }

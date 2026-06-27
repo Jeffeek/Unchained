@@ -75,7 +75,8 @@ public class CsvCoverageTests
         document.Sheets[0].SetValue(1, 1, true);
 
         var text = Encoding.UTF8.GetString(
-            document.Sheets[0].ToCsv(new CsvSaveOptions { TrueValue = "Y", FalseValue = "N" }));
+            document.Sheets[0].ToCsv(new CsvSaveOptions { TrueValue = "Y", FalseValue = "N" })
+        );
         text.ShouldContain("Y");
     }
 
@@ -128,10 +129,12 @@ public class CsvCoverageTests
     [Fact]
     public async Task Import_ZeroPaddedId_StaysString()
     {
-        var csv = "007,42\r\n";
+        const string csv = "007,42\r\n";
         using var processor = new SpreadsheetProcessor();
         using var document = await processor.LoadFromCsvAsync(
-            new MemoryStream(Encoding.UTF8.GetBytes(csv)), cancellationToken: TestContext.Current.CancellationToken);
+            new MemoryStream(Encoding.UTF8.GetBytes(csv)),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
 
         document.Sheets[0].GetCell(1, 1)!.GetString().ShouldBe("007");
         document.Sheets[0].GetCell(1, 2)!.GetDouble().ShouldBe(42.0);
@@ -140,10 +143,12 @@ public class CsvCoverageTests
     [Fact]
     public async Task Import_EmptyField_LeavesCellBlank()
     {
-        var csv = "a,,c\r\n";
+        const string csv = "a,,c\r\n";
         using var processor = new SpreadsheetProcessor();
         using var document = await processor.LoadFromCsvAsync(
-            new MemoryStream(Encoding.UTF8.GetBytes(csv)), cancellationToken: TestContext.Current.CancellationToken);
+            new MemoryStream(Encoding.UTF8.GetBytes(csv)),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
 
         document.Sheets[0].GetCell(1, 2).ShouldBeNull();
         document.Sheets[0].GetCell(1, 3)!.GetString().ShouldBe("c");
@@ -152,12 +157,13 @@ public class CsvCoverageTests
     [Fact]
     public async Task Import_DateFormat_ParsesDate()
     {
-        var csv = "2023-06-15\r\n";
+        const string csv = "2023-06-15\r\n";
         using var processor = new SpreadsheetProcessor();
         using var document = await processor.LoadFromCsvAsync(
             new MemoryStream(Encoding.UTF8.GetBytes(csv)),
             new CsvLoadOptions { DateFormat = "yyyy-MM-dd" },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         document.Sheets[0].GetCell(1, 1)!.GetDateTime().ShouldBe(new DateTime(2023, 6, 15));
     }
@@ -165,10 +171,12 @@ public class CsvCoverageTests
     [Fact]
     public async Task Import_StripsUtf8Bom()
     {
-        var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("hello,1\r\n")).ToArray();
+        var bytes = Encoding.UTF8.GetPreamble().Concat("hello,1\r\n"u8.ToArray()).ToArray();
         using var processor = new SpreadsheetProcessor();
         using var document = await processor.LoadFromCsvAsync(
-            new MemoryStream(bytes), cancellationToken: TestContext.Current.CancellationToken);
+            new MemoryStream(bytes),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
 
         document.Sheets[0].GetCell(1, 1)!.GetString().ShouldBe("hello");
     }
@@ -178,9 +186,10 @@ public class CsvCoverageTests
     {
         using var processor = new SpreadsheetProcessor();
         using var document = await processor.LoadFromCsvAsync(
-            new MemoryStream(Encoding.UTF8.GetBytes("x\r\n")),
+            new MemoryStream("x\r\n"u8.ToArray()),
             new CsvLoadOptions { SheetName = "Imported" },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken
+        );
 
         document.Sheets[0].Name.ShouldBe("Imported");
     }
@@ -188,10 +197,12 @@ public class CsvCoverageTests
     [Fact]
     public async Task Import_NoTrailingNewline_ReadsLastRow()
     {
-        var csv = "a,b\r\nc,d";
+        const string csv = "a,b\r\nc,d";
         using var processor = new SpreadsheetProcessor();
         using var document = await processor.LoadFromCsvAsync(
-            new MemoryStream(Encoding.UTF8.GetBytes(csv)), cancellationToken: TestContext.Current.CancellationToken);
+            new MemoryStream(Encoding.UTF8.GetBytes(csv)),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
 
         document.Sheets[0].GetCell(2, 2)!.GetString().ShouldBe("d");
     }

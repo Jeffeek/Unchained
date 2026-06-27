@@ -11,6 +11,8 @@ public sealed class RowCollection : IReadOnlyList<Row>
 {
     private readonly SortedDictionary<int, Row> _rows = [];
 
+    internal IEnumerable<Row> AllRows => _rows.Values;
+
     /// <summary>The number of materialised rows.</summary>
     public int Count => _rows.Count;
 
@@ -45,8 +47,6 @@ public sealed class RowCollection : IReadOnlyList<Row>
     internal void AddExisting(Row row) => _rows[row.RowNumber] = row;
 
     internal void Remove(int rowNumber) => _rows.Remove(rowNumber);
-
-    internal IEnumerable<Row> AllRows => _rows.Values;
 
     internal void RenumberFrom(IEnumerable<Row> rows)
     {

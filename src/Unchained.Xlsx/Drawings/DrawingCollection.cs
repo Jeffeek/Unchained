@@ -7,6 +7,11 @@ public sealed class DrawingCollection : IReadOnlyList<WorksheetDrawing>
 {
     private readonly List<WorksheetDrawing> _drawings = [];
 
+    /// <summary>The pictures on the sheet.</summary>
+    public IEnumerable<PictureDrawing> Pictures => _drawings.OfType<PictureDrawing>();
+
+    internal IReadOnlyList<WorksheetDrawing> All => _drawings;
+
     /// <summary>The number of drawings on the sheet.</summary>
     public int Count => _drawings.Count;
 
@@ -18,9 +23,6 @@ public sealed class DrawingCollection : IReadOnlyList<WorksheetDrawing>
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    /// <summary>The pictures on the sheet.</summary>
-    public IEnumerable<PictureDrawing> Pictures => _drawings.OfType<PictureDrawing>();
-
     /// <summary>Adds a drawing to the sheet.</summary>
     public void Add(WorksheetDrawing drawing)
     {
@@ -30,6 +32,4 @@ public sealed class DrawingCollection : IReadOnlyList<WorksheetDrawing>
 
     /// <summary>Removes a drawing from the sheet.</summary>
     public void Remove(WorksheetDrawing drawing) => _drawings.Remove(drawing);
-
-    internal IReadOnlyList<WorksheetDrawing> All => _drawings;
 }

@@ -6,16 +6,13 @@ namespace Unchained.Xlsx.Worksheets;
 
 public sealed partial class Worksheet
 {
-    private readonly ColumnCollection _columns = new();
-    private bool _columnsParsed;
-
     /// <summary>The column definitions of this sheet.</summary>
     public ColumnCollection Columns
     {
         get
         {
             EnsureColumnsParsed();
-            return _columns;
+            return ColumnsInternal;
         }
     }
 
@@ -37,34 +34,31 @@ public sealed partial class Worksheet
     public void ShowColumn(int columnNumber)
     {
         var column = Columns.GetColumn(columnNumber);
-        if (column != null)
-            column.IsHidden = false;
+        column?.IsHidden = false;
     }
 
     private void EnsureColumnsParsed()
     {
-        if (_columnsParsed)
+        if (ColumnsMaterialised)
             return;
 
-        _columnsParsed = true;
+        ColumnsMaterialised = true;
         var colsElement = RawElement?.Child(SmlNames.Cols);
         if (colsElement == null)
             return;
 
-        foreach (var colElement in colsElement.Children(SmlNames.Col))
-        {
-            var min = colElement.GetAttrInt("min", 1);
-            var max = colElement.GetAttrInt("max", min);
-            var column = new Column(min, max)
-            {
-                Width = colElement.GetAttrDouble("width"),
-                IsCustomWidth = colElement.GetAttrBool("customWidth") == true,
-                IsHidden = colElement.GetAttrBool("hidden") == true,
-                IsCollapsed = colElement.GetAttrBool("collapsed") == true,
-                OutlineLevel = colElement.GetAttrInt("outlineLevel", 0),
-                StyleIndex = colElement.GetAttrInt("style")
-            };
-            _columns.AddExisting(column);
-        }
+        foreach (var column in from colElement in colsElement.Children(SmlNames.Col)
+                               let min = colElement.GetAttrInt("min", 1)
+                               let max = colElement.GetAttrInt("max", min)
+                               select new Column(min, max)
+                               {
+                                   Width = colElement.GetAttrDouble("width"),
+                                   IsCustomWidth = colElement.GetAttrBool("customWidth") == true,
+                                   IsHidden = colElement.GetAttrBool("hidden") == true,
+                                   IsCollapsed = colElement.GetAttrBool("collapsed") == true,
+                                   OutlineLevel = colElement.GetAttrInt("outlineLevel", 0),
+                                   StyleIndex = colElement.GetAttrInt("style")
+                               })
+            ColumnsInternal.AddExisting(column);
     }
 }

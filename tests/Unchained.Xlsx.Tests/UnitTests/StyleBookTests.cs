@@ -1,5 +1,6 @@
 using Shouldly;
-using Unchained.Xlsx.Models.Styles;
+using Unchained.Ooxml.Drawing;
+using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Styles;
 using Xunit;
 
@@ -36,8 +37,8 @@ public class StyleBookTests
     public void GetOrAddFill_AndBorder_Deduplicate()
     {
         var book = Default();
-        var fill = book.GetOrAddFill(CellFill.Solid(Unchained.Ooxml.Drawing.ColorSpec.FromRgb(1, 2, 3)));
-        book.GetOrAddFill(CellFill.Solid(Unchained.Ooxml.Drawing.ColorSpec.FromRgb(1, 2, 3))).ShouldBe(fill);
+        var fill = book.GetOrAddFill(CellFill.Solid(ColorSpec.FromRgb(1, 2, 3)));
+        book.GetOrAddFill(CellFill.Solid(ColorSpec.FromRgb(1, 2, 3))).ShouldBe(fill);
 
         var border = book.GetOrAddBorder(new CellBorder().SetAllEdges(BorderStyle.Thin));
         book.GetOrAddBorder(new CellBorder().SetAllEdges(BorderStyle.Thin)).ShouldBe(border);

@@ -1,7 +1,7 @@
 namespace Unchained.Ooxml.Drawing;
 
 /// <summary>
-///     Converts between <see cref="LineDashStyle"/> values and their OOXML string representations.
+///     Converts between <see cref="LineDashStyle" /> values and their OOXML string representations.
 /// </summary>
 internal static class LineStyles
 {

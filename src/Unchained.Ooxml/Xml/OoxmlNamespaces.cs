@@ -1,5 +1,3 @@
-using System.Xml.Linq;
-
 namespace Unchained.Ooxml.Xml;
 
 /// <summary>
@@ -25,7 +23,9 @@ internal static class OoxmlNamespaces
     /// <summary>Full extended-properties relationship URI.</summary>
     public const string ExtendedPropertiesFull = OfficeDocument + "/extended-properties";
 
-    /// <summary>Office document relationships: <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships</c></summary>
+    /// <summary>
+    ///     Office document relationships: <c>http://schemas.openxmlformats.org/officeDocument/2006/relationships</c>
+    /// </summary>
     public const string OfficeDocument = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
     /// <summary>Package relationships: <c>http://schemas.openxmlformats.org/package/2006/relationships</c></summary>

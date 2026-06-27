@@ -1,17 +1,13 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
-using MudBlazor.Services;
 using Unchained.Studio.Components.Xlsx;
+using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Studio.Tests.Components;
 
 public sealed class FormulaBarTests : MudTestContext
 {
-    public FormulaBarTests()
-    {
-    }
-
     [Fact]
     public void Render_NoSheet_NoPreview()
     {
@@ -23,7 +19,7 @@ public sealed class FormulaBarTests : MudTestContext
     [Fact]
     public void Render_CellValue_SimpleValueShown()
     {
-        var cut = Render<FormulaBar>(pb => pb.Add(c => c.CellText, "42"));
+        var cut = Render<FormulaBar>(static pb => pb.Add(static c => c.CellText, "42"));
 
         cut.Find(".formula-bar-input").GetAttribute("value").ShouldBe("42");
     }
@@ -31,7 +27,7 @@ public sealed class FormulaBarTests : MudTestContext
     [Fact]
     public void Render_BlankCell_EmptyShown()
     {
-        var cut = Render<FormulaBar>(pb => pb.Add(c => c.CellText, string.Empty));
+        var cut = Render<FormulaBar>(static pb => pb.Add(static c => c.CellText, string.Empty));
 
         var value = cut.Find(".formula-bar-input").GetAttribute("value");
         (value ?? string.Empty).ShouldBe(string.Empty);
@@ -40,9 +36,10 @@ public sealed class FormulaBarTests : MudTestContext
     [Fact]
     public void Input_ValidFormula_Evaluates()
     {
-        var cut = Render<FormulaBar>(pb =>
-            pb.Add(c => c.Sheet, CreateSheet())
-              .Add(c => c.CellText, "=10+5"));
+        var cut = Render<FormulaBar>(static pb =>
+            pb.Add(static c => c.Sheet, CreateSheet())
+                .Add(static c => c.CellText, "=10+5")
+        );
 
         cut.Find(".formula-bar-preview").TextContent.ShouldContain("15");
     }
@@ -50,9 +47,10 @@ public sealed class FormulaBarTests : MudTestContext
     [Fact]
     public void Input_ErrorFormula_ShowsError()
     {
-        var cut = Render<FormulaBar>(pb =>
-            pb.Add(c => c.Sheet, CreateSheet())
-              .Add(c => c.CellText, "=1/0"));
+        var cut = Render<FormulaBar>(static pb =>
+            pb.Add(static c => c.Sheet, CreateSheet())
+                .Add(static c => c.CellText, "=1/0")
+        );
 
         cut.Find(".formula-bar-preview").ClassList.ShouldContain("formula-bar-preview--error");
     }
@@ -62,8 +60,9 @@ public sealed class FormulaBarTests : MudTestContext
     {
         var committed = false;
         var cut = Render<FormulaBar>(pb =>
-            pb.Add(c => c.CellText, "hello")
-              .Add(c => c.Committed, EventCallback.Factory.Create<string>(this, _ => committed = true)));
+            pb.Add(static c => c.CellText, "hello")
+                .Add(static c => c.Committed, EventCallback.Factory.Create<string>(this, _ => committed = true))
+        );
 
         var input = cut.Find(".formula-bar-input");
         input.Input("world");
@@ -76,8 +75,9 @@ public sealed class FormulaBarTests : MudTestContext
     public void Input_Cancelled_OnEscape()
     {
         var cut = Render<FormulaBar>(pb =>
-            pb.Add(c => c.CellText, "original")
-              .Add(c => c.Committed, EventCallback.Factory.Create<string>(this, _ => { })));
+            pb.Add(static c => c.CellText, "original")
+                .Add(static c => c.Committed, EventCallback.Factory.Create<string>(this, static _ => { }))
+        );
 
         var input = cut.Find(".formula-bar-input");
         input.Input("changed");
@@ -88,7 +88,7 @@ public sealed class FormulaBarTests : MudTestContext
 
     private static Worksheet CreateSheet()
     {
-        using var processor = new Unchained.Xlsx.Engine.SpreadsheetProcessor();
+        using var processor = new SpreadsheetProcessor();
         var doc = processor.CreateBlank("Sheet1");
         return doc.Sheets[0];
     }

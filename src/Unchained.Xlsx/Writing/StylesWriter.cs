@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Xlsx.Core.Xml;
-using Unchained.Xlsx.Models.Styles;
+using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Styles;
 
 namespace Unchained.Xlsx.Writing;
@@ -14,7 +14,8 @@ internal static class StylesWriter
     {
         var root = new XElement(
             SmlNames.StyleSheet,
-            new XAttribute("xmlns", SmlNames.X.NamespaceName));
+            new XAttribute("xmlns", SmlNames.X.NamespaceName)
+        );
 
         WriteNumberFormats(root, book);
         root.Add(WriteFonts(book));
@@ -27,7 +28,7 @@ internal static class StylesWriter
         return new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
     }
 
-    private static void WriteNumberFormats(XElement root, StyleBook book)
+    private static void WriteNumberFormats(XContainer root, StyleBook book)
     {
         var custom = book.NumberFormats.Where(static f => !f.IsBuiltIn).ToList();
         if (custom.Count == 0)
@@ -36,9 +37,13 @@ internal static class StylesWriter
         var numFmts = new XElement(SmlNames.NumFmts, new XAttribute("count", custom.Count));
         foreach (var format in custom)
         {
-            numFmts.Add(new XElement(SmlNames.NumFmt,
-                new XAttribute("numFmtId", format.FormatId.ToString(CultureInfo.InvariantCulture)),
-                new XAttribute("formatCode", format.FormatCode)));
+            numFmts.Add(
+                new XElement(
+                    SmlNames.NumFmt,
+                    new XAttribute("numFmtId", format.FormatId.ToString(CultureInfo.InvariantCulture)),
+                    new XAttribute("formatCode", format.FormatCode)
+                )
+            );
         }
 
         root.Add(numFmts);
@@ -74,12 +79,20 @@ internal static class StylesWriter
 
         if (font.VerticalAlignment != FontVerticalAlignment.None)
         {
-            element.Add(new XElement(SmlNames.FontVertAlign,
-                new XAttribute(DmlNames.AttributeValue, SmlEnums.ToLiteral(font.VerticalAlignment)!)));
+            element.Add(
+                new XElement(
+                    SmlNames.FontVertAlign,
+                    new XAttribute(DmlNames.AttributeValue, SmlEnums.ToLiteral(font.VerticalAlignment)!)
+                )
+            );
         }
 
-        element.Add(new XElement(SmlNames.FontSize,
-            new XAttribute(DmlNames.AttributeValue, font.SizePoints.ToString(CultureInfo.InvariantCulture))));
+        element.Add(
+            new XElement(
+                SmlNames.FontSize,
+                new XAttribute(DmlNames.AttributeValue, font.SizePoints.ToString(CultureInfo.InvariantCulture))
+            )
+        );
 
         if (font.Color is { } color)
             element.Add(new XElement(SmlNames.Color, new XAttribute("rgb", SmlColor.ToHexArgb(color))));
@@ -102,8 +115,10 @@ internal static class StylesWriter
 
     private static XElement WriteFill(CellFill fill)
     {
-        var patternFill = new XElement(SmlNames.PatternFill,
-            new XAttribute("patternType", SmlEnums.ToLiteral(fill.PatternType)));
+        var patternFill = new XElement(
+            SmlNames.PatternFill,
+            new XAttribute("patternType", SmlEnums.ToLiteral(fill.PatternType))
+        );
 
         if (fill.ForegroundColor is { } fg)
             patternFill.Add(new XElement(SmlNames.FgColor, new XAttribute("rgb", SmlColor.ToHexArgb(fg))));
@@ -148,7 +163,7 @@ internal static class StylesWriter
         return element;
     }
 
-    private static XElement WriteXfTable(XName tableName, IReadOnlyList<CellXf> xfs)
+    private static XElement WriteXfTable(XName tableName, IReadOnlyCollection<CellXf> xfs)
     {
         var table = new XElement(tableName, new XAttribute("count", xfs.Count));
         foreach (var xf in xfs)
@@ -158,12 +173,14 @@ internal static class StylesWriter
 
     private static XElement WriteXf(CellXf xf)
     {
-        var element = new XElement(SmlNames.Xf,
+        var element = new XElement(
+            SmlNames.Xf,
             new XAttribute("numFmtId", xf.NumberFormatId.ToString(CultureInfo.InvariantCulture)),
             new XAttribute("fontId", xf.FontId.ToString(CultureInfo.InvariantCulture)),
             new XAttribute("fillId", xf.FillId.ToString(CultureInfo.InvariantCulture)),
             new XAttribute("borderId", xf.BorderId.ToString(CultureInfo.InvariantCulture)),
-            new XAttribute("xfId", xf.XfId.ToString(CultureInfo.InvariantCulture)));
+            new XAttribute("xfId", xf.XfId.ToString(CultureInfo.InvariantCulture))
+        );
 
         if (xf.ApplyNumberFormat) element.SetAttributeValue("applyNumberFormat", "1");
         if (xf.ApplyFont) element.SetAttributeValue("applyFont", "1");
@@ -191,13 +208,14 @@ internal static class StylesWriter
         if (alignment.ShrinkToFit) element.SetAttributeValue("shrinkToFit", "1");
         if (alignment.TextRotation != 0) element.SetAttributeValue("textRotation", alignment.TextRotation.ToString(CultureInfo.InvariantCulture));
         if (alignment.Indent != 0) element.SetAttributeValue("indent", alignment.Indent.ToString(CultureInfo.InvariantCulture));
-        if (alignment.ReadingOrder != ReadingOrder.ContextDependent) element.SetAttributeValue("readingOrder", SmlEnums.ToLiteral(alignment.ReadingOrder).ToString(CultureInfo.InvariantCulture));
+        if (alignment.ReadingOrder != ReadingOrder.ContextDependent)
+            element.SetAttributeValue("readingOrder", SmlEnums.ToLiteral(alignment.ReadingOrder).ToString(CultureInfo.InvariantCulture));
         if (alignment.JustifyLastLine) element.SetAttributeValue("justifyLastLine", "1");
 
         return element;
     }
 
-    private static void WriteNamedStyles(XElement root, StyleBook book)
+    private static void WriteNamedStyles(XContainer root, StyleBook book)
     {
         if (book.NamedStyles.Count == 0)
             return;
@@ -205,9 +223,11 @@ internal static class StylesWriter
         var cellStyles = new XElement(SmlNames.CellStyles, new XAttribute("count", book.NamedStyles.Count));
         foreach (var style in book.NamedStyles)
         {
-            var element = new XElement(SmlNames.CellStyle,
+            var element = new XElement(
+                SmlNames.CellStyle,
                 new XAttribute("name", style.Name),
-                new XAttribute("xfId", style.XfId.ToString(CultureInfo.InvariantCulture)));
+                new XAttribute("xfId", style.XfId.ToString(CultureInfo.InvariantCulture))
+            );
             if (style.IsBuiltIn)
                 element.SetAttributeValue("builtinId", style.BuiltInId.ToString(CultureInfo.InvariantCulture));
             cellStyles.Add(element);

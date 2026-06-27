@@ -2,7 +2,6 @@
 @using System.Text
 @using Unchained.Pptx.Rendering.Engine
 @using Unchained.Pptx.Rendering.Models
-@using Unchained.Studio.Components.Pptx
 @inject SessionStateService Session
 @inject FileExportService Exporter
 @inject IDialogService Dialogs
@@ -431,6 +430,7 @@
     private async Task OnPlayboardDirty()
     {
         if (Session.Pptx is null) return;
+
         try
         {
             await Session.Pptx.RefreshAsync();
@@ -440,4 +440,5 @@
             // Refresh failure is non-fatal; tree will still update via Refreshed event.
         }
     }
+
 }

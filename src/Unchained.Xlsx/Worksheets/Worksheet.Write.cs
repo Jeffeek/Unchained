@@ -1,3 +1,5 @@
+using System.Globalization;
+using Unchained.Xlsx.Formatting;
 using Unchained.Xlsx.Models.Cell;
 
 namespace Unchained.Xlsx.Worksheets;
@@ -17,7 +19,7 @@ public sealed partial class Worksheet
 
     /// <summary>Sets a date/time value (converted to a serial number) at the given 1-based position.</summary>
     public void SetValue(int row, int column, DateTime value) =>
-        this[row, column].SetValue(Formatting.DateTimeSerializer.ToSerial(value, Document.Date1904));
+        this[row, column].SetValue(DateTimeSerializer.ToSerial(value, Document.Date1904));
 
     /// <summary>Sets a date/time value (converted to a serial number) at the given 1-based position.</summary>
     public void SetValue(int row, int column, DateTimeOffset value) =>
@@ -38,7 +40,7 @@ public sealed partial class Worksheet
             case DateTime dt: SetValue(row, column, dt); break;
             case DateTimeOffset dto: SetValue(row, column, dto); break;
             case CellError e: this[row, column].SetValue(e); break;
-            case IConvertible conv: SetValue(row, column, conv.ToDouble(System.Globalization.CultureInfo.InvariantCulture)); break;
+            case IConvertible conv: SetValue(row, column, conv.ToDouble(CultureInfo.InvariantCulture)); break;
             default:
                 throw new ArgumentException($"Unsupported cell value type '{value.GetType().Name}'.", nameof(value));
         }
@@ -62,7 +64,7 @@ public sealed partial class Worksheet
     public void ClearCell(int row, int column)
     {
         EnsureCellsParsedPublic();
-        _rows.GetRow(row)?.RemoveCell(column);
+        RowsInternal.GetRow(row)?.RemoveCell(column);
     }
 
     /// <summary>Clears every cell within <paramref name="range" />.</summary>
@@ -71,7 +73,7 @@ public sealed partial class Worksheet
         EnsureCellsParsedPublic();
         for (var r = range.TopLeft.Row; r <= range.BottomRight.Row; r++)
         {
-            var row = _rows.GetRow(r);
+            var row = RowsInternal.GetRow(r);
             if (row == null)
                 continue;
 
@@ -89,8 +91,8 @@ public sealed partial class Worksheet
         var rows = data.GetLength(0);
         var cols = data.GetLength(1);
         for (var r = 0; r < rows; r++)
-            for (var c = 0; c < cols; c++)
-                SetValue(topRow + r, leftColumn + c, data[r, c]);
+        for (var c = 0; c < cols; c++)
+            SetValue(topRow + r, leftColumn + c, data[r, c]);
     }
 
     /// <summary>Writes a sequence of value rows starting at <paramref name="topRow" />, <paramref name="leftColumn" />.</summary>

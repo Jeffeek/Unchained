@@ -1,6 +1,6 @@
+using System.Globalization;
 using Unchained.Xlsx.Formatting;
 using Unchained.Xlsx.Models.Cell;
-using System.Globalization;
 
 namespace Unchained.Xlsx.Formulas;
 
@@ -14,6 +14,8 @@ namespace Unchained.Xlsx.Formulas;
 /// </summary>
 internal static partial class FormulaFunctions
 {
+    private static readonly Random SharedRandom = new();
+
     public static FormulaValue Invoke(string name, IReadOnlyList<FormulaNode> args, FormulaEvaluator evaluator)
     {
         var upper = name.ToUpperInvariant();
@@ -23,8 +25,8 @@ internal static partial class FormulaFunctions
         {
             case "IF": return If(args, evaluator);
             case "IFS": return Ifs(args, evaluator);
-            case "IFERROR": return IfError(args, evaluator, naOnly: false);
-            case "IFNA": return IfError(args, evaluator, naOnly: true);
+            case "IFERROR": return IfError(args, evaluator, false);
+            case "IFNA": return IfError(args, evaluator, true);
             case "SWITCH": return Switch(args, evaluator);
             case "AND": return BoolAggregate(args, evaluator, BoolMode.And);
             case "OR": return BoolAggregate(args, evaluator, BoolMode.Or);
@@ -34,8 +36,8 @@ internal static partial class FormulaFunctions
             case "SUMIF": return SumIf(args, evaluator);
             case "AVERAGEIF": return AverageIf(args, evaluator);
             case "COUNTIF": return CountIf(args, evaluator);
-            case "SUMIFS": return ConditionalSumIfs(args, evaluator, average: false);
-            case "AVERAGEIFS": return ConditionalSumIfs(args, evaluator, average: true);
+            case "SUMIFS": return ConditionalSumIfs(args, evaluator, false);
+            case "AVERAGEIFS": return ConditionalSumIfs(args, evaluator, true);
             case "COUNTIFS": return CountIfs(args, evaluator);
             case "SUMPRODUCT": return SumProduct(args, evaluator);
             case "VLOOKUP": return VLookup(args, evaluator);
@@ -60,10 +62,10 @@ internal static partial class FormulaFunctions
                 "COUNT" => Number(Flatten(values).Count(IsNumber)),
                 "COUNTA" => Number(Flatten(values).Count(static v => v.Kind != FormulaValueKind.Blank)),
                 "COUNTBLANK" => Number(Flatten(values).Count(static v => v.Kind == FormulaValueKind.Blank)),
-                "MIN" => MinMax(values, min: true),
-                "MINA" => MinMaxA(values, min: true),
-                "MAX" => MinMax(values, min: false),
-                "MAXA" => MinMaxA(values, min: false),
+                "MIN" => MinMax(values, true),
+                "MINA" => MinMaxA(values, true),
+                "MAX" => MinMax(values, false),
+                "MAXA" => MinMaxA(values, false),
                 "ABS" => Unary(values, Math.Abs),
                 "SQRT" => Guarded(values, Math.Sqrt, static x => x < 0, CellError.Number),
                 "POWER" => Binary(values, Math.Pow),
@@ -77,8 +79,8 @@ internal static partial class FormulaFunctions
                 "MOD" => Binary(values, Modulo, CellError.DivisionByZero),
                 "QUOTIENT" => Binary(values, static (a, b) => b == 0 ? double.NaN : Math.Truncate(a / b), CellError.DivisionByZero),
                 "ROUND" => Round(values),
-                "ROUNDUP" => RoundDir(values, up: true),
-                "ROUNDDOWN" => RoundDir(values, up: false),
+                "ROUNDUP" => RoundDir(values, true),
+                "ROUNDDOWN" => RoundDir(values, false),
                 "MROUND" => Binary(values, static (x, m) => m == 0 ? 0 : Math.Round(x / m, MidpointRounding.AwayFromZero) * m),
                 "CEILING" => Binary(values, static (x, s) => s == 0 ? 0 : Math.Ceiling(x / s) * s),
                 "FLOOR" => Binary(values, static (x, s) => s == 0 ? 0 : Math.Floor(x / s) * s),
@@ -107,12 +109,12 @@ internal static partial class FormulaFunctions
                 // Statistics.
                 "MEDIAN" => Median(values),
                 "MODE" or "MODE.SNGL" => Mode(values),
-                "STDEV" or "STDEV.S" => StdDev(values, sample: true),
-                "STDEVP" or "STDEV.P" => StdDev(values, sample: false),
-                "VAR" or "VAR.S" => Variance(values, sample: true),
-                "VARP" or "VAR.P" => Variance(values, sample: false),
-                "LARGE" => LargeSmall(values, largest: true),
-                "SMALL" => LargeSmall(values, largest: false),
+                "STDEV" or "STDEV.S" => StdDev(values, true),
+                "STDEVP" or "STDEV.P" => StdDev(values, false),
+                "VAR" or "VAR.S" => Variance(values, true),
+                "VARP" or "VAR.P" => Variance(values, false),
+                "LARGE" => LargeSmall(values, true),
+                "SMALL" => LargeSmall(values, false),
                 "RANK" or "RANK.EQ" => Rank(values),
                 "PERCENTILE" or "PERCENTILE.INC" => Percentile(values),
                 // Text.
@@ -128,8 +130,8 @@ internal static partial class FormulaFunctions
                 "CONCATENATE" or "CONCAT" => Str(string.Concat(Flatten(values).Select(FormulaEvaluator.ToText))),
                 "TEXTJOIN" => TextJoin(values),
                 "REPT" => Rept(values),
-                "FIND" => Find(values, caseSensitive: true),
-                "SEARCH" => Find(values, caseSensitive: false),
+                "FIND" => Find(values, true),
+                "SEARCH" => Find(values, false),
                 "SUBSTITUTE" => Substitute(values),
                 "REPLACE" => Replace(values),
                 "EXACT" => FormulaValue.FromBoolean(Text(values, 0) == Text(values, 1)),
@@ -169,8 +171,8 @@ internal static partial class FormulaFunctions
                 // Additional math.
                 "SUMSQ" => Number(Nums(values).Sum(static x => x * x)),
                 "CBRT" => Unary(values, Math.Cbrt),
-                "CEILING.MATH" => CeilingFloorMath(values, ceiling: true),
-                "FLOOR.MATH" => CeilingFloorMath(values, ceiling: false),
+                "CEILING.MATH" => CeilingFloorMath(values, true),
+                "FLOOR.MATH" => CeilingFloorMath(values, false),
                 "ROMAN" => Str(ToRoman((int)Num(values, 0))),
                 "ARABIC" => Number(FromRoman(Text(values, 0))),
                 "BASE" => Str(ToBase((long)Num(values, 0), (int)Num(values, 1), values.Count > 2 ? (int)Num(values, 2) : 0)),
@@ -185,8 +187,8 @@ internal static partial class FormulaFunctions
                 "ACOSH" => Unary(values, Math.Acosh),
                 "ATANH" => Unary(values, Math.Atanh),
                 // Conditional / aggregate extras.
-                "MAXIFS" => MinMaxIfs(args, evaluator, max: true),
-                "MINIFS" => MinMaxIfs(args, evaluator, max: false),
+                "MAXIFS" => MinMaxIfs(args, evaluator, true),
+                "MINIFS" => MinMaxIfs(args, evaluator, false),
                 // Statistics extras.
                 "GEOMEAN" => GeoMean(values),
                 "HARMEAN" => HarMean(values),
@@ -199,8 +201,8 @@ internal static partial class FormulaFunctions
                 "TRIMMEAN" => TrimMean(values),
                 "RANK.AVG" => Rank(values),
                 // Text extras.
-                "TEXTBEFORE" => TextBeforeAfter(values, before: true),
-                "TEXTAFTER" => TextBeforeAfter(values, before: false),
+                "TEXTBEFORE" => TextBeforeAfter(values, true),
+                "TEXTAFTER" => TextBeforeAfter(values, false),
                 "UNICHAR" => Str(char.ConvertFromUtf32((int)Num(values, 0))),
                 "UNICODE" => Number(Text(values, 0).Length > 0 ? char.ConvertToUtf32(Text(values, 0), 0) : 0),
                 "DOLLAR" => Dollar(values),
@@ -232,8 +234,6 @@ internal static partial class FormulaFunctions
                 _ => FormulaValue.FromError(CellError.Name)
             };
     }
-
-    private static readonly Random SharedRandom = new();
 
     private static bool IsInfoFunction(string upper) =>
         upper is "ISERROR" or "ISERR" or "ISNA" or "ISBLANK" or "ISNUMBER" or "ISTEXT" or "ISNONTEXT"

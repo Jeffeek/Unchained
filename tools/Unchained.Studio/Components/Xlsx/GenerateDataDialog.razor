@@ -1,6 +1,6 @@
+@using System.Globalization
 @using Unchained.Xlsx.Models.Cell
 @using Unchained.Xlsx.Worksheets
-
 <MudDialog Style="min-width:480px; max-width:600px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -12,7 +12,7 @@
     <DialogContent>
         <MudStack Spacing="3">
             <MudText Typo="Typo.body2" Style="opacity:.7;">
-                Fill the selected range (@_selection) with generated data.
+                Fill the selected range (@SelectionA1) with generated data.
             </MudText>
 
             <MudSelect T="DataGenerationType" @bind-Value="_type" Label="Data type" Variant="Variant.Outlined" Margin="Margin.Dense">
@@ -74,12 +74,12 @@
     private DataGenerationType _type = DataGenerationType.Sequence;
     private string _start = "1";
     private string _step = "1";
-    private double _min = 0;
+    private double _min;
     private double _max = 100;
     private FillDirection _direction = FillDirection.Down;
     private string? _error;
 
-    private string _selection => Selection.ToA1();
+    private string SelectionA1 => Selection.ToA1();
 
     private void Generate()
     {
@@ -87,7 +87,6 @@
 
         var start = ParseStart();
         var step = ParseStep();
-        var count = Selection.RowCount * Selection.ColumnCount;
         var current = start;
 
         try
@@ -96,21 +95,22 @@
             {
                 for (var c = 0; c < Selection.ColumnCount; c++)
                 {
-                    var row = Selection.TopLeft.Row + (int)(r * Selection.ColumnCount + c) / (_direction == FillDirection.Down ? 1 : Selection.ColumnCount);
-                    var col = Selection.TopLeft.Column + (int)(r * Selection.ColumnCount + c) % (_direction == FillDirection.Down ? Selection.ColumnCount : 1);
+                    var row = Selection.TopLeft.Row + (((r * Selection.ColumnCount) + c) / (_direction == FillDirection.Down ? 1 : Selection.ColumnCount));
+                    var col = Selection.TopLeft.Column + (((r * Selection.ColumnCount) + c) % (_direction == FillDirection.Down ? Selection.ColumnCount : 1));
 
+                    // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                     switch (_type)
                     {
                         case DataGenerationType.Sequence:
                         case DataGenerationType.Decimal:
                             Sheet.SetValue(row, col, current);
                             current += step;
-                            break;
+                        break;
                         case DataGenerationType.RandomNumber:
                         case DataGenerationType.RandomInteger:
                         {
                             var rng = new Random();
-                            var val = rng.NextDouble() * (_max - _min) + _min;
+                            var val = (rng.NextDouble() * (_max - _min)) + _min;
                             if (_type == DataGenerationType.RandomInteger)
                                 val = Math.Round(val);
                             Sheet.SetValue(row, col, val);
@@ -120,7 +120,7 @@
                         case DataGenerationType.DateTime:
                             Sheet.SetValue(row, col, current);
                             current += step;
-                            break;
+                        break;
                     }
                 }
             }
@@ -136,19 +136,19 @@
 
     private double ParseStart()
     {
-        if (double.TryParse(_start, System.Globalization.CultureInfo.InvariantCulture, out var v))
+        if (double.TryParse(_start, CultureInfo.InvariantCulture, out var v))
             return v;
         if (DateTime.TryParse(_start, out var dt))
             return dt.ToOADate();
+
         return 1;
     }
 
     private double ParseStep()
     {
-        if (double.TryParse(_step, System.Globalization.CultureInfo.InvariantCulture, out var v))
+        if (double.TryParse(_step, CultureInfo.InvariantCulture, out var v))
             return v;
-        if (_type is DataGenerationType.Date or DataGenerationType.DateTime)
-            return 1;
+
         return 1;
     }
 

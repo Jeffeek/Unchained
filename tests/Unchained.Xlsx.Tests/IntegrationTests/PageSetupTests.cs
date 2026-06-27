@@ -41,7 +41,7 @@ public class PageSetupTests
     public async Task FreezePanes_RoundTrips()
     {
         using var document = XlsxFixtures.WithSheets("Data");
-        document.Sheets[0].FreezePanes(rows: 1, columns: 2);
+        document.Sheets[0].FreezePanes(1, 2);
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var frozen = reloaded.Sheets[0].View.FrozenPanes;

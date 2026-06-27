@@ -1,6 +1,5 @@
 @using Unchained.Xlsx.Models.PageSetup
 @using Unchained.Xlsx.Worksheets
-
 <MudDialog Style="min-width:520px; max-width:620px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -114,7 +113,12 @@
         _printOrder = ps.PrintOrder;
 
         var m = Sheet.PageMargins;
-        _mTop = m.Top; _mBottom = m.Bottom; _mLeft = m.Left; _mRight = m.Right; _mHeader = m.Header; _mFooter = m.Footer;
+        _mTop = m.Top;
+        _mBottom = m.Bottom;
+        _mLeft = m.Left;
+        _mRight = m.Right;
+        _mHeader = m.Header;
+        _mFooter = m.Footer;
 
         var hf = Sheet.HeaderFooter;
         _oddHeader = hf.OddHeader ?? string.Empty;
@@ -136,7 +140,12 @@
         ps.PrintOrder = _printOrder;
 
         var m = Sheet.PageMargins;
-        m.Top = _mTop; m.Bottom = _mBottom; m.Left = _mLeft; m.Right = _mRight; m.Header = _mHeader; m.Footer = _mFooter;
+        m.Top = _mTop;
+        m.Bottom = _mBottom;
+        m.Left = _mLeft;
+        m.Right = _mRight;
+        m.Header = _mHeader;
+        m.Footer = _mFooter;
 
         var hf = Sheet.HeaderFooter;
         hf.OddHeader = string.IsNullOrWhiteSpace(_oddHeader) ? null : _oddHeader;

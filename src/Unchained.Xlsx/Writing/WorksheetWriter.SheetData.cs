@@ -3,7 +3,9 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Xlsx.Cell;
 using Unchained.Xlsx.Core.Xml;
+using Unchained.Xlsx.DataValidation;
 using Unchained.Xlsx.Models.Cell;
+using Unchained.Xlsx.SharedStrings;
 using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Xlsx.Writing;
@@ -31,13 +33,8 @@ internal static partial class WorksheetWriter
         var sharedStrings = sheet.Document.SharedStrings;
 
         var sheetData = new XElement(SmlNames.SheetData);
-        foreach (var row in sheet.RowsInternal.AllRows.OrderBy(static r => r.RowNumber))
-        {
-            if (row.IsEffectivelyEmpty)
-                continue;
-
+        foreach (var row in sheet.RowsInternal.AllRows.OrderBy(static r => r.RowNumber).Where(static row => !row.IsEffectivelyEmpty))
             sheetData.Add(BuildRow(row, sharedStrings));
-        }
 
         root.Child(SmlNames.SheetData)?.ReplaceWith(sheetData);
         if (root.Child(SmlNames.SheetData) == null)
@@ -46,10 +43,12 @@ internal static partial class WorksheetWriter
         UpdateDimension(root, sheet);
     }
 
-    private static XElement BuildRow(Row row, SharedStrings.SharedStringsTable sharedStrings)
+    private static XElement BuildRow(Row row, SharedStringsTable sharedStrings)
     {
-        var rowElement = new XElement(SmlNames.Row,
-            new XAttribute("r", row.RowNumber.ToString(CultureInfo.InvariantCulture)));
+        var rowElement = new XElement(
+            SmlNames.Row,
+            new XAttribute("r", row.RowNumber.ToString(CultureInfo.InvariantCulture))
+        );
 
         if (row.Height.HasValue)
         {
@@ -67,18 +66,13 @@ internal static partial class WorksheetWriter
             rowElement.SetAttributeValue("customFormat", "1");
         }
 
-        foreach (var cell in row.CellsInternal.OrderBy(static c => c.Column))
-        {
-            if (cell.IsEffectivelyEmpty)
-                continue;
-
+        foreach (var cell in row.CellsInternal.OrderBy(static c => c.Column).Where(static cell => !cell.IsEffectivelyEmpty))
             rowElement.Add(BuildCell(cell, sharedStrings));
-        }
 
         return rowElement;
     }
 
-    private static XElement BuildCell(Cell.Cell cell, SharedStrings.SharedStringsTable sharedStrings)
+    private static XElement BuildCell(Cell.Cell cell, SharedStringsTable sharedStrings)
     {
         var element = new XElement(SmlNames.Cell, new XAttribute("r", cell.Reference.ToA1()));
 
@@ -88,7 +82,7 @@ internal static partial class WorksheetWriter
         // Formula cells: emit <f> plus optional cached <v>.
         if (cell.CellType == CellType.Formula)
         {
-            WriteFormula(element, cell, sharedStrings);
+            WriteFormula(element, cell);
             return element;
         }
 
@@ -96,7 +90,7 @@ internal static partial class WorksheetWriter
         {
             case CellType.Number:
                 element.Add(new XElement(SmlNames.CellValue, Num(cell.Number)));
-                break;
+            break;
             case CellType.String:
             {
                 var index = sharedStrings.GetOrAdd(cell.Text ?? string.Empty);
@@ -107,21 +101,21 @@ internal static partial class WorksheetWriter
             case CellType.Boolean:
                 element.SetAttributeValue("t", "b");
                 element.Add(new XElement(SmlNames.CellValue, cell.Number != 0 ? "1" : "0"));
-                break;
+            break;
             case CellType.Error:
                 element.SetAttributeValue("t", "e");
                 element.Add(new XElement(SmlNames.CellValue, (cell.Error ?? CellError.Value).ToLiteral()));
-                break;
+            break;
             case CellType.Empty:
             case CellType.Formula:
             default:
-                break;
+            break;
         }
 
         return element;
     }
 
-    private static void WriteFormula(XElement element, Cell.Cell cell, SharedStrings.SharedStringsTable sharedStrings)
+    private static void WriteFormula(XElement element, Cell.Cell cell)
     {
         var formula = new XElement(SmlNames.Formula, cell.Formula ?? string.Empty);
         if (cell is { IsArrayFormula: true, ArrayFormulaRange: { } range })
@@ -158,9 +152,11 @@ internal static partial class WorksheetWriter
         var cols = new XElement(SmlNames.Cols);
         foreach (var column in ordered)
         {
-            var colElement = new XElement(SmlNames.Col,
+            var colElement = new XElement(
+                SmlNames.Col,
                 new XAttribute("min", column.Min.ToString(CultureInfo.InvariantCulture)),
-                new XAttribute("max", column.Max.ToString(CultureInfo.InvariantCulture)));
+                new XAttribute("max", column.Max.ToString(CultureInfo.InvariantCulture))
+            );
 
             if (column.Width.HasValue)
             {
@@ -193,8 +189,10 @@ internal static partial class WorksheetWriter
         if (ranges.Count == 0)
             return;
 
-        var mergeCells = new XElement(SmlNames.MergeCells,
-            new XAttribute("count", ranges.Count.ToString(CultureInfo.InvariantCulture)));
+        var mergeCells = new XElement(
+            SmlNames.MergeCells,
+            new XAttribute("count", ranges.Count.ToString(CultureInfo.InvariantCulture))
+        );
         foreach (var range in ranges)
             mergeCells.Add(new XElement(SmlNames.MergeCell, new XAttribute("ref", range.ToA1())));
 
@@ -256,10 +254,12 @@ internal static partial class WorksheetWriter
 
     // ── Data validation writing (moved from Worksheet.DataValidation.cs) ─────────
 
-    internal static XElement WriteValidations(Unchained.Xlsx.DataValidation.DataValidationCollection validations)
+    internal static XElement WriteValidations(DataValidationCollection validations)
     {
-        var container = new XElement(SmlNames.DataValidations,
-            new XAttribute("count", validations.Count.ToString(CultureInfo.InvariantCulture)));
+        var container = new XElement(
+            SmlNames.DataValidations,
+            new XAttribute("count", validations.Count.ToString(CultureInfo.InvariantCulture))
+        );
 
         foreach (var validation in validations)
             container.Add(WriteValidation(validation));
@@ -267,7 +267,7 @@ internal static partial class WorksheetWriter
         return container;
     }
 
-    private static XElement WriteValidation(Unchained.Xlsx.DataValidation.DataValidation validation)
+    private static XElement WriteValidation(DataValidation.DataValidation validation)
     {
         var element = new XElement(SmlNames.DataValidation);
 

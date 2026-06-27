@@ -35,8 +35,11 @@ public class DocumentLifecycleTests
     {
         using var document = XlsxFixtures.WithSheets("Data");
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
-
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         archive.GetEntry("[Content_Types].xml").ShouldNotBeNull();
         archive.GetEntry("xl/workbook.xml").ShouldNotBeNull();
         archive.GetEntry("xl/worksheets/sheet1.xml").ShouldNotBeNull();
@@ -102,6 +105,7 @@ public class DocumentLifecycleTests
         using var processor = new SpreadsheetProcessor();
         var garbage = "not a zip file"u8.ToArray();
 
+        // ReSharper disable once AccessToDisposedClosure
         Should.ThrowAsync<SpreadsheetException>(async () => await processor.LoadAsync(garbage));
     }
 }

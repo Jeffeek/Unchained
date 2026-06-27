@@ -1,5 +1,4 @@
 @using Unchained.Xlsx.Worksheets
-
 <MudDialog Style="min-width:420px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -75,20 +74,60 @@
         _col = InitialColumn;
     }
 
-    private async Task SetRowHeight() { Sheet.SetRowHeight(_row, _rowHeight); await Changed($"Row {_row} height set to {_rowHeight}pt"); }
-    private async Task HideRow(bool hide) { if (hide) Sheet.HideRow(_row); else Sheet.ShowRow(_row); await Changed($"Row {_row} {(hide ? "hidden" : "shown")}"); }
-    private async Task InsertRow() { Sheet.InsertRow(_row); await Changed($"Inserted row at {_row}"); }
-    private async Task DeleteRow() { Sheet.DeleteRow(_row); await Changed($"Deleted row {_row}"); }
+    private Task SetRowHeight()
+    {
+        Sheet.SetRowHeight(_row, _rowHeight);
+        return Changed($"Row {_row} height set to {_rowHeight}pt");
+    }
 
-    private async Task SetColWidth() { Sheet.SetColumnWidth(_col, _colWidth); await Changed($"Column {_col} width set to {_colWidth}"); }
-    private async Task HideCol(bool hide) { if (hide) Sheet.HideColumn(_col); else Sheet.ShowColumn(_col); await Changed($"Column {_col} {(hide ? "hidden" : "shown")}"); }
-    private async Task InsertCol() { Sheet.InsertColumn(_col); await Changed($"Inserted column at {_col}"); }
-    private async Task DeleteCol() { Sheet.DeleteColumn(_col); await Changed($"Deleted column {_col}"); }
+    private Task HideRow(bool hide)
+    {
+        if (hide) Sheet.HideRow(_row);
+        else Sheet.ShowRow(_row);
+        return Changed($"Row {_row} {(hide ? "hidden" : "shown")}");
+    }
 
-    private async Task Changed(string message)
+    private Task InsertRow()
+    {
+        Sheet.InsertRow(_row);
+        return Changed($"Inserted row at {_row}");
+    }
+
+    private Task DeleteRow()
+    {
+        Sheet.DeleteRow(_row);
+        return Changed($"Deleted row {_row}");
+    }
+
+    private Task SetColWidth()
+    {
+        Sheet.SetColumnWidth(_col, _colWidth);
+        return Changed($"Column {_col} width set to {_colWidth}");
+    }
+
+    private Task HideCol(bool hide)
+    {
+        if (hide) Sheet.HideColumn(_col);
+        else Sheet.ShowColumn(_col);
+        return Changed($"Column {_col} {(hide ? "hidden" : "shown")}");
+    }
+
+    private Task InsertCol()
+    {
+        Sheet.InsertColumn(_col);
+        return Changed($"Inserted column at {_col}");
+    }
+
+    private Task DeleteCol()
+    {
+        Sheet.DeleteColumn(_col);
+        return Changed($"Deleted column {_col}");
+    }
+
+    private Task Changed(string message)
     {
         _status = message;
-        await OnChanged.InvokeAsync();
+        return OnChanged.InvokeAsync();
     }
 
     private void Close() => MudDialog.Close();

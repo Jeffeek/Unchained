@@ -42,6 +42,21 @@ public sealed class CellXf : IEquatable<CellXf>
     /// <summary>Whether the alignment applies.</summary>
     public bool ApplyAlignment { get; set; }
 
+    /// <inheritdoc />
+    public bool Equals(CellXf? other) =>
+        other != null &&
+        NumberFormatId == other.NumberFormatId &&
+        FontId == other.FontId &&
+        FillId == other.FillId &&
+        BorderId == other.BorderId &&
+        XfId == other.XfId &&
+        Alignment.Equals(other.Alignment) &&
+        ApplyNumberFormat == other.ApplyNumberFormat &&
+        ApplyFont == other.ApplyFont &&
+        ApplyFill == other.ApplyFill &&
+        ApplyBorder == other.ApplyBorder &&
+        ApplyAlignment == other.ApplyAlignment;
+
     /// <summary>Returns a deep copy of this format record.</summary>
     public CellXf Clone() =>
         new()
@@ -60,27 +75,13 @@ public sealed class CellXf : IEquatable<CellXf>
         };
 
     /// <inheritdoc />
-    public bool Equals(CellXf? other) =>
-        other != null &&
-        NumberFormatId == other.NumberFormatId &&
-        FontId == other.FontId &&
-        FillId == other.FillId &&
-        BorderId == other.BorderId &&
-        XfId == other.XfId &&
-        Alignment.Equals(other.Alignment) &&
-        ApplyNumberFormat == other.ApplyNumberFormat &&
-        ApplyFont == other.ApplyFont &&
-        ApplyFill == other.ApplyFill &&
-        ApplyBorder == other.ApplyBorder &&
-        ApplyAlignment == other.ApplyAlignment;
-
-    /// <inheritdoc />
     public override bool Equals(object? obj) => Equals(obj as CellXf);
 
     /// <inheritdoc />
     public override int GetHashCode()
     {
         var hash = new HashCode();
+        // ReSharper disable NonReadonlyMemberInGetHashCode
         hash.Add(NumberFormatId);
         hash.Add(FontId);
         hash.Add(FillId);
@@ -92,6 +93,7 @@ public sealed class CellXf : IEquatable<CellXf>
         hash.Add(ApplyFill);
         hash.Add(ApplyBorder);
         hash.Add(ApplyAlignment);
+        // ReSharper restore NonReadonlyMemberInGetHashCode
         return hash.ToHashCode();
     }
 }

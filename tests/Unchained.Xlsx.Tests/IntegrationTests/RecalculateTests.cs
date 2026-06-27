@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Tests.Helpers;
 using Xunit;
 
@@ -71,7 +72,7 @@ public class RecalculateTests
         sheet.SetFormula(1, 2, "=A1+1");
         document.Recalculate();
 
-        sheet.GetCell(1, 1)!.GetError().ShouldBe(Unchained.Xlsx.Models.Cell.CellError.Reference);
+        sheet.GetCell(1, 1)!.GetError().ShouldBe(CellError.Reference);
     }
 
     [Fact]
@@ -80,9 +81,9 @@ public class RecalculateTests
         using var document = XlsxFixtures.WithSheets("S");
         var sheet = document.Sheets[0];
         sheet.SetValue(1, 1, 2.0);
-        sheet.SetFormula(2, 1, "=A1*3");   // 6
-        sheet.SetFormula(3, 1, "=A2+4");   // 10
-        sheet.SetFormula(4, 1, "=A3*A1");  // 20
+        sheet.SetFormula(2, 1, "=A1*3");  // 6
+        sheet.SetFormula(3, 1, "=A2+4");  // 10
+        sheet.SetFormula(4, 1, "=A3*A1"); // 20
         document.Recalculate();
 
         sheet.GetCell(2, 1)!.GetDouble().ShouldBe(6);

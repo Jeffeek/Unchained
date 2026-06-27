@@ -5,6 +5,9 @@ namespace Unchained.Xlsx.Models;
 /// <summary>Settings controlling CSV import.</summary>
 public sealed class CsvLoadOptions
 {
+    /// <summary>The default options.</summary>
+    public static readonly CsvLoadOptions Default = new();
+
     /// <summary>The field delimiter. Defaults to comma.</summary>
     public char Delimiter { get; init; } = ',';
 
@@ -22,7 +25,4 @@ public sealed class CsvLoadOptions
 
     /// <summary>The name of the sheet created to hold the imported data.</summary>
     public string SheetName { get; init; } = "Sheet1";
-
-    /// <summary>The default options.</summary>
-    public static readonly CsvLoadOptions Default = new();
 }

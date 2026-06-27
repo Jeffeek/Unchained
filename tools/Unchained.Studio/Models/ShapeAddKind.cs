@@ -1,4 +1,4 @@
-namespace Unchained.Studio;
+namespace Unchained.Studio.Models;
 
 /// <summary>Kind of shape to insert from the ShapeAddDialog.</summary>
 public enum ShapeAddKind

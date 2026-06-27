@@ -1,8 +1,7 @@
 @using Unchained.Xlsx.DataValidation
+@using Unchained.Xlsx.Models
 @using Unchained.Xlsx.Models.Cell
-@using Unchained.Xlsx.Models.DataValidation
 @using Unchained.Xlsx.Worksheets
-
 <MudDialog Style="min-width:560px; max-width:680px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -22,21 +21,27 @@
                 else
                 {
                     <MudSimpleTable Dense="true" Hover="true">
-                        <thead><tr><th>Type</th><th>Ranges</th><th>Formula</th><th></th></tr></thead>
+                        <thead>
+                        <tr>
+                            <th>Type</th><th>Ranges</th><th>Formula</th><th></th>
+                        </tr>
+                        </thead>
                         <tbody>
-                            @foreach (var rule in Sheet.DataValidations.ToList())
-                            {
-                                var dv = rule;
-                                <tr>
-                                    <td>@dv.Type</td>
-                                    <td>@string.Join(", ", dv.Ranges.Select(r => r.ToA1()))</td>
-                                    <td><code>@dv.Formula1</code></td>
-                                    <td>
-                                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
-                                                       OnClick="() => Remove(dv)"/>
-                                    </td>
-                                </tr>
-                            }
+                        @foreach (var rule in Sheet.DataValidations.ToList())
+                        {
+                            var dv = rule;
+                            <tr>
+                                <td>@dv.Type</td>
+                                <td>@string.Join(", ", dv.Ranges.Select(static r => r.ToA1()))</td>
+                                <td>
+                                    <code>@dv.Formula1</code>
+                                </td>
+                                <td>
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                                   OnClick="() => Remove(dv)"/>
+                                </td>
+                            </tr>
+                        }
                         </tbody>
                     </MudSimpleTable>
                 }
@@ -183,10 +188,10 @@
         dv.ErrorMessage = string.IsNullOrWhiteSpace(_errorMessage) ? null : _errorMessage;
     }
 
-    private async Task Remove(DataValidation dv)
+    private Task Remove(DataValidation dv)
     {
         Sheet.DataValidations.Remove(dv);
-        await OnChanged.InvokeAsync();
+        return OnChanged.InvokeAsync();
     }
 
     private void Close() => MudDialog.Close();

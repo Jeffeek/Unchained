@@ -44,8 +44,8 @@ public class ColumnCollectionTests
 
         isolated.Min.ShouldBe(4);
         isolated.Max.ShouldBe(4);
-        isolated.Width.ShouldBe(20);          // inherited
-        isolated.IsHidden.ShouldBeTrue();     // inherited
+        isolated.Width.ShouldBe(20);      // inherited
+        isolated.IsHidden.ShouldBeTrue(); // inherited
 
         // Original 2..6 should become 2..3, 4, 5..6.
         collection.Count.ShouldBe(3);

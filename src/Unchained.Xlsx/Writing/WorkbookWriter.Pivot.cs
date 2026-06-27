@@ -1,9 +1,10 @@
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Opc;
+using Unchained.Xlsx.Abstractions;
 using Unchained.Xlsx.Core.Xml;
-using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Pivot;
+using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Xlsx.Writing;
 
@@ -13,7 +14,7 @@ internal static partial class WorkbookWriter
     // workbook-level <pivotCaches> registration. Identities are assigned, then parts + relationships
     // are written; the workbook part registration is handled in WriteWorkbookPart via PivotCaches().
 
-    private static void WritePivotParts(OpcPackage package, SpreadsheetDocument document)
+    private static void WritePivotParts(OpcPackage package, ISpreadsheetDocument document)
     {
         var pivots = CollectPivots(document);
         if (pivots.Count == 0)
@@ -36,30 +37,46 @@ internal static partial class WorkbookWriter
             package.AddOrReplacePart(pivot.CacheRecordsUri, SmlNames.ContentTypePivotCacheRecords, PivotWriter.WriteCacheRecords(pivot));
 
             // 2. Cache definition part + def → records relationship.
-            var recordsRelId = "rId1";
-            package.AddOrReplacePart(pivot.CacheDefinitionUri, SmlNames.ContentTypePivotCacheDefinition,
-                PivotWriter.WriteCacheDefinition(pivot, recordsRelId));
+            const string recordsRelId = "rId1";
+            package.AddOrReplacePart(
+                pivot.CacheDefinitionUri,
+                SmlNames.ContentTypePivotCacheDefinition,
+                PivotWriter.WriteCacheDefinition(pivot, recordsRelId)
+            );
             package.ClearRelationships(pivot.CacheDefinitionUri);
-            package.AddRelationship(pivot.CacheDefinitionUri, recordsRelId, SmlNames.RelTypePivotCacheRecords,
-                OpcPackage.GetRelativeUri(pivot.CacheDefinitionUri, pivot.CacheRecordsUri));
+            package.AddRelationship(
+                pivot.CacheDefinitionUri,
+                recordsRelId,
+                SmlNames.RelTypePivotCacheRecords,
+                OpcPackage.GetRelativeUri(pivot.CacheDefinitionUri, pivot.CacheRecordsUri)
+            );
 
             // 3. Table definition part + table → cacheDefinition relationship.
             package.AddOrReplacePart(pivot.TablePartUri, SmlNames.ContentTypePivotTable, PivotWriter.WriteTableDefinition(pivot));
             package.ClearRelationships(pivot.TablePartUri);
             pivot.CacheDefinitionRelId = "rId1";
-            package.AddRelationship(pivot.TablePartUri, pivot.CacheDefinitionRelId, SmlNames.RelTypePivotCacheDefinition,
-                OpcPackage.GetRelativeUri(pivot.TablePartUri, pivot.CacheDefinitionUri));
+            package.AddRelationship(
+                pivot.TablePartUri,
+                pivot.CacheDefinitionRelId,
+                SmlNames.RelTypePivotCacheDefinition,
+                OpcPackage.GetRelativeUri(pivot.TablePartUri, pivot.CacheDefinitionUri)
+            );
 
             // 4. Worksheet → pivot table relationship.
             if (string.IsNullOrEmpty(pivot.TableRelationshipId))
                 pivot.TableRelationshipId = package.NextFreeRelId(sheet.PartUri, "rIdPv");
-            EnsureRelationship(package, sheet.PartUri, pivot.TableRelationshipId, SmlNames.RelTypePivotTable,
-                OpcPackage.GetRelativeUri(sheet.PartUri, pivot.TablePartUri));
+            EnsureRelationship(
+                package,
+                sheet.PartUri,
+                pivot.TableRelationshipId,
+                SmlNames.RelTypePivotTable,
+                OpcPackage.GetRelativeUri(sheet.PartUri, pivot.TablePartUri)
+            );
         }
     }
 
     /// <summary>Builds the workbook-level <c>&lt;pivotCaches&gt;</c> element + the workbook → cacheDefinition relationships.</summary>
-    private static XElement? PivotCaches(OpcPackage package, SpreadsheetDocument document)
+    private static XElement? PivotCaches(OpcPackage package, ISpreadsheetDocument document)
     {
         var pivots = CollectPivots(document);
         if (pivots.Count == 0)
@@ -69,27 +86,29 @@ internal static partial class WorkbookWriter
         foreach (var (_, pivot) in pivots)
         {
             var relId = NextFreeRelId(package.GetPart(WorkbookUri));
-            package.AddRelationship(WorkbookUri, relId, SmlNames.RelTypePivotCacheDefinition,
-                RelativeToWorkbook(package, pivot.CacheDefinitionUri));
-            caches.Add(new XElement(SmlNames.X + "pivotCache",
-                new XAttribute("cacheId", pivot.CacheId.ToString(CultureInfo.InvariantCulture)),
-                new XAttribute(SmlNames.R + "id", relId)));
+            package.AddRelationship(
+                WorkbookUri,
+                relId,
+                SmlNames.RelTypePivotCacheDefinition,
+                RelativeToWorkbook(pivot.CacheDefinitionUri)
+            );
+            caches.Add(
+                new XElement(
+                    SmlNames.X + "pivotCache",
+                    new XAttribute("cacheId", pivot.CacheId.ToString(CultureInfo.InvariantCulture)),
+                    new XAttribute(SmlNames.R + "id", relId)
+                )
+            );
         }
 
         return caches;
     }
 
-    private static List<(Worksheets.Worksheet Sheet, PivotTable Pivot)> CollectPivots(SpreadsheetDocument document)
+    private static List<(Worksheet Sheet, PivotTable Pivot)> CollectPivots(ISpreadsheetDocument document)
     {
-        var result = new List<(Worksheets.Worksheet, PivotTable)>();
-        foreach (var sheet in document.Sheets)
-        {
-            if (!sheet.PivotTablesMaterialised)
-                continue;
-
-            foreach (var pivot in sheet.PivotTablesOrNull!.All)
-                result.Add((sheet, pivot));
-        }
+        var result = new List<(Worksheet, PivotTable)>();
+        foreach (var sheet in document.Sheets.Where(static sheet => sheet.PivotTablesMaterialised))
+            result.AddRange(sheet.PivotTablesOrNull?.All.Select(pivot => (sheet, pivot)) ?? []);
 
         return result;
     }

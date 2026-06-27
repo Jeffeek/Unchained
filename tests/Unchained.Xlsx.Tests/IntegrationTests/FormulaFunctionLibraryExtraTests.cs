@@ -1,20 +1,22 @@
 using Shouldly;
+using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Tests.Helpers;
+using Unchained.Xlsx.Worksheets;
 using Xunit;
 
 namespace Unchained.Xlsx.Tests.IntegrationTests;
 
 public class FormulaFunctionLibraryExtraTests
 {
-    private static object? Eval(string formula, Action<Unchained.Xlsx.Worksheets.Worksheet>? setup = null)
+    private static object? Eval(string formula, Action<Worksheet>? setup = null)
     {
         using var document = XlsxFixtures.WithSheets("S");
         var sheet = document.Sheets[0];
         setup?.Invoke(sheet);
-        return Unchained.Xlsx.Engine.SpreadsheetDocument.EvaluateFormula(sheet, formula);
+        return SpreadsheetDocument.EvaluateFormula(sheet, formula);
     }
 
-    private static double? Num(string f, Action<Unchained.Xlsx.Worksheets.Worksheet>? setup = null)
+    private static double? Num(string f, Action<Worksheet>? setup = null)
         => Eval(f, setup) is double d ? d : null;
 
     [
@@ -53,22 +55,28 @@ public class FormulaFunctionLibraryExtraTests
     {
         Num("=QUARTILE(A1:A5,2)", Fill).ShouldBe(3); // median
         return;
-        static void Fill(Unchained.Xlsx.Worksheets.Worksheet s)
+
+        static void Fill(Worksheet s)
         {
-            for (var i = 1; i <= 5; i++) s.SetValue(i, 1, (double)i);
+            for (var i = 1; i <= 5; i++) s.SetValue(i, 1, i);
         }
     }
 
     [Fact]
     public void MaxIfsMinIfs()
     {
-        void Fill(Unchained.Xlsx.Worksheets.Worksheet s)
-        {
-            for (var i = 1; i <= 4; i++) { s.SetValue(i, 1, (double)(i * 10)); s.SetValue(i, 2, i <= 2 ? "A" : "B"); }
-        }
-
         Num("=MAXIFS(A1:A4,B1:B4,\"A\")", Fill).ShouldBe(20);
         Num("=MINIFS(A1:A4,B1:B4,\"B\")", Fill).ShouldBe(30);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            for (var i = 1; i <= 4; i++)
+            {
+                s.SetValue(i, 1, i * 10);
+                s.SetValue(i, 2, i <= 2 ? "A" : "B");
+            }
+        }
     }
 
     [Fact]

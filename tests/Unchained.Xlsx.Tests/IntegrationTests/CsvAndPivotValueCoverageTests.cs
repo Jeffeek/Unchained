@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using System.Text;
 using Shouldly;
-using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Tests.Helpers;
@@ -41,7 +40,18 @@ public class CsvAndPivotValueCoverageTests
     {
         using var document = XlsxFixtures.WithSheets("Data");
         var sheet = document.Sheets[0];
-        sheet.SetValue(1, 1, new DateTime(2023, 6, 15, 14, 30, 0));
+        sheet.SetValue(
+            1,
+            1,
+            new DateTime(
+                2023,
+                6,
+                15,
+                14,
+                30,
+                0
+            )
+        );
         sheet[1, 1].SetNumberFormat("yyyy-mm-dd hh:mm:ss");
 
         var text = Encoding.UTF8.GetString(sheet.ToCsv());
@@ -102,7 +112,11 @@ public class CsvAndPivotValueCoverageTests
         pivot.AddDataField("Value");
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         archive.Entries.Any(static e => e.FullName.Contains("pivotCacheRecords")).ShouldBeTrue();
     }
 
@@ -117,8 +131,8 @@ public class CsvAndPivotValueCoverageTests
         sheet.SetValue(2, 2, 1.0);
         sheet.AddPivotTable(CellRange.FromA1("A1:B2"), CellReference.FromA1("E1"), "P1");
 
-        var count = 0;
-        foreach (var _ in sheet.PivotTables) count++;
+        // ReSharper disable once UseCollectionCountProperty
+        var count = sheet.PivotTables.Count();
         count.ShouldBe(1);
         sheet.PivotTables.AsEnumerable().Count().ShouldBe(1);
     }

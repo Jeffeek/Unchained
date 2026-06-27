@@ -241,7 +241,7 @@ public sealed class PdfATests : PdfTestBase
         await Processor.ConvertToPdfAAsync(doc, ms, PdfAProfile.PdfA2B, TestContext.Current.CancellationToken);
 
         // Reload and confirm the document still parses (the Print-flag rewrite did not corrupt it).
-        await using var reloaded = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), ct: TestContext.Current.CancellationToken);
+        await using var reloaded = await Processor.LoadAsync(new MemoryStream(ms.ToArray()), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
     }
 

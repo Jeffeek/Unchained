@@ -56,8 +56,8 @@ public sealed class NamedDestinationTests : PdfTestBase
             "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
             "<< /Foo 1 >>",
-            "<< /Type /Annot >>",                       // bare: dict that is not a GoTo action
-            "<< /Type /Action /S /GoTo >>"              // noDest: GoTo action with no /Dest
+            "<< /Type /Annot >>",          // bare: dict that is not a GoTo action
+            "<< /Type /Action /S /GoTo >>" // noDest: GoTo action with no /Dest
         };
         await using var doc = await LoadAsync(RawPdfBuilder.Build(bodies), TestContext.Current.CancellationToken);
         // None of the three entries resolve to a page → all skipped.

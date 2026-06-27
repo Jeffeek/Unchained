@@ -19,11 +19,12 @@ public class WorksheetCollectionTests
 
     [Fact]
     public void Add_DuplicateName_Throws() =>
-        Should.Throw<ArgumentException>(() =>
-        {
-            using var document = XlsxFixtures.WithSheets("Data");
-            document.Sheets.Add("Data");
-        });
+        Should.Throw<ArgumentException>(static () =>
+            {
+                using var document = XlsxFixtures.WithSheets("Data");
+                document.Sheets.Add("Data");
+            }
+        );
 
     [
         Theory,
@@ -34,26 +35,29 @@ public class WorksheetCollectionTests
     ]
     public void Add_InvalidName_Throws(string name) =>
         Should.Throw<ArgumentException>(() =>
-        {
-            using var document = XlsxFixtures.WithSheets("Data");
-            document.Sheets.Add(name);
-        });
+            {
+                using var document = XlsxFixtures.WithSheets("Data");
+                document.Sheets.Add(name);
+            }
+        );
 
     [Fact]
     public void Add_NameTooLong_Throws() =>
-        Should.Throw<ArgumentException>(() =>
-        {
-            using var document = XlsxFixtures.WithSheets("Data");
-            document.Sheets.Add(new string('x', 32));
-        });
+        Should.Throw<ArgumentException>(static () =>
+            {
+                using var document = XlsxFixtures.WithSheets("Data");
+                document.Sheets.Add(new string('x', 32));
+            }
+        );
 
     [Fact]
     public void Remove_LastSheet_Throws() =>
-        Should.Throw<InvalidOperationException>(() =>
-        {
-            using var document = XlsxFixtures.WithSheets("Only");
-            document.Sheets.Remove(document.Sheets[0]);
-        });
+        Should.Throw<InvalidOperationException>(static () =>
+            {
+                using var document = XlsxFixtures.WithSheets("Only");
+                document.Sheets.Remove(document.Sheets[0]);
+            }
+        );
 
     [Fact]
     public async Task Remove_ThenRoundTrip_DropsSheet()
@@ -82,7 +86,7 @@ public class WorksheetCollectionTests
     public void SheetId_IsStableAndUnique()
     {
         using var document = XlsxFixtures.WithSheets("A", "B", "C");
-        var ids = document.Sheets.Select(s => s.SheetId).ToList();
+        var ids = document.Sheets.Select(static s => s.SheetId).ToList();
 
         ids.Distinct().Count().ShouldBe(3);
     }

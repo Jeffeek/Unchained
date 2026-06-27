@@ -12,6 +12,14 @@ public sealed class OdpParserTests
 {
     private const string Mime = "application/vnd.oasis.opendocument.presentation";
 
+    private const string NsDecls =
+        "xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\" " +
+        "xmlns:draw=\"urn:oasis:names:tc:opendocument:xmlns:drawing:1.0\" " +
+        "xmlns:text=\"urn:oasis:names:tc:opendocument:xmlns:text:1.0\" " +
+        "xmlns:svg=\"urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0\" " +
+        "xmlns:presentation=\"urn:oasis:names:tc:opendocument:xmlns:presentation:1.0\" " +
+        "xmlns:xlink=\"http://www.w3.org/1999/xlink\"";
+
     private static byte[] BuildOdp(
         string contentXml,
         string? stylesXml = null,
@@ -21,7 +29,7 @@ public sealed class OdpParserTests
     )
     {
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             Write(zip, "mimetype", Encoding.ASCII.GetBytes(mimetype));
             Write(zip, "content.xml", Encoding.UTF8.GetBytes(contentXml));
@@ -40,14 +48,6 @@ public sealed class OdpParserTests
         }
     }
 
-    private const string NsDecls =
-        "xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\" " +
-        "xmlns:draw=\"urn:oasis:names:tc:opendocument:xmlns:drawing:1.0\" " +
-        "xmlns:text=\"urn:oasis:names:tc:opendocument:xmlns:text:1.0\" " +
-        "xmlns:svg=\"urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0\" " +
-        "xmlns:presentation=\"urn:oasis:names:tc:opendocument:xmlns:presentation:1.0\" " +
-        "xmlns:xlink=\"http://www.w3.org/1999/xlink\"";
-
     private static string Content(string pagesInner) =>
         $"<office:document-content {NsDecls}><office:body><office:presentation>{pagesInner}</office:presentation></office:body></office:document-content>";
 
@@ -62,7 +62,7 @@ public sealed class OdpParserTests
     public void IsOdp_NoMimetype_ReturnsFalse()
     {
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             var e = zip.CreateEntry("content.xml");
             using var s = e.Open();
@@ -87,7 +87,7 @@ public sealed class OdpParserTests
     public void Parse_NoContent_Throws()
     {
         using var ms = new MemoryStream();
-        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
             var e = zip.CreateEntry("mimetype");
             using var s = e.Open();

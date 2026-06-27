@@ -1,5 +1,4 @@
 using Unchained.Xlsx.Models.Cell;
-using System.Globalization;
 
 namespace Unchained.Xlsx.Formulas;
 
@@ -61,7 +60,7 @@ internal static partial class FormulaFunctions
         if (args.Count < 3) return FormulaValue.FromError(CellError.Value);
 
         var aggregate = ev.Evaluate(args[0]).Flatten().ToList();
-        var pairs = CriteriaPairs(args, ev, startIndex: 1);
+        var pairs = CriteriaPairs(args, ev, 1);
 
         double total = 0;
         var count = 0;
@@ -85,7 +84,7 @@ internal static partial class FormulaFunctions
     {
         if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
 
-        var pairs = CriteriaPairs(args, ev, startIndex: 0);
+        var pairs = CriteriaPairs(args, ev, 0);
         if (pairs.Count == 0) return Number(0);
 
         var length = pairs.Min(static p => p.Range.Count);
@@ -131,7 +130,7 @@ internal static partial class FormulaFunctions
         if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
 
         var values = ev.Evaluate(args[0]).Flatten().ToList();
-        var pairs = CriteriaPairs(args, ev, startIndex: 1);
+        var pairs = CriteriaPairs(args, ev, 1);
         var length = pairs.Min(static p => p.Range.Count);
         var min = double.MaxValue;
         var maxVal = double.MinValue;
@@ -143,8 +142,15 @@ internal static partial class FormulaFunctions
             if (!IsNumber(values[i])) continue;
 
             var v = FormulaEvaluator.ToNumber(values[i]);
-            if (max) { if (v > maxVal) maxVal = v; }
-            else { if (v < min) min = v; }
+            if (max)
+            {
+                if (v > maxVal) maxVal = v;
+            }
+            else
+            {
+                if (v < min) min = v;
+            }
+
             count++;
         }
 

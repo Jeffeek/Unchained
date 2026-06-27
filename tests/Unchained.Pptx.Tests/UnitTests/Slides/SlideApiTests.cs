@@ -2,6 +2,7 @@ using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Shapes;
+using Unchained.Pptx.Slides;
 using Unchained.Pptx.Tests.Helpers;
 using Xunit;
 
@@ -15,13 +16,13 @@ namespace Unchained.Pptx.Tests.UnitTests.Slides;
 /// </summary>
 public sealed class SlideApiTests
 {
-    private static Unchained.Pptx.Slides.Slide FirstSlide()
+    private static Slide FirstSlide()
     {
         var doc = PptxFixtures.WithSlides(1);
         return doc.Slides[0];
     }
 
-    private static AutoShape AddText(Unchained.Pptx.Slides.Slide slide, string name, string text)
+    private static AutoShape AddText(Slide slide, string name, string text)
     {
         var shape = slide.Shapes.AddTextBox(Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(3), Emu.FromInches(1), text);
         shape.Name = name;
@@ -47,7 +48,7 @@ public sealed class SlideApiTests
     public void AddComment_NullAuthor_Throws()
     {
         var slide = FirstSlide();
-        Should.Throw<ArgumentNullException>(() => slide.AddComment("x", new SlidePosition(new Emu(0), new Emu(0)), author: null));
+        Should.Throw<ArgumentNullException>(() => slide.AddComment("x", new SlidePosition(new Emu(0), new Emu(0)), null));
     }
 
     [Fact]

@@ -1,27 +1,27 @@
-using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.DataValidation;
+using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
-using Unchained.Xlsx.Models.DataValidation;
 
 namespace Unchained.Xlsx.Worksheets;
 
 public sealed partial class Worksheet
 {
-    private readonly DataValidationCollection _dataValidations = new();
-    private bool _dataValidationsParsed;
-
     /// <summary>The data-validation rules defined on this worksheet.</summary>
     public DataValidationCollection DataValidations
     {
         get
         {
             EnsureDataValidationsParsed();
-            return _dataValidations;
+            return DataValidationsInternal;
         }
     }
+
+    internal bool DataValidationsMaterialised { get; private set; }
+
+    internal DataValidationCollection DataValidationsInternal { get; } = new();
 
     /// <summary>Adds a drop-down list validation to <paramref name="range" /> from an explicit list of options.</summary>
     public DataValidation.DataValidation AddDropdownValidation(CellRange range, params string[] options)
@@ -36,22 +36,18 @@ public sealed partial class Worksheet
         return DataValidations.Add(validation);
     }
 
-    internal bool DataValidationsMaterialised => _dataValidationsParsed;
-
-    internal DataValidationCollection DataValidationsInternal => _dataValidations;
-
     private void EnsureDataValidationsParsed()
     {
-        if (_dataValidationsParsed)
+        if (DataValidationsMaterialised)
             return;
 
-        _dataValidationsParsed = true;
+        DataValidationsMaterialised = true;
         var container = RawElement?.Child(SmlNames.DataValidations);
         if (container == null)
             return;
 
         foreach (var element in container.Children(SmlNames.DataValidation))
-            _dataValidations.AddExisting(ReadValidation(element));
+            DataValidationsInternal.AddExisting(ReadValidation(element));
     }
 
     private static DataValidation.DataValidation ReadValidation(XElement element)

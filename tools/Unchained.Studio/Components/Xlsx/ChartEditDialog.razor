@@ -1,6 +1,5 @@
 @using Unchained.Ooxml.Charts
 @using Unchained.Ooxml.Drawing
-@using Unchained.Studio.Studio.Xlsx
 @using Unchained.Xlsx.Drawings
 @using Unchained.Xlsx.Models.Cell
 @using Unchained.Xlsx.Worksheets
@@ -67,8 +66,9 @@
                         var series = _model.Data.Series[index];
                         <div class="d-flex align-center gap-2">
                             <MudTextField T="string" Value="series.Name"
-                                          ValueChanged="@(v => series.Name = v)"
+                                          ValueChanged="@(v => series.Name = v ?? string.Empty)"
                                           Label="@($"Series {index + 1}")" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                            @* ReSharper disable once CSharpWarnings::CS8619 *@
                             <MudColorPicker Label="Colour" Text="@SeriesColor(index)"
                                             TextChanged="@(c => SetSeriesColor(index, c))"
                                             Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -82,7 +82,7 @@
                 </MudStack>
             </MudTabPanel>
 
-            <MudTabPanel Text="Axes" Disabled="@_axisDisabled">
+            <MudTabPanel Text="Axes" Disabled="@AxisDisabled">
                 <MudStack Spacing="3" Class="pa-4">
                     <MudText Typo="Typo.subtitle2">Value axis</MudText>
                     <MudTextField @bind-Value="_valueAxisTitle" Label="Title" Variant="Variant.Outlined" Margin="Margin.Dense"/>
@@ -142,7 +142,7 @@
     private bool _valueGridlines;
     private string? _error;
 
-    private bool _axisDisabled =>
+    private bool AxisDisabled =>
         _type is ChartType.Pie or ChartType.PieExploded or ChartType.Doughnut or ChartType.DoughnutExploded;
 
     protected override void OnInitialized()
@@ -166,10 +166,11 @@
         return fill is { Type: FillType.Solid, Solid.Color: var color } ? XlsxColor.ToHex(color) : "#4472C4";
     }
 
-    private void SetSeriesColor(int index, string hex)
+    private void SetSeriesColor(int index, string? hex)
     {
         if (string.IsNullOrWhiteSpace(hex))
             return;
+
         (_model.Data.Series[index].Fill ??= new FillFormat()).SetSolid(XlsxColor.FromHex(hex));
     }
 

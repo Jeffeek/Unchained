@@ -2,6 +2,7 @@ using Unchained.Xlsx.DefinedNames;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Security;
+using Unchained.Xlsx.Styles;
 using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Xlsx.Abstractions;
@@ -18,7 +19,7 @@ public interface ISpreadsheetDocument : IDisposable
     WorkbookProperties Properties { get; }
 
     /// <summary>The workbook style registry.</summary>
-    Styles.StyleBook Styles { get; }
+    StyleBook Styles { get; }
 
     /// <summary>The workbook's defined names (named ranges).</summary>
     DefinedNameCollection DefinedNames { get; }

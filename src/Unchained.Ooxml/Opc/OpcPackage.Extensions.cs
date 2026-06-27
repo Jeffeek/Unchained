@@ -1,6 +1,3 @@
-using System.Xml.Linq;
-using Unchained.Ooxml.Opc;
-
 namespace Unchained.Ooxml.Opc;
 
 /// <summary>
@@ -21,7 +18,7 @@ internal static class OpcPackageExtensions
             if (exists)
                 return;
 
-            var used = new HashSet<string>(package.PackageRelationships.Select(r => r.Id), StringComparer.Ordinal);
+            var used = new HashSet<string>(package.PackageRelationships.Select(static r => r.Id), StringComparer.Ordinal);
             var n = 1;
             string relId;
             do
@@ -58,7 +55,7 @@ internal static class OpcPackageExtensions
         public string NextFreeRelId(string partUri, string prefix)
         {
             var part = package.TryGetPart(partUri);
-            var used = new HashSet<string>(part?.Relationships.Select(r => r.Id) ?? [], StringComparer.Ordinal);
+            var used = new HashSet<string>(part?.Relationships.Select(static r => r.Id) ?? [], StringComparer.Ordinal);
             var n = 1;
             string id;
             do

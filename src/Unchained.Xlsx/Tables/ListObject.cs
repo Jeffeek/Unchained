@@ -13,30 +13,19 @@ public sealed class ListObject
     internal ListObject(int id, string name, CellRange range)
     {
         Id = id;
-        _name = name;
-        _displayName = name;
+        Name = name;
+        DisplayName = name;
         Range = range;
     }
-
-    private string _name;
-    private string _displayName;
 
     /// <summary>The stable table id within the workbook.</summary>
     public int Id { get; internal set; }
 
     /// <summary>The internal table name (no spaces). Used in structured references.</summary>
-    public string Name
-    {
-        get => _name;
-        set => _name = value;
-    }
+    public string Name { get; set; }
 
     /// <summary>The user-visible table name.</summary>
-    public string DisplayName
-    {
-        get => _displayName;
-        set => _displayName = value;
-    }
+    public string DisplayName { get; set; }
 
     /// <summary>The range the table covers, including header and totals rows.</summary>
     public CellRange Range { get; private set; }

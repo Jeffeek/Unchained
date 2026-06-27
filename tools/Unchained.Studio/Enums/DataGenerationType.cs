@@ -8,12 +8,12 @@ public enum DataGenerationType
     RandomNumber,
     RandomInteger,
     Date,
-    DateTime,
+    DateTime
 }
 
 /// <summary>Direction to fill generated data.</summary>
 public enum FillDirection
 {
     Down,
-    Right,
+    Right
 }

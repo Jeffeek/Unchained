@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Unchained.Xlsx.Formatting;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Worksheets;
@@ -31,7 +32,7 @@ internal static class CsvExporter
 
         // Encode without an embedded BOM, then prepend the preamble only when requested.
         var encoding = options.Encoding is UTF8Encoding
-            ? new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
+            ? new UTF8Encoding(false)
             : options.Encoding;
 
         var body = encoding.GetBytes(text);
@@ -67,7 +68,7 @@ internal static class CsvExporter
         // Render dates using the configured date format when the cell carries a date number format.
         var code = cell.NumberFormatCode;
         // ReSharper disable once InvertIf
-        if (Formatting.NumberFormatter.IsDateTimeFormatCode(code) && cell.GetDateTime() is { } dt)
+        if (NumberFormatter.IsDateTimeFormatCode(code) && cell.GetDateTime() is { } dt)
         {
             var hasTime = dt.TimeOfDay != TimeSpan.Zero;
             return dt.ToString(hasTime ? options.DateTimeFormat : options.DateFormat, CultureInfo.InvariantCulture);

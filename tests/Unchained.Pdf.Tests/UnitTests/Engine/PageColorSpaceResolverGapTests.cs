@@ -2,6 +2,7 @@ using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
+using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
 
@@ -402,7 +403,7 @@ public sealed class PageColorSpaceResolverGapTests
 
     // Builds a single-page doc whose page colour-space CS0 array references object 5 for its
     // sub-object (ICC stream / Cal dict), exercising the indirect-resolution ternary branches.
-    private static IReadOnlyDictionary<string, Unchained.Pdf.Models.ColorSpaceInfo> ResolveWithIndirectSubObject(
+    private static IReadOnlyDictionary<string, ColorSpaceInfo> ResolveWithIndirectSubObject(
         string cs0Array,
         string object5Body
     )

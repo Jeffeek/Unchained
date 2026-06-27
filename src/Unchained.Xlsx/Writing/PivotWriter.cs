@@ -1,8 +1,8 @@
-using Unchained.Xlsx.Models.Cell;
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Xlsx.Core.Xml;
+using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Models.Pivot;
 using Unchained.Xlsx.Pivot;
 
@@ -179,8 +179,10 @@ internal static class PivotWriter
             // Items: one <item> per shared item plus a default. Only meaningful for axis fields.
             case PivotAxis.Row or PivotAxis.Column or PivotAxis.Page when field.Items.Count > 0:
             {
-                var items = new XElement(X + "items",
-                    new XAttribute("count", (field.Items.Count + 1).ToString(CultureInfo.InvariantCulture)));
+                var items = new XElement(
+                    X + "items",
+                    new XAttribute("count", (field.Items.Count + 1).ToString(CultureInfo.InvariantCulture))
+                );
                 for (var i = 0; i < field.Items.Count; i++)
                     items.Add(new XElement(X + "item", new XAttribute("x", i.ToString(CultureInfo.InvariantCulture))));
                 items.Add(new XElement(X + "item", new XAttribute("t", "default")));
@@ -201,29 +203,35 @@ internal static class PivotWriter
         return el;
     }
 
-    private static XElement WritePageFields(IReadOnlyList<PivotField> pageFields)
+    private static XElement WritePageFields(IReadOnlyCollection<PivotField> pageFields)
     {
         var el = new XElement(X + "pageFields", new XAttribute("count", pageFields.Count.ToString(CultureInfo.InvariantCulture)));
         foreach (var field in pageFields)
         {
-            el.Add(new XElement(X + "pageField",
-                new XAttribute("fld", field.SourceIndex.ToString(CultureInfo.InvariantCulture)),
-                new XAttribute("hier", "-1")));
+            el.Add(
+                new XElement(
+                    X + "pageField",
+                    new XAttribute("fld", field.SourceIndex.ToString(CultureInfo.InvariantCulture)),
+                    new XAttribute("hier", "-1")
+                )
+            );
         }
 
         return el;
     }
 
-    private static XElement WriteDataFields(IReadOnlyList<PivotDataField> dataFields)
+    private static XElement WriteDataFields(IReadOnlyCollection<PivotDataField> dataFields)
     {
         var el = new XElement(X + "dataFields", new XAttribute("count", dataFields.Count.ToString(CultureInfo.InvariantCulture)));
         foreach (var data in dataFields)
         {
-            var dataEl = new XElement(X + "dataField",
+            var dataEl = new XElement(
+                X + "dataField",
                 new XAttribute("name", data.Name),
                 new XAttribute("fld", data.SourceIndex.ToString(CultureInfo.InvariantCulture)),
                 new XAttribute("baseField", "0"),
-                new XAttribute("baseItem", "0"));
+                new XAttribute("baseItem", "0")
+            );
             var subtotal = SubtotalAttr(data.Function);
             if (subtotal != null)
                 dataEl.SetAttributeValue("subtotal", subtotal);

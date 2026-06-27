@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Tests.Helpers;
 using Xunit;
@@ -14,7 +15,7 @@ public sealed class MutationHelperTests
     [Fact]
     public void Cast_RealAdapter_ReturnsAdapter()
     {
-        using var doc = Unchained.Pdf.Document.PdfDocumentCore.Parse(PdfFixtures.SinglePage());
+        using var doc = PdfDocumentCore.Parse(PdfFixtures.SinglePage());
         var adapter = new PdfDocumentAdapter(doc);
         MutationHelper.Cast("document", adapter).ShouldBeSameAs(adapter);
     }

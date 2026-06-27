@@ -1,5 +1,6 @@
 using Unchained.Xlsx.Core.Xml;
 using Unchained.Xlsx.Models.Cell;
+using Unchained.Xlsx.Parsing;
 using Unchained.Xlsx.Pivot;
 
 namespace Unchained.Xlsx.Worksheets;
@@ -20,16 +21,16 @@ public sealed partial class Worksheet
         }
     }
 
+    internal bool PivotTablesMaterialised => PivotTablesOrNull != null;
+
+    internal PivotTableCollection? PivotTablesOrNull { get; private set; }
+
     /// <summary>
     ///     Creates a pivot table from <paramref name="sourceRange" /> (on this sheet) placed at
     ///     <paramref name="targetCell" />.
     /// </summary>
     public PivotTable AddPivotTable(CellRange sourceRange, CellReference targetCell, string name) =>
         PivotTables.Add(sourceRange, targetCell, name);
-
-    internal bool PivotTablesMaterialised => PivotTablesOrNull != null;
-
-    internal PivotTableCollection? PivotTablesOrNull { get; private set; }
 
     private void ParsePivotTables(PivotTableCollection pivots)
     {
@@ -53,7 +54,7 @@ public sealed partial class Worksheet
             if (tablePart == null)
                 continue;
 
-            var pivot = Parsing.PivotParser.Parse(Document, tablePart, tableUri);
+            var pivot = PivotParser.Parse(Document, tablePart, tableUri);
             if (pivot == null)
                 continue;
 

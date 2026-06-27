@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Tests.Helpers;
 using Unchained.Xlsx.Worksheets;
@@ -14,7 +15,7 @@ public class FormulaFunctionFinalCoverageTests
         using var document = XlsxFixtures.WithSheets("S");
         var sheet = document.Sheets[0];
         setup?.Invoke(sheet);
-        return Unchained.Xlsx.Engine.SpreadsheetDocument.EvaluateFormula(sheet, formula);
+        return SpreadsheetDocument.EvaluateFormula(sheet, formula);
     }
 
     private static double? Num(string formula, Action<Worksheet>? setup = null)
@@ -24,19 +25,27 @@ public class FormulaFunctionFinalCoverageTests
         Theory,
         InlineData("=SQRTPI(4)", 3.5449077018110318),
         InlineData("=MODE.MULT(1,2,2,3)", 2),
-        InlineData("=RANK.AVG(2,A1:A3)", 0)  // overwritten below; placeholder
+        InlineData("=RANK.AVG(2,A1:A3)", 0) // overwritten below; placeholder
     ]
     public void MiscMath(string formula, double expected)
     {
         if (formula.Contains("RANK.AVG")) return; // covered separately
+
         Num(formula)!.Value.ShouldBe(expected, 1e-9);
     }
 
     [Fact]
     public void RankAvg()
     {
-        void Fill(Worksheet s) { s.SetValue(1, 1, 10.0); s.SetValue(2, 1, 20.0); s.SetValue(3, 1, 30.0); }
         Num("=RANK.AVG(20,A1:A3)", Fill).ShouldBe(2);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, 10.0);
+            s.SetValue(2, 1, 20.0);
+            s.SetValue(3, 1, 30.0);
+        }
     }
 
     // ── Lookup arms ──────────────────────────────────────────────────────────
@@ -44,57 +53,90 @@ public class FormulaFunctionFinalCoverageTests
     [Fact]
     public void Vlookup_Approximate_FindsLargestNotExceeding()
     {
-        void Fill(Worksheet s)
-        {
-            s.SetValue(1, 1, 1.0); s.SetValue(1, 2, "low");
-            s.SetValue(2, 1, 10.0); s.SetValue(2, 2, "mid");
-            s.SetValue(3, 1, 20.0); s.SetValue(3, 2, "high");
-        }
         Eval("=VLOOKUP(15,A1:B3,2,TRUE)", Fill).ShouldBe("mid");
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, 1.0);
+            s.SetValue(1, 2, "low");
+            s.SetValue(2, 1, 10.0);
+            s.SetValue(2, 2, "mid");
+            s.SetValue(3, 1, 20.0);
+            s.SetValue(3, 2, "high");
+        }
     }
 
     [Fact]
     public void Hlookup_Approximate()
     {
-        void Fill(Worksheet s)
-        {
-            s.SetValue(1, 1, 1.0); s.SetValue(1, 2, 10.0); s.SetValue(1, 3, 20.0);
-            s.SetValue(2, 1, "a"); s.SetValue(2, 2, "b"); s.SetValue(2, 3, "c");
-        }
         Eval("=HLOOKUP(15,A1:C2,2,TRUE)", Fill).ShouldBe("b");
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, 1.0);
+            s.SetValue(1, 2, 10.0);
+            s.SetValue(1, 3, 20.0);
+            s.SetValue(2, 1, "a");
+            s.SetValue(2, 2, "b");
+            s.SetValue(2, 3, "c");
+        }
     }
 
     [Fact]
     public void Hlookup_NotFound_ReturnsNotAvailable() =>
-        Eval("=HLOOKUP(\"Z\",A1:C2,2,FALSE)", s =>
-        {
-            s.SetValue(1, 1, "a"); s.SetValue(1, 2, "b");
-            s.SetValue(2, 1, 1.0); s.SetValue(2, 2, 2.0);
-        }).ShouldBe(CellError.NotAvailable);
+        Eval(
+                "=HLOOKUP(\"Z\",A1:C2,2,FALSE)",
+                static s =>
+                {
+                    s.SetValue(1, 1, "a");
+                    s.SetValue(1, 2, "b");
+                    s.SetValue(2, 1, 1.0);
+                    s.SetValue(2, 2, 2.0);
+                }
+            )
+            .ShouldBe(CellError.NotAvailable);
 
     [Fact]
     public void Hlookup_BadRow_ReturnsReferenceError() =>
-        Eval("=HLOOKUP(\"a\",A1:C2,9,FALSE)", s =>
-        {
-            s.SetValue(1, 1, "a"); s.SetValue(2, 1, 1.0);
-        }).ShouldBe(CellError.Reference);
+        Eval(
+                "=HLOOKUP(\"a\",A1:C2,9,FALSE)",
+                static s =>
+                {
+                    s.SetValue(1, 1, "a");
+                    s.SetValue(2, 1, 1.0);
+                }
+            )
+            .ShouldBe(CellError.Reference);
 
     [Fact]
     public void Index_SingleRowArray_OneIndex()
     {
-        void Fill(Worksheet s) { s.SetValue(1, 1, 10.0); s.SetValue(1, 2, 20.0); s.SetValue(1, 3, 30.0); }
         Num("=INDEX(A1:C1,2)", Fill).ShouldBe(20);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, 10.0);
+            s.SetValue(1, 2, 20.0);
+            s.SetValue(1, 3, 30.0);
+        }
     }
 
     [Fact]
     public void Index_TwoDimensional_RowAndColumn()
     {
-        void Fill(Worksheet s)
-        {
-            s.SetValue(1, 1, 1.0); s.SetValue(1, 2, 2.0);
-            s.SetValue(2, 1, 3.0); s.SetValue(2, 2, 4.0);
-        }
         Num("=INDEX(A1:B2,2,2)", Fill).ShouldBe(4);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, 1.0);
+            s.SetValue(1, 2, 2.0);
+            s.SetValue(2, 1, 3.0);
+            s.SetValue(2, 2, 4.0);
+        }
     }
 
     [Fact]
@@ -108,18 +150,39 @@ public class FormulaFunctionFinalCoverageTests
     [Fact]
     public void Match_PositiveType_FindsLargestNotExceeding()
     {
-        void Fill(Worksheet s) { s.SetValue(1, 1, 1.0); s.SetValue(2, 1, 5.0); s.SetValue(3, 1, 10.0); }
         Num("=MATCH(7,A1:A3,1)", Fill).ShouldBe(2);
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            s.SetValue(1, 1, 1.0);
+            s.SetValue(2, 1, 5.0);
+            s.SetValue(3, 1, 10.0);
+        }
     }
 
     [Fact]
     public void Match_PositiveType_NoMatch_ReturnsNotAvailable() =>
-        Eval("=MATCH(0,A1:A2,1)", s => { s.SetValue(1, 1, 5.0); s.SetValue(2, 1, 10.0); })
+        Eval(
+                "=MATCH(0,A1:A2,1)",
+                static s =>
+                {
+                    s.SetValue(1, 1, 5.0);
+                    s.SetValue(2, 1, 10.0);
+                }
+            )
             .ShouldBe(CellError.NotAvailable);
 
     [Fact]
     public void Match_DescendingType_NoMatch_ReturnsNotAvailable() =>
-        Eval("=MATCH(99,A1:A2,-1)", s => { s.SetValue(1, 1, 10.0); s.SetValue(2, 1, 5.0); })
+        Eval(
+                "=MATCH(99,A1:A2,-1)",
+                static s =>
+                {
+                    s.SetValue(1, 1, 10.0);
+                    s.SetValue(2, 1, 5.0);
+                }
+            )
             .ShouldBe(CellError.NotAvailable);
 
     // ── Criterion arms (text comparison operators) ───────────────────────────
@@ -127,33 +190,37 @@ public class FormulaFunctionFinalCoverageTests
     [Fact]
     public void CountIf_TextComparisonOperators()
     {
-        void Fill(Worksheet s)
+        Num("=COUNTIF(A1:A3,\">apple\")", Fill).ShouldBe(2);  // text >
+        Num("=COUNTIF(A1:A3,\"<>apple\")", Fill).ShouldBe(2); // text <>
+        Num("=COUNTIF(A1:A3,\"apple\")", Fill).ShouldBe(1);   // equality
+        return;
+
+        static void Fill(Worksheet s)
         {
-            s.SetValue(1, 1, "apple"); s.SetValue(2, 1, "banana"); s.SetValue(3, 1, "cherry");
+            s.SetValue(1, 1, "apple");
+            s.SetValue(2, 1, "banana");
+            s.SetValue(3, 1, "cherry");
         }
-        Num("=COUNTIF(A1:A3,\">apple\")", Fill).ShouldBe(2);   // text >
-        Num("=COUNTIF(A1:A3,\"<>apple\")", Fill).ShouldBe(2);  // text <>
-        Num("=COUNTIF(A1:A3,\"apple\")", Fill).ShouldBe(1);    // equality
     }
 
     [Fact]
     public void SumIf_NumericComparison()
     {
-        void Fill(Worksheet s)
-        {
-            for (var i = 1; i <= 4; i++) s.SetValue(i, 1, (double)(i * 10));
-        }
         Num("=SUMIF(A1:A4,\">=20\")", Fill).ShouldBe(90); // 20+30+40
+        return;
+
+        static void Fill(Worksheet s)
+        {
+            for (var i = 1; i <= 4; i++) s.SetValue(i, 1, i * 10);
+        }
     }
 
     // ── Text / TextFn fallback ───────────────────────────────────────────────
 
     [Fact]
-    public void TextFn_InvalidFormat_FallsBack()
-    {
+    public void TextFn_InvalidFormat_FallsBack() =>
         // A format code the partial engine can't parse still returns a string.
         Eval("=TEXT(5,\"[bogus]\")").ShouldBeOfType<string>();
-    }
 
     [Fact]
     public void Substitute_InstanceNotFound_ReturnsOriginal() =>
@@ -203,7 +270,7 @@ public class FormulaFunctionFinalCoverageTests
     [Fact]
     public void Type_BlankAndArray()
     {
-        Num("=TYPE(A1)").ShouldBe(1);          // blank → 1
-        Num("=TYPE(A1:A2)").ShouldBe(64);      // array → 64
+        Num("=TYPE(A1)").ShouldBe(1);     // blank → 1
+        Num("=TYPE(A1:A2)").ShouldBe(64); // array → 64
     }
 }

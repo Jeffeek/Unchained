@@ -70,16 +70,24 @@ public class ParserReloadCoverageTests
         var bytes = await XlsxFixtures.SaveBytesAsync(seed);
 
         const string ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-        var sst = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="{ns}" count="1" uniqueCount="1"><si><r><t>foo</t></r><r><t>bar</t></r></si></sst>""";
-        var sheet = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="{ns}"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>""";
+        const string sst = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="{ns}" count="1" uniqueCount="1"><si><r><t>foo</t></r><r><t>bar</t></r></si></sst>""";
+        const string sheet = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="{ns}"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>""";
 
         using var ms = new MemoryStream();
         await ms.WriteAsync(bytes);
-        using (var archive = new ZipArchive(ms, ZipArchiveMode.Update, leaveOpen: true))
+#if NET10_0_OR_GREATER
+        await using (var archive = new ZipArchive(ms, ZipArchiveMode.Update, true))
         {
             Replace(archive, "xl/sharedStrings.xml", sst);
             Replace(archive, "xl/worksheets/sheet1.xml", sheet);
         }
+#else
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Update, true))
+        {
+            Replace(archive, "xl/sharedStrings.xml", sst);
+            Replace(archive, "xl/worksheets/sheet1.xml", sheet);
+        }
+#endif
 
         using var processor = new SpreadsheetProcessor();
         using var document = await processor.LoadAsync(ms.ToArray(), cancellationToken: TestContext.Current.CancellationToken);
@@ -101,7 +109,7 @@ public class ParserReloadCoverageTests
         // Inject a drawing with an absoluteAnchor to exercise that parser branch.
         var tiny = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC");
         using var document = XlsxFixtures.WithSheets("Data");
-        document.Sheets[0].AddImage(tiny, "image/png", Models.Cell.CellReference.FromA1("A1"));
+        document.Sheets[0].AddImage(tiny, "image/png", CellReference.FromA1("A1"));
 
         // A normal round-trip already exercises OneCell; verify it reloads.
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);

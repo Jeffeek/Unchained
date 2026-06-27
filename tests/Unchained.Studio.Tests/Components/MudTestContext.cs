@@ -1,5 +1,4 @@
 using Bunit;
-using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
 namespace Unchained.Studio.Tests.Components;
@@ -15,7 +14,8 @@ public abstract class MudTestContext : BunitContext
     protected MudTestContext()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
-        Services.AddMudServices(options =>
-            options.PopoverOptions.CheckForPopoverProvider = false);
+        Services.AddMudServices(static options =>
+            options.PopoverOptions.CheckForPopoverProvider = false
+        );
     }
 }

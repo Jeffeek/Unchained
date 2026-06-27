@@ -1,6 +1,5 @@
 using Unchained.Drawing;
 using Unchained.Drawing.Decoders;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Ooxml.Media;
 
 namespace Unchained.Pptx.Rendering.Engine.Rasterizers;
@@ -91,18 +90,25 @@ internal static class SlideImageDecoder
         var searchLen = Math.Min(bytes.Length - start, 512);
         var trimmed = bytes.Slice(start, searchLen);
         while (trimmed.Length > 0 && trimmed[0] <= 32) trimmed = trimmed[1..];
-        if (trimmed.Length >= 4 && trimmed[0] == '<' && trimmed[1] == 's' && trimmed[2] == 'v' && trimmed[3] == 'g') return true;
-        if (trimmed.Length >= 5 && trimmed[0] == '<' && trimmed[1] == '?' && trimmed[2] == 'x' && trimmed[3] == 'm' && trimmed[4] == 'l')
+        switch (trimmed.Length)
         {
-            // Skip <?xml...?> to reach the root element.
-            var close = trimmed.IndexOf("?>"u8);
-            if (close >= 0)
+            case >= 4 when trimmed[0] == '<' && trimmed[1] == 's' && trimmed[2] == 'v' && trimmed[3] == 'g':
+                return true;
+            case >= 5 when trimmed[0] == '<' && trimmed[1] == '?' && trimmed[2] == 'x' && trimmed[3] == 'm' && trimmed[4] == 'l':
             {
-                var afterDecl = trimmed.Slice(close + 2);
-                while (afterDecl.Length > 0 && afterDecl[0] <= 32) afterDecl = afterDecl[1..];
-                if (afterDecl.Length >= 4 && afterDecl[0] == '<' && afterDecl[1] == 's' && afterDecl[2] == 'v' && afterDecl[3] == 'g') return true;
+                // Skip <?xml...?> to reach the root element.
+                var close = trimmed.IndexOf("?>"u8);
+                if (close >= 0)
+                {
+                    var afterDecl = trimmed[(close + 2)..];
+                    while (afterDecl.Length > 0 && afterDecl[0] <= 32) afterDecl = afterDecl[1..];
+                    if (afterDecl.Length >= 4 && afterDecl[0] == '<' && afterDecl[1] == 's' && afterDecl[2] == 'v' && afterDecl[3] == 'g') return true;
+                }
+
+                break;
             }
         }
+
         return false;
     }
 }

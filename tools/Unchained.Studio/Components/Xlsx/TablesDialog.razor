@@ -1,8 +1,6 @@
 @using Unchained.Xlsx.Models.Cell
-@using Unchained.Xlsx.Models.Tables
 @using Unchained.Xlsx.Tables
 @using Unchained.Xlsx.Worksheets
-
 <MudDialog Style="min-width:560px; max-width:720px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -23,26 +21,31 @@
                 {
                     <MudSimpleTable Dense="true" Hover="true">
                         <thead>
-                            <tr><th>Name</th><th>Range</th><th>Columns</th><th>Style</th><th></th></tr>
+                        <tr>
+                            <th>Name</th><th>Range</th><th>Columns</th><th>Style</th><th></th>
+                        </tr>
                         </thead>
                         <tbody>
-                            @foreach (var table in Sheet.Tables.ToList())
-                            {
-                                var t = table;
-                                <tr>
-                                    <td>@t.DisplayName</td>
-                                    <td>@t.Range.ToA1()</td>
-                                    <td>@t.Columns.Count</td>
-                                    <td>
-                                        <MudText Typo="Typo.caption">@t.StyleName</MudText>
-                                        @if (t.ShowTotalsRow) { <MudChip T="string" Size="Size.Small" Text="totals"/> }
-                                    </td>
-                                    <td>
-                                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
-                                                       OnClick="() => RemoveTable(t)"/>
-                                    </td>
-                                </tr>
-                            }
+                        @foreach (var table in Sheet.Tables.ToList())
+                        {
+                            var t = table;
+                            <tr>
+                                <td>@t.DisplayName</td>
+                                <td>@t.Range.ToA1()</td>
+                                <td>@t.Columns.Count</td>
+                                <td>
+                                    <MudText Typo="Typo.caption">@t.StyleName</MudText>
+                                    @if (t.ShowTotalsRow)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Text="totals"/>
+                                    }
+                                </td>
+                                <td>
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                                   OnClick="() => RemoveTable(t)"/>
+                                </td>
+                            </tr>
+                        }
                         </tbody>
                     </MudSimpleTable>
                 }
@@ -135,10 +138,10 @@
         }
     }
 
-    private async Task RemoveTable(ListObject table)
+    private Task RemoveTable(ListObject table)
     {
         Sheet.RemoveTable(table);
-        await OnChanged.InvokeAsync();
+        return OnChanged.InvokeAsync();
     }
 
     private void Close() => MudDialog.Close();

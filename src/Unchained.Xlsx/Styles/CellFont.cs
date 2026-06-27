@@ -1,5 +1,5 @@
 using Unchained.Ooxml.Drawing;
-using Unchained.Xlsx.Models.Styles;
+using Unchained.Xlsx.Models;
 
 namespace Unchained.Xlsx.Styles;
 
@@ -45,9 +45,6 @@ public sealed class CellFont : IEquatable<CellFont>
     /// <summary>The theme font scheme this font belongs to ("major", "minor"), or <see langword="null" />.</summary>
     public string? Scheme { get; set; }
 
-    /// <summary>Returns a shallow copy of this font.</summary>
-    public CellFont Clone() => (CellFont)MemberwiseClone();
-
     /// <inheritdoc />
     public bool Equals(CellFont? other) =>
         other != null &&
@@ -65,6 +62,9 @@ public sealed class CellFont : IEquatable<CellFont>
         Extend == other.Extend &&
         Scheme == other.Scheme;
 
+    /// <summary>Returns a shallow copy of this font.</summary>
+    public CellFont Clone() => (CellFont)MemberwiseClone();
+
     /// <inheritdoc />
     public override bool Equals(object? obj) => Equals(obj as CellFont);
 
@@ -72,6 +72,7 @@ public sealed class CellFont : IEquatable<CellFont>
     public override int GetHashCode()
     {
         var hash = new HashCode();
+        // ReSharper disable NonReadonlyMemberInGetHashCode
         hash.Add(Name);
         hash.Add(SizePoints);
         hash.Add(Bold);
@@ -85,6 +86,7 @@ public sealed class CellFont : IEquatable<CellFont>
         hash.Add(Condense);
         hash.Add(Extend);
         hash.Add(Scheme);
+        // ReSharper restore NonReadonlyMemberInGetHashCode
         return hash.ToHashCode();
     }
 }

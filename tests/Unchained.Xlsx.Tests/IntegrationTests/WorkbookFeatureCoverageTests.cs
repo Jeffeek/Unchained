@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Tests.Helpers;
 using Xunit;
 
@@ -72,7 +71,7 @@ public class WorkbookFeatureCoverageTests
     public void WorkbookProtection_WithPassword_SetsHash()
     {
         using var document = XlsxFixtures.WithSheets("Data");
-        document.Protection.Protect("secret", lockStructure: true, lockWindows: true);
+        document.Protection.Protect("secret", true, true);
 
         document.Protection.LockStructure.ShouldBeTrue();
         document.Protection.LockWindows.ShouldBeTrue();
@@ -97,7 +96,7 @@ public class WorkbookFeatureCoverageTests
     public async Task WorkbookProtection_WithPassword_RoundTrips()
     {
         using var document = XlsxFixtures.WithSheets("Data");
-        document.Protection.Protect("topsecret", lockStructure: true, lockWindows: true);
+        document.Protection.Protect("topsecret", true, true);
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         reloaded.Protection.LockStructure.ShouldBeTrue();

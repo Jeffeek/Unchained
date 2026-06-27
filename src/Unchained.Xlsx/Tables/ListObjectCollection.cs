@@ -7,10 +7,12 @@ namespace Unchained.Xlsx.Tables;
 /// <summary>The collection of structured tables (<see cref="ListObject" />) on a worksheet.</summary>
 public sealed class ListObjectCollection : IReadOnlyList<ListObject>
 {
-    private readonly Worksheet _worksheet;
     private readonly List<ListObject> _tables = [];
+    private readonly Worksheet _worksheet;
 
     internal ListObjectCollection(Worksheet worksheet) => _worksheet = worksheet;
+
+    internal IReadOnlyList<ListObject> All => _tables;
 
     /// <summary>The number of tables.</summary>
     public int Count => _tables.Count;
@@ -53,8 +55,6 @@ public sealed class ListObjectCollection : IReadOnlyList<ListObject>
     public void Remove(ListObject table) => _tables.Remove(table);
 
     internal void AddExisting(ListObject table) => _tables.Add(table);
-
-    internal IReadOnlyList<ListObject> All => _tables;
 
     private static string EnsureUnique(ListObject table, string header)
     {

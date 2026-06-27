@@ -14,12 +14,12 @@ internal static class DateTimeSerializer
     // Day after which the 1900 phantom-leap-day correction applies.
     private const int PhantomLeapSerial = 60;
 
+    /// <summary>The largest valid serial (corresponds to 31 Dec 9999 in the 1900 system).</summary>
+    public const double MaxSerial = 2_958_465.99999999;
+
     // 1900 base is 31 Dec 1899 so that serial 1 maps to 1 Jan 1900.
     private static readonly DateTime Base1900 = new(1899, 12, 31);
     private static readonly DateTime Base1904 = new(1904, 1, 1);
-
-    /// <summary>The largest valid serial (corresponds to 31 Dec 9999 in the 1900 system).</summary>
-    public const double MaxSerial = 2_958_465.99999999;
 
     /// <summary>
     ///     Converts a serial number to a <see cref="DateTime" />, or returns <see langword="null" />

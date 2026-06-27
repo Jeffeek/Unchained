@@ -41,7 +41,7 @@ public sealed class PresentationProcessorFileTests
         }
         finally
         {
-            dir.Delete(recursive: true);
+            dir.Delete(true);
         }
     }
 
@@ -60,7 +60,7 @@ public sealed class PresentationProcessorFileTests
         }
         finally
         {
-            dir.Delete(recursive: true);
+            dir.Delete(true);
         }
     }
 
@@ -79,7 +79,7 @@ public sealed class PresentationProcessorFileTests
         }
         finally
         {
-            dir.Delete(recursive: true);
+            dir.Delete(true);
         }
     }
 

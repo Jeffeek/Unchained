@@ -45,7 +45,7 @@ internal sealed partial class SlideRasterizer
     {
         var amplitude = height * 0.25; // max 25% of height
         var p = preset.ToLowerInvariant();
-        return (p.EndsWith("archup") || p.EndsWith("archdown")) switch
+        return (p.EndsWith("archup", StringComparison.Ordinal) || p.EndsWith("archdown", StringComparison.Ordinal)) switch
         {
             // Arch presets: sine curve, max offset at centre.
             true when p.Contains("archup") =>

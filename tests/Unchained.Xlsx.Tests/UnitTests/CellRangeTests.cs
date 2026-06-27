@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Xlsx;
 using Unchained.Xlsx.Models.Cell;
 using Xunit;
 
@@ -60,7 +59,7 @@ public class CellRangeTests
     [Fact]
     public void Cells_EnumeratesRowMajor()
     {
-        var cells = CellRange.FromA1("A1:B2").Cells().Select(c => c.ToA1()).ToList();
+        var cells = CellRange.FromA1("A1:B2").Cells().Select(static c => c.ToA1()).ToList();
         cells.ShouldBe(["A1", "B1", "A2", "B2"]);
     }
 

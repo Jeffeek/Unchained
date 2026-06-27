@@ -26,7 +26,8 @@ internal static class DrawingWriter
             new XAttribute(XNamespace.Xmlns + "xdr", Xdr.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "a", A.NamespaceName),
             new XAttribute(XNamespace.Xmlns + "r", R.NamespaceName),
-            new XAttribute(XNamespace.Xmlns + "c", C.NamespaceName));
+            new XAttribute(XNamespace.Xmlns + "c", C.NamespaceName)
+        );
 
         foreach (var drawing in drawings)
             root.Add(WriteAnchor(drawing));
@@ -39,18 +40,24 @@ internal static class DrawingWriter
         var anchor = drawing.Anchor;
         var element = anchor.AnchorType switch
         {
-            DrawingAnchorType.TwoCell => new XElement(Xdr + "twoCellAnchor",
+            DrawingAnchorType.TwoCell => new XElement(
+                Xdr + "twoCellAnchor",
                 new XAttribute("editAs", "oneCell"),
                 WriteMarker("from", anchor.From.Row, anchor.From.Column, anchor.FromOffsetX.Value, anchor.FromOffsetY.Value),
-                WriteMarker("to", anchor.To.Row, anchor.To.Column, anchor.ToOffsetX.Value, anchor.ToOffsetY.Value)),
+                WriteMarker("to", anchor.To.Row, anchor.To.Column, anchor.ToOffsetX.Value, anchor.ToOffsetY.Value)
+            ),
 
-            DrawingAnchorType.Absolute => new XElement(Xdr + "absoluteAnchor",
+            DrawingAnchorType.Absolute => new XElement(
+                Xdr + "absoluteAnchor",
                 new XElement(Xdr + "pos", new XAttribute("x", anchor.OffsetX.Value), new XAttribute("y", anchor.OffsetY.Value)),
-                new XElement(Xdr + "ext", new XAttribute("cx", anchor.Width.Value), new XAttribute("cy", anchor.Height.Value))),
+                new XElement(Xdr + "ext", new XAttribute("cx", anchor.Width.Value), new XAttribute("cy", anchor.Height.Value))
+            ),
 
-            _ => new XElement(Xdr + "oneCellAnchor",
+            _ => new XElement(
+                Xdr + "oneCellAnchor",
                 WriteMarker("from", anchor.From.Row, anchor.From.Column, anchor.FromOffsetX.Value, anchor.FromOffsetY.Value),
-                new XElement(Xdr + "ext", new XAttribute("cx", anchor.Width.Value), new XAttribute("cy", anchor.Height.Value)))
+                new XElement(Xdr + "ext", new XAttribute("cx", anchor.Width.Value), new XAttribute("cy", anchor.Height.Value))
+            )
         };
 
         element.Add(WriteContent(drawing));
@@ -64,7 +71,8 @@ internal static class DrawingWriter
             new XElement(Xdr + "col", (col1Based - 1).ToString(CultureInfo.InvariantCulture)),
             new XElement(Xdr + "colOff", offsetX.ToString(CultureInfo.InvariantCulture)),
             new XElement(Xdr + "row", (row1Based - 1).ToString(CultureInfo.InvariantCulture)),
-            new XElement(Xdr + "rowOff", offsetY.ToString(CultureInfo.InvariantCulture)));
+            new XElement(Xdr + "rowOff", offsetY.ToString(CultureInfo.InvariantCulture))
+        );
 
     private static XElement WriteContent(WorksheetDrawing drawing) => drawing switch
     {
@@ -73,7 +81,7 @@ internal static class DrawingWriter
         _ => new XElement(Xdr + "sp")
     };
 
-    private static XElement WritePicture(PictureDrawing picture)
+    private static XElement WritePicture(WorksheetDrawing picture)
     {
         var name = string.IsNullOrEmpty(picture.Name) ? $"Picture {picture.ShapeId}" : picture.Name;
 
@@ -81,28 +89,42 @@ internal static class DrawingWriter
             Xdr + "pic",
             new XElement(
                 Xdr + "nvPicPr",
-                new XElement(Xdr + "cNvPr",
+                new XElement(
+                    Xdr + "cNvPr",
                     new XAttribute("id", picture.ShapeId.ToString(CultureInfo.InvariantCulture)),
-                    new XAttribute("name", name)),
-                new XElement(Xdr + "cNvPicPr",
-                    new XElement(A + "picLocks", new XAttribute("noChangeAspect", "1")))),
+                    new XAttribute("name", name)
+                ),
+                new XElement(
+                    Xdr + "cNvPicPr",
+                    new XElement(A + "picLocks", new XAttribute("noChangeAspect", "1"))
+                )
+            ),
             new XElement(
                 Xdr + "blipFill",
                 new XElement(A + "blip", new XAttribute(R + "embed", picture.RelationshipId)),
-                new XElement(A + "stretch", new XElement(A + "fillRect"))),
+                new XElement(A + "stretch", new XElement(A + "fillRect"))
+            ),
             new XElement(
                 Xdr + "spPr",
-                new XElement(A + "xfrm",
+                new XElement(
+                    A + "xfrm",
                     new XElement(A + "off", new XAttribute("x", "0"), new XAttribute("y", "0")),
-                    new XElement(A + "ext",
+                    new XElement(
+                        A + "ext",
                         new XAttribute("cx", picture.Anchor.Width.Value),
-                        new XAttribute("cy", picture.Anchor.Height.Value))),
-                new XElement(A + "prstGeom",
+                        new XAttribute("cy", picture.Anchor.Height.Value)
+                    )
+                ),
+                new XElement(
+                    A + "prstGeom",
                     new XAttribute("prst", "rect"),
-                    new XElement(A + "avLst"))));
+                    new XElement(A + "avLst")
+                )
+            )
+        );
     }
 
-    private static XElement WriteChartFrame(ChartDrawing chart)
+    private static XElement WriteChartFrame(WorksheetDrawing chart)
     {
         var name = string.IsNullOrEmpty(chart.Name) ? $"Chart {chart.ShapeId}" : chart.Name;
 
@@ -111,20 +133,29 @@ internal static class DrawingWriter
             new XAttribute("macro", string.Empty),
             new XElement(
                 Xdr + "nvGraphicFramePr",
-                new XElement(Xdr + "cNvPr",
+                new XElement(
+                    Xdr + "cNvPr",
                     new XAttribute("id", chart.ShapeId.ToString(CultureInfo.InvariantCulture)),
-                    new XAttribute("name", name)),
-                new XElement(Xdr + "cNvGraphicFramePr")),
+                    new XAttribute("name", name)
+                ),
+                new XElement(Xdr + "cNvGraphicFramePr")
+            ),
             new XElement(
                 Xdr + "xfrm",
                 new XElement(A + "off", new XAttribute("x", "0"), new XAttribute("y", "0")),
-                new XElement(A + "ext", new XAttribute("cx", "0"), new XAttribute("cy", "0"))),
+                new XElement(A + "ext", new XAttribute("cx", "0"), new XAttribute("cy", "0"))
+            ),
             new XElement(
                 A + "graphic",
                 new XElement(
                     A + "graphicData",
                     new XAttribute("uri", C.NamespaceName),
-                    new XElement(C + "chart",
-                        new XAttribute(R + "id", chart.RelationshipId)))));
+                    new XElement(
+                        C + "chart",
+                        new XAttribute(R + "id", chart.RelationshipId)
+                    )
+                )
+            )
+        );
     }
 }

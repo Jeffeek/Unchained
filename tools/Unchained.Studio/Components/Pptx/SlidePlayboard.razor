@@ -1,14 +1,9 @@
 @using Unchained.Ooxml
-@using Unchained.Ooxml.Drawing
-@using Unchained.Ooxml.Text
 @using Unchained.Pptx.Engine
 @using Unchained.Pptx.Models.Shapes
 @using Unchained.Pptx.Rendering.Engine
 @using Unchained.Pptx.Shapes
 @using Unchained.Pptx.Slides
-@using Unchained.Studio
-@using Unchained.Studio.Services
-@using Unchained.Studio.Studio.Pptx
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 
@@ -38,7 +33,7 @@
         <MudTooltip Text="Zoom out">
             <MudIconButton Icon="@Icons.Material.Outlined.ZoomOut" Size="Size.Small" OnClick="() => ZoomTo(Math.Max(0.25, _zoom - 0.25))"/>
         </MudTooltip>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@_zoomPercent%</MudChip>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@ZoomPercent%</MudChip>
         <MudTooltip Text="Zoom in">
             <MudIconButton Icon="@Icons.Material.Outlined.ZoomIn" Size="Size.Small" OnClick="() => ZoomTo(Math.Min(4.0, _zoom + 0.25))"/>
         </MudTooltip>
@@ -88,7 +83,7 @@
                                  @onmousedown="e => OnShapeMouseDown(shape, e)"
                                  @ondblclick="() => OnShapeDoubleClick(shape)">
                                 @* Text preview for text shapes (hidden when selected) *@
-                                @if (shape is AutoShape autoShape && autoShape.IsTextBox && !isSelected)
+                                @if (shape is AutoShape { IsTextBox: true } autoShape && !isSelected)
                                 {
                                     var text = autoShape.TextFrame.PlainText;
                                     if (!string.IsNullOrEmpty(text))
@@ -106,7 +101,7 @@
                                     {
                                         <div class="@($"playboard-handle playboard-handle--{handle.Kind.ToString().ToLower()}")"
                                              style="@HandleStyle(handle, shape)"
-                                             @onmousedown="e => OnHandleMouseDown(handle, e)"/>
+                                             @onmousedown="e => OnHandleMouseDown(handle, e)"></div>
                                     }
                                 }
                             </div>
@@ -141,7 +136,7 @@
     public PresentationDocument Document { get; set; } = null!;
 
     [Parameter]
-    public Slide Slide { get; set; } = null!;
+    public Slide? Slide { get; set; }
 
     [Parameter]
     public SlidePlayboardState State { get; set; } = null!;
@@ -158,14 +153,14 @@
     private string? _renderError;
     private List<Shape>? _slideShapes;
     private double _zoom;
-    private readonly List<ResizeHandle> _handles = Enum.GetValues<ResizeHandleKind>().Select(k => new ResizeHandle(k, null!)).ToList();
+    private readonly List<ResizeHandle> _handles = Enum.GetValues<ResizeHandleKind>().Select(static k => new ResizeHandle(k, null!)).ToList();
 
-    private string _zoomPercent => ((int)(_zoom * 100)).ToString();
+    private string ZoomPercent => ((int)(_zoom * 100)).ToString();
     private Shape? SelectedShape => State.SelectedShape;
 
     protected override void OnParametersSet()
     {
-        _slideName = Slide.Name ?? "Slide";
+        _slideName = Slide?.Name ?? "Slide";
         _zoom = State.Zoom;
         RenderSlideSync();
     }
@@ -178,6 +173,9 @@
 
     private void RenderSlideSync()
     {
+        if (Slide == null)
+            return;
+
         try
         {
             _rendering = true;
@@ -204,7 +202,7 @@
         }
     }
 
-    private string ShapeStyle(Shape shape)
+    private static string ShapeStyle(Shape shape)
     {
         var left = shape.X.ToPixels(96);
         var top = shape.Y.ToPixels(96);
@@ -213,24 +211,24 @@
         return $"left:{left:0}px;top:{top:0}px;width:{width:0}px;height:{height:0}px;";
     }
 
-    private string HandleStyle(ResizeHandle handle, Shape shape)
+    private static string HandleStyle(ResizeHandle handle, Shape shape)
     {
         var left = shape.X.ToPixels(96);
         var top = shape.Y.ToPixels(96);
         var width = shape.Width.ToPixels(96);
         var height = shape.Height.ToPixels(96);
-        var hs = 8.0;
+        const double hs = 8.0;
 
-        return (handle.Kind) switch
+        return handle.Kind switch
         {
-            ResizeHandleKind.TopLeft      => $"left:{left - hs / 2}px;top:{top - hs / 2}px;",
-            ResizeHandleKind.Top          => $"left:{left + width / 2 - hs / 2}px;top:{top - hs / 2}px;",
-            ResizeHandleKind.TopRight     => $"left:{left + width - hs / 2}px;top:{top - hs / 2}px;",
-            ResizeHandleKind.Right        => $"left:{left + width - hs / 2}px;top:{top + height / 2 - hs / 2}px;",
-            ResizeHandleKind.BottomRight  => $"left:{left + width - hs / 2}px;top:{top + height - hs / 2}px;",
-            ResizeHandleKind.Bottom       => $"left:{left + width / 2 - hs / 2}px;top:{top + height - hs / 2}px;",
-            ResizeHandleKind.BottomLeft   => $"left:{left - hs / 2}px;top:{top + height - hs / 2}px;",
-            ResizeHandleKind.Left         => $"left:{left - hs / 2}px;top:{top + height / 2 - hs / 2}px;",
+            ResizeHandleKind.TopLeft => $"left:{left - (hs / 2)}px;top:{top - (hs / 2)}px;",
+            ResizeHandleKind.Top => $"left:{left + (width / 2) - (hs / 2)}px;top:{top - (hs / 2)}px;",
+            ResizeHandleKind.TopRight => $"left:{left + width - (hs / 2)}px;top:{top - (hs / 2)}px;",
+            ResizeHandleKind.Right => $"left:{left + width - (hs / 2)}px;top:{top + (height / 2) - (hs / 2)}px;",
+            ResizeHandleKind.BottomRight => $"left:{left + width - (hs / 2)}px;top:{top + height - (hs / 2)}px;",
+            ResizeHandleKind.Bottom => $"left:{left + (width / 2) - (hs / 2)}px;top:{top + height - (hs / 2)}px;",
+            ResizeHandleKind.BottomLeft => $"left:{left - (hs / 2)}px;top:{top + height - (hs / 2)}px;",
+            ResizeHandleKind.Left => $"left:{left - (hs / 2)}px;top:{top + (height / 2) - (hs / 2)}px;",
             _ => string.Empty
         };
     }
@@ -244,14 +242,13 @@
 
     private void OnShapeMouseDown(Shape shape, MouseEventArgs e)
     {
-        if (e.Button == 0)
-        {
-            State.SelectedShape = shape;
-            State.IsDragging = true;
-            State.DragStart = (e.ClientX, e.ClientY);
-            State.DragOrigPos = (shape.X, shape.Y);
-            StateHasChanged();
-        }
+        if (e.Button != 0) return;
+
+        State.SelectedShape = shape;
+        State.IsDragging = true;
+        State.DragStart = (e.ClientX, e.ClientY);
+        State.DragOrigPos = (shape.X, shape.Y);
+        StateHasChanged();
     }
 
     private void OnHandleMouseDown(ResizeHandle handle, MouseEventArgs e)
@@ -267,21 +264,27 @@
 
     private async void OnShapeDoubleClick(Shape shape)
     {
-        if (shape is AutoShape autoShape && autoShape.IsTextBox)
+        try
         {
-            var text = autoShape.TextFrame.PlainText ?? string.Empty;
+            if (shape is not AutoShape { IsTextBox: true } autoShape) return;
+
+            var text = autoShape.TextFrame.PlainText;
             var result = await Dialogs.ShowAsync<InlineTextEditDialog>(
                 "Edit Text",
                 new DialogParameters { { nameof(InlineTextEditDialog.CurrentText), text } },
-                Small());
+                Small()
+            );
             var outcome = await result.Result;
-            if (outcome is { Canceled: false, Data: string newText })
-            {
-                autoShape.TextFrame.PlainText = newText;
-                _slideShapes = Slide.Shapes.ToList();
-                RenderSlideSync();
-                State.InvokeDirty();
-            }
+            if (outcome is not { Canceled: false, Data: string newText }) return;
+
+            autoShape.TextFrame.PlainText = newText;
+            _slideShapes = Slide!.Shapes.ToList();
+            RenderSlideSync();
+            State.InvokeDirty();
+        }
+        catch (Exception)
+        {
+            // ignored
         }
     }
 
@@ -306,7 +309,8 @@
 
     private void DeleteSelected()
     {
-        if (SelectedShape is null) return;
+        if (SelectedShape is null || Slide is null) return;
+
         Slide.Shapes.Remove(SelectedShape);
         _slideShapes?.Remove(SelectedShape);
         State.ClearSelection();
@@ -324,23 +328,35 @@
 
     private void AddTextBox()
     {
+        if (Slide is null) return;
+
         var box = Slide.Shapes.AddTextBox(
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(4), Emu.FromInches(1),
-            "Double-click to edit text");
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(4),
+            Emu.FromInches(1),
+            "Double-click to edit text"
+        );
         State.OnShapeAdded(box);
     }
 
     private async void OpenShapeAddDialog()
     {
-        var parameters = new DialogParameters
+        try
         {
-            { nameof(ShapeAddDialog.Kind), ShapeAddKind.AutoShape },
-            { nameof(ShapeAddDialog.Document), Document },
-            { nameof(ShapeAddDialog.Slide), Slide },
-            { nameof(ShapeAddDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
-        };
-        await Dialogs.ShowAsync<ShapeAddDialog>("Insert AutoShape", parameters, Large());
+            var parameters = new DialogParameters
+            {
+                { nameof(ShapeAddDialog.Kind), ShapeAddKind.AutoShape },
+                { nameof(ShapeAddDialog.Document), Document },
+                { nameof(ShapeAddDialog.Slide), Slide },
+                { nameof(ShapeAddDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
+            };
+            await Dialogs.ShowAsync<ShapeAddDialog>("Insert AutoShape", parameters, Large());
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
     }
 
     private void OnShapeInserted(Shape shape)
@@ -351,25 +367,39 @@
 
     private async void OpenPicturePicker()
     {
-        var parameters = new DialogParameters
+        try
         {
-            { nameof(PictureInsertDialog.Document), Document },
-            { nameof(PictureInsertDialog.Slide), Slide },
-            { nameof(PictureInsertDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
-        };
-        await Dialogs.ShowAsync<PictureInsertDialog>("Insert Picture", parameters, Small());
+            var parameters = new DialogParameters
+            {
+                { nameof(PictureInsertDialog.Document), Document },
+                { nameof(PictureInsertDialog.Slide), Slide },
+                { nameof(PictureInsertDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
+            };
+            await Dialogs.ShowAsync<PictureInsertDialog>("Insert Picture", parameters, Small());
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
     }
 
     private async void OpenTableDialog()
     {
-        var parameters = new DialogParameters
+        try
         {
-            { nameof(ShapeAddDialog.Kind), ShapeAddKind.Table },
-            { nameof(ShapeAddDialog.Document), Document },
-            { nameof(ShapeAddDialog.Slide), Slide },
-            { nameof(ShapeAddDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
-        };
-        await Dialogs.ShowAsync<ShapeAddDialog>("Insert Table", parameters, Small());
+            var parameters = new DialogParameters
+            {
+                { nameof(ShapeAddDialog.Kind), ShapeAddKind.Table },
+                { nameof(ShapeAddDialog.Document), Document },
+                { nameof(ShapeAddDialog.Slide), Slide },
+                { nameof(ShapeAddDialog.OnInserted), EventCallback.Factory.Create<Shape>(this, OnShapeInserted) }
+            };
+            await Dialogs.ShowAsync<ShapeAddDialog>("Insert Table", parameters, Small());
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
     }
 
     private void OpenChartDialog() =>
@@ -377,9 +407,15 @@
 
     private void AddConnector()
     {
-        var conn = Slide.Shapes.AddConnector(ConnectorType.Bent,
-            Emu.FromInches(1), Emu.FromInches(1),
-            Emu.FromInches(5), Emu.FromInches(5));
+        if (Slide is null) return;
+
+        var conn = Slide.Shapes.AddConnector(
+            ConnectorType.Bent,
+            Emu.FromInches(1),
+            Emu.FromInches(1),
+            Emu.FromInches(5),
+            Emu.FromInches(5)
+        );
         State.OnShapeAdded(conn);
     }
 
@@ -388,9 +424,19 @@
     private void AddSlide()
     {
         var master = Document.Masters.FirstOrDefault();
-        if (master is null) { Snackbar.Add("No master slides available", Severity.Error); return; }
+        if (master is null)
+        {
+            Snackbar.Add("No master slides available", Severity.Error);
+            return;
+        }
+
         var layout = master.Layouts.FirstOrDefault();
-        if (layout is null) { Snackbar.Add("No layouts in master", Severity.Error); return; }
+        if (layout is null)
+        {
+            Snackbar.Add("No layouts in master", Severity.Error);
+            return;
+        }
+
         var newSlide = Document.Slides.AddBlank(layout);
         newSlide.Name = $"Slide {Document.Slides.Count}";
         State.InvokeDirty();
@@ -399,37 +445,43 @@
 
     private void DeleteSlide()
     {
-        if (Document.Slides.Count <= 1) { Snackbar.Add("Cannot delete the only slide", Severity.Warning); return; }
-        Dialogs.ShowMessageBoxAsync("Delete slide", "Delete this slide?").ContinueWith(t =>
+        if (Document.Slides.Count <= 1)
         {
-            if (t.Result == true)
+            Snackbar.Add("Cannot delete the only slide", Severity.Warning);
+            return;
+        }
+
+        Dialogs.ShowMessageBoxAsync("Delete slide", "Delete this slide?")
+            .ContinueWith(t =>
             {
+                if (t.Result != true) return;
+
                 Document.Slides.RemoveAt(0);
                 State.InvokeDirty();
                 StateHasChanged();
             }
-        });
+            );
     }
 
     // ── Dialogs ──────────────────────────────────────────────────────────
 
-    private async void OpenTransitions()
+    private Task OpenTransitions()
     {
         var parameters = new DialogParameters
         {
             { nameof(TransitionsDialog.Slide), Slide },
             { nameof(TransitionsDialog.OnChanged), EventCallback.Factory.Create(this, State.InvokeDirty) }
         };
-        await Dialogs.ShowAsync<TransitionsDialog>("Slide Transitions", parameters, Small());
+        return Dialogs.ShowAsync<TransitionsDialog>("Slide Transitions", parameters, Small());
     }
 
-    private async void OpenMasters()
+    private Task OpenMasters()
     {
         var parameters = new DialogParameters { { nameof(SlideMasterViewer.Document), Document } };
-        await Dialogs.ShowAsync<SlideMasterViewer>("Master Slides", parameters, Wide());
+        return Dialogs.ShowAsync<SlideMasterViewer>("Master Slides", parameters, Wide());
     }
 
-    private async void OpenSlideProps()
+    private Task OpenSlideProps()
     {
         var parameters = new DialogParameters
         {
@@ -437,7 +489,7 @@
             { nameof(SlidePropertiesDialog.Slide), Slide },
             { nameof(SlidePropertiesDialog.OnChanged), EventCallback.Factory.Create(this, State.InvokeDirty) }
         };
-        await Dialogs.ShowAsync<SlidePropertiesDialog>("Slide Properties", parameters, Small());
+        return Dialogs.ShowAsync<SlidePropertiesDialog>("Slide Properties", parameters, Small());
     }
 
     private static DialogOptions Small() => new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };

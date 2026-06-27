@@ -16,11 +16,11 @@ public class NumberFormatterTests
         InlineData(0.7525, "0.00%", "75.25%")
     ]
     public void Format_Numeric(double value, string code, string expected) =>
-        NumberFormatter.Format(value, code, date1904: false).ShouldBe(expected);
+        NumberFormatter.Format(value, code, false).ShouldBe(expected);
 
     [Fact]
     public void Format_General_UsesInvariant() =>
-        NumberFormatter.Format(3.14, "General", date1904: false).ShouldBe("3.14");
+        NumberFormatter.Format(3.14, "General", false).ShouldBe("3.14");
 
     [
         Theory,
@@ -36,13 +36,11 @@ public class NumberFormatterTests
         NumberFormatter.IsDateTimeFormatCode(code).ShouldBe(expected);
 
     [Fact]
-    public void Format_Date()
-    {
+    public void Format_Date() =>
         // 44927 = 1 Jan 2023 in the 1900 system.
-        NumberFormatter.Format(44927, "yyyy-MM-dd", date1904: false).ShouldBe("2023-01-01");
-    }
+        NumberFormatter.Format(44927, "yyyy-MM-dd", false).ShouldBe("2023-01-01");
 
     [Fact]
     public void Format_NegativeUsesSecondSection() =>
-        NumberFormatter.Format(-5, "0.00;(0.00)", date1904: false).ShouldBe("(5.00)");
+        NumberFormatter.Format(-5, "0.00;(0.00)", false).ShouldBe("(5.00)");
 }

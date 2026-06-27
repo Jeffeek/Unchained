@@ -1,3 +1,4 @@
+using System.Text;
 using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -21,7 +22,7 @@ public sealed class PageContentReaderTests
     private static PdfStream ContentStream(string content) =>
         new(
             new PdfDictionary(new Dictionary<string, PdfObject> { ["Length"] = new PdfInteger(content.Length) }),
-            System.Text.Encoding.Latin1.GetBytes(content)
+            Encoding.Latin1.GetBytes(content)
         );
 
     private static PdfDictionary Page(params (string Key, PdfObject Value)[] entries)
@@ -118,7 +119,7 @@ public sealed class PageContentReaderTests
                     )
                 }
             ),
-            System.Text.Encoding.Latin1.GetBytes("0 0 10 10 re f")
+            Encoding.Latin1.GetBytes("0 0 10 10 re f")
         );
         var resources = new PdfDictionary(
             new Dictionary<string, PdfObject>
@@ -149,7 +150,7 @@ public sealed class PageContentReaderTests
                     ["Filter"] = PdfName.Get("NonexistentFilter")
                 }
             ),
-            System.Text.Encoding.Latin1.GetBytes("garbage")
+            Encoding.Latin1.GetBytes("garbage")
         );
         var resources = new PdfDictionary(
             new Dictionary<string, PdfObject>

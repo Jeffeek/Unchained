@@ -1,7 +1,5 @@
 @using Unchained.Pptx.Animations
 @using Unchained.Pptx.Slides
-@inject IDialogService Dialogs
-@inject ISnackbar Snackbar
 
 <MudDialog Style="min-width:520px;">
     <TitleContent>
@@ -47,11 +45,15 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
 
-    [Parameter] public Slide Slide { get; set; } = null!;
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
 
-    [Parameter] public Action OnChanged { get; set; } = static () => { };
+    [Parameter]
+    public Slide? Slide { get; set; }
+
+    [Parameter]
+    public Action OnChanged { get; set; } = static () => { };
 
     private TransitionType _type = TransitionType.None;
     private TransitionDirection _direction = TransitionDirection.FromTop;
@@ -62,72 +64,76 @@
 
     protected override void OnInitialized()
     {
-        var trans = Slide.Transition;
-        if (trans is not null)
-        {
-            _type = EffectToType(trans.Effect);
-            _direction = EffectToDirection(trans.Effect);
-            _duration = trans.DurationSeconds;
-            _advanceOnTime = trans.AutoAdvanceSeconds is not null;
-            _advanceTime = trans.AutoAdvanceSeconds ?? 5;
-            _advanceOnClick = trans.AdvanceOnClick;
-        }
+        var trans = Slide?.Transition;
+        if (trans is null)
+            return;
+
+        _type = EffectToType(trans.Effect);
+        _direction = EffectToDirection(trans.Effect);
+        _duration = trans.DurationSeconds;
+        _advanceOnTime = trans.AutoAdvanceSeconds is not null;
+        _advanceTime = trans.AutoAdvanceSeconds ?? 5;
+        _advanceOnClick = trans.AdvanceOnClick;
     }
 
     private static TransitionType EffectToType(TransitionEffect effect) =>
-        (effect) switch
+        effect switch
         {
-            TransitionEffect.None          => TransitionType.None,
-            TransitionEffect.Fade          => TransitionType.Fade,
-            TransitionEffect.PushLeft      => TransitionType.Push,
-            TransitionEffect.PushRight     => TransitionType.Push,
-            TransitionEffect.PushUp        => TransitionType.Push,
-            TransitionEffect.PushDown      => TransitionType.Push,
-            TransitionEffect.WipeLeft      => TransitionType.Wipe,
-            TransitionEffect.WipeRight     => TransitionType.Wipe,
-            TransitionEffect.WipeUp        => TransitionType.Wipe,
-            TransitionEffect.WipeDown      => TransitionType.Wipe,
-            _ => TransitionType.None,
+            TransitionEffect.None => TransitionType.None,
+            TransitionEffect.Fade => TransitionType.Fade,
+            TransitionEffect.PushLeft => TransitionType.Push,
+            TransitionEffect.PushRight => TransitionType.Push,
+            TransitionEffect.PushUp => TransitionType.Push,
+            TransitionEffect.PushDown => TransitionType.Push,
+            TransitionEffect.WipeLeft => TransitionType.Wipe,
+            TransitionEffect.WipeRight => TransitionType.Wipe,
+            TransitionEffect.WipeUp => TransitionType.Wipe,
+            TransitionEffect.WipeDown => TransitionType.Wipe,
+            _ => TransitionType.None
         };
 
     private static TransitionDirection EffectToDirection(TransitionEffect effect) =>
-        (effect) switch
+        effect switch
         {
-            TransitionEffect.PushLeft      => TransitionDirection.FromTop,
-            TransitionEffect.PushRight     => TransitionDirection.FromLeft,
-            TransitionEffect.PushUp        => TransitionDirection.FromBottom,
-            TransitionEffect.PushDown      => TransitionDirection.FromTop,
-            TransitionEffect.WipeLeft      => TransitionDirection.FromLeft,
-            TransitionEffect.WipeRight     => TransitionDirection.FromRight,
-            TransitionEffect.WipeUp        => TransitionDirection.FromTop,
-            TransitionEffect.WipeDown      => TransitionDirection.FromBottom,
-            _ => TransitionDirection.FromTop,
+            TransitionEffect.PushLeft => TransitionDirection.FromTop,
+            TransitionEffect.PushRight => TransitionDirection.FromLeft,
+            TransitionEffect.PushUp => TransitionDirection.FromBottom,
+            TransitionEffect.PushDown => TransitionDirection.FromTop,
+            TransitionEffect.WipeLeft => TransitionDirection.FromLeft,
+            TransitionEffect.WipeRight => TransitionDirection.FromRight,
+            TransitionEffect.WipeUp => TransitionDirection.FromTop,
+            TransitionEffect.WipeDown => TransitionDirection.FromBottom,
+            _ => TransitionDirection.FromTop
         };
 
     private TransitionEffect ComputeEffect() =>
         (_type, _direction) switch
         {
-            (TransitionType.None, _)          => TransitionEffect.None,
-            (TransitionType.Fade, _)          => TransitionEffect.Fade,
-            (TransitionType.Push, TransitionDirection.FromTop)    => TransitionEffect.PushDown,
+            (TransitionType.None, _) => TransitionEffect.None,
+            (TransitionType.Fade, _) => TransitionEffect.Fade,
+            (TransitionType.Push, TransitionDirection.FromTop) => TransitionEffect.PushDown,
             (TransitionType.Push, TransitionDirection.FromBottom) => TransitionEffect.PushUp,
-            (TransitionType.Push, TransitionDirection.FromLeft)   => TransitionEffect.PushRight,
-            (TransitionType.Push, TransitionDirection.FromRight)  => TransitionEffect.PushLeft,
-            (TransitionType.Wipe, TransitionDirection.FromTop)    => TransitionEffect.WipeUp,
+            (TransitionType.Push, TransitionDirection.FromLeft) => TransitionEffect.PushRight,
+            (TransitionType.Push, TransitionDirection.FromRight) => TransitionEffect.PushLeft,
+            (TransitionType.Wipe, TransitionDirection.FromTop) => TransitionEffect.WipeUp,
             (TransitionType.Wipe, TransitionDirection.FromBottom) => TransitionEffect.WipeDown,
-            (TransitionType.Wipe, TransitionDirection.FromLeft)   => TransitionEffect.WipeLeft,
-            (TransitionType.Wipe, TransitionDirection.FromRight)  => TransitionEffect.WipeRight,
-            _ => TransitionEffect.None,
+            (TransitionType.Wipe, TransitionDirection.FromLeft) => TransitionEffect.WipeLeft,
+            (TransitionType.Wipe, TransitionDirection.FromRight) => TransitionEffect.WipeRight,
+            _ => TransitionEffect.None
         };
 
-    private async Task Apply()
+    private Task Apply()
     {
+        if (Slide == null)
+            return Task.CompletedTask;
+
         Slide.Transition.Effect = ComputeEffect();
         Slide.Transition.DurationSeconds = _duration;
         Slide.Transition.AutoAdvanceSeconds = _advanceOnTime ? _advanceTime : null;
         Slide.Transition.AdvanceOnClick = _advanceOnClick;
         OnChanged();
         MudDialog.Close();
+        return Task.CompletedTask;
     }
 
     private void Cancel() => MudDialog.Cancel();

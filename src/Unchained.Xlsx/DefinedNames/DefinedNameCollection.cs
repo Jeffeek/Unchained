@@ -8,6 +8,8 @@ public sealed class DefinedNameCollection : IReadOnlyList<DefinedName>
 {
     private readonly List<DefinedName> _names = [];
 
+    internal IReadOnlyList<DefinedName> All => _names;
+
     /// <summary>The number of defined names.</summary>
     public int Count => _names.Count;
 
@@ -25,7 +27,7 @@ public sealed class DefinedNameCollection : IReadOnlyList<DefinedName>
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentException.ThrowIfNullOrEmpty(formula);
 
-        var defined = new DefinedName(name, formula, localSheetId: null) { Comment = comment };
+        var defined = new DefinedName(name, formula, null) { Comment = comment };
         _names.Add(defined);
         return defined;
     }
@@ -54,6 +56,4 @@ public sealed class DefinedNameCollection : IReadOnlyList<DefinedName>
         _names.FirstOrDefault(n => n.LocalSheetId == scope.TabIndex && n.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     internal void AddExisting(DefinedName name) => _names.Add(name);
-
-    internal IReadOnlyList<DefinedName> All => _names;
 }

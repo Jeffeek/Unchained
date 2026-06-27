@@ -37,7 +37,7 @@ public sealed class PresentationParserDirectTests
     [Fact]
     public void ParsePackage_NoPresentationRelationship_Throws()
     {
-        var package = PackageWith("<p:presentation/>", wirePresentationRel: false);
+        var package = PackageWith("<p:presentation/>", false);
         Should.Throw<PptxException>(() => PresentationParser.ParsePackage(package));
     }
 

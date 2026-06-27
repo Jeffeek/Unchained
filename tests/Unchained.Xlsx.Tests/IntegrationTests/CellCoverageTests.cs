@@ -1,4 +1,5 @@
 using Shouldly;
+using Unchained.Xlsx.Core;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Tests.Helpers;
@@ -36,7 +37,7 @@ public class CellCoverageTests
     public void SetValue_String_NullThrows()
     {
         using var document = XlsxFixtures.WithSheets("S");
-        Should.Throw<ArgumentNullException>(() => document.Sheets[0][1, 1].SetValue((string)null!));
+        Should.Throw<ArgumentNullException>(() => document.Sheets[0][1, 1].SetValue(null!));
     }
 
     [Fact]
@@ -198,11 +199,12 @@ public class CellCoverageTests
 }
 
 /// <summary>Branch coverage for <c>SpreadsheetProcessor</c> construction and error paths.</summary>
+// ReSharper disable once ClassCanBeSealed.Global
 public class SpreadsheetProcessorCoverageTests
 {
     [Fact]
     public void Constructor_InvalidConcurrency_Throws() =>
-        Should.Throw<ArgumentOutOfRangeException>(() => new SpreadsheetProcessor(0));
+        Should.Throw<ArgumentOutOfRangeException>(static () => new SpreadsheetProcessor(0));
 
     [Fact]
     public void Constructor_CustomConcurrency_Works()
@@ -232,16 +234,14 @@ public class SpreadsheetProcessorCoverageTests
     public async Task LoadAsync_NullStream_Throws()
     {
         using var processor = new SpreadsheetProcessor();
-        await Should.ThrowAsync<ArgumentNullException>(
-            async () => await processor.LoadAsync((Stream)null!, cancellationToken: TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(async () => await processor.LoadAsync((Stream)null!, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task LoadAsync_EmptyPath_Throws()
     {
         using var processor = new SpreadsheetProcessor();
-        await Should.ThrowAsync<ArgumentException>(
-            async () => await processor.LoadAsync("  ", cancellationToken: TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentException>(async () => await processor.LoadAsync("  ", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -249,8 +249,7 @@ public class SpreadsheetProcessorCoverageTests
     {
         using var processor = new SpreadsheetProcessor();
         using var ms = new MemoryStream();
-        await Should.ThrowAsync<ArgumentNullException>(
-            async () => await processor.SaveAsync(null!, ms, cancellationToken: TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => processor.SaveAsync(null!, ms, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -258,8 +257,7 @@ public class SpreadsheetProcessorCoverageTests
     {
         using var processor = new SpreadsheetProcessor();
         var garbage = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-        await Should.ThrowAsync<Core.SpreadsheetException>(
-            async () => await processor.LoadAsync(garbage, cancellationToken: TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<SpreadsheetException>(async () => await processor.LoadAsync(garbage, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -271,7 +269,9 @@ public class SpreadsheetProcessorCoverageTests
 
         using var processor = new SpreadsheetProcessor();
         using var reloaded = await processor.LoadAsync(
-            (ReadOnlyMemory<byte>)bytes, cancellationToken: TestContext.Current.CancellationToken);
+            (ReadOnlyMemory<byte>)bytes,
+            cancellationToken: TestContext.Current.CancellationToken
+        );
         reloaded.Sheets[0].GetCell(1, 1)!.GetString().ShouldBe("persisted");
     }
 }

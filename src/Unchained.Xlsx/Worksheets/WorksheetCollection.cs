@@ -16,16 +16,16 @@ public sealed class WorksheetCollection : IReadOnlyList<Worksheet>
 
     internal WorksheetCollection(SpreadsheetDocument document) => _document = document;
 
+    /// <summary>Returns the worksheet with the given name.</summary>
+    /// <exception cref="KeyNotFoundException">Thrown when no sheet with that name exists.</exception>
+    public Worksheet this[string name] =>
+        Find(name) ?? throw new KeyNotFoundException($"No worksheet named '{name}' exists.");
+
     /// <summary>The number of worksheets in the workbook.</summary>
     public int Count => _sheets.Count;
 
     /// <summary>Returns the worksheet at the given zero-based tab index.</summary>
     public Worksheet this[int index] => _sheets[index];
-
-    /// <summary>Returns the worksheet with the given name.</summary>
-    /// <exception cref="KeyNotFoundException">Thrown when no sheet with that name exists.</exception>
-    public Worksheet this[string name] =>
-        Find(name) ?? throw new KeyNotFoundException($"No worksheet named '{name}' exists.");
 
     /// <inheritdoc />
     public IEnumerator<Worksheet> GetEnumerator() => _sheets.GetEnumerator();
@@ -63,8 +63,8 @@ public sealed class WorksheetCollection : IReadOnlyList<Worksheet>
             _document,
             name,
             NextSheetId(),
-            relationshipId: string.Empty,
-            partUri: string.Empty,
+            string.Empty,
+            string.Empty,
             SheetState.Visible
         );
         _sheets.Insert(index, sheet);

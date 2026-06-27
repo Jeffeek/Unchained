@@ -1,4 +1,3 @@
-@using Unchained.Ooxml.Charts
 @using Unchained.Xlsx.Drawings
 @using Unchained.Xlsx.Models.Cell
 @using Unchained.Xlsx.Worksheets
@@ -101,7 +100,7 @@
 
         try
         {
-            var anchor = DrawingAnchor.OneCell(cell, 480, 288);
+            var anchor = DrawingAnchor.OneCell(cell);
             Sheet.AddChart(_type, range, anchor, string.IsNullOrWhiteSpace(_title) ? null : _title);
             await OnInserted.InvokeAsync();
             MudDialog.Close();

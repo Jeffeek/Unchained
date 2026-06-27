@@ -1,6 +1,5 @@
 @using Unchained.Ooxml.Charts
 @using Unchained.Ooxml.Drawing
-@using Unchained.Studio.Studio.Xlsx
 @using MudChartType = MudBlazor.ChartType
 @using MudBlazorChartSeries = MudBlazor.ChartSeries<double>
 @using OoxmlChartType = Unchained.Ooxml.Charts.ChartType
@@ -17,15 +16,15 @@
             <MudChart T="double" ChartType="_kind"
                       inputData="@_pieData"
                       inputLabels="@_pieLabels"
-                      chartOptions="_options"
+                      chartOptions="Options"
                       Width="100%" Height="100%"/>
         }
         else
         {
             <MudChart T="double" ChartType="_kind"
-                      chartSeries="_series"
+                      chartSeries="Series"
                       xAxisLabels="_categories"
-                      chartOptions="_options"
+                      chartOptions="Options"
                       Width="100%" Height="100%"/>
         }
     </div>
@@ -46,11 +45,11 @@ else
 
     private bool _supported;
     private MudChartType _kind;
-    private List<MudBlazorChartSeries> _series = [];
+    public List<MudBlazorChartSeries> Series { get; private set; } = [];
     private string[] _categories = [];
     private double[] _pieData = [];
     private string[] _pieLabels = [];
-    private MudBlazor.ChartOptions _options = new();
+    private MudBlazor.ChartOptions Options = new();
 
     // Default series palette (hex without '#') used when a series has no explicit fill.
     private static readonly string[] DefaultPalette =
@@ -69,7 +68,7 @@ else
 
         _kind = MapKind(Model.Type);
         _categories = Model.Data.Categories.ToArray();
-        _options = new MudBlazor.ChartOptions
+        Options = new MudBlazor.ChartOptions
         {
             ChartPalette = BuildPalette()
         };
@@ -82,7 +81,7 @@ else
             return;
         }
 
-        _series = Model.Data.Series
+        Series = Model.Data.Series
             .Select(static s => new MudBlazorChartSeries { Name = s.Name, Data = s.Values.ToArray() })
             .ToList();
     }
@@ -97,19 +96,13 @@ else
         }
 
         // Pie/donut slices are coloured per category, not per series.
-        if (_kind is not (MudChartType.Pie or MudChartType.Donut) || _categories.Length <= 1)
-            return palette;
-        return Enumerable.Range(0, _categories.Length)
+        return _kind is not (MudChartType.Pie or MudChartType.Donut) || _categories.Length <= 1 ? palette : Enumerable.Range(0, _categories.Length)
             .Select(static i => "#" + DefaultPalette[i % DefaultPalette.Length])
             .ToArray();
     }
 
-    private static string? SeriesHex(ChartSeries series)
-    {
-        if (series.Fill is { Type: FillType.Solid, Solid.Color: var color })
-            return XlsxColor.ToHex(color).TrimStart('#');
-        return null;
-    }
+    private static string? SeriesHex(ChartSeries series) =>
+        series.Fill is { Type: FillType.Solid, Solid.Color: var color } ? XlsxColor.ToHex(color).TrimStart('#') : null;
 
     private string FallbackLabel =>
         string.IsNullOrEmpty(Model.Title) ? $"{Model.Type} chart (preview unavailable)" : Model.Title;
@@ -135,4 +128,5 @@ else
             or OoxmlChartType.Radar or OoxmlChartType.RadarWithMarkers or OoxmlChartType.RadarFilled => false,
         _ => true
     };
+
 }

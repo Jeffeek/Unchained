@@ -97,13 +97,17 @@ public class SheetDataWriterCoverageTests
         // Materialise columns/merge/validations without adding anything → writer takes the empty paths.
         using var document = XlsxFixtures.WithSheets("Data");
         var sheet = document.Sheets[0];
-        _ = sheet.Columns;        // materialise, leave empty
-        _ = sheet.MergedCells;    // materialise, leave empty
+        _ = sheet.Columns;     // materialise, leave empty
+        _ = sheet.MergedCells; // materialise, leave empty
         _ = sheet.DataValidations;
-        _ = sheet.Rows;           // cells materialised but empty
+        _ = sheet.Rows; // cells materialised but empty
 
         var bytes = await XlsxFixtures.SaveBytesAsync(document);
+#if NET10_0_OR_GREATER
+        await using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#else
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+#endif
         archive.GetEntry("xl/worksheets/sheet1.xml").ShouldNotBeNull();
     }
 

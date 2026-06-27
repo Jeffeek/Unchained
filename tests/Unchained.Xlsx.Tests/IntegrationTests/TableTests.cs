@@ -1,6 +1,5 @@
 using Shouldly;
 using Unchained.Xlsx.Models.Cell;
-using Unchained.Xlsx.Tables;
 using Unchained.Xlsx.Tests.Helpers;
 using Xunit;
 
@@ -33,7 +32,7 @@ public class TableTests
     public void AddColumn_DuplicateName_Throws()
     {
         using var document = XlsxFixtures.WithSheets("Data");
-        var table = document.Sheets[0].AddTable(CellRange.FromA1("A1:A2"), hasHeaders: false);
+        var table = document.Sheets[0].AddTable(CellRange.FromA1("A1:A2"), false);
         var existing = table.Columns[0].Name;
         Should.Throw<ArgumentException>(() => table.AddColumn(existing));
     }

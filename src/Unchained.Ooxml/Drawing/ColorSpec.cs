@@ -124,7 +124,7 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
     /// <returns>A 32-bit ARGB value (0xAARRGGBB).</returns>
     public uint Resolve(ColorScheme? scheme)
     {
-        uint baseArgb = Type switch
+        var baseArgb = Type switch
         {
             ColorSpecType.Rgb => Rgb,
             ColorSpecType.ThemeSlot => scheme?.Resolve(ThemeSlot) ?? ColorScheme.UnresolvedThemeColorArgb,
@@ -151,9 +151,13 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
 
     /// <inheritdoc />
     public override int GetHashCode() =>
-        HashCode.Combine(Type, Rgb, ThemeSlot,
+        HashCode.Combine(
+            Type,
+            Rgb,
+            ThemeSlot,
             Math.Round(LuminanceModifier / DoubleComparisonTolerance),
-            Math.Round(LuminanceOffset / DoubleComparisonTolerance));
+            Math.Round(LuminanceOffset / DoubleComparisonTolerance)
+        );
 
     /// <summary>Returns <see langword="true" /> when both colour specs are identical.</summary>
     public static bool operator ==(ColorSpec left, ColorSpec right) => left.Equals(right);

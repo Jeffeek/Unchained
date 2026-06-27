@@ -91,18 +91,18 @@ internal static class Program
     private static async Task CreateFromMarkdownAsync()
     {
         const string markdown = """
-            # Unchained.Pdf
+                                # Unchained.Pdf
 
-            A **pure-managed** PDF engine for .NET.
+                                A **pure-managed** PDF engine for .NET.
 
-            ## Features
+                                ## Features
 
-            - Text extraction
-            - Table generation
-            - Merging, stamping, encryption
+                                - Text extraction
+                                - Table generation
+                                - Merging, stamping, encryption
 
-            > No native dependencies for core operations.
-            """;
+                                > No native dependencies for core operations.
+                                """;
 
         var processor = new DocumentProcessor();
         await using var doc = await processor.LoadFromMarkdownAsync(markdown);
@@ -182,8 +182,8 @@ internal static class Program
             doc,
             new TextStamp(
                 "DRAFT",
-                X: 150,
-                Y: 400,
+                150,
+                400,
                 FontSize: 60f,
                 GrayLevel: 0.8f,
                 RotationDegrees: 45f,
@@ -205,14 +205,14 @@ internal static class Program
         await processor.SetMetadataAsync(
             doc,
             new DocumentMetadata(
-                Title: "Annual Report 2026",
-                Author: "Unchained Samples",
-                Subject: "Finance",
-                Keywords: "report finance annual",
-                Creator: null,
-                Producer: null,
-                CreationDate: null,
-                ModificationDate: null
+                "Annual Report 2026",
+                "Unchained Samples",
+                "Finance",
+                "report finance annual",
+                null,
+                null,
+                null,
+                null
             )
         );
 
@@ -233,9 +233,10 @@ internal static class Program
             path,
             new SaveOptions(
                 Encryption: new EncryptionOptions(
-                    UserPassword: "open-sesame",
-                    OwnerPassword: "owner-key",
-                    Algorithm: PdfEncryptionAlgorithm.Aes256
+                    "open-sesame",
+                    "owner-key",
+                    // ReSharper disable once RedundantArgumentDefaultValue
+                    PdfEncryptionAlgorithm.Aes256
                 )
             )
         );
@@ -268,7 +269,8 @@ internal static class Program
 
         using (renderer)
         {
-            var png = await renderer.RenderPageAsync(doc.Pages[1], new RenderOptions(Dpi: 150));
+            // ReSharper disable once RedundantArgumentDefaultValue
+            var png = await renderer.RenderPageAsync(doc.Pages[1], new RenderOptions(150));
             var path = Path.Combine(OutputDir, "page1.png");
             await File.WriteAllBytesAsync(path, png);
             Console.WriteLine($"  Rendered page 1 → {Rel(path)} ({png.Length:N0} bytes)");

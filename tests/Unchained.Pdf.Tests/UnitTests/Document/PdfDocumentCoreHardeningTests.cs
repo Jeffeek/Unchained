@@ -255,7 +255,7 @@ public sealed class PdfDocumentCoreHardeningTests
     public void Repair_TrailerMissingRoot_NoCatalogPresent_Throws()
     {
         // No object is a /Catalog and the trailer has no /Root → Repair cannot locate the catalog.
-        var bytes = BuildNoRootTrailer(includeCatalog: false);
+        var bytes = BuildNoRootTrailer(false);
         Should.Throw<PdfException>(() => PdfDocumentCore.Repair(bytes));
     }
 
@@ -267,10 +267,10 @@ public sealed class PdfDocumentCoreHardeningTests
         // is found. Exercises the "skip unreadable objects" branch of Repair.
         var bodies = new[]
         {
-            "]",                                                      // 1: malformed → scan skips it
-            "<< /Type /Catalog /Pages 3 0 R >>",                     // 2: the real catalog
-            "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",             // 3: pages
-            "<< /Type /Page /Parent 3 0 R /MediaBox [0 0 10 10] >>"  // 4: page
+            "]",                                                    // 1: malformed → scan skips it
+            "<< /Type /Catalog /Pages 3 0 R >>",                    // 2: the real catalog
+            "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",            // 3: pages
+            "<< /Type /Page /Parent 3 0 R /MediaBox [0 0 10 10] >>" // 4: page
         };
         var withRoot = RawPdfBuilder.Build(bodies);
         // Strip "/Root 1 0 R " from the trailer so Repair must scan for the catalog.

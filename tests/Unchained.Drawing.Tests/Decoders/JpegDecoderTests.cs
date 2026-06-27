@@ -92,34 +92,52 @@ public sealed class JpegDecoderTests
     [Fact]
     public void NonMarkerBytesBetweenMarkers_AreSkipped() =>
         // 0x00 after SOI is not a marker prefix → skipped, then EOI ends.
-        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, 0x00, 0x00, JpegConstants.MarkerPrefix, JpegConstants.Eoi], out _, out _).ShouldBeNull();
+        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, 0x00, 0x00, JpegConstants.MarkerPrefix, JpegConstants.Eoi], out _, out _)
+            .ShouldBeNull();
 
     [Fact]
     public void FillBytesBeforeMarker_AreSkipped() =>
         // Extra 0xFF fill bytes before the SOF2 marker exercise the fill-skip loop.
-        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.MarkerPrefix, JpegConstants.MarkerPrefix, JpegConstants.Sof2], out _, out _).ShouldBeNull();
+        JpegDecoder.TryDecodeToRgb(
+                [JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.MarkerPrefix, JpegConstants.MarkerPrefix, JpegConstants.Sof2],
+                out _,
+                out _
+            )
+            .ShouldBeNull();
 
     [Fact]
     public void RestartMarkerOutsideScan_IsSkipped() =>
         // RST0 (no payload) followed by EOI.
-        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.RstFirst, JpegConstants.MarkerPrefix, JpegConstants.Eoi], out _, out _)
+        JpegDecoder.TryDecodeToRgb(
+                [JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.RstFirst, JpegConstants.MarkerPrefix, JpegConstants.Eoi],
+                out _,
+                out _
+            )
             .ShouldBeNull();
 
     [Fact]
     public void StuffedByteMarker_IsSkipped() =>
-        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.ByteStuff, JpegConstants.MarkerPrefix, JpegConstants.Eoi], out _, out _)
+        JpegDecoder.TryDecodeToRgb(
+                [JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.ByteStuff, JpegConstants.MarkerPrefix, JpegConstants.Eoi],
+                out _,
+                out _
+            )
             .ShouldBeNull();
 
     [Fact]
     public void UnknownSegment_IsSkipped() =>
         // APP0 segment with length 2 (no payload), then stream ends → loop exits with null.
-        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.App0Jfif, 0x00, 0x02], out _, out _).ShouldBeNull();
+        JpegDecoder.TryDecodeToRgb([JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.App0Jfif, 0x00, 0x02], out _, out _)
+            .ShouldBeNull();
 
     [Fact]
     public void DefineRestartInterval_IsParsed() =>
         // DRI segment (len 4, interval 16), then EOI.
         JpegDecoder.TryDecodeToRgb(
-                [JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.Dri, 0x00, 0x04, 0x00, 0x10, JpegConstants.MarkerPrefix, JpegConstants.Eoi],
+                [
+                    JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.Dri, 0x00, 0x04, 0x00, 0x10, JpegConstants.MarkerPrefix,
+                    JpegConstants.Eoi
+                ],
                 out _,
                 out _
             )
@@ -172,7 +190,10 @@ public sealed class JpegDecoderTests
     public void StreamEndsAfterSegment_ReturnsNull() =>
         // SOF0 parsed, then stream ends before any SOS → marker loop exits with null.
         JpegDecoder.TryDecodeToRgb(
-                [JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.Sof0, 0x00, 0x0B, 8, 0x00, 0x08, 0x00, 0x08, 0x01, 0x01, 0x11, 0x00],
+                [
+                    JpegConstants.MarkerPrefix, JpegConstants.Soi, JpegConstants.MarkerPrefix, JpegConstants.Sof0, 0x00, 0x0B, 8, 0x00, 0x08, 0x00, 0x08, 0x01, 0x01,
+                    0x11, 0x00
+                ],
                 out _,
                 out _
             )
@@ -183,7 +204,7 @@ public sealed class JpegDecoderTests
     [Fact]
     public void GrayscaleJpeg_DecodesToReplicatedRgb()
     {
-        var jpeg = GrayscaleJpegBuilder.Build(16, 16, gray: 200);
+        var jpeg = GrayscaleJpegBuilder.Build(16, 16, 200);
 
         var rgb = JpegDecoder.TryDecodeToRgb(jpeg, out var w, out var h);
 
@@ -201,7 +222,7 @@ public sealed class JpegDecoderTests
     [Fact]
     public void GrayscaleJpeg_NonBlockAlignedSize_DecodesToExactDimensions()
     {
-        var jpeg = GrayscaleJpegBuilder.Build(10, 6, gray: 100);
+        var jpeg = GrayscaleJpegBuilder.Build(10, 6, 100);
 
         var rgb = JpegDecoder.TryDecodeToRgb(jpeg, out var w, out var h);
 
@@ -214,8 +235,8 @@ public sealed class JpegDecoderTests
     [Fact]
     public void GrayscaleJpeg_BrighterInput_ProducesBrighterOutput()
     {
-        var dark = JpegDecoder.TryDecodeToRgb(GrayscaleJpegBuilder.Build(16, 16, gray: 60), out _, out _);
-        var light = JpegDecoder.TryDecodeToRgb(GrayscaleJpegBuilder.Build(16, 16, gray: 220), out var w, out _);
+        var dark = JpegDecoder.TryDecodeToRgb(GrayscaleJpegBuilder.Build(16, 16, 60), out _, out _);
+        var light = JpegDecoder.TryDecodeToRgb(GrayscaleJpegBuilder.Build(16, 16, 220), out var w, out _);
         dark.ShouldNotBeNull();
         light.ShouldNotBeNull();
 
@@ -226,7 +247,7 @@ public sealed class JpegDecoderTests
     public void GrayscaleJpeg_WithRestartInterval_DecodesAcrossRestarts()
     {
         // 32×32 = 16 MCUs; restart every 2 MCUs forces several RSTn markers mid-scan.
-        var jpeg = GrayscaleJpegBuilder.Build(32, 32, gray: 150, restartInterval: 2);
+        var jpeg = GrayscaleJpegBuilder.Build(32, 32, 150, 2);
 
         var rgb = JpegDecoder.TryDecodeToRgb(jpeg, out var w, out var h);
 

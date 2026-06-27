@@ -1,4 +1,3 @@
-using Unchained.Xlsx;
 using Unchained.Xlsx.Engine;
 
 namespace Unchained.Xlsx.Tests.Helpers;

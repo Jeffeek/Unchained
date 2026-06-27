@@ -2,6 +2,7 @@ using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Security;
 using Unchained.Xlsx.Abstractions;
 using Unchained.Xlsx.Core;
+using Unchained.Xlsx.Import;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Parsing;
 using Unchained.Xlsx.Worksheets;
@@ -137,9 +138,6 @@ public sealed class SpreadsheetProcessor : ISpreadsheetProcessor
         return ImportCsv(ms.ToArray(), options);
     }
 
-    private SpreadsheetDocument ImportCsv(byte[] data, CsvLoadOptions? options) =>
-        Import.CsvImporter.Import(data, options ?? CsvLoadOptions.Default, this);
-
     // ── Save ───────────────────────────────────────────────────────────────────
 
     /// <summary>Saves the workbook to a file.</summary>
@@ -169,6 +167,9 @@ public sealed class SpreadsheetProcessor : ISpreadsheetProcessor
         var bytes = await SerializeAsync(document, options, cancellationToken).ConfigureAwait(false);
         await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
     }
+
+    private SpreadsheetDocument ImportCsv(byte[] data, CsvLoadOptions? options) =>
+        CsvImporter.Import(data, options ?? CsvLoadOptions.Default, this);
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 

@@ -3,6 +3,8 @@ using Unchained.Ooxml;
 using Unchained.Ooxml.Engine;
 using Unchained.Ooxml.Media;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Properties;
+using Unchained.Ooxml.Security;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Core;
@@ -11,7 +13,6 @@ using Unchained.Pptx.Engine;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Security;
-using Unchained.Ooxml.Security;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
 
@@ -249,7 +250,9 @@ internal sealed class PresentationParser
         // Digital signatures — a package-level origin relationship plus the signature parts it
         // links to. Captured verbatim; any edit to the deck invalidates them in PowerPoint, but a
         // pure round-trip keeps the bytes intact.
-        foreach (var originRel in package.PackageRelationships.Where(static originRel => originRel.RelationshipType.Equals(PmlNames.RelTypeDigitalSignatureOrigin, StringComparison.Ordinal)))
+        foreach (var originRel in package.PackageRelationships.Where(static originRel =>
+                     originRel.RelationshipType.Equals(PmlNames.RelTypeDigitalSignatureOrigin, StringComparison.Ordinal)
+                 ))
         {
             var originUri = "/" + originRel.TargetUri.TrimStart('/');
             var originPart = package.TryGetPart(originUri);
@@ -496,7 +499,7 @@ internal sealed class PresentationParser
         return props;
     }
 
-    private static void ParseCoreProperties(byte[] data, DocumentProperties props)
+    private static void ParseCoreProperties(byte[] data, OoXmlCoreProperties props)
     {
         try
         {
