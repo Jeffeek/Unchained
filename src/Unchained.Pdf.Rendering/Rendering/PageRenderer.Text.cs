@@ -41,18 +41,6 @@ internal sealed partial class PageRenderer
         return mag > RenderingConstants.Epsilon ? mag : 1.0;
     }
 
-    // Horizontal scale magnitude of the text matrix combined with the CTM's linear part.
-    // Text advances are computed in glyph space and must be scaled by this to land in the
-    // pre-CTM position space that UToPixel consumes. Returns 1 for unit-scale matrices.
-    private double TextMatrixHorizontalScale()
-    {
-        var ta = _gs.TextMatrix[0];
-        var tc = _gs.TextMatrix[2];
-        // Horizontal text-space basis (1,0) through the text matrix linear part.
-        var mag = Vector2D.Magnitude(ta, tc);
-        return mag > RenderingConstants.Epsilon ? mag : 1.0;
-    }
-
     private void ShowString(ReadOnlySpan<byte> bytes)
     {
         // Text rendering mode 3 = invisible; do not draw.
@@ -208,7 +196,11 @@ internal sealed partial class PageRenderer
 
             var advance = ((glyphPositions[i].XAdvance / (double)TextShapingConstants.HarfBuzzFixed / scale) + _gs.CharSpace)
                           * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
-            _gs.TextMatrix[4] += advance;
+            // Transform advance through CTM to account for page/local rotation.
+            var advX = advance * _gs.Ctm[0];
+            var advY = advance * _gs.Ctm[2];
+            _gs.TextMatrix[4] += advX;
+            _gs.TextMatrix[5] += advY;
         }
     }
 
@@ -262,7 +254,11 @@ internal sealed partial class PageRenderer
 
             var advance = (advancePts + _gs.CharSpace + (code == 32 ? _gs.WordSpace : 0))
                           * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
-            _gs.TextMatrix[4] += advance;
+            // Transform advance through CTM to account for page/local rotation.
+            var advX = advance * _gs.Ctm[0];
+            var advY = advance * _gs.Ctm[2];
+            _gs.TextMatrix[4] += advX;
+            _gs.TextMatrix[5] += advY;
         }
     }
 
@@ -311,14 +307,16 @@ internal sealed partial class PageRenderer
                     ClipGlyphOutline(ftFace, (int)px, (int)py);
             }
 
-            // Advance from /W (glyph-space units, 1000 per em) → text-space, then scaled
-            // by the text-matrix horizontal magnitude into the pen-position space that
-            // UToPixel consumes (handles producers that carry size in the matrix).
+            // Advance from /W (glyph-space units, 1000 per em) → text-space.
+            // CTM rotation is applied below via the 2D advance.
             var wGlyph = info.Widths.TryGetValue(cid, out var w) ? w : info.DefaultWidth;
-            var hScale = TextMatrixHorizontalScale();
-            var advance = ((wGlyph / RenderingConstants.CidEmUnits * _gs.FontSize) + _gs.CharSpace) * hScale
-                                                                                                    * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
-            _gs.TextMatrix[4] += advance;
+            var advance = ((wGlyph / RenderingConstants.CidEmUnits * _gs.FontSize) + _gs.CharSpace)
+                          * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
+            // Transform advance through CTM to account for page/local rotation.
+            var advX = advance * _gs.Ctm[0];
+            var advY = advance * _gs.Ctm[2];
+            _gs.TextMatrix[4] += advX;
+            _gs.TextMatrix[5] += advY;
         }
     }
 
@@ -332,13 +330,22 @@ internal sealed partial class PageRenderer
                     ShowString(s.GetBinaryBytes().Span);
                 break;
                 case PdfInteger n:
-                    _gs.TextMatrix[4] -= n.Value / RenderingConstants.CidEmUnits * _gs.FontSize *
-                                         (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
-                break;
+                {
+                    var kern = n.Value / RenderingConstants.CidEmUnits * _gs.FontSize *
+                               (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
+                    // Kerning is in text-space; transform through CTM for rotation.
+                    _gs.TextMatrix[4] -= kern * _gs.Ctm[0];
+                    _gs.TextMatrix[5] -= kern * _gs.Ctm[2];
+                    break;
+                }
                 case PdfReal r:
-                    _gs.TextMatrix[4] -= r.Value / RenderingConstants.CidEmUnits * _gs.FontSize *
-                                         (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
-                break;
+                {
+                    var kern = r.Value / RenderingConstants.CidEmUnits * _gs.FontSize *
+                               (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
+                    _gs.TextMatrix[4] -= kern * _gs.Ctm[0];
+                    _gs.TextMatrix[5] -= kern * _gs.Ctm[2];
+                    break;
+                }
             }
         }
     }
@@ -419,7 +426,11 @@ internal sealed partial class PageRenderer
         var fm = t3.FontMatrix;
         var advance = ((wGlyph * fm[0] * _gs.FontSize) + _gs.CharSpace)
                       * (_gs.HorizontalScale / RenderingConstants.HorizontalScalePercent);
-        _gs.TextMatrix[4] += advance;
+        // Transform advance through CTM to account for page/local rotation.
+        var advX = advance * _gs.Ctm[0];
+        var advY = advance * _gs.Ctm[2];
+        _gs.TextMatrix[4] += advX;
+        _gs.TextMatrix[5] += advY;
     }
 
     // Adds the glyph outline as a clip path contribution (text rendering modes 4–7).

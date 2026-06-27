@@ -9,8 +9,8 @@ namespace Unchained.Drawing;
 internal sealed class RasterBuffer(int width, int height)
 {
     // Glyph coverage adjustment. FreeType emits linear coverage; reference rasterizers
-    // (incl. Pdfium) lighten partial-coverage edge pixels, so a purely linear blit makes
-    // Unchained text edges too heavy/dark. Applying gamma 2.0 to the coverage softens
+    // (incl. Pdfium) darken partial-coverage edge pixels, so a purely linear blit makes
+    // Unchained text edges too light. Applying gamma 2.0 to the coverage darkens
     // edges to match; 2.0 minimises the true mean-absolute pixel error against Pdfium
     // (higher values keep gaming a thresholded metric while actually thinning text).
     // Full coverage (255) and zero coverage (0) are unchanged.
