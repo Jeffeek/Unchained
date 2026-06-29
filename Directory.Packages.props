@@ -32,7 +32,7 @@
   <ItemGroup Label="Unchained.Pdf.Rendering">
     <PackageVersion Include="HarfBuzzSharp" Version="8.3.1.5" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.5" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.5" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.0" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.5" />
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
