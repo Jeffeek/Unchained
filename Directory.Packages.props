@@ -9,7 +9,7 @@
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
-    <PackageVersion Include="System.IO.Packaging" Version="10.0.2" />
+    <PackageVersion Include="System.IO.Packaging" Version="10.0.9" />
   </ItemGroup>
   <!-- ── Unchained.Pdf — image / document processing ──────────────────────── -->
   <ItemGroup Label="Unchained.Pdf">
@@ -54,7 +54,7 @@
   </ItemGroup>
   <!-- ── Test project ───────────────────────────────────────────────────────── -->
   <ItemGroup Label="Tests">
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
@@ -65,7 +65,7 @@
   <!-- ── Studio tests — Blazor component (bUnit) + browser E2E (Playwright) ──── -->
   <ItemGroup Label="StudioTests">
     <PackageVersion Include="bunit" Version="2.7.2" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.17" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
   </ItemGroup>
 </Project>
