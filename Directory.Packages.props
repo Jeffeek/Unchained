@@ -9,7 +9,7 @@
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
-    <PackageVersion Include="System.IO.Packaging" Version="10.0.2" />
+    <PackageVersion Include="System.IO.Packaging" Version="10.0.9" />
   </ItemGroup>
   <!-- ── Unchained.Pdf — image / document processing ──────────────────────── -->
   <ItemGroup Label="Unchained.Pdf">
@@ -41,8 +41,8 @@
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="151.0.7891" />
-    <PackageVersion Include="bblanchon.PDFium.Linux" Version="151.0.7891" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="151.0.7891" />
+    <PackageVersion Include="bblanchon.PDFium.Linux" Version="151.0.7920" />
+    <PackageVersion Include="bblanchon.PDFium.macOS" Version="151.0.7920" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
   <ItemGroup Label="PerformanceTests">
@@ -50,7 +50,7 @@
     <PackageVersion Include="BenchmarkDotNet.Annotations" Version="0.15.8" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
     <!-- MIT-licensed PDF libraries used as benchmark baselines -->
-    <PackageVersion Include="PdfPig" Version="0.1.14" />
+    <PackageVersion Include="PdfPig" Version="0.1.15" />
   </ItemGroup>
   <!-- ── Test project ───────────────────────────────────────────────────────── -->
   <ItemGroup Label="Tests">
@@ -65,7 +65,7 @@
   <!-- ── Studio tests — Blazor component (bUnit) + browser E2E (Playwright) ──── -->
   <ItemGroup Label="StudioTests">
     <PackageVersion Include="bunit" Version="2.7.2" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.17" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
   </ItemGroup>
 </Project>
