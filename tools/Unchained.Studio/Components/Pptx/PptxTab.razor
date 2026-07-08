@@ -1,11 +1,14 @@
 @page "/pptx"
+@inject SessionStateService Session
+@inject FileExportService Exporter
+@inject IUserFeedback Feedback
+@inject IStudioDialogs Dialogs
 @using System.Text
 @using Unchained.Pptx.Rendering.Engine
 @using Unchained.Pptx.Rendering.Models
-@inject SessionStateService Session
-@inject FileExportService Exporter
-@inject IDialogService Dialogs
-@inject ISnackbar Snackbar
+@using Unchained.Pptx.Slides
+@using Unchained.Studio.Infrastructure
+@implements IDisposable
 
 <div class="studio-tab">
     @if (Session.Pptx is null)
@@ -13,10 +16,9 @@
         <div class="drop-zone-page">
             <FileDropZone Title="Drop a PPTX here"
                           Subtitle="Supports PowerPoint .pptx (OOXML). Legacy binary .ppt is not supported."
-                          Icon="@Icons.Material.Outlined.Slideshow"
                           Accept=".pptx,.ppt"
                           OnFileLoaded="LoadPptx"
-                          OnError="ShowError"/>
+                          OnError="Feedback.Error"/>
         </div>
     }
     else
@@ -33,19 +35,41 @@
 
             <!-- CENTRE: slide playboard -->
             <div class="panel-preview">
+                @{
+                    var slideCount = state.Document.Slides.Count;
+                    var currentSlide = Math.Clamp(state.CurrentSlide, 1, Math.Max(1, slideCount));
+                }
+
+                <!-- Slide management bar -->
+                <div class="pptx-slidebar">
+                    <MudIconButton Icon="@Icons.Material.Outlined.ChevronLeft" Size="Size.Small" title="Previous slide"
+                                   Disabled="@(currentSlide <= 1)"
+                                   OnClick="() => GoToSlide(currentSlide - 1)"/>
+                    <span class="pptx-slidebar-label">Slide @currentSlide / @slideCount</span>
+                    <MudIconButton Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" title="Next slide"
+                                   Disabled="@(currentSlide >= slideCount)"
+                                   OnClick="() => GoToSlide(currentSlide + 1)"/>
+                    <span class="pptx-slidebar-sep"></span>
+                    <MudIconButton Icon="@Icons.Material.Outlined.AddBox" Size="Size.Small" Color="Color.Primary" title="Add slide"
+                                   OnClick="AddSlide"/>
+                    <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error" title="Delete slide"
+                                   Disabled="@(slideCount <= 1)"
+                                   OnClick="DeleteCurrentSlide"/>
+                </div>
+
                 @if (_showInfo)
                 {
                     <div class="pptx-info-strip">
-                        <PptxInfoPanel Document="state.Document"/>
+                        <PptxInfoPanel Document="state.Document" FontWarnings="[.._fontWarnings]"/>
                     </div>
                 }
-                @if (state.Document.Slides.Count > 0)
+                @if (slideCount > 0)
                 {
-                    <SlidePlayboard @key="state.Document.GetHashCode() + state.CurrentSlide"
-                                    Document="state.Document"
-                                    Slide="state.Document.Slides[state.CurrentSlide - 1]"
+                    <SlidePlayboard Document="state.Document"
+                                    Slide="state.Document.Slides[currentSlide - 1]"
                                     State="state.PlayboardState"
-                                    OnDirty="OnPlayboardDirty"/>
+                                    OnDirty="OnPlayboardDirty"
+                                    OnFontWarnings="OnFontWarnings"/>
                 }
             </div>
 
@@ -150,6 +174,18 @@
     private bool _showTextPanel;
     private string? _extractedText;
     private bool _showInfo;
+    private readonly HashSet<string> _fontWarnings = new(StringComparer.OrdinalIgnoreCase);
+
+    private BusyScope _busyScope = null!;
+
+    protected override void OnInitialized() =>
+        _busyScope = new BusyScope(msg =>
+            {
+                _busyMessage = msg ?? string.Empty;
+                _busy = msg is not null;
+                StateHasChanged();
+            }
+        );
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -159,8 +195,20 @@
             Session.Pptx.Refreshed += OnSessionRefreshed;
     }
 
-    private void OnSessionRefreshed() =>
+    private void OnSessionRefreshed()
+    {
+        // Keep the active slide index valid after add/delete so the playboard never indexes past the end.
+        if (Session.Pptx is { } state)
+            state.CurrentSlide = Math.Clamp(state.CurrentSlide, 1, Math.Max(1, state.Document.Slides.Count));
+
         InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (Session.Pptx is not null)
+            Session.Pptx.Refreshed -= OnSessionRefreshed;
+    }
 
     private async Task LoadPptx((byte[] Bytes, string FileName) file)
     {
@@ -168,13 +216,14 @@
         if (file.FileName.EndsWith(".ppt", StringComparison.OrdinalIgnoreCase)
             && !file.FileName.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase))
         {
-            ShowError("Legacy binary .ppt is not supported. Please convert it to .pptx and try again.");
+            Feedback.Error("Legacy binary .ppt is not supported. Please convert it to .pptx and try again.");
             return;
         }
 
-        SetBusy("Loading PPTX…");
         try
         {
+            using var _ = _busyScope.Begin("Loading PPTX…");
+
             if (Session.Pptx is not null)
                 Session.Pptx.Refreshed -= OnSessionRefreshed;
 
@@ -183,56 +232,79 @@
             if (Session.Pptx is not null)
                 Session.Pptx.Refreshed += OnSessionRefreshed;
 
-            ShowInfo($"Loaded {file.FileName}");
+            Feedback.Info($"Loaded {file.FileName}");
         }
         catch (Exception ex)
         {
-            ShowError($"Failed to load PPTX: {ex.Message}");
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error($"Failed to load PPTX: {ex.Message}");
         }
     }
 
-    private void OnNodeSelected(TreeNode? node) =>
-        _selectedProperties = node is null
-            ? null
-            : PptxPropertyAdapter.Build(node);
+    private void OnNodeSelected(TreeNode? node)
+    {
+        _selectedProperties = node is null ? null : PptxPropertyAdapter.Build(node);
 
-    private async Task RefreshTree()
+        // Selecting a slide in the tree navigates the playboard to that slide.
+        if (node is not { NodeType: TreeNodeType.Slide, Payload: Slide slide } || Session.Pptx is null)
+            return;
+
+        var slides = Session.Pptx.Document.Slides;
+        for (var i = 0; i < slides.Count; i++)
+        {
+            if (!ReferenceEquals(slides[i], slide)) continue;
+
+            NavigateToSlide(i + 1);
+            break;
+        }
+    }
+
+    // Rebuild the tree from the live model only — no serialize+reload round-trip, which would
+    // push the model through the lossy SDK writer and degrade the document.
+    private void RefreshTree() => Session.Pptx?.RebuildTree();
+
+    // Unedited download returns the original bytes verbatim — a perfect round-trip with zero
+    // fidelity loss. Only when the model has actually been edited do we re-serialize (SDK in-place
+    // save, which preserves unmodelled parts but re-emits modelled content).
+    private async Task DownloadDocument()
     {
         if (Session.Pptx is null)
             return;
 
-        SetBusy("Refreshing…");
         try
         {
-            await Session.Pptx.RefreshAsync();
-        }
-        finally
-        {
-            ClearBusy();
-        }
-    }
+            byte[] bytes;
+            if (Session.Pptx.IsDirty)
+            {
+                using var ms = new MemoryStream();
+                await Session.Pptx.Processor.SaveAsync(Session.Pptx.Document, ms, PptxSessionState.SaveWithEngine);
+                bytes = ms.ToArray();
+            }
+            else
+            {
+                bytes = Session.Pptx.CurrentBytes;
+            }
 
-    private Task DownloadDocument() =>
-        Session.Pptx is null
-            ? Task.CompletedTask
-            : Exporter.TriggerDownloadAsync(
-                Session.Pptx.CurrentBytes,
+            await Exporter.TriggerDownloadAsync(
+                bytes,
                 Session.Pptx.FileName,
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation"
             );
+        }
+        catch (Exception ex)
+        {
+            Feedback.Error($"Download failed: {ex.Message}");
+        }
+    }
 
     private void ExtractText()
     {
         if (Session.Pptx is null)
             return;
 
-        SetBusy("Extracting text…");
         try
         {
+            using var _ = _busyScope.Begin("Extracting text…");
+
             var sb = new StringBuilder();
             var slides = Session.Pptx.Document.Slides;
             for (var i = 0; i < slides.Count; i++)
@@ -245,9 +317,9 @@
             _extractedText = sb.ToString();
             _showTextPanel = true;
         }
-        finally
+        catch (Exception ex)
         {
-            ClearBusy();
+            Feedback.Error($"Text extraction failed: {ex.Message}");
         }
     }
 
@@ -266,7 +338,7 @@
         }
         catch (Exception ex)
         {
-            ShowError($"Download failed: {ex.Message}");
+            Feedback.Error($"Download failed: {ex.Message}");
         }
     }
 
@@ -275,9 +347,10 @@
         if (Session.Pptx is null)
             return;
 
-        SetBusy("Rendering slide…");
         try
         {
+            using var _ = _busyScope.Begin("Rendering slide…");
+
             var state = Session.Pptx;
             var index = Math.Clamp(state.CurrentSlide, 1, state.Document.Slides.Count) - 1;
             var slide = state.Document.Slides[index];
@@ -296,98 +369,63 @@
         }
         catch (DllNotFoundException)
         {
-            ShowError("FreeType native library not found. Run scripts/FetchNatives/fetch-natives to enable rendering.");
+            Feedback.Error("FreeType native library not found. Run scripts/FetchNatives/fetch-natives to enable rendering.");
         }
         catch (Exception ex)
         {
-            ShowError($"Slide export failed: {ex.Message}");
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error($"Slide export failed: {ex.Message}");
         }
     }
 
-    private async Task OpenExportZipDialog()
-    {
-        if (Session.Pptx is null)
-            return;
+    private Task OpenExportZipDialog() =>
+        Session.Pptx is null
+            ? Task.CompletedTask
+            : Dialogs.ShowVoidAsync<SlideExportDialog>(
+                "Export Slides",
+                p =>
+                {
+                    p[nameof(SlideExportDialog.Document)] = Session.Pptx.Document;
+                    p[nameof(SlideExportDialog.FileName)] = Session.Pptx.FileName;
+                    p[nameof(SlideExportDialog.CurrentSlide)] = Session.Pptx.CurrentSlide;
+                }
+            );
 
-        var parameters = new DialogParameters
-        {
-            { nameof(SlideExportDialog.Document), Session.Pptx.Document },
-            { nameof(SlideExportDialog.FileName), Session.Pptx.FileName },
-            { nameof(SlideExportDialog.CurrentSlide), Session.Pptx.CurrentSlide }
-        };
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-        await Dialogs.ShowAsync<SlideExportDialog>("Export Slides", parameters, options);
-    }
+    private Task OpenExportDialog() =>
+        Session.Pptx is null
+            ? Task.CompletedTask
+            : Dialogs.ShowVoidAsync<PptxExportDialog>(
+              "Export Presentation",
+              p =>
+              {
+                  p[nameof(PptxExportDialog.Processor)] = Session.Pptx!.Processor;
+                  p[nameof(PptxExportDialog.Document)] = Session.Pptx.Document;
+                  p[nameof(PptxExportDialog.FileName)] = Session.Pptx.FileName;
+              }
+            );
 
-    private async Task OpenExportDialog()
-    {
-        if (Session.Pptx is null)
-            return;
+    private Task OpenFindReplaceDialog() =>
+        Session.Pptx is null
+            ? Task.CompletedTask
+            : Dialogs.ShowVoidAsync<FindReplaceDialog>(
+                "Find & Replace",
+                p =>
+                {
+                    p[nameof(FindReplaceDialog.Document)] = Session.Pptx.Document;
+                    p[nameof(FindReplaceDialog.OnReplaced)] = EventCallback.Factory.Create(this, RefreshTree);
+                }
+            );
 
-        var parameters = new DialogParameters
-        {
-            { nameof(PptxExportDialog.Processor), Session.Pptx.Processor },
-            { nameof(PptxExportDialog.Document), Session.Pptx.Document },
-            { nameof(PptxExportDialog.FileName), Session.Pptx.FileName }
-        };
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-        await Dialogs.ShowAsync<PptxExportDialog>("Export Presentation", parameters, options);
-    }
-
-    private async Task OpenFindReplaceDialog()
-    {
-        if (Session.Pptx is null)
-            return;
-
-        var parameters = new DialogParameters
-        {
-            { nameof(FindReplaceDialog.Document), Session.Pptx.Document },
-            { nameof(FindReplaceDialog.OnReplaced), EventCallback.Factory.Create(this, RefreshTree) }
-        };
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-        await Dialogs.ShowAsync<FindReplaceDialog>("Find & Replace", parameters, options);
-    }
-
-    private async Task OpenHyperlinkDialog()
-    {
-        if (Session.Pptx is null)
-            return;
-
-        var parameters = new DialogParameters
-        {
-            { nameof(HyperlinkBrowserDialog.Document), Session.Pptx.Document },
-            {
-                nameof(HyperlinkBrowserDialog.OnNavigate),
-                EventCallback.Factory.Create<int>(this, NavigateToSlide)
-            }
-        };
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true
-        };
-        await Dialogs.ShowAsync<HyperlinkBrowserDialog>("Hyperlinks", parameters, options);
-    }
+    private Task OpenHyperlinkDialog() =>
+        Session.Pptx is null
+            ? Task.CompletedTask
+            : Dialogs.ShowVoidAsync<HyperlinkBrowserDialog>(
+                "Hyperlinks",
+                p =>
+                {
+                    p[nameof(HyperlinkBrowserDialog.Document)] = Session.Pptx.Document;
+                    p[nameof(HyperlinkBrowserDialog.OnNavigate)] = EventCallback.Factory.Create<int>(this, NavigateToSlide);
+                }
+            );
 
     private void NavigateToSlide(int slideNumber)
     {
@@ -397,6 +435,48 @@
         Session.Pptx.CurrentSlide = Math.Clamp(slideNumber, 1, Session.Pptx.Document.Slides.Count);
         StateHasChanged();
     }
+
+    private void GoToSlide(int slideNumber) => NavigateToSlide(slideNumber);
+
+    private void AddSlide()
+    {
+        if (Session.Pptx is not { } state)
+            return;
+
+        var layout = state.Document.Masters.FirstOrDefault()?.Layouts.FirstOrDefault();
+        if (layout is null)
+        {
+            Feedback.Error("No slide layout available to base a new slide on.");
+            return;
+        }
+
+        var slide = state.Document.Slides.AddBlank(layout);
+        slide.Name = $"Slide {state.Document.Slides.Count}";
+        state.CurrentSlide = state.Document.Slides.Count; // jump to the new slide
+        state.MarkDirty();
+    }
+
+    private async Task DeleteCurrentSlide()
+    {
+        if (Session.Pptx is not { } state)
+            return;
+
+        if (state.Document.Slides.Count <= 1)
+        {
+            Feedback.Error("A presentation must keep at least one slide.");
+            return;
+        }
+
+        var confirmed = await Dialogs.ShowMessageBoxAsync("Delete slide", "Delete this slide? This cannot be undone.", "Delete", "Cancel");
+        if (confirmed != true)
+            return;
+
+        var index = Math.Clamp(state.CurrentSlide, 1, state.Document.Slides.Count) - 1;
+        state.Document.Slides.RemoveAt(index);
+        state.CurrentSlide = Math.Clamp(state.CurrentSlide, 1, state.Document.Slides.Count);
+        state.MarkDirty();
+    }
+
 
     private async Task CloseDocument()
     {
@@ -408,37 +488,18 @@
         _extractedText = null;
     }
 
-    private void SetBusy(string message)
+    // In-place edit: rebuild the tree and flag dirty WITHOUT reloading the document, so the
+    // selected shape (and the rest of the model) keep their identity across edits. The download
+    // serializes the live document, so changes are still saved.
+    private Task OnPlayboardDirty()
     {
-        _busy = true;
-        _busyMessage = message;
-        StateHasChanged();
+        Session.Pptx?.MarkDirty();
+        return Task.CompletedTask;
     }
 
-    private void ClearBusy()
+    private void OnFontWarnings(IReadOnlyList<string> warnings)
     {
-        _busy = false;
-        StateHasChanged();
+        foreach (var w in warnings)
+            _fontWarnings.Add(w);
     }
-
-    private void ShowInfo(string message) =>
-        Snackbar.Add(message, Severity.Info);
-
-    private void ShowError(string message) =>
-        Snackbar.Add(message, Severity.Error);
-
-    private async Task OnPlayboardDirty()
-    {
-        if (Session.Pptx is null) return;
-
-        try
-        {
-            await Session.Pptx.RefreshAsync();
-        }
-        catch
-        {
-            // Refresh failure is non-fatal; tree will still update via Refreshed event.
-        }
-    }
-
 }

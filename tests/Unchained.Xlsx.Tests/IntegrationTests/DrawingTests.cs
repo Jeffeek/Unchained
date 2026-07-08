@@ -97,6 +97,72 @@ public class DrawingTests
     }
 
     [Fact]
+    public void AddChart_SingleNumericColumn_PlotsAllValuesAsOneSeries()
+    {
+        using var document = XlsxFixtures.WithSheets("Data");
+        var sheet = document.Sheets[0];
+        for (var r = 1; r <= 6; r++)
+            sheet.SetValue(r, 1, r);
+
+        var chart = sheet.AddChart(
+                ChartType.Line,
+                CellRange.FromA1("A1:A6"),
+                DrawingAnchor.OneCell(CellReference.FromA1("D1"))
+            )
+            .Chart;
+
+        // No category column → no categories; the single column is plotted directly.
+        chart.Data.Categories.ShouldBeEmpty();
+        chart.Data.Series.Count.ShouldBe(1);
+        chart.Data.Series[0].Name.ShouldBe("A");
+        chart.Data.Series[0].Values.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    [Fact]
+    public void AddChart_SingleColumnWithHeader_UsesHeaderAsSeriesName()
+    {
+        using var document = XlsxFixtures.WithSheets("Data");
+        var sheet = document.Sheets[0];
+        sheet.SetValue(1, 1, "Revenue");
+        sheet.SetValue(2, 1, 10.0);
+        sheet.SetValue(3, 1, 20.0);
+
+        var chart = sheet.AddChart(
+                ChartType.ColumnClustered,
+                CellRange.FromA1("A1:A3"),
+                DrawingAnchor.OneCell(CellReference.FromA1("D1"))
+            )
+            .Chart;
+
+        chart.Data.Series.Count.ShouldBe(1);
+        chart.Data.Series[0].Name.ShouldBe("Revenue");
+        chart.Data.Series[0].Values.ShouldBe([10.0, 20.0]);
+    }
+
+    [Fact]
+    public void AddChart_TwoColumnsNoHeader_PlotsEveryRow()
+    {
+        using var document = XlsxFixtures.WithSheets("Data");
+        var sheet = document.Sheets[0];
+        sheet.SetValue(1, 1, "Jan");
+        sheet.SetValue(1, 2, 100.0);
+        sheet.SetValue(2, 1, "Feb");
+        sheet.SetValue(2, 2, 200.0);
+
+        var chart = sheet.AddChart(
+                ChartType.ColumnClustered,
+                CellRange.FromA1("A1:B2"),
+                DrawingAnchor.OneCell(CellReference.FromA1("D1"))
+            )
+            .Chart;
+
+        // First series cell (B1) is numeric → treated as data, not a header.
+        chart.Data.Categories.ShouldBe(["Jan", "Feb"]);
+        chart.Data.Series.Count.ShouldBe(1);
+        chart.Data.Series[0].Values.ShouldBe([100.0, 200.0]);
+    }
+
+    [Fact]
     public async Task ImageAndChart_CoexistOnSameSheet()
     {
         using var document = XlsxFixtures.WithSheets("Data");

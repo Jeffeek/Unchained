@@ -20,14 +20,9 @@ public sealed class BookmarkEditor : IBookmarkEditor
 
     private static void SetBookmarks(IPdfDocument document, IReadOnlyList<Bookmark> bookmarks)
     {
-        var adapter = document as PdfDocumentAdapter
-                      ?? throw new ArgumentException(
-                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document)
-                      );
+        var adapter = MutationHelper.Cast(nameof(document), document);
 
-        var existing = adapter.Core.CollectObjects();
-        var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
+        var (existing, maxObjNum) = MutationHelper.CollectWithMax(adapter);
         var builder = new ObjectGraphBuilder(maxObjNum + 1);
 
         // Build the page object-number lookup: page N → object number.
@@ -79,18 +74,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
             .Concat(builder.Objects)
             .ToList();
 
-        var totalMax = finalObjects.Max(static o => o.ObjectNumber);
-        var rootRef2 = catalogObj.ToReference();
-        var trailer = new PdfDictionary(
-            new Dictionary<string, PdfObject>
-            {
-                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-                [PdfName.Root.Value] = rootRef2
-            }
-        );
-
-        var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(finalObjects, trailer);
-        adapter.ReplaceCore(newDoc.Core);
+        MutationHelper.SerializeAndReplace(adapter, finalObjects);
     }
 
     // ── Outline tree construction ─────────────────────────────────────────────

@@ -9,17 +9,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Unchained.Pdf/Unchained.Pdf.csproj" />
     <ProjectReference Include="../../src/Unchained.Pdf.Rendering/Unchained.Pdf.Rendering.csproj" />
-    <ProjectReference Include="../../src/Unchained.Pptx/Unchained.Pptx.csproj" />
+    <ProjectReference Include="../../src/Unchained.Pdf.Rendering.Proprietary/Unchained.Pdf.Rendering.Proprietary.csproj" />
     <ProjectReference Include="../../src/Unchained.Pptx.Rendering/Unchained.Pptx.Rendering.csproj" />
-    <ProjectReference Include="../../src/Unchained.Xlsx/Unchained.Xlsx.csproj" />
+    <ProjectReference Include="../../src/Unchained.Xlsx.Extensions/Unchained.Xlsx.Extensions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCore.SassCompiler" PrivateAssets="all" />
+    <PackageReference Include="MudBlazor" />
     <PackageReference Include="bblanchon.PDFium.Linux" />
     <PackageReference Include="bblanchon.PDFium.macOS" />
-    <PackageReference Include="MudBlazor" />
+    <PackageReference Include="bblanchon.PDFium.Win32" />
     <PackageReference Include="PDFiumCore" />
   </ItemGroup>
 

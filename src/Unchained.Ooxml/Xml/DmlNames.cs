@@ -12,7 +12,7 @@ internal static class DmlNames
     public const string GraphicDataTableUri = "http://schemas.openxmlformats.org/drawingml/2006/table";
 
     /// <summary>DrawingML chart namespace URI (used as <c>uri</c> attribute on <c>&lt;a:graphicData&gt;</c>).</summary>
-    public const string GraphicDataChartUri = OoxmlNamespaces.Chart;
+    public const string GraphicDataChartUri = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 
     /// <summary>DrawingML diagram (SmartArt) namespace URI (used as <c>uri</c> on <c>&lt;a:graphicData&gt;</c>).</summary>
     public const string GraphicDataDiagramUri = "http://schemas.openxmlformats.org/drawingml/2006/diagram";
@@ -90,6 +90,9 @@ internal static class DmlNames
 
     /// <summary>URI attribute on <c>&lt;a:graphicData&gt;</c>: <c>uri</c></summary>
     public const string AttributeUri = "uri";
+
+    /// <summary>Scheme color value: placeholder color.</summary>
+    public const string SchemeColorPhClr = "phClr";
     // ── Namespaces ───────────────────────────────────────────────────────────
 
     /// <summary>DrawingML main namespace: <c>http://schemas.openxmlformats.org/drawingml/2006/main</c></summary>
@@ -217,11 +220,17 @@ internal static class DmlNames
     /// <summary><c>&lt;a:sysClr&gt;</c> — system colour.</summary>
     public static readonly XName SystemColor = Dml + "sysClr";
 
+    /// <summary><c>&lt;a:spPr&gt;</c> — shape properties.</summary>
+    public static readonly XName ShapeProperties = Dml + "spPr";
+
     /// <summary><c>&lt;a:lumMod&gt;</c> — luminance modifier.</summary>
     public static readonly XName LuminanceModifier = Dml + "lumMod";
 
     /// <summary><c>&lt;a:lumOff&gt;</c> — luminance offset.</summary>
     public static readonly XName LuminanceOffset = Dml + "lumOff";
+
+    /// <summary><c>&lt;a:extLst&gt;</c> — extended content (future-proofing container).</summary>
+    public static readonly XName Extended = Dml + "extLst";
 
     /// <summary><c>&lt;a:alpha&gt;</c> — alpha (opacity) transform.</summary>
     public static readonly XName Alpha = Dml + "alpha";

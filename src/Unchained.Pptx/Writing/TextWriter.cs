@@ -84,7 +84,7 @@ internal static class TextWriter
             bodyPr.Add(
                 new XElement(
                     DmlNames.Dml + "prstTxWarp",
-                    new XAttribute("prst", warp.Preset),
+                    new XAttribute(DmlNames.AttributePreset, warp.Preset),
                     new XElement(DmlNames.Dml + "avLst")
                 )
             );
@@ -404,10 +404,10 @@ internal static class TextWriter
 
     private static string DirectionToString(TextDirection direction) => direction switch
     {
-        TextDirection.Vertical90 => "vert",
-        TextDirection.Vertical270 => "vert270",
-        TextDirection.Stacked => "mongolianVert",
-        _ => "horz"
+        TextDirection.Vertical90 => TransitionStrings.DirVert,
+        TextDirection.Vertical270 => TransitionStrings.DirVert270,
+        TextDirection.Stacked => TransitionStrings.DirMongolianVert,
+        _ => TransitionStrings.DirHorz
     };
 
     private static string AlignmentToString(TextAlignment alignment) => alignment switch

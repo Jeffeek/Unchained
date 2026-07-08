@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using FreeTypeSharp;
 using HarfBuzzSharp;
+using Unchained.Drawing.Constants;
 using Buffer = HarfBuzzSharp.Buffer;
 using Face = HarfBuzzSharp.Face;
 
@@ -58,7 +59,8 @@ internal sealed class FontCache : IDisposable
             ? $"{fontName}:{embeddedBytes.Length}"
             : fontName;
 
-        if (_fonts.TryGetValue(cacheKey, out var cached)) return (cached.Face, cached.HbFont);
+        if (_fonts.TryGetValue(cacheKey, out var cached))
+            return (cached.Face, cached.HbFont);
 
         var bytes = embeddedBytes is { Length: > 0 }
             ? embeddedBytes
@@ -117,14 +119,15 @@ internal sealed class FontCache : IDisposable
 
     private static string SelectResourceName(string fontName) => fontName switch
     {
-        "Helvetica-Bold" or "Helvetica-BoldOblique"
-            or "Arial-Bold" or "Arial-BoldItalic" => "DejaVuSans-Bold.ttf",
-        "Helvetica-Oblique" or "Arial-Italic" => "DejaVuSans-Oblique.ttf",
-        "Helvetica" or "Helvetica-Regular" or "Arial" or "Arial-Regular"
-            or "Calibri" or "Calibri-Regular" => "DejaVuSans-Regular.ttf",
-        "Times-Bold" or "Times-BoldItalic" => "DejaVuSerif-Bold.ttf",
-        "Times-Roman" or "Times-Italic" => "DejaVuSerif-Regular.ttf",
-        "Courier" or "Courier-Bold" or "Courier-Oblique" or "Courier-BoldOblique"
+        FontFallbackNames.HelveticaBold or FontFallbackNames.HelveticaBoldOblique
+            or FontFallbackNames.FallbackArialBold or FontFallbackNames.FallbackArialBoldItalic => "DejaVuSans-Bold.ttf",
+        FontFallbackNames.HelveticaOblique or FontFallbackNames.FallbackArialItalic => "DejaVuSans-Oblique.ttf",
+        FontFallbackNames.Helvetica or "Helvetica-Regular"
+            or FontFallbackNames.FallbackArial or "Arial-Regular"
+            or FontFallbackNames.FallbackCalibri or "Calibri-Regular" => "DejaVuSans-Regular.ttf",
+        FontFallbackNames.TimesBold or FontFallbackNames.FallbackTimesBoldItalic => "DejaVuSerif-Bold.ttf",
+        FontFallbackNames.TimesRoman or FontFallbackNames.FallbackTimesItalic => "DejaVuSerif-Regular.ttf",
+        FontFallbackNames.Courier or FontFallbackNames.CourierBold or FontFallbackNames.CourierOblique or FontFallbackNames.CourierBoldOblique
             => "DejaVuSansMono-Regular.ttf",
         _ => "NotoSans-Regular.ttf"
     };

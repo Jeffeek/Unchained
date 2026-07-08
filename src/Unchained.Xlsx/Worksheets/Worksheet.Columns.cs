@@ -57,7 +57,7 @@ public sealed partial class Worksheet
                                    IsHidden = colElement.GetAttrBool("hidden") == true,
                                    IsCollapsed = colElement.GetAttrBool("collapsed") == true,
                                    OutlineLevel = colElement.GetAttrInt("outlineLevel", 0),
-                                   StyleIndex = colElement.GetAttrInt("style")
+                                   StyleIndex = colElement.GetAttrInt(SmlNames.AttrStyle)
                                })
             ColumnsInternal.AddExisting(column);
     }

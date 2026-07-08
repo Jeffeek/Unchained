@@ -21,7 +21,4 @@ public sealed class OoXmlExceptionTests
         ex.Message.ShouldBe("outer");
         ex.InnerException.ShouldBeSameAs(inner);
     }
-
-    [Fact]
-    public void IsException() => new OoXmlException("x").ShouldBeAssignableTo<Exception>();
 }

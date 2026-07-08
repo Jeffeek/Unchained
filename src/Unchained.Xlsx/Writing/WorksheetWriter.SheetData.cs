@@ -168,7 +168,7 @@ internal static partial class WorksheetWriter
             if (column.IsHidden) colElement.SetAttributeValue("hidden", "1");
             if (column.IsCollapsed) colElement.SetAttributeValue("collapsed", "1");
             if (column.OutlineLevel > 0) colElement.SetAttributeValue("outlineLevel", column.OutlineLevel.ToString(CultureInfo.InvariantCulture));
-            if (column.StyleIndex is { } style) colElement.SetAttributeValue("style", style.ToString(CultureInfo.InvariantCulture));
+            if (column.StyleIndex is { } style) colElement.SetAttributeValue(SmlNames.AttrStyle, style.ToString(CultureInfo.InvariantCulture));
 
             cols.Add(colElement);
         }

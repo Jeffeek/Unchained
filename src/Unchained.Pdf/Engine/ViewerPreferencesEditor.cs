@@ -36,58 +36,47 @@ public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
         PageMode? mode
     )
     {
-        var adapter = Cast(document);
+        var adapter = MutationHelper.Cast(nameof(document), document);
         var existing = adapter.Core.CollectObjects();
 
-        var catalogObj = existing.First(static o =>
-            o.Value is PdfDictionary d && d.IsCatalog()
+        var finalObjects = MutationHelper.ModifyCatalog(
+            adapter,
+            existing,
+            catEntries =>
+            {
+                if (prefs is not null)
+                {
+                    var vpEntries = new Dictionary<string, PdfObject>();
+                    if (prefs.HideToolbar)
+                        vpEntries[PdfName.HideToolbar.Value] = PdfBoolean.True;
+                    if (prefs.HideMenubar)
+                        vpEntries[PdfName.HideMenubar.Value] = PdfBoolean.True;
+                    if (prefs.HideWindowUI)
+                        vpEntries[PdfName.HideWindowUI.Value] = PdfBoolean.True;
+                    if (prefs.FitWindow)
+                        vpEntries[PdfName.FitWindow.Value] = PdfBoolean.True;
+                    if (prefs.CenterWindow)
+                        vpEntries[PdfName.CenterWindow.Value] = PdfBoolean.True;
+                    if (prefs.DisplayDocTitle)
+                        vpEntries[PdfName.DisplayDocTitle.Value] = PdfBoolean.True;
+                    if (prefs.Direction == ReadingDirection.RightToLeft)
+                        vpEntries["Direction"] = PdfName.R2L;
+                    if (prefs.Duplex != DuplexMode.None)
+                        vpEntries["Duplex"] = PdfName.Get(prefs.Duplex.ToString());
+                    if (prefs.NonFullScreenPageMode != PageMode.Default && prefs.NonFullScreenPageMode != PageMode.UseNone)
+                        vpEntries["NonFullScreenPageMode"] = PdfName.Get(prefs.NonFullScreenPageMode.ToString());
+
+                    catEntries[PdfName.ViewerPreferences.Value] = new PdfDictionary(vpEntries);
+                }
+
+                if (layout.HasValue && layout.Value != PageLayout.Default)
+                    catEntries[PdfName.PageLayout.Value] = PdfName.Get(layout.Value.ToString());
+
+                if (mode.HasValue && mode.Value != PageMode.Default)
+                    catEntries[PdfName.PageMode.Value] = PdfName.Get(mode.Value.ToString());
+            }
         );
-        var catalog = (PdfDictionary)catalogObj.Value;
-        var catEntries = new Dictionary<string, PdfObject>(catalog.Entries);
-
-        if (prefs is not null)
-        {
-            var vpEntries = new Dictionary<string, PdfObject>();
-            if (prefs.HideToolbar)
-                vpEntries["HideToolbar"] = PdfBoolean.True;
-            if (prefs.HideMenubar)
-                vpEntries["HideMenubar"] = PdfBoolean.True;
-            if (prefs.HideWindowUI)
-                vpEntries["HideWindowUI"] = PdfBoolean.True;
-            if (prefs.FitWindow)
-                vpEntries["FitWindow"] = PdfBoolean.True;
-            if (prefs.CenterWindow)
-                vpEntries["CenterWindow"] = PdfBoolean.True;
-            if (prefs.DisplayDocTitle)
-                vpEntries["DisplayDocTitle"] = PdfBoolean.True;
-            if (prefs.Direction == ReadingDirection.RightToLeft)
-                vpEntries["Direction"] = PdfName.R2L;
-            if (prefs.Duplex != DuplexMode.None)
-                vpEntries["Duplex"] = PdfName.Get(prefs.Duplex.ToString());
-            if (prefs.NonFullScreenPageMode != PageMode.Default && prefs.NonFullScreenPageMode != PageMode.UseNone)
-                vpEntries["NonFullScreenPageMode"] = PdfName.Get(prefs.NonFullScreenPageMode.ToString());
-
-            catEntries[PdfName.ViewerPreferences.Value] = new PdfDictionary(vpEntries);
-        }
-
-        if (layout.HasValue && layout.Value != PageLayout.Default)
-            catEntries[PdfName.PageLayout.Value] = PdfName.Get(layout.Value.ToString());
-
-        if (mode.HasValue && mode.Value != PageMode.Default)
-            catEntries[PdfName.PageMode.Value] = PdfName.Get(mode.Value.ToString());
-
-        var rebuiltCatalog = new PdfIndirectObject(catalogObj.ObjectNumber, catalogObj.Generation, new PdfDictionary(catEntries));
-        var finalObjects = existing
-            .Select(o => o.ObjectNumber == catalogObj.ObjectNumber ? rebuiltCatalog : o)
-            .ToList();
 
         MutationHelper.SerializeAndReplace(adapter, finalObjects);
     }
-
-    private static PdfDocumentAdapter Cast(IPdfDocument document) =>
-        document as PdfDocumentAdapter
-        ?? throw new ArgumentException(
-            $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}.",
-            nameof(document)
-        );
 }

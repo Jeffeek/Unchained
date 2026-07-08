@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Engine;
@@ -260,8 +260,10 @@ public sealed class PageImageExtractorHardeningTests
             PageWithImage(Image(1, 1, 8, [0xFF, 0x00, 0x00, 0x00], PdfName.Get("DeviceCMYK"))),
             Core()
         )["Im1"];
-        img.RgbData[0].ShouldBeLessThan((byte)40);
-        img.RgbData[1].ShouldBeGreaterThan((byte)200);
+        // Pure cyan: R≈0, G≈255, B≈255. Tight bounds to catch CMYK→RGB conversion bugs.
+        img.RgbData[0].ShouldBeLessThan((byte)10);
+        img.RgbData[1].ShouldBeGreaterThan((byte)240);
+        img.RgbData[2].ShouldBeGreaterThan((byte)240);
     }
 
     [Fact]

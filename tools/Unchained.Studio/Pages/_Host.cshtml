@@ -13,17 +13,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Unchained Studio</title>
     <base href="/"/>
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
     @* ReSharper disable Html.PathError *@
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet"/>
-    @* ReSharper restore Html.PathError *@
     <link href="css/app.css" rel="stylesheet"/>
+    @* ReSharper restore Html.PathError *@
 </head>
 <body>
 <component type="typeof(App)" render-mode="Server"/>
 
 <script src="js/interop.js"></script>
 @* ReSharper disable Html.PathError *@
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/highcharts-more.js"></script>
+<script src="https://code.highcharts.com/modules/drilldown.js"></script>
+<script src="https://code.highcharts.com/modules/annotations.js"></script>
 <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 <script src="_framework/blazor.server.js"></script>
 @* ReSharper restore Html.PathError *@

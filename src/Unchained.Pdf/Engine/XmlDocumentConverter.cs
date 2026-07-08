@@ -40,7 +40,7 @@ internal static class XmlDocumentConverter
     ///     Serializes the structure of <paramref name="core" /> to the Unchained document XML schema
     ///     and returns the UTF-8 encoded XML string.
     /// </summary>
-    internal static string SaveXml(PdfDocumentCore core)
+    internal static string SaveXml(PdfDocumentCore core, IPdfDocument document)
     {
         var docEl = new XElement("Document");
 
@@ -60,7 +60,7 @@ internal static class XmlDocumentConverter
             try
             {
                 var pd = core.GetPage(pageNum);
-                var pageAdapter = new PdfPageAdapter(pd, pageNum, core);
+                var pageAdapter = new PdfPageAdapter(pd, pageNum, core, document);
                 var spans = pageAdapter.GetTextSpans();
 
                 foreach (var span in spans.Where(static span => !string.IsNullOrWhiteSpace(span.Text)))
@@ -69,7 +69,7 @@ internal static class XmlDocumentConverter
                         new XElement(
                             "Paragraph",
                             // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-                            new XAttribute("font", span.FontName ?? "Helvetica"),
+                            new XAttribute("font", span.FontName ?? PdfConstants.FontHelvetica),
                             new XAttribute(
                                 "size",
                                 span.FontSize.ToString("G", CultureInfo.InvariantCulture)
@@ -123,7 +123,7 @@ internal static class XmlDocumentConverter
             var usedFonts = new HashSet<string>(StringComparer.Ordinal);
 
             // Pre-scan for fonts used on this page.
-            foreach (var font in pageEl.Elements().Select(static el => el.Attribute("font")?.Value ?? "Helvetica"))
+            foreach (var font in pageEl.Elements().Select(static el => el.Attribute("font")?.Value ?? PdfConstants.FontHelvetica))
                 usedFonts.Add(font);
 
             foreach (var font in usedFonts)
@@ -185,7 +185,7 @@ internal static class XmlDocumentConverter
         var text = el.Value;
         if (string.IsNullOrEmpty(text)) return;
 
-        var font = el.Attribute("font")?.Value ?? (isBold ? "Helvetica-Bold" : "Helvetica");
+        var font = el.Attribute("font")?.Value ?? (isBold ? PdfConstants.FontHelveticaBold : PdfConstants.FontHelvetica);
         var size = FloatAttr(el, "size", 12f);
         var x = FloatAttr(el, "x", 72f);
         // XML Y is top-down; PDF Y is bottom-up — flip if the value looks like top-down.
@@ -194,7 +194,7 @@ internal static class XmlDocumentConverter
         // Use the font key that exists in fontRefs (may differ from requested).
         var fontKey = fontRefs.ContainsKey(font)
             ? font
-            : fontRefs.Keys.FirstOrDefault() ?? "Helvetica";
+            : fontRefs.Keys.FirstOrDefault() ?? PdfConstants.FontHelvetica;
 
         csw.Op("BT"u8);
         csw.Name(fontKey);
@@ -240,7 +240,7 @@ internal static class XmlDocumentConverter
             )
             .ToList();
 
-        var fontKey = fontRefs.Keys.FirstOrDefault() ?? "Helvetica";
+        var fontKey = fontRefs.Keys.FirstOrDefault() ?? PdfConstants.FontHelvetica;
         var boldKey = fontRefs.Keys.FirstOrDefault(static k =>
             k.Contains("Bold", StringComparison.OrdinalIgnoreCase)
         ) ?? fontKey;

@@ -13,8 +13,6 @@ namespace Unchained.Pdf.Engine.PageResources;
 /// </summary>
 internal static class PageColorSpaceResolver
 {
-    private const int MaxFormXObjectDepth = 10;
-
     internal static IReadOnlyDictionary<string, ColorSpaceInfo> GetColorSpaces(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, ColorSpaceInfo>();
@@ -34,7 +32,7 @@ internal static class PageColorSpaceResolver
         ISet<int> seen
     )
     {
-        if (resources is null || depth > MaxFormXObjectDepth)
+        if (resources is null || depth > PdfConstants.MaxFormXObjectDepth)
             return;
 
         var csDict = core.ResolveDict(resources[PdfName.ColorSpace]);
@@ -54,22 +52,8 @@ internal static class PageColorSpaceResolver
         }
 
         // Recurse into form XObjects.
-        var xObjDict = core.ResolveDict(resources[PdfName.XObject]);
-        if (xObjDict is null) return;
-
-        foreach (var (_, xObj) in xObjDict.Entries)
-        {
-            if (xObj is PdfIndirectReference xr && !seen.Add(xr.ObjectNumber))
-                continue;
-
-            var stream = xObj is PdfIndirectReference xrr
-                ? core.ResolveIndirect(xrr.ObjectNumber).Value as PdfStream
-                : xObj as PdfStream;
-            if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
-                continue;
-
-            CollectColorSpaces(core, core.ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
-        }
+        foreach (var formResources in core.GetFormXObjectResources(resources, seen))
+            CollectColorSpaces(core, formResources, result, depth + 1, seen);
     }
 
     private static ColorSpaceInfo? BuildColorSpaceInfo(PdfDocumentCore core, PdfObject? csObj)
@@ -82,7 +66,7 @@ internal static class PageColorSpaceResolver
         {
             return n.Value switch
             {
-                "DeviceGray" or "DeviceRGB" or "DeviceCMYK" => null, // handled directly
+                PdfConstants.DeviceGray or PdfConstants.DeviceRgb or PdfConstants.DeviceCmyk => null, // handled directly
                 "Pattern" => null,
                 _ => ColorSpaceInfo.Device(n.Value)
             };
@@ -96,11 +80,11 @@ internal static class PageColorSpaceResolver
 
         switch (kind)
         {
-            case "DeviceGray": return ColorSpaceInfo.Device("DeviceGray");
-            case "DeviceRGB": return ColorSpaceInfo.Device("DeviceRGB");
-            case "DeviceCMYK": return ColorSpaceInfo.Device("DeviceCMYK");
+            case PdfConstants.DeviceGray: return ColorSpaceInfo.Device(PdfConstants.DeviceGray);
+            case PdfConstants.DeviceRgb: return ColorSpaceInfo.Device(PdfConstants.DeviceRgb);
+            case PdfConstants.DeviceCmyk: return ColorSpaceInfo.Device(PdfConstants.DeviceCmyk);
 
-            case "ICCBased" when arr.Count >= 2:
+            case PdfConstants.IccBased when arr.Count >= 2:
             {
                 var iccStream = arr[1] is PdfIndirectReference iccRef
                     ? core.ResolveIndirect(iccRef.ObjectNumber).Value as PdfStream
@@ -113,33 +97,33 @@ internal static class PageColorSpaceResolver
                 if (altName is null)
                 {
                     var n2 = (int)(iccStream?.Dictionary.Get<PdfInteger>(PdfName.N)?.Value ?? 0);
-                    altName = n2 switch { 1 => "DeviceGray", 4 => "DeviceCMYK", _ => "DeviceRGB" };
+                    altName = n2 switch { 1 => PdfConstants.DeviceGray, 4 => PdfConstants.DeviceCmyk, _ => PdfConstants.DeviceRgb };
                 }
 
                 return ColorSpaceInfo.IccBased(altName);
             }
 
-            case "Separation" when arr.Count >= 4:
+            case PdfConstants.Separation when arr.Count >= 4:
             {
-                var altName = core.ResolveBaseSpaceName(arr[2]) ?? "DeviceRGB";
+                var altName = core.ResolveBaseSpaceName(arr[2]) ?? PdfConstants.DeviceRgb;
                 var fn = PdfFunction.Build(arr[3], core);
                 return ColorSpaceInfo.Separation(fn, altName);
             }
 
-            case "DeviceN" when arr.Count >= 4:
+            case PdfConstants.DeviceN when arr.Count >= 4:
             {
                 // arr[1] = names array, arr[2] = alternate space, arr[3] = tint transform
-                var altName = core.ResolveBaseSpaceName(arr[2]) ?? "DeviceRGB";
+                var altName = core.ResolveBaseSpaceName(arr[2]) ?? PdfConstants.DeviceRgb;
                 var fn = PdfFunction.Build(arr[3], core);
                 return ColorSpaceInfo.DeviceN(fn, altName);
             }
 
-            case "Indexed" when arr.Count >= 4:
+            case PdfConstants.Indexed when arr.Count >= 4:
             {
-                var baseName = core.ResolveBaseSpaceName(arr[1]) ?? "DeviceRGB";
+                var baseName = core.ResolveBaseSpaceName(arr[1]) ?? PdfConstants.DeviceRgb;
                 var baseChannels = baseName switch
                 {
-                    "DeviceGray" => 1, "DeviceCMYK" => 4, _ => 3
+                    PdfConstants.DeviceGray => 1, PdfConstants.DeviceCmyk => 4, _ => 3
                 };
                 var lookupObj = arr[3];
                 if (lookupObj is PdfIndirectReference lr)
@@ -155,14 +139,14 @@ internal static class PageColorSpaceResolver
                     : null;
             }
 
-            case "CalGray" when arr.Count >= 2:
+            case PdfConstants.CalGray when arr.Count >= 2:
             {
                 var dict = core.ResolveDict(arr[1]);
                 var gamma = (dict?[PdfName.Gamma]).ReadFloat();
                 return ColorSpaceInfo.CalGrayInfo(gamma > 0 ? gamma : 1.0);
             }
 
-            case "CalRGB" when arr.Count >= 2:
+            case PdfConstants.CalRgb when arr.Count >= 2:
             {
                 var dict = core.ResolveDict(arr[1]);
                 var gammaArr = dict?[PdfName.Gamma] is PdfArray ga
@@ -174,7 +158,7 @@ internal static class PageColorSpaceResolver
                 return ColorSpaceInfo.CalRgb(gammaArr, matArr);
             }
 
-            case "Lab": return ColorSpaceInfo.Lab();
+            case PdfConstants.Lab: return ColorSpaceInfo.Lab();
 
             default: return null;
         }

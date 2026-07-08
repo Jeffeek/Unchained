@@ -13,6 +13,19 @@ internal static class SmlNames
 {
     private const string Sml = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     private const string Xdr = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing";
+
+    /// <summary>XDR element name: <c>xdr:spPr</c> — shape properties.</summary>
+    public const string XdrSpPr = "spPr";
+
+    /// <summary>XDR element name: <c>xdr:cNvPr</c> — nonvisual properties.</summary>
+    public const string XdrCnVPr = "cNvPr";
+
+    /// <summary>XDR element name: <c>xdr:cNvPicPr</c> — nonvisual picture properties.</summary>
+    public const string XdrCnVPicPr = "cNvPicPr";
+
+    /// <summary>XDR element name: <c>xdr:nvGraphicFramePr</c> — nonvisual graphic frame properties.</summary>
+    public const string XdrNvGraphicFramePr = "nvGraphicFramePr";
+
     private const string Chart = OoxmlNamespaces.Chart;
     private const string Rel = OoxmlNamespaces.OfficeDocument;
 
@@ -57,6 +70,17 @@ internal static class SmlNames
     public const string AttributeErrorMessage = "error";
     public const string AttributePromptTitle = "promptTitle";
     public const string AttributePrompt = "prompt";
+
+    // ── Shared attribute name strings (used with XAttribute) ───────────────────
+
+    /// <summary>XAttribute name for RGB colour values (e.g. <c>rgb="#FF0000"</c>).</summary>
+    public const string AttrRgb = "rgb";
+
+    /// <summary>XAttribute name for sheet protection toggle (e.g. <c>sheet="1"</c>).</summary>
+    public const string AttrSheet = "sheet";
+
+    /// <summary>XAttribute name for column/style index (e.g. <c>style="3"</c>).</summary>
+    public const string AttrStyle = "style";
 
     public static readonly XNamespace X = Sml;
     public static readonly XNamespace XDR = Xdr;

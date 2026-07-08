@@ -5,7 +5,7 @@ using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Slides;
@@ -57,10 +57,14 @@ public sealed class SmallModelTypeTests
     [Fact]
     public void SlideSize_Presets_HaveExpectedDimensions()
     {
-        SlideSize.A4Portrait.Width.Value.ShouldBe(6_858_000);
-        SlideSize.A4Landscape.Width.Value.ShouldBe(9_144_000);
-        SlideSize.LetterPortrait.Height.ShouldBe(Emu.FromInches(11));
-        SlideSize.LetterLandscape.Width.ShouldBe(Emu.FromInches(11));
+        SlideSize.A4Portrait.Width.Value.ShouldBe(7_560_000);
+        SlideSize.A4Portrait.Height.Value.ShouldBe(10_692_000);
+        SlideSize.A4Landscape.Width.Value.ShouldBe(10_692_000);
+        SlideSize.A4Landscape.Height.Value.ShouldBe(7_560_000);
+        SlideSize.LetterPortrait.Width.Value.ShouldBe(Emu.FromInches(8.5).Value);
+        SlideSize.LetterPortrait.Height.Value.ShouldBe(Emu.FromInches(11).Value);
+        SlideSize.LetterLandscape.Width.Value.ShouldBe(Emu.FromInches(11).Value);
+        SlideSize.LetterLandscape.Height.Value.ShouldBe(Emu.FromInches(8.5).Value);
     }
 
     [Fact]

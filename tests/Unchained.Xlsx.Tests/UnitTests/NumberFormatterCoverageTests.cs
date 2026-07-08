@@ -91,6 +91,7 @@ public class NumberFormatterCoverageTests
         // A serial well out of range cannot map to a DateTime → invariant fallback.
         var result = NumberFormatter.Format(double.MaxValue, "yyyy-MM-dd", false);
         result.ShouldNotBeNullOrEmpty();
+        result.ShouldNotBe("12:00:00 PM"); // ensure it's not a bogus date
     }
 
     [Fact]
@@ -99,5 +100,6 @@ public class NumberFormatterCoverageTests
         // The same display serial differs between 1900 and 1904 systems; just ensure it formats.
         var result = NumberFormatter.Format(1000, "yyyy-MM-dd", true);
         result.ShouldNotBeNullOrEmpty();
+        result.ShouldNotBe("12:00:00 PM");
     }
 }

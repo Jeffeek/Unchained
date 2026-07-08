@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Engine;
@@ -60,8 +60,14 @@ public sealed class PageImageExtractorTests
         var result = PageImageExtractor.GetImageXObjects(PageWithImage(Image(2, 1, "DeviceRGB", 8, data)), Core());
         var img = result["Im1"];
         img.Width.ShouldBe(2);
+        // Pixel 0: red = (255, 0, 0)
         img.RgbData[0].ShouldBe((byte)255);
+        img.RgbData[1].ShouldBe((byte)0);
+        img.RgbData[2].ShouldBe((byte)0);
+        // Pixel 1: green = (0, 255, 0)
+        img.RgbData[3].ShouldBe((byte)0);
         img.RgbData[4].ShouldBe((byte)255);
+        img.RgbData[5].ShouldBe((byte)0);
     }
 
     [Fact]

@@ -11,7 +11,7 @@ using Unchained.Pptx.Models;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -307,7 +307,7 @@ public sealed class OpenXmlPresentationParserCoverageTests : PptxTestBase
     public async Task RealSample_MapsMastersLayoutsAndShapes(string fileName)
     {
         var bytes = await SampleBytesOrNullAsync(fileName);
-        Assert.SkipUnless(bytes is not null, $"sample missing: {fileName}");
+        bytes.ShouldNotBeNull($"sample missing: {fileName}");
 
         var doc = await new PresentationProcessor().LoadAsync(bytes!, Sdk);
         doc.Masters.Count.ShouldBeGreaterThan(0);

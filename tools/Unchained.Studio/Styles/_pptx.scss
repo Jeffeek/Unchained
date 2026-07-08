@@ -1,0 +1,314 @@
+@use 'variables' as *;
+
+// ── PPTX: info panel, slide bar, SlidePlayboard, shape properties ──
+
+// ── Pptx info panel ──────────────────────────────────────────────────────
+.pptx-info-strip {
+    flex-shrink: 0;
+    padding: 8px;
+    background: #16181d;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: auto;
+    max-height: 40%;
+}
+
+.pptx-slidebar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 10px;
+    background: #16181d;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+
+    &-label {
+        min-width: 92px;
+        text-align: center;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+        white-space: nowrap;
+        font-family: $font-mono;
+    }
+
+    &-sep {
+        width: 1px;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 0 6px;
+        flex-shrink: 0;
+    }
+}
+
+.pptx-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+}
+
+.pptx-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 2px solid rgba(92, 107, 192, 0.3);
+    border-radius: 0;
+    position: relative;
+
+    // Subtle left indicator line
+    &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: rgba(92, 107, 192, 0.2);
+    }
+
+    &--highlight {
+        border-top-color: $accent;
+
+        &::before {
+            background: $accent;
+        }
+    }
+
+    &-icon { opacity: .6; }
+    &-value { font-size: 1.05rem; font-weight: 600; line-height: 1.1; color: #fff; font-family: $font-mono; }
+    &-label { font-size: .68rem; opacity: .5; color: rgba(255, 255, 255, 0.4); letter-spacing: 0.04em; text-transform: uppercase; }
+}
+
+.pptx-info-props {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pptx-prop-row {
+    display: flex;
+    gap: 8px;
+    font-size: .8rem;
+    padding: 2px 0;
+}
+
+.pptx-prop-label { min-width: 72px; opacity: .55; color: rgba(255, 255, 255, 0.5); }
+.pptx-prop-value { font-weight: 500; word-break: break-word; color: rgba(255, 255, 255, 0.85); }
+
+// ── PPTX SlidePlayboard ──────────────────────────────────────────────────
+.playboard-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.playboard-properties {
+    width: $playboard-props-width;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    background: #16181d;
+    overflow-y: auto;
+
+    &-header {
+        display: flex;
+        align-items: center;
+        padding: 4px 6px 4px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        flex-shrink: 0;
+    }
+}
+
+.playboard-props-fab {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 30;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border-radius: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.14);
+    }
+}
+
+// ── PPTX slide bar icon button overrides ─────────────────────────────────
+.pptx-slidebar {
+    .mud-icon-button {
+        color: rgba(255, 255, 255, 0.5) !important;
+
+        &:hover {
+            color: #fff !important;
+        }
+
+        // Neutralize the Primary/Error color — flat monochrome
+        &.mud-icon-button-primary,
+        &.mud-icon-button-error {
+            color: rgba(255, 255, 255, 0.5) !important;
+
+            &:hover {
+                color: #fff !important;
+            }
+        }
+    }
+}
+
+.playboard-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: #16181d;
+    flex-shrink: 0;
+}
+
+.playboard-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.playboard-canvas {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    // Deeper dark with crosshair grid — like a drafting table
+    background:
+        radial-gradient(circle, rgba(92, 107, 192, 0.04) 1px, transparent 1px);
+    background-color: #0e1014;
+    background-size: 20px 20px;
+    background-position: 0 0;
+    padding: 24px;
+}
+
+.playboard-image-wrap {
+    position: relative;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.playboard-svg {
+    display: block;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    background: white;
+
+    svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.playboard-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+}
+
+.playboard-shape {
+    position: absolute;
+    cursor: move;
+    border: 1px solid transparent;
+    transition: border-color 0.1s;
+    pointer-events: auto;
+
+    &:hover {
+        border-color: rgba($accent, 0.4);
+    }
+
+    &--selected {
+        border: 2px solid $accent !important;
+        box-shadow: 0 0 0 1px rgba($accent, 0.2);
+    }
+
+    &-text {
+        padding: 4px 8px;
+        font-size: 0.82rem;
+        color: var(--mud-palette-text-primary);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+}
+
+.playboard-handle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #16181d;
+    border: 1px solid $accent;
+    z-index: 20;
+    border-radius: 0;
+
+    &--topleft { cursor: nwse-resize; }
+    &--top { cursor: ns-resize; }
+    &--topright { cursor: nesw-resize; }
+    &--right { cursor: ew-resize; }
+    &--bottomright { cursor: nwse-resize; }
+    &--bottom { cursor: ns-resize; }
+    &--bottomleft { cursor: nesw-resize; }
+    &--left { cursor: ew-resize; }
+}
+
+// Full-viewport layer shown only while dragging/resizing a shape, so pointer-move events
+// are captured even outside the slide and never fire when idle.
+.playboard-capture {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    cursor: grabbing;
+    touch-action: none;
+}
+
+.playboard-rendering {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px;
+}
+
+.playboard-error {
+    margin: 24px;
+    max-width: 480px;
+}
+
+// ── Shape properties panel ───────────────────────────────────────────────
+.shape-props {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    &-actions {
+        display: flex;
+        gap: 4px;
+        padding: 4px 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        flex-shrink: 0;
+        background: rgba(0, 0, 0, 0.1);
+    }
+}
+
+// ── PPTX properties panel header ─────────────────────────────────────────
+.playboard-properties {
+    .properties-header {
+        background: rgba(0, 0, 0, 0.15);
+    }
+
+    .prop-group-header {
+        color: rgba(255, 255, 255, 0.3);
+    }
+}

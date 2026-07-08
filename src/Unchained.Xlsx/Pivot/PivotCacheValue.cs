@@ -41,15 +41,12 @@ internal readonly struct PivotCacheValue
                 _ => Blank
             };
 
-    private static PivotCacheValue FromFormula(Cell.Cell cell)
-    {
-        if (cell.GetDouble() is { } d)
-            return new PivotCacheValue(PivotCacheValueKind.Number, d, null, false, default);
-        if (cell.GetString() is { } s)
-            return new PivotCacheValue(PivotCacheValueKind.Text, 0, s, false, default);
-
-        return Blank;
-    }
+    private static PivotCacheValue FromFormula(Cell.Cell cell) =>
+        cell.GetDouble() is { } d
+            ? new PivotCacheValue(PivotCacheValueKind.Number, d, null, false, default)
+            : cell.GetString() is { } s
+                ? new PivotCacheValue(PivotCacheValueKind.Text, 0, s, false, default)
+                : Blank;
 
     public override string ToString() => Kind switch
     {

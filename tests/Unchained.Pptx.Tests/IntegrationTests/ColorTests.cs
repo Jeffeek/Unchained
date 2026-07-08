@@ -2,7 +2,7 @@ using System.Xml.Linq;
 using Shouldly;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Parsing;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Unchained.Pptx.Writing;
 using Xunit;
 

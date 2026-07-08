@@ -1,5 +1,5 @@
 using Shouldly;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
@@ -31,8 +31,7 @@ public sealed class RealPdfTextTests : PdfTestBase
             tested++;
         }
 
-        if (tested == 0)
-            Assert.Skip("No parseable PDF files found in TestFiles/.");
+        tested.ShouldBeGreaterThan(0, "No parseable PDF files found in TestFiles/.");
     }
 
     [Fact]
@@ -53,8 +52,7 @@ public sealed class RealPdfTextTests : PdfTestBase
             tested++;
         }
 
-        if (tested == 0)
-            Assert.Skip("No parseable PDF files found in TestFiles/.");
+        tested.ShouldBeGreaterThan(0, "No parseable PDF files found in TestFiles/.");
     }
 
     // ── text-only.pdf — detailed extraction checks ────────────────────────────
@@ -62,7 +60,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     [Fact]
     public async Task TextOnly_ExtractedTextIsNonEmpty()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.TextOnly);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         // Text extraction may return empty for PDFs with CIDFont/no ToUnicode map.
@@ -73,7 +71,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     [Fact]
     public async Task TextOnly_SpansHaveNonNegativeWidth()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.TextOnly);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.Pages[1].GetTextSpans().ShouldAllBe(static s => s.Width >= 0);
@@ -82,7 +80,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     [Fact]
     public async Task TextOnly_SpansWithTextHavePositiveFontSize()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.TextOnly);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.Pages[1]
@@ -94,7 +92,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     [Fact]
     public async Task TextOnly_SpansAreInTopToBottomOrder()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.TextOnly);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var spans = doc.Pages[1].GetTextSpans().ToList();
@@ -113,7 +111,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     [Fact]
     public async Task TextOnly_SpansWithTextHaveNonEmptyFontName()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.TextOnly);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.TextOnly);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.Pages[1]
@@ -127,7 +125,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     [Fact]
     public async Task Multipage_AtLeastOnePageHasText()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Multipage);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Multipage);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         Enumerable.Range(1, doc.PageCount)
@@ -140,7 +138,7 @@ public sealed class RealPdfTextTests : PdfTestBase
     [Fact]
     public async Task WithEmbeddedFonts_GetEmbeddedFontBytes_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithEmbeddedFonts);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithEmbeddedFonts);
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var embedded = Enumerable.Range(1, doc.PageCount)

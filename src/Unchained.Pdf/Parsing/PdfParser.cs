@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text;
+using Unchained.Drawing.Constants;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -310,7 +312,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
             if (span[i] != (byte)'x')
                 continue;
 
-            if (!span.Slice(i, 4).SequenceEqual("xref"u8))
+            if (!span.Slice(i, 4).SequenceEqual(KeywordsConstants.KeywordXref.ToUtf8Span()))
                 continue;
 
             if (i == 0 || span[i - 1] is (byte)'\r' or (byte)'\n')
@@ -519,16 +521,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         return new PdfString(inner, true);
     }
 
-    private static long ParseRawInteger(ReadOnlySpan<byte> span)
-    {
-        var negative = span[0] == (byte)'-';
-        var start = (negative || span[0] == (byte)'+') ? 1 : 0;
-        long value = 0;
-        for (var i = start; i < span.Length; i++)
-            value = (value * 10) + (span[i] - '0');
-
-        return negative ? -value : value;
-    }
+    private static long ParseRawInteger(ReadOnlySpan<byte> span) => PdfNumericExtensions.ParseRawInteger(span);
 
     private static double ParseRawReal(ReadOnlySpan<byte> span) =>
         double.Parse(

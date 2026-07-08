@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <!-- Shared test infrastructure (fixtures, base classes). Contains NO tests. -->
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Unchained.Pptx\Unchained.Pptx.csproj" />
+  </ItemGroup>
+
+  <!-- Real PPTX test files: copied to the output of this project AND every project that
+       references it, so tests in Pptx.Tests and Pptx.Rendering.Tests can load them from
+       AppContext.BaseDirectory. -->
+  <ItemGroup>
+    <Content Include="TestFiles\**\*.*"
+             CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('TestFiles\')" />
+  </ItemGroup>
+
+</Project>

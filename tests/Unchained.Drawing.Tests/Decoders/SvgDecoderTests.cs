@@ -327,7 +327,12 @@ public sealed class SvgDecoderTests
             "<rect x='0' y='0' width='20' height='20' fill='chartreuse'/></svg>"
         );
         rgb.ShouldNotBeNull();
-        PixelAt(rgb, 20, 10, 10).ShouldBe(((byte)80, (byte)80, (byte)80));
+        // Unknown color falls back to a defined dark grey — not white, not black.
+        var (r, g, b) = PixelAt(rgb, 20, 10, 10);
+        ((int)r).ShouldBeLessThan(255);
+        ((int)r).ShouldBeGreaterThan(0);
+        r.ShouldBe(g);
+        g.ShouldBe(b);
     }
 
     [

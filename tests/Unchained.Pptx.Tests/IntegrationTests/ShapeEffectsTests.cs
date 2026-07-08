@@ -3,7 +3,7 @@ using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -48,11 +48,12 @@ public sealed class ShapeEffectsTests : PptxTestBase
         };
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var s = reloaded.Slides[0].Shapes.OfType<AutoShape>().First(static x => !x.Effects.IsEmpty);
+        var s = reloaded.Slides[0].Shapes.OfType<AutoShape>().SingleOrDefault(static x => !x.Effects.IsEmpty);
+        s.ShouldNotBeNull();
         s.Effects.OuterShadow.ShouldNotBeNull();
         s.Effects.OuterShadow.BlurRadius.Value.ShouldBe(Emu.FromPoints(4).Value);
         s.Effects.OuterShadow.Distance.Value.ShouldBe(Emu.FromPoints(3).Value);
-        Math.Round(s.Effects.OuterShadow.DirectionDegrees).ShouldBe(45);
+        s.Effects.OuterShadow.DirectionDegrees.ShouldBe(45, 0.1);
     }
 
     [Fact]
@@ -72,11 +73,12 @@ public sealed class ShapeEffectsTests : PptxTestBase
         shape.Effects.SoftEdge = new SoftEdgeEffect { Radius = Emu.FromPoints(5) };
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var s = reloaded.Slides[0].Shapes.OfType<AutoShape>().First(static x => !x.Effects.IsEmpty);
+        var s = reloaded.Slides[0].Shapes.OfType<AutoShape>().SingleOrDefault(static x => !x.Effects.IsEmpty);
+        s.ShouldNotBeNull();
         s.Effects.Glow.ShouldNotBeNull();
         s.Effects.Glow.Radius.Value.ShouldBe(Emu.FromPoints(6).Value);
         s.Effects.Reflection.ShouldNotBeNull();
-        Math.Round(s.Effects.Reflection.StartOpacityPercent).ShouldBe(60);
+        s.Effects.Reflection.StartOpacityPercent.ShouldBe(60, 0.1);
         s.Effects.SoftEdge.ShouldNotBeNull();
         s.Effects.SoftEdge.Radius.Value.ShouldBe(Emu.FromPoints(5).Value);
     }

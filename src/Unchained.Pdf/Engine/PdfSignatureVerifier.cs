@@ -182,7 +182,7 @@ internal static class PdfSignatureVerifier
     {
         try
         {
-            var acroFormObj = core.Catalog["AcroForm"];
+            var acroFormObj = core.Catalog[PdfName.AcroForm.Value];
             return Resolve<PdfDictionary>(acroFormObj, core);
         }
         catch (PdfException) { return null; }

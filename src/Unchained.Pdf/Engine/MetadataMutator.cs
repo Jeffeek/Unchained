@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -18,8 +19,7 @@ internal static class MetadataMutator
 {
     internal static void SetMetadata(PdfDocumentAdapter adapter, DocumentMetadata metadata)
     {
-        var existing = adapter.Core.CollectObjects().ToList();
-        var maxObj = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
+        var (existing, maxObj) = MutationHelper.CollectWithMax(adapter);
 
         // Build the /Info dictionary — merge with existing entries if present.
         var infoEntries = new Dictionary<string, PdfObject>();
@@ -31,7 +31,7 @@ internal static class MetadataMutator
                 infoEntries[key] = value;
         }
 
-        if (ToStr(metadata.Title) is { } title) infoEntries["Title"] = title;
+        if (ToStr(metadata.Title) is { } title) infoEntries[PdfName.Title.Value] = title;
         if (ToStr(metadata.Author) is { } author) infoEntries["Author"] = author;
         if (ToStr(metadata.Subject) is { } subject) infoEntries["Subject"] = subject;
         if (ToStr(metadata.Keywords) is { } keywords) infoEntries["Keywords"] = keywords;
@@ -51,7 +51,7 @@ internal static class MetadataMutator
                 )
                 .ToList();
 
-            var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
+            var rootRef = MutationHelper.GetCatalogRef(adapter);
             var trailer = new PdfDictionary(
                 new Dictionary<string, PdfObject>
                 {
@@ -73,7 +73,7 @@ internal static class MetadataMutator
                 .Append(new PdfIndirectObject(infoObjNum, 0, infoDict))
                 .ToList();
 
-            var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
+            var rootRef = MutationHelper.GetCatalogRef(adapter);
             var trailer = new PdfDictionary(
                 new Dictionary<string, PdfObject>
                 {
@@ -98,7 +98,7 @@ internal static class MetadataMutator
         RemoveComplianceMarkers(adapter, "OutputIntents", "pdfaid");
 
     internal static void RemovePdfUaCompliance(PdfDocumentAdapter adapter) =>
-        RemoveComplianceMarkers(adapter, PdfName.MarkInfo.Value, "pdfuaid");
+        RemoveComplianceMarkers(adapter, PdfName.MarkInfo.Value, PdfConstants.PdfAIdentifier);
 
     /// <summary>
     ///     Removes a compliance marker from the catalog and strips the corresponding XMP
@@ -113,13 +113,8 @@ internal static class MetadataMutator
     )
     {
         var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0)
-            return;
-
-        if (existing[catalogIdx].Value is not PdfDictionary catalogDict)
-            return;
+        var (found, catalogIdx, catalogDict) = MutationHelper.TryGetCatalogDict(adapter, existing);
+        if (!found) return;
 
         // Remove the compliance marker from the catalog.
         var entries = new Dictionary<string, PdfObject>(catalogDict.Entries);
@@ -128,13 +123,7 @@ internal static class MetadataMutator
         // Strip the compliance namespace's properties from XMP if present.
         if (entries.TryGetValue("Metadata", out var metaObj))
         {
-            var metaStream = metaObj switch
-            {
-                PdfStream s => s,
-                PdfIndirectReference r =>
-                    adapter.Core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-                _ => null
-            };
+            var metaStream = adapter.Core.ResolveStream(metaObj);
             if (metaStream is not null)
             {
                 var xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
@@ -143,7 +132,7 @@ internal static class MetadataMutator
                 var newStreamDict = new PdfDictionary(
                     new Dictionary<string, PdfObject>(metaStream.Dictionary.Entries)
                     {
-                        ["Length"] = new PdfInteger(cleanedBytes.Length)
+                        [PdfName.Length.Value] = new PdfInteger(cleanedBytes.Length)
                     }
                 );
                 var newStream = new PdfStream(newStreamDict, cleanedBytes.ToArray());
@@ -156,11 +145,11 @@ internal static class MetadataMutator
                         existing[metaIdx] = new PdfIndirectObject(metaRef.ObjectNumber, 0, newStream);
                 }
                 else
-                    entries["Metadata"] = newStream;
+                    entries[PdfName.Metadata.Value] = newStream;
             }
         }
 
-        existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(entries));
+        existing[catalogIdx] = new PdfIndirectObject(existing[catalogIdx].ObjectNumber, 0, new PdfDictionary(entries));
         MutationHelper.SerializeAndReplace(adapter, existing);
     }
 

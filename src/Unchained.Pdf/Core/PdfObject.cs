@@ -643,6 +643,58 @@ public sealed class PdfName : PdfObject, IEquatable<PdfName>
     public static readonly PdfName ContactInfo = Get("ContactInfo");
     public static readonly PdfName FT = Get("FT");
 
+    /// <summary>The <c>/O</c> name (encryption dictionary — owner password hash).</summary>
+    public static readonly PdfName O = Get("O");
+
+    /// <summary>The <c>/U</c> name (encryption dictionary — user password hash).</summary>
+    public static readonly PdfName U = Get("U");
+
+    /// <summary>The <c>/OE</c> name (encryption dictionary — owner encryption algorithm).</summary>
+    public static readonly PdfName OE = Get("OE");
+
+    /// <summary>The <c>/UE</c> name (encryption dictionary — user encryption algorithm).</summary>
+    public static readonly PdfName UE = Get("UE");
+
+    /// <summary>The <c>/AS</c> name (annotation appearance state entry).</summary>
+    public static readonly PdfName AS = Get("AS");
+
+    /// <summary>The <c>/Length1</c> name (embedded font program length for Type 1 fonts).</summary>
+    public static readonly PdfName Length1 = Get("Length1");
+
+    /// <summary>The <c>/FontName</c> name (the font's PostScript name in a font descriptor).</summary>
+    public static readonly PdfName FontName = Get("FontName");
+
+    /// <summary>The <c>/Flags</c> name (flag bits for a font descriptor or structure element).</summary>
+    public static readonly PdfName Flags = Get("Flags");
+
+    /// <summary>The <c>/FontBBox</c> name (bounding box of the font's glyph space).</summary>
+    public static readonly PdfName FontBBox = Get("FontBBox");
+
+    /// <summary>The <c>/ItalicAngle</c> name (italic angle of the font in degrees).</summary>
+    public static readonly PdfName ItalicAngle = Get("ItalicAngle");
+
+    /// <summary>The <c>/Ascent</c> name (ascent of the font in font units).</summary>
+    public static readonly PdfName Ascent = Get("Ascent");
+
+    /// <summary>The <c>/Descent</c> name (descent of the font in font units).</summary>
+    public static readonly PdfName Descent = Get("Descent");
+
+    /// <summary>The <c>/CapHeight</c> name (cap height of the font in font units).</summary>
+    public static readonly PdfName CapHeight = Get("CapHeight");
+
+    /// <summary>The <c>/StemV</c> name (stem thickness of the font).</summary>
+    public static readonly PdfName StemV = Get("StemV");
+
+    /// <summary>The <c>/Decode</c> name (decode parameters array for an image or stream).</summary>
+    public static readonly PdfName Decode = Get("Decode");
+
+    /// <summary>The <c>/CIDToGIDMap</c> name (CID-to-Glyph-ID mapping for a CID font).</summary>
+    // ReSharper disable once InconsistentNaming
+    public static readonly PdfName CIDToGIDMap = Get("CIDToGIDMap");
+
+    /// <summary>The <c>/R</c> name (encryption revision in the encryption dictionary).</summary>
+    public static readonly PdfName R = Get("R");
+
     private PdfName(string value) => Value = value;
 
     /// <summary>The name string without the leading <c>/</c> delimiter.</summary>

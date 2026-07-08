@@ -37,6 +37,13 @@ public sealed class PdfDictionaryExtensionsTests
         new PdfDictionary().IsSubtype("Image").ShouldBeFalse();
 
     [Fact]
+    public void IsSubtype_TypeInsteadOfSubtype_ReturnsFalse()
+    {
+        var dict = Dict(("Type", PdfName.Get("Image")));
+        dict.IsSubtype("Image").ShouldBeFalse();
+    }
+
+    [Fact]
     public void IsSubtype_NullDictionary_ReturnsFalse()
     {
         PdfDictionary? dict = null;

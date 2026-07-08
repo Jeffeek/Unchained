@@ -8,7 +8,8 @@ namespace Unchained.Pdf.Engine.PageResources;
 ///     page-resource readers (<see cref="PageFontResolver" />, <see cref="PageImageExtractor" />,
 ///     <see cref="PageColorSpaceResolver" />, <see cref="PageShadingResolver" /> and others).
 ///     Each method takes the owning <see cref="PdfDocumentCore" /> explicitly so the readers
-///     can stay stateless.
+///     can stay stateless. Also used by XmpDocumentHelper, MetadataMutator, PdfAValidator,
+///     PdfUAValidator, FormFiller, and PdfDocumentAdapter for resolving indirect references.
 /// </summary>
 internal static class PdfResolve
 {
@@ -18,6 +19,13 @@ internal static class PdfResolve
         {
             PdfDictionary d => d,
             PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfDictionary,
+            _ => null
+        };
+
+        internal PdfStream? ResolveStream(PdfObject? obj) => obj switch
+        {
+            PdfStream s => s,
+            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
             _ => null
         };
 
@@ -31,6 +39,44 @@ internal static class PdfResolve
                 PdfDictionary d => d,
                 _ => null
             };
+
+        /// <summary>Resolves the /Annots entry to a <see cref="PdfArray" /> (direct or via indirect ref).</summary>
+        internal PdfArray? ResolveAnnots(PdfDictionary pageDict)
+        {
+            var annotsObj = pageDict[PdfName.Annots];
+            return annotsObj switch
+            {
+                PdfArray a => a,
+                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfArray,
+                _ => null
+            };
+        }
+
+        /// <summary>
+        ///     Enumerates Form XObject resource dictionaries from a <c>/Resources</c> dict's <c>/XObject</c>.
+        ///     Skips already-seen indirect references (cycle detection) and non-Form entries.
+        ///     Shared by <see cref="PageColorSpaceResolver" />, <see cref="PageShadingResolver" />.
+        /// </summary>
+        internal IEnumerable<PdfDictionary?> GetFormXObjectResources(
+            PdfDictionary? resources,
+            ISet<int> seen
+        )
+        {
+            var xObjDict = ResolveDict(core, resources?[PdfName.XObject]);
+            if (xObjDict is null) yield break;
+
+            foreach (var (_, value) in xObjDict.Entries)
+            {
+                if (value is PdfIndirectReference r && !seen.Add(r.ObjectNumber))
+                    continue;
+
+                var stream = ResolveStream(core, value);
+                if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != PdfConstants.XObjectForm)
+                    continue;
+
+                yield return ResolveDict(core, stream.Dictionary[PdfName.Resources]);
+            }
+        }
     }
 
     extension(PdfObject? obj)
@@ -100,7 +146,7 @@ internal static class PdfResolve
     {
         internal string? ReadColorSpace(PdfDictionary dict)
         {
-            var csObj = dict["ColorSpace"];
+            var csObj = dict[PdfName.ColorSpace.Value];
 
             switch (csObj)
             {
@@ -118,16 +164,16 @@ internal static class PdfResolve
 
             switch (kind)
             {
-                case "ICCBased" when arr.Count >= 2:
+                case PdfConstants.IccBased when arr.Count >= 2:
                 {
                     // The ICC stream's /N entry gives the number of color channels.
                     var iccStream = arr[1] is PdfIndirectReference iccRef
                         ? core.ResolveIndirect(iccRef.ObjectNumber).Value as PdfStream
                         : arr[1] as PdfStream;
                     var n = (int)(iccStream?.Dictionary.Get<PdfInteger>(PdfName.N)?.Value ?? 0);
-                    return n switch { 1 => "DeviceGray", 3 => "DeviceRGB", 4 => "DeviceCMYK", _ => null };
+                    return n switch { 1 => PdfConstants.DeviceGray, 3 => PdfConstants.DeviceRgb, 4 => PdfConstants.DeviceCmyk, _ => null };
                 }
-                case "Indexed" when arr.Count >= 2:
+                case PdfConstants.Indexed when arr.Count >= 2:
                     return (arr[1] as PdfName)?.Value; // return base space
             }
 
@@ -148,18 +194,18 @@ internal static class PdfResolve
                     var kind = (arr[0] as PdfName)?.Value;
                     switch (kind)
                     {
-                        case "ICCBased" when arr.Count >= 2:
+                        case PdfConstants.IccBased when arr.Count >= 2:
                         {
                             var iccStream = arr[1] is PdfIndirectReference iccRef
                                 ? core.ResolveIndirect(iccRef.ObjectNumber).Value as PdfStream
                                 : arr[1] as PdfStream;
                             var nn = (int)(iccStream?.Dictionary.Get<PdfInteger>(PdfName.N)?.Value ?? 0);
-                            return nn switch { 1 => "DeviceGray", 3 => "DeviceRGB", 4 => "DeviceCMYK", _ => null };
+                            return nn switch { 1 => PdfConstants.DeviceGray, 3 => PdfConstants.DeviceRgb, 4 => PdfConstants.DeviceCmyk, _ => null };
                         }
-                        case "CalRGB" or "Lab":
-                            return "DeviceRGB";
-                        case "CalGray":
-                            return "DeviceGray";
+                        case PdfConstants.CalRgb or PdfConstants.Lab:
+                            return PdfConstants.DeviceRgb;
+                        case PdfConstants.CalGray:
+                            return PdfConstants.DeviceGray;
                     }
 
                     break;

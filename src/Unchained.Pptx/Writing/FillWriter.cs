@@ -86,7 +86,7 @@ internal static class FillWriter
     {
         var pattFill = new XElement(
             DmlNames.PatternFill,
-            new XAttribute("prst", LineStyles.PatternPresetToString(pattern.Preset))
+            new XAttribute(DmlNames.AttributePreset, LineStyles.PatternPresetToString(pattern.Preset))
         );
 
         var fg = new XElement(DmlNames.SolidFill);
@@ -107,7 +107,7 @@ internal static class FillWriter
         {
             var blip = new XElement(DmlNames.Blip);
             if (!string.IsNullOrEmpty(picture.Image.RelationshipId))
-                blip.Add(new XAttribute(PmlNames.RelationshipId, picture.Image.RelationshipId));
+                blip.Add(new XAttribute(PmlNames.RelationshipEmbed, picture.Image.RelationshipId));
             blipFill.Add(blip);
         }
 

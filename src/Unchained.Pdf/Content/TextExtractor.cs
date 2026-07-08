@@ -22,7 +22,11 @@ internal static class TextExtractor
     ///     from <paramref name="fontNameMap" /> (resource name → base font name).
     ///     Returns spans sorted by reading order (Y descending, then X ascending).
     /// </summary>
-    internal static IReadOnlyList<TextSpan> Extract(IEnumerable<ContentOperator> operators, IReadOnlyDictionary<string, string> fontNameMap)
+    internal static IReadOnlyList<TextSpan> Extract(
+        IEnumerable<ContentOperator> operators,
+        IReadOnlyDictionary<string, string> fontNameMap,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>>? toUnicodeMaps = null
+    )
     {
         var spans = new List<TextSpan>();
 
@@ -42,6 +46,7 @@ internal static class TextExtractor
 
         var fontSize = 0.0;
         var fontName = string.Empty;
+        var fontResourceName = string.Empty;
         var tc = 0.0;   // character spacing
         var tw = 0.0;   // word spacing
         var th = 100.0; // horizontal scaling (%)
@@ -108,6 +113,7 @@ internal static class TextExtractor
                 {
                     var resName = (op.Operands[0] as PdfName)?.Value ?? string.Empty;
                     fontName = fontNameMap.GetValueOrDefault(resName, resName);
+                    fontResourceName = resName;
                     fontSize = op.Operands[1].ReadIntOrReal();
                     break;
                 }
@@ -224,7 +230,7 @@ internal static class TextExtractor
                     if (op.Operands[0] is PdfString s)
                     {
                         ShowString(
-                            s.Bytes.Span,
+                            s.GetBinaryBytes().Span,
                             fontName,
                             fontSize,
                             tc,
@@ -233,7 +239,8 @@ internal static class TextExtractor
                             ref tmE,
                             ref tmF,
                             ctm,
-                            spans
+                            spans,
+                            toUnicodeMaps?.GetValueOrDefault(fontResourceName)
                         );
                     }
 
@@ -260,7 +267,7 @@ internal static class TextExtractor
                     if (op.Operands[0] is PdfString s2)
                     {
                         ShowString(
-                            s2.Bytes.Span,
+                            s2.GetBinaryBytes().Span,
                             fontName,
                             fontSize,
                             tc,
@@ -269,7 +276,8 @@ internal static class TextExtractor
                             ref tmE,
                             ref tmF,
                             ctm,
-                            spans
+                            spans,
+                            toUnicodeMaps?.GetValueOrDefault(fontResourceName)
                         );
                     }
 
@@ -298,7 +306,7 @@ internal static class TextExtractor
                     if (op.Operands[2] is PdfString s3)
                     {
                         ShowString(
-                            s3.Bytes.Span,
+                            s3.GetBinaryBytes().Span,
                             fontName,
                             fontSize,
                             tc,
@@ -307,7 +315,8 @@ internal static class TextExtractor
                             ref tmE,
                             ref tmF,
                             ctm,
-                            spans
+                            spans,
+                            toUnicodeMaps?.GetValueOrDefault(fontResourceName)
                         );
                     }
 
@@ -389,13 +398,47 @@ internal static class TextExtractor
         ref double tmE,
         ref double tmF,
         IReadOnlyList<double> ctm,
-        ICollection<TextSpan> spans
+        ICollection<TextSpan> spans,
+        IReadOnlyDictionary<uint, string>? toUnicodeMap = null
     )
     {
         if (bytes.IsEmpty || fontSize <= 0)
             return;
 
-        var text = Encoding.Latin1.GetString(bytes);
+        // Map char codes to Unicode using the ToUnicode CMap when available.
+        // Composite (Type0/CID) fonts use 2-byte big-endian codes; simple fonts use 1-byte.
+        // This mirrors the logic in PageRenderer.Text.cs to ensure consistent decoding.
+        string text;
+        if (toUnicodeMap is { Count: > 0 })
+        {
+            var sb = new StringBuilder();
+            var span = bytes;
+            while (!span.IsEmpty)
+            {
+                var code2 = span.Length >= 2 ? (uint)((span[0] << 8) | span[1]) : 0;
+                uint code1 = span[0];
+                if (span.Length >= 2 && toUnicodeMap.TryGetValue(code2, out var u2))
+                {
+                    sb.Append(u2);
+                    span = span[2..];
+                }
+                else if (toUnicodeMap.TryGetValue(code1, out var u1))
+                {
+                    sb.Append(u1);
+                    span = span[1..];
+                }
+                else
+                {
+                    sb.Append((char)code1);
+                    span = span[1..];
+                }
+            }
+
+            text = sb.ToString();
+        }
+        else
+            text = Encoding.Latin1.GetString(bytes);
+
         // Text origin (tmE, tmF) is in user space; map through the CTM to device space so
         // translated / rotated / scaled coordinate systems position text correctly.
         var startX = (tmE * ctm[0]) + (tmF * ctm[2]) + ctm[4];
@@ -449,7 +492,7 @@ internal static class TextExtractor
             {
                 case PdfString s:
                     ShowString(
-                        s.Bytes.Span,
+                        s.GetBinaryBytes().Span,
                         fontName,
                         fontSize,
                         tc,

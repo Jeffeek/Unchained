@@ -32,6 +32,9 @@ public class TableWriterAndCalcCoverageTests
         reloadedTable.ShowTotalsRow.ShouldBeTrue();
         reloadedTable.Columns[1].TotalsFunction.ShouldBe(TotalsRowFunction.Sum);
         reloadedTable.Columns[0].TotalsLabel.ShouldBe("Total");
+        reloadedTable.ShowFirstColumn.ShouldBeTrue();
+        reloadedTable.ShowLastColumn.ShouldBeTrue();
+        reloadedTable.ShowBandedColumns.ShouldBeTrue();
     }
 
     [Fact]
@@ -76,7 +79,10 @@ public class TableWriterAndCalcCoverageTests
         sheet.SetFormula(2, 1, "=A1>3");
         document.Recalculate();
 
-        sheet.GetCell(2, 1)!.GetDouble().ShouldBe(1); // TRUE cached as 1
+        var cell = sheet.GetCell(2, 1);
+        cell.ShouldNotBeNull();
+        cell.CellType.ShouldBe(CellType.Boolean);
+        cell.GetBoolean().ShouldBe(true);
     }
 
     [Fact]
@@ -112,7 +118,10 @@ public class TableWriterAndCalcCoverageTests
         sheet.SetFormula(1, 1, "=A5"); // empty cell reference → blank
         document.Recalculate();
 
-        sheet.GetCell(1, 1)!.GetDouble().ShouldBe(0);
+        // The calculator caches blank as 0.0 (known limitation — blank results are stored as Number=0).
+        var cell = sheet.GetCell(1, 1);
+        cell.ShouldNotBeNull();
+        cell.GetDouble().ShouldBe(0);
     }
 
     [Fact]

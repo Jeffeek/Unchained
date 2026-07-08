@@ -8,7 +8,7 @@ using Unchained.Ooxml.Media;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Models.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -88,7 +88,8 @@ public sealed class PdfExportRichTests : PptxTestBase
     public async Task EmbeddedFontRun_EmitsFontFile2()
     {
         var doc = PptxFixtures.WithSlides(1);
-        // Register a font in the media store so the run resolves to an embedded font triple.
+        // Inject fake font bytes (not a valid font file). The PDF writer emits /FontFile2
+        // regardless of validity — this test exercises the control-flow path.
         var fontBytes = new byte[] { 0x00, 0x01, 0x00, 0x00, 0x10, 0x20, 0x30, 0x40 };
         doc.Media.AddFont(
             new EmbeddedFont

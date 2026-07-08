@@ -5,11 +5,12 @@ using Unchained.Drawing.Encoders;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
 using Unchained.Pptx.Comments;
+using Unchained.Pptx.Core;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -43,7 +44,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
     public async Task SdkEngine_LoadsRealFile_WithMastersAndSlides(string fileName)
     {
         var bytes = await SampleBytesOrNullAsync(fileName);
-        Assert.SkipUnless(bytes is not null, $"sample missing: {fileName}");
+        bytes.ShouldNotBeNull($"sample missing: {fileName}");
 
         var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true });
 
@@ -60,7 +61,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
     public async Task SdkEngine_ReadsPropertiesAndShapes()
     {
         var bytes = await SampleBytesOrNullAsync("shp-shapes.pptx");
-        Assert.SkipUnless(bytes is not null, "sample missing: shp-shapes.pptx");
+        bytes.ShouldNotBeNull("sample missing: shp-shapes.pptx");
 
         var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true });
         doc.Slides.SelectMany(static s => s.Shapes).ShouldNotBeEmpty();
@@ -284,7 +285,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
     public async Task SdkEngine_RealSamples_MapLayoutsChartsAndProperties(string fileName)
     {
         var bytes = await SampleBytesOrNullAsync(fileName);
-        Assert.SkipUnless(bytes is not null, $"sample missing: {fileName}");
+        bytes.ShouldNotBeNull($"sample missing: {fileName}");
 
         var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true });
 
@@ -301,7 +302,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
     public async Task SdkEngine_ChartSample_ReadsChartShape()
     {
         var bytes = await SampleBytesOrNullAsync("cht-charts.pptx");
-        Assert.SkipUnless(bytes is not null, "sample missing: cht-charts.pptx");
+        bytes.ShouldNotBeNull("sample missing: cht-charts.pptx");
 
         var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true });
         doc.Slides.SelectMany(static s => s.Shapes).OfType<ChartShape>().ShouldNotBeEmpty();
@@ -338,7 +339,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         // A DOCX/XLSX OOXML package is a valid zip but not a presentation — the engine recognises
         // the format mismatch and the parser surfaces a PptxException (and disposes the engine).
         var fakeWord = BuildMinimalWordPackage();
-        await Should.ThrowAsync<Exception>(async () =>
+        await Should.ThrowAsync<PptxException>(async () =>
             await Processor.LoadAsync(fakeWord, new OpenOptions { UseOpenXmlEngine = true })
         );
     }

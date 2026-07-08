@@ -98,9 +98,10 @@ internal static class PptxToHtmlWriter
     )
     {
         var colorScheme = slide.Master.Theme.Colors;
+        var fontScheme = slide.Master.Theme.Fonts;
         WriteBackground(sb, slide, slideW, slideH, colorScheme);
         foreach (var shape in slide.Shapes)
-            WriteShape(sb, shape, options, colorScheme);
+            WriteShape(sb, shape, options, colorScheme, fontScheme);
     }
 
     private static void WriteBackground(
@@ -132,7 +133,8 @@ internal static class PptxToHtmlWriter
         StringBuilder sb,
         Shape shape,
         HtmlSaveOptions options,
-        ColorScheme? colorScheme
+        ColorScheme? colorScheme,
+        FontScheme fontScheme
     )
     {
         var x = shape.X.Value * EmuToPx;
@@ -176,7 +178,7 @@ internal static class PptxToHtmlWriter
         switch (shape)
         {
             case AutoShape { TextFrame.Paragraphs.Count: > 0 } auto:
-                WriteTextFrame(sb, auto, colorScheme);
+                WriteTextFrame(sb, auto, colorScheme, fontScheme);
             break;
             case PictureShape { Image: not null } pic when options.EmbedImages:
                 WritePicture(sb, pic);
@@ -186,7 +188,7 @@ internal static class PptxToHtmlWriter
         sb.AppendLine("</div>");
     }
 
-    private static void WriteTextFrame(StringBuilder sb, AutoShape shape, ColorScheme? colorScheme)
+    private static void WriteTextFrame(StringBuilder sb, AutoShape shape, ColorScheme? colorScheme, FontScheme fontScheme)
     {
         // Default text color: StyleTextColor → dk1 → black.
         string defaultColor;
@@ -202,10 +204,10 @@ internal static class PptxToHtmlWriter
         {
             var align = para.Alignment switch
             {
-                TextAlignment.Center => "center",
-                TextAlignment.Right => "right",
-                TextAlignment.Justify => "justify",
-                _ => "left"
+                TextAlignment.Center => HtmlTextAlign.Center,
+                TextAlignment.Right => HtmlTextAlign.Right,
+                TextAlignment.Justify => HtmlTextAlign.Justify,
+                _ => HtmlTextAlign.Left
             };
             sb.Append($"<p class=\"para\" style=\"text-align:{align}\">");
 
@@ -216,6 +218,8 @@ internal static class PptxToHtmlWriter
                 runStyle.Append($"font-size:{fs:F1}pt;");
                 if (run.Format.Bold.Value == true) runStyle.Append("font-weight:bold;");
                 if (run.Format.Italic.Value == true) runStyle.Append("font-style:italic;");
+                var fontFamily = ResolveFontFamily(run.Format.LatinFont, fontScheme);
+                runStyle.Append($"font-family:\"{EscapeCssIdentifier(fontFamily)}\";");
                 var textColor = run.Format.Fill?.Solid != null
                     ? ToCssColor(run.Format.Fill.Solid.Color.Resolve(colorScheme))
                     : defaultColor;
@@ -230,6 +234,23 @@ internal static class PptxToHtmlWriter
 
         sb.AppendLine("</div>");
     }
+
+    private static string EscapeCssIdentifier(string value) =>
+        value.Replace("\\", @"\\").Replace("\"", "\\\"").Replace("'", "\\'");
+
+    /// <summary>
+    ///     Resolves the effective font family name for a run, expanding theme references
+    ///     and falling back to the configured default.
+    /// </summary>
+    private static string ResolveFontFamily(string? latinFont, FontScheme fontScheme) =>
+        !string.IsNullOrEmpty(latinFont)
+            ? latinFont switch
+            {
+                "+mj-lt" => fontScheme.MajorFont.LatinFont is { Length: > 0 } mj ? mj : TextConstants.FallbackLatinFont,
+                "+mn-lt" => fontScheme.MinorFont.LatinFont is { Length: > 0 } mn ? mn : TextConstants.FallbackLatinFont,
+                _ => latinFont
+            }
+            : TextConstants.FallbackLatinFont;
 
     private static void WritePicture(StringBuilder sb, PictureShape pic)
     {

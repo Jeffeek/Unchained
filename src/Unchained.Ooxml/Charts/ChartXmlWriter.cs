@@ -33,7 +33,7 @@ public static class ChartXmlWriter
     {
         var c = CmlNames.Cml;
         var a = DmlNames.Dml;
-        var r = XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+        var r = XNamespace.Get(OoxmlNamespaces.OfficeDocument);
 
         var chartSpace = new XElement(
             CmlNames.ChartSpace,
@@ -106,6 +106,44 @@ public static class ChartXmlWriter
         return plotArea;
     }
 
+    // ── Shared chart body helpers ───────────────────────────────────────────
+
+    private static void WriteBarLikeChartBody(
+        XContainer el,
+        ChartModel model,
+        XName? typeAttr,
+        object? typeValue,
+        string grouping,
+        Action<XElement, FillFormat>? fw
+    )
+    {
+        if (typeAttr is not null && typeValue is not null)
+            el.Add(new XElement(typeAttr, new XAttribute(DmlNames.AttributeValue, typeValue)));
+        el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
+        for (var i = 0; i < model.Data.Series.Count; i++)
+            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, false, fw));
+        AddAxisIds(el);
+    }
+
+    private static void WriteChartBody(XContainer el, ChartModel model, string grouping, bool includeMarker, Action<XElement, FillFormat>? fw)
+    {
+        el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
+        for (var i = 0; i < model.Data.Series.Count; i++)
+            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, includeMarker, fw));
+        AddAxisIds(el);
+    }
+
+    private static void WriteScatterLikeChartBody(XContainer el, ChartModel model, XName styleAttr, object styleValue)
+    {
+        el.Add(new XElement(styleAttr, new XAttribute(DmlNames.AttributeValue, styleValue)));
+        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
+        for (var i = 0; i < model.Data.Series.Count; i++)
+            el.Add(WriteScatterSeries(model.Data.Series[i], i));
+        AddAxisIds(el);
+    }
+
     private static (XElement element, bool needsAxes) WriteChartTypeElement(ChartModel model, Action<XElement, FillFormat>? fw) =>
         model.Type switch
         {
@@ -131,20 +169,15 @@ public static class ChartXmlWriter
         var el = new XElement(CmlNames.BarChart);
         var (dir, grouping) = model.Type switch
         {
-            ChartType.BarClustered => ("bar", "clustered"),
-            ChartType.BarStacked => ("bar", "stacked"),
-            ChartType.BarFullStacked => ("bar", "percentStacked"),
-            ChartType.ColumnStacked => ("col", "stacked"),
-            ChartType.ColumnFullStacked => ("col", "percentStacked"),
-            _ => ("col", "clustered")
+            ChartType.BarClustered => (CmlNames.BarDirBar, CmlNames.GroupingClustered),
+            ChartType.BarStacked => (CmlNames.BarDirBar, CmlNames.GroupingStacked),
+            ChartType.BarFullStacked => (CmlNames.BarDirBar, CmlNames.GroupingPercentStacked),
+            ChartType.ColumnStacked => (CmlNames.BarDirColumn, CmlNames.GroupingStacked),
+            ChartType.ColumnFullStacked => (CmlNames.BarDirColumn, CmlNames.GroupingPercentStacked),
+            _ => (CmlNames.BarDirColumn, CmlNames.GroupingClustered)
         };
-
-        el.Add(new XElement(CmlNames.BarDirection, new XAttribute(DmlNames.AttributeValue, dir)));
-        el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
-        for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, false, fw));
-        AddAxisIds(el);
+        // ReSharper disable once BadListLineBreaks
+        WriteBarLikeChartBody(el, model, CmlNames.BarDirection, dir, grouping, fw);
         return el;
     }
 
@@ -153,18 +186,13 @@ public static class ChartXmlWriter
         var el = new XElement(CmlNames.LineChart);
         var grouping = model.Type switch
         {
-            ChartType.LineStacked or ChartType.LineWithMarkersStacked => "stacked",
-            ChartType.LineFullStacked or ChartType.LineWithMarkersFullStacked => "percentStacked",
-            _ => "standard"
+            ChartType.LineStacked or ChartType.LineWithMarkersStacked => CmlNames.GroupingStacked,
+            ChartType.LineFullStacked or ChartType.LineWithMarkersFullStacked => CmlNames.GroupingPercentStacked,
+            _ => CmlNames.GroupingStandard
         };
-        el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
-
         var includeMarker = model.Type is ChartType.LineWithMarkers or ChartType.LineWithMarkersStacked
             or ChartType.LineWithMarkersFullStacked;
-        for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, includeMarker, fw));
-        AddAxisIds(el);
+        WriteChartBody(el, model, grouping, includeMarker, fw);
         return el;
     }
 
@@ -192,15 +220,12 @@ public static class ChartXmlWriter
         var el = new XElement(CmlNames.AreaChart);
         var grouping = model.Type switch
         {
-            ChartType.AreaStacked => "stacked",
-            ChartType.AreaFullStacked => "percentStacked",
-            _ => "standard"
+            ChartType.AreaStacked => CmlNames.GroupingStacked,
+            ChartType.AreaFullStacked => CmlNames.GroupingPercentStacked,
+            _ => CmlNames.GroupingStandard
         };
-        el.Add(new XElement(CmlNames.Grouping, new XAttribute(DmlNames.AttributeValue, grouping)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
-        for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteStandardSeries(model.Data.Series[i], i, model.Data.Categories, false, fw));
-        AddAxisIds(el);
+        // ReSharper disable once BadListLineBreaks
+        WriteBarLikeChartBody(el, model, null, null, grouping, fw);
         return el;
     }
 
@@ -209,17 +234,13 @@ public static class ChartXmlWriter
         var el = new XElement(CmlNames.ScatterChart);
         var style = model.Type switch
         {
-            ChartType.ScatterWithStraightLines => "line",
-            ChartType.ScatterWithStraightLinesAndMarkers => "lineMarker",
-            ChartType.ScatterWithSmoothLines => "smooth",
-            ChartType.ScatterWithSmoothLinesAndMarkers => "smoothMarker",
-            _ => "marker"
+            ChartType.ScatterWithStraightLines => CmlNames.ScatterStyleLine,
+            ChartType.ScatterWithStraightLinesAndMarkers => CmlNames.ScatterStyleLineMarker,
+            ChartType.ScatterWithSmoothLines => CmlNames.ScatterStyleSmooth,
+            ChartType.ScatterWithSmoothLinesAndMarkers => CmlNames.ScatterStyleSmoothMarker,
+            _ => CmlNames.ScatterStyleMarker
         };
-        el.Add(new XElement(CmlNames.ScatterStyle, new XAttribute(DmlNames.AttributeValue, style)));
-        el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
-        for (var i = 0; i < model.Data.Series.Count; i++)
-            el.Add(WriteScatterSeries(model.Data.Series[i], i));
-        AddAxisIds(el);
+        WriteScatterLikeChartBody(el, model, CmlNames.ScatterStyle, style);
         return el;
     }
 
@@ -228,9 +249,9 @@ public static class ChartXmlWriter
         var el = new XElement(CmlNames.RadarChart);
         var style = model.Type switch
         {
-            ChartType.RadarWithMarkers => "marker",
-            ChartType.RadarFilled => "filled",
-            _ => "standard"
+            ChartType.RadarWithMarkers => CmlNames.RadarStyleMarker,
+            ChartType.RadarFilled => CmlNames.RadarStyleFilled,
+            _ => CmlNames.GroupingStandard
         };
         el.Add(new XElement(CmlNames.RadarStyle, new XAttribute(DmlNames.AttributeValue, style)));
         el.Add(new XElement(CmlNames.VaryColors, new XAttribute(DmlNames.AttributeValue, "0")));
@@ -279,7 +300,7 @@ public static class ChartXmlWriter
         }
 
         if (includeMarker)
-            ser.Add(new XElement(CmlNames.Marker, new XElement(CmlNames.MarkerSymbol, new XAttribute(DmlNames.AttributeValue, "circle"))));
+            ser.Add(new XElement(CmlNames.Marker, new XElement(CmlNames.MarkerSymbol, new XAttribute(DmlNames.AttributeValue, CmlNames.MarkerSymbolCircle))));
 
         if (series.DataLabels is { } dl)
             ser.Add(WriteDataLabels(dl));
@@ -386,7 +407,7 @@ public static class ChartXmlWriter
 
     private static XElement WriteCategoryAxis(ChartType type, ChartAxis axis)
     {
-        var catPos = type is ChartType.BarClustered or ChartType.BarStacked or ChartType.BarFullStacked ? "l" : "b";
+        var catPos = type is ChartType.BarClustered or ChartType.BarStacked or ChartType.BarFullStacked ? CmlNames.AxisPositionLeft : CmlNames.AxisPositionBottom;
         var ax = new XElement(CmlNames.CategoryAxis);
         ax.Add(new XElement(CmlNames.AxisId, new XAttribute(DmlNames.AttributeValue, CategoryAxisId)));
         ax.Add(WriteScaling(axis));
@@ -403,7 +424,7 @@ public static class ChartXmlWriter
 
     private static XElement WriteValueAxis(ChartType type, ChartAxis axis)
     {
-        var valPos = type is ChartType.BarClustered or ChartType.BarStacked or ChartType.BarFullStacked ? "b" : "l";
+        var valPos = type is ChartType.BarClustered or ChartType.BarStacked or ChartType.BarFullStacked ? CmlNames.AxisPositionBottom : CmlNames.AxisPositionLeft;
         var ax = new XElement(CmlNames.ValueAxis);
         ax.Add(new XElement(CmlNames.AxisId, new XAttribute(DmlNames.AttributeValue, ValueAxisId)));
         ax.Add(WriteScaling(axis));
@@ -428,7 +449,7 @@ public static class ChartXmlWriter
             CmlNames.Scaling,
             new XElement(
                 CmlNames.Orientation,
-                new XAttribute(DmlNames.AttributeValue, "minMax")
+                new XAttribute(DmlNames.AttributeValue, CmlNames.OrientationMinMax)
             )
         );
         if (axis.Maximum is { } max)

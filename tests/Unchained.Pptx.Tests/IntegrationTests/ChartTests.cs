@@ -6,7 +6,7 @@ using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Unchained.Pptx.Writing;
 using Xunit;
 
@@ -349,198 +349,31 @@ public sealed class ChartTests : PptxTestBase
         chart.Chart.Data.Series[1].Values[2].ShouldBe(110.0);
     }
 
-    [Fact]
-    public async Task RoundTrip_BarChart_PreservesChartType()
+    // ── Round-trip: each chart type preserves type and content ──────────────────
+
+    [
+        Theory,
+        InlineData(ChartType.BarClustered),
+        InlineData(ChartType.Line),
+        InlineData(ChartType.LineWithMarkers),
+        InlineData(ChartType.Pie),
+        InlineData(ChartType.Doughnut),
+        InlineData(ChartType.Area),
+        InlineData(ChartType.ScatterWithMarkersOnly),
+        InlineData(ChartType.Radar),
+        InlineData(ChartType.ColumnStacked)
+    ]
+    public async Task RoundTrip_Chart_PreservesTypeAndContent(ChartType type)
     {
         var doc = PptxFixtures.WithSlides(1);
         var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.BarClustered,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(6),
-                Emu.FromInches(4)
-            );
+            .Shapes.AddChart(type, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(6), Emu.FromInches(4));
         AddSimpleSeries(shape.Chart);
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Type.ShouldBe(ChartType.BarClustered);
-    }
-
-    [Fact]
-    public async Task RoundTrip_LineChart_PreservesChartType()
-    {
-        var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.Line,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(6),
-                Emu.FromInches(4)
-            );
-        AddSimpleSeries(shape.Chart);
-
-        var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Type.ShouldBe(ChartType.Line);
-    }
-
-    [Fact]
-    public async Task RoundTrip_LineWithMarkersChart_PreservesChartType()
-    {
-        var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.LineWithMarkers,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(6),
-                Emu.FromInches(4)
-            );
-        AddSimpleSeries(shape.Chart);
-
-        var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Type.ShouldBe(ChartType.LineWithMarkers);
-    }
-
-    [Fact]
-    public async Task RoundTrip_PieChart_PreservesChartType()
-    {
-        var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.Pie,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(5),
-                Emu.FromInches(4)
-            );
-        AddSimpleSeries(shape.Chart);
-
-        var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Type.ShouldBe(ChartType.Pie);
-    }
-
-    [Fact]
-    public async Task RoundTrip_DoughnutChart_PreservesChartType()
-    {
-        var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.Doughnut,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(5),
-                Emu.FromInches(4)
-            );
-        AddSimpleSeries(shape.Chart);
-
-        var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Type.ShouldBe(ChartType.Doughnut);
-    }
-
-    [Fact]
-    public async Task RoundTrip_AreaChart_PreservesChartType()
-    {
-        var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.Area,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(6),
-                Emu.FromInches(4)
-            );
-        AddSimpleSeries(shape.Chart);
-
-        var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Type.ShouldBe(ChartType.Area);
-    }
-
-    [Fact]
-    public async Task RoundTrip_ScatterChart_PreservesChartType()
-    {
-        var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.ScatterWithMarkersOnly,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(6),
-                Emu.FromInches(4)
-            );
-        AddSimpleSeries(shape.Chart);
-
-        var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Type.ShouldBe(ChartType.ScatterWithMarkersOnly);
-    }
-
-    [Fact]
-    public async Task RoundTrip_ScatterChart_PreservesExplicitXValues()
-    {
-        var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.ScatterWithMarkersOnly,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(6),
-                Emu.FromInches(4)
-            );
-        var series = new ChartSeries { Name = "XY" };
-        series.XValues.AddRange([1.5, 2.5, 3.5]);
-        series.Values.AddRange([10.0, 20.0, 30.0]);
-        shape.Chart.Data.Series.Add(series);
-
-        var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var reloadedSeries = reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Data.Series.Single();
-        reloadedSeries.XValues.ShouldBe([1.5, 2.5, 3.5]);
-        reloadedSeries.Values.ShouldBe([10.0, 20.0, 30.0]);
-    }
-
-    [Fact]
-    public async Task RoundTrip_RadarChart_PreservesChartType()
-    {
-        var doc = PptxFixtures.WithSlides(1);
-        var shape = doc.Slides[0]
-            .Shapes.AddChart(
-                ChartType.Radar,
-                Emu.FromInches(1),
-                Emu.FromInches(1),
-                Emu.FromInches(6),
-                Emu.FromInches(4)
-            );
-        AddSimpleSeries(shape.Chart);
-
-        var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0]
-            .Shapes.OfType<ChartShape>()
-            .Single()
-            .Chart.Type.ShouldBe(ChartType.Radar);
+        var chart = reloaded.Slides[0].Shapes.OfType<ChartShape>().Single();
+        chart.Chart.Type.ShouldBe(type);
+        chart.Chart.Data.Series[0].Values.ShouldBe([1.0, 2.0, 3.0]);
     }
 
     [Fact]

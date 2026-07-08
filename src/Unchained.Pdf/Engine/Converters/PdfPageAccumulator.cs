@@ -42,12 +42,12 @@ internal sealed class PdfPageAccumulator
     {
         var entries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Font,
-            ["Subtype"] = PdfName.Type1,
-            ["BaseFont"] = PdfName.Get(baseFontName)
+            [PdfName.Type.Value] = PdfName.Font,
+            [PdfName.Subtype.Value] = PdfName.Type1,
+            [PdfName.BaseFont.Value] = PdfName.Get(baseFontName)
         };
         if (encoding is not null)
-            entries["Encoding"] = PdfName.Get(encoding);
+            entries[PdfName.Encoding.Value] = PdfName.Get(encoding);
 
         return _builder.Add(new PdfDictionary(entries)).ToReference();
     }
@@ -102,7 +102,7 @@ internal sealed class PdfPageAccumulator
         var contentDict = new PdfDictionary(
             new Dictionary<string, PdfObject>
             {
-                ["Length"] = new PdfInteger(contentBytes.Length)
+                [PdfName.Length.Value] = new PdfInteger(contentBytes.Length)
             }
         );
         var contentRef = _builder.Add(new PdfStream(contentDict, contentBytes.ToArray())).ToReference();
@@ -115,19 +115,19 @@ internal sealed class PdfPageAccumulator
         var pageDict = new PdfDictionary(
             new Dictionary<string, PdfObject>
             {
-                ["Type"] = PdfName.Page,
-                ["Parent"] = _pagesRef,
-                ["MediaBox"] = new PdfArray(
+                [PdfName.Type.Value] = PdfName.Page,
+                [PdfName.Parent.Value] = _pagesRef,
+                [PdfName.MediaBox.Value] = new PdfArray(
                     [
                         new PdfInteger(0), new PdfInteger(0),
                         new PdfReal(widthPt), new PdfReal(heightPt)
                     ]
                 ),
-                ["Contents"] = contentRef,
-                ["Resources"] = new PdfDictionary(
+                [PdfName.Contents.Value] = contentRef,
+                [PdfName.Resources.Value] = new PdfDictionary(
                     new Dictionary<string, PdfObject>
                     {
-                        ["Font"] = new PdfDictionary(fontEntries)
+                        [PdfName.Font.Value] = new PdfDictionary(fontEntries)
                     }
                 )
             }
@@ -151,17 +151,17 @@ internal sealed class PdfPageAccumulator
         var pagesDict = new PdfDictionary(
             new Dictionary<string, PdfObject>
             {
-                ["Type"] = PdfName.Pages,
-                ["Kids"] = new PdfArray(_pageRefs.Cast<PdfObject>().ToArray()),
-                ["Count"] = new PdfInteger(_pageRefs.Count)
+                [PdfName.Type.Value] = PdfName.Pages,
+                [PdfName.Kids.Value] = new PdfArray(_pageRefs.Cast<PdfObject>().ToArray()),
+                [PdfName.Count.Value] = new PdfInteger(_pageRefs.Count)
             }
         );
         _builder.AddAt(_pagesNum, pagesDict);
 
         var catalogEntries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Catalog,
-            ["Pages"] = _pagesRef
+            [PdfName.Type.Value] = PdfName.Catalog,
+            [PdfName.Pages.Value] = _pagesRef
         };
 
         // ── Tagged PDF catalog entries ─────────────────────────────────────────
@@ -183,7 +183,7 @@ internal sealed class PdfPageAccumulator
             catalogEntries[PdfName.ViewerPreferences.Value] = new PdfDictionary(
                 new Dictionary<string, PdfObject>
                 {
-                    ["DisplayDocTitle"] = PdfBoolean.True
+                    [PdfName.DisplayDocTitle.Value] = PdfBoolean.True
                 }
             );
 

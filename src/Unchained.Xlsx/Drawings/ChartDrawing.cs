@@ -1,4 +1,5 @@
 using Unchained.Ooxml.Charts;
+using Unchained.Xlsx.Abstractions;
 
 namespace Unchained.Xlsx.Drawings;
 
@@ -16,4 +17,20 @@ public sealed class ChartDrawing : WorksheetDrawing
 
     /// <summary>The OPC part URI of the backing chart (assigned on write).</summary>
     internal string ChartPartUri { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The <see cref="ISpreadsheetDocument" /> that owns this drawing is anchored to.
+    ///     Provided so callers can trigger formula evaluation (e.g. <c>chart.Workbook?.Recalculate()</c>)
+    ///     before reading evaluated data values.
+    /// </summary>
+    // ReSharper disable once MemberCanBeInternal
+    public ISpreadsheetDocument? Workbook { get; set; }
+
+    /// <summary>
+    ///     Loosely-typed annotation payload attached by extension packages (e.g. the Highcharts converter in
+    ///     <c>Unchained.Xlsx.Extensions</c>). Stored as <see cref="object" /> because the core assembly cannot
+    ///     reference the extension assembly that defines the concrete annotation type; consumers cast it back.
+    /// </summary>
+    // ReSharper disable once MemberCanBeInternal
+    public object? Annotations { get; set; }
 }

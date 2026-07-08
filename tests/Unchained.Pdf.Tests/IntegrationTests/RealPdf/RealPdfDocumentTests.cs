@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
@@ -19,7 +19,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Simple_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Simple);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Simple);
 
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBe(1);
@@ -28,7 +28,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Simple_MetadataIsReadable()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Simple);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Simple);
 
         await using var doc = await LoadAsync(bytes);
         // Metadata may or may not be present; the call must not throw.
@@ -38,7 +38,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Simple_PageDimensionsArePlausible()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Simple);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Simple);
 
         await using var doc = await LoadAsync(bytes);
         // A4 portrait ≈ 595 × 842 pt; US Letter ≈ 612 × 792 pt — allow ±20 pt.
@@ -51,7 +51,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Multipage_HasAtLeastTwoPages()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Multipage);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Multipage);
 
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThanOrEqualTo(2);
@@ -60,7 +60,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Multipage_EachPageAccessibleByNumber()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Multipage);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Multipage);
 
         await using var doc = await LoadAsync(bytes);
         for (var i = 1; i <= doc.PageCount; i++)
@@ -70,7 +70,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Multipage_RoundTripPreservesAllPages()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Multipage);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Multipage);
 
         await using var doc = await LoadAsync(bytes);
         var before = doc.PageCount;
@@ -83,7 +83,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task WithAnnotations_PageOneHasAnnotations()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithAnnotations);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithAnnotations);
 
         await using var doc = await LoadAsync(bytes);
         // At least one page must carry annotations.
@@ -95,7 +95,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task WithAnnotations_AnnotationHasRect()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithAnnotations);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithAnnotations);
 
         await using var doc = await LoadAsync(bytes);
         var annots = Enumerable.Range(1, doc.PageCount)
@@ -114,7 +114,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task WithBookmarks_HasAtLeastOneBookmark()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithBookmarks);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithBookmarks);
 
         await using var doc = await LoadAsync(bytes);
         doc.GetBookmarks().ShouldNotBeEmpty();
@@ -150,7 +150,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task WithForms_HasAtLeastOneField()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithForms);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithForms);
 
         await using var doc = await LoadAsync(bytes);
         doc.GetFormFields().ShouldNotBeEmpty();
@@ -159,7 +159,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task WithForms_AllFieldsHaveNonEmptyName()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithForms);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithForms);
 
         await using var doc = await LoadAsync(bytes);
         doc.GetFormFields().ShouldAllBe(static f => !string.IsNullOrEmpty(f.Name));
@@ -168,7 +168,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task WithForms_AllFieldsHaveKnownType()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithForms);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithForms);
 
         await using var doc = await LoadAsync(bytes);
         var validTypes = new HashSet<string>(StringComparer.Ordinal) { "Tx", "Btn", "Ch", "Sig" };
@@ -180,7 +180,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Scanned_ParsesWithoutCrashing()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Scanned);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Scanned);
 
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
@@ -189,7 +189,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Encrypted_DoesNotCrashParser()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Encrypted);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Encrypted);
         // Parser must either load it (if unencrypted body is accessible) or
         // throw a PdfException — not an unhandled crash.
         // Acceptable outcomes: loads successfully (some readers expose unencrypted structure),
@@ -208,7 +208,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     [Fact]
     public async Task Large_ParsesInReasonableTime()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Large);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Large);
 
         var sw = Stopwatch.StartNew();
         await using var doc = await LoadAsync(bytes);

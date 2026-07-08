@@ -127,7 +127,8 @@ public class PivotWriterCoverageTests
         using var reader = new StreamReader(entry.Open());
 #endif
         var xml = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
-        xml.ShouldContain("<");
+        xml.ShouldContain("<n "); // numeric cache values
+        xml.ShouldContain("<s "); // string cache values
     }
 
     [Fact]

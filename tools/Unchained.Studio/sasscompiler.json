@@ -1,0 +1,6 @@
+{
+    "SourceFolder": "Styles",
+    "TargetFolder": "wwwroot/css",
+    "Arguments": "--style=expanded --no-source-map",
+    "GenerateScopedCss": false
+}

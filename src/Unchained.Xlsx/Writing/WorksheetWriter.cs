@@ -52,6 +52,6 @@ internal static partial class WorksheetWriter
         }
 
         sheetPr.Child(SmlNames.TabColor)?.Remove();
-        sheetPr.AddFirst(new XElement(SmlNames.TabColor, new XAttribute("rgb", SmlColor.ToHexArgb(sheet.TabColor.Value))));
+        sheetPr.AddFirst(new XElement(SmlNames.TabColor, new XAttribute(SmlNames.AttrRgb, SmlColor.ToHexArgb(sheet.TabColor.Value))));
     }
 }

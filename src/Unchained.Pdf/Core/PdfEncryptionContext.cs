@@ -126,7 +126,7 @@ internal sealed class PdfEncryptionContext
         // Update /Length to match decrypted size
         var dictEntries = new Dictionary<string, PdfObject>(newDict.Entries)
         {
-            ["Length"] = new PdfInteger(decrypted.Length)
+            [PdfName.Length.Value] = new PdfInteger(decrypted.Length)
         };
 
         return new PdfStream(new PdfDictionary(dictEntries), decrypted);
@@ -139,7 +139,7 @@ internal sealed class PdfEncryptionContext
         var newDict = EncryptDictionary(stream.Dictionary, objNum, gen);
         var dictEntries = new Dictionary<string, PdfObject>(newDict.Entries)
         {
-            ["Length"] = new PdfInteger(encrypted.Length)
+            [PdfName.Length.Value] = new PdfInteger(encrypted.Length)
         };
 
         return new PdfStream(new PdfDictionary(dictEntries), encrypted);

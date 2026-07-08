@@ -1,6 +1,7 @@
 using System.Text;
 using Shouldly;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Parsing;
 using Xunit;
@@ -20,8 +21,6 @@ public sealed class MasterParserDirectTests
 
     private const string MasterContentType =
         "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml";
-    private const string ThemeContentType =
-        "application/vnd.openxmlformats-officedocument.theme+xml";
     private const string LayoutContentType =
         "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml";
 
@@ -37,7 +36,7 @@ public sealed class MasterParserDirectTests
 
         if (withTheme)
         {
-            package.AddOrReplacePart(ThemeUri, ThemeContentType, Encoding.UTF8.GetBytes(ThemeXml()));
+            package.AddOrReplacePart(ThemeUri, OoxmlContentTypes.Theme, Encoding.UTF8.GetBytes(ThemeXml()));
             package.AddRelationship(MasterUri, "rIdTheme", PmlNames.RelTypeTheme, "../theme/theme1.xml");
         }
 

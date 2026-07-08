@@ -3,6 +3,7 @@ using Unchained.Ooxml;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Writing;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -24,7 +25,7 @@ internal static class AnimationParser
         // Navigate to the main sequence
         var tnLst = timingEl.Element(pml + "tnLst");
         var rootPar = tnLst?.Element(pml + "par");
-        var rootCtn = rootPar?.Element(pml + "cTn");
+        var rootCtn = rootPar?.Element(PmlNames.AnimationContainer);
         var rootChildren = rootCtn?.Element(pml + "childTnLst");
         if (rootChildren == null) return;
 
@@ -40,7 +41,7 @@ internal static class AnimationParser
             if (triggerShapeId == 0) continue;
 
             var interactive = timeline.AddInteractiveSequence(triggerShapeId);
-            var seqCtn = interSeq.Element(pml + "cTn");
+            var seqCtn = interSeq.Element(PmlNames.AnimationContainer);
             var seqChildren = seqCtn?.Element(pml + "childTnLst");
             if (seqChildren != null)
                 ParseClickGroups(seqChildren, interactive.Sequence, pml);
@@ -51,7 +52,7 @@ internal static class AnimationParser
 
     private static void ParseMainSequence(XContainer seqEl, AnimationSequence sequence, XNamespace pml)
     {
-        var ctn = seqEl.Element(pml + "cTn");
+        var ctn = seqEl.Element(PmlNames.AnimationContainer);
         var children = ctn?.Element(pml + "childTnLst");
         if (children == null) return;
 
@@ -63,11 +64,11 @@ internal static class AnimationParser
         // Each <p:par> inside children is a click group
         foreach (var clickGroup in childrenEl.Elements(pml + "par"))
         {
-            var groupCtn = clickGroup.Element(pml + "cTn");
+            var groupCtn = clickGroup.Element(PmlNames.AnimationContainer);
             var groupChildren = groupCtn?.Element(pml + "childTnLst");
             if (groupChildren == null) continue;
 
-            // Determine if this is an OnClick group (has delay="indefinite" condition)
+            // Determine if this is an OnClick group (has delay=RepeatIndefinite condition)
             var isOnClick = IsClickGroup(groupCtn!, pml);
 
             // Each inner <p:par> is one effect
@@ -80,7 +81,7 @@ internal static class AnimationParser
                 // Assign trigger based on group type and position
                 effect.Trigger = isFirst && isOnClick
                     ? EffectTrigger.OnClick
-                    : GetTrigger(effectPar.Element(pml + "cTn"));
+                    : GetTrigger(effectPar.Element(PmlNames.AnimationContainer));
 
                 // Add the fully-parsed effect (preserves duration, accel/decel, auto-reverse,
                 // repeat) rather than reconstructing it from a handful of fields.
@@ -92,7 +93,7 @@ internal static class AnimationParser
 
     private static AnimationEffect? ParseEffect(XContainer effectPar, XNamespace pml)
     {
-        var ctn = effectPar.Element(pml + "cTn");
+        var ctn = effectPar.Element(PmlNames.AnimationContainer);
         if (ctn == null) return null;
 
         // Read preset metadata
@@ -148,7 +149,7 @@ internal static class AnimationParser
         if (ctn.GetAttrBool("autoRev") is true)
             effect.Timing.AutoReverse = true;
         var repeat = ctn.GetAttr("repeatCount");
-        if (repeat == "indefinite")
+        if (repeat == AnimationStrings.RepeatIndefinite)
             effect.Timing.RepeatCount = -1;
         else if (repeat != null && int.TryParse(repeat, out var rc) && rc > 0)
             effect.Timing.RepeatCount = rc / 1000;
@@ -169,7 +170,7 @@ internal static class AnimationParser
     private static bool IsClickGroup(XContainer groupCtn, XNamespace pml)
     {
         var cond = groupCtn.Element(pml + "stCondLst")?.Element(pml + "cond");
-        return cond?.GetAttr(PmlNames.AttributeDelay) == "indefinite";
+        return cond?.GetAttr(PmlNames.AttributeDelay) == AnimationStrings.RepeatIndefinite;
     }
 
     private static EffectTrigger GetTrigger(XElement? ctn)

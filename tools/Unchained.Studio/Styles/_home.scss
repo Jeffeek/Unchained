@@ -1,0 +1,243 @@
+@use 'variables' as *;
+
+// ── Home — technical spec sheet ──
+
+.home-page {
+    flex: 1;
+    overflow-y: auto;
+    background-color: #121418;
+}
+
+// ── Top row: title + version ──
+.home-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 20px 40px 0;
+}
+
+.home-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.home-title {
+    font-family: $font-mono !important;
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    letter-spacing: -0.02em !important;
+    color: #fff !important;
+    line-height: 1.2 !important;
+}
+
+.home-version {
+    font-family: $font-mono;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    line-height: 1.6;
+    flex-shrink: 0;
+}
+
+// ── Tagline ──
+.home-tagline {
+    font-family: $font-mono !important;
+    font-size: 0.72rem !important;
+    color: rgba(255, 255, 255, 0.35) !important;
+    padding: 8px 40px 0;
+    line-height: 1.5 !important;
+}
+
+// ── Badges ──
+.home-badges {
+    display: flex;
+    gap: 6px;
+    padding: 10px 40px 0;
+    flex-wrap: wrap;
+}
+
+.home-badge {
+    font-family: $font-mono;
+    font-size: 0.6rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.4);
+    line-height: 1.4;
+}
+
+// ── Separator ──
+.home-body {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+// ── Format cards ──
+.home-formats {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+}
+
+.home-format-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 20px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: #16181d;
+    cursor: pointer;
+    transition: background 0.12s;
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: transparent;
+        transition: background 0.12s;
+    }
+
+    &:nth-child(odd) {
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    &:nth-child(even) {
+        border-right: none;
+    }
+
+    &:hover {
+        background: #1a1d26;
+
+        &::before {
+            background: $accent;
+        }
+    }
+
+    &--soon {
+        opacity: 0.35;
+        cursor: default;
+
+        &:hover {
+            background: #16181d;
+
+            &::before {
+                background: transparent;
+            }
+        }
+    }
+}
+
+.home-format-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.home-format-icon {
+    font-size: 1.1rem !important;
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.home-format-card .mud-typography-h6 {
+    font-family: $font-mono !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: #fff !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1.3 !important;
+}
+
+.home-format-soon {
+    font-family: $font-mono;
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.25);
+    margin-left: auto;
+}
+
+.home-format-tagline {
+    font-family: $font-mono !important;
+    font-size: 0.65rem !important;
+    color: rgba(255, 255, 255, 0.35) !important;
+    margin-top: 2px !important;
+    line-height: 1.4 !important;
+}
+
+// ── Capabilities column ──
+.home-capabilities {
+    width: 210px;
+    flex-shrink: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 16px 16px;
+    background: #16181d;
+}
+
+.home-caps-heading {
+    font-family: $font-mono !important;
+    font-size: 0.58rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    color: rgba(255, 255, 255, 0.25) !important;
+    margin: 0 0 10px !important;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    line-height: 1.4 !important;
+}
+
+.home-cap-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.home-cap-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.home-cap-icon {
+    color: rgba(255, 255, 255, 0.25) !important;
+    flex-shrink: 0;
+    font-size: 0.8rem !important;
+    margin-top: 1px;
+}
+
+.home-cap-name {
+    font-family: $font-mono;
+    font-weight: 600;
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.3;
+}
+
+.home-cap-desc {
+    font-family: $font-mono;
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.3);
+    line-height: 1.4;
+    margin-top: 1px;
+}

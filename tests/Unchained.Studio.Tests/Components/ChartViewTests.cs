@@ -1,5 +1,5 @@
 using Bunit;
-using MudBlazor.Services;
+using MudBlazor;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
 using Unchained.Studio.Components.Xlsx;
@@ -7,19 +7,34 @@ using OoxmlChartType = Unchained.Ooxml.Charts.ChartType;
 
 namespace Unchained.Studio.Tests.Components;
 
-public sealed class ChartViewTests : BunitContext
+public sealed class ChartViewTests : MudTestContext
 {
-    public ChartViewTests()
-    {
-        JSInterop.Mode = JSRuntimeMode.Loose;
-        Services.AddMudServices();
-    }
-
     [Fact]
     public void Render_BarChart_SvgRendered()
     {
         var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.ColumnClustered)));
+
         cut.Find("svg").ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Render_BarChart_ChartReceivesCorrectData()
+    {
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, Bar(OoxmlChartType.ColumnClustered)));
+
+        var mudChart = cut.FindComponent<MudChart<double>>();
+        var series = mudChart.Instance.ChartSeries;
+        series.Count.ShouldBe(1);
+        series[0].Name.ShouldBe("Series 1");
+        series[0].Data.SequenceEqual(new[] { 10.0, 20.0, 30.0 }).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Render_EmptySeries_NoCrash()
+    {
+        var cut = Render<ChartView>(static pb => pb.Add(static c => c.Model, new ChartModel { Type = OoxmlChartType.ColumnClustered, HasTitle = false }));
+
+        cut.Markup.ShouldNotContain("preview unavailable");
     }
 
     [Fact]
@@ -110,30 +125,25 @@ public sealed class ChartViewTests : BunitContext
 
     [
         Theory,
-        InlineData(OoxmlChartType.ColumnClustered),
-        InlineData(OoxmlChartType.Line),
-        InlineData(OoxmlChartType.Pie),
-        InlineData(OoxmlChartType.Doughnut),
-        InlineData(OoxmlChartType.Area),
-        InlineData(OoxmlChartType.BarClustered)
+        InlineData(OoxmlChartType.ColumnClustered, true),
+        InlineData(OoxmlChartType.Line, true),
+        InlineData(OoxmlChartType.Pie, true),
+        InlineData(OoxmlChartType.Doughnut, true),
+        InlineData(OoxmlChartType.Area, true),
+        InlineData(OoxmlChartType.BarClustered, true),
+        InlineData(OoxmlChartType.ScatterWithMarkersOnly, false),
+        InlineData(OoxmlChartType.Bubble, false),
+        InlineData(OoxmlChartType.Radar, false),
+        InlineData(OoxmlChartType.RadarWithMarkers, false)
     ]
-    public void Render_SupportedTypes_NoFallback(OoxmlChartType type)
+    public void Render_ChartType_HasExpectedFallback(OoxmlChartType type, bool expectedSupported)
     {
         var cut = Render<ChartView>(pb => pb.Add(static c => c.Model, Bar(type)));
-        cut.Markup.ShouldNotContain("preview unavailable");
-    }
 
-    [
-        Theory,
-        InlineData(OoxmlChartType.ScatterWithMarkersOnly),
-        InlineData(OoxmlChartType.Bubble),
-        InlineData(OoxmlChartType.Radar),
-        InlineData(OoxmlChartType.RadarWithMarkers)
-    ]
-    public void Render_UnsupportedTypes_Fallback(OoxmlChartType type)
-    {
-        var cut = Render<ChartView>(pb => pb.Add(static c => c.Model, Bar(type)));
-        cut.Markup.ShouldContain("preview unavailable");
+        if (expectedSupported)
+            cut.Markup.ShouldNotContain("preview unavailable");
+        else
+            cut.Markup.ShouldContain("preview unavailable");
     }
 
     private static ChartModel Bar(OoxmlChartType type)

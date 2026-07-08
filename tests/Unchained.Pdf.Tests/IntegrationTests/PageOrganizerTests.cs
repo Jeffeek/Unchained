@@ -1,7 +1,7 @@
 using Shouldly;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Engine;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
@@ -80,6 +80,43 @@ public sealed class PageOrganizerTests : PdfTestBase
         await Organizer.DeletePagesAsync(doc, [1], TestContext.Current.CancellationToken);
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task DeletePages_PrunesOrphanedImage_OutputSizeDecreases()
+    {
+        // Each page owns a private ~30KB image. Deleting page 1 orphans its image,
+        // which must be pruned from the output (otherwise the scanned-PDF file never shrinks).
+        await using var doc = await LoadAsync(PdfFixtures.TwoPagesEachWithPrivateImage(100, 100));
+        using var originalMs = new MemoryStream();
+        await Processor.SaveAsync(doc, originalMs, ct: TestContext.Current.CancellationToken);
+        var originalSize = originalMs.Length;
+
+        await Organizer.DeletePagesAsync(doc, [1], TestContext.Current.CancellationToken);
+
+        using var afterMs = new MemoryStream();
+        await Processor.SaveAsync(doc, afterMs, ct: TestContext.Current.CancellationToken);
+
+        // Dropping one of two ~30KB images should remove roughly one image's worth of bytes.
+        (originalSize - afterMs.Length).ShouldBeGreaterThan(25_000);
+
+        // Remaining page still parses and renders its own resources.
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(1);
+        reloaded.Pages[1].GetImageXObjects().Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task DeletePages_OrphansPruned_NoExtraObjects()
+    {
+        await using var doc = await LoadFixtureAsync(5);
+        var beforeCount = doc.PageCount;
+
+        await Organizer.DeletePagesAsync(doc, [3], TestContext.Current.CancellationToken);
+
+        doc.PageCount.ShouldBe(beforeCount - 1);
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
+        reloaded.PageCount.ShouldBe(beforeCount - 1);
     }
 
     [Fact]

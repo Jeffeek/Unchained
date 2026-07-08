@@ -137,4 +137,13 @@ public interface IPdfDocument : IDisposable, IAsyncDisposable
     ///     no layers. Default interface implementation returns empty for non-Unchained documents.
     /// </summary>
     IReadOnlyList<OptionalContentGroup> GetLayers() => [];
+
+    /// <summary>
+    ///     The raw bytes of the loaded PDF file.
+    ///     <para>
+    ///         Populated when a document is loaded from a file or byte array.
+    ///         Returns an empty span when loaded from a stream without seeking capability.
+    ///     </para>
+    /// </summary>
+    ReadOnlyMemory<byte> Bytes { get; }
 }

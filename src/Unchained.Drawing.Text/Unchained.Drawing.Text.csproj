@@ -31,6 +31,7 @@
   <!-- FreeTypeSharp (MIT) — FreeType2 binding with bundled native binaries.
        Correct struct marshaling on every platform (no SharpFont Windows-x64 FT_Long bug). -->
   <ItemGroup>
+    <PackageReference Include="CoreJ2K" />
     <PackageReference Include="FreeTypeSharp" />
   </ItemGroup>
 
@@ -40,6 +41,8 @@
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
+    <PackageReference Include="JBig2Decoder.NETStandard" />
+    <PackageReference Include="JpegLibrary" />
   </ItemGroup>
 
   <!-- Bundled fonts: DejaVu (Bitstream Vera / SIL OFL) + NotoSans (SIL OFL). -->

@@ -38,6 +38,8 @@ namespace Unchained.Pptx.Parsing;
 /// </remarks>
 internal static class OpenXmlPresentationParser
 {
+    private const string DecorativeExtensionUri = "{C183D7F6-B498-43B3-948B-1728B52AA6E4}";
+
     public static ParsedPresentation Parse(byte[] data)
     {
         ArgumentNullException.ThrowIfNull(data);
@@ -169,7 +171,7 @@ internal static class OpenXmlPresentationParser
     {
         var master = new MasterSlide
         {
-            Name = "Office Theme",
+            Name = MasterSlide.DefaultName,
             PartUri = masterPart.Uri.ToString()
         };
 
@@ -267,7 +269,7 @@ internal static class OpenXmlPresentationParser
 
     private static SlideLayout SynthesizeFallback(MasterSlideCollection masters)
     {
-        var master = new MasterSlide { Name = "Office Theme" };
+        var master = new MasterSlide { Name = MasterSlide.DefaultName };
         var layout = new SlideLayout
         {
             Name = "Blank",
@@ -398,8 +400,9 @@ internal static class OpenXmlPresentationParser
     {
         var shape = new AutoShape();
         ReadCommon(sp.NonVisualShapeProperties?.NonVisualDrawingProperties, shape);
+        ReadHyperlink(sp.NonVisualShapeProperties?.NonVisualDrawingProperties, slidePart, shape);
         ReadGeometry(sp.ShapeProperties?.Transform2D, shape);
-        ReadFillAndLine(sp.ShapeProperties, shape);
+        ReadFillAndLine(sp.ShapeProperties, shape); // also reads effects + 3D
 
         // Resolve spPr blipFill image (AutoShape with picture fill, e.g. group background images)
         if (slidePart is not null && mediaStore is not null && imageCache is not null)
@@ -433,7 +436,9 @@ internal static class OpenXmlPresentationParser
     {
         var shape = new PictureShape();
         ReadCommon(pic.NonVisualPictureProperties?.NonVisualDrawingProperties, shape);
+        ReadHyperlink(pic.NonVisualPictureProperties?.NonVisualDrawingProperties, slidePart, shape);
         ReadGeometry(pic.ShapeProperties?.Transform2D, shape);
+        ReadEffects(pic.ShapeProperties, shape);
 
         // Resolve the embedded image bytes from the blip r:embed relationship into the store,
         // de-duplicating by image-part URI so a shared image yields one EmbeddedImage.
@@ -532,7 +537,7 @@ internal static class OpenXmlPresentationParser
         var shape = new ConnectorShape();
         ReadCommon(cxn.NonVisualConnectionShapeProperties?.NonVisualDrawingProperties, shape);
         ReadGeometry(cxn.ShapeProperties?.Transform2D, shape);
-        ReadFillAndLine(cxn.ShapeProperties, shape);
+        ReadFillAndLine(cxn.ShapeProperties, shape); // also reads effects + 3D
 
         var prst = cxn.ShapeProperties?.GetFirstChild<D.PresetGeometry>()?.Preset?.InnerText;
         shape.ConnectorType = prst switch
@@ -550,8 +555,51 @@ internal static class OpenXmlPresentationParser
     {
         if (nv is null) return;
 
+        shape.ShapeId = nv.Id?.Value ?? 0;
         shape.Name = nv.Name?.Value ?? string.Empty;
         shape.AltText = nv.Description?.Value;
+        shape.AltTextTitle = nv.Title?.Value;
+        shape.IsHidden = nv.Hidden?.Value ?? false;
+        shape.IsDecorative = HasDecorativeExtension(nv);
+    }
+
+    private static bool HasDecorativeExtension(OpenXmlElement nv)
+    {
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        return XElement.Parse(nv.OuterXml)
+            .Element(a + "extLst")
+            ?.Elements(a + "ext")
+            .Any(static e => (string?)e.Attribute("uri") == DecorativeExtensionUri
+                             && e.Descendants().Any(static d => d.Name.LocalName == "decorative")
+            ) ?? false;
+    }
+
+    // Reads a shape's click hyperlink, resolving the relationship id to its external URL.
+    private static void ReadHyperlink(P.NonVisualDrawingProperties? nv, OpenXmlPartContainer? part, Shape shape)
+    {
+        if (nv is null || part is null) return;
+
+        var rId = nv.GetFirstChild<D.HyperlinkOnClick>()?.Id?.Value;
+        if (string.IsNullOrEmpty(rId)) return;
+
+        var relationship = part.HyperlinkRelationships.FirstOrDefault(r => r.Id == rId);
+        if (relationship is null) return;
+
+        shape.ClickAction = new HyperlinkAction
+        {
+            Url = relationship.Uri.ToString(),
+            OpenInNewWindow = true,
+            RelationshipId = rId
+        };
+    }
+
+    // Bridges the SDK shape-properties DOM to the shared EffectParser (which reads DrawingML XML),
+    // so a shape's effects (shadow/glow/reflection/…) round-trip through the SDK engine faithfully.
+    private static void ReadEffects(OpenXmlElement? shapeProperties, Shape shape)
+    {
+        if (shapeProperties is null) return;
+
+        EffectParser.Parse(XElement.Parse(shapeProperties.OuterXml), shape.Effects);
     }
 
     // Maps the shape's <p:spPr> fill and outline to the model by reusing the shared FillParser

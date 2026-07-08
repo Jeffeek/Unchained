@@ -1,6 +1,6 @@
 using Shouldly;
 using Unchained.Ooxml.Drawing;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -51,7 +51,7 @@ public sealed class ThemeTests : PptxTestBase
     public void MasterSlide_HasAtLeastOneLayout()
     {
         var doc = PptxFixtures.BlankPresentation();
-        doc.Masters[0].Layouts.Count.ShouldBeGreaterThan(0);
+        doc.Masters[0].Layouts.Count.ShouldBeGreaterThanOrEqualTo(1);
     }
 
     [Fact]

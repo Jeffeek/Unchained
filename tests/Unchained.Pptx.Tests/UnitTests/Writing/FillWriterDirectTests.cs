@@ -116,7 +116,7 @@ public sealed class FillWriterDirectTests
         blipFill.ShouldNotBeNull();
         var blip = blipFill.Element(DmlNames.Blip);
         blip.ShouldNotBeNull();
-        blip.Attribute(PmlNames.RelationshipId).ShouldNotBeNull();
+        blip.Attribute(PmlNames.RelationshipEmbed).ShouldNotBeNull();
         blipFill.Element(DmlNames.Stretch).ShouldNotBeNull();
     }
 
@@ -128,7 +128,7 @@ public sealed class FillWriterDirectTests
 
         var blip = Write(fill).Element(DmlNames.BlipFill)!.Element(DmlNames.Blip);
         blip.ShouldNotBeNull();
-        blip.Attribute(PmlNames.RelationshipId).ShouldBeNull();
+        blip.Attribute(PmlNames.RelationshipEmbed).ShouldBeNull();
     }
 
     [Fact]

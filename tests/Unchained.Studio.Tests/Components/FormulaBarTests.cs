@@ -1,13 +1,17 @@
+using System.Reflection;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Unchained.Studio.Components.Xlsx;
 using Unchained.Xlsx.Engine;
+using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Worksheets;
 
 namespace Unchained.Studio.Tests.Components;
 
 public sealed class FormulaBarTests : MudTestContext
 {
+    private SpreadsheetProcessor? _processor;
+
     [Fact]
     public void Render_NoSheet_NoPreview()
     {
@@ -29,14 +33,13 @@ public sealed class FormulaBarTests : MudTestContext
     {
         var cut = Render<FormulaBar>(static pb => pb.Add(static c => c.CellText, string.Empty));
 
-        var value = cut.Find(".formula-bar-input").GetAttribute("value");
-        (value ?? string.Empty).ShouldBe(string.Empty);
+        cut.Find(".formula-bar-input").GetAttribute("value").ShouldBe(string.Empty);
     }
 
     [Fact]
     public void Input_ValidFormula_Evaluates()
     {
-        var cut = Render<FormulaBar>(static pb =>
+        var cut = Render<FormulaBar>(pb =>
             pb.Add(static c => c.Sheet, CreateSheet())
                 .Add(static c => c.CellText, "=10+5")
         );
@@ -47,7 +50,7 @@ public sealed class FormulaBarTests : MudTestContext
     [Fact]
     public void Input_ErrorFormula_ShowsError()
     {
-        var cut = Render<FormulaBar>(static pb =>
+        var cut = Render<FormulaBar>(pb =>
             pb.Add(static c => c.Sheet, CreateSheet())
                 .Add(static c => c.CellText, "=1/0")
         );
@@ -72,7 +75,7 @@ public sealed class FormulaBarTests : MudTestContext
     }
 
     [Fact]
-    public void Input_Cancelled_OnEscape()
+    public void Input_Cancelled_OnEscape_ResetsToOriginalCellText()
     {
         var cut = Render<FormulaBar>(pb =>
             pb.Add(static c => c.CellText, "original")
@@ -86,10 +89,31 @@ public sealed class FormulaBarTests : MudTestContext
         cut.Find(".formula-bar-input").GetAttribute("value").ShouldBe("original");
     }
 
-    private static Worksheet CreateSheet()
+    [Fact]
+    public void Input_CellReference_InsertedIntoInternalText()
     {
-        using var processor = new SpreadsheetProcessor();
-        var doc = processor.CreateBlank("Sheet1");
+        var cut = Render<FormulaBar>(pb =>
+            pb.Add(static c => c.Sheet, CreateSheet())
+                .Add(static c => c.CellText, "=SUM(A")
+                .Add(static c => c.IsActive, true)
+                .Add(static c => c.Reference, new CellReference(2, 3))
+        );
+
+        // OnCellClicked mutates the internal text buffer.
+        cut.Instance.OnCellClicked(new CellReference(2, 3), 6);
+
+        // Verify internal state (the component's OnParametersSet would normally
+        // sync this to the input on the next parameter change cycle).
+        var textField = cut.Instance.GetType().GetField("_text", BindingFlags.NonPublic | BindingFlags.Instance);
+        textField.ShouldNotBeNull();
+        textField.GetValue(cut.Instance).ShouldBe("=SUM(A$C$2");
+    }
+
+    private Worksheet CreateSheet()
+    {
+        _processor?.Dispose();
+        _processor = new SpreadsheetProcessor();
+        var doc = _processor.CreateBlank("Sheet1");
         return doc.Sheets[0];
     }
 }

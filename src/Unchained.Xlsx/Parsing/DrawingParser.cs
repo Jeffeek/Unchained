@@ -131,7 +131,7 @@ internal static class DrawingParser
             return null;
 
         var image = new EmbeddedImage(mediaPart.ContentType, mediaPart.Data) { PartUri = mediaUri };
-        var name = (string?)pic.Element(Xdr + "nvPicPr")?.Element(Xdr + "cNvPr")?.Attribute("name") ?? string.Empty;
+        var name = (string?)pic.Element(Xdr + SmlNames.XdrCnVPicPr)?.Element(Xdr + SmlNames.XdrCnVPr)?.Attribute("name") ?? string.Empty;
 
         return new PictureDrawing(image)
         {
@@ -159,7 +159,7 @@ internal static class DrawingParser
         if (chartPart == null)
             return null;
 
-        var name = (string?)frame.Element(Xdr + "nvGraphicFramePr")?.Element(Xdr + "cNvPr")?.Attribute("name") ?? string.Empty;
+        var name = (string?)frame.Element(Xdr + SmlNames.XdrNvGraphicFramePr)?.Element(Xdr + SmlNames.XdrCnVPr)?.Attribute("name") ?? string.Empty;
 
         return new ChartDrawing
         {
@@ -168,7 +168,8 @@ internal static class DrawingParser
             RelationshipId = relId,
             ChartPartUri = chartUri,
             ChartPartData = chartPart.Data,
-            Chart = ChartXml.Parse(OoXmlHelper.ParseXml(chartPart.Data).Root)
+            Chart = ChartXml.Parse(OoXmlHelper.ParseXml(chartPart.Data).Root),
+            Workbook = document
         };
     }
 }

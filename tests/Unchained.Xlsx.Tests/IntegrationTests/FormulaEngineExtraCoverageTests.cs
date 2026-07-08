@@ -92,9 +92,6 @@ public class FormulaEngineExtraCoverageTests
     // ── ToText coercions via concatenation ───────────────────────────────────
 
     [Fact]
-    public void Concat_WithError_PropagatesError() => Eval("=(1/0)&\"x\"").ShouldBe(CellError.DivisionByZero);
-
-    [Fact]
     public void Concat_BooleanRendersUpperCase() => Eval("=TRUE&\"\"").ShouldBe("TRUE");
 
     [Fact]

@@ -3,7 +3,7 @@ using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -33,7 +33,7 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
             .Shapes.OfType<AutoShape>()
             .SelectMany(static s => s.TextFrame.Paragraphs)
             .SelectMany(static p => p.Runs)
-            .First(static x => !x.Format.Effects.IsEmpty);
+            .Single(static x => !x.Format.Effects.IsEmpty);
         r.Format.Effects.Glow.ShouldNotBeNull();
         r.Format.Effects.Glow.Radius.Value.ShouldBe(Emu.FromPoints(5).Value);
         r.Format.Outline.ShouldNotBeNull();
@@ -57,7 +57,7 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
         var s = reloaded.Slides[0]
             .Shapes.OfType<AutoShape>()
-            .First(static x => x.TextFrame.Format.Warp is not null);
+            .Single(static x => x.TextFrame.Format.Warp is not null);
         s.TextFrame.Format.Warp!.Preset.ShouldBe("textArchUp");
     }
 
@@ -78,7 +78,7 @@ public sealed class WordArtAndThreeDTests : PptxTestBase
         shape.ThreeD.TopBevel = new BevelFormat { Width = Emu.FromPoints(6), Height = Emu.FromPoints(6), Preset = "circle" };
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        var s = reloaded.Slides[0].Shapes.OfType<AutoShape>().First(static x => !x.ThreeD.IsEmpty);
+        var s = reloaded.Slides[0].Shapes.OfType<AutoShape>().Single(static x => !x.ThreeD.IsEmpty);
         s.ThreeD.ExtrusionHeight.Value.ShouldBe(Emu.FromPoints(10).Value);
         s.ThreeD.Material.ShouldBe("metal");
         s.ThreeD.TopBevel.ShouldNotBeNull();

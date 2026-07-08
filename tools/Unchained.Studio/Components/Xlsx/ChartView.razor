@@ -13,18 +13,18 @@
         }
         @if (_kind is MudChartType.Pie or MudChartType.Donut)
         {
-            <MudChart T="double" ChartType="_kind"
+            <MudChart T="double" ChartType="@_kind"
                       inputData="@_pieData"
                       inputLabels="@_pieLabels"
-                      chartOptions="Options"
-                      Width="100%" Height="100%"/>
+                      chartOptions="@_options"
+                      Width="@_pieWidth" Height="@_pieHeight"/>
         }
         else
         {
-            <MudChart T="double" ChartType="_kind"
-                      chartSeries="Series"
-                      xAxisLabels="_categories"
-                      chartOptions="Options"
+            <MudChart T="double" ChartType="@_kind"
+                      chartSeries="@Series"
+                      xAxisLabels="@_categories"
+                      chartOptions="@_options"
                       Width="100%" Height="100%"/>
         }
     </div>
@@ -43,13 +43,19 @@ else
     [Parameter]
     public ChartModel Model { get; set; } = null!;
 
+    /// <summary>Container pixel size (optional). Used for pie/donut which need explicit dimensions.</summary>
+    [Parameter]
+    public (double Width, double Height) ChartSize { get; set; }
+
     private bool _supported;
     private MudChartType _kind;
     public List<MudBlazorChartSeries> Series { get; private set; } = [];
     private string[] _categories = [];
     private double[] _pieData = [];
     private string[] _pieLabels = [];
-    private MudBlazor.ChartOptions Options = new();
+    private ChartOptions _options = new();
+    private string _pieWidth = "100%";
+    private string _pieHeight = "100%";
 
     // Default series palette (hex without '#') used when a series has no explicit fill.
     private static readonly string[] DefaultPalette =
@@ -68,7 +74,7 @@ else
 
         _kind = MapKind(Model.Type);
         _categories = Model.Data.Categories.ToArray();
-        Options = new MudBlazor.ChartOptions
+        _options = new ChartOptions
         {
             ChartPalette = BuildPalette()
         };
@@ -78,12 +84,32 @@ else
             var first = Model.Data.Series.Count > 0 ? Model.Data.Series[0] : null;
             _pieData = first?.Values.ToArray() ?? [];
             _pieLabels = _categories.Length > 0 ? _categories : Enumerable.Range(1, _pieData.Length).Select(static n => n.ToString()).ToArray();
+
+            // Pie/donut need explicit pixel dimensions (Chart.js can't compute center/radius from percentages).
+            if (ChartSize is (> 0, > 0))
+            {
+                _pieWidth = $"{ChartSize.Width:0}px";
+                _pieHeight = $"{ChartSize.Height:0}px";
+            }
+            else
+            {
+                // Fallback: use a reasonable default size so the chart renders.
+                _pieWidth = "400px";
+                _pieHeight = "300px";
+            }
+
             return;
         }
 
         Series = Model.Data.Series
             .Select(static s => new MudBlazorChartSeries { Name = s.Name, Data = s.Values.ToArray() })
             .ToList();
+
+        // Cartesian charts need x-axis labels; auto-number them when the range had no category column.
+        if (_categories.Length != 0) return;
+
+        var pointCount = Model.Data.Series.Count > 0 ? Model.Data.Series.Max(static s => s.Values.Count) : 0;
+        _categories = Enumerable.Range(1, pointCount).Select(static n => n.ToString()).ToArray();
     }
 
     private string[] BuildPalette()
@@ -96,9 +122,11 @@ else
         }
 
         // Pie/donut slices are coloured per category, not per series.
-        return _kind is not (MudChartType.Pie or MudChartType.Donut) || _categories.Length <= 1 ? palette : Enumerable.Range(0, _categories.Length)
-            .Select(static i => "#" + DefaultPalette[i % DefaultPalette.Length])
-            .ToArray();
+        return _kind is not (MudChartType.Pie or MudChartType.Donut) || _categories.Length <= 1
+            ? palette
+            : Enumerable.Range(0, _categories.Length)
+                .Select(static i => "#" + DefaultPalette[i % DefaultPalette.Length])
+                .ToArray();
     }
 
     private static string? SeriesHex(ChartSeries series) =>

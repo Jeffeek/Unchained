@@ -44,43 +44,44 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
             o.Value is PdfDictionary d && d.IsCatalog()
         );
         var catDict = (PdfDictionary)catalogObj.Value;
-        var catEntries = new Dictionary<string, PdfObject>(catDict.Entries);
 
-        // Read existing /Names /Dests flat name list, then add/remove our entry.
-        var existingDests = ReadFlatDests(catDict, adapter.Core);
-        if (pageNumber <= 0)
-            existingDests.Remove(name);
-        else if (pageRef is not null)
-            existingDests[name] = new PdfArray([pageRef, PdfName.Fit]);
-
-        // Rebuild /Names /Dests as a flat name dict (simple structure).
-        var namesEntries = new Dictionary<string, PdfObject>();
-        if (existingDests.Count > 0)
-        {
-            var namesList = new List<PdfObject>();
-            foreach (var (k, v) in existingDests.OrderBy(static kvp => kvp.Key, StringComparer.Ordinal))
+        var finalObjects = MutationHelper.ModifyCatalog(
+            adapter,
+            existing,
+            catEntries =>
             {
-                namesList.Add(PdfString.FromLatin1(k));
-                namesList.Add(v);
-            }
+                // Read existing /Names /Dests flat name list, then add/remove our entry.
+                var existingDests = ReadFlatDests(catDict, adapter.Core);
+                if (pageNumber <= 0)
+                    existingDests.Remove(name);
+                else if (pageRef is not null)
+                    existingDests[name] = new PdfArray([pageRef, PdfName.Fit]);
 
-            namesEntries[PdfName.Dests.Value] = new PdfDictionary(
-                new Dictionary<string, PdfObject>
+                // Rebuild /Names /Dests as a flat name dict (simple structure).
+                var namesEntries = new Dictionary<string, PdfObject>();
+                if (existingDests.Count > 0)
                 {
-                    [PdfName.Names.Value] = new PdfArray(namesList.ToArray())
+                    var namesList = new List<PdfObject>();
+                    foreach (var (k, v) in existingDests.OrderBy(static kvp => kvp.Key, StringComparer.Ordinal))
+                    {
+                        namesList.Add(PdfString.FromLatin1(k));
+                        namesList.Add(v);
+                    }
+
+                    namesEntries[PdfName.Dests.Value] = new PdfDictionary(
+                        new Dictionary<string, PdfObject>
+                        {
+                            [PdfName.Names.Value] = new PdfArray(namesList.ToArray())
+                        }
+                    );
                 }
-            );
-        }
 
-        if (namesEntries.Count > 0)
-            catEntries[PdfName.Names.Value] = new PdfDictionary(namesEntries);
-        else
-            catEntries.Remove(PdfName.Names.Value);
-
-        var rebuiltCatalog = new PdfIndirectObject(catalogObj.ObjectNumber, catalogObj.Generation, new PdfDictionary(catEntries));
-        var finalObjects = existing
-            .Select(o => o.ObjectNumber == catalogObj.ObjectNumber ? rebuiltCatalog : o)
-            .ToList();
+                if (namesEntries.Count > 0)
+                    catEntries[PdfName.Names.Value] = new PdfDictionary(namesEntries);
+                else
+                    catEntries.Remove(PdfName.Names.Value);
+            }
+        );
 
         MutationHelper.SerializeAndReplace(adapter, finalObjects);
     }

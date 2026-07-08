@@ -197,9 +197,9 @@ internal static class ContentStreamParser
     // Returns 0 for unknown/indexed spaces where the unfiltered length can't be derived.
     private static int ComponentsForColorSpace(string? cs) => cs switch
     {
-        "G" or "DeviceGray" or "CalGray" => 1,
-        "RGB" or "DeviceRGB" or "CalRGB" => 3,
-        "CMYK" or "DeviceCMYK" => 4,
+        "G" or PdfConstants.DeviceGray or PdfConstants.CalGray => 1,
+        "RGB" or PdfConstants.DeviceRgb or PdfConstants.CalRgb => 3,
+        "CMYK" or PdfConstants.DeviceCmyk => 4,
         _ => 0
     };
 
@@ -318,7 +318,7 @@ internal static class ContentStreamParser
             var dict = new PdfDictionary(
                 new Dictionary<string, PdfObject>
                 {
-                    ["Filter"] = PdfName.Get(expanded)
+                    [PdfName.Filter.Value] = PdfName.Get(expanded)
                 }
             );
             var stream = new PdfStream(dict, raw);
@@ -343,9 +343,9 @@ internal static class ContentStreamParser
 
         switch (cs)
         {
-            case null or "DeviceRGB" or "RGB" when bpc == 8 && data.Length == pixelCount * 3:
+            case null or PdfConstants.DeviceRgb or "RGB" when bpc == 8 && data.Length == pixelCount * 3:
                 return data.ToArray();
-            case null or "DeviceGray" or "G" when bpc == 8 && data.Length == pixelCount:
+            case null or PdfConstants.DeviceGray or "G" when bpc == 8 && data.Length == pixelCount:
             {
                 var src = data.Span;
                 var rgb = new byte[pixelCount * 3];
@@ -353,7 +353,7 @@ internal static class ContentStreamParser
                     rgb[j] = rgb[j + 1] = rgb[j + 2] = src[i];
                 return rgb;
             }
-            case "DeviceCMYK" or "CMYK" when bpc == 8 && data.Length == pixelCount * 4:
+            case PdfConstants.DeviceCmyk or "CMYK" when bpc == 8 && data.Length == pixelCount * 4:
             {
                 var src = data.Span;
                 var rgb = new byte[pixelCount * 3];
@@ -374,7 +374,7 @@ internal static class ContentStreamParser
             // DeviceGray 1 bpc — bit-packed rows.
             // PDF §8.9.5.1: for 1-bpc images the sample value 0 = white (minimum),
             // 1 = black (maximum), i.e. 0 = paper, 1 = ink (CCITT fax convention).
-            case null or "DeviceGray" or "G" when bpc == 1:
+            case null or PdfConstants.DeviceGray or "G" when bpc == 1:
             {
                 var src = data.Span;
                 var rgb = new byte[pixelCount * 3];

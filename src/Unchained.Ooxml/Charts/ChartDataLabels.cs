@@ -43,7 +43,7 @@ public sealed class ChartTrendline
     ///     Trendline type token (e.g. <c>linear</c>, <c>exp</c>, <c>log</c>, <c>poly</c>, <c>power</c>, <c>movingAvg</c>
     ///     ).
     /// </summary>
-    public string Type { get; set; } = "linear";
+    public string Type { get; set; } = CmlNames.TrendlineTypeLinear;
 
     /// <summary>Polynomial order or moving-average period, when applicable.</summary>
     public int? Order { get; set; }

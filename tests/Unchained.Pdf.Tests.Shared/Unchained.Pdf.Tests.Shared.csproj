@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <!-- Shared test infrastructure (fixtures, builders, base classes). Contains NO tests. -->
+    <IsTestProject>false</IsTestProject>
+    <!-- CA2007: Consider calling ConfigureAwait on the awaited task -->
+    <NoWarn>CA2007</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- xUnit v3 assertions only (not the full test-runner meta-package) — fixtures use
+         Assert.Skip/SkipWhen to skip gracefully on missing files. Referencing xunit.v3 here
+         would force this infrastructure library to be an executable test project. -->
+    <PackageReference Include="xunit.v3.assert" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Unchained.Pdf\Unchained.Pdf.csproj" />
+  </ItemGroup>
+
+  <!-- Real-PDF test files: copied to the output of this project AND every project that
+       references it, so tests in Pdf.Tests and Pdf.Rendering.Tests can load them from
+       AppContext.BaseDirectory. -->
+  <ItemGroup>
+    <Content Include="TestFiles\**\*.*"
+             CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('TestFiles\')" />
+  </ItemGroup>
+
+</Project>

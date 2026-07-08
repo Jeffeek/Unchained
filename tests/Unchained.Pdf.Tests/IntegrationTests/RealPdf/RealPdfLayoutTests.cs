@@ -1,5 +1,5 @@
 using Shouldly;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
@@ -19,7 +19,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task WithTables_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithTables);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -27,7 +27,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task WithTables_GetTextSpans_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithTables);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].GetTextSpans().ShouldNotBeNull(); // count may be 0 if content uses form XObjects
     }
@@ -35,7 +35,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task WithTables_TextSpansAtMultipleDistinctYLevels()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithTables);
         await using var doc = await LoadAsync(bytes);
         var spans = doc.Pages[1].GetTextSpans();
         if (spans.Count < 3)
@@ -54,7 +54,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task WithTables_TextSpansAtMultipleDistinctXPositions()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithTables);
         await using var doc = await LoadAsync(bytes);
         var spans = doc.Pages[1].GetTextSpans();
         if (spans.Count < 3)
@@ -73,7 +73,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task WithTables_GetContentOperators_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithTables);
         await using var doc = await LoadAsync(bytes);
         _ = doc.Pages[1].GetContentOperators();
         // Content may be in form XObjects — operators list may be empty but must not throw.
@@ -83,7 +83,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task WithTables_RoundTripPreservesPageCount()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithTables);
         await using var doc = await LoadAsync(bytes);
         var before = doc.PageCount;
         await using var reloaded = await SaveAndReloadAsync(doc);
@@ -102,7 +102,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task Complex_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -110,7 +110,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task Complex_PageDimensionsArePlausible()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].Width.ShouldBeInRange(400, 900);
         doc.Pages[1].Height.ShouldBeInRange(400, 1200);
@@ -119,7 +119,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task Complex_GetContentOperators_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes);
         // Content is in form XObjects — /Contents may be empty or reference XObjects.
         // Either way the call must not throw.
@@ -129,7 +129,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task Complex_GetTextSpans_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes);
         // Text spans may be empty due to form XObject content structure.
         doc.Pages[1].GetTextSpans().ShouldNotBeNull();
@@ -138,7 +138,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task Complex_GetImageXObjects_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].GetImageXObjects().ShouldNotBeNull();
     }
@@ -146,7 +146,7 @@ public sealed class RealPdfLayoutTests : PdfTestBase
     [Fact]
     public async Task Complex_RoundTripPreservesPageCount()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes);
         var before = doc.PageCount;
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);

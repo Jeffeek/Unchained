@@ -5,7 +5,7 @@ using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
@@ -288,7 +288,7 @@ public sealed class DocumentProcessorLifetimeTests
 }
 
 /// <summary>Wraps a byte array in a non-seekable stream to test the copy-to-buffer path.</summary>
-file sealed class NonSeekableStream(byte[] data) : Stream
+sealed file class NonSeekableStream(byte[] data) : Stream
 {
     private readonly MemoryStream _inner = new(data);
     public override bool CanRead => true;

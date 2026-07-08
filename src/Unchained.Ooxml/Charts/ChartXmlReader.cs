@@ -117,30 +117,30 @@ public static class ChartXmlReader
     {
         if (element.Name == CmlNames.BarChart)
         {
-            var dir = element.Element(CmlNames.BarDirection)?.GetAttr(DmlNames.AttributeValue, "col") ?? "col";
-            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, "clustered") ?? "clustered";
+            var dir = element.Element(CmlNames.BarDirection)?.GetAttr(DmlNames.AttributeValue, CmlNames.BarDirColumn) ?? CmlNames.BarDirColumn;
+            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, CmlNames.GroupingClustered) ?? CmlNames.GroupingClustered;
             return ((dir, grouping) switch
             {
-                ("col", "clustered") => ChartType.ColumnClustered,
-                ("col", "stacked") => ChartType.ColumnStacked,
-                ("col", "percentStacked") => ChartType.ColumnFullStacked,
-                ("bar", "clustered") => ChartType.BarClustered,
-                ("bar", "stacked") => ChartType.BarStacked,
-                ("bar", "percentStacked") => ChartType.BarFullStacked,
+                (CmlNames.BarDirColumn, CmlNames.GroupingClustered) => ChartType.ColumnClustered,
+                (CmlNames.BarDirColumn, CmlNames.GroupingStacked) => ChartType.ColumnStacked,
+                (CmlNames.BarDirColumn, CmlNames.GroupingPercentStacked) => ChartType.ColumnFullStacked,
+                (CmlNames.BarDirBar, CmlNames.GroupingClustered) => ChartType.BarClustered,
+                (CmlNames.BarDirBar, CmlNames.GroupingStacked) => ChartType.BarStacked,
+                (CmlNames.BarDirBar, CmlNames.GroupingPercentStacked) => ChartType.BarFullStacked,
                 _ => ChartType.ColumnClustered
             }, true);
         }
 
         if (element.Name == CmlNames.LineChart)
         {
-            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, "standard") ?? "standard";
+            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, CmlNames.GroupingStandard) ?? CmlNames.GroupingStandard;
             var hasMarkers = element.Elements(CmlNames.Series).Any(static s => s.Element(CmlNames.Marker) != null);
             return ((grouping, hasMarkers) switch
             {
-                ("stacked", false) => ChartType.LineStacked,
-                ("stacked", true) => ChartType.LineWithMarkersStacked,
-                ("percentStacked", false) => ChartType.LineFullStacked,
-                ("percentStacked", true) => ChartType.LineWithMarkersFullStacked,
+                (CmlNames.GroupingStacked, false) => ChartType.LineStacked,
+                (CmlNames.GroupingStacked, true) => ChartType.LineWithMarkersStacked,
+                (CmlNames.GroupingPercentStacked, false) => ChartType.LineFullStacked,
+                (CmlNames.GroupingPercentStacked, true) => ChartType.LineWithMarkersFullStacked,
                 (_, true) => ChartType.LineWithMarkers,
                 _ => ChartType.Line
             }, true);
@@ -158,24 +158,24 @@ public static class ChartXmlReader
 
         if (element.Name == CmlNames.AreaChart)
         {
-            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, "standard") ?? "standard";
+            var grouping = element.Element(CmlNames.Grouping)?.GetAttr(DmlNames.AttributeValue, CmlNames.GroupingStandard) ?? CmlNames.GroupingStandard;
             return (grouping switch
             {
-                "stacked" => ChartType.AreaStacked,
-                "percentStacked" => ChartType.AreaFullStacked,
+                CmlNames.GroupingStacked => ChartType.AreaStacked,
+                CmlNames.GroupingPercentStacked => ChartType.AreaFullStacked,
                 _ => ChartType.Area
             }, true);
         }
 
         if (element.Name == CmlNames.ScatterChart)
         {
-            var style = element.Element(CmlNames.ScatterStyle)?.GetAttr(DmlNames.AttributeValue, "marker") ?? "marker";
+            var style = element.Element(CmlNames.ScatterStyle)?.GetAttr(DmlNames.AttributeValue, CmlNames.ScatterStyleMarker) ?? CmlNames.ScatterStyleMarker;
             return (style switch
             {
-                "line" => ChartType.ScatterWithStraightLines,
-                "lineMarker" => ChartType.ScatterWithStraightLinesAndMarkers,
-                "smooth" => ChartType.ScatterWithSmoothLines,
-                "smoothMarker" => ChartType.ScatterWithSmoothLinesAndMarkers,
+                CmlNames.ScatterStyleLine => ChartType.ScatterWithStraightLines,
+                CmlNames.ScatterStyleLineMarker => ChartType.ScatterWithStraightLinesAndMarkers,
+                CmlNames.ScatterStyleSmooth => ChartType.ScatterWithSmoothLines,
+                CmlNames.ScatterStyleSmoothMarker => ChartType.ScatterWithSmoothLinesAndMarkers,
                 _ => ChartType.ScatterWithMarkersOnly
             }, true);
         }
@@ -183,11 +183,11 @@ public static class ChartXmlReader
         // ReSharper disable once InvertIf
         if (element.Name == CmlNames.RadarChart)
         {
-            var style = element.Element(CmlNames.RadarStyle)?.GetAttr(DmlNames.AttributeValue, "standard") ?? "standard";
+            var style = element.Element(CmlNames.RadarStyle)?.GetAttr(DmlNames.AttributeValue, CmlNames.GroupingStandard) ?? CmlNames.GroupingStandard;
             return (style switch
             {
-                "marker" => ChartType.RadarWithMarkers,
-                "filled" => ChartType.RadarFilled,
+                CmlNames.RadarStyleMarker => ChartType.RadarWithMarkers,
+                CmlNames.RadarStyleFilled => ChartType.RadarFilled,
                 _ => ChartType.Radar
             }, true);
         }
@@ -260,7 +260,7 @@ public static class ChartXmlReader
         var c = CmlNames.Cml;
         return new ChartTrendline
         {
-            Type = tl.Element(c + "trendlineType")?.GetAttr(DmlNames.AttributeValue, "linear") ?? "linear",
+            Type = tl.Element(c + "trendlineType")?.GetAttr(DmlNames.AttributeValue, CmlNames.TrendlineTypeLinear) ?? CmlNames.TrendlineTypeLinear,
             Order = tl.Element(c + "order")?.GetAttrInt(DmlNames.AttributeValue),
             Forward = tl.Element(c + "forward")?.GetAttrDouble(DmlNames.AttributeValue),
             Backward = tl.Element(c + "backward")?.GetAttrDouble(DmlNames.AttributeValue),

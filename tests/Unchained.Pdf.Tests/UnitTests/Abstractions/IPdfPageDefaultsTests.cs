@@ -63,5 +63,6 @@ public sealed class IPdfPageDefaultsTests
         public IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes() => throw new NotSupportedException();
         public IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>> GetToUnicodeMaps() => throw new NotSupportedException();
         public IReadOnlyDictionary<string, ImageXObject> GetImageXObjects() => throw new NotSupportedException();
+        public IPdfDocument Document => throw new NotSupportedException();
     }
 }

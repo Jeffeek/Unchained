@@ -435,53 +435,9 @@ internal static class MarkdownToPdfConverter
         var curFont = string.Empty;
         var curSize = 0f;
 
-        w.Op("BT"u8);
-
-        foreach (var run in runs)
-        {
-            if (run.IsRule)
-            {
-                w.Op("ET"u8);
-                y -= run.FontSize * 0.5f;
-                w.Float(opts.MarginPt);
-                w.Float(y);
-                w.Op("m"u8);
-                w.Float(opts.PageWidthPt - opts.MarginPt);
-                w.Float(y);
-                w.Op("l"u8);
-                w.Float(0.5f);
-                w.Op("w"u8);
-                w.Op("S"u8);
-                y -= (run.FontSize * 0.5f) + 2f;
-                w.Op("BT"u8);
-                curFont = string.Empty;
-                continue;
-            }
-
-            if (run.IsEmptyLine)
-            {
-                y -= run.FontSize;
-                continue;
-            }
-
-            var lineHeight = run.FontSize * opts.LineSpacing;
-            y -= lineHeight;
-
-            if (run.FontKey != curFont || Math.Abs(run.FontSize - curSize) > 0.01f)
-            {
-                w.Name(run.FontKey);
-                w.Float(run.FontSize);
-                w.Op("Tf"u8);
-                curFont = run.FontKey;
-                curSize = run.FontSize;
-            }
-
-            w.Float(x + run.IndentPt);
-            w.Float(y);
-            w.Op("Td"u8);
-            w.LiteralString(run.Text);
-            w.Op("Tj"u8);
-        }
+        // ReSharper disable BadListLineBreaks
+        EmitRunLoop(w, runs, opts, x, ref y, ref curFont, ref curSize);
+        // ReSharper restore BadListLineBreaks
 
         w.Op("ET"u8);
         return buf.WrittenMemory.ToArray();
@@ -503,28 +459,32 @@ internal static class MarkdownToPdfConverter
         var curSize = 0f;
         var mcid = 0;
 
-        w.Op("BT"u8);
+        // ReSharper disable BadListLineBreaks
+        EmitRunLoopTagged(w, runs, opts, x, ref y, ref curFont, ref curSize, taggedItems, ref mcid, pageIndex);
+        // ReSharper restore BadListLineBreaks
 
+        w.Op("ET"u8);
+        return buf.WrittenMemory.ToArray();
+    }
+
+    // ── Shared content loops ──────────────────────────────────────────────────
+
+    private static void EmitRunLoop(
+        ContentStreamWriter w,
+        List<TextRun> runs,
+        MdLoadOptions opts,
+        float x,
+        ref float y,
+        ref string curFont,
+        ref float curSize
+    )
+    {
+        w.Op("BT"u8);
         foreach (var run in runs)
         {
             if (run.IsRule)
             {
-                w.Op("ET"u8);
-                // Rules are artifacts — not part of the logical structure.
-                w.Op("/Artifact BMC"u8);
-                y -= run.FontSize * 0.5f;
-                w.Float(opts.MarginPt);
-                w.Float(y);
-                w.Op("m"u8);
-                w.Float(opts.PageWidthPt - opts.MarginPt);
-                w.Float(y);
-                w.Op("l"u8);
-                w.Float(0.5f);
-                w.Op("w"u8);
-                w.Op("S"u8);
-                y -= (run.FontSize * 0.5f) + 2f;
-                w.Op("EMC"u8);
-                w.Op("BT"u8);
+                EmitRule(w, opts, ref y, false, run.FontSize);
                 curFont = string.Empty;
                 continue;
             }
@@ -537,13 +497,6 @@ internal static class MarkdownToPdfConverter
 
             var lineHeight = run.FontSize * opts.LineSpacing;
             y -= lineHeight;
-
-            w.Op("ET"u8);
-            w.MarkedContentBegin(run.StructTag, mcid);
-            taggedItems.Add(new TaggedContentItem(run.StructTag, mcid, pageIndex));
-            mcid++;
-            w.Op("BT"u8);
-
             if (run.FontKey != curFont || Math.Abs(run.FontSize - curSize) > 0.01f)
             {
                 w.Name(run.FontKey);
@@ -558,14 +511,150 @@ internal static class MarkdownToPdfConverter
             w.Op("Td"u8);
             w.LiteralString(run.Text);
             w.Op("Tj"u8);
+        }
+    }
 
+    private static void EmitRunLoopTagged(
+        ContentStreamWriter w,
+        List<TextRun> runs,
+        MdLoadOptions opts,
+        float x,
+        ref float y,
+        ref string curFont,
+        ref float curSize,
+        ICollection<TaggedContentItem> taggedItems,
+        ref int mcid,
+        int pageIndex
+    )
+    {
+        w.Op("BT"u8);
+        EmitRuns(
+            w,
+            runs,
+            opts,
+            x,
+            ref y,
+            ref curFont,
+            ref curSize,
+            isTagged: true,
+            ref mcid,
+            pageIndex,
+            taggedItems
+        );
+    }
+
+    private static void EmitRuns(
+        ContentStreamWriter w,
+        List<TextRun> runs,
+        MdLoadOptions opts,
+        float x,
+        ref float y,
+        ref string curFont,
+        ref float curSize,
+        bool isTagged,
+        ref int mcid,
+        int pageIndex,
+        ICollection<TaggedContentItem>? taggedItems = null
+    )
+    {
+        foreach (var run in runs)
+        {
+            if (run.IsRule)
+            {
+                EmitRule(w, opts, ref y, isTagged, run.FontSize);
+                curFont = string.Empty;
+                continue;
+            }
+
+            if (run.IsEmptyLine)
+            {
+                y -= run.FontSize;
+                continue;
+            }
+
+            EmitText(
+                w,
+                opts,
+                x,
+                ref y,
+                run,
+                ref curFont,
+                ref curSize,
+                isTagged,
+                taggedItems,
+                ref mcid,
+                pageIndex
+            );
+        }
+    }
+
+    private static void EmitRule(ContentStreamWriter w, MdLoadOptions opts, ref float y, bool isTagged, float fontSize)
+    {
+        w.Op("ET"u8);
+        if (isTagged)
+            w.Op("/Artifact BMC"u8);
+        y -= fontSize * 0.5f;
+        w.Float(opts.MarginPt);
+        w.Float(y);
+        w.Op("m"u8);
+        w.Float(opts.PageWidthPt - opts.MarginPt);
+        w.Float(y);
+        w.Op("l"u8);
+        w.Float(0.5f);
+        w.Op("w"u8);
+        w.Op("S"u8);
+        y -= (fontSize * 0.5f) + 2f;
+        if (isTagged)
+            w.Op("EMC"u8);
+        w.Op("BT"u8);
+    }
+
+    private static void EmitText(
+        ContentStreamWriter w,
+        MdLoadOptions opts,
+        float x,
+        ref float y,
+        TextRun run,
+        ref string curFont,
+        ref float curSize,
+        bool isTagged,
+        ICollection<TaggedContentItem>? taggedItems,
+        ref int mcid,
+        int pageIndex
+    )
+    {
+        var lineHeight = run.FontSize * opts.LineSpacing;
+        y -= lineHeight;
+
+        if (isTagged)
+        {
             w.Op("ET"u8);
-            w.MarkedContentEnd();
+            w.MarkedContentBegin(run.StructTag, mcid);
+            taggedItems!.Add(new TaggedContentItem(run.StructTag, mcid, pageIndex));
+            mcid++;
             w.Op("BT"u8);
         }
 
+        if (run.FontKey != curFont || Math.Abs(run.FontSize - curSize) > 0.01f)
+        {
+            w.Name(run.FontKey);
+            w.Float(run.FontSize);
+            w.Op("Tf"u8);
+            curFont = run.FontKey;
+            curSize = run.FontSize;
+        }
+
+        w.Float(x + run.IndentPt);
+        w.Float(y);
+        w.Op("Td"u8);
+        w.LiteralString(run.Text);
+        w.Op("Tj"u8);
+
+        if (!isTagged) return;
+
         w.Op("ET"u8);
-        return buf.WrittenMemory.ToArray();
+        w.MarkedContentEnd();
+        w.Op("BT"u8);
     }
 
     // ── Run collection ────────────────────────────────────────────────────────

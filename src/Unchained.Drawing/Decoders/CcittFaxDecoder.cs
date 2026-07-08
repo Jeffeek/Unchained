@@ -206,7 +206,18 @@ internal static class CcittFaxDecoder
         _ => DecodeGroup3_2D(data, columns, rows, blackIs1, encodedByteAlign)
     };
 
-    // ── Group 4 (K = -1, T.6 pure 2D) ───────────────────────────────────────
+    // ── Shared decoder infrastructure ───────────────────────────────────────
+
+    private static (MemoryStream output, bool[] refRow, bool[] curRow) CreateDecoderState(int columns, int rows)
+    {
+        var rowBytes = (columns + 7) >> 3;
+        var output = new MemoryStream(rows > 0 ? rows * rowBytes : rowBytes * 64);
+        const bool white = true;
+        var refRow = new bool[columns + 1];
+        var curRow = new bool[columns + 1];
+        Array.Fill(refRow, white, 0, columns + 1);
+        return (output, refRow, curRow);
+    }
 
     private static ReadOnlyMemory<byte> DecodeGroup4(
         ReadOnlyMemory<byte> data,
@@ -216,30 +227,23 @@ internal static class CcittFaxDecoder
         bool endOfBlock
     )
     {
-        var input = data.Span;
         var rowBytes = (columns + 7) >> 3;
-        var output = new MemoryStream(rows > 0 ? rows * rowBytes : rowBytes * 64);
+        var (output, refRow, curRow) = CreateDecoderState(columns, rows);
 
-        var bitPos = 0;
-        const bool white = true;
-        var refRow = new bool[columns + 1];
-        var curRow = new bool[columns + 1];
-        Array.Fill(refRow, white, 0, columns + 1);
-
-        for (;;)
+        for (var bitPos = 0;;)
         {
-            Array.Fill(curRow, white, 0, columns);
+            Array.Fill(curRow, true, 0, columns);
 
             var a0 = -1;
-            var a0Color = white;
+            var a0Color = true;
 
             var complete = DecodeRow2D(
-                input,
+                data.Span,
                 ref bitPos,
                 refRow,
                 curRow,
                 columns,
-                white,
+                true,
                 endOfBlock,
                 ref a0,
                 ref a0Color
@@ -335,16 +339,14 @@ internal static class CcittFaxDecoder
         bool endOfBlock
     )
     {
-        var input = data.Span;
-        var rowBytes = (columns + 7) >> 3;
-        var output = new MemoryStream(rows > 0 ? rows * rowBytes : rowBytes * 64);
+        var (output, _, _) = CreateDecoderState(columns, rows);
 
         var bitPos = 0;
         var whiteBit = !blackIs1;
 
         for (var rowIdx = 0; rows == 0 || rowIdx < rows; rowIdx++)
         {
-            SkipEol(input, ref bitPos);
+            SkipEol(data.Span, ref bitPos);
             if (encodedByteAlign)
                 bitPos = (bitPos + 7) & ~7;
 
@@ -356,7 +358,7 @@ internal static class CcittFaxDecoder
 
             while (pos < columns)
             {
-                var run = ReadRunLength(input, ref bitPos, isWhite);
+                var run = ReadRunLength(data.Span, ref bitPos, isWhite);
                 if (run < 0)
                 {
                     output.Write([]);
@@ -369,9 +371,9 @@ internal static class CcittFaxDecoder
             }
 
             var saved = bitPos;
-            SkipEol(input, ref bitPos);
+            SkipEol(data.Span, ref bitPos);
             var saved2 = bitPos;
-            SkipEol(input, ref bitPos);
+            SkipEol(data.Span, ref bitPos);
             if (saved2 == bitPos)
                 bitPos = saved;
             else if (endOfBlock)
@@ -393,21 +395,15 @@ internal static class CcittFaxDecoder
         bool encodedByteAlign
     )
     {
-        var input = data.Span;
-        var rowBytes = (columns + 7) >> 3;
-        var output = new MemoryStream(rows > 0 ? rows * rowBytes : rowBytes * 64);
-
+        var (output, refRow, curRow) = CreateDecoderState(columns, rows);
         var bitPos = 0;
         const bool white = true;
-        var refRow = new bool[columns + 1];
-        var curRow = new bool[columns + 1];
-        Array.Fill(refRow, white, 0, columns + 1);
 
         for (var rowIdx = 0; rows == 0 || rowIdx < rows; rowIdx++)
         {
-            SkipEol(input, ref bitPos);
+            SkipEol(data.Span, ref bitPos);
 
-            var tag = PeekBit(input, bitPos);
+            var tag = PeekBit(data.Span, bitPos);
             if (tag < 0)
                 break;
 
@@ -420,13 +416,13 @@ internal static class CcittFaxDecoder
 
             bool decoded;
             if (tag == 1)
-                decoded = DecodeRow1D(input, ref bitPos, curRow, columns, white);
+                decoded = DecodeRow1D(data.Span, ref bitPos, curRow, columns, white);
             else
             {
                 var a0 = -1;
                 var a0Color = white;
                 decoded = DecodeRow2D(
-                    input,
+                    data.Span,
                     ref bitPos,
                     refRow,
                     curRow,

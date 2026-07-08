@@ -80,9 +80,10 @@ internal static class FillParser
             ? ColorParser.Parse(fg)
             : default;
 
-        var background = patternElement.Elements().Skip(1).FirstOrDefault() is { } bg
-            ? ColorParser.Parse(bg)
-            : default;
+        // The second child is <a:bgClr>, which wraps a color element per ECMA-376.
+        // The color element may be <solidFill> (spec-correct) or directly a colour element.
+        var bgClr = patternElement.Elements().Skip(1).FirstOrDefault();
+        var background = bgClr != null ? ReadBgClrColor(bgClr) : default;
 
         fill.Type = FillType.Pattern;
         fill.Pattern = new PatternFill
@@ -91,6 +92,17 @@ internal static class FillParser
             ForegroundColor = foreground,
             BackgroundColor = background
         };
+    }
+
+    private static ColorSpec ReadBgClrColor(XElement bgClr)
+    {
+        // Per ECMA-376 §20.1.8.4, <bgClr> wraps a colour element.
+        // Try <solidFill> first (spec-correct), then fall back to direct colour child.
+        var solidFill = bgClr.Element(DmlNames.SolidFill);
+        return ColorParser.Parse(
+            solidFill ??
+            bgClr // Direct colour child (legacy / malformed but seen in practice).
+        );
     }
 
     private static void ParsePicture(XContainer blipElement, FillFormat fill)

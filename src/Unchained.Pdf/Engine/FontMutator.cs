@@ -18,19 +18,11 @@ internal static class FontMutator
         IReadOnlyDictionary<string, byte[]> fontMap
     )
     {
-        var existing = adapter.Core.CollectObjects().ToList();
+        var (existing, _) = MutationHelper.CollectWithMax(adapter);
         var changed = false;
 
-        for (var i = 0; i < existing.Count; i++)
+        foreach (var (i, obj, dict, baseFont) in CollectFontDicts(existing))
         {
-            var obj = existing[i];
-            var dict = obj.Value as PdfDictionary;
-            if (dict is null) continue;
-            if (dict.GetName("Type") != "Font") continue;
-
-            var baseFont = dict.GetName(PdfName.BaseFont.Value);
-            if (baseFont is null) continue;
-
             // Strip style suffixes to find the base family name.
             var family = NormalizeBaseFont(baseFont);
             if (!fontMap.TryGetValue(family, out var fontBytes) &&
@@ -56,12 +48,7 @@ internal static class FontMutator
             var maxObj = existing.Max(static o => o.ObjectNumber);
             var descObjNum = AppendFontDescriptor(existing, ref maxObj, baseFont, fontBytes, metrics);
 
-            // Update the font dict to include the descriptor.
-            var updatedEntries = new Dictionary<string, PdfObject>(dict.Entries)
-            {
-                ["FontDescriptor"] = new PdfIndirectReference(descObjNum, 0)
-            };
-            existing[i] = new PdfIndirectObject(obj.ObjectNumber, obj.Generation, new PdfDictionary(updatedEntries));
+            AttachDescriptor(existing, i, obj, dict, descObjNum);
             changed = true;
         }
 
@@ -75,21 +62,13 @@ internal static class FontMutator
         byte[] newFontBytes
     )
     {
-        var existing = adapter.Core.CollectObjects().ToList();
+        var (existing, maxObj) = MutationHelper.CollectWithMax(adapter);
         var metrics = TrueTypeMetrics.Read(newFontBytes) ?? TrueTypeMetrics.HelveticaFallback;
         var changed = false;
         var normalised = NormalizeBaseFont(fontName);
-        var maxObj = existing.Max(static o => o.ObjectNumber);
 
-        for (var i = 0; i < existing.Count; i++)
+        foreach (var (i, obj, dict, baseFont) in CollectFontDicts(existing))
         {
-            var obj = existing[i];
-            var dict = obj.Value as PdfDictionary;
-            if (dict is null) continue;
-            if (dict.GetName("Type") != "Font") continue;
-
-            var baseFont = dict.GetName(PdfName.BaseFont.Value);
-            if (baseFont is null) continue;
             if (!string.Equals(NormalizeBaseFont(baseFont), normalised, StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(baseFont, fontName, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -97,16 +76,7 @@ internal static class FontMutator
             // Build new /FontFile2 stream + /FontDescriptor.
             var descObjNum = AppendFontDescriptor(existing, ref maxObj, baseFont, newFontBytes, metrics);
 
-            // Update the font dictionary with the new descriptor.
-            var updatedEntries = new Dictionary<string, PdfObject>(dict.Entries)
-            {
-                ["FontDescriptor"] = new PdfIndirectReference(descObjNum, 0)
-            };
-            existing[i] = new PdfIndirectObject(
-                obj.ObjectNumber,
-                obj.Generation,
-                new PdfDictionary(updatedEntries)
-            );
+            AttachDescriptor(existing, i, obj, dict, descObjNum);
             changed = true;
         }
 
@@ -145,7 +115,7 @@ internal static class FontMutator
                 )
                 {
                     [PdfName.Length.Value] = new PdfInteger(subsetBytes.Length),
-                    ["Length1"] = new PdfInteger(subsetBytes.Length)
+                    [PdfName.Length1.Value] = new PdfInteger(subsetBytes.Length)
                 }
             );
             existing[i] = new PdfIndirectObject(
@@ -158,6 +128,46 @@ internal static class FontMutator
 
         if (changed)
             MutationHelper.SerializeAndReplace(adapter, existing);
+    }
+
+    // Snapshots every /Font dictionary in the object list with a non-null /BaseFont, returning its
+    // index, indirect object, dictionary, and base-font name. Materialised into a list so callers can
+    // safely append new objects to `existing` while iterating. Shared by EmbedStandardFonts and ReplaceFont.
+    private static List<(int Index, PdfIndirectObject Obj, PdfDictionary Dict, string BaseFont)> CollectFontDicts(
+        IReadOnlyList<PdfIndirectObject> existing
+    )
+    {
+        var result = new List<(int, PdfIndirectObject, PdfDictionary, string)>();
+        for (var i = 0; i < existing.Count; i++)
+        {
+            var obj = existing[i];
+            if (obj.Value is not PdfDictionary dict) continue;
+            if (dict.GetName(PdfName.Type.Value) != PdfName.Font.Value) continue;
+
+            var baseFont = dict.GetName(PdfName.BaseFont.Value);
+            if (baseFont is null) continue;
+
+            result.Add((i, obj, dict, baseFont));
+        }
+
+        return result;
+    }
+
+    // Rewrites the font dictionary at index i so its /FontDescriptor points at descObjNum,
+    // preserving all other entries. Shared by EmbedStandardFonts and ReplaceFont.
+    private static void AttachDescriptor(
+        IList<PdfIndirectObject> existing,
+        int i,
+        PdfIndirectObject obj,
+        PdfDictionary dict,
+        int descObjNum
+    )
+    {
+        var updatedEntries = new Dictionary<string, PdfObject>(dict.Entries)
+        {
+            [PdfName.FontDescriptor.Value] = new PdfIndirectReference(descObjNum, 0)
+        };
+        existing[i] = new PdfIndirectObject(obj.ObjectNumber, obj.Generation, new PdfDictionary(updatedEntries));
     }
 
     private static string NormalizeBaseFont(string baseFont)
@@ -191,21 +201,21 @@ internal static class FontMutator
         var descObjNum = ++maxObj;
         var descEntries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.FontDescriptor,
-            ["FontName"] = PdfName.Get(baseFont),
-            ["Flags"] = new PdfInteger(32),
-            ["FontBBox"] = new PdfArray(
+            [PdfName.Type.Value] = PdfName.FontDescriptor,
+            [PdfName.FontName.Value] = PdfName.Get(baseFont),
+            [PdfName.Flags.Value] = new PdfInteger(32),
+            [PdfName.FontBBox.Value] = new PdfArray(
                 [
                     new PdfInteger(metrics.XMin), new PdfInteger(metrics.YMin),
                     new PdfInteger(metrics.XMax), new PdfInteger(metrics.YMax)
                 ]
             ),
-            ["ItalicAngle"] = new PdfInteger(0),
-            ["Ascent"] = new PdfInteger(metrics.Ascent),
-            ["Descent"] = new PdfInteger(metrics.Descent),
-            ["CapHeight"] = new PdfInteger(metrics.CapHeight),
-            ["StemV"] = new PdfInteger(metrics.StemV),
-            ["FontFile2"] = new PdfIndirectReference(fontFileObjNum, 0)
+            [PdfName.ItalicAngle.Value] = new PdfInteger(0),
+            [PdfName.Ascent.Value] = new PdfInteger(metrics.Ascent),
+            [PdfName.Descent.Value] = new PdfInteger(metrics.Descent),
+            [PdfName.CapHeight.Value] = new PdfInteger(metrics.CapHeight),
+            [PdfName.StemV.Value] = new PdfInteger(metrics.StemV),
+            [PdfName.FontFile2.Value] = new PdfIndirectReference(fontFileObjNum, 0)
         };
         existing.Add(new PdfIndirectObject(descObjNum, 0, new PdfDictionary(descEntries)));
 
@@ -229,7 +239,7 @@ internal static class FontMutator
         {
             var dict = (PdfDictionary)obj.Value;
 
-            var type = dict.GetName("Type");
+            var type = dict.GetName(PdfName.Type.Value);
             switch (type)
             {
                 case "FontDescriptor":
@@ -258,7 +268,7 @@ internal static class FontMutator
         for (var p = 1; p <= adapter.Core.PageCount; p++)
         {
             var pageDict = adapter.Core.GetPage(p);
-            var pageAdapter = new PdfPageAdapter(pageDict, p, adapter.Core);
+            var pageAdapter = new PdfPageAdapter(pageDict, p, adapter.Core, adapter);
             var ops = pageAdapter.GetContentOperators();
             var compFonts = pageAdapter.GetCompositeFonts(); // resource name → composite info
 

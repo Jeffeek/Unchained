@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
@@ -13,16 +13,18 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Unchained.Pdf.Tests" />
+    <InternalsVisibleTo Include="Unchained.Studio" />
   </ItemGroup>
 
-  <!--
-    Unchained.Drawing provides RasterBuffer + PngEncoder (pure managed).
-    Unchained.Drawing.Text provides FontCache + glyph blitting (FreeType2 + HarfBuzz).
-    All native DLLs and font resources are pulled in transitively.
-  -->
   <ItemGroup>
     <ProjectReference Include="..\Unchained.Pdf\Unchained.Pdf.csproj" />
-    <ProjectReference Include="..\Unchained.Drawing.Text\Unchained.Drawing.Text.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="bblanchon.PDFium.Linux" />
+    <PackageReference Include="bblanchon.PDFium.macOS" />
+    <PackageReference Include="bblanchon.PDFium.Win32" />
+    <PackageReference Include="PDFiumCore" />
   </ItemGroup>
 
 </Project>

@@ -124,16 +124,31 @@ public sealed class CcittFaxDecoderTests
     }
 
     [Fact]
-    public void DecodeGroup3_1D_BlackIs1_StillSetsWhiteRowBits()
+    public void DecodeGroup3_1D_BlackIs1_InvertsOutput()
     {
-        // The 1D path applies blackIs1 twice: once when choosing the row fill colour
-        // (whiteBit = !blackIs1) and again in WriteRow (isSet = blackIs1 ? !row : row).
-        // The two negations cancel, so an all-white row reads back as all-set bits
-        // regardless of blackIs1.
-        var decoded = CcittFaxDecoder.Decode(EncodedG31DWhite, 0, 8, 2, true).ToArray();
+        var normal = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16, true).ToArray();
 
-        decoded.Length.ShouldBe(2);
-        RowBits(decoded, 0, 8).ShouldBe("11111111");
+        inverted.Length.ShouldBe(normal.Length);
+        for (var i = 0; i < normal.Length; i++)
+            inverted[i].ShouldBe((byte)~normal[i]);
+    }
+
+    [Fact]
+    public void DecodeGroup3_1D_MixedRow_VerifiesBlackIs1Semantics()
+    {
+        // Use the known-good G3-2D fixture (16×16) and verify blackIs1 inverts it.
+        var normal = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16).ToArray();
+        var inverted = CcittFaxDecoder.Decode(EncodedG32D, 4, 16, 16, true).ToArray();
+
+        // Normal: background=1 (white), figure has some 0s (black).
+        // Verify mixed content: not all 0s and not all 1s.
+        normal.Any(static b => b != 0).ShouldBeTrue();
+        normal.Any(static b => b != 255).ShouldBeTrue();
+
+        // Inverted flips every bit.
+        for (var i = 0; i < normal.Length; i++)
+            inverted[i].ShouldBe((byte)~normal[i]);
     }
 
     [Fact]

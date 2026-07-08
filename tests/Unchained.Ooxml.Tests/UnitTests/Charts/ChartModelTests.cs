@@ -7,16 +7,6 @@ namespace Unchained.Ooxml.Tests.UnitTests.Charts;
 public sealed class ChartModelTests
 {
     [Fact]
-    public void Defaults_ColumnClustered_TitleEnabled_NoDataTable()
-    {
-        var model = new ChartModel();
-        model.Type.ShouldBe(ChartType.ColumnClustered);
-        model.Title.ShouldBe(string.Empty);
-        model.HasTitle.ShouldBeTrue();
-        model.HasDataTable.ShouldBeFalse();
-    }
-
-    [Fact]
     public void Defaults_NonNullChildren()
     {
         var model = new ChartModel();

@@ -1,6 +1,6 @@
 @using Unchained.Pdf.Abstractions
+@using Unchained.Studio.Infrastructure
 @inject RenderingService Renderer
-@inject PdfiumReferenceRenderer Pdfium
 @inject FileExportService Exporter
 @inject ISnackbar Snackbar
 
@@ -155,6 +155,28 @@
 
     private string FileNamePreview => BuildFileNamePreview();
 
+    private PdfiumReferenceRenderer? _pdfiumRenderer;
+
+    private PdfiumReferenceRenderer? EnsurePdfium()
+    {
+        if (_pdfiumRenderer is not null)
+            return _pdfiumRenderer;
+
+        if (!FeatureFlags.EnablePdfiumCompare)
+            return null;
+
+        try
+        {
+            _pdfiumRenderer = new PdfiumReferenceRenderer();
+        }
+        catch
+        {
+            _pdfiumRenderer = null;
+        }
+
+        return _pdfiumRenderer;
+    }
+
     private string BuildFileNamePreview()
     {
         var baseName = Path.GetFileNameWithoutExtension(FileName);
@@ -167,6 +189,21 @@
 
     private async Task StartExport()
     {
+        if (!FeatureFlags.EnablePdfiumCompare)
+        {
+            Snackbar.Add("Comparison feature is not enabled.", Severity.Warning);
+            MudDialog.Cancel();
+            return;
+        }
+
+        var pdfium = EnsurePdfium();
+        if (pdfium is null)
+        {
+            Snackbar.Add("Pdfium reference renderer is not available.", Severity.Warning);
+            MudDialog.Cancel();
+            return;
+        }
+
         var pages = ResolvePages();
         if (pages is null) return;
 
@@ -218,7 +255,7 @@
                     {
                         _progressDetail = "Pdfium (Chrome engine)…";
                         StateHasChanged();
-                        pdfiumBytes = await Pdfium.RenderPageAsync(DocumentBytes, page, _dpi, pts.Token);
+                        pdfiumBytes = await pdfium.RenderPageAsync(DocumentBytes, page, _dpi, pts.Token);
                         if (pdfiumBytes is null)
                             _errors.Add($"p.{page} Pdfium: render returned null");
                     }

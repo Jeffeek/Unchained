@@ -21,15 +21,9 @@ public sealed class AnnotationEditor : IAnnotationEditor
 
     private static void AddAnnotation(IPdfDocument document, int pageNumber, Annotation annotation)
     {
-        var adapter = document as PdfDocumentAdapter
-                      ?? throw new ArgumentException(
-                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document)
-                      );
+        var adapter = MutationHelper.Cast(nameof(document), document);
 
-        var existing = adapter.Core.CollectObjects();
-        var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(maxObjNum + 1);
+        var (existing, builder) = MutationHelper.CollectWithBuilder(adapter);
 
         // Build annotation dict.
         var annotEntries = new Dictionary<string, PdfObject>
@@ -78,18 +72,7 @@ public sealed class AnnotationEditor : IAnnotationEditor
             .Concat(builder.Objects)
             .ToList();
 
-        var totalMax = finalObjects.Max(static o => o.ObjectNumber);
-        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var trailer = new PdfDictionary(
-            new Dictionary<string, PdfObject>
-            {
-                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-                [PdfName.Root.Value] = rootRef
-            }
-        );
-
-        var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(finalObjects, trailer);
-        adapter.ReplaceCore(newDoc.Core);
+        MutationHelper.SerializeAndReplace(adapter, finalObjects);
     }
 
     private static IEnumerable<PdfObject> ResolveAnnotArray(PdfObject? obj, PdfDocumentCore core)

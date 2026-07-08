@@ -3,7 +3,7 @@ using Unchained.Ooxml;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Slides;
@@ -42,6 +42,7 @@ public sealed class SlideApiTests
 
         slide.GetComments().ShouldHaveSingleItem().ShouldBeSameAs(comment);
         comment.Author.ShouldBeSameAs(author);
+        comment.Index.ShouldBe(1u);
     }
 
     [Fact]
@@ -119,7 +120,7 @@ public sealed class SlideApiTests
         var slide = FirstSlide();
         slide.Notes.NotesText = "note foo";
         var replaced = slide.ReplaceText("foo", "bar", includeNotes: true);
-        replaced.ShouldBeGreaterThanOrEqualTo(1);
+        replaced.ShouldBe(1);
     }
 
     // ── Hyperlinks ──────────────────────────────────────────────────────────

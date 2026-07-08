@@ -7,7 +7,7 @@ using Unchained.Ooxml.Text;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Models.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -75,7 +75,7 @@ public sealed class HtmlExportRichTests : PptxTestBase
         shape.Line.SetSolid(ColorSpec.FromRgb(0, 0, 0), 2);
 
         var html = await WriteAndReadAsync(doc);
-        html.ShouldContain("border:");
+        html.ShouldContain("border:2.0px solid rgb(0,0,0)");
     }
 
     [Fact]

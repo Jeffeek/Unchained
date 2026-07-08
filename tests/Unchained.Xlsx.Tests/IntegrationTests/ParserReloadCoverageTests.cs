@@ -70,8 +70,10 @@ public class ParserReloadCoverageTests
         var bytes = await XlsxFixtures.SaveBytesAsync(seed);
 
         const string ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-        const string sst = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="{ns}" count="1" uniqueCount="1"><si><r><t>foo</t></r><r><t>bar</t></r></si></sst>""";
-        const string sheet = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="{ns}"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>""";
+        const string sst =
+            $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="{ns}" count="1" uniqueCount="1"><si><r><t>foo</t></r><r><t>bar</t></r></si></sst>""";
+        const string sheet =
+            $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="{ns}"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>""";
 
         using var ms = new MemoryStream();
         await ms.WriteAsync(bytes);

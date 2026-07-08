@@ -5,6 +5,7 @@ using Unchained.Ooxml;
 using Unchained.Ooxml.Media;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Core;
+using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Models.Shapes;
@@ -24,7 +25,6 @@ namespace Unchained.Pptx.Parsing;
 /// </summary>
 internal static class OdpParser
 {
-    public const string MimeType = "application/vnd.oasis.opendocument.presentation";
     // ODF namespaces (kept local to the reader; the writer has its own copy in Export/OdfNames).
     private static readonly XNamespace Office = "urn:oasis:names:tc:opendocument:xmlns:office:1.0";
     private static readonly XNamespace Draw = "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0";
@@ -47,7 +47,7 @@ internal static class OdpParser
 
             using var s = mime.Open();
             using var r = new StreamReader(s);
-            return r.ReadToEnd().Trim().StartsWith(MimeType, StringComparison.Ordinal);
+            return r.ReadToEnd().Trim().StartsWith(OdfNames.PresentationMimeType, StringComparison.Ordinal);
         }
         catch
         {
@@ -264,11 +264,11 @@ internal static class OdpParser
 
     private static string ExtensionToMime(string ext) => ext.ToLowerInvariant() switch
     {
-        ".png" => "image/png",
-        ".jpg" or ".jpeg" => "image/jpeg",
-        ".gif" => "image/gif",
-        ".bmp" => "image/bmp",
-        ".tif" or ".tiff" => "image/tiff",
-        _ => "application/octet-stream"
+        ".png" => MimeTypes.Png,
+        ".jpg" or ".jpeg" => MimeTypes.Jpeg,
+        ".gif" => MimeTypes.Gif,
+        ".bmp" => MimeTypes.Bmp,
+        ".tif" or ".tiff" => MimeTypes.Tiff,
+        _ => MimeTypes.OctetStream
     };
 }

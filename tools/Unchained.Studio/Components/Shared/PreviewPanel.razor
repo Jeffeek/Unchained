@@ -1,8 +1,8 @@
 @using System.Globalization
 @using Unchained.Pdf.Abstractions
 @using Unchained.Pdf.Models
+@using Unchained.Studio.Infrastructure
 @inject RenderingService Renderer
-@inject PdfiumReferenceRenderer Pdfium
 @inject IDialogService Dialogs
 
 <div class="preview-panel">
@@ -64,20 +64,23 @@
 
         <!-- Compare toggle: use ToggledChanged, not OnClick.
              OnClick fires before Toggled is updated; ToggledChanged carries the new value. -->
-        <MudToggleIconButton Toggled="_compareMode"
-                             ToggledChanged="OnCompareToggled"
-                             Icon="@Icons.Material.Outlined.Compare"
-                             ToggledIcon="@Icons.Material.Filled.Compare"
-                             ToggledColor="Color.Secondary"
-                             Size="Size.Small"
-                             title="Compare with Pdfium (Chrome's engine), rendered server-side"/>
+        @if (FeatureFlags.EnablePdfiumCompare)
+        {
+            <MudToggleIconButton Toggled="_compareMode"
+                                 ToggledChanged="OnCompareToggled"
+                                 Icon="@Icons.Material.Outlined.Compare"
+                                 ToggledIcon="@Icons.Material.Filled.Compare"
+                                 ToggledColor="Color.Secondary"
+                                 Size="Size.Small"
+                                 title="Compare with Pdfium (Chrome's engine), rendered server-side"/>
 
-        <!-- Export comparison images -->
-        <MudIconButton Icon="@Icons.Material.Outlined.FileDownload"
-                       Size="Size.Small"
-                       Disabled="@(Document is null || DocumentBytes is null)"
-                       OnClick="OpenExportDialog"
-                       title="Export comparison images (Unchained vs Pdfium)"/>
+            <!-- Export comparison images -->
+            <MudIconButton Icon="@Icons.Material.Outlined.FileDownload"
+                           Size="Size.Small"
+                           Disabled="@(Document is null || DocumentBytes is null)"
+                           OnClick="OpenExportDialog"
+                           title="Export comparison images (Unchained vs Pdfium)"/>
+        }
     </div>
 
     <div class="preview-content @(_compareMode ? "preview-content--compare" : string.Empty)">
@@ -131,7 +134,7 @@
         </div>
 
         <!-- ── Pane B: Pdfium reference renderer (compare mode only) ── -->
-        @if (_compareMode)
+        @if (FeatureFlags.EnablePdfiumCompare && _compareMode)
         {
             <div class="preview-pane preview-pane--native">
                 <div class="pane-label pane-label--right">Pdfium (Chrome engine reference)</div>
@@ -210,6 +213,29 @@
     // Flag set synchronously in OnParametersSetAsync; acted on in OnAfterRenderAsync
     // so the browser receives the "spinner visible" state BEFORE rendering starts.
     private bool _pendingPageRender;
+
+    // Lazily-create Pdfium renderer (null when feature is disabled or creation fails).
+    private PdfiumReferenceRenderer? _pdfiumRenderer;
+
+    private PdfiumReferenceRenderer? EnsurePdfium()
+    {
+        if (_pdfiumRenderer is not null)
+            return _pdfiumRenderer;
+
+        if (!FeatureFlags.EnablePdfiumCompare)
+            return null;
+
+        try
+        {
+            _pdfiumRenderer = new PdfiumReferenceRenderer();
+        }
+        catch
+        {
+            _pdfiumRenderer = null;
+        }
+
+        return _pdfiumRenderer;
+    }
 
     protected override Task OnParametersSetAsync()
     {
@@ -294,7 +320,8 @@
     // at the same DPI as the Unchained pane. Kept in sync with page navigation + DPI.
     private async Task RenderReferencePageAsync()
     {
-        if (DocumentBytes is null)
+        var pdfium = EnsurePdfium();
+        if (pdfium is null || DocumentBytes is null)
         {
             _referenceBytes = null;
             _referenceLoading = false;
@@ -304,7 +331,7 @@
 
         try
         {
-            _referenceBytes = await Pdfium.RenderPageAsync(DocumentBytes, CurrentPage, _dpi);
+            _referenceBytes = await pdfium.RenderPageAsync(DocumentBytes, CurrentPage, _dpi);
         }
         catch
         {

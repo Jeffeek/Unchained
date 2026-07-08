@@ -31,6 +31,6 @@ internal static class Shape3DParser
     {
         Width = el.GetAttrEmu("w"),
         Height = el.GetAttrEmu("h"),
-        Preset = el.GetAttr("prst", "circle")
+        Preset = el.GetAttr(DmlNames.AttributePreset, "circle")
     };
 }

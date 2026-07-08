@@ -1,5 +1,5 @@
 using Shouldly;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -68,7 +68,7 @@ public sealed class NotesTests : PptxTestBase
         doc.Slides[0].Notes.NotesText = "Line one\nLine two\nLine three";
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Notes.NotesText.ShouldContain("Line one");
+        reloaded.Slides[0].Notes.NotesText.ShouldBe("Line one\nLine two\nLine three");
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class NotesTests : PptxTestBase
         doc.Slides[0].Notes.NotesText = longText;
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
-        reloaded.Slides[0].Notes.NotesText.ShouldContain("long speaker note");
+        reloaded.Slides[0].Notes.NotesText.ShouldBe(longText);
     }
 
     [Fact]

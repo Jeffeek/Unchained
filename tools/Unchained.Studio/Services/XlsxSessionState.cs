@@ -9,50 +9,25 @@ namespace Unchained.Studio.Services;
 ///     tree, the raw bytes, and the active sheet. Mirrors <see cref="PptxSessionState" />.
 /// </summary>
 /// <remarks>
-///     Edits mutate the live <see cref="SpreadsheetDocument" /> in place; <see cref="MarkDirty" />
-///     flags that the in-memory model has diverged from <see cref="CurrentBytes" />. Call
-///     <see cref="RefreshAsync" /> to re-serialize + reload (canonicalising the model and rebuilding
+///     Edits mutate the live <see cref="SpreadsheetDocument" /> in place;
+///     <see cref="DocumentSessionBase{TDocument,TProcessor}.MarkDirty" />
+///     flags that the in-memory model has diverged from
+///     <see cref="DocumentSessionBase{TDocument,TProcessor}.CurrentBytes" />. Call
+///     <see cref="DocumentSessionBase{TDocument,TProcessor}.RefreshAsync" /> to re-serialize + reload (canonicalising the
+///     model and rebuilding
 ///     the tree), or download directly from the live document via <see cref="SerializeAsync" />.
 /// </remarks>
-public sealed class XlsxSessionState : IAsyncDisposable
+public sealed class XlsxSessionState : DocumentSessionBase<SpreadsheetDocument, SpreadsheetProcessor>
 {
     private XlsxSessionState(
         SpreadsheetProcessor processor,
         SpreadsheetDocument document,
         byte[] bytes,
         string fileName
-    )
-    {
-        Processor = processor;
-        Document = document;
-        CurrentBytes = bytes;
-        FileName = fileName;
-        FileSizeBytes = bytes.LongLength;
-        Tree = XlsxTreeBuilder.Build(document, fileName);
-    }
-
-    public SpreadsheetProcessor Processor { get; }
-    public SpreadsheetDocument Document { get; private set; }
-    public string FileName { get; }
-    public long FileSizeBytes { get; private set; }
-    public byte[] CurrentBytes { get; private set; }
-    public TreeNode Tree { get; private set; }
-    public TreeNode? SelectedNode { get; set; }
+    ) : base(fileName, bytes, document, processor) { }
 
     /// <summary>The 1-based index of the active sheet tab.</summary>
     public int CurrentSheet { get; set; } = 1;
-
-    /// <summary><see langword="true" /> when the in-memory model has unsaved edits vs <see cref="CurrentBytes" />.</summary>
-    public bool IsDirty { get; private set; }
-
-    public ValueTask DisposeAsync()
-    {
-        Document.Dispose();
-        return ValueTask.CompletedTask;
-    }
-
-    /// <summary>Raised after the tree or model changes so the UI can re-render.</summary>
-    public event Action? Refreshed;
 
     public static async Task<XlsxSessionState> CreateAsync(
         SpreadsheetProcessor processor,
@@ -74,47 +49,27 @@ public sealed class XlsxSessionState : IAsyncDisposable
         return new XlsxSessionState(processor, document, [], fileName) { IsDirty = true };
     }
 
-    /// <summary>Flags the model dirty and rebuilds the tree from the live document.</summary>
-    public void MarkDirty()
-    {
-        IsDirty = true;
-        Tree = XlsxTreeBuilder.Build(Document, FileName);
-        Refreshed?.Invoke();
-    }
-
-    /// <summary>Rebuilds the tree and notifies the UI without flagging dirty (e.g. after selection-only changes).</summary>
-    public void RebuildTree()
-    {
-        Tree = XlsxTreeBuilder.Build(Document, FileName);
-        Refreshed?.Invoke();
-    }
-
-    /// <summary>Serialises the live document to bytes (honouring any password) without reloading.</summary>
-    public async Task<byte[]> SerializeAsync(CancellationToken ct = default)
+    protected override async Task<byte[]> SerializeAsync(CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
         await Processor.SaveAsync(Document, ms, cancellationToken: ct).ConfigureAwait(false);
         return ms.ToArray();
     }
 
-    /// <summary>
-    ///     Serialises the current document, reloads it (canonicalising), refreshes the cached bytes,
-    ///     clears the dirty flag, and rebuilds the tree.
-    /// </summary>
-    public async Task RefreshAsync(CancellationToken ct = default)
-    {
-        var newBytes = await SerializeAsync(ct).ConfigureAwait(false);
-        var oldDocument = Document;
+    protected override TreeNode BuildTree(SpreadsheetDocument document, string fileName) =>
+        XlsxTreeBuilder.Build(document, fileName);
 
-        Document = await Processor.LoadAsync(newBytes, cancellationToken: ct).ConfigureAwait(false);
-        CurrentBytes = newBytes;
-        FileSizeBytes = newBytes.LongLength;
-        IsDirty = false;
+    protected override Task<SpreadsheetDocument> ReloadAsync(byte[] bytes, CancellationToken ct = default) =>
+        Processor.LoadAsync(bytes, cancellationToken: ct);
+
+    // SpreadsheetDocument.Dispose() is synchronous; the base RefreshAsync routes it through its
+    // IDisposable switch, so no RefreshAsync override is needed — only the active-sheet reconciliation.
+    protected override void OnReloaded() =>
         CurrentSheet = Math.Clamp(CurrentSheet, 1, Math.Max(1, Document.Sheets.Count));
-        Tree = XlsxTreeBuilder.Build(Document, FileName);
 
-        oldDocument.Dispose();
-
-        Refreshed?.Invoke();
+    protected override ValueTask Dispose()
+    {
+        Document.Dispose();
+        return ValueTask.CompletedTask;
     }
 }

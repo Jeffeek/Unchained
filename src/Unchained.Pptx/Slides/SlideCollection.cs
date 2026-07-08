@@ -1,4 +1,9 @@
 using System.Collections;
+using System.Xml.Linq;
+using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Parsing;
+using Unchained.Pptx.Shapes;
+using Unchained.Pptx.Writing;
 
 namespace Unchained.Pptx.Slides;
 
@@ -133,8 +138,6 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
 
     private Slide CloneSlide(Slide source)
     {
-        // Shallow structural clone — shapes are copied by reference for now.
-        // A deeper clone would require a full shape-graph copy visitor.
         var clone = new Slide
         {
             SlideId = _nextSlideId++,
@@ -142,8 +145,19 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
             IsHidden = source.IsHidden,
             Layout = source.Layout
         };
-        foreach (var shape in source.Shapes)
+
+        // Serialize shapes to XML, then re-parse into a temporary collection,
+        // then transfer to the clone. This gives a true deep-copy of each shape.
+        var spTree = new XElement(PmlNames.GroupShape);
+        foreach (var el in source.Shapes.Select(static shape => ShapeWriter.Write(shape)).OfType<XElement>())
+            spTree.Add(el);
+
+        var tempCollection = new ShapeCollection();
+        new ShapeParser().ParseTree(spTree, tempCollection);
+
+        foreach (var shape in tempCollection)
             clone.Shapes.AddParsed(shape);
+
         return clone;
     }
 

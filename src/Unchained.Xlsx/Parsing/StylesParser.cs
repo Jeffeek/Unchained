@@ -69,7 +69,7 @@ internal static class StylesParser
             SizePoints = element.Child(SmlNames.FontSize)?.GetAttrDouble(DmlNames.AttributeValue) ?? 11,
             Name = element.Child(SmlNames.FontName)?.GetAttr(DmlNames.AttributeValue) ?? "Calibri",
             Scheme = element.Child(SmlNames.FontScheme)?.GetAttr(DmlNames.AttributeValue),
-            Color = SmlColor.FromHexArgb(element.Child(SmlNames.Color)?.GetAttr("rgb"))
+            Color = SmlColor.FromHexArgb(element.Child(SmlNames.Color)?.GetAttr(SmlNames.AttrRgb))
         };
 
         var underline = element.Child(SmlNames.FontUnderline);
@@ -101,8 +101,8 @@ internal static class StylesParser
             : new CellFill
             {
                 PatternType = SmlEnums.ParseFillPattern(patternFill.GetAttr("patternType")),
-                ForegroundColor = SmlColor.FromHexArgb(patternFill.Child(SmlNames.FgColor)?.GetAttr("rgb")),
-                BackgroundColor = SmlColor.FromHexArgb(patternFill.Child(SmlNames.BgColor)?.GetAttr("rgb"))
+                ForegroundColor = SmlColor.FromHexArgb(patternFill.Child(SmlNames.FgColor)?.GetAttr(SmlNames.AttrRgb)),
+                BackgroundColor = SmlColor.FromHexArgb(patternFill.Child(SmlNames.BgColor)?.GetAttr(SmlNames.AttrRgb))
             };
     }
 
@@ -133,8 +133,8 @@ internal static class StylesParser
             ? BorderLine.None
             : new BorderLine
             {
-                Style = SmlEnums.ParseBorderStyle(edge.GetAttr("style")),
-                Color = SmlColor.FromHexArgb(edge.Child(SmlNames.Color)?.GetAttr("rgb"))
+                Style = SmlEnums.ParseBorderStyle(edge.GetAttr(SmlNames.AttrStyle)),
+                Color = SmlColor.FromHexArgb(edge.Child(SmlNames.Color)?.GetAttr(SmlNames.AttrRgb))
             };
 
     private static void ReadXfs(XElement? table, StyleBook book, bool isCellStyle)

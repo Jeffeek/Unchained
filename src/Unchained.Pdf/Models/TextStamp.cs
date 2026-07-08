@@ -20,7 +20,7 @@ public sealed record TextStamp(
     string Text,
     float X,
     float Y,
-    string FontName = "Helvetica",
+    string FontName = PdfConstants.FontHelvetica,
     float FontSize = 24f,
     float GrayLevel = 0f,
     float RotationDegrees = 0f,

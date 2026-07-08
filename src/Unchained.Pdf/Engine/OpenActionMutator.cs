@@ -21,15 +21,6 @@ internal static class OpenActionMutator
             );
         }
 
-        var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0)
-            throw new PdfException("Catalog object not found.");
-
-        var catalogDict = existing[catalogIdx].Value as PdfDictionary ?? throw new PdfException("Catalog is not a dictionary.");
-
-        // Build a GoTo action pointing at the target page.
         var pageRef = FindPageRef(adapter.Core, pageNumber);
         var dest = new PdfArray(
             [
@@ -43,31 +34,23 @@ internal static class OpenActionMutator
         var action = new PdfDictionary(
             new Dictionary<string, PdfObject>
             {
-                ["Type"] = PdfName.Action,
-                ["S"] = PdfName.GoTo,
-                ["D"] = dest
+                [PdfName.Type.Value] = PdfName.Action,
+                [PdfName.S.Value] = PdfName.GoTo,
+                [PdfName.D.Value] = dest
             }
         );
 
-        var newEntries = new Dictionary<string, PdfObject>(catalogDict.Entries)
-        {
-            [PdfName.OpenAction.Value] = action
-        };
-        existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(newEntries));
-
-        MutationHelper.SerializeAndReplace(adapter, existing);
+        MutationHelper.ApplyCatalogMutation(
+            adapter,
+            entries =>
+            {
+                entries[PdfName.OpenAction.Value] = action;
+            }
+        );
     }
 
     internal static void SetOpenActionFromModel(PdfDocumentAdapter adapter, PdfOpenAction action)
     {
-        var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0)
-            throw new PdfException("Catalog object not found.");
-
-        var catalogDict = existing[catalogIdx].Value as PdfDictionary ?? throw new PdfException("Catalog is not a dictionary.");
-
         PdfObject openAction = action switch
         {
             PdfOpenAction.GoToAction g => BuildGoToAction(adapter.Core, g.PageNumber),
@@ -76,16 +59,13 @@ internal static class OpenActionMutator
             _ => throw new ArgumentException($"Unknown PdfOpenAction type: {action.GetType().Name}")
         };
 
-        var newEntries = new Dictionary<string, PdfObject>(catalogDict.Entries)
-        {
-            [PdfName.OpenAction.Value] = openAction
-        };
-        existing[catalogIdx] = new PdfIndirectObject(
-            catalogRef.ObjectNumber,
-            0,
-            new PdfDictionary(newEntries)
+        MutationHelper.ApplyCatalogMutation(
+            adapter,
+            entries =>
+            {
+                entries[PdfName.OpenAction.Value] = openAction;
+            }
         );
-        MutationHelper.SerializeAndReplace(adapter, existing);
     }
 
     private static PdfDictionary BuildGoToAction(PdfDocumentCore core, int pageNumber)
@@ -109,9 +89,9 @@ internal static class OpenActionMutator
         return new PdfDictionary(
             new Dictionary<string, PdfObject>
             {
-                ["Type"] = PdfName.Action,
-                ["S"] = PdfName.GoTo,
-                ["D"] = dest
+                [PdfName.Type.Value] = PdfName.Action,
+                [PdfName.S.Value] = PdfName.GoTo,
+                [PdfName.D.Value] = dest
             }
         );
     }
@@ -120,9 +100,9 @@ internal static class OpenActionMutator
         new(
             new Dictionary<string, PdfObject>
             {
-                ["Type"] = PdfName.Action,
-                ["S"] = PdfName.URI,
-                ["URI"] = PdfString.FromLatin1(uri)
+                [PdfName.Type.Value] = PdfName.Action,
+                [PdfName.S.Value] = PdfName.URI,
+                [PdfName.URI.Value] = PdfString.FromLatin1(uri)
             }
         );
 
@@ -130,9 +110,9 @@ internal static class OpenActionMutator
         new(
             new Dictionary<string, PdfObject>
             {
-                ["Type"] = PdfName.Action,
-                ["S"] = PdfName.Named,
-                ["N"] = PdfName.Get(name)
+                [PdfName.Type.Value] = PdfName.Action,
+                [PdfName.S.Value] = PdfName.Named,
+                [PdfName.N.Value] = PdfName.Get(name)
             }
         );
 

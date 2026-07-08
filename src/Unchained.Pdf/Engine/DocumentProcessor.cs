@@ -108,7 +108,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(outputStream);
 
         var adapter = CastAdapter(document);
-        var converted = await Task.Run(() => PdfAConverter.Convert(adapter.Core, profile), ct).ConfigureAwait(false);
+        var converted = await Task.Run(() => new PdfAConverter(profile).Convert(adapter.Core), ct).ConfigureAwait(false);
         await outputStream.WriteAsync(converted, ct).ConfigureAwait(false);
     }
 
@@ -124,7 +124,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
         var adapter = CastAdapter(document);
-        var converted = await Task.Run(() => PdfAConverter.Convert(adapter.Core, profile), ct).ConfigureAwait(false);
+        var converted = await Task.Run(() => new PdfAConverter(profile).Convert(adapter.Core), ct).ConfigureAwait(false);
         await File.WriteAllBytesAsync(filePath, converted, ct).ConfigureAwait(false);
     }
 
@@ -141,7 +141,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(outputStream);
 
         var adapter = CastAdapter(document);
-        var converted = await Task.Run(() => PdfXConverter.Convert(adapter.Core, profile, outputConditionIdentifier), ct).ConfigureAwait(false);
+        var converted = await Task.Run(() => new PdfXConverter(profile, outputConditionIdentifier).Convert(adapter.Core), ct).ConfigureAwait(false);
         await outputStream.WriteAsync(converted, ct).ConfigureAwait(false);
     }
 
@@ -158,7 +158,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
         var adapter = CastAdapter(document);
-        var converted = await Task.Run(() => PdfXConverter.Convert(adapter.Core, profile, outputConditionIdentifier), ct).ConfigureAwait(false);
+        var converted = await Task.Run(() => new PdfXConverter(profile, outputConditionIdentifier).Convert(adapter.Core), ct).ConfigureAwait(false);
         await File.WriteAllBytesAsync(filePath, converted, ct).ConfigureAwait(false);
     }
 
@@ -343,7 +343,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
     {
         ArgumentNullException.ThrowIfNull(document);
         var adapter = CastAdapter(document);
-        return Task.Run(() => XmlDocumentConverter.SaveXml(adapter.Core), ct);
+        return Task.Run(() => XmlDocumentConverter.SaveXml(adapter.Core, document), ct);
     }
 
     /// <inheritdoc />

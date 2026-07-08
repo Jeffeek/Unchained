@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
@@ -205,5 +205,25 @@ public sealed class TextExtractionTests : PdfTestBase
         var span = page.GetTextSpans().First(static s => s.Text.Contains("Plain"));
         span.X.ShouldBe(72, 0.5);
         span.Y.ShouldBe(144, 0.5);
+    }
+
+    [Fact]
+    public async Task GetTextSpans_CtmRotated_TextPositionRotates()
+    {
+        // 90° rotation: cm = [0 -1 1 0 tx ty]. Text at (0,0) in text space → (tx, ty) in rotated space.
+        // The CTM swaps X and Y and negates the new X.
+        var page = await LoadFirstPageAsync(
+            PdfFixtures.WithRawContent(
+                "BT 0 -1 1 0 100 200 cm /F1 12 Tf 0 0 Td (Rot) Tj ET"
+            )
+        );
+        var span = page.GetTextSpans().First(static s => s.Text.Contains("Rot"));
+        // Original (0,0) transformed by [0 -1 1 0 100 200]:
+        // X' = 0*0 + 0*1 + 100 = 100
+        // Y' = 0*(-1) + 0*0 + 200 = 200
+        // But CTM for text transforms (x, y) to (a*x + c*y + e, b*x + d*y + f),
+        // and the text extractor reads X,Y from the transformed text matrix.
+        span.X.ShouldBeGreaterThan(90);
+        span.Y.ShouldBeGreaterThan(190);
     }
 }

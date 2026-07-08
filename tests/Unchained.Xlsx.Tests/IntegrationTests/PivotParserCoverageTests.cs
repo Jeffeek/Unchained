@@ -90,7 +90,8 @@ public class PivotParserCoverageTests
     {
         var bytes = await SavedPivotBytes();
         // cacheDef with a cacheSource that has no worksheetSource child, and no cacheFields.
-        const string cacheDef = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><pivotCacheDefinition xmlns="{Ns}" xmlns:r="{RNs}" recordCount="0"><cacheSource type="worksheet"/></pivotCacheDefinition>""";
+        const string cacheDef =
+            $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><pivotCacheDefinition xmlns="{Ns}" xmlns:r="{RNs}" recordCount="0"><cacheSource type="worksheet"/></pivotCacheDefinition>""";
 
         using var document = await ReloadWithReplacements(bytes, (CacheDefPath, cacheDef));
         var pivot = document.Sheets[0].PivotTables[0];
@@ -104,7 +105,8 @@ public class PivotParserCoverageTests
     {
         var bytes = await SavedPivotBytes();
         // Remove the cache-definition rels entirely → no records relationship.
-        const string emptyRels = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>""";
+        const string emptyRels =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>""";
 
         using var document = await ReloadWithReplacements(bytes, (CacheDefRelsPath, emptyRels));
         var pivot = document.Sheets[0].PivotTables[0];
@@ -117,7 +119,8 @@ public class PivotParserCoverageTests
     {
         var bytes = await SavedPivotBytes();
         // location ref is a range "E1:H10"; parser should take the top-left (E1).
-        const string def = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><pivotTableDefinition xmlns="{Ns}" xmlns:r="{RNs}" name="Ranged" cacheId="1"><location ref="E1:H10"/></pivotTableDefinition>""";
+        const string def =
+            $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><pivotTableDefinition xmlns="{Ns}" xmlns:r="{RNs}" name="Ranged" cacheId="1"><location ref="E1:H10"/></pivotTableDefinition>""";
 
         using var document = await ReloadWithReplacements(bytes, (PivotTablePath, def));
         var pivot = document.Sheets[0].PivotTables[0];
@@ -130,7 +133,8 @@ public class PivotParserCoverageTests
     {
         var bytes = await SavedPivotBytes();
         // cacheField entries without a name attribute → parser generates Field1/Field2.
-        const string cacheDef = $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><pivotCacheDefinition xmlns="{Ns}" xmlns:r="{RNs}" recordCount="0"><cacheSource type="worksheet"><worksheetSource ref="A1:B2" sheet="Data"/></cacheSource><cacheFields count="2"><cacheField/><cacheField/></cacheFields></pivotCacheDefinition>""";
+        const string cacheDef =
+            $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><pivotCacheDefinition xmlns="{Ns}" xmlns:r="{RNs}" recordCount="0"><cacheSource type="worksheet"><worksheetSource ref="A1:B2" sheet="Data"/></cacheSource><cacheFields count="2"><cacheField/><cacheField/></cacheFields></pivotCacheDefinition>""";
 
         using var document = await ReloadWithReplacements(bytes, (CacheDefPath, cacheDef));
         var pivot = document.Sheets[0].PivotTables[0];

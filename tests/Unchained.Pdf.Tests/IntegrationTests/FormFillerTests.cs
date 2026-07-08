@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
@@ -481,6 +481,7 @@ public sealed class FormFillerTests : PdfTestBase
         public PageMode PageMode => PageMode.Default;
         public string? GetXmpMetadata() => null;
         public IReadOnlyList<NamedDestination> GetNamedDestinations() => [];
+        public ReadOnlyMemory<byte> Bytes => ReadOnlyMemory<byte>.Empty;
         public void Dispose() { }
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }

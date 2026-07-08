@@ -251,7 +251,7 @@ internal static class PptxToPdfWriter
 
             // xref table
             var xrefOffset = _buf.Length;
-            WriteLn("xref");
+            WriteLn(KeywordsConstants.KeywordXref);
             WriteLn($"0 {_nextObjNum}");
             WriteLn("0000000000 65535 f ");
             foreach (var off in _offsets)

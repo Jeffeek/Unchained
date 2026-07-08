@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Xml.Linq;
+using Unchained.Ooxml.Media;
 
 namespace Unchained.Ooxml.Opc;
 
@@ -230,7 +231,7 @@ internal sealed class OpcPackage : IDisposable
             if (IsMetaEntry(name)) continue;
 
             var uri = "/" + name.Replace('\\', '/');
-            var contentType = _contentTypes.GetContentType(uri) ?? "application/octet-stream";
+            var contentType = _contentTypes.GetContentType(uri) ?? MimeTypes.OctetStream;
             var part = new OpcPart(uri, contentType, data);
 
             var relsEntryName = BuildRelationshipsPath(uri).TrimStart('/');

@@ -43,16 +43,32 @@
         if (!NodeOrChildMatchesFilter(node))
             return;
 
+        var style = node == _selectedNode ? "background:rgba(92,107,192,0.08);" : string.Empty;
+
+        // Leaf nodes are rendered without a child-content fragment so MudTreeView doesn't show an
+        // expand arrow for something that has nothing to expand.
+        if (!node.HasChildren)
+        {
+            <MudTreeViewItem Value="@node"
+                             Icon="@node.Icon"
+                             Text="@node.Label"
+                             CanExpand="false"
+                             OnClick="@(() => SelectNode(node))"
+                             Selected="@(node == _selectedNode)"
+                             Style="@style"/>
+            return;
+        }
+
         <MudTreeViewItem Value="@node"
                          Icon="@node.Icon"
                          Text="@node.Label"
-                         CanExpand="@node.HasChildren"
+                         CanExpand="true"
                          Expanded="@node.IsExpanded"
                          ExpandedChanged="@(val => OnExpandedChanged(node, val))"
                          OnClick="@(() => SelectNode(node))"
                          Selected="@(node == _selectedNode)"
-                         Style="@(node == _selectedNode ? "background:rgba(92,107,192,0.08);" : string.Empty)">
-            @if (node is { IsExpanded: true, Children.Count: > 0 })
+                         Style="@style">
+            @if (node.IsExpanded)
             {
                 @foreach (var child in VisibleChildren(node.Children))
                 {

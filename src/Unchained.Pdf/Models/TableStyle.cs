@@ -16,7 +16,7 @@ namespace Unchained.Pdf.Models;
 ///     When <see langword="true" />, a 0.5-point border is drawn around each cell.
 /// </param>
 public sealed record TableStyle(
-    string FontName = "Helvetica",
+    string FontName = PdfConstants.FontHelvetica,
     float HeaderFontSize = 10f,
     float CellFontSize = 9f,
     float CellPaddingPt = 4f,

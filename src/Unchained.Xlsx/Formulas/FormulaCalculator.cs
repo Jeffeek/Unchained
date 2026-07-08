@@ -46,7 +46,7 @@ internal static class FormulaCalculator
                     cell.SetFormulaCachedNumber(value.Kind == FormulaValueKind.Blank ? 0 : value.Number);
                 break;
                 case FormulaValueKind.Boolean:
-                    cell.SetFormulaCachedNumber(value.Boolean ? 1 : 0);
+                    cell.SetFormulaCachedBoolean(value.Boolean);
                 break;
                 case FormulaValueKind.Text:
                     cell.SetFormulaCachedText(value.Text ?? string.Empty);

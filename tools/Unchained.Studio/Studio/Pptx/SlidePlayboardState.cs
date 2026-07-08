@@ -85,6 +85,21 @@ public sealed class SlidePlayboardState
     }
 
     /// <summary>
+    ///     Selects a shape and resets any in-progress drag/resize transients
+    ///     (without clearing the selection itself).
+    /// </summary>
+    public void Select(Shape shape)
+    {
+        SelectedShape = shape;
+        IsDragging = false;
+        IsResizing = false;
+        ActiveHandle = null;
+        DragStart = null;
+        DragOrigPos = null;
+        DragOrigSize = null;
+    }
+
+    /// <summary>
     ///     Clears selection and resets drag/resize state.
     /// </summary>
     public void ClearSelection()

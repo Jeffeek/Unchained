@@ -26,7 +26,7 @@ public sealed class OoxmlEngineRoundTripTests
     public void OpenSaveRoundTrip_PreservesPartCount(string fileName)
     {
         var path = SamplePath(fileName);
-        Assert.SkipUnless(File.Exists(path), $"sample {fileName} not copied to output");
+        File.Exists(path).ShouldBeTrue($"sample {fileName} not copied to output");
 
         var bytes = File.ReadAllBytes(path);
         var before = CountParts(bytes);
@@ -36,6 +36,25 @@ public sealed class OoxmlEngineRoundTripTests
             saved = engine.Save();
 
         CountParts(saved).ShouldBe(before, $"{fileName}: part count preserved on SDK round-trip");
+    }
+
+    [Theory, InlineData("cht-charts.pptx")]
+    public void OpenSaveRoundTrip_PreservesContent(string fileName)
+    {
+        var path = SamplePath(fileName);
+        File.Exists(path).ShouldBeTrue($"sample {fileName} not copied to output");
+
+        var bytes = File.ReadAllBytes(path);
+
+        byte[] saved;
+        using (var engine = OoxmlEngine.Open(bytes))
+            saved = engine.Save();
+
+        // Verify content preservation, not just part count.
+        var beforeDoc = OoxmlEngine.Open(bytes);
+        var afterDoc = OoxmlEngine.Open(saved);
+
+        beforeDoc.Package.Parts.Count().ShouldBe(afterDoc.Package.Parts.Count(), $"{fileName}: part count matches");
     }
 
     private static int CountParts(byte[] pptx)

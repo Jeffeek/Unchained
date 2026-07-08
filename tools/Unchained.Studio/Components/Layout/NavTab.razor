@@ -3,7 +3,7 @@
 @if (Disabled)
 {
     <span class="nav-tab nav-tab--disabled">
-        <MudIcon Icon="@Icon" Size="Size.Small" Class="nav-tab-icon"/>
+        <MudIcon Icon="@Icon" Size="Size.Medium" Class="nav-tab-icon"/>
         <span>@Label</span>
         <span class="nav-tab-soon">soon</span>
     </span>
@@ -13,7 +13,7 @@ else
     <button type="button"
             class="@CssClass"
             @onclick="HandleClick">
-        <MudIcon Icon="@Icon" Size="Size.Small" Class="nav-tab-icon"/>
+        <MudIcon Icon="@Icon" Size="Size.Medium" Class="nav-tab-icon"/>
         <span>@Label</span>
     </button>
 }

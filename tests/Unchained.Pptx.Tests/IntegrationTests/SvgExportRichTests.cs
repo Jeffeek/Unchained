@@ -8,7 +8,7 @@ using Unchained.Ooxml.Text;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Models.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -68,6 +68,19 @@ public sealed class SvgExportRichTests : PptxTestBase
         var shape = doc.Slides[0]
             .Shapes.AddShape(AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(1));
         shape.Fill.SetNone();
+
+        var svg = await ExportFirstAsync(doc);
+        svg.ShouldContain("fill=\"none\"");
+    }
+
+    [Fact]
+    public async Task ImplicitNoFillShape_EmitsFillNone()
+    {
+        // A freshly created shape has Fill.Type = None by default (never called SetNone).
+        // The SVG exporter should emit fill="none", not a default color.
+        var doc = PptxFixtures.WithSlides(1);
+        doc.Slides[0]
+            .Shapes.AddShape(AutoShapeType.Rectangle, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(2), Emu.FromInches(1));
 
         var svg = await ExportFirstAsync(doc);
         svg.ShouldContain("fill=\"none\"");

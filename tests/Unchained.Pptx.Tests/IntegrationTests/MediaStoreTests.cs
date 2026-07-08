@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Drawing.Constants;
 using Unchained.Ooxml;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;

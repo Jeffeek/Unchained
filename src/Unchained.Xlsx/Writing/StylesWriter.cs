@@ -95,7 +95,7 @@ internal static class StylesWriter
         );
 
         if (font.Color is { } color)
-            element.Add(new XElement(SmlNames.Color, new XAttribute("rgb", SmlColor.ToHexArgb(color))));
+            element.Add(new XElement(SmlNames.Color, new XAttribute(SmlNames.AttrRgb, SmlColor.ToHexArgb(color))));
 
         element.Add(new XElement(SmlNames.FontName, new XAttribute(DmlNames.AttributeValue, font.Name)));
 
@@ -121,9 +121,9 @@ internal static class StylesWriter
         );
 
         if (fill.ForegroundColor is { } fg)
-            patternFill.Add(new XElement(SmlNames.FgColor, new XAttribute("rgb", SmlColor.ToHexArgb(fg))));
+            patternFill.Add(new XElement(SmlNames.FgColor, new XAttribute(SmlNames.AttrRgb, SmlColor.ToHexArgb(fg))));
         if (fill.BackgroundColor is { } bg)
-            patternFill.Add(new XElement(SmlNames.BgColor, new XAttribute("rgb", SmlColor.ToHexArgb(bg))));
+            patternFill.Add(new XElement(SmlNames.BgColor, new XAttribute(SmlNames.AttrRgb, SmlColor.ToHexArgb(bg))));
 
         return new XElement(SmlNames.Fill, patternFill);
     }
@@ -157,9 +157,9 @@ internal static class StylesWriter
         if (style == null)
             return element;
 
-        element.SetAttributeValue("style", style);
+        element.SetAttributeValue(SmlNames.AttrStyle, style);
         if (line.Color is { } color)
-            element.Add(new XElement(SmlNames.Color, new XAttribute("rgb", SmlColor.ToHexArgb(color))));
+            element.Add(new XElement(SmlNames.Color, new XAttribute(SmlNames.AttrRgb, SmlColor.ToHexArgb(color))));
         return element;
     }
 

@@ -85,33 +85,24 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         PdfDictionary node,
         PdfDocumentCore core,
         ICollection<EmbeddedFile> result
-    )
-    {
-        // Leaf node: /Names array of (string-key, filespec-dict) pairs.
-        if (node.Get<PdfArray>(PdfName.Names) is { } namesArr)
-        {
-            for (var i = 0; i + 1 < namesArr.Count; i += 2)
+    ) =>
+        MutationHelper.CollectTree(
+            node,
+            core,
+            result,
+            PdfName.Names.Value,
+            (_, arr, i, _) =>
             {
-                var key = namesArr[i] is PdfString ks
+                var key = arr[i] is PdfString ks
                     ? Encoding.Latin1.GetString(ks.Bytes.Span)
-                    : (namesArr[i] as PdfName)?.Value ?? string.Empty;
+                    : (arr[i] as PdfName)?.Value ?? string.Empty;
+                if (key.Length == 0)
+                    return null;
 
-                var fileSpec = core.ResolveDict(namesArr[i + 1]);
-
-                if (fileSpec is null || key.Length == 0) continue;
-
-                var ef = BuildEmbeddedFile(key, fileSpec, core);
-                if (ef is not null) result.Add(ef);
+                var fileSpec = core.ResolveDict(arr[i + 1]);
+                return fileSpec is null ? null : BuildEmbeddedFile(key, fileSpec, core);
             }
-        }
-
-        // Intermediate node: /Kids array.
-        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
-            return;
-
-        foreach (var childDict in kids.Elements.Select(core.ResolveDict).Where(static x => x != null))
-            CollectNameTree(childDict!, core, result);
-    }
+        );
 
     private static EmbeddedFile? BuildEmbeddedFile(
         string name,
@@ -151,8 +142,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
 
     private static void AddEmbeddedFile(PdfDocumentAdapter adapter, EmbeddedFile file)
     {
-        var existing = adapter.Core.CollectObjects().ToList();
-        var maxObj = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
+        var (existing, maxObj) = MutationHelper.CollectWithMax(adapter);
         var builder = new ObjectGraphBuilder(maxObj + 1);
 
         // Compress file data with FlateDecode.
@@ -167,7 +157,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         // Build the embedded file stream.
         var efStreamEntries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.EmbeddedFile,
+            [PdfName.Type.Value] = PdfName.EmbeddedFile,
             [PdfName.Filter.Value] = PdfName.FlateDecode,
             [PdfName.Length.Value] = new PdfInteger(compressed.Length),
             ["Params"] = new PdfDictionary(
@@ -178,7 +168,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
             )
         };
         if (file.MimeType is not null)
-            efStreamEntries["Subtype"] = PdfName.Get(file.MimeType.Replace("/", "#2F"));
+            efStreamEntries[PdfName.Subtype.Value] = PdfName.Get(file.MimeType.Replace("/", "#2F"));
 
         var efStreamRef = builder.Add(
                 new PdfStream(new PdfDictionary(efStreamEntries), compressed)
@@ -188,8 +178,8 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         // Build the file specification dictionary.
         var fileSpecEntries = new Dictionary<string, PdfObject>
         {
-            ["Type"] = PdfName.Filespec,
-            ["F"] = PdfString.FromLatin1(file.FileName),
+            [PdfName.Type.Value] = PdfName.Filespec,
+            [PdfName.F.Value] = PdfString.FromLatin1(file.FileName),
             ["UF"] = new PdfString(
                 new[] { PdfConstants.Utf16BeBomByte0, PdfConstants.Utf16BeBomByte1 }
                     .Concat(Encoding.BigEndianUnicode.GetBytes(file.FileName))
@@ -198,7 +188,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
             ["EF"] = new PdfDictionary(
                 new Dictionary<string, PdfObject>
                 {
-                    ["F"] = efStreamRef
+                    [PdfName.F.Value] = efStreamRef
                 }
             )
         };
@@ -208,11 +198,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         var fileSpecRef = builder.Add(new PdfDictionary(fileSpecEntries)).ToReference();
 
         // Update /Names /EmbeddedFiles name tree.
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0) throw new PdfException("Catalog not found.");
-
-        var catalogDict = existing[catalogIdx].Value as PdfDictionary ?? throw new PdfException("Catalog is not a dictionary.");
+        var (catalogIdx, catalogDict) = MutationHelper.GetCatalogDict(adapter, existing);
         var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries);
 
         // Get or create /Names dict.
@@ -268,7 +254,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         var newNamesRef = builder.Add(new PdfDictionary(namesDict)).ToReference();
         catalogEntries[PdfName.Names.Value] = newNamesRef;
 
-        existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(catalogEntries));
+        existing[catalogIdx] = new PdfIndirectObject(existing[catalogIdx].ObjectNumber, 0, new PdfDictionary(catalogEntries));
 
         var allObjects = existing.Concat(builder.Objects).ToList();
         MutationHelper.SerializeAndReplace(adapter, allObjects);
@@ -277,11 +263,8 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
     private static void RemoveEmbeddedFile(PdfDocumentAdapter adapter, string name)
     {
         var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0) return;
-
-        if (existing[catalogIdx].Value is not PdfDictionary catalogDict) return;
+        var (found, catalogIdx, catalogDict) = MutationHelper.TryGetCatalogDict(adapter, existing);
+        if (!found) return;
 
         var namesObj = catalogDict[PdfName.Names];
         var namesDict = adapter.Core.ResolveDict(namesObj);
@@ -327,7 +310,7 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
         {
             [PdfName.Names.Value] = newNamesRef
         };
-        existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(catalogEntries));
+        existing[catalogIdx] = new PdfIndirectObject(existing[catalogIdx].ObjectNumber, 0, new PdfDictionary(catalogEntries));
 
         var allObjects = existing.Concat(builder.Objects).ToList();
         MutationHelper.SerializeAndReplace(adapter, allObjects);
@@ -335,37 +318,39 @@ public sealed class EmbeddedFileEditor : IEmbeddedFileEditor
 
     private static void SetPortfolioMode(PdfDocumentAdapter adapter, bool enable)
     {
-        var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0) return;
-
-        if (existing[catalogIdx].Value is not PdfDictionary catalogDict) return;
-
-        var entries = new Dictionary<string, PdfObject>(catalogDict.Entries);
-
         if (enable)
         {
-            if (entries.ContainsKey("Collection")) return; // already enabled
-
-            entries["Collection"] = new PdfDictionary(
-                new Dictionary<string, PdfObject>
+            MutationHelper.TryApplyCatalogMutation(
+                adapter,
+                static entries =>
                 {
-                    ["Type"] = PdfName.Collection,
-                    ["Sort"] = new PdfDictionary(
+                    if (entries.ContainsKey("Collection")) return; // already enabled
+
+                    entries[PdfName.Collection.Value] = new PdfDictionary(
                         new Dictionary<string, PdfObject>
                         {
-                            ["S"] = PdfName.ModDate,
-                            ["A"] = PdfBoolean.True
+                            ["Type"] = PdfName.Collection,
+                            ["Sort"] = new PdfDictionary(
+                                new Dictionary<string, PdfObject>
+                                {
+                                    [PdfName.S.Value] = PdfName.ModDate,
+                                    [PdfName.A.Value] = PdfBoolean.True
+                                }
+                            )
                         }
-                    )
+                    );
                 }
             );
         }
         else
-            entries.Remove("Collection");
-
-        existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(entries));
-        MutationHelper.SerializeAndReplace(adapter, existing);
+        {
+            MutationHelper.TryApplyCatalogMutation(
+                adapter,
+                static entries =>
+                {
+                    entries.Remove("Collection");
+                }
+            );
+        }
     }
 }

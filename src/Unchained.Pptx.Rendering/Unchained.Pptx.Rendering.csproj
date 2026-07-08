@@ -20,6 +20,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CoreJ2K" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="DocumentFormat.OpenXml.Features" />
+    <PackageReference Include="DocumentFormat.OpenXml.Framework" />
+    <PackageReference Include="DocumentFormat.OpenXml.Linq" />
+    <PackageReference Include="FreeTypeSharp" />
+    <PackageReference Include="HarfBuzzSharp" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
+    <PackageReference Include="JBig2Decoder.NETStandard" />
+    <PackageReference Include="JpegLibrary" />
+    <PackageReference Include="System.IO.Packaging" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Unchained.Pptx\Unchained.Pptx.csproj" />
     <ProjectReference Include="..\Unchained.Drawing.Text\Unchained.Drawing.Text.csproj" />
   </ItemGroup>

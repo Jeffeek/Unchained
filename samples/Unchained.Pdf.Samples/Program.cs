@@ -1,6 +1,6 @@
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Rendering.Engine;
+using Unchained.Pdf.Rendering;
 
 namespace Unchained.Pdf.Samples;
 
@@ -255,26 +255,12 @@ internal static class Program
 
         await using var doc = await processor.LoadAsync(source);
 
-        PdfRenderer renderer;
-        try
-        {
-            renderer = new PdfRenderer();
-        }
-        catch (InvalidOperationException ex)
-        {
-            // The FreeType2 native library could not be loaded on this machine.
-            Console.WriteLine($"  Rendering unavailable: {ex.Message}");
-            return;
-        }
-
-        using (renderer)
-        {
-            // ReSharper disable once RedundantArgumentDefaultValue
-            var png = await renderer.RenderPageAsync(doc.Pages[1], new RenderOptions(150));
-            var path = Path.Combine(OutputDir, "page1.png");
-            await File.WriteAllBytesAsync(path, png);
-            Console.WriteLine($"  Rendered page 1 → {Rel(path)} ({png.Length:N0} bytes)");
-        }
+        using var renderer = PdfRendererFactory.CreateRenderer();
+        // ReSharper disable once RedundantArgumentDefaultValue
+        var png = await renderer.RenderPageAsync(doc.Pages[1], new RenderOptions(150));
+        var path = Path.Combine(OutputDir, "page1.png");
+        await File.WriteAllBytesAsync(path, png);
+        Console.WriteLine($"  Rendered page 1 → {Rel(path)} ({png.Length:N0} bytes)");
     }
 
     private static string Rel(string path) => Path.GetRelativePath(AppContext.BaseDirectory, path);

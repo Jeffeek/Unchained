@@ -5,9 +5,18 @@ namespace Unchained.Ooxml.Drawing;
 /// </summary>
 internal static class LineStyles
 {
+    /// <summary>OOXML direction value: horizontal.</summary>
+    public const string DirHorz = "horz";
+
+    /// <summary>OOXML direction value: vertical.</summary>
+    public const string DirVert = "vert";
+
+    /// <summary>Default line dash style (solid). Used as fallback in ParseDashStyle and default in XAttribute.</summary>
+    public const string DashSolid = "solid";
+
     public static LineDashStyle ParseDashStyle(string value) => value switch
     {
-        "solid" => LineDashStyle.Solid,
+        DashSolid => LineDashStyle.Solid,
         "dot" => LineDashStyle.Dot,
         "dash" => LineDashStyle.Dash,
         "dashDot" => LineDashStyle.DashDot,
@@ -33,7 +42,7 @@ internal static class LineStyles
         LineDashStyle.SystemDot => "sysDot",
         LineDashStyle.SystemDashDot => "sysDashDot",
         LineDashStyle.SystemDashDotDot => "sysDashDotDot",
-        _ => "solid"
+        _ => DashSolid
     };
 
     public static ArrowHeadType ParseArrowType(string value) => value switch

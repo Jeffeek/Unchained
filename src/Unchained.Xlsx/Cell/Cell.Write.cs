@@ -73,4 +73,13 @@ public sealed partial class Cell
         Error = error;
         Text = null;
     }
+
+    /// <summary>Stores a boolean cached result on this formula cell.</summary>
+    internal void SetFormulaCachedBoolean(bool value)
+    {
+        CellType = CellType.Boolean;
+        Number = value ? 1 : 0;
+        Text = null;
+        Error = null;
+    }
 }

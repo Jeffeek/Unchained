@@ -10,15 +10,15 @@ internal static class PdfDictionaryExtensions
     extension(PdfDictionary? dict)
     {
         /// <summary>Whether the dictionary's <c>/Type</c> entry equals <paramref name="type" />.</summary>
-        internal bool IsType(string type) => dict?.GetName("Type") == type;
+        internal bool IsType(string type) => dict?.GetName(PdfName.Type.Value) == type;
 
         /// <summary>Whether the dictionary's <c>/Subtype</c> entry equals <paramref name="subtype" />.</summary>
-        internal bool IsSubtype(string subtype) => dict?.GetName("Subtype") == subtype;
+        internal bool IsSubtype(string subtype) => dict?.GetName(PdfName.Subtype.Value) == subtype;
 
         /// <summary>Whether the dictionary is a page object (<c>/Type /Page</c>).</summary>
-        internal bool IsPage() => dict.IsType("Page");
+        internal bool IsPage() => dict.IsType(PdfName.Page.Value);
 
         /// <summary>Whether the dictionary is the document catalog (<c>/Type /Catalog</c>).</summary>
-        internal bool IsCatalog() => dict.IsType("Catalog");
+        internal bool IsCatalog() => dict.IsType(PdfName.Catalog.Value);
     }
 }

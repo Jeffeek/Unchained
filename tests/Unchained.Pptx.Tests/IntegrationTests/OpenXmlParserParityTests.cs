@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -78,10 +78,7 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
     public async Task RealFile_BothParsers_AgreeOnSlideCountSizeAndHidden(string fileName)
     {
         var path = SamplePath(fileName);
-        Assert.SkipUnless(
-            File.Exists(path),
-            $"Sample {fileName} not found at {path}. Ensure TestFiles/python-pptx/ is copied to output."
-        );
+        File.Exists(path).ShouldBeTrue($"Sample {fileName} not found at {path}. Ensure TestFiles/python-pptx/ is copied to output.");
 
         var bytes = await File.ReadAllBytesAsync(path);
 

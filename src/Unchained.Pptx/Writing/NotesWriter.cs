@@ -27,9 +27,7 @@ internal static class NotesWriter
 
         var pml = PmlNames.Pml;
         var dml = DmlNames.Dml;
-        var r = XNamespace.Get(
-            "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-        );
+        var r = XNamespace.Get(OoxmlNamespaces.OfficeDocument);
 
         var notesEl = new XElement(
             PmlNames.Notes,
@@ -46,7 +44,7 @@ internal static class NotesWriter
             new XElement(
                 pml + "nvGrpSpPr",
                 new XElement(
-                    pml + "cNvPr",
+                    pml + PmlNames.CommonNonVisualProperties.LocalName,
                     new XAttribute("id", "1"),
                     new XAttribute("name", string.Empty)
                 ),
@@ -74,7 +72,7 @@ internal static class NotesWriter
                 new XElement(
                     pml + "nvSpPr",
                     new XElement(
-                        pml + "cNvPr",
+                        pml + PmlNames.CommonNonVisualProperties.LocalName,
                         new XAttribute("id", "2"),
                         new XAttribute("name", "Slide Image Placeholder 1")
                     ),
@@ -105,7 +103,7 @@ internal static class NotesWriter
                 new XElement(
                     pml + "nvSpPr",
                     new XElement(
-                        pml + "cNvPr",
+                        pml + PmlNames.CommonNonVisualProperties.LocalName,
                         new XAttribute("id", "3"),
                         new XAttribute("name", "Notes Placeholder 2")
                     ),

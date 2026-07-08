@@ -1,0 +1,309 @@
+@use 'variables' as *;
+
+// ── PDF: preview/compare, text overlay, PDF playboard ──────────────────────
+
+// ── Preview panel ─────────────────────────────────────────────────────────
+.preview-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.preview-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: #16181d;
+    flex-shrink: 0;
+    gap: 2px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+
+    // Flat button overrides — match operations bar
+    .mud-button-root {
+        min-width: 0 !important;
+        padding: 0 6px !important;
+        height: 26px !important;
+        text-transform: none !important;
+        font-family: $font-mono !important;
+        font-size: 0.72rem !important;
+        border-radius: 0 !important;
+        color: rgba(255, 255, 255, 0.5) !important;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.06) !important;
+            color: #fff !important;
+        }
+
+        .mud-button-start-icon {
+            margin-right: 3px !important;
+            opacity: 0.5;
+            font-size: 1rem;
+        }
+    }
+
+    .mud-divider {
+        height: 16px;
+        margin: 0 4px;
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+}
+
+.preview-page-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    font-family: $font-mono;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.preview-page-input {
+    width: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    padding: 2px 4px;
+    font-size: 0.78rem;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    outline: none;
+    font-family: $font-mono;
+    -moz-appearance: textfield;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    &:focus {
+        border-color: $accent;
+        box-shadow: 0 0 0 1px rgba($accent, 0.2);
+    }
+}
+
+// Single-pane layout (default)
+.preview-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+}
+
+.preview-pane {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    position: relative;
+    // Inspection-table aesthetic — dark with subtle dot grid
+    background:
+        radial-gradient(circle, rgba(92, 107, 192, 0.05) 1px, transparent 1px);
+    background-color: #121418;
+    background-size: 20px 20px;
+    background-position: 0 0;
+}
+
+// Split layout when compare mode is active
+.preview-content--compare {
+    gap: 4px;
+
+    .preview-pane:first-child { border-right: 2px solid $accent; }
+}
+
+.preview-pane--native {
+    background: #121418;
+    padding: 0;
+}
+
+.pane-label {
+    position: absolute;
+    top: 8px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font-size: 0.68rem;
+    font-family: $font-mono;
+    padding: 2px 8px;
+    border-radius: 0;
+    pointer-events: none;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    &--left { left: 8px; background: rgba($accent, 0.85); }
+    &--right { left: 8px; background: rgba(38, 166, 154, 0.85); }
+}
+
+.preview-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.preview-scroll {
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex: 1;
+    width: 100%;
+}
+
+.preview-image-wrap {
+    transform-origin: top center;
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.preview-page-img {
+    display: block;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    background: white;
+    max-width: 100%;
+}
+
+.native-pdf-object {
+    width: 100%;
+    flex: 1;
+    min-height: 300px;
+    border: none;
+    display: block;
+}
+
+// ── PDF status bar (file info strip at bottom of preview) ─────────────────
+.pdf-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 3px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: #16181d;
+    flex-shrink: 0;
+    font-family: $font-mono;
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.4);
+
+    &-sep {
+        width: 1px;
+        height: 12px;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    &-chip {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 1px 6px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+
+        &--accent {
+            border-color: rgba($accent, 0.3);
+            background: rgba($accent, 0.08);
+            color: $accent;
+        }
+    }
+}
+
+// Text overlay spans
+.text-overlay-span {
+    position: absolute;
+    height: 1.2em;
+    background: rgba(255, 230, 0, 0.2);
+    border: 1px solid rgba(255, 200, 0, 0.3);
+    pointer-events: none;
+}
+
+// ── PDF Playboard ─────────────────────────────────────────────────────────
+.pdf-playboard-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.pdf-playboard-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: #16181d;
+    flex-shrink: 0;
+
+    .mud-button-root {
+        min-width: 0 !important;
+        padding: 0 6px !important;
+        height: 26px !important;
+        text-transform: none !important;
+        font-family: $font-mono !important;
+        font-size: 0.72rem !important;
+        border-radius: 0 !important;
+        color: rgba(255, 255, 255, 0.5) !important;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.06) !important;
+            color: #fff !important;
+        }
+    }
+}
+
+.pdf-playboard-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.pdf-playboard-canvas {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    // Deeper dark — inspection table
+    background:
+        radial-gradient(circle, rgba(92, 107, 192, 0.04) 1px, transparent 1px);
+    background-color: #0e1014;
+    background-size: 20px 20px;
+    background-position: 0 0;
+    padding: 24px;
+}
+
+.pdf-playboard-page-wrap {
+    position: relative;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.pdf-playboard-page-img {
+    display: block;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.pdf-playboard-annotations {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.pdf-playboard-annotation {
+    position: absolute;
+    border: 1px dashed $accent;
+    background: rgba($accent, 0.08);
+    cursor: move;
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 0;
+    font-family: $font-mono;
+
+    &:hover { background: rgba($accent, 0.15); }
+}
