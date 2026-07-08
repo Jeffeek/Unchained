@@ -162,12 +162,7 @@ internal static class PdfUAValidator
     private static bool HasXmpTitle(PdfDocumentCore core)
     {
         var metaObj = core.Catalog[PdfName.Metadata];
-        var stream = metaObj switch
-        {
-            PdfStream s => s,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-            _ => null
-        };
+        var stream = core.ResolveStream(metaObj);
         if (stream is null) return false;
 
         try
@@ -285,19 +280,13 @@ internal static class PdfUAValidator
         for (var page = 1; page <= core.PageCount; page++)
         {
             var pageDict = core.GetPage(page);
-            var annotsObj = pageDict[PdfName.Annots];
-            var annots = annotsObj switch
-            {
-                PdfArray a => a,
-                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfArray,
-                _ => null
-            };
+            var annots = core.ResolveAnnots(pageDict);
             if (annots is null) continue;
 
             foreach (var _ in from elem in annots.Elements
                               select core.ResolveDict(elem)
                               into dict
-                              where dict?.GetName("Subtype") == "Widget"
+                              where dict?.GetName(PdfName.Subtype.Value) == PdfName.Widget.Value
                               where dict[PdfName.TU] is null
                               select dict)
                 v.Add(W("7.7", $"Widget annotation on page {page} is missing /TU (tooltip / accessible name).", pageNumber: page));
@@ -437,16 +426,8 @@ internal static class PdfUAValidator
             var pageHasMarkedContent = false;
             var pageHasContent = false;
 
-            foreach (var contentRef in contentStreams)
+            foreach (var streamObj in contentStreams.Select(core.ResolveStream).OfType<PdfStream>())
             {
-                var streamObj = contentRef switch
-                {
-                    PdfStream s => s,
-                    PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-                    _ => null
-                };
-                if (streamObj is null) continue;
-
                 try
                 {
                     var decoded = StreamFilters.Decode(streamObj);
@@ -483,13 +464,7 @@ internal static class PdfUAValidator
         for (var page = 1; page <= core.PageCount; page++)
         {
             var pageDict = core.GetPage(page);
-            var annotsObj = pageDict[PdfName.Annots];
-            var annots = annotsObj switch
-            {
-                PdfArray a => a,
-                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfArray,
-                _ => null
-            };
+            var annots = core.ResolveAnnots(pageDict);
             if (annots is null) continue;
 
             foreach (var elem in annots.Elements)
@@ -497,7 +472,7 @@ internal static class PdfUAValidator
                 var dict = core.ResolveDict(elem);
                 if (dict is null) continue;
 
-                var subtype = dict.GetName("Subtype") ?? string.Empty;
+                var subtype = dict.GetName(PdfName.Subtype.Value) ?? string.Empty;
 
                 // All annotations except /Popup must have a /Contents or /TU entry (accessible name).
                 if (subtype is not ("Popup" or "Link"))
@@ -561,12 +536,7 @@ internal static class PdfUAValidator
     private static void CheckXmpMetadata(PdfDocumentCore core, ICollection<PdfUAViolation> v)
     {
         var metaObj = core.Catalog[PdfName.Metadata];
-        var stream = metaObj switch
-        {
-            PdfStream s => s,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-            _ => null
-        };
+        var stream = core.ResolveStream(metaObj);
 
         if (stream is null)
         {
@@ -586,7 +556,7 @@ internal static class PdfUAValidator
         }
 
         // Must contain pdfuaid:part = 1.
-        if (!xmp.Contains("pdfuaid", StringComparison.OrdinalIgnoreCase))
+        if (!xmp.Contains(PdfConstants.PdfAIdentifier, StringComparison.OrdinalIgnoreCase))
             v.Add(E("7.17", "XMP metadata is missing required pdfuaid namespace declaration and pdfuaid:part property."));
         else if (!xmp.Contains(">1<", StringComparison.Ordinal) &&
                  !xmp.Contains(">1 <", StringComparison.Ordinal) &&

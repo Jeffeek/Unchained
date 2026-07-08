@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Parsing.Filters;
 
 namespace Unchained.Pdf.Engine;
@@ -17,12 +18,7 @@ internal static class XmpDocumentHelper
     internal static string? ReadExistingXmp(IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
     {
         var metaObj = catalogEntries.GetValueOrDefault("Metadata");
-        var stream = metaObj switch
-        {
-            PdfStream s => s,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-            _ => null
-        };
+        var stream = core.ResolveStream(metaObj);
 
         if (stream is null)
             return null;

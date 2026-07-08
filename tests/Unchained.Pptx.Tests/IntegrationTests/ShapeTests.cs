@@ -3,7 +3,7 @@ using Unchained.Ooxml;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Slides;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -41,7 +41,7 @@ public sealed class ShapeTests : PptxTestBase
             Emu.FromInches(1),
             Emu.FromInches(1)
         );
-        shape.ShapeId.ShouldBeGreaterThan(0u);
+        shape.ShapeId.ShouldBe(2u);
     }
 
     [Fact]

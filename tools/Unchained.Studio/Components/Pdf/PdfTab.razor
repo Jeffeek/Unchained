@@ -1,11 +1,13 @@
 @page "/pdf"
+@inject SessionStateService Session
+@inject FileExportService Exporter
+@inject IUserFeedback Feedback
+@inject IStudioDialogs Dialogs
 @using System.Text
 @using Unchained.Pdf.Engine
 @using Unchained.Pdf.Models
-@inject SessionStateService Session
-@inject FileExportService Exporter
-@inject ISnackbar Snackbar
-@inject IDialogService Dialogs
+@using Unchained.Studio.Infrastructure
+@implements IDisposable
 
 <div class="studio-tab">
     @if (Session.Pdf is null)
@@ -13,18 +15,20 @@
         <div class="drop-zone-page">
             <FileDropZone Title="Drop a PDF here"
                           Subtitle="Supports PDF 1.x–2.x, encrypted, linearized, tagged"
-                          Icon="@Icons.Material.Outlined.PictureAsPdf"
                           Accept=".pdf"
                           OnFileLoaded="LoadPdf"
-                          OnError="ShowError"/>
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Secondary"
-                       StartIcon="@Icons.Material.Outlined.BatchPrediction"
-                       OnClick="OpenBatchDialog"
-                       Class="mt-3"
-                       Style="align-self:center;">
-                Batch Compare…
-            </MudButton>
+                          OnError="Feedback.Error"/>
+            @if (FeatureFlags.EnablePdfiumCompare)
+            {
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Outlined.BatchPrediction"
+                           OnClick="OpenBatchDialog"
+                           Class="mt-3"
+                           Style="align-self:center;">
+                    Batch Compare…
+                </MudButton>
+            }
         </div>
     }
     else
@@ -148,12 +152,15 @@
             </div>
             <MudDivider Vertical="true" Class="ops-divider"/>
             <div class="ops-group ops-group--right">
-                <MudButton StartIcon="@Icons.Material.Outlined.BatchPrediction"
-                           Variant="Variant.Text" Size="Size.Small"
-                           Color="Color.Secondary"
-                           OnClick="OpenBatchDialog">
-                    Batch Compare
-                </MudButton>
+                @if (FeatureFlags.EnablePdfiumCompare)
+                {
+                    <MudButton StartIcon="@Icons.Material.Outlined.BatchPrediction"
+                               Variant="Variant.Text" Size="Size.Small"
+                               Color="Color.Secondary"
+                               OnClick="OpenBatchDialog">
+                        Batch Compare
+                    </MudButton>
+                }
                 <MudDivider Vertical="true" Class="ops-divider"/>
                 <MudButton StartIcon="@Icons.Material.Outlined.Download"
                            Variant="Variant.Filled"
@@ -196,6 +203,20 @@
     private bool _showTextPanel;
     private string? _extractedText;
 
+    private BusyScope _busyScope = null!;
+
+    protected override void OnInitialized() =>
+        // Wire BusyScope to local state so Begin()/Dispose() work transparently.
+        _busyScope = new BusyScope(msg =>
+            {
+                _busyMessage = msg ?? string.Empty;
+                _busy = msg is not null;
+                // Explicit StateHasChanged so the overlay appears/disappears immediately
+                // without waiting for Blazor's automatic coalesced re-render.
+                StateHasChanged();
+            }
+        );
+
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender) return;
@@ -206,6 +227,12 @@
 
     private void OnSessionRefreshed() =>
         InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (Session.Pdf is not null)
+            Session.Pdf.Refreshed -= OnSessionRefreshed;
+    }
 
     // Reloads the session with new bytes, re-wiring the Refreshed subscription onto the
     // new PdfSessionState. Every reload-based operation (Optimize, Repair, Linearize, Merge,
@@ -236,10 +263,10 @@
 
     private async Task LoadPdf((byte[] Bytes, string FileName) file)
     {
-        SetBusy("Loading PDF…");
         try
         {
-            // Unsubscribe from the old session before replacing it
+            using var _ = _busyScope.Begin("Loading PDF…");
+
             if (Session.Pdf is not null)
                 Session.Pdf.Refreshed -= OnSessionRefreshed;
 
@@ -248,15 +275,11 @@
             if (Session.Pdf is not null)
                 Session.Pdf.Refreshed += OnSessionRefreshed;
 
-            ShowInfo($"Loaded {file.FileName}");
+            Feedback.Info($"Loaded {file.FileName}");
         }
         catch (Exception ex)
         {
-            ShowError($"Failed to load PDF: {ex.Message}");
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error($"Failed to load PDF: {ex.Message}");
         }
     }
 
@@ -270,15 +293,8 @@
         if (Session.Pdf is null)
             return;
 
-        SetBusy("Refreshing…");
-        try
-        {
-            await Session.Pdf.RefreshAsync();
-        }
-        finally
-        {
-            ClearBusy();
-        }
+        using var _ = _busyScope.Begin("Refreshing…");
+        await Session.Pdf.RefreshAsync();
     }
 
     private Task DownloadDocument() =>
@@ -295,24 +311,17 @@
         if (Session.Pdf is null)
             return;
 
-        SetBusy("Extracting text…");
-        try
+        using var _ = _busyScope.Begin("Extracting text…");
+        var sb = new StringBuilder();
+        for (var i = 1; i <= Session.Pdf.Document.PageCount; i++)
         {
-            var sb = new StringBuilder();
-            for (var i = 1; i <= Session.Pdf.Document.PageCount; i++)
-            {
-                sb.AppendLine($"─── Page {i} ───");
-                sb.AppendLine(Session.Pdf.Document.Pages[i].ExtractText());
-                sb.AppendLine();
-            }
+            sb.AppendLine($"─── Page {i} ───");
+            sb.AppendLine(Session.Pdf.Document.Pages[i].ExtractText());
+            sb.AppendLine();
+        }
 
-            _extractedText = sb.ToString();
-            _showTextPanel = true;
-        }
-        finally
-        {
-            ClearBusy();
-        }
+        _extractedText = sb.ToString();
+        _showTextPanel = true;
     }
 
     private async Task DownloadText()
@@ -330,7 +339,7 @@
         }
         catch (Exception ex)
         {
-            ShowError($"Download failed: {ex.Message}");
+            Feedback.Error($"Download failed: {ex.Message}");
         }
     }
 
@@ -339,25 +348,22 @@
         if (Session.Pdf is null)
             return;
 
-        SetBusy("Optimizing…");
         try
         {
+            using var _ = _busyScope.Begin("Optimizing…");
+
             // Optimize via SaveOptions
             using var ms = new MemoryStream();
             var options = new SaveOptions(OptimizeSize: true);
-            await Session.Pdf.Processor.SaveAsync(Session.Pdf.Document, ms, options);
+            await Session.Pdf!.Processor.SaveAsync(Session.Pdf.Document, ms, options);
             var old = Session.Pdf.CurrentBytes.Length;
             await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
             var @new = Session.Pdf.CurrentBytes.Length;
-            ShowInfo($"Optimized: {old / 1024} KB → {@new / 1024} KB");
+            Feedback.Info($"Optimized: {old / 1024} KB → {@new / 1024} KB");
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -366,23 +372,20 @@
         if (Session.Pdf is null)
             return;
 
-        SetBusy("Repairing…");
         try
         {
-            var repaired = await Session.Pdf.Processor.RepairAsync(Session.Pdf.CurrentBytes);
+            using var _ = _busyScope.Begin("Repairing…");
+
+            var repaired = await Session.Pdf!.Processor.RepairAsync(Session.Pdf.CurrentBytes);
             using var ms = new MemoryStream();
-            await Session.Pdf.Processor.SaveAsync(repaired, ms);
+            await Session.Pdf!.Processor.SaveAsync(repaired, ms);
             await repaired.DisposeAsync();
             await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
-            ShowInfo("Repair complete.");
+            Feedback.Info("Repair complete.");
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -391,25 +394,22 @@
         if (Session.Pdf is null)
             return;
 
-        SetBusy("Linearizing…");
         try
         {
+            using var _ = _busyScope.Begin("Linearizing…");
+
             using var ms = new MemoryStream();
-            await Session.Pdf.Processor.SaveAsync(
+            await Session.Pdf!.Processor.SaveAsync(
                 Session.Pdf.Document,
                 ms,
                 SaveOptions.WebOptimized
             );
             await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
-            ShowInfo("Document linearized (web-optimized).");
+            Feedback.Info("Document linearized (web-optimized).");
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -418,18 +418,19 @@
         if (Session.Pdf is null)
             return;
 
-        SetBusy("Validating PDF/A…");
         try
         {
-            var result = await Session.Pdf.Processor.ValidatePdfAAsync(Session.Pdf.CurrentBytes);
+            using var _ = _busyScope.Begin("Validating PDF/A…");
+
+            var result = await Session.Pdf!.Processor.ValidatePdfAAsync(Session.Pdf.CurrentBytes);
             var msg = result.IsConformant
                 ? $"✅ PDF/A-1b conformant ({result.Violations.Count} violations)"
                 : $"❌ Not conformant — {result.Violations.Count} violation(s): {result.Violations.FirstOrDefault()?.Description}";
-            Snackbar.Add(msg, result.IsConformant ? Severity.Success : Severity.Warning);
+            Feedback.Info(msg);
         }
-        finally
+        catch (Exception ex)
         {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -438,18 +439,19 @@
         if (Session.Pdf is null)
             return;
 
-        SetBusy("Validating PDF/UA…");
         try
         {
-            var result = await Session.Pdf.Processor.ValidatePdfUAAsync(Session.Pdf.CurrentBytes);
+            using var _ = _busyScope.Begin("Validating PDF/UA…");
+
+            var result = await Session.Pdf!.Processor.ValidatePdfUAAsync(Session.Pdf.CurrentBytes);
             var msg = result.IsConformant
                 ? "✅ PDF/UA conformant"
                 : $"❌ Not conformant — {result.Violations.Count} violation(s): {result.Violations.FirstOrDefault()?.Description}";
-            Snackbar.Add(msg, result.IsConformant ? Severity.Success : Severity.Warning);
+            Feedback.Info(msg);
         }
-        finally
+        catch (Exception ex)
         {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -458,50 +460,36 @@
         if (Session.Pdf is null)
             return;
 
-        SetBusy("Rotating page…");
         try
         {
+            using var _ = _busyScope.Begin("Rotating page…");
+
             var page = Session.Pdf.CurrentPage;
             await new PageOrganizer().RotatePagesAsync(Session.Pdf.Document, [page], 90);
             await Session.Pdf.RefreshAsync();
-            ShowInfo($"Rotated page {page} by 90°.");
+            Feedback.Info($"Rotated page {page} by 90°.");
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
-    private async Task OpenBatchDialog()
-    {
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = false,
-            CloseButton = false,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = false
-        };
-        await Dialogs.ShowAsync<BatchExportDialog>("Batch Comparison Export", new DialogParameters(), options);
-    }
+    private Task OpenBatchDialog() => Dialogs.ShowVoidAsync<BatchExportDialog>("Batch Comparison Export", fullWidth: false);
 
     private async Task OpenMergeDialog()
     {
         if (Session.Pdf is null)
             return;
 
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        var dialog = await Dialogs.ShowAsync<MergeDialog>("Merge Documents", new DialogParameters(), options);
-        var result = await dialog.Result;
-        if (result is null || result.Canceled || result.Data is not List<byte[]> extraDocs || extraDocs.Count == 0)
+        var extraDocs = await Dialogs.ShowAsync<MergeDialog, List<byte[]>>("Merge Documents");
+        if (extraDocs is null || extraDocs.Count == 0)
             return;
 
-        SetBusy("Merging…");
         try
         {
+            using var _ = _busyScope.Begin("Merging…");
+
             // Combine the current document's bytes with the uploaded ones, in order.
             var streams = new List<Stream> { new MemoryStream(Session.Pdf.CurrentBytes) };
             streams.AddRange(extraDocs.Select(static Stream (b) => new MemoryStream(b)));
@@ -510,19 +498,15 @@
             foreach (var s in streams) await s.DisposeAsync();
 
             using var ms = new MemoryStream();
-            await Session.Pdf.Processor.SaveAsync(merged, ms);
+            await Session.Pdf!.Processor.SaveAsync(merged, ms);
             await merged.DisposeAsync();
 
             await ReloadAsync(ms.ToArray(), Session.Pdf.FileName);
-            ShowInfo($"Merged {extraDocs.Count} document(s).");
+            Feedback.Info($"Merged {extraDocs.Count} document(s).");
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -531,16 +515,17 @@
         if (Session.Pdf is null)
             return;
 
-        var parameters = new DialogParameters { [nameof(SplitDialog.PageCount)] = Session.Pdf.Document.PageCount };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        var dialog = await Dialogs.ShowAsync<SplitDialog>("Split Document", parameters, options);
-        var result = await dialog.Result;
-        if (result is null || result.Canceled || result.Data is not List<(int Start, int End)> ranges)
+        var ranges = await Dialogs.ShowAsync<SplitDialog, IReadOnlyList<(int Start, int End)>>(
+            "Split Document",
+            p => p[nameof(SplitDialog.PageCount)] = Session.Pdf!.Document.PageCount
+        );
+        if (ranges is null)
             return;
 
-        SetBusy("Splitting…");
         try
         {
+            using var _ = _busyScope.Begin("Splitting…");
+
             var parts = await new PageOrganizer().SplitAsync(Session.Pdf.Document, ranges);
             var zipEntries = new List<(string Name, byte[] Bytes)>();
             var baseName = Path.GetFileNameWithoutExtension(Session.Pdf.FileName);
@@ -548,21 +533,17 @@
             for (var i = 0; i < parts.Count; i++)
             {
                 using var ms = new MemoryStream();
-                await Session.Pdf.Processor.SaveAsync(parts[i], ms);
+                await Session.Pdf!.Processor.SaveAsync(parts[i], ms);
                 zipEntries.Add(($"{baseName}_part{i + 1}_p{ranges[i].Start}-{ranges[i].End}.pdf", ms.ToArray()));
                 await parts[i].DisposeAsync();
             }
 
             await Exporter.TriggerDownloadAsync(ZipBuilder.Build(zipEntries), $"{baseName}_split.zip", "application/zip");
-            ShowInfo($"Split into {parts.Count} file(s) — downloaded as ZIP.");
+            Feedback.Info($"Split into {parts.Count} file(s) — downloaded as ZIP.");
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -571,27 +552,24 @@
         if (Session.Pdf is null)
             return;
 
-        var parameters = new DialogParameters { [nameof(RemovePagesDialog.PageCount)] = Session.Pdf.Document.PageCount };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        var dialog = await Dialogs.ShowAsync<RemovePagesDialog>("Remove Pages", parameters, options);
-        var result = await dialog.Result;
-        if (result is null || result.Canceled || result.Data is not List<int> pages || pages.Count == 0)
+        var pages = await Dialogs.ShowAsync<RemovePagesDialog, List<int>>(
+            "Remove Pages",
+            p => p[nameof(RemovePagesDialog.PageCount)] = Session.Pdf!.Document.PageCount
+        );
+        if (pages is null || pages.Count == 0)
             return;
 
-        SetBusy("Removing pages…");
         try
         {
+            using var _ = _busyScope.Begin("Removing pages…");
+
             await new PageOrganizer().DeletePagesAsync(Session.Pdf.Document, pages);
             await Session.Pdf.RefreshAsync();
-            ShowInfo($"Removed {pages.Count} page(s).");
+            Feedback.Info($"Removed {pages.Count} page(s).");
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -600,17 +578,16 @@
         if (Session.Pdf is null)
             return;
 
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        var dialog = await Dialogs.ShowAsync<EncryptDialog>("Encrypt Document", new DialogParameters(), options);
-        var result = await dialog.Result;
-        if (result is null || result.Canceled || result.Data is not EncryptResult enc)
+        var enc = await Dialogs.ShowAsync<EncryptDialog, EncryptResult>("Encrypt Document");
+        if (enc is null)
             return;
 
-        SetBusy("Encrypting…");
         try
         {
+            using var _ = _busyScope.Begin("Encrypting…");
+
             using var ms = new MemoryStream();
-            await Session.Pdf.Processor.ChangePasswordsAsync(
+            await Session.Pdf!.Processor.ChangePasswordsAsync(
                 Session.Pdf.Document,
                 enc.UserPassword,
                 enc.OwnerPassword,
@@ -625,7 +602,7 @@
             else
                 await ReloadAsync(bytes, Session.Pdf.FileName);
 
-            ShowInfo(
+            Feedback.Info(
                 enc.UserPassword.Length == 0 && enc.OwnerPassword.Length == 0
                     ? "Encryption removed."
                     : "Document encrypted."
@@ -633,11 +610,7 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -646,16 +619,17 @@
         if (Session.Pdf is null)
             return;
 
-        var parameters = new DialogParameters { [nameof(WatermarkDialog.CurrentPage)] = Session.Pdf.CurrentPage };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        var dialog = await Dialogs.ShowAsync<WatermarkDialog>("Add Watermark", parameters, options);
-        var result = await dialog.Result;
-        if (result is null || result.Canceled || result.Data is not WatermarkResult wm)
+        var wm = await Dialogs.ShowAsync<WatermarkDialog, WatermarkResult>(
+            "Add Watermark",
+            p => p[nameof(WatermarkDialog.CurrentPage)] = Session.Pdf.CurrentPage
+        );
+        if (wm is null)
             return;
 
-        SetBusy("Applying watermark…");
         try
         {
+            using var _ = _busyScope.Begin("Applying watermark…");
+
             var applier = new StampApplier();
             if (wm.AllPages)
                 await applier.StampAsync(Session.Pdf.Document, wm.Stamp);
@@ -663,15 +637,11 @@
                 await applier.StampPageAsync(Session.Pdf.Document, Session.Pdf.CurrentPage, wm.Stamp);
 
             await Session.Pdf.RefreshAsync();
-            ShowInfo(wm.AllPages ? "Watermark applied to all pages." : "Watermark applied to current page.");
+            Feedback.Info(wm.AllPages ? "Watermark applied to all pages." : "Watermark applied to current page.");
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
-        }
-        finally
-        {
-            ClearBusy();
+            Feedback.Error(ex.Message);
         }
     }
 
@@ -692,7 +662,7 @@
         var file = e.File;
         if (file.Size > StudioConstants.MaxUploadBytes)
         {
-            ShowError("File too large.");
+            Feedback.Error("File too large.");
             return;
         }
 
@@ -701,30 +671,6 @@
         await stream.CopyToAsync(ms);
         await LoadPdf((ms.ToArray(), file.Name));
     }
-
-    private void SetBusy(string message)
-    {
-        _busy = true;
-        _busyMessage = message;
-        // Explicit StateHasChanged so the overlay appears immediately without
-        // waiting for Blazor's automatic coalesced re-render.
-        StateHasChanged();
-    }
-
-    private void ClearBusy()
-    {
-        _busy = false;
-        // Explicit StateHasChanged so the overlay disappears immediately.
-        // Blazor's automatic post-EventCallback StateHasChanged can be delayed
-        // when the circuit is under load (large PDF parse + component mounting).
-        StateHasChanged();
-    }
-
-    private void ShowInfo(string message) =>
-        Snackbar.Add(message, Severity.Info);
-
-    private void ShowError(string message) =>
-        Snackbar.Add(message, Severity.Error);
 
     private Task OnPlayboardDirty()
     {

@@ -41,6 +41,7 @@ public sealed class IPdfDocumentDefaultsTests
         public ViewerPreferences GetViewerPreferences() => throw new NotSupportedException();
         public string? GetXmpMetadata() => null;
         public IReadOnlyList<NamedDestination> GetNamedDestinations() => throw new NotSupportedException();
+        public ReadOnlyMemory<byte> Bytes => ReadOnlyMemory<byte>.Empty;
 
         public void Dispose() { }
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;

@@ -20,7 +20,7 @@ namespace Unchained.Pdf.Models;
 ///     <paramref name="Tagged" /> is <see langword="true" />.
 /// </param>
 public sealed record TxtLoadOptions(
-    string FontName = "Helvetica",
+    string FontName = PdfConstants.FontHelvetica,
     float FontSize = 12f,
     float LineSpacing = 1.2f,
     float MarginPt = 72f,

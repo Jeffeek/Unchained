@@ -89,7 +89,7 @@ public class RowColumnCoverageTests
         sheet.SetValue(2, 1, 1.0);
 
         var text = sheet.GetAllText();
-        text.ShouldContain("a\tb");
+        text.ShouldBe("a\tb\n1\t");
     }
 
     [Fact]

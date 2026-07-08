@@ -1,0 +1,25 @@
+// Shared Sass variables. Runtime theming still relies on MudBlazor's CSS custom properties
+// (var(--mud-palette-*)); these are build-time constants for values repeated across partials.
+
+// ── Colour ────────────────────────────────────────────────────────────────
+// The Studio accent — a fixed shade of the MudBlazor primary, used at various alphas for
+// selections, hovers, and highlights.
+$accent: #5c6bc0;
+
+// Typed-value colours in the properties panel — "signal lights" on the instrument panel.
+$val-hex-color: #64b5f6;
+$val-number-color: #81c784;
+$val-bool-color: #ba68c8;
+$val-date-color: #ffb74d;
+
+// Scrollbar thumb.
+$scrollbar-thumb: #444;
+$scrollbar-thumb-hover: #666;
+
+// ── Typography ──────────────────────────────────────────────────────────────
+$font-mono: "Roboto Mono", monospace;
+
+// ── Layout dimensions ───────────────────────────────────────────────────────
+$panel-tree-width: 260px; // left document-tree column
+$panel-props-width: 300px; // right properties column
+$playboard-props-width: 340px; // PPTX shape-properties panel

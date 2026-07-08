@@ -208,7 +208,7 @@ internal static class PdfAValidator
                 continue;
 
             // Look for ExtGState dicts that have transparency settings
-            var type = dict.GetName("Type");
+            var type = dict.GetName(PdfName.Type.Value);
             if (type != "ExtGState" && type is not null)
                 continue; // skip non-ExtGState (unless no type)
 
@@ -237,17 +237,17 @@ internal static class PdfAValidator
             var dict = obj.Value as PdfDictionary ?? (obj.Value as PdfStream)?.Dictionary;
             if (dict is null)
                 continue;
-            if (dict.GetName("Type") != "Font")
+            if (dict.GetName(PdfName.Type.Value) != PdfName.Font.Value)
                 continue;
             if (!seen.Add(obj.ObjectNumber))
                 continue;
 
-            var subtype = dict.GetName("Subtype");
+            var subtype = dict.GetName(PdfName.Subtype.Value);
             if (subtype is "Type0")
                 continue; // Composite font — check descendant fonts below
 
             // Standard 14 fonts MUST be embedded in PDF/A-1
-            var baseName = dict.GetName("BaseFont");
+            var baseName = dict.GetName(PdfName.BaseFont.Value);
 
             var descriptor = Resolve<PdfDictionary>(dict[PdfName.FontDescriptor], core);
             if (descriptor is null)
@@ -281,13 +281,7 @@ internal static class PdfAValidator
         for (var page = 1; page <= core.PageCount; page++)
         {
             var pageDict = core.GetPage(page);
-            var annotsObj = pageDict[PdfName.Annots];
-            var annots = annotsObj switch
-            {
-                PdfArray a => a,
-                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfArray,
-                _ => null
-            };
+            var annots = core.ResolveAnnots(pageDict);
 
             if (annots is null)
                 continue;
@@ -297,7 +291,7 @@ internal static class PdfAValidator
                 if (dict is null)
                     continue;
 
-                var subtype = dict.GetName("Subtype") ?? string.Empty;
+                var subtype = dict.GetName(PdfName.Subtype.Value) ?? string.Empty;
 
                 // Prohibited annotation types
                 if (ProhibitedAnnotationTypes.Contains(subtype))
@@ -305,11 +299,11 @@ internal static class PdfAValidator
 
                 // Print flag (bit 2 = 0x4) must be set
                 var flags = (int)(dict.Get<PdfInteger>("F")?.Value ?? 0);
-                if ((flags & 4) == 0 && subtype != "Widget")
+                if ((flags & 4) == 0 && subtype != PdfName.Widget.Value)
                     v.Add(E("6.5.3", $"/{subtype} annotation on page {page} does not have the Print flag (bit 3) set.", pageNumber: page));
 
                 // Widget annotations must have an appearance stream
-                if (subtype == "Widget" && dict[PdfName.AP] is null)
+                if (subtype == PdfName.Widget.Value && dict[PdfName.AP] is null)
                     v.Add(E("6.5.4", $"Widget annotation on page {page} is missing an appearance stream (/AP).", pageNumber: page));
             }
         }
@@ -318,7 +312,7 @@ internal static class PdfAValidator
     private static void CheckActions(PdfDocumentCore core, ICollection<PdfAViolation> v)
     {
         // Catalog must not have /AA (additional actions)
-        if (core.Catalog["AA"] is not null)
+        if (core.Catalog[PdfName.AA.Value] is not null)
             v.Add(E("6.6.1", "Catalog contains /AA (additional actions), which is not permitted in PDF/A-1."));
 
         // Catalog /OpenAction must not be a prohibited action
@@ -368,12 +362,7 @@ internal static class PdfAValidator
     private static void CheckXmpMetadata(PdfDocumentCore core, PdfAProfile profile, ICollection<PdfAViolation> v)
     {
         var metaObj = core.Catalog[PdfName.Metadata];
-        var metaStream = metaObj switch
-        {
-            PdfStream s => s,
-            PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-            _ => null
-        };
+        var metaStream = core.ResolveStream(metaObj);
 
         if (metaStream is null)
         {

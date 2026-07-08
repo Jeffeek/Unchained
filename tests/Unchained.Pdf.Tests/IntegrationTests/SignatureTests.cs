@@ -5,7 +5,7 @@ using System.Text;
 using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
@@ -37,7 +37,7 @@ public sealed class SignatureTests : PdfTestBase
     // ── Sign ──────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Sign_SinglePage_ProducesValidPdfBytes()
+    public async Task Sign_SinglePage_ProducesValidPdf()
     {
         using var cert = CreateSelfSignedCert();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
@@ -47,6 +47,11 @@ public sealed class SignatureTests : PdfTestBase
 
         ms.ToArray()[..5].ShouldBe("%PDF-"u8.ToArray());
         ms.Length.ShouldBeGreaterThan(0);
+        // Verify the signed output still parses and contains a signature dictionary.
+        var bytes = ms.ToArray();
+        var parsed = await LoadAsync(bytes);
+        var fields = parsed.GetFormFields();
+        fields.ShouldNotBeNull();
     }
 
     [Fact]

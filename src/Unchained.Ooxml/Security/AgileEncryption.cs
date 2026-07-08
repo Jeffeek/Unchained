@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Ooxml.Security;
 
@@ -346,8 +347,8 @@ public static class AgileEncryption
         byte[] encryptedHmacValue
     )
     {
-        var enc = XNamespace.Get("http://schemas.microsoft.com/office/2006/encryption");
-        var pwd = XNamespace.Get("http://schemas.microsoft.com/office/2006/keyEncryptor/password");
+        var enc = XNamespace.Get(OoxmlNamespaces.MsEncryption);
+        var pwd = XNamespace.Get(OoxmlNamespaces.MsKeyEncryptorPassword);
 
         var encEl = new XElement(
             enc + "encryption",
@@ -411,8 +412,8 @@ public static class AgileEncryption
         ParseEncryptionInfo(ReadOnlySpan<byte> xmlSpan)
     {
         var doc = XDocument.Parse(Encoding.UTF8.GetString(xmlSpan));
-        var enc = XNamespace.Get("http://schemas.microsoft.com/office/2006/encryption");
-        var pwd = XNamespace.Get("http://schemas.microsoft.com/office/2006/keyEncryptor/password");
+        var enc = XNamespace.Get(OoxmlNamespaces.MsEncryption);
+        var pwd = XNamespace.Get(OoxmlNamespaces.MsKeyEncryptorPassword);
 
         var keyDataEl = doc.Root?.Element(enc + "keyData")
                         ?? throw new OoXmlEncryptedException("Missing keyData element.");

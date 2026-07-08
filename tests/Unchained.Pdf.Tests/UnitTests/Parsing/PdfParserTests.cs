@@ -2,7 +2,7 @@ using System.Text;
 using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Parsing;
@@ -126,8 +126,11 @@ public sealed class PdfParserReadValueTests
     }
 
     [Fact]
-    public void ReadValue_UnexpectedToken_ThrowsPdfException() =>
-        Should.Throw<PdfException>(static () => ReadValue("endobj"));
+    public void ReadValue_UnexpectedToken_ThrowsPdfException()
+    {
+        var ex = Should.Throw<PdfException>(static () => ReadValue("endobj"));
+        ex.ShouldNotBeNull();
+    }
 }
 
 public sealed class PdfParserStructureTests
@@ -143,6 +146,7 @@ public sealed class PdfParserStructureTests
         trailer.ShouldNotBeNull();
         trailer["Root"].ShouldNotBeNull();
         trailer["Root"].ShouldBeOfType<PdfIndirectReference>();
+        trailer["Size"].ShouldNotBeNull();
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Unchained.Ooxml.Xml;
 
 namespace Unchained.Ooxml.Opc;
 
@@ -26,7 +27,7 @@ internal sealed class ContentTypeMap
             _extensionDefaults =
             {
                 ["rels"] = "application/vnd.openxmlformats-package.relationships+xml",
-                ["xml"] = "application/xml"
+                ["xml"] = OoxmlContentTypes.ApplicationXml
             }
         };
         return map;

@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Engine;
@@ -61,8 +61,8 @@ public sealed class PageShadingResolverTests
         sh.ExtendEnd.ShouldBeTrue();
         sh.ColorRamp.Length.ShouldBe(256 * 3);
         // Ramp goes black (t=0) to white (t=1).
-        sh.ColorAt(0.0).R.ShouldBeLessThan((byte)20);
-        sh.ColorAt(1.0).R.ShouldBeGreaterThan((byte)235);
+        sh.ColorAt(0.0).R.ShouldBeLessThan((byte)10);
+        sh.ColorAt(1.0).R.ShouldBeGreaterThan((byte)245);
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public sealed class PageShadingResolverTests
         var result = PageShadingResolver.GetShadings(PageWithShading(("C1", cmyk)), Core());
         result.TryGetValue("C1", out var c1).ShouldBeTrue();
         // Full cyan at t=1 → low red.
-        c1.ColorAt(1.0).R.ShouldBeLessThan((byte)80);
+        c1.ColorAt(1.0).R.ShouldBeLessThan((byte)20);
     }
 
     [Fact]

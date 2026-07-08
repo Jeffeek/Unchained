@@ -2,115 +2,67 @@
 @inject NavigationManager Nav
 
 <div class="home-page">
-    <!-- Hero -->
-    <section class="home-hero">
-        <div class="home-hero-glow"></div>
-        <MudIcon Icon="@Icons.Material.Filled.AutoStories" Class="home-hero-icon"/>
-        <MudText Typo="Typo.h3" Class="home-hero-title">Unchained Studio</MudText>
-        <MudText Typo="Typo.h6" Class="home-hero-subtitle">
-            A pure-managed document engine for PDF &amp; Office formats — no native dependencies for the core.
-        </MudText>
-        <div class="home-hero-badges">
-            <span class="home-badge">.NET 8 / 9 / 10</span>
-            <span class="home-badge">100% C#</span>
-            <span class="home-badge">MIT-friendly stack</span>
+    <div class="home-header">
+        <div class="home-header-left">
+            <MudText Typo="Typo.h4" Class="home-title">Unchained Studio</MudText>
         </div>
-    </section>
+        <div class="home-version">v0.1.0</div>
+    </div>
 
-    <!-- Format cards -->
-    <section class="home-cards">
-        @foreach (var f in _formats)
-        {
-            <div class="@($"home-card {(f.Enabled ? "" : "home-card--soon")}")"
-                 @onclick="@(() => OpenFormat(f))">
-                <div class="home-card-head">
-                    <MudIcon Icon="@f.Icon" Class="home-card-icon" Style="@($"color:{f.Accent};")"/>
-                    <div>
-                        <MudText Typo="Typo.h6">@f.Name</MudText>
-                        <MudText Typo="Typo.caption" Style="opacity:.65;">@f.Tagline</MudText>
-                    </div>
-                    @if (!f.Enabled)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="Coming soon" Class="ml-auto"/>
-                    }
-                </div>
-                <ul class="home-card-features">
-                    @foreach (var feat in f.Features)
-                    {
-                        <li>
-                            <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"/> @feat
-                        </li>
-                    }
-                </ul>
-                @if (f.Enabled)
-                {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                               EndIcon="@Icons.Material.Outlined.ArrowForward"
-                               OnClick="@(() => OpenFormat(f))">
-                        Open @f.Name
-                    </MudButton>
-                }
-            </div>
-        }
-    </section>
+    <MudText Typo="Typo.body2" Class="home-tagline">
+        A pure-managed document engine for PDF and Office formats.
+    </MudText>
 
-    <!-- Capability strip -->
-    <section class="home-caps">
-        <MudText Typo="Typo.overline" Class="home-caps-title">What the engine can do</MudText>
-        <div class="home-caps-grid">
-            @foreach (var cap in _capabilities)
+    <div class="home-badges">
+        <span class="home-badge">.NET 8 / 9 / 10</span>
+        <span class="home-badge">100% C#</span>
+        <span class="home-badge">MIT-friendly stack</span>
+    </div>
+
+    <div class="home-body">
+        <div class="home-formats">
+            @foreach (var f in _formats)
             {
-                <div class="home-cap">
-                    <MudIcon Icon="@cap.Icon" Size="Size.Small" Class="home-cap-icon"/>
-                    <div>
-                        <div class="home-cap-name">@cap.Name</div>
-                        <div class="home-cap-desc">@cap.Desc</div>
+                <div class="home-format-card @(f.Enabled ? "" : "home-format-card--soon")"
+                     @onclick="@(() => OpenFormat(f))">
+                    <div class="home-format-head">
+                        <MudIcon Icon="@f.Icon" Class="home-format-icon"/>
+                        <MudText Typo="Typo.h6">@f.Name</MudText>
+                        @if (!f.Enabled)
+                        {
+                            <span class="home-format-soon">coming soon</span>
+                        }
                     </div>
+                    <MudText Typo="Typo.caption" Class="home-format-tagline">@f.Tagline</MudText>
                 </div>
             }
         </div>
-    </section>
+
+        <div class="home-capabilities">
+            <MudText Typo="Typo.subtitle1" Class="home-caps-heading">Engine Capabilities</MudText>
+            <div class="home-cap-list">
+                @foreach (var cap in _capabilities)
+                {
+                    <div class="home-cap-item">
+                        <MudIcon Icon="@cap.Icon" Size="Size.Small" Class="home-cap-icon"/>
+                        <div>
+                            <div class="home-cap-name">@cap.Name</div>
+                            <div class="home-cap-desc">@cap.Desc</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
     private readonly List<FormatCard> _formats =
     [
-        new(
-            "PDF",
-            "Read, render, edit, convert",
-            Icons.Material.Outlined.PictureAsPdf,
-            "#E53935",
-            true,
-            "/pdf",
-            ["PDF 1.x–2.x, encrypted, linearized, tagged", "Render & extract text", "Optimize, repair, validate PDF/A & PDF/UA", "Batch visual comparison"]
-        ),
-        new(
-            "PPTX",
-            "PowerPoint presentations",
-            Icons.Material.Outlined.Slideshow,
-            "#FB8C00",
-            true,
-            "/pptx",
-            ["Slides, shapes, charts, tables, SmartArt", "Render slides to PNG", "Find & replace, hyperlinks", "Export to PDF, HTML5 player, ODP"]
-        ),
-        new(
-            "DOCX",
-            "Word documents",
-            Icons.Material.Outlined.Description,
-            "#1E88E5",
-            false,
-            "/docx",
-            ["Built on the shared OOXML core", "Paragraphs, runs, tables, styles", "Round-trip fidelity"]
-        ),
-        new(
-            "XLSX",
-            "Excel workbooks",
-            Icons.Material.Outlined.TableChart,
-            "#43A047",
-            true,
-            "/xlsx",
-            ["Live cell editing, styles, formulas", "Tables, named ranges, data validation", "Page setup, freeze panes, protection", "AES-256 encryption, CSV import/export"]
-        )
+        new("PDF", "Read, render, edit, convert", Icons.Material.Outlined.PictureAsPdf, true, "/pdf"),
+        new("PPTX", "PowerPoint presentations", Icons.Material.Outlined.Slideshow, true, "/pptx"),
+        new("DOCX", "Word documents", Icons.Material.Outlined.Description, false, "/docx"),
+        new("XLSX", "Excel workbooks", Icons.Material.Outlined.TableChart, true, "/xlsx")
     ];
 
     private readonly List<Capability> _capabilities =

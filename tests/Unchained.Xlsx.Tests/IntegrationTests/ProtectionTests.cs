@@ -16,6 +16,7 @@ public class ProtectionTests
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         reloaded.Sheets[0].Protection.IsProtected.ShouldBeTrue();
         reloaded.Sheets[0].Protection.PasswordHash.ShouldNotBeNull();
+        reloaded.Sheets[0].Protection.PasswordHash.ShouldNotBe("secret"); // legacy hash, not plaintext
     }
 
     [Fact]

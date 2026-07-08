@@ -24,7 +24,7 @@ public sealed class OleShapeTests
             ProgId = "Excel.Sheet.12",
             LinkedFilePath = @"C:\book.xlsx"
         };
-        ole.EmbeddedData.Length.ShouldBe(3);
+        ole.EmbeddedData.ToArray().ShouldBe([1, 2, 3]);
         ole.ProgId.ShouldBe("Excel.Sheet.12");
         ole.LinkedFilePath.ShouldBe(@"C:\book.xlsx");
     }

@@ -24,9 +24,7 @@ internal static class PageImageExtractor
 
         foreach (var (key, value) in xObjDict.Entries)
         {
-            var stream = value is PdfIndirectReference r
-                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfStream
-                : value as PdfStream;
+            var stream = core.ResolveStream(value);
 
             if (stream is null) continue;
             if (stream.Dictionary.GetName(PdfName.Subtype.Value) != "Image") continue;
@@ -100,7 +98,7 @@ internal static class PageImageExtractor
                 StreamFilters.Decode(smStream),
                 smw,
                 smh,
-                "DeviceGray",
+                PdfConstants.DeviceGray,
                 smBpc,
                 smDecode
             );
@@ -126,7 +124,7 @@ internal static class PageImageExtractor
     // Reads the /Decode array as a float[]. Returns null when absent (= identity).
     private static float[]? ReadDecodeArray(PdfDictionary dict)
     {
-        if (dict["Decode"] is not PdfArray da || da.Count == 0)
+        if (dict[PdfName.Decode.Value] is not PdfArray da || da.Count == 0)
             return null;
 
         var values = new float[da.Count];
@@ -140,13 +138,13 @@ internal static class PageImageExtractor
     // Returns null when the colour space is not Indexed.
     private static IndexedPalette? ReadIndexedPalette(PdfDocumentCore core, PdfDictionary dict)
     {
-        var csObj = dict["ColorSpace"];
+        var csObj = dict[PdfName.ColorSpace.Value];
         if (csObj is PdfIndirectReference r)
             csObj = core.ResolveIndirect(r.ObjectNumber).Value;
 
         if (csObj is not PdfArray arr || arr.Count < 4)
             return null;
-        if ((arr[0] as PdfName)?.Value != "Indexed")
+        if ((arr[0] as PdfName)?.Value != PdfConstants.Indexed)
             return null;
 
         // Base colour space: a name, or a nested array (e.g. [/ICCBased ...]).
@@ -156,7 +154,7 @@ internal static class PageImageExtractor
 
         var baseChannels = baseName switch
         {
-            "DeviceGray" => 1, "DeviceRGB" => 3, "DeviceCMYK" => 4, _ => 0
+            PdfConstants.DeviceGray => 1, PdfConstants.DeviceRgb => 3, PdfConstants.DeviceCmyk => 4, _ => 0
         };
         if (baseChannels == 0)
             return null;
@@ -314,22 +312,22 @@ internal static class PageImageExtractor
         // rather than a grey placeholder.
         var expectedChannels = cs switch
         {
-            "DeviceCMYK" => 4, "DeviceRGB" => 3, "DeviceGray" => 1, _ => 0
+            PdfConstants.DeviceCmyk => 4, PdfConstants.DeviceRgb => 3, PdfConstants.DeviceGray => 1, _ => 0
         };
         if (bpc == 8 && expectedChannels > 0 && decoded.Length != pixelCount * expectedChannels)
             cs = null; // declared cs doesn't match data; re-infer below
 
         cs ??= decoded.Length switch
         {
-            var n when n == pixelCount * 4 => "DeviceCMYK",
-            var n when n == pixelCount * 3 => "DeviceRGB",
-            _ => "DeviceGray"
+            var n when n == pixelCount * 4 => PdfConstants.DeviceCmyk,
+            var n when n == pixelCount * 3 => PdfConstants.DeviceRgb,
+            _ => PdfConstants.DeviceGray
         };
 
         switch (cs)
         {
             // DeviceRGB — direct 3-channel, 8 bpc
-            case "DeviceRGB" when bpc == 8 && decoded.Length == pixelCount * 3:
+            case PdfConstants.DeviceRgb when bpc == 8 && decoded.Length == pixelCount * 3:
             {
                 if (decode is null) return decoded.ToArray();
 
@@ -345,7 +343,7 @@ internal static class PageImageExtractor
                 return rgb;
             }
             // DeviceGray — single channel; replicate to R, G, B
-            case "DeviceGray" when bpc == 8 && decoded.Length == pixelCount:
+            case PdfConstants.DeviceGray when bpc == 8 && decoded.Length == pixelCount:
             {
                 var span = decoded.Span;
                 var rgb = new byte[pixelCount * 3];
@@ -358,7 +356,7 @@ internal static class PageImageExtractor
                 return rgb;
             }
             // DeviceCMYK — 4 channels, 8 bpc → convert to RGB
-            case "DeviceCMYK" when bpc == 8 && decoded.Length == pixelCount * 4:
+            case PdfConstants.DeviceCmyk when bpc == 8 && decoded.Length == pixelCount * 4:
             {
                 var span = decoded.Span;
                 var rgb = new byte[pixelCount * 3];
@@ -381,7 +379,7 @@ internal static class PageImageExtractor
             // (white). The CCITTFaxDecode filter already applies its /BlackIs1 flag when
             // producing these samples, so here we only honour the image's own /Decode array.
             // ReSharper disable once InvertIf
-            case "DeviceGray" when bpc == 1:
+            case PdfConstants.DeviceGray when bpc == 1:
             {
                 // /Decode default for 1bpc is [0.0 1.0]; [1.0 0.0] inverts black/white.
                 var invertBits = decode is { Length: >= 2 } && decode[0] > decode[1];

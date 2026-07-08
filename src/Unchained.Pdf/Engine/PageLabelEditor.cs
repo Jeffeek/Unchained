@@ -64,34 +64,26 @@ public sealed class PageLabelEditor : IPageLabelEditor
         PdfDictionary node,
         PdfDocumentCore core,
         ICollection<PageLabelRange> result
-    )
-    {
-        // Leaf: /Nums array of (integer-key, label-dict) pairs.
-        if (node.Get<PdfArray>(PdfName.Nums) is { } nums)
-        {
-            for (var i = 0; i + 1 < nums.Count; i += 2)
+    ) =>
+        MutationHelper.CollectTree(
+            node,
+            core,
+            result,
+            PdfName.Nums.Value,
+            (_, arr, i, _) =>
             {
-                var pageIdx = (int)(nums[i] is PdfInteger pi ? pi.Value : 0);
-                var labelDict = core.ResolveDict(nums[i + 1]);
-
-                if (labelDict is null) continue;
+                var pageIdx = (int)(arr[i] is PdfInteger pi ? pi.Value : 0);
+                var labelDict = core.ResolveDict(arr[i + 1]);
+                if (labelDict is null) return null;
 
                 var style = ParseStyle(labelDict.GetName("S"));
                 var prefix = labelDict[PdfName.P] is PdfString ps
                     ? Encoding.Latin1.GetString(ps.Bytes.Span)
                     : null;
                 var first = (int)(labelDict.Get<PdfInteger>("St")?.Value ?? 1);
-                result.Add(new PageLabelRange(pageIdx, style, prefix, first));
+                return new PageLabelRange(pageIdx, style, prefix, first);
             }
-        }
-
-        // Intermediate: /Kids array.
-        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
-            return;
-
-        foreach (var childDict in kids.Elements.Select(core.ResolveDict).Where(static x => x != null))
-            CollectNumberTree(childDict!, core, result);
-    }
+        );
 
     // ── Write ─────────────────────────────────────────────────────────────────
 
@@ -100,14 +92,6 @@ public sealed class PageLabelEditor : IPageLabelEditor
         IEnumerable<PageLabelRange> ranges
     )
     {
-        var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0) throw new PdfException("Catalog not found.");
-
-        var catalogDict = existing[catalogIdx].Value as PdfDictionary ?? throw new PdfException("Catalog is not a dictionary.");
-
-        // Build flat /Nums array: [ pageIdx0 labelDict0  pageIdx1 labelDict1 ... ]
         var numsArray = new List<PdfObject>();
         foreach (var range in ranges.OrderBy(static r => r.StartPageIndex))
         {
@@ -122,30 +106,23 @@ public sealed class PageLabelEditor : IPageLabelEditor
             }
         );
 
-        var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries)
-        {
-            ["PageLabels"] = pageLabelsDict
-        };
-        existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(catalogEntries));
-
-        MutationHelper.SerializeAndReplace(adapter, existing);
+        MutationHelper.ApplyCatalogMutation(
+            adapter,
+            entries =>
+            {
+                entries[PdfName.PageLabels.Value] = pageLabelsDict;
+            }
+        );
     }
 
-    private static void RemovePageLabels(PdfDocumentAdapter adapter)
-    {
-        var existing = adapter.Core.CollectObjects().ToList();
-        var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var catalogIdx = existing.FindIndex(o => o.ObjectNumber == catalogRef.ObjectNumber);
-        if (catalogIdx < 0) return;
-
-        if (existing[catalogIdx].Value is not PdfDictionary catalogDict) return;
-
-        var entries = new Dictionary<string, PdfObject>(catalogDict.Entries);
-        if (!entries.Remove("PageLabels")) return;
-
-        existing[catalogIdx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(entries));
-        MutationHelper.SerializeAndReplace(adapter, existing);
-    }
+    private static void RemovePageLabels(PdfDocumentAdapter adapter) =>
+        MutationHelper.TryApplyCatalogMutation(
+            adapter,
+            static entries =>
+            {
+                entries.Remove("PageLabels");
+            }
+        );
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -153,7 +130,7 @@ public sealed class PageLabelEditor : IPageLabelEditor
     {
         var entries = new Dictionary<string, PdfObject>();
         var styleStr = StyleToString(range.Style);
-        if (styleStr is not null) entries["S"] = PdfName.Get(styleStr);
+        if (styleStr is not null) entries[PdfName.S.Value] = PdfName.Get(styleStr);
         if (!string.IsNullOrEmpty(range.Prefix)) entries["P"] = PdfString.FromLatin1(range.Prefix);
         if (range.FirstLabelNumber != 1) entries["St"] = new PdfInteger(range.FirstLabelNumber);
 

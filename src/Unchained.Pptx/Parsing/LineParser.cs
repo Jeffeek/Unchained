@@ -27,7 +27,7 @@ internal static class LineParser
         // Dash style
         var dash = ln.Element(DmlNames.PresetDash);
         if (dash != null)
-            line.DashStyle = LineStyles.ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, "solid"));
+            line.DashStyle = LineStyles.ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, LineStyles.DashSolid));
 
         // Fill (colour of the line itself)
         FillParser.Parse(ln, line.Fill);
@@ -62,7 +62,7 @@ internal static class LineParser
 
         var dash = lineEl.Element(DmlNames.PresetDash);
         if (dash != null)
-            line.DashStyle = LineStyles.ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, "solid"));
+            line.DashStyle = LineStyles.ParseDashStyle(dash.GetAttr(DmlNames.AttributeValue, LineStyles.DashSolid));
 
         FillParser.Parse(lineEl, line.Fill);
     }

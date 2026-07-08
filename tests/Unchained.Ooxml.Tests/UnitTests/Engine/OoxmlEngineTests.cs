@@ -5,6 +5,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using Shouldly;
 using Unchained.Ooxml.Engine;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Xml;
 using Xunit;
 
 namespace Unchained.Ooxml.Tests.UnitTests.Engine;
@@ -30,17 +31,7 @@ public sealed class OoxmlEngineTests
         byte[] bytes;
         using (var engine = OoxmlEngine.Create(OoxmlFormat.Presentation))
         {
-            // A freshly created presentation needs a presentation part with a minimal body
-            // before the content-type map names it as a presentation.
-            var doc = (PresentationDocument)engine.Package;
-            var presPart = doc.AddPresentationPart();
-            presPart.Presentation = new Presentation(
-                new SlideIdList(),
-                new SlideSize { Cx = 9144000, Cy = 6858000 },
-                new NotesSize { Cx = 6858000, Cy = 9144000 }
-            );
-            presPart.Presentation.Save();
-
+            PreparePresentation(engine);
             bytes = engine.Save();
         }
 
@@ -61,7 +52,7 @@ public sealed class OoxmlEngineTests
         // A structurally valid OPC package whose only part is not a presentation/document/workbook
         // main part → DetectFormat falls through to the "could not determine format" throw.
         var package = OpcPackage.CreateEmpty();
-        package.AddOrReplacePart("/custom/part.xml", "application/xml", "<root/>"u8.ToArray());
+        package.AddOrReplacePart("/custom/part.xml", OoxmlContentTypes.ApplicationXml, "<root/>"u8.ToArray());
         var bytes = package.Save();
 
         Should.Throw<OoXmlException>(() => OoxmlEngine.Open(bytes, false));
@@ -71,12 +62,7 @@ public sealed class OoxmlEngineTests
     public void Save_LeavesEngineUsable()
     {
         using var engine = OoxmlEngine.Create(OoxmlFormat.Wordprocessing);
-        var doc = (WordprocessingDocument)engine.Package;
-        var main = doc.AddMainDocumentPart();
-        main.Document = new Document(
-            new Body()
-        );
-        main.Document.Save();
+        PrepareWordProcessing(engine);
 
         var first = engine.Save();
         var second = engine.Save();
@@ -92,14 +78,7 @@ public sealed class OoxmlEngineTests
         byte[] bytes;
         using (var writable = OoxmlEngine.Create(OoxmlFormat.Presentation))
         {
-            var doc = (PresentationDocument)writable.Package;
-            var presPart = doc.AddPresentationPart();
-            presPart.Presentation = new Presentation(
-                new SlideIdList(),
-                new SlideSize { Cx = 9144000, Cy = 6858000 },
-                new NotesSize { Cx = 6858000, Cy = 9144000 }
-            );
-            presPart.Presentation.Save();
+            PreparePresentation(writable);
             bytes = writable.Save();
         }
 
@@ -111,10 +90,7 @@ public sealed class OoxmlEngineTests
     public void SaveTo_WritesBytesToDestination()
     {
         using var engine = OoxmlEngine.Create(OoxmlFormat.Wordprocessing);
-        var doc = (WordprocessingDocument)engine.Package;
-        var main = doc.AddMainDocumentPart();
-        main.Document = new Document(new Body());
-        main.Document.Save();
+        PrepareWordProcessing(engine);
 
         using var destination = new MemoryStream();
         engine.SaveTo(destination);
@@ -150,10 +126,7 @@ public sealed class OoxmlEngineTests
         byte[] bytes;
         using (var engine = OoxmlEngine.Create(OoxmlFormat.Wordprocessing))
         {
-            var doc = (WordprocessingDocument)engine.Package;
-            var main = doc.AddMainDocumentPart();
-            main.Document = new Document(new Body());
-            main.Document.Save();
+            PrepareWordProcessing(engine);
             bytes = engine.Save();
         }
 
@@ -167,16 +140,41 @@ public sealed class OoxmlEngineTests
         byte[] bytes;
         using (var engine = OoxmlEngine.Create(OoxmlFormat.Spreadsheet))
         {
-            var doc = (SpreadsheetDocument)engine.Package;
-            var wbPart = doc.AddWorkbookPart();
-            wbPart.Workbook = new Workbook(
-                new Sheets()
-            );
-            wbPart.Workbook.Save();
+            PrepareSpreadsheet(engine);
             bytes = engine.Save();
         }
 
         using var reopened = OoxmlEngine.Open(bytes, false);
         reopened.Format.ShouldBe(OoxmlFormat.Spreadsheet);
+    }
+
+    // ── Helpers (extracted from duplicated inline SDK setup) ──────────────────
+
+    private static void PreparePresentation(OoxmlEngine engine)
+    {
+        var doc = (PresentationDocument)engine.Package;
+        var presPart = doc.AddPresentationPart();
+        presPart.Presentation = new Presentation(
+            new SlideIdList(),
+            new SlideSize { Cx = 9144000, Cy = 6858000 },
+            new NotesSize { Cx = 6858000, Cy = 9144000 }
+        );
+        presPart.Presentation.Save();
+    }
+
+    private static void PrepareWordProcessing(OoxmlEngine engine)
+    {
+        var doc = (WordprocessingDocument)engine.Package;
+        var main = doc.AddMainDocumentPart();
+        main.Document = new Document(new Body());
+        main.Document.Save();
+    }
+
+    private static void PrepareSpreadsheet(OoxmlEngine engine)
+    {
+        var doc = (SpreadsheetDocument)engine.Package;
+        var wbPart = doc.AddWorkbookPart();
+        wbPart.Workbook = new Workbook(new Sheets());
+        wbPart.Workbook.Save();
     }
 }

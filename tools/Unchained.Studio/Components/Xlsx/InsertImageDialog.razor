@@ -1,5 +1,6 @@
 @using Unchained.Xlsx.Models.Cell
 @using Unchained.Xlsx.Worksheets
+@inject IJSRuntime JS
 <MudDialog Style="min-width:460px; max-width:560px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -10,11 +11,11 @@
 
     <DialogContent>
         <MudStack Spacing="3">
-            <MudFileUpload T="IBrowserFile" FilesChanged="OnFile" Accept=".png,.jpg,.jpeg,.gif,.bmp">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.UploadFile">
-                    Choose image…
-                </MudButton>
-            </MudFileUpload>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.UploadFile"
+                       OnClick="TriggerFilePicker">
+                Choose image…
+            </MudButton>
 
             @if (_fileName != null)
             {
@@ -47,6 +48,12 @@
     </DialogActions>
 </MudDialog>
 
+<!-- Hidden file input, clicked from the "Choose image…" button via JS interop.
+     MudFileUpload's activator templates differ across MudBlazor versions, so the
+     codebase uses this hidden-InputFile pattern (see MergeDialog, FileDropZone). -->
+<InputFile id="insert-image-file-input" OnChange="OnFilePicked"
+           accept=".png,.jpg,.jpeg,.gif,.bmp" style="display:none;"/>
+
 @code {
 
     [CascadingParameter]
@@ -73,11 +80,13 @@
 
     protected override void OnInitialized() => _anchorCell = InitialAnchor;
 
-    private async Task OnFile(IBrowserFile? file)
+    private Task TriggerFilePicker() =>
+        JS.InvokeVoidAsync("unchainedStudio.clickElement", "insert-image-file-input").AsTask();
+
+    private async Task OnFilePicked(InputFileChangeEventArgs e)
     {
+        var file = e.File;
         _error = null;
-        if (file is null)
-            return;
 
         if (file.Size > MaxBytes)
         {

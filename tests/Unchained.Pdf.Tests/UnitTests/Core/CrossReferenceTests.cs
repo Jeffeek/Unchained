@@ -82,4 +82,18 @@ public sealed class CrossReferenceTableTests
         var table = new CrossReferenceTable(new Dictionary<int, CrossReferenceEntry>(), 512L);
         table.TrailerOffset.ShouldBe(512L);
     }
+
+    [Fact]
+    public void InUseObjectNumbers_ReturnsNonFreeInAscendingOrder()
+    {
+        var table = Table(
+            (5, new CrossReferenceEntry(100, 0, CrossReferenceEntryType.InUse)),
+            (2, new CrossReferenceEntry(50, 0, CrossReferenceEntryType.InUse)),
+            (1, new CrossReferenceEntry(10, 0, CrossReferenceEntryType.Free))
+        );
+        var nums = table.InUseObjectNumbers.ToList();
+        nums.Count.ShouldBe(2);
+        nums[0].ShouldBe(2);
+        nums[1].ShouldBe(5);
+    }
 }

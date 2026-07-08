@@ -15,11 +15,12 @@ internal static class PropertiesWriter
     private const string CoreUri = "/docProps/core.xml";
     private const string AppUri = "/docProps/app.xml";
 
-    private const string CoreContentType = OoxmlContentTypes.CoreProperties;
-    private const string AppContentType = OoxmlContentTypes.ExtendedProperties;
+    // ── Relationship types ─────────────────
 
-    private const string CoreRelType = OoxmlNamespaces.CorePropertiesFull;
-    private const string AppRelType = OoxmlNamespaces.ExtendedPropertiesFull;
+    private const string CoreRelType = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
+    private const string AppRelType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties";
+
+    // ── XML namespaces ─────────────────────────────────────────────────────────
 
     private static readonly XNamespace Cp = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
     private static readonly XNamespace Dc = "http://purl.org/dc/elements/1.1/";
@@ -60,7 +61,7 @@ internal static class PropertiesWriter
         AddDate(root, Cp + "lastPrinted", props.LastPrinted);
 
         var bytes = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
-        package.AddOrReplacePart(CoreUri, CoreContentType, bytes);
+        package.AddOrReplacePart(CoreUri, OoxmlContentTypes.CoreProperties, bytes);
         package.EnsurePackageRelationship(CoreRelType, "docProps/core.xml");
     }
 
@@ -101,7 +102,7 @@ internal static class PropertiesWriter
         AddIfPresent(root, Ep + "Manager", props.Manager);
 
         var bytes = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
-        package.AddOrReplacePart(AppUri, AppContentType, bytes);
+        package.AddOrReplacePart(AppUri, OoxmlContentTypes.ExtendedProperties, bytes);
         package.EnsurePackageRelationship(AppRelType, "docProps/app.xml");
     }
 }

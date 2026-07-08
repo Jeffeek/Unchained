@@ -16,18 +16,25 @@ public sealed class SessionStateService(
     private PptxSessionState? _pptx;
     private XlsxSessionState? _xlsx;
 
-    public PdfSessionState? Pdf => _pdf;
-    public PptxSessionState? Pptx => _pptx;
-    public XlsxSessionState? Xlsx => _xlsx;
+    internal PdfSessionState? Pdf => _pdf;
+    internal PptxSessionState? Pptx => _pptx;
+    internal XlsxSessionState? Xlsx => _xlsx;
 
     public async ValueTask DisposeAsync()
     {
-        await ClosePdfAsync().ConfigureAwait(false);
-        await ClosePptxAsync().ConfigureAwait(false);
-        await CloseXlsxAsync().ConfigureAwait(false);
+        await CloseSessionAsync(ref _pdf).ConfigureAwait(false);
+        await CloseSessionAsync(ref _pptx).ConfigureAwait(false);
+        await CloseSessionAsync(ref _xlsx).ConfigureAwait(false);
     }
 
-    public async Task LoadPdfAsync(
+    private static Task CloseSessionAsync<T>(ref T? state)
+        where T : IAsyncDisposable
+    {
+        var old = Interlocked.Exchange(ref state, default!);
+        return old is not null ? old.DisposeAsync().AsTask() : Task.CompletedTask;
+    }
+
+    internal async Task LoadPdfAsync(
         byte[] bytes,
         string fileName,
         CancellationToken ct = default
@@ -74,12 +81,7 @@ public sealed class SessionStateService(
         }
     }
 
-    public async Task ClosePdfAsync()
-    {
-        var old = Interlocked.Exchange(ref _pdf, null);
-        if (old is not null)
-            await old.DisposeAsync().ConfigureAwait(false);
-    }
+    public Task ClosePdfAsync() => CloseSessionAsync(ref _pdf);
 
     public async Task LoadPptxAsync(
         byte[] bytes,
@@ -103,12 +105,7 @@ public sealed class SessionStateService(
         }
     }
 
-    public async Task ClosePptxAsync()
-    {
-        var old = Interlocked.Exchange(ref _pptx, null);
-        if (old is not null)
-            await old.DisposeAsync().ConfigureAwait(false);
-    }
+    public Task ClosePptxAsync() => CloseSessionAsync(ref _pptx);
 
     public async Task LoadXlsxAsync(
         byte[] bytes,
@@ -132,6 +129,34 @@ public sealed class SessionStateService(
         }
     }
 
+    public async Task LoadCsvAsync(
+        byte[] bytes,
+        string fileName,
+        CancellationToken ct = default
+    )
+    {
+        if (Interlocked.Exchange(ref _loading, 1) == 1)
+            throw new InvalidOperationException("A document load is already in progress.");
+
+        try
+        {
+            using var inStream = new MemoryStream(bytes);
+            using var imported = await xlsxProcessor.LoadFromCsvAsync(inStream, cancellationToken: ct).ConfigureAwait(false);
+            using var outStream = new MemoryStream();
+            await xlsxProcessor.SaveAsync(imported, outStream, cancellationToken: ct).ConfigureAwait(false);
+
+            var name = Path.ChangeExtension(fileName, ".xlsx");
+            var newState = await XlsxSessionState.CreateAsync(xlsxProcessor, outStream.ToArray(), name, ct).ConfigureAwait(false);
+            var old = Interlocked.Exchange(ref _xlsx, newState);
+            if (old is not null)
+                await old.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _loading, 0);
+        }
+    }
+
     public async Task CreateBlankXlsxAsync(string fileName = "workbook.xlsx")
     {
         var newState = XlsxSessionState.CreateBlank(xlsxProcessor, fileName);
@@ -140,10 +165,5 @@ public sealed class SessionStateService(
             await old.DisposeAsync().ConfigureAwait(false);
     }
 
-    public async Task CloseXlsxAsync()
-    {
-        var old = Interlocked.Exchange(ref _xlsx, null);
-        if (old is not null)
-            await old.DisposeAsync().ConfigureAwait(false);
-    }
+    public Task CloseXlsxAsync() => CloseSessionAsync(ref _xlsx);
 }

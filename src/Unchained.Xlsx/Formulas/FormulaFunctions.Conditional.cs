@@ -6,12 +6,25 @@ internal static partial class FormulaFunctions
 {
     // ── Conditional aggregates ──────────────────────────────────────────────────
 
+    private static bool TryParseIfArgs(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev, out List<FormulaValue> range, out FormulaValue criterion)
+    {
+        if (args.Count < 2)
+        {
+            range = null!;
+            criterion = FormulaValue.FromError(CellError.Value);
+            return false;
+        }
+
+        range = ev.Evaluate(args[0]).Flatten().ToList();
+        criterion = ev.Evaluate(args[1]);
+        return true;
+    }
+
     private static FormulaValue SumIf(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (!TryParseIfArgs(args, ev, out var range, out var criterion))
+            return FormulaValue.FromError(CellError.Value);
 
-        var range = ev.Evaluate(args[0]).Flatten().ToList();
-        var criterion = ev.Evaluate(args[1]);
         var sumRange = args.Count >= 3 ? ev.Evaluate(args[2]).Flatten().ToList() : range;
 
         var total = 0.0;
@@ -26,10 +39,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue AverageIf(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (!TryParseIfArgs(args, ev, out var range, out var criterion)) return FormulaValue.FromError(CellError.Value);
 
-        var range = ev.Evaluate(args[0]).Flatten().ToList();
-        var criterion = ev.Evaluate(args[1]);
         var avgRange = args.Count >= 3 ? ev.Evaluate(args[2]).Flatten().ToList() : range;
 
         double total = 0;
@@ -45,14 +56,10 @@ internal static partial class FormulaFunctions
         return count == 0 ? FormulaValue.FromError(CellError.DivisionByZero) : Number(total / count);
     }
 
-    private static FormulaValue CountIf(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
-    {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
-
-        var range = ev.Evaluate(args[0]).Flatten().ToList();
-        var criterion = ev.Evaluate(args[1]);
-        return Number(range.Count(v => MatchesCriterion(v, criterion)));
-    }
+    private static FormulaValue CountIf(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev) =>
+        !TryParseIfArgs(args, ev, out var range, out var criterion)
+            ? FormulaValue.FromError(CellError.Value)
+            : Number(range.Count(v => MatchesCriterion(v, criterion)));
 
     private static FormulaValue ConditionalSumIfs(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev, bool average)
     {

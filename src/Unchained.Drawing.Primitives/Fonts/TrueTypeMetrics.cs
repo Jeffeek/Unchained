@@ -11,8 +11,42 @@ namespace Unchained.Drawing.Primitives.Fonts;
 /// </summary>
 internal static class TrueTypeMetrics
 {
+    // ── TrueType table name constants ────────────────────────────────────────
+
+    /// <summary>OS/2 and Windows Metrics table.</summary>
+    internal const string TableOs2 = "OS/2";
+
+    /// <summary>Horizontal header table.</summary>
+    internal const string TableHhea = "hhea";
+
+    /// <summary>Font header table (offsets, magic number, units-per-em).</summary>
+    internal const string TableHead = "head";
+
+    /// <summary>Character-to-glyph mapping table.</summary>
+    internal const string TableCmap = "cmap";
+
+    /// <summary>HoriZontal metrics table (ascender, descender, line gap).</summary>
+    internal const string TableHmtx = "hmtx";
+
+    /// <summary>PostScript table (glyph names, italic angle).</summary>
+    internal const string TablePost = "post";
+
+    /// <summary>Glyph data table (outline contours).</summary>
+    internal const string TableGlyf = "glyf";
+
+    /// <summary>Loca table (offsets into glyf).</summary>
+    internal const string TableLoca = "loca";
+
+    /// <summary>Maximum profile table (glyph count, max components, etc.).</summary>
+    internal const string TableMaxp = "maxp";
+
+    /// <summary>Horizontal metrics table name (for subsetter offset map).</summary>
+    internal const string TableHmtxShort = "hmtx";
+
+    // ── Target units-per-em ──────────────────────────────────────────────────
+
     /// <summary>Target units-per-em after normalisation; widths and bounding boxes use a 1000-unit em square.</summary>
-    private const int NormalizedUnitsPerEm = 1000;
+    internal const int NormalizedUnitsPerEm = 1000;
 
     /// <summary><see cref="NormalizedUnitsPerEm" /> as <see langword="double" /> for scale calculations.</summary>
     private const double NormalizedUnitsPerEmDouble = 1000.0;
@@ -75,7 +109,7 @@ internal static class TrueTypeMetrics
             {
                 case "OS/2": os2Off = offset; break;
                 case "hhea": hheaOff = offset; break;
-                case "head": headOff = offset; break;
+                case TableHead: headOff = offset; break;
             }
         }
 

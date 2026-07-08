@@ -31,7 +31,7 @@ public sealed class RawElementPreservationTests
     public async Task SdkLoad_CustomSave_PreservesMasterTextStylesAndColorMap()
     {
         var path = SamplePath("mst-slide-layouts.pptx");
-        Assert.SkipUnless(File.Exists(path), "sample missing");
+        File.Exists(path).ShouldBeTrue("sample missing");
         var bytes = await File.ReadAllBytesAsync(path);
 
         using var processor = new PresentationProcessor();
@@ -52,7 +52,7 @@ public sealed class RawElementPreservationTests
     public async Task Notes_RoundTrip_PreservesFullNotesXml()
     {
         var path = SamplePath("prs-notes.pptx");
-        Assert.SkipUnless(File.Exists(path), "sample missing");
+        File.Exists(path).ShouldBeTrue("sample missing");
         var bytes = await File.ReadAllBytesAsync(path);
 
         using var processor = new PresentationProcessor();

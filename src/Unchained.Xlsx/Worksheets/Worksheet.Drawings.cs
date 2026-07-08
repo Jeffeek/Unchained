@@ -75,7 +75,8 @@ public sealed partial class Worksheet
             Chart =
             {
                 Type = type
-            }
+            },
+            Workbook = Document
         };
         if (!string.IsNullOrEmpty(title))
         {
@@ -83,6 +84,7 @@ public sealed partial class Worksheet
             chart.Chart.HasTitle = true;
         }
 
+        chart.Chart.SourceRange = dataRange.ToA1();
         chart.Chart.Legend.IsVisible = true;
         PopulateChartData(chart.Chart, dataRange);
         Drawings.Add(chart);
@@ -114,20 +116,38 @@ public sealed partial class Worksheet
     private void PopulateChartData(ChartModel model, CellRange range)
     {
         var topRow = range.TopLeft.Row;
+        var bottomRow = range.BottomRight.Row;
         var leftCol = range.TopLeft.Column;
+        var rightCol = range.BottomRight.Column;
 
-        // Categories from the first column (skip the header cell).
-        for (var r = topRow + 1; r <= range.BottomRight.Row; r++)
-            model.Data.Categories.Add(GetCell(r, leftCol)?.GetFormattedString() ?? string.Empty);
+        // With two or more columns the first column supplies category labels; with a single
+        // column the values are plotted directly and categories are auto-numbered by the renderer.
+        var hasCategoryColumn = rightCol > leftCol;
+        var firstSeriesCol = hasCategoryColumn ? leftCol + 1 : leftCol;
 
-        // One series per remaining column.
-        for (var c = leftCol + 1; c <= range.BottomRight.Column; c++)
+        // Treat the top row as a header (series names) only when its first series cell is
+        // non-numeric text. A numeric top cell means the data starts at row 1 (no header).
+        var headerCell = GetCell(topRow, firstSeriesCol);
+        var hasHeaderRow = headerCell?.GetDouble() is null
+                           && !string.IsNullOrEmpty(headerCell?.GetFormattedString());
+        var firstDataRow = hasHeaderRow ? topRow + 1 : topRow;
+
+        // Categories from the first column (data rows only) when a category column is present.
+        if (hasCategoryColumn)
+        {
+            for (var r = firstDataRow; r <= bottomRow; r++)
+                model.Data.Categories.Add(GetCell(r, leftCol)?.GetFormattedString() ?? string.Empty);
+        }
+
+        // One series per series column.
+        for (var c = firstSeriesCol; c <= rightCol; c++)
         {
             var series = new ChartSeries
             {
-                Name = GetCell(topRow, c)?.GetFormattedString() ?? CellReference.ColumnNumberToLetters(c)
+                Name = (hasHeaderRow ? GetCell(topRow, c)?.GetFormattedString() : null)
+                       ?? CellReference.ColumnNumberToLetters(c)
             };
-            for (var r = topRow + 1; r <= range.BottomRight.Row; r++)
+            for (var r = firstDataRow; r <= bottomRow; r++)
                 series.Values.Add(GetCell(r, c)?.GetDouble() ?? 0);
             model.Data.Series.Add(series);
         }

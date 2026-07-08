@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using Unchained.Drawing.Primitives.Fonts;
 
 namespace Unchained.Pdf.Engine;
 
@@ -52,8 +53,8 @@ internal static class TrueTypeSubsetter
         }
 
         // Require the essential subsetting tables.
-        if (!tables.TryGetValue("head", out var headTable) || !tables.TryGetValue("loca", out var locaTable) ||
-            !tables.TryGetValue("glyf", out var glyfTable) || !tables.TryGetValue("maxp", out var maxpTable))
+        if (!tables.TryGetValue(TrueTypeMetrics.TableHead, out var headTable) || !tables.TryGetValue(TrueTypeMetrics.TableLoca, out var locaTable) ||
+            !tables.TryGetValue(TrueTypeMetrics.TableGlyf, out var glyfTable) || !tables.TryGetValue(TrueTypeMetrics.TableMaxp, out var maxpTable))
             return b; // not a standard TrueType — skip subsetting
 
         // Read head: unitsPerEm, indexToLocFormat (0=short, 1=long).
@@ -203,8 +204,8 @@ internal static class TrueTypeSubsetter
             newOffsets[tag] = currentOffset;
             var len = tag switch
             {
-                "glyf" => newGlyf.Length,
-                "loca" => newLoca.Length,
+                TrueTypeMetrics.TableGlyf => newGlyf.Length,
+                TrueTypeMetrics.TableLoca => newLoca.Length,
                 _ => tables[tag].Length
             };
             newLengths[tag] = len;
@@ -244,10 +245,10 @@ internal static class TrueTypeSubsetter
             var off = newOffsets[tag];
             switch (tag)
             {
-                case "glyf":
+                case TrueTypeMetrics.TableGlyf:
                     Array.Copy(newGlyf, 0, result, off, newGlyf.Length);
                 break;
-                case "loca":
+                case TrueTypeMetrics.TableLoca:
                     Array.Copy(newLoca, 0, result, off, newLoca.Length);
                 break;
                 default:
@@ -261,7 +262,7 @@ internal static class TrueTypeSubsetter
         }
 
         // Update head.indexToLocFormat in the new font.
-        var newHeadOff = newOffsets["head"];
+        var newHeadOff = newOffsets[TrueTypeMetrics.TableHead];
         WriteS16(result, newHeadOff + 50, indexToLocFormat);
 
         // Zero out head.checkSumAdjustment (offset 8 in head table) — must be recalculated.

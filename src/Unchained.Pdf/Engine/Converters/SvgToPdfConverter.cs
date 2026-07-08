@@ -84,7 +84,7 @@ internal static class SvgToPdfConverter
             w.MarkedContentEnd();
 
         var acc = new PdfPageAccumulator();
-        var fontRef = acc.AddFont("Helvetica");
+        var fontRef = acc.AddFont(PdfConstants.FontHelvetica);
         var fontMap = new Dictionary<string, PdfIndirectReference> { ["F1"] = fontRef };
 
         if (taggedItems is not null)
@@ -425,27 +425,17 @@ internal static class SvgToPdfConverter
             {
                 case 'M':
                 {
-                    var x = N(tokens, i);
-                    var y = N(tokens, i + 1);
-                    i += 2;
-                    cx = abs ? x : cx + x;
-                    cy = abs ? y : cy + y;
-                    w.Float(cx);
-                    w.Float(cy);
-                    w.Op("m"u8);
+                    // ReSharper disable BadListLineBreaks
+                    EmitXY(w, tokens, ref i, abs, ref cx, ref cy, "m"u8);
+                    // ReSharper restore BadListLineBreaks
                     prevCmd = abs ? 'L' : 'l';
                     break;
                 }
                 case 'L':
                 {
-                    var x = N(tokens, i);
-                    var y = N(tokens, i + 1);
-                    i += 2;
-                    cx = abs ? x : cx + x;
-                    cy = abs ? y : cy + y;
-                    w.Float(cx);
-                    w.Float(cy);
-                    w.Op("l"u8);
+                    // ReSharper disable BadListLineBreaks
+                    EmitXY(w, tokens, ref i, abs, ref cx, ref cy, "l"u8);
+                    // ReSharper restore BadListLineBreaks
                     break;
                 }
                 case 'H':
@@ -619,5 +609,26 @@ internal static class SvgToPdfConverter
         }
 
         return result;
+    }
+
+    // ReSharper disable once InconsistentNaming
+    private static void EmitXY(
+        ContentStreamWriter w,
+        IReadOnlyList<string> tokens,
+        ref int i,
+        bool abs,
+        ref float cx,
+        ref float cy,
+        ReadOnlySpan<byte> op
+    )
+    {
+        var x = N(tokens, i);
+        var y = N(tokens, i + 1);
+        i += 2;
+        cx = abs ? x : cx + x;
+        cy = abs ? y : cy + y;
+        w.Float(cx);
+        w.Float(cy);
+        w.Op(op);
     }
 }

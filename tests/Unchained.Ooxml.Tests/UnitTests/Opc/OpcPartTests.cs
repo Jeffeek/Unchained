@@ -1,5 +1,6 @@
 using Shouldly;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Xml;
 using Xunit;
 
 namespace Unchained.Ooxml.Tests.UnitTests.Opc;
@@ -10,7 +11,7 @@ namespace Unchained.Ooxml.Tests.UnitTests.Opc;
 /// </summary>
 public sealed class OpcPartTests
 {
-    private static OpcPart Part(string uri) => new(uri, "application/xml", [1, 2, 3]);
+    private static OpcPart Part(string uri) => new(uri, OoxmlContentTypes.ApplicationXml, [1, 2, 3]);
 
     [Fact]
     public void ResolveUri_AbsoluteTarget_ReturnedAsIs() =>

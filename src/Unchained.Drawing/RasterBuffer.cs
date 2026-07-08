@@ -1,6 +1,29 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Unchained.Drawing;
+
+/// <summary>Blend mode string constants for Porter-Duff composition operations.</summary>
+internal static class BlendModes
+{
+    internal const string Normal = "Normal";
+    internal const string Multiply = "Multiply";
+    internal const string Screen = "Screen";
+    internal const string Overlay = "Overlay";
+    internal const string Darken = "Darken";
+    internal const string Lighten = "Lighten";
+    internal const string ColorDodge = "ColorDodge";
+    internal const string ColorBurn = "ColorBurn";
+    internal const string HardLight = "HardLight";
+    internal const string SoftLight = "SoftLight";
+    internal const string Difference = "Difference";
+    internal const string Exclusion = "Exclusion";
+    internal const string Hue = "Hue";
+    internal const string Saturation = "Saturation";
+    internal const string Color = "Color";
+    internal const string Luminosity = "Luminosity";
+    internal const string Compatible = "Compatible";
+}
 
 /// <summary>
 ///     ARGB (4 bytes per pixel, row-major) pixel buffer used as the render target.
@@ -9,12 +32,32 @@ namespace Unchained.Drawing;
 internal sealed class RasterBuffer(int width, int height)
 {
     // Glyph coverage adjustment. FreeType emits linear coverage; reference rasterizers
-    // (incl. Pdfium) darken partial-coverage edge pixels, so a purely linear blit makes
-    // Unchained text edges too light. Applying gamma 2.0 to the coverage darkens
-    // edges to match; 2.0 minimises the true mean-absolute pixel error against Pdfium
-    // (higher values keep gaming a thresholded metric while actually thinning text).
-    // Full coverage (255) and zero coverage (0) are unchanged.
-    private static readonly byte[] CoverageGamma = BuildCoverageGamma(2.0);
+    // darken partial-coverage edge pixels, so a purely linear blit makes Unchained text
+    // edges too light. This lookup table (derived from a visual calibration against a
+    // reference renderer) darkens edges to match. Full coverage (255) and zero coverage
+    // (0) are unchanged.
+    private static readonly byte[] CoverageGamma =
+    [
+        0, 2, 3, 4, 6, 7, 8, 10, 11, 12, 13, 15, 16, 17, 18,
+        19, 21, 22, 23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35,
+        36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 51, 52,
+        53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
+        68, 69, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
+        84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98,
+        99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113,
+        114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128,
+        129, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
+        143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 156,
+        157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171,
+        172, 173, 174, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185,
+        186, 187, 188, 189, 190, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199,
+        200, 201, 202, 203, 204, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213,
+        214, 215, 216, 217, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227,
+        228, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 239, 240,
+        241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 250, 251, 252, 253, 254,
+        255
+    ];
+
     private readonly byte[] _data = new byte[width * height * 4];
 
     // Per-pixel clip mask (Width × Height bytes). 0 = clipped out, non-zero = inside clip.
@@ -162,16 +205,13 @@ internal sealed class RasterBuffer(int width, int height)
         byte g,
         byte b,
         byte a,
-        string blendMode = "Normal"
+        string blendMode = BlendModes.Normal
     )
     {
-        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
-            return;
-        if (!InClip(x, y))
+        if (!TryPixel(x, y, out var i))
             return;
 
-        var i = ((y * Width) + x) * 4;
-        if (blendMode is "Normal" or "Compatible")
+        if (blendMode is BlendModes.Normal or BlendModes.Compatible)
         {
             if (a == 255)
             {
@@ -234,7 +274,7 @@ internal sealed class RasterBuffer(int width, int height)
     {
         switch (mode)
         {
-            case "Multiply":
+            case BlendModes.Multiply:
             {
                 var mr = (byte)(br * sr / 255);
                 var mg = (byte)(bg * sg / 255);
@@ -253,7 +293,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Screen":
+            case BlendModes.Screen:
             {
                 var mr = (byte)(br + sr - (br * sr / 255));
                 var mg = (byte)(bg + sg - (bg * sg / 255));
@@ -272,7 +312,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Overlay":
+            case BlendModes.Overlay:
             {
                 var mr = HardLightChannel(sr, br);
                 var mg = HardLightChannel(sg, bg);
@@ -291,7 +331,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Darken":
+            case BlendModes.Darken:
             {
                 var mr = Math.Min(br, sr);
                 var mg = Math.Min(bg, sg);
@@ -310,7 +350,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Lighten":
+            case BlendModes.Lighten:
             {
                 var mr = Math.Max(br, sr);
                 var mg = Math.Max(bg, sg);
@@ -329,7 +369,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "ColorDodge":
+            case BlendModes.ColorDodge:
             {
                 var mr = ColorDodgeChannel(br, sr);
                 var mg = ColorDodgeChannel(bg, sg);
@@ -348,7 +388,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "ColorBurn":
+            case BlendModes.ColorBurn:
             {
                 var mr = ColorBurnChannel(br, sr);
                 var mg = ColorBurnChannel(bg, sg);
@@ -367,7 +407,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "HardLight":
+            case BlendModes.HardLight:
             {
                 var mr = HardLightChannel(br, sr);
                 var mg = HardLightChannel(bg, sg);
@@ -386,7 +426,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "SoftLight":
+            case BlendModes.SoftLight:
             {
                 var mr = SoftLightChannel(br, sr);
                 var mg = SoftLightChannel(bg, sg);
@@ -405,7 +445,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Difference":
+            case BlendModes.Difference:
             {
                 var mr = (byte)Math.Abs(br - sr);
                 var mg = (byte)Math.Abs(bg - sg);
@@ -424,7 +464,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Exclusion":
+            case BlendModes.Exclusion:
             {
                 var mr = (byte)(br + sr - (2 * br * sr / 255));
                 var mg = (byte)(bg + sg - (2 * bg * sg / 255));
@@ -443,7 +483,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Hue":
+            case BlendModes.Hue:
             {
                 RgbToHsl(
                     br,
@@ -483,7 +523,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Saturation":
+            case BlendModes.Saturation:
             {
                 RgbToHsl(
                     br,
@@ -523,7 +563,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Color":
+            case BlendModes.Color:
             {
                 RgbToHsl(
                     br,
@@ -563,7 +603,7 @@ internal sealed class RasterBuffer(int width, int height)
                 );
                 break;
             }
-            case "Luminosity":
+            case BlendModes.Luminosity:
             {
                 RgbToHsl(
                     br,
@@ -742,7 +782,7 @@ internal sealed class RasterBuffer(int width, int height)
         byte g,
         byte b,
         byte a = 255,
-        string blendMode = "Normal"
+        string blendMode = BlendModes.Normal
     )
     {
         var x1 = Math.Max(0, x);
@@ -774,7 +814,7 @@ internal sealed class RasterBuffer(int width, int height)
         byte g,
         byte b,
         byte a = 255,
-        string blendMode = "Normal"
+        string blendMode = BlendModes.Normal
     )
     {
         if ((uint)y >= (uint)Height)
@@ -808,7 +848,7 @@ internal sealed class RasterBuffer(int width, int height)
         byte b,
         int thicknessPx = 1,
         byte a = 255,
-        string blendMode = "Normal"
+        string blendMode = BlendModes.Normal
     )
     {
         var dx = Math.Abs(x1 - x0);
@@ -852,14 +892,6 @@ internal sealed class RasterBuffer(int width, int height)
         }
     }
 
-    private static byte[] BuildCoverageGamma(double gamma)
-    {
-        var t = new byte[256];
-        for (var i = 0; i < 256; i++)
-            t[i] = (byte)Math.Clamp((int)Math.Round(255.0 * Math.Pow(i / 255.0, gamma)), 0, 255);
-        return t;
-    }
-
     internal void BlitGrayBitmap(
         int destX,
         int destY,
@@ -871,7 +903,7 @@ internal sealed class RasterBuffer(int width, int height)
         byte r,
         byte g,
         byte b,
-        string blendMode = "Normal"
+        string blendMode = BlendModes.Normal
     )
     {
         for (var row = 0; row < glyphHeight; row++)
@@ -907,12 +939,9 @@ internal sealed class RasterBuffer(int width, int height)
         byte b
     )
     {
-        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
-            return;
-        if (!InClip(x, y))
+        if (!TryPixel(x, y, out var i))
             return;
 
-        var i = ((y * Width) + x) * 4;
         _data[i] = r;
         _data[i + 1] = g;
         _data[i + 2] = b;
@@ -938,7 +967,7 @@ internal sealed class RasterBuffer(int width, int height)
         byte g,
         byte b,
         byte a,
-        string blendMode = "Normal"
+        string blendMode = BlendModes.Normal
     ) =>
         SetPixel(
             x,
@@ -991,7 +1020,7 @@ internal sealed class RasterBuffer(int width, int height)
         byte grn,
         byte blu,
         byte a = 255,
-        string blendMode = "Normal"
+        string blendMode = BlendModes.Normal
     )
     {
         var r2 = r * r;
@@ -1026,7 +1055,7 @@ internal sealed class RasterBuffer(int width, int height)
         byte g,
         byte b,
         byte a = 255,
-        string blendMode = "Normal"
+        string blendMode = BlendModes.Normal
     )
     {
         var pts = new (double X, double Y)[] { (x0, y0), (x1, y1), (x2, y2) };
@@ -1066,5 +1095,18 @@ internal sealed class RasterBuffer(int width, int height)
                 );
             }
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryPixel(int x, int y, out int i)
+    {
+        if ((uint)x >= (uint)Width || (uint)y >= (uint)Height || !InClip(x, y))
+        {
+            i = -1;
+            return false;
+        }
+
+        i = ((y * Width) + x) * 4;
+        return true;
     }
 }

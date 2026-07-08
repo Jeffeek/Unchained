@@ -112,4 +112,22 @@ public sealed class PageRangeParserTests
         result.ShouldBeNull();
         error.ShouldNotBeNull();
     }
+
+    [Fact]
+    public void Parse_NegativeNumber_ReturnsNullWithError()
+    {
+        var result = PageRangeParser.Parse("-1", 10, out var error);
+
+        result.ShouldBeNull();
+        error.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Parse_LeadingZeros_ParsedNormally()
+    {
+        var result = PageRangeParser.Parse("007", 10, out var error);
+
+        error.ShouldBeNull();
+        result.ShouldBe([7]);
+    }
 }

@@ -90,7 +90,7 @@ internal static class DrawingWriter
             new XElement(
                 Xdr + "nvPicPr",
                 new XElement(
-                    Xdr + "cNvPr",
+                    Xdr + SmlNames.XdrCnVPr,
                     new XAttribute("id", picture.ShapeId.ToString(CultureInfo.InvariantCulture)),
                     new XAttribute("name", name)
                 ),
@@ -105,7 +105,7 @@ internal static class DrawingWriter
                 new XElement(A + "stretch", new XElement(A + "fillRect"))
             ),
             new XElement(
-                Xdr + "spPr",
+                Xdr + SmlNames.XdrSpPr,
                 new XElement(
                     A + "xfrm",
                     new XElement(A + "off", new XAttribute("x", "0"), new XAttribute("y", "0")),
@@ -117,7 +117,7 @@ internal static class DrawingWriter
                 ),
                 new XElement(
                     A + "prstGeom",
-                    new XAttribute("prst", "rect"),
+                    new XAttribute(DmlNames.AttributePreset, "rect"),
                     new XElement(A + "avLst")
                 )
             )
@@ -134,7 +134,7 @@ internal static class DrawingWriter
             new XElement(
                 Xdr + "nvGraphicFramePr",
                 new XElement(
-                    Xdr + "cNvPr",
+                    Xdr + SmlNames.XdrCnVPr,
                     new XAttribute("id", chart.ShapeId.ToString(CultureInfo.InvariantCulture)),
                     new XAttribute("name", name)
                 ),

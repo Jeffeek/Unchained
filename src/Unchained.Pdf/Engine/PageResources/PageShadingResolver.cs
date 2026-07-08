@@ -14,8 +14,6 @@ namespace Unchained.Pdf.Engine.PageResources;
 /// </summary>
 internal static class PageShadingResolver
 {
-    private const int MaxFormXObjectDepth = 10;
-
     internal static IReadOnlyDictionary<string, ShadingInfo> GetShadings(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, ShadingInfo>();
@@ -42,7 +40,7 @@ internal static class PageShadingResolver
         ISet<int> seen
     )
     {
-        if (resources is null || depth > MaxFormXObjectDepth) return;
+        if (resources is null || depth > PdfConstants.MaxFormXObjectDepth) return;
 
         // /Shading resources — painted directly by the `sh` operator.
         var shadingDict = core.ResolveDict(resources[PdfName.Shading]);
@@ -73,23 +71,8 @@ internal static class PageShadingResolver
         }
 
         // Recurse into form XObjects' own resource dictionaries.
-        var xObjDict = core.ResolveDict(resources[PdfName.XObject]);
-        if (xObjDict is null)
-            return;
-
-        foreach (var (_, value) in xObjDict.Entries)
-        {
-            if (value is PdfIndirectReference r && !seen.Add(r.ObjectNumber))
-                continue;
-
-            var stream = value is PdfIndirectReference rr
-                ? core.ResolveIndirect(rr.ObjectNumber).Value as PdfStream
-                : value as PdfStream;
-            if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
-                continue;
-
-            CollectShadings(core, core.ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
-        }
+        foreach (var formResources in core.GetFormXObjectResources(resources, seen))
+            CollectShadings(core, formResources, result, depth + 1, seen);
     }
 
     private static void CollectTilingPatterns(
@@ -100,7 +83,7 @@ internal static class PageShadingResolver
         ISet<int> seen
     )
     {
-        if (resources is null || depth > MaxFormXObjectDepth) return;
+        if (resources is null || depth > PdfConstants.MaxFormXObjectDepth) return;
 
         var patternDict = core.ResolveDict(resources[PdfName.Pattern]);
         if (patternDict is not null)
@@ -140,23 +123,8 @@ internal static class PageShadingResolver
         }
 
         // Recurse into form XObjects (same flattening rationale as shadings).
-        var xObjDict = core.ResolveDict(resources[PdfName.XObject]);
-        if (xObjDict is null)
-            return;
-
-        foreach (var (_, value) in xObjDict.Entries)
-        {
-            if (value is PdfIndirectReference r && !seen.Add(r.ObjectNumber))
-                continue;
-
-            var stream = value is PdfIndirectReference rr
-                ? core.ResolveIndirect(rr.ObjectNumber).Value as PdfStream
-                : value as PdfStream;
-            if (stream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
-                continue;
-
-            CollectTilingPatterns(core, core.ResolveDict(stream.Dictionary[PdfName.Resources]), result, depth + 1, seen);
-        }
+        foreach (var formResources in core.GetFormXObjectResources(resources, seen))
+            CollectTilingPatterns(core, formResources, result, depth + 1, seen);
     }
 
     // Builds a ShadingInfo (axial/radial only) from a shading dictionary, pre-sampling its
@@ -200,7 +168,7 @@ internal static class PageShadingResolver
 
         var domain = dict["Domain"].ReadFloatArray() ?? [0, 1];
         var (extStart, extEnd) = ReadExtend(dict["Extend"]);
-        var cs = core.ReadColorSpace(dict) ?? "DeviceRGB";
+        var cs = core.ReadColorSpace(dict) ?? PdfConstants.DeviceRgb;
 
         var fn = PdfFunction.Build(dict["Function"], core);
 
@@ -223,7 +191,7 @@ internal static class PageShadingResolver
     {
         return (cs, c.Count) switch
         {
-            ("DeviceCMYK", >= 4) => CmykToBytes(c[0], c[1], c[2], c[3]),
+            (PdfConstants.DeviceCmyk, >= 4) => CmykToBytes(c[0], c[1], c[2], c[3]),
             (_, >= 3) => (B255(c[0]), B255(c[1]), B255(c[2])),
             (_, 1) => (B255(c[0]), B255(c[0]), B255(c[0])),
             _ => (128, 128, 128)

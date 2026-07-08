@@ -1,3 +1,4 @@
+using Unchained.Ooxml.Engine;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Security;
 using Unchained.Xlsx.Abstractions;
@@ -17,16 +18,15 @@ namespace Unchained.Xlsx.Engine;
 /// <remarks>
 ///     <para>
 ///         I/O-bound methods are <see langword="async" /> and dispatch CPU-bound parse/serialize work
-///         to the thread pool via <see cref="Task.Run(Action)" />. A <see cref="SemaphoreSlim" /> caps
-///         concurrency at <see cref="Environment.ProcessorCount" /> simultaneous operations to prevent
+///         to the thread pool via <see cref="Task.Run{TResult}(Func{TResult})" />. A gate
+///         caps concurrency at <see cref="Environment.ProcessorCount" /> simultaneous operations to prevent
 ///         thread-pool saturation on high-throughput ASP.NET or gRPC servers.
 ///     </para>
 ///     <para>Dispose the processor when it is no longer needed to release the semaphore.</para>
 /// </remarks>
 public sealed class SpreadsheetProcessor : ISpreadsheetProcessor
 {
-    private readonly SemaphoreSlim _gate;
-    private int _disposed;
+    private readonly ProcessorGate _gate;
 
     /// <summary>
     ///     Initialises a new <see cref="SpreadsheetProcessor" />.
@@ -41,16 +41,11 @@ public sealed class SpreadsheetProcessor : ISpreadsheetProcessor
         if (limit < 1)
             throw new ArgumentOutOfRangeException(nameof(maxConcurrency), "Concurrency limit must be at least 1.");
 
-        _gate = new SemaphoreSlim(limit, limit);
+        _gate = new ProcessorGate(limit);
     }
 
     /// <inheritdoc />
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-
-        _gate.Dispose();
-    }
+    public void Dispose() => _gate.Dispose();
 
     // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -173,22 +168,15 @@ public sealed class SpreadsheetProcessor : ISpreadsheetProcessor
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    private async Task<SpreadsheetDocument> ParseBytesAsync(
+    private Task<SpreadsheetDocument> ParseBytesAsync(
         byte[] bytes,
         OpenOptions? options,
         CancellationToken cancellationToken
-    )
-    {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            return await Task.Run(() => Parse(bytes, options), cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
+    ) =>
+        _gate.RunAsync(
+            () => Task.Run(() => Parse(bytes, options), cancellationToken),
+            cancellationToken
+        );
 
     private static SpreadsheetDocument Parse(byte[] bytes, OpenOptions? options)
     {
@@ -225,31 +213,22 @@ public sealed class SpreadsheetProcessor : ISpreadsheetProcessor
         return document;
     }
 
-    private async Task<byte[]> SerializeAsync(
+    private Task<byte[]> SerializeAsync(
         SpreadsheetDocument document,
         XlsxSaveOptions? options,
         CancellationToken cancellationToken
-    )
-    {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            var opts = options ?? XlsxSaveOptions.Default;
-            return await Task.Run(
-                    () =>
-                    {
-                        var bytes = WorkbookWriter.Write(document, opts);
-                        return string.IsNullOrEmpty(opts.Password)
-                            ? bytes
-                            : AgileEncryption.Encrypt(bytes, opts.Password);
-                    },
-                    cancellationToken
-                )
-                .ConfigureAwait(false);
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
+    ) =>
+        _gate.RunAsync(
+            () =>
+            {
+                var opts = options ?? XlsxSaveOptions.Default;
+                var bytes = WorkbookWriter.Write(document, opts);
+                return Task.FromResult(
+                    string.IsNullOrEmpty(opts.Password)
+                        ? bytes
+                        : AgileEncryption.Encrypt(bytes, opts.Password)
+                );
+            },
+            cancellationToken
+        );
 }

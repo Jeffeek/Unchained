@@ -25,6 +25,7 @@
                     <MudSelectItem Value="ExportFormat.HtmlPlayer">HTML5 player — single navigable file</MudSelectItem>
                     <MudSelectItem Value="ExportFormat.Odp">ODP — OpenDocument Presentation</MudSelectItem>
                     <MudSelectItem Value="ExportFormat.HtmlPerSlide">HTML — one page per slide (ZIP)</MudSelectItem>
+                    <MudSelectItem Value="ExportFormat.Svg">SVG — one vector file per slide (ZIP)</MudSelectItem>
                 </MudSelect>
 
                 <div>
@@ -117,6 +118,7 @@
         ExportFormat.HtmlPlayer => "A single self-contained .html with keyboard/click navigation, counter, and fullscreen.",
         ExportFormat.Odp => "Structural OpenDocument export — slides, shapes, text, and images.",
         ExportFormat.HtmlPerSlide => "One .html file per slide, packaged into a ZIP.",
+        ExportFormat.Svg => "One scalable .svg file per slide, packaged into a ZIP.",
         _ => string.Empty
     };
 
@@ -141,6 +143,9 @@
                 break;
                 case ExportFormat.HtmlPerSlide:
                     await ExportHtmlZip();
+                break;
+                case ExportFormat.Svg:
+                    await ExportSvgZip();
                 break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -220,6 +225,17 @@
         {
             if (Directory.Exists(dir)) Directory.Delete(dir, true);
         }
+    }
+
+    private async Task ExportSvgZip()
+    {
+        var options = new SvgSaveOptions { IncludeHiddenSlides = _includeHidden };
+        var slides = await Processor.ExportAsSvgAsync(Document, options);
+
+        var entries = slides.Select((t, i) => ($"{BaseName}-slide{i + 1}.svg", t)).ToList();
+
+        var zip = ZipBuilder.Build(entries);
+        await Exporter.TriggerDownloadAsync(zip, $"{BaseName}-svg.zip", "application/zip");
     }
 
     private void Cancel() => MudDialog.Cancel();

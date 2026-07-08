@@ -59,8 +59,7 @@ internal static class PdfSigner
             throw new InvalidOperationException("Cannot sign an encrypted PDF. Sign before encrypting, or decrypt first.");
 
         // ── Step 1: collect existing objects ──────────────────────────────────
-        var objects = core.CollectObjects().ToList();
-        var maxObj = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
+        var (objects, maxObj) = MutationHelper.CollectWithMax(core);
 
         // ── Step 2: create signature objects ──────────────────────────────────
         var sigValueNum = maxObj + 1;
@@ -186,8 +185,8 @@ internal static class PdfSigner
         var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries);
 
         // Build or update /AcroForm
-        var acroForm = BuildOrUpdateAcroForm(catalogEntries.GetValueOrDefault("AcroForm"), sigFieldRef, core);
-        catalogEntries["AcroForm"] = acroForm;
+        var acroForm = BuildOrUpdateAcroForm(catalogEntries.GetValueOrDefault(PdfName.AcroForm.Value), sigFieldRef, core);
+        catalogEntries[PdfName.AcroForm.Value] = acroForm;
 
         objects[idx] = new PdfIndirectObject(catalogRef.ObjectNumber, 0, new PdfDictionary(catalogEntries));
     }

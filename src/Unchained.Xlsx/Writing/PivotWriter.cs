@@ -37,7 +37,7 @@ internal static class PivotWriter
                 new XElement(
                     X + "worksheetSource",
                     new XAttribute("ref", pivot.SourceRange.ToA1()),
-                    new XAttribute("sheet", pivot.SourceSheetName)
+                    new XAttribute(SmlNames.AttrSheet, pivot.SourceSheetName)
                 )
             )
         );

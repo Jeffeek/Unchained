@@ -77,7 +77,7 @@ internal static class PivotParser
     {
         var root = OoXmlHelper.ParseXml(cacheDefPart.Data).Root;
         var worksheetSource = root?.Child(SmlNames.X + "cacheSource")?.Child(SmlNames.X + "worksheetSource");
-        var sheet = worksheetSource?.GetAttr("sheet") ?? string.Empty;
+        var sheet = worksheetSource?.GetAttr(SmlNames.AttrSheet) ?? string.Empty;
         var refAttr = worksheetSource?.GetAttr("ref");
         var range = refAttr != null
             ? CellRange.FromA1(refAttr)

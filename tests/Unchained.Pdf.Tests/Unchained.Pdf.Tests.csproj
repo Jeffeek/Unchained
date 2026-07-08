@@ -37,14 +37,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Unchained.Pdf.Rendering\Unchained.Pdf.Rendering.csproj" />
+    <ProjectReference Include="..\..\src\Unchained.Pdf\Unchained.Pdf.csproj" />
+    <ProjectReference Include="..\Unchained.Pdf.Tests.Shared\Unchained.Pdf.Tests.Shared.csproj" />
   </ItemGroup>
 
-  <!-- Real-PDF test files: copied to output so tests can load from AppContext.BaseDirectory. -->
-  <ItemGroup>
-    <Content Include="TestFiles\**\*.pdf"
-             CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('TestFiles\')" />
-  </ItemGroup>
+  <!-- TestFiles live in Unchained.Pdf.Tests.Shared and are copied to this project's output
+       transitively via that project reference. -->
 
 </Project>

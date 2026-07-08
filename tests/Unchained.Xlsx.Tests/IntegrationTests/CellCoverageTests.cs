@@ -94,24 +94,25 @@ public class CellCoverageTests
         var offset = cell.GetDateTimeOffset();
         offset.ShouldNotBeNull();
         offset.Value.Date.ShouldBe(new DateTime(2023, 6, 15));
+        offset.Value.Offset.ShouldBe(TimeSpan.Zero);
     }
 
     [
         Theory,
-        InlineData(CellType.Empty),
-        InlineData(CellType.String),
-        InlineData(CellType.Boolean),
-        InlineData(CellType.Error),
-        InlineData(CellType.Number)
+        InlineData(CellType.String, "hi"),
+        InlineData(CellType.Boolean, "FALSE"),
+        InlineData(CellType.Error, "#VALUE!"),
+        InlineData(CellType.Number, "3.5"),
+        InlineData(CellType.Empty, "")
     ]
-    public void GetFormattedString_HandlesEachType(CellType type)
+    public void GetFormattedString_HandlesEachType(CellType type, string expected)
     {
         using var document = XlsxFixtures.WithSheets("S");
         var cell = document.Sheets[0][1, 1];
         switch (type)
         {
             case CellType.String: cell.SetValue("hi"); break;
-            case CellType.Boolean: cell.SetValue(true); break;
+            case CellType.Boolean: cell.SetValue(false); break;
             case CellType.Error: cell.SetValue(CellError.Value); break;
             case CellType.Number: cell.SetValue(3.5); break;
             case CellType.Empty:
@@ -119,7 +120,7 @@ public class CellCoverageTests
             default: break;
         }
 
-        cell.GetFormattedString().ShouldNotBeNull();
+        cell.GetFormattedString().ShouldBe(expected);
     }
 
     [Fact]

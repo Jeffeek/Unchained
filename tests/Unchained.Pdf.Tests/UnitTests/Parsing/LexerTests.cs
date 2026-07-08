@@ -94,6 +94,34 @@ public sealed class LexerTests
         Raw(token).ShouldBe("<4E6F>");
     }
 
+    [
+        Theory,
+        InlineData("<4E>"),
+        InlineData("<4E6>")
+    ]
+    public void ReadNext_HexString_AcceptsOddLength(string input)
+    {
+        var token = Lex(input).ReadNext();
+        token.Kind.ShouldBe(PdfTokenKind.HexString);
+    }
+
+    [Fact]
+    public void ReadNext_UnknownKeyword_ReturnsNameToken() =>
+        Lex("foobar").ReadNext().Kind.ShouldBe(PdfTokenKind.Name);
+
+    [
+        Theory,
+        InlineData("(\\n)", "(\\n)"),
+        InlineData("(\\r)", "(\\r)"),
+        InlineData("(\\041)", "(\\041)")
+    ]
+    public void ReadNext_EscapedCharsInString_Preserved(string input, string expected)
+    {
+        var token = Lex(input).ReadNext();
+        token.Kind.ShouldBe(PdfTokenKind.LiteralString);
+        Raw(token).ShouldBe(expected);
+    }
+
     // ── Containers ────────────────────────────────────────────────────────────
 
     [Fact]

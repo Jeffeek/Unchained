@@ -532,7 +532,8 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
     // Maps a coordinate-space EMU point to device pixels: px = (Scale * emu) + Offset.
     // The slide root uses Scale = px/EMU, Offset = 0; each group composes a child transform
     // onto its parent so nested shapes land in the right place.
-    private readonly record struct Transform(double ScaleX,
+    private readonly record struct Transform(
+        double ScaleX,
         double ScaleY,
         double OffsetX,
         double OffsetY

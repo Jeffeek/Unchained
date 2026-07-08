@@ -13,8 +13,6 @@ namespace Unchained.Pdf.Engine.PageResources;
 /// </summary>
 internal static class PageContentReader
 {
-    private const int MaxFormXObjectDepth = 10;
-
     // 100 000 operators per page is a generous ceiling that covers any real PDF.
     // An expanded count above this indicates recursive or excessively large form XObjects
     // that would take too long to render; we stop expanding beyond the limit.
@@ -47,7 +45,7 @@ internal static class PageContentReader
         ref int budget
     )
     {
-        if (depth >= MaxFormXObjectDepth ||
+        if (depth >= PdfConstants.MaxFormXObjectDepth ||
             budget <= 0 || // ceiling reached — no further expansion
             !operators.Any(static op => op.Name == "Do"))
             return operators;
@@ -72,14 +70,9 @@ internal static class PageContentReader
             }
 
             var xObj = xObjDict[PdfName.Get(xName.Value)];
-            var xStream = xObj switch
-            {
-                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-                PdfStream s => s,
-                _ => null
-            };
+            var xStream = core.ResolveStream(xObj);
 
-            if (xStream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form")
+            if (xStream?.Dictionary.GetName(PdfName.Subtype.Value) != PdfConstants.XObjectForm)
             {
                 result.Add(op); // image XObject or unresolved — leave Do intact
                 budget--;

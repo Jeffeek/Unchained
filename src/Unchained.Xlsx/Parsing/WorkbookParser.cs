@@ -123,7 +123,7 @@ internal static class WorkbookParser
 
     private static void ReadTabColor(Worksheet sheet)
     {
-        var rgb = sheet.RawElement?.Child(SmlNames.SheetPr)?.Child(SmlNames.TabColor)?.GetAttr("rgb");
+        var rgb = sheet.RawElement?.Child(SmlNames.SheetPr)?.Child(SmlNames.TabColor)?.GetAttr(SmlNames.AttrRgb);
         sheet.TabColor = SmlColor.FromHexArgb(rgb);
     }
 

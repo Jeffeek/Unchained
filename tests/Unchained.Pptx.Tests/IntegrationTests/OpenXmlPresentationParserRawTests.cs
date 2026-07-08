@@ -7,7 +7,7 @@ using Unchained.Pptx.Models;
 using Unchained.Pptx.Models.Shapes;
 using Unchained.Pptx.Models.Themes;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -45,7 +45,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
     private static byte[] BaseBytes()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "TestFiles", "python-pptx", "minimal.pptx");
-        Assert.SkipUnless(File.Exists(path), "minimal.pptx base sample missing");
+        File.Exists(path).ShouldBeTrue("minimal.pptx base sample missing");
         return File.ReadAllBytes(path);
     }
 

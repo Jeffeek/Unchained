@@ -3,7 +3,7 @@ using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Engine;
@@ -57,8 +57,8 @@ public sealed class PageContentReaderTests
     {
         var page = Page(("Contents", new PdfArray([ContentStream("0 0 5 5 re f"), ContentStream("5 5 5 5 re f")])));
         // The array path keeps only indirect references; direct streams yield no streams → empty.
-        // This verifies the array branch handles direct (non-reference) elements without throwing.
-        Should.NotThrow(() => PageContentReader.GetContentOperators(page, Core()));
+        var ops = PageContentReader.GetContentOperators(page, Core());
+        ops.ShouldBeEmpty();
     }
 
     [Fact]

@@ -14,50 +14,130 @@ namespace Unchained.Pdf.Engine.PageResources;
 /// </summary>
 internal static class PageFontResolver
 {
-    // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
-    // to the actual base font name (e.g. "Helvetica") for AFM width lookup.
-    internal static Dictionary<string, string> ResolveFontNames(PdfDictionary page, PdfDocumentCore core)
+    private static void ForEachFontEntry(
+        PdfDictionary page,
+        PdfDocumentCore core,
+        Action<string, PdfObject?, PdfDictionary?> action
+    )
     {
-        var result = new Dictionary<string, string>();
         var resources = core.ResolveDict(page[PdfName.Resources]);
         var fontDict = core.ResolveDict(resources?[PdfName.Font]);
-        if (fontDict is null)
-            return result;
+        if (fontDict is null) return;
 
         foreach (var (key, value) in fontDict.Entries)
-        {
-            var fontEntry = core.ResolveDict(value);
-            var baseFontName = fontEntry?.GetName(PdfName.BaseFont.Value);
-            if (baseFontName is not null)
-                result[key] = baseFontName;
-        }
+            action(key, value, core.ResolveDict(value));
+    }
 
+    private static Dictionary<TKey, TValue> CollectFontEntries<TKey, TValue>(
+        PdfDictionary page,
+        PdfDocumentCore core,
+        Func<string, PdfObject?, PdfDictionary?, (TKey Key, TValue Value, bool Include)> selector
+    )
+        where TKey : notnull
+    {
+        var result = new Dictionary<TKey, TValue>();
+        ForEachFontEntry(
+            page,
+            core,
+            (key, value, fontEntry) =>
+            {
+                var (k, v, include) = selector(key, value, fontEntry);
+                if (include) result[k] = v;
+            }
+        );
         return result;
     }
+
+    // Walks the page /Resources /Font dictionary and maps each resource name (e.g. "F1")
+    // to the actual base font name (e.g. "Helvetica") for AFM width lookup.
+    internal static Dictionary<string, string> ResolveFontNames(PdfDictionary page, PdfDocumentCore core) =>
+        CollectFontEntries(
+            page,
+            core,
+            static (key, _, fontEntry) =>
+            {
+                var baseFontName = fontEntry?.GetName(PdfName.BaseFont.Value);
+                return (key, baseFontName!, baseFontName is not null);
+            }
+        );
 
     internal static IReadOnlyDictionary<string, byte[]?> GetEmbeddedFontBytes(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, byte[]?>();
-        var resources = core.ResolveDict(page[PdfName.Resources]);
-        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
-        if (fontDict is null)
-            return result;
-
-        foreach (var (key, value) in fontDict.Entries)
-        {
-            var fontEntry = core.ResolveDict(value);
-            if (fontEntry is null)
+        ForEachFontEntry(
+            page,
+            core,
+            (key, _, fontEntry) =>
             {
-                result[key] = null;
-                continue;
+                if (fontEntry is null)
+                {
+                    result[key] = null;
+                    return;
+                }
+
+                // For composite fonts (/Subtype /Type0) the embedded font program lives in
+                // the FontDescriptor of the descendant CIDFont, not the top-level font dict
+                // (§9.7.4). Follow /DescendantFonts to reach it.
+                var descriptorHolder = fontEntry;
+                if (fontEntry.IsSubtype("Type0"))
+                {
+                    var descendants = fontEntry[PdfName.DescendantFonts];
+                    if (descendants is PdfIndirectReference dr)
+                        descendants = core.ResolveIndirect(dr.ObjectNumber).Value;
+                    var cidFont = descendants switch
+                    {
+                        PdfArray { Count: > 0 } a => core.ResolveDict(a[0]),
+                        PdfDictionary d => d,
+                        _ => null
+                    };
+                    if (cidFont is not null)
+                        descriptorHolder = cidFont;
+                }
+
+                var descriptor = core.ResolveDict(descriptorHolder[PdfName.FontDescriptor]);
+                if (descriptor is null)
+                {
+                    result[key] = null;
+                    return;
+                }
+
+                // Try /FontFile2 (TrueType), /FontFile3 (OpenType/CFF), /FontFile (Type1) in order.
+                var streamRef = descriptor[PdfName.FontFile2]
+                                ?? descriptor[PdfName.FontFile3]
+                                ?? descriptor[PdfName.FontFile];
+
+                if (streamRef is null)
+                {
+                    result[key] = null;
+                    return;
+                }
+
+                var fontStream = core.ResolveStream(streamRef);
+
+                result[key] = fontStream is not null
+                    ? StreamFilters.Decode(fontStream).ToArray()
+                    : null;
             }
+        );
+        return result;
+    }
 
-            // For composite fonts (/Subtype /Type0) the embedded font program lives in
-            // the FontDescriptor of the descendant CIDFont, not the top-level font dict
-            // (§9.7.4). Follow /DescendantFonts to reach it.
-            var descriptorHolder = fontEntry;
-            if (fontEntry.IsSubtype("Type0"))
+    internal static IReadOnlyDictionary<string, CompositeFontInfo> GetCompositeFonts(PdfDictionary page, PdfDocumentCore core)
+    {
+        var result = new Dictionary<string, CompositeFontInfo>();
+        ForEachFontEntry(
+            page,
+            core,
+            (key, _, fontEntry) =>
             {
+                if (fontEntry is null || fontEntry.GetName(PdfName.Subtype.Value) != "Type0")
+                    return;
+
+                // /Encoding may be a name (e.g. /Identity-H) or a CMap stream. We only
+                // fast-path the Identity CMaps where each 2-byte code equals the CID.
+                var encName = (fontEntry[PdfName.Encoding.Value] as PdfName)?.Value;
+                var identityEncoding = encName is "Identity-H" or "Identity-V";
+
                 var descendants = fontEntry[PdfName.DescendantFonts];
                 if (descendants is PdfIndirectReference dr)
                     descendants = core.ResolveIndirect(dr.ObjectNumber).Value;
@@ -67,104 +147,43 @@ internal static class PageFontResolver
                     PdfDictionary d => d,
                     _ => null
                 };
-                if (cidFont is not null)
-                    descriptorHolder = cidFont;
-            }
+                if (cidFont is null)
+                    return;
 
-            var descriptor = core.ResolveDict(descriptorHolder[PdfName.FontDescriptor]);
-            if (descriptor is null)
-            {
-                result[key] = null;
-                continue;
-            }
-
-            // Try /FontFile2 (TrueType), /FontFile3 (OpenType/CFF), /FontFile (Type1) in order.
-            var streamRef = descriptor[PdfName.FontFile2]
-                            ?? descriptor[PdfName.FontFile3]
-                            ?? descriptor[PdfName.FontFile];
-
-            if (streamRef is null)
-            {
-                result[key] = null;
-                continue;
-            }
-
-            var fontStream = streamRef is PdfIndirectReference r
-                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfStream
-                : streamRef as PdfStream;
-
-            result[key] = fontStream is not null
-                ? StreamFilters.Decode(fontStream).ToArray()
-                : null;
-        }
-
-        return result;
-    }
-
-    internal static IReadOnlyDictionary<string, CompositeFontInfo> GetCompositeFonts(PdfDictionary page, PdfDocumentCore core)
-    {
-        var result = new Dictionary<string, CompositeFontInfo>();
-        var resources = core.ResolveDict(page[PdfName.Resources]);
-        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
-        if (fontDict is null)
-            return result;
-
-        foreach (var (key, value) in fontDict.Entries)
-        {
-            var fontEntry = core.ResolveDict(value);
-            if (fontEntry is null || fontEntry.GetName(PdfName.Subtype.Value) != "Type0")
-                continue;
-
-            // /Encoding may be a name (e.g. /Identity-H) or a CMap stream. We only
-            // fast-path the Identity CMaps where each 2-byte code equals the CID.
-            var encName = (fontEntry["Encoding"] as PdfName)?.Value;
-            var identityEncoding = encName is "Identity-H" or "Identity-V";
-
-            var descendants = fontEntry[PdfName.DescendantFonts];
-            if (descendants is PdfIndirectReference dr)
-                descendants = core.ResolveIndirect(dr.ObjectNumber).Value;
-            var cidFont = descendants switch
-            {
-                PdfArray { Count: > 0 } a => core.ResolveDict(a[0]),
-                PdfDictionary d => d,
-                _ => null
-            };
-            if (cidFont is null)
-                continue;
-
-            // /CIDToGIDMap: /Identity (or absent) => CID == GID; otherwise a stream of
-            // 2-byte big-endian GIDs indexed by CID.
-            var c2GObj = cidFont["CIDToGIDMap"];
-            if (c2GObj is PdfIndirectReference cr)
-                c2GObj = core.ResolveIndirect(cr.ObjectNumber).Value;
-            var identityCidToGid = c2GObj is null || (c2GObj as PdfName)?.Value == "Identity";
-            IReadOnlyDictionary<int, int>? cidToGid = null;
-            if (!identityCidToGid && c2GObj is PdfStream c2GStream)
-            {
-                var bytes = StreamFilters.Decode(c2GStream).Span;
-                var map = new Dictionary<int, int>();
-                for (var cid = 0; (cid * 2) + 1 < bytes.Length; cid++)
+                // /CIDToGIDMap: /Identity (or absent) => CID == GID; otherwise a stream of
+                // 2-byte big-endian GIDs indexed by CID.
+                var c2GObj = cidFont[PdfName.CIDToGIDMap.Value];
+                if (c2GObj is PdfIndirectReference cr)
+                    c2GObj = core.ResolveIndirect(cr.ObjectNumber).Value;
+                var identityCidToGid = c2GObj is null || (c2GObj as PdfName)?.Value == "Identity";
+                IReadOnlyDictionary<int, int>? cidToGid = null;
+                if (!identityCidToGid && c2GObj is PdfStream c2GStream)
                 {
-                    var gid = (bytes[cid * 2] << 8) | bytes[(cid * 2) + 1];
-                    if (gid != 0) map[cid] = gid;
+                    var bytes = StreamFilters.Decode(c2GStream).Span;
+                    var map = new Dictionary<int, int>();
+                    for (var cid = 0; (cid * 2) + 1 < bytes.Length; cid++)
+                    {
+                        var gid = (bytes[cid * 2] << 8) | bytes[(cid * 2) + 1];
+                        if (gid != 0) map[cid] = gid;
+                    }
+
+                    cidToGid = map;
                 }
 
-                cidToGid = map;
+                var dwInt = cidFont.Get<PdfInteger>(PdfName.DW)?.Value;
+                var dwReal = cidFont.Get<PdfReal>(PdfName.DW)?.Value;
+                var dw = dwInt ?? dwReal ?? 1000.0;
+                var widths = ParseCidWidths(core, cidFont["W"]);
+
+                result[key] = new CompositeFontInfo(
+                    identityEncoding,
+                    identityCidToGid,
+                    cidToGid,
+                    dw,
+                    widths
+                );
             }
-
-            var dwInt = cidFont.Get<PdfInteger>(PdfName.DW)?.Value;
-            var dwReal = cidFont.Get<PdfReal>(PdfName.DW)?.Value;
-            var dw = dwInt ?? dwReal ?? 1000.0;
-            var widths = ParseCidWidths(core, cidFont["W"]);
-
-            result[key] = new CompositeFontInfo(
-                identityEncoding,
-                identityCidToGid,
-                cidToGid,
-                dw,
-                widths
-            );
-        }
+        );
 
         return result;
     }
@@ -172,31 +191,28 @@ internal static class PageFontResolver
     internal static IReadOnlyDictionary<string, IReadOnlyDictionary<uint, string>> GetToUnicodeMaps(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, IReadOnlyDictionary<uint, string>>();
-        var resources = core.ResolveDict(page[PdfName.Resources]);
-        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
-        if (fontDict is null) return result;
-
-        foreach (var (key, value) in fontDict.Entries)
-        {
-            var fontEntry = core.ResolveDict(value);
-            if (fontEntry is null) continue;
-
-            var tuRef = fontEntry[PdfName.ToUnicode];
-            var tuStream = tuRef is PdfIndirectReference r
-                ? core.ResolveIndirect(r.ObjectNumber).Value as PdfStream
-                : tuRef as PdfStream;
-            if (tuStream is null) continue;
-
-            try
+        ForEachFontEntry(
+            page,
+            core,
+            (key, _, fontEntry) =>
             {
-                var cmap = ParseToUnicodeCmap(StreamFilters.Decode(tuStream).Span);
-                if (cmap.Count > 0) result[key] = cmap;
+                if (fontEntry is null) return;
+
+                var tuRef = fontEntry[PdfName.ToUnicode];
+                var tuStream = core.ResolveStream(tuRef);
+                if (tuStream is null) return;
+
+                try
+                {
+                    var cmap = ParseToUnicodeCmap(StreamFilters.Decode(tuStream).Span);
+                    if (cmap.Count > 0) result[key] = cmap;
+                }
+                catch
+                {
+                    /* malformed CMap — skip */
+                }
             }
-            catch
-            {
-                /* malformed CMap — skip */
-            }
-        }
+        );
 
         return result;
     }
@@ -204,121 +220,120 @@ internal static class PageFontResolver
     internal static IReadOnlyDictionary<string, Type3FontInfo> GetType3Fonts(PdfDictionary page, PdfDocumentCore core)
     {
         var result = new Dictionary<string, Type3FontInfo>();
-        var resources = core.ResolveDict(page[PdfName.Resources]);
-        var fontDict = core.ResolveDict(resources?[PdfName.Font]);
-        if (fontDict is null) return result;
-
-        foreach (var (resName, fontObj) in fontDict.Entries)
-        {
-            var font = core.ResolveDict(fontObj);
-            if (font is null) continue;
-            if (font.GetName("Subtype") != "Type3") continue;
-
-            // /FontMatrix: glyph space → text space transform.
-            var fm = font[PdfName.FontMatrix] is PdfArray { Count: >= 6 } fmArr
-                ? fmArr.Elements.Take(6)
-                    .Select(static e =>
-                        e switch
-                        {
-                            PdfReal rr => rr.Value,
-                            PdfInteger ii => ii.Value,
-                            _ => 0.0
-                        }
-                    )
-                    .ToArray()
-                : [FontConstants.Type3DefaultMatrixScale, 0, 0, FontConstants.Type3DefaultMatrixScale, 0, 0];
-
-            // /Encoding: maps char codes 0–255 to glyph names.
-            var encoding = new string?[256];
-            var encObj = font[PdfName.Encoding];
-            if (encObj is PdfIndirectReference er)
-                encObj = core.ResolveIndirect(er.ObjectNumber).Value;
-
-            switch (encObj)
+        ForEachFontEntry(
+            page,
+            core,
+            (resName, _, font) =>
             {
-                case PdfDictionary encDict:
-                {
-                    // /Differences array: [firstCode /name1 /name2 …]
-                    if (encDict[PdfName.Differences] is PdfArray diff)
-                    {
-                        var code = 0;
-                        foreach (var elem in diff.Elements)
-                        {
-                            switch (elem)
+                if (font is null) return;
+                if (font.GetName(PdfName.Subtype.Value) != "Type3") return;
+
+                // /FontMatrix: glyph space → text space transform.
+                var fm = font[PdfName.FontMatrix] is PdfArray { Count: >= 6 } fmArr
+                    ? fmArr.Elements.Take(6)
+                        .Select(static e =>
+                            e switch
                             {
-                                case PdfInteger ic:
-                                    code = (int)ic.Value;
-                                break;
-                                case PdfName gn when code < 256:
-                                    encoding[code] = gn.Value;
-                                    code++;
-                                break;
+                                PdfReal rr => rr.Value,
+                                PdfInteger ii => ii.Value,
+                                _ => 0.0
+                            }
+                        )
+                        .ToArray()
+                    : [FontConstants.Type3DefaultMatrixScale, 0, 0, FontConstants.Type3DefaultMatrixScale, 0, 0];
+
+                // /Encoding: maps char codes 0–255 to glyph names.
+                var encoding = new string?[256];
+                var encObj = font[PdfName.Encoding];
+                if (encObj is PdfIndirectReference er)
+                    encObj = core.ResolveIndirect(er.ObjectNumber).Value;
+
+                switch (encObj)
+                {
+                    case PdfDictionary encDict:
+                    {
+                        // /Differences array: [firstCode /name1 /name2 …]
+                        if (encDict[PdfName.Differences] is PdfArray diff)
+                        {
+                            var code = 0;
+                            foreach (var elem in diff.Elements)
+                            {
+                                switch (elem)
+                                {
+                                    case PdfInteger ic:
+                                        code = (int)ic.Value;
+                                    break;
+                                    case PdfName gn when code < 256:
+                                        encoding[code] = gn.Value;
+                                        code++;
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    break;
-                }
-                case PdfName encName:
-                {
-                    // Standard encoding names — use a simple ASCII fallback.
-                    if (encName.Value is "StandardEncoding" or "WinAnsiEncoding" or "MacRomanEncoding")
+                        break;
+                    }
+                    case PdfName encName:
                     {
-                        for (var c = 32; c < 127; c++)
-                            encoding[c] = ((char)c).ToString();
-                    }
-
-                    break;
-                }
-            }
-
-            // /CharProcs: glyph name → stream of content operators.
-            var charProcs = new Dictionary<string, IReadOnlyList<ContentOperator>>();
-            var cpDict = core.ResolveDict(font[PdfName.CharProcs]);
-            if (cpDict is not null)
-            {
-                foreach (var (glyphName, streamObj) in cpDict.Entries)
-                {
-                    var streamRef = streamObj is PdfIndirectReference sr
-                        ? core.ResolveIndirect(sr.ObjectNumber).Value
-                        : streamObj;
-                    if (streamRef is not PdfStream glyphStream)
-                        continue;
-
-                    try
-                    {
-                        var decoded = StreamFilters.Decode(glyphStream);
-                        var ops = ContentStreamParser.Parse(decoded);
-                        charProcs[glyphName] = ops;
-                    }
-                    // ReSharper disable once EmptyGeneralCatchClause
-                    catch { }
-                }
-            }
-
-            // /Widths and /FirstChar.
-            var firstChar = (int)((font[PdfName.FirstChar] as PdfInteger)?.Value ?? 0);
-            var widths = font[PdfName.Widths] is PdfArray widthsArr
-                ? widthsArr.Elements
-                    .Select(static e => e switch
+                        // Standard encoding names — use a simple ASCII fallback.
+                        if (encName.Value is "StandardEncoding" or "WinAnsiEncoding" or "MacRomanEncoding")
                         {
-                            PdfReal wr => wr.Value,
-                            PdfInteger wi => wi.Value,
-                            _ => 0.0
+                            for (var c = 32; c < 127; c++)
+                                encoding[c] = ((char)c).ToString();
                         }
-                    )
-                    .ToArray()
-                : [];
 
-            result[resName] = new Type3FontInfo
-            {
-                FontMatrix = fm,
-                Encoding = encoding,
-                CharProcs = charProcs,
-                Widths = widths,
-                FirstChar = firstChar
-            };
-        }
+                        break;
+                    }
+                }
+
+                // /CharProcs: glyph name → stream of content operators.
+                var charProcs = new Dictionary<string, IReadOnlyList<ContentOperator>>();
+                var cpDict = core.ResolveDict(font[PdfName.CharProcs]);
+                if (cpDict is not null)
+                {
+                    foreach (var (glyphName, streamObj) in cpDict.Entries)
+                    {
+                        var streamRef = streamObj is PdfIndirectReference sr
+                            ? core.ResolveIndirect(sr.ObjectNumber).Value
+                            : streamObj;
+                        if (streamRef is not PdfStream glyphStream)
+                            continue;
+
+                        try
+                        {
+                            var decoded = StreamFilters.Decode(glyphStream);
+                            var ops = ContentStreamParser.Parse(decoded);
+                            charProcs[glyphName] = ops;
+                        }
+                        // ReSharper disable once EmptyGeneralCatchClause
+                        catch { }
+                    }
+                }
+
+                // /Widths and /FirstChar.
+                var firstChar = (int)((font[PdfName.FirstChar] as PdfInteger)?.Value ?? 0);
+                var widths = font[PdfName.Widths] is PdfArray widthsArr
+                    ? widthsArr.Elements
+                        .Select(static e => e switch
+                            {
+                                PdfReal wr => wr.Value,
+                                PdfInteger wi => wi.Value,
+                                _ => 0.0
+                            }
+                        )
+                        .ToArray()
+                    : [];
+
+                result[resName] = new Type3FontInfo
+                {
+                    FontMatrix = fm,
+                    Encoding = encoding,
+                    CharProcs = charProcs,
+                    Widths = widths,
+                    FirstChar = firstChar
+                };
+            }
+        );
 
         return result;
     }

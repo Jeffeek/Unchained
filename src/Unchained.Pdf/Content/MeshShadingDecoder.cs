@@ -26,7 +26,7 @@ internal static class MeshShadingDecoder
             var bpc = (int)(dict.Get<PdfInteger>(PdfName.BitsPerCoordinate)?.Value ?? 0);
             var bpComp = (int)(dict.Get<PdfInteger>(PdfName.BitsPerComponent)?.Value ?? 0);
             var bpf = (int)(dict.Get<PdfInteger>(PdfName.BitsPerFlag)?.Value ?? 0);
-            var decode = ReadDoubles(dict["Decode"]);
+            var decode = ReadDoubles(dict[PdfName.Decode.Value]);
             if (bpc == 0 || bpComp == 0 || decode is null || decode.Length < 6)
                 return triangles;
 
@@ -392,7 +392,8 @@ internal static class MeshShadingDecoder
         : null;
 
     // ── Vertex / point / colour readers ─────────────────────────────────────────
-    private readonly record struct Vertex(double X,
+    private readonly record struct Vertex(
+        double X,
         double Y,
         byte R,
         byte G,

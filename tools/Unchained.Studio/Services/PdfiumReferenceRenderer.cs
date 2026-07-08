@@ -17,9 +17,6 @@ public sealed class PdfiumReferenceRenderer
     private static bool _initialized;
     private static bool _available;
 
-    /// <summary>True when the Pdfium native library loaded successfully.</summary>
-    public bool IsAvailable => EnsureInit();
-
     private static bool EnsureInit()
     {
         if (_initialized) return _available;

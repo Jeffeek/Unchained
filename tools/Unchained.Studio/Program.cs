@@ -1,9 +1,13 @@
 using MudBlazor.Services;
 using Unchained.Pdf.Engine;
-using Unchained.Pdf.Rendering.Engine;
+using Unchained.Pdf.Rendering.Abstractions;
 using Unchained.Pptx.Engine;
+using Unchained.Studio.Features.Xlsx;
+using Unchained.Studio.Infrastructure;
 using Unchained.Studio.Services;
 using Unchained.Xlsx.Engine;
+
+FeatureFlags.EnablePdfiumCompare = false;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +23,7 @@ builder.Services.AddMudServices();
 
 // Unchained processors — singleton; stateless and thread-safe
 builder.Services.AddSingleton<DocumentProcessor>();
-builder.Services.AddSingleton<PdfRenderer>();
+builder.Services.AddSingleton<IPdfRenderer>(static _ => Unchained.Pdf.Rendering.PdfRendererFactory.CreateRenderer());
 builder.Services.AddSingleton<PresentationProcessor>();
 builder.Services.AddSingleton<SpreadsheetProcessor>();
 
@@ -29,8 +33,22 @@ builder.Services.AddScoped<RenderingService>();
 builder.Services.AddScoped<FileExportService>();
 builder.Services.AddScoped<ThemeService>();
 
-// Pdfium reference renderer — singleton (one Pdfium library per process)
-builder.Services.AddSingleton<PdfiumReferenceRenderer>();
+// Studio infrastructure — scoped to one Blazor circuit
+builder.Services.AddScoped<IUserFeedback, UserFeedback>();
+builder.Services.AddScoped<IStudioDialogs, StudioDialogs>();
+
+// Xlsx editor — scoped per circuit, instantiated lazily via factory
+builder.Services.AddScoped(static sp =>
+    {
+        var session = sp.GetRequiredService<SessionStateService>();
+        var dialogs = sp.GetRequiredService<IStudioDialogs>();
+        var feedback = sp.GetRequiredService<IUserFeedback>();
+        return new XlsxEditorViewModel(session, dialogs, feedback, () => session.Xlsx?.Document.Sheets[session.Xlsx.CurrentSheet - 1]);
+    }
+);
+
+// Pdfium reference renderer — created lazily by components when the feature is enabled.
+// No DI registration needed; components call `new PdfiumReferenceRenderer()` directly.
 
 var app = builder.Build();
 

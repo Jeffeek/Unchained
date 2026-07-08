@@ -1,12 +1,8 @@
-using System.Buffers;
-using System.Text;
 using System.Xml.Linq;
 using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Writing;
-using SaveOptions = System.Xml.Linq.SaveOptions;
 
 namespace Unchained.Pdf.Engine;
 
@@ -17,25 +13,34 @@ namespace Unchained.Pdf.Engine;
 ///     This applies the required structural markers; it does not perform colour conversion
 ///     (e.g. RGB→CMYK), which would require an ICC colour-management engine.
 /// </summary>
-internal static class PdfXConverter
+internal sealed class PdfXConverter(PdfXProfile profile, string outputConditionIdentifier) : PdfConversionBase
 {
-    internal static byte[] Convert(PdfDocumentCore core, PdfXProfile profile, string outputConditionIdentifier)
+    protected override ReadOnlySpan<byte> BuildXmp(PdfDocumentCore core, IReadOnlyDictionary<string, PdfObject> catalogEntries)
     {
-        if (core.IsEncrypted)
-            throw new InvalidOperationException("Cannot convert an encrypted PDF to PDF/X. Decrypt first.");
+        var existing = XmpDocumentHelper.ReadExistingXmp(catalogEntries, core);
+        var xmpDoc = (existing is not null ? XmpDocumentHelper.TryParse(existing) : null) ?? XmpDocumentHelper.CreateMinimalXmp();
 
-        var objects = core.CollectObjects().ToList();
-        var maxObj = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
+        XNamespace rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+        XNamespace pdfxid = "http://www.npes.org/pdfx/ns/id/";
+        var rdfRoot = xmpDoc.Descendants(rdf + "RDF").FirstOrDefault();
 
-        var catalogObjNum = (core.Trailer[PdfName.Root] as PdfIndirectReference)?.ObjectNumber ?? 0;
-        var catalogIdx = objects.FindIndex(o => o.ObjectNumber == catalogObjNum);
-        if (catalogIdx < 0)
-            throw new InvalidOperationException("Cannot locate catalog object.");
+        if (rdfRoot is null)
+            return xmpDoc.ToString().ToUtf8Span();
 
-        var catalogDict = objects[catalogIdx].Value as PdfDictionary ?? throw new InvalidOperationException("Catalog is not a dictionary.");
-        var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries);
+        var desc = rdfRoot.Elements(rdf + "Description").FirstOrDefault(d => d.Attribute(rdf + "about") is not null)
+                   ?? new XElement(rdf + "Description", new XAttribute(rdf + "about", ""));
+        if (!rdfRoot.Elements(rdf + "Description").Contains(desc))
+            rdfRoot.Add(desc);
+        if (desc.Attribute(XNamespace.Xmlns + "pdfxid") is null)
+            desc.Add(new XAttribute(XNamespace.Xmlns + "pdfxid", pdfxid.NamespaceName));
+        XmpDocumentHelper.SetOrAdd(desc, pdfxid + "GTS_PDFXVersion", VersionString(profile));
 
-        // ── 1. /OutputIntents with a GTS_PDFX intent ──────────────────────────
+        return xmpDoc.ToString().ToUtf8Span();
+    }
+
+    protected override int PreMetadataHook(List<PdfIndirectObject> objects, int maxObj)
+    {
+        // ── OutputIntents ──────────────────────────────────────────────────
         var intentObjNum = maxObj + 1;
         var intentDict = new PdfDictionary(
             new Dictionary<string, PdfObject>
@@ -48,67 +53,39 @@ internal static class PdfXConverter
             }
         );
         objects.Add(new PdfIndirectObject(intentObjNum, 0, intentDict));
-        catalogEntries["OutputIntents"] = new PdfArray([new PdfIndirectReference(intentObjNum, 0)]);
+        // Catalog will add the reference in the base class
+        return 1; // one object added
+    }
 
-        // ── 2. /Metadata with pdfxid XMP ──────────────────────────────────────
-        var metaObjNum = maxObj + 2;
-        var xmpBytes = BuildPdfXXmp(profile, catalogEntries, core);
-        var metaDict = new PdfDictionary(
-            new Dictionary<string, PdfObject>
+    protected override void PostCatalogRebuild(List<PdfIndirectObject> objects, PdfDocumentCore core)
+    {
+        // Add OutputIntents reference to catalog
+        var (catalogObjNum, catalogIdx) = ResolveCatalog(core, objects);
+        if (catalogIdx >= 0 && objects[catalogIdx].Value is PdfDictionary cat)
+        {
+            var entries = new Dictionary<string, PdfObject>(cat.Entries)
             {
-                [PdfName.Type.Value] = PdfName.Metadata,
-                [PdfName.Subtype.Value] = PdfName.XML,
-                [PdfName.Length.Value] = new PdfInteger(xmpBytes.Length)
-            }
-        );
-        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
-        catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
+                ["OutputIntents"] = new PdfArray([new PdfIndirectReference(catalogObjNum + 1, 0)])
+            };
+            objects[catalogIdx] = new PdfIndirectObject(catalogObjNum, objects[catalogIdx].Generation, new PdfDictionary(entries));
+        }
 
-        // ── 3. Info dict needs GTS_PDFXVersion + a Title (PDF/X requires both) ──
+        // Info dict needs GTS_PDFXVersion + a Title (PDF/X requires both)
         var infoRef = core.Trailer[PdfName.Info] as PdfIndirectReference;
-        var infoObjNum = infoRef?.ObjectNumber ?? (maxObj + 3);
+        var infoObjNum = infoRef?.ObjectNumber ?? (catalogObjNum + 3);
         var infoEntries = new Dictionary<string, PdfObject>();
         if (infoRef is not null && core.ResolveIndirect(infoRef.ObjectNumber).Value is PdfDictionary existingInfo)
             infoEntries = new Dictionary<string, PdfObject>(existingInfo.Entries);
 
         infoEntries["GTS_PDFXVersion"] = PdfString.FromLatin1(VersionString(profile));
-        if (!infoEntries.ContainsKey("Title"))
-            infoEntries["Title"] = PdfString.FromLatin1("Untitled");
+        if (!infoEntries.ContainsKey(PdfName.Title.Value))
+            infoEntries[PdfName.Title.Value] = PdfString.FromLatin1("Untitled");
 
         var infoIdx = objects.FindIndex(o => o.ObjectNumber == infoObjNum);
         if (infoIdx >= 0)
             objects[infoIdx] = new PdfIndirectObject(infoObjNum, 0, new PdfDictionary(infoEntries));
         else
             objects.Add(new PdfIndirectObject(infoObjNum, 0, new PdfDictionary(infoEntries)));
-
-        // ── 4. Rebuild catalog ────────────────────────────────────────────────
-        objects[catalogIdx] = new PdfIndirectObject(catalogObjNum, 0, new PdfDictionary(catalogEntries));
-
-        // ── 5. Trailer with /Info + /ID ───────────────────────────────────────
-        var maxAfter = objects.Max(static o => o.ObjectNumber);
-        var trailerEntries = new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(maxAfter + 1),
-            [PdfName.Root.Value] = core.Trailer[PdfName.Root]!,
-            [PdfName.Info.Value] = new PdfIndirectReference(infoObjNum, 0)
-        };
-        if (core.Trailer[PdfName.ID.Value] is { } id)
-            trailerEntries[PdfName.ID.Value] = id;
-        else
-        {
-            var hex = new string('0', 32);
-            trailerEntries[PdfName.ID.Value] = new PdfArray(
-                [
-                    new PdfString(Encoding.Latin1.GetBytes(hex), true),
-                    new PdfString(Encoding.Latin1.GetBytes(hex), true)
-                ]
-            );
-        }
-
-        var buf = new ArrayBufferWriter<byte>();
-        using var writer = new PdfWriter(buf);
-        writer.Write(objects, new PdfDictionary(trailerEntries));
-        return buf.WrittenMemory.ToArray();
     }
 
     private static string VersionString(PdfXProfile p) => p switch
@@ -120,28 +97,4 @@ internal static class PdfXConverter
         PdfXProfile.PdfX4 => "PDF/X-4",
         _ => "PDF/X-1a:2001"
     };
-
-    private static ReadOnlySpan<byte> BuildPdfXXmp(PdfXProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
-    {
-        var existing = XmpDocumentHelper.ReadExistingXmp(catalogEntries, core);
-        var xmpDoc = (existing is not null ? XmpDocumentHelper.TryParse(existing) : null) ?? XmpDocumentHelper.CreateMinimalXmp();
-
-        XNamespace rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-        XNamespace pdfxid = "http://www.npes.org/pdfx/ns/id/";
-        var rdfRoot = xmpDoc.Descendants(rdf + "RDF").FirstOrDefault();
-
-        // ReSharper disable once InvertIf
-        if (rdfRoot is not null)
-        {
-            var desc = rdfRoot.Elements(rdf + "Description").FirstOrDefault(d => d.Attribute(rdf + "about") is not null)
-                       ?? new XElement(rdf + "Description", new XAttribute(rdf + "about", ""));
-            if (!rdfRoot.Elements(rdf + "Description").Contains(desc))
-                rdfRoot.Add(desc);
-            if (desc.Attribute(XNamespace.Xmlns + "pdfxid") is null)
-                desc.Add(new XAttribute(XNamespace.Xmlns + "pdfxid", pdfxid.NamespaceName));
-            XmpDocumentHelper.SetOrAdd(desc, pdfxid + "GTS_PDFXVersion", VersionString(profile));
-        }
-
-        return xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces).ToUtf8Span();
-    }
 }

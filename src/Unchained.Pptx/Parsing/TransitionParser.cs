@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Core.Xml;
+using Unchained.Pptx.Writing;
 
 namespace Unchained.Pptx.Parsing;
 
@@ -96,15 +97,15 @@ internal static class TransitionParser
 
             "zoom" => dir == "out" ? TransitionEffect.ZoomOut : TransitionEffect.ZoomIn,
 
-            "blinds" => dir == "vert"
+            "blinds" => dir == TransitionStrings.DirVert
                 ? TransitionEffect.BlindsVertical
                 : TransitionEffect.BlindsHorizontal,
 
-            "checker" => dir == "vert"
+            "checker" => dir == TransitionStrings.DirVert
                 ? TransitionEffect.CheckerVertical
                 : TransitionEffect.CheckerHorizontal,
 
-            "comb" => dir == "vert"
+            "comb" => dir == TransitionStrings.DirVert
                 ? TransitionEffect.CombVertical
                 : TransitionEffect.CombHorizontal,
 

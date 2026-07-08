@@ -13,6 +13,82 @@ public static class CmlNames
     /// <summary>Data point index attribute: <c>idx</c>.</summary>
     public const string AttributeIndex = "idx";
 
+    // ── Chart grouping values ──────────────────────────────────────────────────
+
+    /// <summary>Grouping: clustered (bars/columns placed side by side).</summary>
+    public const string GroupingClustered = "clustered";
+
+    /// <summary>Grouping: stacked (bars/columns placed on top of each other).</summary>
+    public const string GroupingStacked = "stacked";
+
+    /// <summary>Grouping: percent stacked (stacked bars/columns normalised to 100%).</summary>
+    public const string GroupingPercentStacked = "percentStacked";
+
+    /// <summary>Grouping: standard (single-series style, default).</summary>
+    public const string GroupingStandard = "standard";
+
+    // ── Chart bar direction ────────────────────────────────────────────────────
+
+    /// <summary>Bar direction: column (vertical bars).</summary>
+    public const string BarDirColumn = "col";
+
+    /// <summary>Bar direction: bar (horizontal bars).</summary>
+    public const string BarDirBar = "bar";
+
+    // ── Chart scatter style ────────────────────────────────────────────────────
+
+    /// <summary>Scatter chart style: plain markers.</summary>
+    public const string ScatterStyleMarker = "marker";
+
+    /// <summary>Scatter chart style: straight line through markers.</summary>
+    public const string ScatterStyleLine = "line";
+
+    /// <summary>Scatter chart style: straight line through markers.</summary>
+    public const string ScatterStyleLineMarker = "lineMarker";
+
+    /// <summary>Scatter chart style: smooth curve through markers.</summary>
+    public const string ScatterStyleSmooth = "smooth";
+
+    /// <summary>Scatter chart style: smooth curve through markers.</summary>
+    public const string ScatterStyleSmoothMarker = "smoothMarker";
+
+    // ── Chart radar style ──────────────────────────────────────────────────────
+
+    /// <summary>Radar chart style: markers only.</summary>
+    public const string RadarStyleMarker = "marker";
+
+    /// <summary>Radar chart style: filled area.</summary>
+    public const string RadarStyleFilled = "filled";
+
+    // ── Chart marker symbol ────────────────────────────────────────────────────
+
+    /// <summary>Marker symbol: circle.</summary>
+    public const string MarkerSymbolCircle = "circle";
+
+    // ── Axis position values ───────────────────────────────────────────────────
+
+    /// <summary>Axis position: bottom.</summary>
+    public const string AxisPositionBottom = "b";
+
+    /// <summary>Axis position: left.</summary>
+    public const string AxisPositionLeft = "l";
+
+    /// <summary>Axis position: right.</summary>
+    public const string AxisPositionRight = "r";
+
+    /// <summary>Axis position: top.</summary>
+    public const string AxisPositionTop = "t";
+
+    // ── Orientation ────────────────────────────────────────────────────────────
+
+    /// <summary>Axis orientation: minimum to maximum (normal).</summary>
+    public const string OrientationMinMax = "minMax";
+
+    // ── Trendline ──────────────────────────────────────────────────────────────
+
+    /// <summary>Trendline type: linear (default).</summary>
+    public const string TrendlineTypeLinear = "linear";
+
     /// <summary>The DrawingML Chart main namespace.</summary>
     public static readonly XNamespace Cml =
         "http://schemas.openxmlformats.org/drawingml/2006/chart";

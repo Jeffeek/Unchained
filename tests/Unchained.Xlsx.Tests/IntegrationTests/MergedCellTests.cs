@@ -30,6 +30,8 @@ public class MergedCellTests
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         reloaded.Sheets[0].MergedCells.Count.ShouldBe(2);
+        reloaded.Sheets[0].MergedCells[0].ToA1().ShouldBe("A1:C1");
+        reloaded.Sheets[0].MergedCells[1].ToA1().ShouldBe("D5:E8");
     }
 
     [Fact]

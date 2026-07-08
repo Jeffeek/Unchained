@@ -55,15 +55,15 @@ internal static class CsvExporter
                 CellType.Boolean => cell.GetBoolean() == true ? options.TrueValue : options.FalseValue,
                 CellType.Error => cell.GetError()?.ToLiteral() ?? string.Empty,
                 CellType.Number => FormatNumber(cell, options),
-                CellType.Formula => cell.GetString() ?? FormatNumber(cell, options),
+                CellType.Formula => cell.GetString() ?? FormatNumber(cell, options) ?? cell.Formula ?? string.Empty,
                 _ => string.Empty
-            };
+            } ?? string.Empty;
 
-    private static string FormatNumber(Cell.Cell cell, CsvSaveOptions options)
+    private static string? FormatNumber(Cell.Cell cell, CsvSaveOptions options)
     {
         var value = cell.GetDouble();
         if (value is null)
-            return string.Empty;
+            return null;
 
         // Render dates using the configured date format when the cell carries a date number format.
         var code = cell.NumberFormatCode;

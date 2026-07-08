@@ -1,7 +1,7 @@
 using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Document;
@@ -122,7 +122,9 @@ public sealed class PdfDocumentCoreTests
         var objs = core.CollectObjects();
         // Catalog + Pages + 2 page nodes = at least 4 objects.
         objs.Count.ShouldBeGreaterThanOrEqualTo(4);
-        objs.ShouldBeInOrder(SortDirection.Ascending, Comparer<PdfIndirectObject>.Create(static (a, b) => a.ObjectNumber.CompareTo(b.ObjectNumber)));
+        // Objects should be returned in ascending object-number order.
+        for (var i = 1; i < objs.Count; i++)
+            objs[i].ObjectNumber.ShouldBeGreaterThan(objs[i - 1].ObjectNumber);
     }
 
     [Fact]

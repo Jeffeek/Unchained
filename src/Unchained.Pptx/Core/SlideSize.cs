@@ -27,27 +27,27 @@ public readonly struct SlideSize : IEquatable<SlideSize>
     // ── Presets ──────────────────────────────────────────────────────────────
 
     /// <summary>
-    ///     Widescreen 16:9 (33,867,200 × 19,050,000 EMU ≈ 13.33 × 7.5 in).
+    ///     Widescreen 16:9 (12,192,000 × 6,858,000 EMU ≈ 13.33 × 7.5 in).
     ///     The default size for PowerPoint presentations since Office 2013.
     /// </summary>
-    public static readonly SlideSize Widescreen = new(new Emu(33_867_200), new Emu(19_050_000));
+    public static readonly SlideSize Widescreen = new(new Emu(12_192_000), new Emu(6_858_000));
 
     /// <summary>
-    ///     Standard 4:3 (27,432,000 × 20,574,000 EMU ≈ 10 × 7.5 in).
+    ///     Standard 4:3 (9,144,000 × 6,858,000 EMU ≈ 10 × 7.5 in).
     ///     The legacy default for older presentations.
     /// </summary>
-    public static readonly SlideSize Standard = new(new Emu(27_432_000), new Emu(20_574_000));
+    public static readonly SlideSize Standard = new(new Emu(9_144_000), new Emu(6_858_000));
 
-    /// <summary>A4 portrait (6,858,000 × 9,144,000 EMU ≈ 7.5 × 10 in).</summary>
-    public static readonly SlideSize A4Portrait = new(new Emu(6_858_000), new Emu(9_144_000));
+    /// <summary>A4 portrait (7,560,000 × 10,692,000 EMU ≈ 8.27 × 11.69 in).</summary>
+    public static readonly SlideSize A4Portrait = new(new Emu(7_560_000), new Emu(10_692_000));
 
-    /// <summary>A4 landscape (9,144,000 × 6,858,000 EMU ≈ 10 × 7.5 in).</summary>
-    public static readonly SlideSize A4Landscape = new(new Emu(9_144_000), new Emu(6_858_000));
+    /// <summary>A4 landscape (10,692,000 × 7,560,000 EMU ≈ 11.69 × 8.27 in).</summary>
+    public static readonly SlideSize A4Landscape = new(new Emu(10_692_000), new Emu(7_560_000));
 
-    /// <summary>Letter portrait (6,858,000 × 9,144,000 EMU ≈ 8.5 × 11 in).</summary>
+    /// <summary>Letter portrait (7,772,400 × 10,058,400 EMU ≈ 8.5 × 11 in).</summary>
     public static readonly SlideSize LetterPortrait = new(Emu.FromInches(8.5), Emu.FromInches(11));
 
-    /// <summary>Letter landscape (9,144,000 × 6,858,000 EMU ≈ 11 × 8.5 in).</summary>
+    /// <summary>Letter landscape (10,058,400 × 7,772,400 EMU ≈ 11 × 8.5 in).</summary>
     public static readonly SlideSize LetterLandscape = new(Emu.FromInches(11), Emu.FromInches(8.5));
 
     // ── Factory ──────────────────────────────────────────────────────────────

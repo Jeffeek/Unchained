@@ -14,12 +14,20 @@
 
   <ItemGroup>
     <ProjectReference Include="../Unchained.Ooxml/Unchained.Ooxml.csproj" />
-    <ProjectReference Include="..\Unchained.Drawing.Primitives\Unchained.Drawing.Primitives.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Unchained.Pptx.Tests" />
     <InternalsVisibleTo Include="Unchained.Pptx.Rendering" />
+    <InternalsVisibleTo Include="Unchained.Studio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="DocumentFormat.OpenXml.Features" />
+    <PackageReference Include="DocumentFormat.OpenXml.Framework" />
+    <PackageReference Include="DocumentFormat.OpenXml.Linq" />
+    <PackageReference Include="System.IO.Packaging" />
   </ItemGroup>
 
 </Project>

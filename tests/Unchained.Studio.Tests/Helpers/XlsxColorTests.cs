@@ -37,6 +37,16 @@ public sealed class XlsxColorTests
     }
 
     [Fact]
+    public void FromHex_Lowercase_Parses()
+    {
+        var color = XlsxColor.FromHex("#aabbcc");
+        var argb = color.Resolve(null);
+        ((byte)((argb >> 16) & 0xFF)).ShouldBe((byte)0xAA);
+        ((byte)((argb >> 8) & 0xFF)).ShouldBe((byte)0xBB);
+        ((byte)(argb & 0xFF)).ShouldBe((byte)0xCC);
+    }
+
+    [Fact]
     public void FromHex_ArgbEightChars_StripsAlpha()
     {
         // 8-char ARGB → RGB is taken from the last 6.

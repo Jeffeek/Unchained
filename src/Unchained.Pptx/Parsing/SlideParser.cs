@@ -14,7 +14,8 @@ namespace Unchained.Pptx.Parsing;
 /// <summary>
 ///     Parses a single slide OPC part into a <see cref="Slide" />.
 /// </summary>
-internal sealed class SlideParser(OpcPackage package,
+internal sealed class SlideParser(
+    OpcPackage package,
     MediaStore mediaStore,
     IEnumerable<MasterSlide> masters,
     CommentAuthorCollection commentAuthors

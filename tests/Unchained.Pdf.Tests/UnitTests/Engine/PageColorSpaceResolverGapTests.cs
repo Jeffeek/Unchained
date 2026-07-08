@@ -3,7 +3,7 @@ using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.UnitTests.Engine;
@@ -329,7 +329,8 @@ public sealed class PageColorSpaceResolverGapTests
 
         var result = PageColorSpaceResolver.GetColorSpaces(page, Core());
         result.ContainsKey("CS0").ShouldBeTrue();
-        // Past the depth limit, the deepest level's space is not collected.
+        // Past the depth limit, the innermost spaces are not collected.
+        result.ContainsKey("CS11").ShouldBeFalse();
         result.ContainsKey("CS12").ShouldBeFalse();
         return;
 

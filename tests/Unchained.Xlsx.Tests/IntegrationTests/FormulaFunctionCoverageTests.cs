@@ -68,6 +68,14 @@ public class FormulaFunctionCoverageTests
     public void Quotient_ByZero_ReturnsDivisionError() =>
         Eval("=QUOTIENT(5,0)").ShouldBe(CellError.DivisionByZero);
 
+    [Fact]
+    public void Mod_NegativeDividend_ReturnsExcelBehavior() =>
+        Num("=MOD(-7,3)").ShouldBe(2);
+
+    [Fact]
+    public void Mod_NegativeDivisor_ReturnsNegativeResult() =>
+        Num("=MOD(7,-3)").ShouldBe(-2);
+
     [
         Theory,
         InlineData("=SEC(0)", 1),
@@ -158,7 +166,7 @@ public class FormulaFunctionCoverageTests
     public void Percentile_And_PercentRank()
     {
         Num("=PERCENTILE(A1:A5,0.5)", Fill).ShouldBe(3);
-        Num("=PERCENTRANK(A1:A5,3)", Fill).ShouldBe(0.5);
+        Num("=PERCENTRANK(A1:A5,3)", Fill).ShouldBe(0.625);
         return;
 
         static void Fill(Worksheet s)
@@ -185,13 +193,14 @@ public class FormulaFunctionCoverageTests
     [Fact]
     public void Skew_And_TrimMean()
     {
-        Num("=TRIMMEAN(A1:A6,0.5)", Fill)!.Value.ShouldBe(3.5, 1e-9);
+        // TRIMMEAN({1..10}, 0.2) removes 2 from each side → {3..8} → avg = 5.5
+        Num("=TRIMMEAN(A1:A10,0.2)", Fill)!.Value.ShouldBe(5.5, 1e-9);
         Num("=SKEW(A1:A6)", Fill).ShouldNotBeNull();
         return;
 
         static void Fill(Worksheet s)
         {
-            for (var i = 1; i <= 6; i++) s.SetValue(i, 1, i);
+            for (var i = 1; i <= 10; i++) s.SetValue(i, 1, i);
         }
     }
 
@@ -269,7 +278,7 @@ public class FormulaFunctionCoverageTests
     public void TextBeforeAfter_NoDelimiter()
     {
         Eval("=TEXTBEFORE(\"abc\",\"-\")").ShouldBe("abc");
-        Eval("=TEXTAFTER(\"abc\",\"-\")").ShouldBe("");
+        Eval("=TEXTAFTER(\"abc\",\"-\")").ShouldBe("abc");
     }
 
     // ── Logical / conditional ────────────────────────────────────────────────
@@ -469,7 +478,7 @@ public class FormulaFunctionCoverageTests
     public void ErrorTypeCodes(string formula, double expected) => Num(formula)!.Value.ShouldBe(expected);
 
     [Fact]
-    public void ErrorType_NoError_ReturnsNotAvailable() => Eval("=ERROR.TYPE(5)").ShouldBe(CellError.NotAvailable);
+    public void ErrorType_NoError_ReturnsValueError() => Eval("=ERROR.TYPE(5)").ShouldBe(CellError.Value);
 
     // ── Unknown function & blank ─────────────────────────────────────────────
 

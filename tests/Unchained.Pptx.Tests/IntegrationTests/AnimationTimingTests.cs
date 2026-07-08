@@ -1,7 +1,7 @@
 using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Models.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;

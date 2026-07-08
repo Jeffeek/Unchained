@@ -132,15 +132,15 @@ internal static class PdfEncryption
         var encryptDict = new PdfDictionary(
             new Dictionary<string, PdfObject>
             {
-                ["Filter"] = PdfName.Standard,
-                ["V"] = new PdfInteger(5),
-                ["R"] = new PdfInteger(6),
-                ["Length"] = new PdfInteger(256),
-                ["P"] = new PdfInteger(EncodePermissions(opts.Permissions)),
-                ["O"] = new PdfString(oBytes, true),
-                ["U"] = new PdfString(uBytes, true),
-                ["OE"] = new PdfString(oeBytes, true),
-                ["UE"] = new PdfString(ueBytes, true),
+                [PdfName.Filter.Value] = PdfName.Standard,
+                [PdfName.V.Value] = new PdfInteger(5),
+                [PdfName.R.Value] = new PdfInteger(6),
+                [PdfName.Length.Value] = new PdfInteger(256),
+                [PdfName.P.Value] = new PdfInteger(EncodePermissions(opts.Permissions)),
+                [PdfName.O.Value] = new PdfString(oBytes, true),
+                [PdfName.U.Value] = new PdfString(uBytes, true),
+                [PdfName.OE.Value] = new PdfString(oeBytes, true),
+                [PdfName.UE.Value] = new PdfString(ueBytes, true),
                 ["Perms"] = new PdfString(permsBytes, true),
                 ["EncryptMetadata"] = PdfBoolean.True,
                 ["StmF"] = PdfName.StdCF,
@@ -153,7 +153,7 @@ internal static class PdfEncryption
                             {
                                 ["CFM"] = PdfName.AESV3,
                                 ["AuthEvent"] = PdfName.DocOpen,
-                                ["Length"] = new PdfInteger(32)
+                                [PdfName.Length.Value] = new PdfInteger(32)
                             }
                         )
                     }

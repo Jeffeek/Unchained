@@ -8,14 +8,14 @@ public static class ImageExtensions
     /// <summary>Returns the file extension for <paramref name="contentType" /> (e.g. ".png").</summary>
     public static string Extension(string contentType) => contentType switch
     {
-        "image/png" => ".png",
-        "image/jpeg" or "image/jpg" => ".jpeg",
-        "image/gif" => ".gif",
-        "image/bmp" => ".bmp",
-        "image/tiff" => ".tiff",
-        "image/svg+xml" => ".svg",
-        "image/x-emf" or "image/emf" => ".emf",
-        "image/x-wmf" or "image/wmf" => ".wmf",
+        MimeTypes.Png => ".png",
+        MimeTypes.Jpeg or MimeTypes.Jpg => ".jpeg",
+        MimeTypes.Gif => ".gif",
+        MimeTypes.Bmp => ".bmp",
+        MimeTypes.Tiff => ".tiff",
+        MimeTypes.Svg => ".svg",
+        MimeTypes.Emf or MimeTypes.EmfLegacy => ".emf",
+        MimeTypes.Wmf or MimeTypes.WmfLegacy => ".wmf",
         _ => ".bin"
     };
 }

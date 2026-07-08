@@ -1,7 +1,7 @@
 using System.Text;
 using Shouldly;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
@@ -758,11 +758,8 @@ public sealed class PdfATests : PdfTestBase
         var passFiles = VeraPdfFixtures.PassPdfFilePaths().Take(10).ToList();
         var failFiles = VeraPdfFixtures.FailPdfFilePaths().Take(10).ToList();
 
-        if (passFiles.Count == 0 || failFiles.Count == 0)
-        {
-            Assert.Skip("veraPDF test files not available in TestFiles/veraPDF/.");
-            return;
-        }
+        passFiles.ShouldNotBeEmpty("veraPDF pass corpus missing from TestFiles/veraPDF/.");
+        failFiles.ShouldNotBeEmpty("veraPDF fail corpus missing from TestFiles/veraPDF/.");
 
         double avgPassErrors = 0, avgFailErrors = 0;
         var passCount = 0;
@@ -797,11 +794,7 @@ public sealed class PdfATests : PdfTestBase
     public async Task Validate_AllVeraPdfFiles_DoNotCrash()
     {
         var paths = VeraPdfFixtures.AllPdfFilePaths().Take(30).ToList();
-        if (paths.Count == 0)
-        {
-            Assert.Skip("veraPDF test files not available in TestFiles/veraPDF/.");
-            return;
-        }
+        paths.ShouldNotBeEmpty("veraPDF corpus missing from TestFiles/veraPDF/.");
 
         foreach (var path in paths)
         {

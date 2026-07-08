@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 using Shouldly;
 using Unchained.Pdf.Core;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
@@ -18,7 +18,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task ImagemagickAscii85_ParsesAndHasPages()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickAscii85);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.ImagemagickAscii85);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -26,7 +26,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task ImagemagickAscii85_RoundTripPreservesPageCount()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickAscii85);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.ImagemagickAscii85);
         await using var doc = await LoadAsync(bytes);
         await using var reloaded = await SaveAndReloadAsync(doc);
         reloaded.PageCount.ShouldBe(doc.PageCount);
@@ -35,7 +35,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task ImagemagickLzw_ParsesAndHasPages()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickLzw);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.ImagemagickLzw);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -44,7 +44,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     public async Task ImagemagickLzw_GetImageXObjects_DecodesWithoutException()
     {
         // LZWDecode is now implemented — the image must decode to a correctly-sized buffer.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickLzw);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.ImagemagickLzw);
         await using var doc = await LoadAsync(bytes);
         var images = doc.Pages[1].GetImageXObjects();
         images.Count.ShouldBeGreaterThan(0);
@@ -55,7 +55,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task ImagemagickCcitt_ParsesAndHasPages()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickCcitt);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.ImagemagickCcitt);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -66,7 +66,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
         // CCITTFaxDecode (K=-1 Group 4) is now implemented — the image must decode to a
         // correctly-sized buffer. CCITT images are DeviceGray/1-bit so GetImageXObjects
         // returns a gray placeholder (DeviceRGB check fails), but the filter must not throw.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ImagemagickCcitt);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.ImagemagickCcitt);
         await using var doc = await LoadAsync(bytes);
         var images = doc.Pages[1].GetImageXObjects();
         images.Count.ShouldBeGreaterThan(0);
@@ -79,7 +79,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task InlineImage_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.InlineImage);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.InlineImage);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -87,7 +87,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task InlineImage_GetContentOperators_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.InlineImage);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.InlineImage);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].GetContentOperators().ShouldNotBeNull();
     }
@@ -97,7 +97,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task LibreOfficeForm_HasFormFields()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.LibreOfficeForm);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.LibreOfficeForm);
         await using var doc = await LoadAsync(bytes);
         doc.GetFormFields().ShouldNotBeEmpty();
     }
@@ -105,7 +105,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task LibreOfficeForm_FieldNamesAreNonEmpty()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.LibreOfficeForm);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.LibreOfficeForm);
         await using var doc = await LoadAsync(bytes);
         doc.GetFormFields().ShouldAllBe(static f => !string.IsNullOrEmpty(f.Name));
     }
@@ -115,7 +115,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task Arabic_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Arabic);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Arabic);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -123,7 +123,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task Arabic_GetContentOperators_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Arabic);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Arabic);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].GetContentOperators().ShouldNotBeNull();
     }
@@ -133,7 +133,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     {
         // Arabic text may require HarfBuzz shaping and ToUnicode maps for extraction.
         // The call must not throw even if spans are empty.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Arabic);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Arabic);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].GetTextSpans().ShouldNotBeNull();
     }
@@ -141,7 +141,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task ArabicRotated_PageHasNonStandardDimensions()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.ArabicRotated);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.ArabicRotated);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
         // A rotated page often swaps Width and Height; both must be non-zero.
@@ -156,7 +156,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     {
         // This PDF has unreadable metadata that may prevent full parsing.
         // Acceptable outcomes: loads successfully, or throws PdfException.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.BadMetadata);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.BadMetadata);
         try
         {
             await using var doc = await LoadAsync(bytes);
@@ -171,7 +171,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task BadMetadata_MetadataAccessDoesNotCrash()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.BadMetadata);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.BadMetadata);
         try
         {
             await using var doc = await LoadAsync(bytes);
@@ -186,7 +186,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task Base64Image_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Base64Image);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Base64Image);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -196,7 +196,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     {
         // JPEG image stored as ASCIIHexDecode + DCTDecode.
         // With libjpeg-turbo present the pixels are real; without it a gray placeholder is returned.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Base64Image);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Base64Image);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].GetImageXObjects().ShouldNotBeNull();
     }
@@ -204,7 +204,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task Base64Image_GetImageXObjects_RgbDataIsCorrectSize()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Base64Image);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Base64Image);
         await using var doc = await LoadAsync(bytes);
         foreach (var img in doc.Pages[1].GetImageXObjects().Values)
             img.RgbData.Length.ShouldBe(img.Width * img.Height * 3);
@@ -215,7 +215,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task WithXmp_GetXmpMetadataReturnsXml()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithXmp);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithXmp);
         await using var doc = await LoadAsync(bytes);
         var xmp = doc.GetXmpMetadata();
         xmp.ShouldNotBeNull("Expected an XMP metadata packet in this PDF.");
@@ -226,7 +226,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task WithXmp_XmpIsValidXml()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithXmp);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithXmp);
         await using var doc = await LoadAsync(bytes);
         var xmp = doc.GetXmpMetadata();
         if (xmp is null) return;
@@ -242,7 +242,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task PdfA_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.PdfA);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.PdfA);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -250,7 +250,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task PdfA_RoundTripPreservesPageCount()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.PdfA);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.PdfA);
         await using var doc = await LoadAsync(bytes);
         await using var reloaded = await SaveAndReloadAsync(doc);
         reloaded.PageCount.ShouldBe(doc.PageCount);
@@ -261,7 +261,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task CmykImage_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.CmykImage);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.CmykImage);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -270,7 +270,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     public async Task CmykImage_GetImageXObjects_ReturnsGrayPlaceholder()
     {
         // CMYK is an unsupported colour space — GetImageXObjects returns a grey placeholder.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.CmykImage);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.CmykImage);
         await using var doc = await LoadAsync(bytes);
         var images = doc.Pages[1].GetImageXObjects();
         images.ShouldNotBeNull();
@@ -284,7 +284,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task WithAttachment_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithAttachment);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithAttachment);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -292,7 +292,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task WithAttachment_RoundTripPreservesPageCount()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithAttachment);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithAttachment);
         await using var doc = await LoadAsync(bytes);
         await using var reloaded = await SaveAndReloadAsync(doc);
         reloaded.PageCount.ShouldBe(doc.PageCount);
@@ -303,7 +303,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task CroppedRotated_ParsesWithoutError()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.CroppedRotated);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.CroppedRotated);
         await using var doc = await LoadAsync(bytes);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
@@ -311,7 +311,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task CroppedRotated_AllPagesHaveNonZeroDimensions()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.CroppedRotated);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.CroppedRotated);
         await using var doc = await LoadAsync(bytes);
         for (var i = 1; i <= doc.PageCount; i++)
         {
@@ -325,7 +325,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task CroppedRotated_ContentOperators_DoesNotThrow()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.CroppedRotated);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.CroppedRotated);
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         for (var i = 1; i <= doc.PageCount; i++)
             doc.Pages[i].GetContentOperators().ShouldNotBeNull($"page {i}");
@@ -338,7 +338,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     {
         // LaTeX-generated PDFs delegate all page content via Do → form XObject.
         // After form XObject expansion, the operator list must be non-empty.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var ops = doc.Pages[1].GetContentOperators();
         ops.ShouldNotBeEmpty("Expected form XObject content to be expanded into the operator list.");
@@ -347,7 +347,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task Complex_GetTextSpans_ReturnsSpansAfterFormExpansion()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var spans = doc.Pages[1].GetTextSpans();
         spans.ShouldNotBeNull();
@@ -358,7 +358,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task Complex_ExtractText_ReturnsNonEmptyString()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.Complex);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Complex);
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var text = doc.Pages[1].ExtractText();
         text.ShouldNotBeNullOrWhiteSpace("Expected extractable text after form XObject expansion.");
@@ -369,7 +369,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     {
         // with-tables.pdf uses vector graphics (paths, fills) — no form XObjects.
         // GetContentOperators() must not throw and must return a valid (possibly empty) list.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithTables);
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var ops = doc.Pages[1].GetContentOperators();
         ops.ShouldNotBeNull();
@@ -379,7 +379,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     public async Task WithTables_GetTextSpans_DoesNotThrow()
     {
         // Table content is drawn as vector graphics — text spans may be empty.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithTables);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithTables);
         await using var doc = await LoadAsync(bytes);
         doc.Pages[1].GetTextSpans().ShouldNotBeNull();
     }
@@ -389,7 +389,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     {
         // After expansion, image Do operators from the page's direct /Contents must still
         // appear exactly once (not duplicated by the expansion logic).
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WithImages);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithImages);
         await using var doc = await LoadAsync(bytes);
         var ops = doc.Pages[1].GetContentOperators();
         // No assertion on count — just verifying it doesn't crash and returns a valid list.
@@ -406,7 +406,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     {
         // This PDF has internally inconsistent XObject references.
         // The parser must not crash — either it recovers or throws PdfException.
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WrongReferences);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WrongReferences);
         try
         {
             await using var doc = await LoadAsync(bytes);
@@ -421,7 +421,7 @@ public sealed class RealPdfExtendedTests : PdfTestBase
     [Fact]
     public async Task WrongReferences_GetImageXObjects_DoesNotCrash()
     {
-        var bytes = RealPdfFixtures.LoadOrSkip(RealPdfFixtures.Files.WrongReferences);
+        var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WrongReferences);
         try
         {
             await using var doc = await LoadAsync(bytes);

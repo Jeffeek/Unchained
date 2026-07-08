@@ -4,7 +4,7 @@ using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;

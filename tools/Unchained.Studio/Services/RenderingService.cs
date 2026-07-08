@@ -1,15 +1,14 @@
 using System.Collections.Concurrent;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Rendering.Engine;
+using Unchained.Pdf.Rendering.Abstractions;
 
 namespace Unchained.Studio.Services;
 
 /// <summary>
-///     Wraps <see cref="PdfRenderer" /> with a simple in-memory cache.
+///     Wraps the PDF renderer with a simple in-memory cache.
 /// </summary>
-// ReSharper disable once SuggestBaseTypeForParameterInConstructor
-public sealed class RenderingService(PdfRenderer renderer)
+public sealed class RenderingService(IPdfRenderer renderer)
 {
     // Soft cap: when the cache grows beyond this, clear the oldest half.
     // For a dev tool rendering at most a handful of documents this is never reached,
@@ -78,7 +77,7 @@ public sealed class RenderingService(PdfRenderer renderer)
 }
 
 // Bring System.Runtime.CompilerServices.RuntimeHelpers into scope cleanly
-file static class RuntimeHelpers
+static file class RuntimeHelpers
 {
     public static int GetHashCode(object obj) =>
         System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);

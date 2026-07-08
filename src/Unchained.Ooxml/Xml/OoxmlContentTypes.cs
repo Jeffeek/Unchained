@@ -17,4 +17,7 @@ internal static class OoxmlContentTypes
 
     /// <summary>Chart: <c>application/vnd.openxmlformats-officedocument.drawingml.chart+xml</c></summary>
     public const string Chart = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
+
+    /// <summary>Generic XML content type.</summary>
+    public const string ApplicationXml = "application/xml";
 }

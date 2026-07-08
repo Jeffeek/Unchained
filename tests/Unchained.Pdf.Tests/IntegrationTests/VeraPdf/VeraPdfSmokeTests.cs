@@ -1,7 +1,7 @@
 using Shouldly;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests.VeraPdf;
@@ -34,8 +34,7 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
                 loaded++;
         }
 
-        if (total == 0)
-            Assert.Skip("No veraPDF test files found — drop the corpus into TestFiles/veraPDF/.");
+        total.ShouldBeGreaterThan(0, "No veraPDF test files found — drop the corpus into TestFiles/veraPDF/.");
 
         // Just being informational — both outcomes are valid for a non-validating parser.
         loaded.ShouldBeGreaterThanOrEqualTo(0, $"loaded {loaded}/{total} veraPDF files");
@@ -167,8 +166,7 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
             $"[{nameof(Parse_FailVeraPdfFiles_ParsesOrThrows_PdfException)}] Tested: {tested}, Successfully Parsed: {successfullyParsed}, Throws PdfException: {throwsPdfException}"
         );
 
-        if (tested == 0)
-            Assert.Skip("No veraPDF test files found in TestFiles/veraPDF/.");
+        tested.ShouldBeGreaterThan(0, "No veraPDF test files found in TestFiles/veraPDF/.");
     }
 
 
@@ -189,7 +187,6 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
             tested++;
         }
 
-        if (tested == 0)
-            Assert.Skip("No veraPDF test files found in TestFiles/veraPDF/.");
+        tested.ShouldBeGreaterThan(0, "No veraPDF test files found in TestFiles/veraPDF/.");
     }
 }

@@ -65,7 +65,7 @@ internal sealed class PresentationWriter
             "rels",
             "application/vnd.openxmlformats-package.relationships+xml"
         );
-        contentTypes.RegisterDefault("xml", "application/xml");
+        contentTypes.RegisterDefault("xml", OoxmlContentTypes.ApplicationXml);
 
         // Assign master relationship IDs before writing presentation.xml
         for (var i = 0; i < masters.Count; i++)

@@ -29,7 +29,15 @@ public class WorksheetLayoutCoverageTests
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
         var result = reloaded.Sheets[0].Protection;
         result.IsProtected.ShouldBeTrue();
+        result.AllowFormatCells.ShouldBeTrue();
+        result.AllowInsertRows.ShouldBeTrue();
+        result.AllowInsertColumns.ShouldBeTrue();
+        result.AllowDeleteRows.ShouldBeTrue();
+        result.AllowDeleteColumns.ShouldBeTrue();
+        result.AllowSort.ShouldBeTrue();
+        result.AllowAutoFilter.ShouldBeTrue();
         result.AllowSelectLockedCells.ShouldBeFalse();
+        result.AllowSelectUnlockedCells.ShouldBeFalse();
     }
 
     [Fact]
@@ -77,8 +85,13 @@ public class WorksheetLayoutCoverageTests
         var result = reloaded.Sheets[0].HeaderFooter;
         result.DifferentFirstPage.ShouldBeTrue();
         result.DifferentOddEven.ShouldBeTrue();
+        result.ScaleWithDocument.ShouldBeFalse();
+        result.AlignWithMargins.ShouldBeFalse();
+        result.OddHeader.ShouldBe("&LOdd");
         result.EvenHeader.ShouldBe("&LEven");
+        result.EvenFooter.ShouldBe("&CEvenFoot");
         result.FirstPageHeader.ShouldBe("&CFirst");
+        result.FirstPageFooter.ShouldBe("&CFirstFoot");
     }
 
     [Fact]
@@ -98,6 +111,7 @@ public class WorksheetLayoutCoverageTests
         result.ShowRowColHeaders.ShouldBeFalse();
         result.ShowFormulas.ShouldBeTrue();
         result.ZoomScale.ShouldBe(125);
+        result.ActiveCell!.Value.ToA1().ShouldBe("C3");
     }
 
     [Fact]
@@ -143,6 +157,22 @@ public class WorksheetLayoutCoverageTests
         sheet.DataValidations.Add(textLength);
 
         using var reloaded = await XlsxFixtures.RoundTripAsync(document);
-        reloaded.Sheets[0].DataValidations.Count.ShouldBe(2);
+        var result = reloaded.Sheets[0].DataValidations;
+        result.Count.ShouldBe(2);
+
+        var dv1 = result[0];
+        dv1.Type.ShouldBe(DataValidationType.Decimal);
+        dv1.Operator.ShouldBe(DataValidationOperator.GreaterThan);
+        dv1.Formula1.ShouldBe("0.5");
+        dv1.ErrorStyle.ShouldBe(DataValidationErrorStyle.Warning);
+        dv1.PromptTitle.ShouldBe("Enter value");
+        dv1.Prompt.ShouldBe("A decimal please");
+        dv1.ShowInputMessage.ShouldBeTrue();
+        dv1.ShowErrorAlert.ShouldBeTrue();
+
+        var dv2 = result[1];
+        dv2.Type.ShouldBe(DataValidationType.TextLength);
+        dv2.Operator.ShouldBe(DataValidationOperator.LessThanOrEqual);
+        dv2.Formula1.ShouldBe("10");
     }
 }

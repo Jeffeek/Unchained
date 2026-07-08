@@ -1,5 +1,6 @@
 using Shouldly;
 using Unchained.Ooxml.Opc;
+using Unchained.Ooxml.Xml;
 using Xunit;
 
 namespace Unchained.Ooxml.Tests.UnitTests.Opc;
@@ -18,12 +19,12 @@ public sealed class OpcPackageTests
     {
         using var package = OpcPackage.CreateEmpty();
         var data = new byte[] { 1, 2, 3 };
-        package.AddOrReplacePart("/test/part.xml", "application/xml", data);
+        package.AddOrReplacePart("/test/part.xml", OoxmlContentTypes.ApplicationXml, data);
 
         var part = package.GetPart("/test/part.xml");
         part.ShouldNotBeNull();
         part.Data.ShouldBe(data);
-        part.ContentType.ShouldBe("application/xml");
+        part.ContentType.ShouldBe(OoxmlContentTypes.ApplicationXml);
     }
 
     [Fact]
@@ -44,7 +45,7 @@ public sealed class OpcPackageTests
     public void AddOrReplacePart_LeadingSlashNormalized()
     {
         using var package = OpcPackage.CreateEmpty();
-        package.AddOrReplacePart("test/part.xml", "application/xml", []);
+        package.AddOrReplacePart("test/part.xml", OoxmlContentTypes.ApplicationXml, []);
         package.TryGetPart("/test/part.xml").ShouldNotBeNull();
     }
 
@@ -53,7 +54,7 @@ public sealed class OpcPackageTests
     {
         using var package = OpcPackage.CreateEmpty();
         var data = "<root/>"u8.ToArray();
-        package.AddOrReplacePart("/doc/doc.xml", "application/xml", data);
+        package.AddOrReplacePart("/doc/doc.xml", OoxmlContentTypes.ApplicationXml, data);
         package.AddPackageRelationship("rId1", "http://example.com/rel", "doc/doc.xml");
 
         var bytes = package.Save();
@@ -69,8 +70,8 @@ public sealed class OpcPackageTests
     public void Relationships_RoundTrip()
     {
         using var package = OpcPackage.CreateEmpty();
-        package.AddOrReplacePart("/ppt/slide1.xml", "application/xml", []);
-        package.AddOrReplacePart("/ppt/slideLayout1.xml", "application/xml", []);
+        package.AddOrReplacePart("/ppt/slide1.xml", OoxmlContentTypes.ApplicationXml, []);
+        package.AddOrReplacePart("/ppt/slideLayout1.xml", OoxmlContentTypes.ApplicationXml, []);
         package.AddRelationship(
             "/ppt/slide1.xml",
             "rId1",

@@ -306,6 +306,57 @@ public sealed class PngDecoderTests
     }
 
     [Fact]
+    public void OneBitDepth_ReturnsNull()
+    {
+        // PNG decoder only supports 8-bit depth.
+        byte[] pixels = [0, 1, 0, 1];
+        // ReSharper disable once BadListLineBreaks
+        var png = BuildPng(
+            4,
+            1,
+            0,
+            1,
+            pixels,
+            bitDepth: 1
+        );
+        PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
+    }
+
+    [Fact]
+    public void FourBitDepth_ReturnsNull()
+    {
+        // PNG decoder only supports 8-bit depth.
+        byte[] pixels = [0, 15, 0, 15];
+        // ReSharper disable once BadListLineBreaks
+        var png = BuildPng(
+            4,
+            1,
+            0,
+            1,
+            pixels,
+            bitDepth: 4
+        );
+        PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
+    }
+
+    [Fact]
+    public void TwoBitDepth_ReturnsNull()
+    {
+        // PNG decoder only supports 8-bit depth.
+        byte[] pixels = [0, 1, 2, 3];
+        // ReSharper disable once BadListLineBreaks
+        var png = BuildPng(
+            4,
+            1,
+            0,
+            1,
+            pixels,
+            bitDepth: 2
+        );
+        PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
+    }
+
+    [Fact]
     public void Interlaced_ReturnsNull()
     {
         var png = BuildPng(
@@ -406,6 +457,7 @@ public sealed class PngDecoderTests
 
     // Builds a PNG where every scanline uses filter None; `scanlines` holds the raw
     // unfiltered channel bytes for all rows concatenated (length = width*height*channels).
+    // For bit depths < 8, `scanlines` is packed MSB-first per row.
     private static byte[] BuildPng(
         int width,
         int height,
@@ -417,7 +469,7 @@ public sealed class PngDecoderTests
         int interlace = 0
     )
     {
-        var idat = Deflate(BuildScanLines(width, height, channels, scanlines));
+        var idat = Deflate(BuildScanLines(width, height, channels, scanlines, bitDepth));
         return Assemble(
             width,
             height,
@@ -508,24 +560,55 @@ public sealed class PngDecoderTests
         int width,
         int height,
         int channels,
-        byte[] data
+        byte[] data,
+        int bitDepth = 8
     )
     {
         var stride = width * channels;
-        var raw = new byte[height * (stride + 1)];
-        for (var y = 0; y < height; y++)
+        if (bitDepth >= 8)
         {
-            raw[y * (stride + 1)] = 0; // filter None
-            Array.Copy(
-                data,
-                y * stride,
-                raw,
-                (y * (stride + 1)) + 1,
-                stride
-            );
+            var rows = new byte[height * (stride + 1)];
+            for (var y = 0; y < height; y++)
+            {
+                rows[y * (stride + 1)] = 0; // filter None
+                Array.Copy(
+                    data,
+                    y * stride,
+                    rows,
+                    (y * (stride + 1)) + 1,
+                    stride
+                );
+            }
+
+            return rows;
         }
 
-        return raw;
+        // Pack MSB-first: pixel 0 → highest bits of first byte.
+        var bitsPerRow = stride * bitDepth;
+        var bytesPerRow = (bitsPerRow + 7) / 8;
+        var packed = new byte[height * (bytesPerRow + 1)];
+        for (var y = 0; y < height; y++)
+        {
+            packed[y * (bytesPerRow + 1)] = 0; // filter None
+            var dst = (y * (bytesPerRow + 1)) + 1;
+            var bitOffset = 0;
+            for (var p = 0; p < stride; p++)
+            {
+                var val = data[p];
+                for (var b = bitDepth - 1; b >= 0; b--)
+                {
+                    if (((val >> b) & 1) != 0)
+                        packed[dst] |= (byte)(1 << (7 - bitOffset));
+                    bitOffset++;
+                    if (bitOffset != 8) continue;
+
+                    bitOffset = 0;
+                    dst++;
+                }
+            }
+        }
+
+        return packed;
     }
 
     private static byte[] Assemble(

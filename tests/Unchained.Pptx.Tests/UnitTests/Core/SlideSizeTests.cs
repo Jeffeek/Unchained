@@ -18,15 +18,15 @@ public sealed class SlideSizeTests
     [Fact]
     public void Widescreen_Is16By9Dimensions()
     {
-        SlideSize.Widescreen.Width.Value.ShouldBe(33_867_200);
-        SlideSize.Widescreen.Height.Value.ShouldBe(19_050_000);
+        SlideSize.Widescreen.Width.Value.ShouldBe(12_192_000);
+        SlideSize.Widescreen.Height.Value.ShouldBe(6_858_000);
     }
 
     [Fact]
     public void Standard_Is4By3Dimensions()
     {
-        SlideSize.Standard.Width.Value.ShouldBe(27_432_000);
-        SlideSize.Standard.Height.Value.ShouldBe(20_574_000);
+        SlideSize.Standard.Width.Value.ShouldBe(9_144_000);
+        SlideSize.Standard.Height.Value.ShouldBe(6_858_000);
     }
 
     [Fact]

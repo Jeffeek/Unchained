@@ -10,6 +10,9 @@ namespace Unchained.Pptx.Slides;
 /// </summary>
 public sealed class MasterSlide
 {
+    /// <summary>Default display name for a newly-created slide master.</summary>
+    public const string DefaultName = "Office Theme";
+
     /// <summary>Initialises a new master with an empty, owner-linked layout collection.</summary>
     public MasterSlide() => Layouts = new SlideLayoutCollection { Owner = this };
 

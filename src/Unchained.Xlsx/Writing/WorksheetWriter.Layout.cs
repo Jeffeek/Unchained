@@ -123,7 +123,7 @@ internal static partial class WorksheetWriter
         if (protection is not { IsProtected: true })
             return;
 
-        var element = new XElement(SmlNames.SheetProtection, new XAttribute("sheet", "1"));
+        var element = new XElement(SmlNames.SheetProtection, new XAttribute(SmlNames.AttrSheet, "1"));
         if (protection.PasswordHash != null) element.SetAttributeValue("password", protection.PasswordHash);
         if (!protection.AllowSelectLockedCells) element.SetAttributeValue("selectLockedCells", "1");
         if (!protection.AllowSelectUnlockedCells) element.SetAttributeValue("selectUnlockedCells", "1");

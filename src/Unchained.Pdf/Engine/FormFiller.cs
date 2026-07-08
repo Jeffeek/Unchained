@@ -29,11 +29,7 @@ public sealed class FormFiller : IFormFiller
     {
         if (values.Count == 0) return;
 
-        var adapter = document as PdfDocumentAdapter
-                      ?? throw new ArgumentException(
-                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document)
-                      );
+        var adapter = MutationHelper.Cast(nameof(document), document);
 
         var existing = adapter.Core.CollectObjects();
         var swaps = new Dictionary<int, PdfIndirectObject>();
@@ -59,20 +55,20 @@ public sealed class FormFiller : IFormFiller
                     // viewers show the correct state. ISO 32000-1 §12.7.4.2.3.
                 {
                     var stateName = ResolveButtonState(fieldDict, newValue, adapter.Core);
-                    entries["V"] = PdfName.Get(stateName);
-                    entries["AS"] = PdfName.Get(stateName);
+                    entries[PdfName.V.Value] = PdfName.Get(stateName);
+                    entries[PdfName.AS.Value] = PdfName.Get(stateName);
                 }
                 break;
 
                 case "Ch":
                     // Choice fields (combo/list): /V is a text string (or array for multi-
                     // select; single value handled here). §12.7.4.4.
-                    entries["V"] = PdfString.FromLatin1(newValue);
+                    entries[PdfName.V.Value] = PdfString.FromLatin1(newValue);
                 break;
 
                 default:
                     // Tx (text) and anything else: plain text string value.
-                    entries["V"] = PdfString.FromLatin1(newValue);
+                    entries[PdfName.V.Value] = PdfString.FromLatin1(newValue);
                 break;
             }
 
@@ -85,22 +81,16 @@ public sealed class FormFiller : IFormFiller
             .Select(o => swaps.GetValueOrDefault(o.ObjectNumber, o))
             .ToList();
 
-        SerializeAndReplace(adapter, finalObjects);
+        MutationHelper.SerializeAndReplace(adapter, finalObjects);
     }
 
     // ── Flatten ───────────────────────────────────────────────────────────────
 
     private static void Flatten(IPdfDocument document)
     {
-        var adapter = document as PdfDocumentAdapter
-                      ?? throw new ArgumentException(
-                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document)
-                      );
+        var adapter = MutationHelper.Cast(nameof(document), document);
 
-        var existing = adapter.Core.CollectObjects();
-        var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
-        var builder = new ObjectGraphBuilder(maxObjNum + 1);
+        var (existing, builder) = MutationHelper.CollectWithBuilder(adapter);
 
         var fieldMap = BuildFieldMap(existing, adapter.Core);
         var swaps = new Dictionary<int, PdfIndirectObject>();
@@ -113,7 +103,7 @@ public sealed class FormFiller : IFormFiller
                 continue;
 
             var ap = adapter.Core.ResolveDict(fieldDict[PdfName.AP]);
-            var normalAp = ap is not null ? ResolveStream(ap[PdfName.N], adapter.Core) : null;
+            var normalAp = ap is not null ? adapter.Core.ResolveStream(ap[PdfName.N]) : null;
             if (normalAp is null)
                 continue;
 
@@ -171,7 +161,7 @@ public sealed class FormFiller : IFormFiller
             .Concat(builder.Objects)
             .ToList();
 
-        SerializeAndReplace(adapter, finalObjects);
+        MutationHelper.SerializeAndReplace(adapter, finalObjects);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -229,28 +219,6 @@ public sealed class FormFiller : IFormFiller
         }
     }
 
-    private static void SerializeAndReplace(PdfDocumentAdapter adapter, IReadOnlyCollection<PdfIndirectObject> objects)
-    {
-        var totalMax = objects.Max(static o => o.ObjectNumber);
-        var rootRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
-        var trailer = new PdfDictionary(
-            new Dictionary<string, PdfObject>
-            {
-                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-                [PdfName.Root.Value] = rootRef
-            }
-        );
-        var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
-        adapter.ReplaceCore(newDoc.Core);
-    }
-
-    private static PdfStream? ResolveStream(PdfObject? obj, PdfDocumentCore core) => obj switch
-    {
-        PdfStream s => s,
-        PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-        _ => null
-    };
-
     // Resolves a field's type, following /Parent for fields that inherit /FT (§12.7.3.1).
     private static string? FieldType(PdfDictionary field, PdfDocumentCore core)
     {
@@ -260,7 +228,7 @@ public sealed class FormFiller : IFormFiller
             if (current.GetName("FT") is { } ft)
                 return ft;
 
-            current = core.ResolveDict(current["Parent"]);
+            current = core.ResolveDict(current[PdfName.Parent.Value]);
         }
 
         return null;

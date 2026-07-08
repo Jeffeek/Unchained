@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using Shouldly;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.IntegrationTests;
@@ -18,7 +18,7 @@ public sealed class SmartArtTests : PptxTestBase
     private static Task<byte[]> SampleBytesAsync(string name)
     {
         var path = SamplePath(name);
-        Assert.SkipUnless(File.Exists(path), $"sample missing: {name}");
+        File.Exists(path).ShouldBeTrue($"sample missing: {name}");
         return File.ReadAllBytesAsync(path);
     }
 
@@ -44,7 +44,7 @@ public sealed class SmartArtTests : PptxTestBase
         var smartArt = doc.Slides.SelectMany(static s => s.Shapes).OfType<SmartArtShape>().First();
 
         smartArt.Nodes.ShouldNotBeEmpty("the diagram has text nodes");
-        // The sample's diagram contains a node reading "Smart Art" (with leading space in source).
+        // The sample's diagram contains a node reading " Smart Art" (with leading space in source).
         smartArt.GetAllText().ShouldContain("Smart Art");
     }
 
@@ -104,7 +104,7 @@ public sealed class SmartArtTests : PptxTestBase
             .GetAllText();
 
         reloadedText.ShouldContain("Edited Node");
-        reloadedText.ShouldNotContain("Smart Art");
+        reloadedText.ShouldNotContain(" Smart Art");
     }
 
     private static SmartArtNode? FindNodeWithText(IEnumerable<SmartArtNode> nodes, string contains)

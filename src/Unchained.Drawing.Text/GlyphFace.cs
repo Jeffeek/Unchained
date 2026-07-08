@@ -53,6 +53,9 @@ internal sealed unsafe class GlyphFace : IDisposable
     /// </summary>
     public bool TryLoadGlyph(uint glyphIndex, bool hinting = false)
     {
+        // FT_LOAD_DEFAULT triggers auto-hinting (afmodule.c) which can fail on embedded
+        // subset fonts (their bytecode tables may be truncated/missing). We disable the
+        // auto-hinter so the native hinter (ttinterp.c) handles it directly.
         // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
         var flags = FT_LOAD_RENDER | (hinting ? FT_LOAD_DEFAULT : FT_LOAD_NO_HINTING);
         return FT_Load_Glyph(_face, glyphIndex, flags) == FT_Error.FT_Err_Ok;

@@ -76,11 +76,7 @@ internal static class Program
         Console.Write("Select (number, name, or 'a'): ");
 
         var input = Console.ReadLine()?.Trim() ?? string.Empty;
-        if (input is "a" or "all") return "all";
-        if (int.TryParse(input, out var n) && n >= 1 && n <= Demos.Length)
-            return Demos[n - 1].Key;
-
-        return input.ToLowerInvariant();
+        return input is "a" or "all" ? "all" : int.TryParse(input, out var n) && n >= 1 && n <= Demos.Length ? Demos[n - 1].Key : input.ToLowerInvariant();
     }
 
     private static async Task RunOneAsync((string Key, string Title, Func<Task> Run) demo)

@@ -51,6 +51,11 @@ internal sealed class PdfDocumentCore : IDisposable
     internal bool IgnoreCorruptedObjects { get; set; }
 
     /// <summary>
+    ///     The raw bytes of the loaded PDF file.
+    /// </summary>
+    internal ReadOnlyMemory<byte> Source => _source;
+
+    /// <summary>
     ///     <see langword="true" /> when the PDF was saved in linearized (web-optimized) form.
     ///     Detected by scanning the first 1024 bytes for the <c>/Linearized</c> keyword,
     ///     as specified in ISO 32000-1 Annex F §F.3.1.
@@ -105,7 +110,7 @@ internal sealed class PdfDocumentCore : IDisposable
     ///     if the document does not carry one.
     /// </summary>
     public PdfDictionary? Info =>
-        Trailer["Info"] is PdfIndirectReference infoRef
+        Trailer[PdfName.Info.Value] is PdfIndirectReference infoRef
             ? Resolve<PdfDictionary>(infoRef, "Info must be a dictionary.")
             : null;
 
@@ -117,7 +122,7 @@ internal sealed class PdfDocumentCore : IDisposable
     {
         get
         {
-            var pages = Resolve<PdfDictionary>(GetRefFromDict(Catalog, "Pages"), "Pages must be a dictionary.");
+            var pages = Resolve<PdfDictionary>(GetRefFromDict(Catalog, PdfName.Pages.Value), "Pages must be a dictionary.");
             return (int)(pages.Get<PdfInteger>(PdfName.Count)?.Value ?? 0);
         }
     }
@@ -230,7 +235,7 @@ internal sealed class PdfDocumentCore : IDisposable
             try
             {
                 var obj = tempCore.ResolveIndirect(objNum);
-                if (obj.Value is not PdfDictionary d || d.GetName("Type") != "Catalog")
+                if (obj.Value is not PdfDictionary d || d.GetName(PdfName.Type.Value) != "Catalog")
                     continue;
 
                 catalogRef = new PdfIndirectReference(objNum, 0);
@@ -477,18 +482,7 @@ internal sealed class PdfDocumentCore : IDisposable
 
         return t.Kind != PdfTokenKind.Integer
             ? throw new PdfException($"Expected integer in object stream header, got {t.Kind}.", t.Offset)
-            : ParseRawInteger(t.Raw.Span);
-    }
-
-    private static long ParseRawInteger(ReadOnlySpan<byte> span)
-    {
-        var negative = span[0] == (byte)'-';
-        var start = (negative || span[0] == (byte)'+') ? 1 : 0;
-        long value = 0;
-        for (var i = start; i < span.Length; i++)
-            value = (value * 10) + (span[i] - '0');
-
-        return negative ? -value : value;
+            : PdfNumericExtensions.ParseRawInteger(t.Raw.Span);
     }
 
     // ── Page access ───────────────────────────────────────────────────────────
@@ -507,7 +501,7 @@ internal sealed class PdfDocumentCore : IDisposable
         if (pageNumber < 1 || pageNumber > PageCount)
             throw new ArgumentOutOfRangeException(nameof(pageNumber), pageNumber, $"Page number must be between 1 and {PageCount}.");
 
-        var pagesRef = GetRefFromDict(Catalog, "Pages");
+        var pagesRef = GetRefFromDict(Catalog, PdfName.Pages.Value);
 
         return FindPageInTree(pagesRef, pageNumber, ref pageNumber);
     }
@@ -515,9 +509,9 @@ internal sealed class PdfDocumentCore : IDisposable
     private PdfDictionary FindPageInTree(PdfIndirectReference nodeRef, int target, ref int remaining)
     {
         var node = Resolve<PdfDictionary>(nodeRef, "Page tree node must be a dictionary.");
-        var type = node.GetName("Type");
+        var type = node.GetName(PdfName.Type.Value);
 
-        if (type == "Page")
+        if (type == PdfName.Page.Value)
         {
             remaining--;
             return remaining == 0
@@ -533,9 +527,9 @@ internal sealed class PdfDocumentCore : IDisposable
                 throw new PdfException("Kids entry is not an indirect reference.");
 
             var kidNode = Resolve<PdfDictionary>(kidRef, "Kid must be a dictionary.");
-            var kidType = kidNode.GetName("Type");
+            var kidType = kidNode.GetName(PdfName.Type.Value);
 
-            if (kidType == "Page")
+            if (kidType == PdfName.Page.Value)
             {
                 remaining--;
                 if (remaining == 0) return kidNode;

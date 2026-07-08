@@ -292,6 +292,9 @@ internal static class PmlNames
     /// <summary><c>&lt;p:cSld&gt;</c> — common slide data.</summary>
     public static readonly XName CommonSlideData = Pml + "cSld";
 
+    /// <summary><c>&lt;p:childTnLst&gt;</c> — child timing elements.</summary>
+    public static readonly XName ChildTimingElements = Pml + "childTnLst";
+
     /// <summary><c>&lt;p:spTree&gt;</c> — shape tree (container for all shapes on a slide).</summary>
     public static readonly XName ShapeTree = Pml + "spTree";
 
@@ -346,8 +349,14 @@ internal static class PmlNames
     /// <summary><c>&lt;p:timing&gt;</c> — animation timing.</summary>
     public static readonly XName Timing = Pml + "timing";
 
+    /// <summary><c>&lt;p:cTn&gt;</c> — animation timing container.</summary>
+    public static readonly XName AnimationContainer = Pml + "cTn";
+
     /// <summary><c>&lt;p:clrMapOvr&gt;</c> — colour map override.</summary>
     public static readonly XName ColorMapOverride = Pml + "clrMapOvr";
+
+    /// <summary><c>&lt;p:extLst&gt;</c> — extended content (future-proofing container).</summary>
+    public static readonly XName Extended = Pml + "extLst";
 
     /// <summary><c>&lt;p:sldMaster&gt;</c> — root element of a slide master part.</summary>
     public static readonly XName SlideMaster = Pml + "sldMaster";

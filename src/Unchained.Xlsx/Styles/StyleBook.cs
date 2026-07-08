@@ -193,10 +193,7 @@ public sealed class StyleBook
     {
         var id = GetCellXf(styleIndex).NumberFormatId;
         var builtIn = BuiltInNumberFormats.GetCode(id);
-        if (builtIn != null)
-            return builtIn;
-
-        return _numberFormats.FirstOrDefault(f => f.FormatId == id)?.FormatCode ?? "General";
+        return builtIn ?? _numberFormats.FirstOrDefault(f => f.FormatId == id)?.FormatCode ?? "General";
     }
 
     /// <summary>Returns the named style with the given name, or <see langword="null" /> if none.</summary>

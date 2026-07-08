@@ -1,0 +1,98 @@
+@using Unchained.Xlsx.Drawings
+@using Unchained.Xlsx.Extensions.Highcharts
+@using Unchained.Xlsx.Extensions.Highcharts.Models
+@inject IJSRuntime Js
+
+<MudDialog Style="min-width:640px; max-width:900px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.BarChart" Class="mr-2" Style="vertical-align:middle;"/>
+            Visualize Chart — @ChartDrawing.Chart.Title
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        @if (ChartDrawing.Chart.Data.Series.Count == 0)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Warning" Class="pa-2">No data to visualize.</MudText>
+        }
+        else
+        {
+            <div class="hc-dialog">
+                <div class="hc-dialog-toolbar">
+                    <MudText Typo="Typo.caption" Class="hc-dialog-toolbar-title">
+                        @ChartDrawing.Chart.Data.Series.Count series · @ChartDrawing.Chart.Data.Categories.Count categories · <code>@_baseType</code>
+                    </MudText>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="CopyJson" StartIcon="@Icons.Material.Outlined.ContentCopy">
+                        Copy JSON
+                    </MudButton>
+                </div>
+                <div class="hc-dialog-chart" id="hc-chart-container" @ref="@_chartContainerRef"></div>
+            </div>
+        }
+
+        @if (_copyFeedback != null)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Success" Class="px-2 mt-2">Copied to clipboard!</MudText>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public ChartDrawing ChartDrawing { get; set; } = null!;
+
+    private HighchartsOptions _options = null!;
+    private string _json = string.Empty;
+    private string _baseType = string.Empty;
+    @* ReSharper disable once NotAccessedField.Local *@
+    private ElementReference _chartContainerRef;
+    private bool _mounted;
+    private string? _copyFeedback;
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _mounted) return Task.CompletedTask;
+
+        _mounted = true;
+        return RenderChartAsync();
+    }
+
+    protected override void OnInitialized()
+    {
+        var converter = new HighchartsConverter();
+        _options = converter.Convert(ChartDrawing);
+        _baseType = _options.Chart.Type;
+        _json = _options.ToJson();
+    }
+
+    private async Task RenderChartAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("__hcRender", "hc-chart-container", _json);
+        }
+        catch
+        {
+            // Highcharts JS not loaded — the JS hook renders a JSON fallback itself.
+        }
+    }
+
+    private async Task CopyJson()
+    {
+        await Js.InvokeVoidAsync("unchainedStudio.copyToClipboard", _json);
+        _copyFeedback = "Copied!";
+        StateHasChanged();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

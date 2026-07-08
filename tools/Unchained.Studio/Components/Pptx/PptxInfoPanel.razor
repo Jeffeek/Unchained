@@ -37,12 +37,29 @@
             }
         </div>
     }
+
+    @if (FontWarnings is { Count: > 0 })
+    {
+        <MudDivider Class="my-2"/>
+        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-warning-darken);">
+            ⚠ Some fonts may fall back to substitutions:
+        </MudText>
+        @foreach (var font in FontWarnings)
+        {
+            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-warning-darken);">
+              • @font
+            </MudText>
+        }
+    }
 </MudPaper>
 
 @code {
 
     [Parameter]
     public PresentationDocument Document { get; set; } = null!;
+
+    [Parameter]
+    public IReadOnlyList<string>? FontWarnings { get; set; }
 
     private readonly List<(string Label, string Value, string Icon)> _stats = [];
     private readonly List<(string Label, string Value)> _props = [];

@@ -18,7 +18,7 @@ namespace Unchained.Pdf.Engine;
 /// </summary>
 public sealed class PageOrganizer : IPageOrganizer
 {
-    private static readonly string[] InheritableKeys = ["MediaBox", "CropBox", "Resources", "Rotate"];
+    private static readonly string[] InheritableKeys = [PdfName.MediaBox.Value, "CropBox", "Resources", "Rotate"];
 
     /// <inheritdoc />
     public Task RotatePagesAsync(
@@ -87,7 +87,7 @@ public sealed class PageOrganizer : IPageOrganizer
                 var next = Normalize(relative ? current + degrees : degrees);
                 var entries = new Dictionary<string, PdfObject>(dict.Entries)
                 {
-                    ["Rotate"] = new PdfInteger(next)
+                    [PdfName.Rotate.Value] = new PdfInteger(next)
                 };
                 dict = new PdfDictionary(entries);
             }
@@ -306,8 +306,9 @@ public sealed class PageOrganizer : IPageOrganizer
 
     // Rebuilds the document in place with a flat /Pages tree containing exactly the supplied
     // ordered page leaves. Page-leaf object numbers are preserved; interior page-tree nodes
-    // are dropped; the catalog keeps all its entries except /Pages, which points at the new
-    // flat root. extraObjects are additional objects to include (e.g. remapped source pages).
+    // are dropped; the catalog is emitted with only /Pages (other entries like /Outlines are
+    // dropped to avoid referencing objects removed with deleted pages). extraObjects are
+    // additional objects to include (e.g. remapped source pages).
     private static void RebuildFlatTree(
         PdfDocumentAdapter adapter,
         IReadOnlyCollection<(int ObjNum, PdfDictionary Dict)> ordered,
@@ -315,7 +316,6 @@ public sealed class PageOrganizer : IPageOrganizer
     )
     {
         var existing = adapter.Core.CollectObjects();
-        var catalog = adapter.Core.Catalog;
         var catalogNum = (adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference
                           ?? throw new PdfException("Trailer missing /Root.")).ObjectNumber;
         var pageTreeNums = PageTreeNodeNumbers(adapter.Core);
@@ -327,21 +327,33 @@ public sealed class PageOrganizer : IPageOrganizer
         var pagesRootNum = combinedMax + 1;
         var pagesRef = new PdfIndirectReference(pagesRootNum, 0);
 
+        // Re-emit ordered page leaves with /Parent set to the new flat root. Overriding
+        // /Parent (rather than keeping the old page-tree reference) means the reachability
+        // walk below cannot climb back up to the old tree and reach deleted-page leaves.
+        var emittedLeaves = ordered
+            .Select(p => new PdfIndirectObject(p.ObjNum, 0, WithEntry(p.Dict, PdfName.Parent.Value, pagesRef)))
+            .ToList();
+
+        // Compute the set of objects reachable from the kept page leaves. Leaves reference
+        // their resources (fonts, images, content streams) by indirect object number; walking
+        // from them discovers everything a kept page needs. Objects referenced only by deleted
+        // pages are unreachable and get pruned here — this is what shrinks the output file.
+        var reachable = CollectReachableFromLeaves(emittedLeaves, adapter.Core);
+
+        // Keep existing objects that are not page-tree nodes, not the ordered leaves
+        // (re-emitted below), not the catalog (re-emitted below), and still reachable
+        // from a surviving page.
         var objects = (from o in existing
                        where !pageTreeNums.Contains(o.ObjectNumber)
                        where !orderedNums.Contains(o.ObjectNumber)
                        where o.ObjectNumber != catalogNum
+                       where reachable.Contains(o.ObjectNumber)
                        select o).ToList();
-
-        // Keep all existing objects that are not page-tree nodes, not the ordered leaves
-        // (re-emitted below), and not the catalog (re-emitted below).
 
         if (extraObjects is not null)
             objects.AddRange(extraObjects.Where(o => !orderedNums.Contains(o.ObjectNumber)));
 
-        // Re-emit ordered page leaves with /Parent set to the new flat root.
-        foreach (var (objNum, dict) in ordered)
-            objects.Add(new PdfIndirectObject(objNum, 0, WithEntry(dict, PdfName.Parent.Value, pagesRef)));
+        objects.AddRange(emittedLeaves);
 
         // New flat /Pages root.
         objects.Add(
@@ -359,8 +371,15 @@ public sealed class PageOrganizer : IPageOrganizer
             )
         );
 
-        // Re-emit the catalog with /Pages pointing at the new root, keeping all other entries.
-        objects.Add(new PdfIndirectObject(catalogNum, 0, WithEntry(catalog, PdfName.Pages.Value, pagesRef)));
+        // Emit the catalog with only /Pages — carrying over other entries (e.g. /Outlines,
+        // /Names) risks referencing objects that were dropped with deleted pages.
+        var catalogDict = new PdfDictionary(
+            new Dictionary<string, PdfObject>
+            {
+                [PdfName.Pages.Value] = pagesRef
+            }
+        );
+        objects.Add(new PdfIndirectObject(catalogNum, 0, catalogDict));
 
         var totalMax = objects.Max(static o => o.ObjectNumber);
         var rootRef = new PdfIndirectReference(catalogNum, 0);
@@ -373,6 +392,64 @@ public sealed class PageOrganizer : IPageOrganizer
         );
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
         adapter.ReplaceCore(newDoc.Core);
+    }
+
+    // ── Reachability ──────────────────────────────────────────────────────────────
+
+    // Walks the object graph starting from the given page leaves and returns every object
+    // number transitively referenced. References are followed by object number (no inlining),
+    // so the output stays byte-for-byte identical to the input except for dropped objects.
+    // The leaves themselves are included. Objects free in the old xref (already dropped) are
+    // skipped defensively.
+    private static HashSet<int> CollectReachableFromLeaves(
+        IEnumerable<PdfIndirectObject> leaves,
+        PdfDocumentCore core
+    )
+    {
+        var reachable = new HashSet<int>();
+        var queue = new Queue<PdfObject>();
+
+        foreach (var leaf in leaves)
+        {
+            reachable.Add(leaf.ObjectNumber);
+            queue.Enqueue(leaf.Value);
+        }
+
+        while (queue.Count > 0)
+        {
+            var obj = queue.Dequeue();
+            switch (obj)
+            {
+                case PdfIndirectReference r:
+                    if (reachable.Add(r.ObjectNumber))
+                    {
+                        try
+                        {
+                            queue.Enqueue(core.ResolveIndirect(r.ObjectNumber).Value);
+                        }
+                        catch (PdfException)
+                        {
+                            // Free in the old xref (belonged to a deleted page) — nothing to walk.
+                        }
+                    }
+
+                break;
+                case PdfArray arr:
+                    foreach (var el in arr.Elements)
+                        queue.Enqueue(el);
+                break;
+                case PdfDictionary dict:
+                    foreach (var entry in dict.Entries.Values)
+                        queue.Enqueue(entry);
+                break;
+                case PdfStream stream:
+                    foreach (var entry in stream.Dictionary.Entries.Values)
+                        queue.Enqueue(entry);
+                break;
+            }
+        }
+
+        return reachable;
     }
 
     // ── Page-tree traversal helpers ───────────────────────────────────────────────
@@ -406,7 +483,7 @@ public sealed class PageOrganizer : IPageOrganizer
         if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node) return;
 
         var type = node.GetName(PdfName.Type.Value);
-        if (type == "Page")
+        if (type == PdfName.Page.Value)
         {
             leaves.Add(nodeRef.ObjectNumber);
             return;
@@ -505,7 +582,7 @@ public sealed class PageOrganizer : IPageOrganizer
     }
 
     private static bool IsStructural(PdfIndirectObject obj) =>
-        obj.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) is "Catalog" or "Pages";
+        obj.Value is PdfDictionary d && (d.GetName(PdfName.Type.Value) == PdfName.Catalog.Value || d.GetName(PdfName.Type.Value) == PdfName.Pages.Value);
 
     private static PdfIndirectObject CopyStreamData(PdfIndirectObject obj) =>
         obj.Value is not PdfStream stream

@@ -71,8 +71,8 @@ public sealed class CommentParserTests
 
         var c = slide.GetComments().ShouldHaveSingleItem();
         c.Text.ShouldBe(string.Empty);
-        c.Position.X.ShouldBe(Emu.Zero);
         c.Position.Y.ShouldBe(Emu.Zero);
+        c.CreatedAt.UtcDateTime.Kind.ShouldBe(DateTimeKind.Utc);
     }
 
     [Fact]

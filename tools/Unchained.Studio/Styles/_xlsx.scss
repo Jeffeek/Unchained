@@ -1,0 +1,560 @@
+@use 'variables' as *;
+
+// ── XLSX: sheet tabs, grid, drawings, formula bar, charts, context menu ──
+
+// ── Sheet tab bar ─────────────────────────────────────────────────────────
+.sheet-tabbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    overflow-x: auto;
+    flex: 0 0 auto;
+    background: #16181d;
+    // Subtle top accent
+    border-top: 1px solid rgba($accent, 0.1);
+}
+
+.sheet-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 12px;
+    border-radius: 0;
+    font-size: 0.8rem;
+    font-family: $font-mono;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    border-top: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.02);
+    color: rgba(255, 255, 255, 0.6);
+    user-select: none;
+    transition: background 0.1s, color 0.1s;
+
+    &:hover { background: rgba($accent, 0.08); color: rgba(255, 255, 255, 0.8); }
+
+    &--active {
+        background: #121418;
+        border-color: rgba(255, 255, 255, 0.06);
+        border-top-color: $accent;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    &--hidden .sheet-tab-label { opacity: 0.5; font-style: italic; }
+
+    &-close {
+        opacity: 0.45;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 0 2px;
+
+        &:hover { opacity: 1; color: var(--mud-palette-error); }
+    }
+}
+
+// ── Live grid ─────────────────────────────────────────────────────────────
+.sheet-grid-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.sheet-grid-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex: 0 0 auto;
+    background: #16181d;
+}
+
+.sheet-grid-scroll {
+    flex: 1 1 auto;
+    overflow: auto;
+    min-height: 0;
+    position: relative;
+    background: #121418;
+}
+
+// ── Drawing overlay (images & charts float above the cell grid) ────────────
+.sg-drawing {
+    position: absolute;
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    background: #121418;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: 0;
+
+    &-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+    &-chart {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 0.8rem;
+        opacity: 0.85;
+        background: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba($accent, 0.04) 8px, rgba($accent, 0.04) 16px);
+    }
+}
+
+.sheet-grid {
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    table-layout: fixed;
+    font-family: "Consolas", "Roboto Mono", monospace;
+
+    th,
+    td {
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        height: 22px;
+        padding: 0 4px;
+        background: #121418;
+    }
+
+    .sg-corner {
+        position: sticky;
+        top: 0;
+        left: 0;
+        z-index: 3;
+        background: #16181d;
+        width: 44px;
+        min-width: 44px;
+    }
+
+    .sg-col-head {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #16181d;
+        font-weight: 600;
+        text-align: center;
+        min-width: 90px;
+        width: 90px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.75rem;
+        font-family: $font-mono;
+    }
+
+    .sg-row-head {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: #16181d;
+        font-weight: 600;
+        text-align: center;
+        width: 44px;
+        min-width: 44px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.75rem;
+        font-family: $font-mono;
+    }
+
+    .sg-cell {
+        padding: 1px 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: cell;
+        max-width: 220px;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .sg-num,
+    .sg-formula { text-align: right; font-variant-numeric: tabular-nums; }
+    .sg-bool { text-align: center; }
+    .sg-err { color: var(--mud-palette-error); text-align: center; }
+    .sg-formula { color: $accent; }
+
+    .sg-selected {
+        outline: 1px solid $accent;
+        outline-offset: -1px;
+        background: rgba($accent, 0.08);
+        z-index: 1;
+        position: relative;
+    }
+
+    .sg-selected {
+        outline: 1px solid $accent;
+        outline-offset: -1px;
+        background: rgba($accent, 0.06);
+        position: relative;
+        z-index: 1;
+    }
+
+    .sg-input {
+        width: 100%;
+        border: none;
+        outline: none;
+        font: inherit;
+        background: transparent;
+        color: inherit;
+        padding: 0;
+    }
+
+    // Range selection + header affordances
+    .sg-col-head,
+    .sg-row-head,
+    .sg-corner { cursor: pointer; }
+    .sg-col-head:hover,
+    .sg-row-head:hover { background: rgba($accent, 0.18); }
+
+    .sg-active {
+        outline: 2px solid $accent;
+        outline-offset: -2px;
+        background: rgba($accent, 0.06);
+        position: relative;
+        z-index: 1;
+    }
+
+    .sg-merged { font-style: italic; color: rgba(255, 255, 255, 0.4); }
+}
+
+// ── Formatting toolbar ────────────────────────────────────────────────────
+.xlsx-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex: 0 0 auto;
+    background: #16181d;
+    min-height: 28px;
+
+    .mud-button-root {
+        min-width: 0 !important;
+        padding: 0 6px !important;
+        height: 26px !important;
+        text-transform: none !important;
+        font-family: $font-mono !important;
+        font-size: 0.72rem !important;
+        border-radius: 0 !important;
+        color: rgba(255, 255, 255, 0.5) !important;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.06) !important;
+            color: #fff !important;
+        }
+
+        .mud-button-start-icon {
+            margin-right: 3px !important;
+            opacity: 0.5;
+            font-size: 1rem;
+        }
+    }
+
+    .mud-divider {
+        height: 16px;
+        margin: 0 4px;
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+}
+
+// ── Grid: resize handles ──────────────────────────────────────────────────
+.sheet-grid {
+    .sg-col-head { position: relative; }
+    .sg-row-head { position: relative; }
+
+    .sg-col-resize {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 5px;
+        height: 100%;
+        cursor: col-resize;
+        user-select: none;
+    }
+
+    .sg-row-resize {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 5px;
+        cursor: row-resize;
+        user-select: none;
+    }
+
+    .sg-col-resize:hover,
+    .sg-row-resize:hover { background: $accent; opacity: 0.5; }
+}
+
+// ── Chart view ────────────────────────────────────────────────────────────
+.sg-chart-view {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 100px;
+    min-width: 150px;
+    overflow: hidden;
+}
+
+.sg-chart-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 2px 4px 0;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+// ── Chart edit affordance ─────────────────────────────────────────────────
+.sg-drawing--chart {
+    pointer-events: auto;
+
+    &:hover .sg-drawing-edit { opacity: 1; }
+}
+
+.sg-drawing-edit {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: auto;
+    background: $accent;
+    border-radius: 0;
+    padding: 1px 4px;
+    font-size: 0.7rem;
+    color: #fff;
+}
+
+// ── Formula bar ───────────────────────────────────────────────────────────
+.formula-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: #16181d;
+    flex-shrink: 0;
+    // Subtle left accent — like a terminal prompt
+    border-left: 2px solid rgba($accent, 0.2);
+
+    &-ref {
+        min-width: 56px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.4);
+        text-align: center;
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-family: $font-mono;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 2px 4px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        letter-spacing: 0.04em;
+    }
+
+    &-input {
+        flex: 1;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 0;
+        padding: 2px 6px;
+        font-size: 0.75rem;
+        font-family: $font-mono;
+        background: rgba(255, 255, 255, 0.02);
+        color: rgba(255, 255, 255, 0.85);
+        outline: none;
+        min-width: 0;
+        // Terminal-like caret color
+        caret-color: $accent;
+
+        &:focus {
+            border-color: rgba($accent, 0.3);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        &--error {
+            border-color: var(--mud-palette-error);
+            color: var(--mud-palette-error);
+        }
+    }
+
+    &-preview {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.68rem;
+        color: rgba(255, 255, 255, 0.3);
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-family: $font-mono;
+
+        &--error { color: var(--mud-palette-error); }
+    }
+}
+
+// ── Formula helper popover ────────────────────────────────────────────────
+.fx-popover {
+    width: 420px;
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #16181d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 2px solid rgba($accent, 0.3);
+}
+
+.fx-search {
+    margin: 8px 12px 0;
+}
+
+.fx-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+    min-height: 40px;
+}
+
+.fx-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.08s;
+    border-left: 3px solid transparent;
+    color: rgba(255, 255, 255, 0.85);
+
+    &:hover {
+        background: rgba($accent, 0.08);
+        border-left-color: $accent;
+    }
+
+    &-head {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+    }
+}
+
+.fx-name {
+    font-weight: 600;
+    font-size: 0.82rem;
+    font-family: $font-mono;
+    color: $accent;
+}
+
+.fx-sig {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-family: $font-mono;
+}
+
+.fx-cat {
+    font-size: 0.6rem;
+    padding: 1px 5px;
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    margin-left: auto;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: $font-mono;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.fx-desc {
+    font-size: 0.72rem;
+    opacity: 0.6;
+    margin-top: 2px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.fx-empty {
+    padding: 16px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.78rem;
+    font-family: $font-mono;
+}
+
+// ── Chart suggestions ─────────────────────────────────────────────────────
+.chart-suggestions {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: #16181d;
+    flex-shrink: 0;
+}
+
+.chart-tip {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.45);
+    background: #121418;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+// ── Highcharts visualize dialog — see _dialogs.scss for `.hc-dialog` styling
+.sheet-grid-scroll { user-select: none; }
+
+// ── Drawing selection ─────────────────────────────────────────────────────
+.sg-drawing--selected {
+    border: 2px solid $accent !important;
+    outline: none;
+    box-shadow: 0 0 0 1px rgba($accent, 0.3);
+}
+
+// 4 corner resize handles on a selected drawing.
+.sg-drawing-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #16181d;
+    border: 2px solid $accent;
+    border-radius: 0;
+    z-index: 10;
+    pointer-events: auto;
+
+    &--tl { top: -5px; left: -5px; cursor: nwse-resize; }
+    &--tr { top: -5px; right: -5px; cursor: nesw-resize; }
+    &--bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+    &--br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+}
+
+// ── Context menu ──────────────────────────────────────────────────────────
+.sg-context-menu {
+    position: fixed;
+    z-index: 9999;
+    min-width: 180px;
+    background: #16181d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+    padding: 4px 0;
+    font-family: $font-mono;
+    // Top accent bar
+    border-top: 2px solid rgba($accent, 0.3);
+
+    &-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 5px 16px;
+        font-size: 0.78rem;
+        cursor: pointer;
+        color: rgba(255, 255, 255, 0.7);
+        transition: background 0.08s, color 0.08s;
+
+        &:hover {
+            background: rgba($accent, 0.1);
+            color: #fff;
+        }
+    }
+
+    &-separator {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.06);
+        margin: 3px 0;
+    }
+}

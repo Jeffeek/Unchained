@@ -5,6 +5,8 @@
 @using Unchained.Xlsx.Worksheets
 @using ChartType = Unchained.Ooxml.Charts.ChartType
 
+@inject IDialogService Dialogs
+
 <MudDialog Style="min-width:520px; max-width:680px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -109,6 +111,9 @@
             Delete chart
         </MudButton>
         <MudSpacer/>
+        <MudButton OnClick="Visualize" Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Insights">
+            Visualize
+        </MudButton>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
         <MudButton OnClick="Apply" Color="Color.Primary" Variant="Variant.Filled">Apply</MudButton>
     </DialogActions>
@@ -158,6 +163,7 @@
         _valueMin = _model.ValueAxis.Minimum;
         _valueMax = _model.ValueAxis.Maximum;
         _valueGridlines = _model.ValueAxis.HasMajorGridlines;
+        _dataRange = _model.SourceRange ?? string.Empty;
     }
 
     private string SeriesColor(int index)
@@ -205,6 +211,7 @@
         _model.ValueAxis.Minimum = _valueMin;
         _model.ValueAxis.Maximum = _valueMax;
         _model.ValueAxis.HasMajorGridlines = _valueGridlines;
+        _model.SourceRange = CellRange.TryFromA1(_dataRange, out _) ? _dataRange : null;
 
         await OnChanged.InvokeAsync();
         MudDialog.Close();
@@ -215,6 +222,23 @@
         Sheet.Drawings.Remove(Chart);
         await OnChanged.InvokeAsync();
         MudDialog.Close();
+    }
+
+    private async Task Visualize()
+    {
+        // Reflect in-flight edits on the model so the preview matches the form.
+        _model.Title = _title;
+        _model.HasTitle = _hasTitle;
+        _model.Type = _type;
+        _model.Legend.IsVisible = _legendVisible;
+        _model.Legend.Position = _legendPosition;
+
+        var parameters = new DialogParameters
+        {
+            { nameof(ChartVisualizeDialog.ChartDrawing), Chart }
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+        await Dialogs.ShowAsync<ChartVisualizeDialog>("Visualize Chart", parameters, options);
     }
 
     private void Cancel() => MudDialog.Cancel();

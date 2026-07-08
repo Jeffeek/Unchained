@@ -131,7 +131,7 @@ internal static class ThemeWriter
         fillStyleLst.Add(
             new XElement(
                 DmlNames.SolidFill,
-                new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr"))
+                new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, DmlNames.SchemeColorPhClr))
             )
         );
         fillStyleLst.Add(new XElement(DmlNames.GradientFill));
@@ -145,7 +145,7 @@ internal static class ThemeWriter
                 new XAttribute(DmlNames.AttributeLineWidth, 6350),
                 new XElement(
                     DmlNames.SolidFill,
-                    new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr"))
+                    new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, DmlNames.SchemeColorPhClr))
                 )
             )
         );
@@ -163,7 +163,7 @@ internal static class ThemeWriter
         bgFillStyleLst.Add(
             new XElement(
                 DmlNames.SolidFill,
-                new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "phClr"))
+                new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, DmlNames.SchemeColorPhClr))
             )
         );
         bgFillStyleLst.Add(new XElement(DmlNames.GradientFill));

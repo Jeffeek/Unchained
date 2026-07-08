@@ -2,7 +2,7 @@ using Shouldly;
 using Unchained.Ooxml.Media;
 using Unchained.Pptx.Media;
 using Unchained.Pptx.Shapes;
-using Unchained.Pptx.Tests.Helpers;
+using Unchained.Pptx.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pptx.Tests.UnitTests.Media;

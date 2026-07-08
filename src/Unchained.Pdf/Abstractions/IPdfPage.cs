@@ -174,4 +174,10 @@ public interface IPdfPage
     /// </summary>
     IReadOnlyDictionary<string, TilingPatternInfo> GetTilingPatterns() =>
         new Dictionary<string, TilingPatternInfo>();
+
+    /// <summary>
+    ///     The document this page belongs to, or <see langword="null"/> for virtual pages
+    ///     (e.g. form XObjects, soft-mask forms).
+    /// </summary>
+    IPdfDocument Document { get; }
 }

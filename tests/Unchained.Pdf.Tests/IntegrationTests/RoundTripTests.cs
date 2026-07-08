@@ -1,7 +1,7 @@
 using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests;
@@ -73,8 +73,8 @@ public sealed class RoundTripTests : IDisposable
     public async Task Load_PageIndexer_OutOfRange_Throws()
     {
         await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
-        Should.Throw<Exception>(() => _ = doc.Pages[0]);
-        Should.Throw<Exception>(() => _ = doc.Pages[2]);
+        Should.Throw<ArgumentOutOfRangeException>(() => _ = doc.Pages[0]);
+        Should.Throw<ArgumentOutOfRangeException>(() => _ = doc.Pages[2]);
     }
 
     // ── Metadata ──────────────────────────────────────────────────────────────
@@ -109,6 +109,20 @@ public sealed class RoundTripTests : IDisposable
 
         await using var reloaded = await _processor.LoadAsync(new MemoryStream(saved.ToArray()), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task SaveAndReload_PreservesTextContent()
+    {
+        await using var original = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
+        var textBefore = original.Pages[1].ExtractText();
+
+        var saved = new MemoryStream();
+        await _processor.SaveAsync(original, saved, ct: TestContext.Current.CancellationToken);
+
+        await using var reloaded = await _processor.LoadAsync(new MemoryStream(saved.ToArray()), TestContext.Current.CancellationToken);
+        var textAfter = reloaded.Pages[1].ExtractText();
+        textAfter.ShouldBe(textBefore);
     }
 
     [Fact]

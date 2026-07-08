@@ -297,7 +297,28 @@ public sealed class RasterBufferTests
     public void SetPixel_MultiplyBlend_DarkensBackground()
     {
         var buffer = new RasterBuffer(2, 2);
+        buffer.Clear(200, 150, 100);
+        // ReSharper disable BadListLineBreaks
+        buffer.SetPixel(
+            0,
+            0,
+            100,
+            200,
+            50,
+            255,
+            "Multiply"
+        );
+        // ReSharper restore BadListLineBreaks
+        // Multiply: (200*100/255, 150*200/255, 100*50/255) = (78, 117, 19).
+        buffer.GetPixelRgb(0, 0).ShouldBe(((byte)78, (byte)117, (byte)19));
+    }
+
+    [Fact]
+    public void SetPixel_MultiplyBlend_ByBlack_Darkens()
+    {
+        var buffer = new RasterBuffer(2, 2);
         buffer.Clear(128, 128, 128);
+        // ReSharper disable BadListLineBreaks
         buffer.SetPixel(
             0,
             0,
@@ -307,6 +328,7 @@ public sealed class RasterBufferTests
             255,
             "Multiply"
         );
+        // ReSharper restore BadListLineBreaks
         // Multiply by black → black.
         buffer.GetPixelRgb(0, 0).ShouldBe(((byte)0, (byte)0, (byte)0));
     }
@@ -335,6 +357,27 @@ public sealed class RasterBufferTests
     {
         var buffer = new RasterBuffer(2, 2);
         buffer.Clear(100, 100, 100);
+        // ReSharper disable BadListLineBreaks
+        buffer.SetPixel(
+            0,
+            0,
+            200,
+            150,
+            50,
+            255,
+            "Screen"
+        );
+        // ReSharper restore BadListLineBreaks
+        // Screen: (100+200-100*200/255, ...) = (222, 192, 131).
+        buffer.GetPixelRgb(0, 0).ShouldBe(((byte)222, (byte)192, (byte)131));
+    }
+
+    [Fact]
+    public void SetPixel_ScreenBlend_WithWhite_LeavesWhite()
+    {
+        var buffer = new RasterBuffer(2, 2);
+        buffer.Clear(100, 100, 100);
+        // ReSharper disable BadListLineBreaks
         buffer.SetPixel(
             0,
             0,
@@ -344,6 +387,7 @@ public sealed class RasterBufferTests
             255,
             "Screen"
         );
+        // ReSharper restore BadListLineBreaks
         // Screen with white → white.
         buffer.GetPixelRgb(0, 0).ShouldBe(((byte)255, (byte)255, (byte)255));
     }
@@ -362,13 +406,13 @@ public sealed class RasterBufferTests
         InlineData("Hue"),
         InlineData("Saturation"),
         InlineData("Color"),
-        InlineData("Luminosity"),
-        InlineData("UnknownModeName")
+        InlineData("Luminosity")
     ]
-    public void SetPixel_AllBlendModes_DoNotThrowAndWriteOpaque(string mode)
+    public void SetPixel_KnownBlendMode_WritesDefinedColor(string mode)
     {
         var buffer = new RasterBuffer(2, 2);
         buffer.Clear(90, 140, 200);
+        // ReSharper disable BadListLineBreaks
         buffer.SetPixel(
             0,
             0,
@@ -378,8 +422,29 @@ public sealed class RasterBufferTests
             255,
             mode
         );
-        // Every mode writes a defined colour; just assert it ran and the pixel changed/known.
-        Should.NotThrow(() => buffer.GetPixelRgb(0, 0));
+        // ReSharper restore BadListLineBreaks
+        // Every mode writes a defined colour that differs from the original.
+        buffer.GetPixelRgb(0, 0).ShouldNotBe(((byte)90, (byte)140, (byte)200));
+    }
+
+    [Fact]
+    public void SetPixel_UnknownModeName_FallsBackToNormal()
+    {
+        var buffer = new RasterBuffer(2, 2);
+        buffer.Clear(200, 100, 50);
+        // ReSharper disable BadListLineBreaks
+        buffer.SetPixel(
+            0,
+            0,
+            100,
+            200,
+            255,
+            255,
+            "UnknownModeName"
+        );
+        // ReSharper restore BadListLineBreaks
+        // Normal compositing: (200*255 + 100*255)/255 = 100, etc.
+        buffer.GetPixelRgb(0, 0).ShouldBe(((byte)100, (byte)200, (byte)255));
     }
 
     [Fact]
@@ -440,18 +505,21 @@ public sealed class RasterBufferTests
     {
         var buffer = new RasterBuffer(4, 4);
         buffer.Clear(200, 200, 200);
+        // ReSharper disable BadListLineBreaks
         buffer.FillRect(
             0,
             0,
             4,
             4,
-            0,
-            0,
-            0,
+            100,
+            100,
+            100,
             255,
             "Multiply"
         );
-        buffer.GetPixelRgb(1, 1).ShouldBe(((byte)0, (byte)0, (byte)0));
+        // ReSharper restore BadListLineBreaks
+        // Multiply: (200*100/255, ...) ≈ (78, 78, 78).
+        buffer.GetPixelRgb(1, 1).ShouldBe(((byte)78, (byte)78, (byte)78));
     }
 
     [Fact]

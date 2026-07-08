@@ -13,11 +13,11 @@ namespace Unchained.Pdf.Engine;
 ///     Pages are resolved lazily from the document core on each access; no pages are
 ///     preloaded at construction time.
 /// </summary>
-internal sealed class PdfPageCollectionAdapter(PdfDocumentCore core) : IPageCollection
+internal sealed class PdfPageCollectionAdapter(PdfDocumentCore core, IPdfDocument document) : IPageCollection
 {
     /// <inheritdoc cref="IPageCollection.this[int]" />
     public IPdfPage this[int pageNumber] =>
-        new PdfPageAdapter(core.GetPage(pageNumber), pageNumber, core);
+        new PdfPageAdapter(core.GetPage(pageNumber), pageNumber, core, document);
 
     /// <inheritdoc />
     public int Count => core.PageCount;
@@ -26,7 +26,7 @@ internal sealed class PdfPageCollectionAdapter(PdfDocumentCore core) : IPageColl
     public IEnumerator<IPdfPage> GetEnumerator()
     {
         for (var i = 1; i <= Count; i++)
-            yield return new PdfPageAdapter(core.GetPage(i), i, core);
+            yield return new PdfPageAdapter(core.GetPage(i), i, core, document);
     }
 
     /// <inheritdoc />
@@ -47,19 +47,19 @@ internal sealed class PdfPageCollectionAdapter(PdfDocumentCore core) : IPageColl
 ///     (<see cref="Width" />/<see cref="Height" />/<see cref="Rotate" /> and the inheritable
 ///     box lookups) that those three values are tightly coupled to.
 /// </remarks>
-internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocumentCore core) : IPdfPage
+internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocumentCore core, IPdfDocument document) : IPdfPage
 {
-    // Exposes the document core for XObject resolution and font embedding in M5.
-    internal PdfDocumentCore Core => core;
+    /// <inheritdoc />
+    public IPdfDocument Document => document;
 
     /// <inheritdoc />
     public int PageNumber { get; } = pageNumber;
 
     /// <inheritdoc />
-    public double CropOriginX => GetArrayBoxValue("CropBox", 0) ?? GetArrayBoxValue("MediaBox", 0) ?? 0;
+    public double CropOriginX => GetArrayBoxValue("CropBox", 0) ?? GetArrayBoxValue(PdfName.MediaBox.Value, 0) ?? 0;
 
     /// <inheritdoc />
-    public double CropOriginY => GetArrayBoxValue("CropBox", 1) ?? GetArrayBoxValue("MediaBox", 1) ?? 0;
+    public double CropOriginY => GetArrayBoxValue("CropBox", 1) ?? GetArrayBoxValue(PdfName.MediaBox.Value, 1) ?? 0;
 
     /// <inheritdoc />
     // CropBox (if present) defines the visible area; fall back to MediaBox.
@@ -104,7 +104,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
 
     /// <inheritdoc />
     public IReadOnlyList<TextSpan> GetTextSpans() =>
-        TextExtractor.Extract(GetContentOperators(), PageFontResolver.ResolveFontNames(page, core));
+        TextExtractor.Extract(GetContentOperators(), PageFontResolver.ResolveFontNames(page, core), PageFontResolver.GetToUnicodeMaps(page, core));
 
     /// <inheritdoc />
     public string ExtractText() =>
@@ -128,7 +128,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
 
     /// <inheritdoc />
     public IReadOnlyDictionary<string, SoftMaskInfo> GetSoftMasks(int widthPx, int heightPx) =>
-        PageTransparencyResolver.GetSoftMasks(page, core, widthPx, heightPx);
+        PageTransparencyResolver.GetSoftMasks(page, core, document, widthPx, heightPx);
 
     /// <inheritdoc />
     public IReadOnlyDictionary<string, ShadingInfo> GetShadings() =>
@@ -206,7 +206,7 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
     // otherwise from /MediaBox. Both follow [llx lly urx ury] order.
     private double GetBoxValue(int index) =>
         GetArrayBoxValue("CropBox", index) ??
-        GetArrayBoxValue("MediaBox", index) ??
+        GetArrayBoxValue(PdfName.MediaBox.Value, index) ??
         0;
 
     private double? GetArrayBoxValue(string name, int index)

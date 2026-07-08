@@ -110,7 +110,14 @@ public sealed class PdfDictionaryTests
     {
         var dict = Dict(("A", PdfNull.Instance), ("B", PdfBoolean.True));
         dict.Entries.Count.ShouldBe(2);
-        dict.Entries.Keys.ShouldContain("A");
-        dict.Entries.Keys.ShouldContain("B");
+        dict.Entries["A"].ShouldBeSameAs(PdfNull.Instance);
+        dict.Entries["B"].ShouldBeSameAs(PdfBoolean.True);
+    }
+
+    [Fact]
+    public void StringIndexer_And_PdfNameIndexer_AreEquivalent()
+    {
+        var dict = Dict(("Type", PdfName.Page));
+        dict["Type"].ShouldBeSameAs(dict[PdfName.Type]);
     }
 }

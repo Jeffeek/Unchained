@@ -1,3 +1,4 @@
+using Unchained.Ooxml.Engine;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
@@ -18,16 +19,15 @@ namespace Unchained.Pptx.Engine;
 /// <remarks>
 ///     <para>
 ///         All I/O-bound methods are <see langword="async" /> and dispatch CPU-bound parse/serialize
-///         work to the thread pool via Task.Run />. A <see cref="SemaphoreSlim" /> limits
-///         concurrency to <see cref="Environment.ProcessorCount" /> simultaneous parse operations,
+///         work to the thread pool via <see cref="Task.Run{TResult}(Func{TResult})" />. A gate
+///         limits concurrency to <see cref="Environment.ProcessorCount" /> simultaneous parse operations,
 ///         preventing thread-pool saturation on high-throughput ASP.NET or gRPC servers.
 ///     </para>
 ///     <para>Dispose the processor when it is no longer needed to release the semaphore.</para>
 /// </remarks>
 public sealed class PresentationProcessor : IDisposable
 {
-    private readonly SemaphoreSlim _gate;
-    private int _disposed;
+    private readonly ProcessorGate _gate;
 
     /// <summary>
     ///     Initialises a new <see cref="PresentationProcessor" />.
@@ -47,18 +47,13 @@ public sealed class PresentationProcessor : IDisposable
             );
         }
 
-        _gate = new SemaphoreSlim(limit, limit);
+        _gate = new ProcessorGate(limit);
     }
 
     // ── IDisposable ───────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-
-        _gate.Dispose();
-    }
+    public void Dispose() => _gate.Dispose();
 
     // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -128,7 +123,7 @@ public sealed class PresentationProcessor : IDisposable
     {
         var slideSize = size ?? SlideSize.Widescreen;
 
-        var master = new MasterSlide { Name = "Office Theme", Theme = new PptxTheme() };
+        var master = new MasterSlide { Name = MasterSlide.DefaultName, Theme = new PptxTheme() };
         var layout = new SlideLayout
         {
             Name = "Blank", LayoutType = LayoutType.Blank,
@@ -342,27 +337,18 @@ public sealed class PresentationProcessor : IDisposable
         await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<byte[]> ExportPdfAsync(
+    private Task<byte[]> ExportPdfAsync(
         PresentationDocument document,
         PdfSaveOptions? options,
         CancellationToken cancellationToken
-    )
-    {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            var opts = options ?? PdfSaveOptions.Default;
-            return await Task.Run(
-                    () => PptxToPdfWriter.Write(document, opts),
-                    cancellationToken
-                )
-                .ConfigureAwait(false);
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
+    ) =>
+        _gate.RunAsync(
+            () => Task.Run(
+                () => PptxToPdfWriter.Write(document, options ?? PdfSaveOptions.Default),
+                cancellationToken
+            ),
+            cancellationToken
+        );
 
     // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -410,89 +396,81 @@ public sealed class PresentationProcessor : IDisposable
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    private async Task<PresentationDocument> ParseBytesAsync(
+    private Task<PresentationDocument> ParseBytesAsync(
         byte[] bytes,
         OpenOptions? options,
         CancellationToken cancellationToken
-    )
-    {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            var parsed = await Task.Run(
-                    () => OdpParser.IsOdp(bytes)
-                        ? OdpParser.Parse(bytes)
-                        : options?.UseOpenXmlEngine == true
-                            ? OpenXmlPresentationParser.Parse(bytes)
-                            : PresentationParser.Parse(bytes, options),
-                    cancellationToken
-                )
-                .ConfigureAwait(false);
-
-            return new PresentationDocument(
-                parsed.Slides,
-                parsed.Masters,
-                parsed.MediaStore,
-                parsed.Properties,
-                parsed.Protection,
-                parsed.SlideSize,
-                parsed.CommentAuthors,
-                parsed.Sections,
-                parsed.Engine
-            )
+    ) =>
+        _gate.RunAsync(
+            async () =>
             {
-                SlideShow = parsed.SlideShow ?? new SlideShowSettings(),
-                Preserved = parsed.Preserved
-            };
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
-
-    private async Task<byte[]> SerializeAsync(
-        PresentationDocument document,
-        SaveOptions? options,
-        CancellationToken cancellationToken
-    )
-    {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            // Keep statistics current before serializing
-            document.SyncStatistics();
-
-            // SDK-backed in-place save when requested and a live engine is attached; otherwise
-            // the custom writer. The SDK path preserves unmodelled parts (Phase 2 / M5b).
-            return options?.UseOpenXmlEngine == true && OpenXmlPresentationWriter.CanSave(document)
-                ? await Task.Run(
-                        () => OpenXmlPresentationWriter.Save(document),
-                        cancellationToken
-                    )
-                    .ConfigureAwait(false)
-                : await Task.Run(
-                        () =>
-                            PresentationWriter.Write(
-                                document.Slides,
-                                document.Masters,
-                                document.Media,
-                                document.Properties,
-                                document.SlideSize,
-                                document.CommentAuthors,
-                                document.Sections,
-                                document.Protection,
-                                options,
-                                document.SlideShow,
-                                document.Preserved
-                            ),
+                var parsed = await Task.Run(
+                        () => OdpParser.IsOdp(bytes)
+                            ? OdpParser.Parse(bytes)
+                            : options?.UseOpenXmlEngine == true
+                                ? OpenXmlPresentationParser.Parse(bytes)
+                                : PresentationParser.Parse(bytes, options),
                         cancellationToken
                     )
                     .ConfigureAwait(false);
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
+
+                return new PresentationDocument(
+                    parsed.Slides,
+                    parsed.Masters,
+                    parsed.MediaStore,
+                    parsed.Properties,
+                    parsed.Protection,
+                    parsed.SlideSize,
+                    parsed.CommentAuthors,
+                    parsed.Sections,
+                    parsed.Engine
+                )
+                {
+                    SlideShow = parsed.SlideShow ?? new SlideShowSettings(),
+                    Preserved = parsed.Preserved
+                };
+            },
+            cancellationToken
+        );
+
+    private Task<byte[]> SerializeAsync(
+        PresentationDocument document,
+        SaveOptions? options,
+        CancellationToken cancellationToken
+    ) =>
+        _gate.RunAsync(
+            async () =>
+            {
+                // Keep statistics current before serializing
+                document.SyncStatistics();
+
+                // SDK-backed in-place save when requested and a live engine is attached; otherwise
+                // the custom writer. The SDK path preserves unmodelled parts (Phase 2 / M5b).
+                return options?.UseOpenXmlEngine == true && OpenXmlPresentationWriter.CanSave(document)
+                    ? await Task.Run(
+                            () => OpenXmlPresentationWriter.Save(document),
+                            cancellationToken
+                        )
+                        .ConfigureAwait(false)
+                    : await Task.Run(
+                            () =>
+                                PresentationWriter.Write(
+                                    document.Slides,
+                                    document.Masters,
+                                    document.Media,
+                                    document.Properties,
+                                    document.SlideSize,
+                                    document.CommentAuthors,
+                                    document.Sections,
+                                    document.Protection,
+                                    options,
+                                    document.SlideShow,
+                                    document.Preserved
+                                ),
+                            cancellationToken
+                        )
+                        .ConfigureAwait(false);
+            },
+            cancellationToken
+        );
 }

@@ -22,10 +22,13 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     internal PdfDocumentAdapter(PdfDocumentCore core)
     {
         Core = core;
-        Pages = new PdfPageCollectionAdapter(core);
+        Pages = new PdfPageCollectionAdapter(core, this);
     }
 
     internal PdfDocumentCore Core { get; private set; }
+
+    /// <inheritdoc />
+    public ReadOnlyMemory<byte> Bytes => Core.Source;
 
     /// <inheritdoc />
     public int PageCount => Core.PageCount;
@@ -100,7 +103,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         get
         {
             var xmp = GetXmpMetadata();
-            return xmp is not null && xmp.Contains("pdfuaid", StringComparison.OrdinalIgnoreCase);
+            return xmp is not null && xmp.Contains(PdfConstants.PdfAIdentifier, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -183,12 +186,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     public string? GetXmpMetadata()
     {
         var metaRef = Core.Catalog[PdfName.Metadata];
-        var stream = metaRef switch
-        {
-            PdfStream s => s,
-            PdfIndirectReference r => Core.ResolveIndirect(r.ObjectNumber).Value as PdfStream,
-            _ => null
-        };
+        var stream = Core.ResolveStream(metaRef);
         if (stream is null) return null;
 
         var decoded = StreamFilters.Decode(stream);
@@ -294,7 +292,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     {
         Core.Dispose();
         Core = newCore;
-        Pages = new PdfPageCollectionAdapter(Core);
+        Pages = new PdfPageCollectionAdapter(Core, this);
     }
 
     private static string IdEntryToHex(PdfObject obj) =>
@@ -386,32 +384,26 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         _ => PageMode.Default
     };
 
-    private void CollectNameTree(PdfDictionary node, ICollection<NamedDestination> result)
-    {
-        // Leaf node: /Names array of (string, dest) pairs
-        if (node.Get<PdfArray>(PdfName.Names) is { } names)
-        {
-            for (var i = 0; i + 1 < names.Count; i += 2)
+    private void CollectNameTree(PdfDictionary node, ICollection<NamedDestination> result) =>
+        MutationHelper.CollectTree(
+            node,
+            Core,
+            result,
+            PdfName.Names.Value,
+            (_, arr, i, _) =>
             {
-                var key = names[i] is PdfString ks
+                var key = arr[i] is PdfString ks
                     ? Encoding.Latin1.GetString(ks.Bytes.Span)
-                    : (names[i] as PdfName)?.Value ?? string.Empty;
-                var dest = names[i + 1] is PdfIndirectReference nr
+                    : (arr[i] as PdfName)?.Value ?? string.Empty;
+                if (key.Length == 0) return null;
+
+                var dest = arr[i + 1] is PdfIndirectReference nr
                     ? Core.ResolveIndirect(nr.ObjectNumber).Value
-                    : names[i + 1];
+                    : arr[i + 1];
                 var pageNum = ResolveDestPageFromObject(dest);
-                if (pageNum > 0 && key.Length > 0)
-                    result.Add(new NamedDestination(key, pageNum));
+                return pageNum > 0 ? new NamedDestination(key, pageNum) : null;
             }
-        }
-
-        // Intermediate node: /Kids array of child nodes
-        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
-            return;
-
-        foreach (var childDict in kids.Elements.Select(kid => Core.ResolveDict(kid)).Where(static x => x != null))
-            CollectNameTree(childDict!, result);
-    }
+        );
 
     private IReadOnlyList<Bookmark> ReadOutlineLevel(PdfDictionary node)
     {

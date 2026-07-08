@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>true</IsPackable>
+    <IsUserFacingPackage>true</IsUserFacingPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="DocumentFormat.OpenXml.Features" />
+    <PackageReference Include="DocumentFormat.OpenXml.Framework" />
+    <PackageReference Include="DocumentFormat.OpenXml.Linq" />
+    <PackageReference Include="System.IO.Packaging" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Unchained.Xlsx\Unchained.Xlsx.csproj" />
+  </ItemGroup>
+
+</Project>

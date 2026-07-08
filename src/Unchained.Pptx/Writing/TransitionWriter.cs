@@ -80,17 +80,17 @@ internal static class TransitionWriter
             TransitionEffect.UncoverUp => new XElement(pml + "uncover", new XAttribute("dir", "u")),
             TransitionEffect.UncoverDown => new XElement(pml + "uncover", new XAttribute("dir", "d")),
 
-            TransitionEffect.ZoomIn => new XElement(pml + "zoom", new XAttribute("dir", "in")),
+            TransitionEffect.ZoomIn => new XElement(pml + "zoom", new XAttribute("dir", TransitionStrings.ZoomDirIn)),
             TransitionEffect.ZoomOut => new XElement(pml + "zoom", new XAttribute("dir", "out")),
 
-            TransitionEffect.BlindsHorizontal => new XElement(pml + "blinds", new XAttribute("dir", "horz")),
-            TransitionEffect.BlindsVertical => new XElement(pml + "blinds", new XAttribute("dir", "vert")),
+            TransitionEffect.BlindsHorizontal => new XElement(pml + "blinds", new XAttribute("dir", TransitionStrings.DirHorz)),
+            TransitionEffect.BlindsVertical => new XElement(pml + "blinds", new XAttribute("dir", TransitionStrings.DirVert)),
 
-            TransitionEffect.CheckerHorizontal => new XElement(pml + "checker", new XAttribute("dir", "horz")),
-            TransitionEffect.CheckerVertical => new XElement(pml + "checker", new XAttribute("dir", "vert")),
+            TransitionEffect.CheckerHorizontal => new XElement(pml + "checker", new XAttribute("dir", TransitionStrings.DirHorz)),
+            TransitionEffect.CheckerVertical => new XElement(pml + "checker", new XAttribute("dir", TransitionStrings.DirVert)),
 
-            TransitionEffect.CombHorizontal => new XElement(pml + "comb", new XAttribute("dir", "horz")),
-            TransitionEffect.CombVertical => new XElement(pml + "comb", new XAttribute("dir", "vert")),
+            TransitionEffect.CombHorizontal => new XElement(pml + "comb", new XAttribute("dir", TransitionStrings.DirHorz)),
+            TransitionEffect.CombVertical => new XElement(pml + "comb", new XAttribute("dir", TransitionStrings.DirVert)),
 
             _ => null
         };

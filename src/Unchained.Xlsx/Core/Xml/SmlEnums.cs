@@ -5,30 +5,42 @@ namespace Unchained.Xlsx.Core.Xml;
 /// <summary>Maps style enums to and from their SpreadsheetML attribute literals.</summary>
 internal static class SmlEnums
 {
+    // ── Alignment literal constants (SpreadsheetML attribute values) ─────────────
+
+    internal const string AlignLeft = "left";
+    internal const string AlignCenter = "center";
+    internal const string AlignRight = "right";
+    internal const string AlignFill = "fill";
+    internal const string AlignJustify = "justify";
+    internal const string AlignCenterCont = "centerContinuous";
+    internal const string AlignDistributed = "distributed";
+    internal const string AlignTop = "top";
+    internal const string AlignBottom = "bottom";
+
     // ── Horizontal alignment ───────────────────────────────────────────────────
 
     public static string? ToLiteral(HorizontalAlignment value) => value switch
     {
         HorizontalAlignment.General => null,
-        HorizontalAlignment.Left => "left",
-        HorizontalAlignment.Center => "center",
-        HorizontalAlignment.Right => "right",
-        HorizontalAlignment.Fill => "fill",
-        HorizontalAlignment.Justify => "justify",
-        HorizontalAlignment.CenterAcrossSelection => "centerContinuous",
-        HorizontalAlignment.Distributed => "distributed",
+        HorizontalAlignment.Left => AlignLeft,
+        HorizontalAlignment.Center => AlignCenter,
+        HorizontalAlignment.Right => AlignRight,
+        HorizontalAlignment.Fill => AlignFill,
+        HorizontalAlignment.Justify => AlignJustify,
+        HorizontalAlignment.CenterAcrossSelection => AlignCenterCont,
+        HorizontalAlignment.Distributed => AlignDistributed,
         _ => null
     };
 
     public static HorizontalAlignment ParseHorizontal(string? literal) => literal switch
     {
-        "left" => HorizontalAlignment.Left,
-        "center" => HorizontalAlignment.Center,
-        "right" => HorizontalAlignment.Right,
-        "fill" => HorizontalAlignment.Fill,
-        "justify" => HorizontalAlignment.Justify,
-        "centerContinuous" => HorizontalAlignment.CenterAcrossSelection,
-        "distributed" => HorizontalAlignment.Distributed,
+        AlignLeft => HorizontalAlignment.Left,
+        AlignCenter => HorizontalAlignment.Center,
+        AlignRight => HorizontalAlignment.Right,
+        AlignFill => HorizontalAlignment.Fill,
+        AlignJustify => HorizontalAlignment.Justify,
+        AlignCenterCont => HorizontalAlignment.CenterAcrossSelection,
+        AlignDistributed => HorizontalAlignment.Distributed,
         _ => HorizontalAlignment.General
     };
 
@@ -36,20 +48,20 @@ internal static class SmlEnums
 
     public static string? ToLiteral(VerticalAlignment value) => value switch
     {
-        VerticalAlignment.Top => "top",
-        VerticalAlignment.Center => "center",
+        VerticalAlignment.Top => AlignTop,
+        VerticalAlignment.Center => AlignCenter,
         VerticalAlignment.Bottom => null, // bottom is the default
-        VerticalAlignment.Justify => "justify",
-        VerticalAlignment.Distributed => "distributed",
+        VerticalAlignment.Justify => AlignJustify,
+        VerticalAlignment.Distributed => AlignDistributed,
         _ => null
     };
 
     public static VerticalAlignment ParseVertical(string? literal) => literal switch
     {
-        "top" => VerticalAlignment.Top,
-        "center" => VerticalAlignment.Center,
-        "justify" => VerticalAlignment.Justify,
-        "distributed" => VerticalAlignment.Distributed,
+        AlignTop => VerticalAlignment.Top,
+        AlignCenter => VerticalAlignment.Center,
+        AlignJustify => VerticalAlignment.Justify,
+        AlignDistributed => VerticalAlignment.Distributed,
         _ => VerticalAlignment.Bottom
     };
 

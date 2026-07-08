@@ -5,54 +5,22 @@ using Unchained.Studio.Studio.Pdf;
 
 namespace Unchained.Studio.Services;
 
-public sealed class PdfSessionState : IAsyncDisposable
+public sealed class PdfSessionState : DocumentSessionBase<IPdfDocument, DocumentProcessor>
 {
     private PdfSessionState(
         DocumentProcessor processor,
         IPdfDocument document,
         byte[] bytes,
         string fileName
-    )
-    {
-        Processor = processor;
-        Document = document;
-        CurrentBytes = bytes;
-        FileName = fileName;
-        FileSizeBytes = bytes.LongLength;
-        Tree = PdfTreeBuilder.Build(document, fileName);
-    }
+    ) : base(fileName, bytes, document, processor) { }
 
-    public DocumentProcessor Processor { get; }
-    public IPdfDocument Document { get; private set; }
-    public string FileName { get; }
-    public long FileSizeBytes { get; }
-    public byte[] CurrentBytes { get; private set; }
-    public TreeNode Tree { get; private set; }
-    public TreeNode? SelectedNode { get; set; }
     public int CurrentPage { get; set; } = 1;
 
     /// <summary>The playboard state for the current document.</summary>
     public PdfPlayboardState PlayboardState { get; } = new();
 
-    public bool IsDirty { get; private set; }
-
-    // Injected so RefreshAsync can invalidate stale render cache entries
-    internal RenderingService? RenderCache { private get; set; }
-
-    public ValueTask DisposeAsync() => Document.DisposeAsync();
-
-    public void MarkDirty()
-    {
-        IsDirty = true;
-        Tree = PdfTreeBuilder.Build(Document, FileName);
-        Refreshed?.Invoke();
-    }
-
-    /// <summary>
-    ///     Raised after <see cref="RefreshAsync" /> completes so that UI components
-    ///     can call <c>StateHasChanged()</c> to pick up the new tree and bytes.
-    /// </summary>
-    public event Action? Refreshed;
+    /// <summary>Inject the render cache after construction so RefreshAsync can invalidate stale entries.</summary>
+    internal RenderingService? RenderCache { get; set; }
 
     public static async Task<PdfSessionState> CreateAsync(
         DocumentProcessor processor,
@@ -79,29 +47,21 @@ public sealed class PdfSessionState : IAsyncDisposable
         return new PdfSessionState(processor, document, bytes, fileName);
     }
 
-    /// <summary>
-    ///     Serialises the current document, reloads it, and rebuilds the tree.
-    ///     Raises <see cref="Refreshed" /> so the UI can re-render.
-    /// </summary>
-    public async Task RefreshAsync(CancellationToken ct = default)
+    protected override async Task<byte[]> SerializeAsync(CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
         await Processor.SaveAsync(Document, ms, ct: ct).ConfigureAwait(false);
-        var newBytes = ms.ToArray();
-
-        var oldDocument = Document;
-
-        // Invalidate render cache for the old document before reloading
-        RenderCache?.InvalidateDocument(oldDocument);
-
-        using var reloadStream = new MemoryStream(newBytes);
-        Document = await Processor.LoadAsync(reloadStream, ct).ConfigureAwait(false);
-        CurrentBytes = newBytes;
-        Tree = PdfTreeBuilder.Build(Document, FileName);
-
-        // Dispose the old document only after the new one is ready
-        await oldDocument.DisposeAsync().ConfigureAwait(false);
-
-        Refreshed?.Invoke();
+        return ms.ToArray();
     }
+
+    protected override TreeNode BuildTree(IPdfDocument document, string fileName) =>
+        PdfTreeBuilder.Build(document, fileName);
+
+    protected override async Task<IPdfDocument> ReloadAsync(byte[] bytes, CancellationToken ct = default)
+    {
+        using var stream = new MemoryStream(bytes);
+        return await Processor.LoadAsync(stream, ct).ConfigureAwait(false);
+    }
+
+    protected override ValueTask Dispose() => Document.DisposeAsync();
 }

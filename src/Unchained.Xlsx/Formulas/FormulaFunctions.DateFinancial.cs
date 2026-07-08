@@ -12,6 +12,13 @@ internal static partial class FormulaFunctions
         (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"),
         (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")
     ];
+
+    private static FormulaValue TryDate(IReadOnlyList<FormulaValue> values, Func<DateTime, FormulaValue> fn)
+    {
+        var date = DateTimeSerializer.ToDateTime(Num(values, 0), false);
+        return date is null ? FormulaValue.FromError(CellError.Number) : fn(date.Value);
+    }
+
     // ── Date / time helpers ─────────────────────────────────────────────────────
 
     private static FormulaValue DateFn(IReadOnlyList<FormulaValue> values)
@@ -26,25 +33,25 @@ internal static partial class FormulaFunctions
         catch { return FormulaValue.FromError(CellError.Number); }
     }
 
-    private static FormulaValue DatePart(IReadOnlyList<FormulaValue> values, Func<DateTime, int> selector)
-    {
-        var date = DateTimeSerializer.ToDateTime(Num(values, 0), false);
-        return date is null ? FormulaValue.FromError(CellError.Number) : Number(selector(date.Value));
-    }
+    private static FormulaValue DatePart(IReadOnlyList<FormulaValue> values, Func<DateTime, int> selector) =>
+        TryDate(values, date => Number(selector(date)));
 
     private static FormulaValue Weekday(IReadOnlyList<FormulaValue> values)
     {
-        var date = DateTimeSerializer.ToDateTime(Num(values, 0), false);
-        if (date is null) return FormulaValue.FromError(CellError.Number);
-
         var type = values.Count > 1 ? (int)Num(values, 1) : 1;
-        var dow = (int)date.Value.DayOfWeek; // Sunday = 0
-        return type switch
-        {
-            2 => Number(dow == 0 ? 7 : dow), // Monday = 1
-            3 => Number((dow + 6) % 7),      // Monday = 0
-            _ => Number(dow + 1)             // Sunday = 1
-        };
+        return TryDate(
+            values,
+            date =>
+            {
+                var dow = (int)date.DayOfWeek;
+                return type switch
+                {
+                    2 => Number(dow == 0 ? 7 : dow),
+                    3 => Number((dow + 6) % 7),
+                    _ => Number(dow + 1)
+                };
+            }
+        );
     }
 
     private static FormulaValue DateValue(IReadOnlyList<FormulaValue> values) =>
@@ -52,15 +59,16 @@ internal static partial class FormulaFunctions
             ? Number(DateTimeSerializer.ToSerial(d, false))
             : FormulaValue.FromError(CellError.Value);
 
-    private static FormulaValue EoMonth(IReadOnlyList<FormulaValue> values)
-    {
-        var date = DateTimeSerializer.ToDateTime(Num(values, 0), false);
-        if (date is null) return FormulaValue.FromError(CellError.Number);
-
-        var shifted = date.Value.AddMonths((int)Num(values, 1));
-        var eom = new DateTime(shifted.Year, shifted.Month, DateTime.DaysInMonth(shifted.Year, shifted.Month));
-        return Number(DateTimeSerializer.ToSerial(eom, false));
-    }
+    private static FormulaValue EoMonth(IReadOnlyList<FormulaValue> values) =>
+        TryDate(
+            values,
+            date =>
+            {
+                var shifted = date.AddMonths((int)Num(values, 1));
+                var eom = new DateTime(shifted.Year, shifted.Month, DateTime.DaysInMonth(shifted.Year, shifted.Month));
+                return Number(DateTimeSerializer.ToSerial(eom, false));
+            }
+        );
 
     private static FormulaValue TimeValue(IReadOnlyList<FormulaValue> values) =>
         DateTime.TryParse(Text(values, 0), CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
@@ -72,69 +80,130 @@ internal static partial class FormulaFunctions
         var d1 = DateTimeSerializer.ToDateTime(Num(values, 0), false) ?? DateTime.MinValue;
         var d2 = DateTimeSerializer.ToDateTime(Num(values, 1), false) ?? DateTime.MinValue;
         var usa = values.Count > 2 && FormulaEvaluator.ToBoolean(values[2]);
-        var day1 = d1.Day == 31 || (usa && d1.Day == 30) ? 30 : d1.Day;
-        var day2 = d2.Day == 31 ? (usa ? 30 : 31) : d2.Day;
+        var day1 = d1.Day;
+        var day2 = d2.Day;
+        if (usa)
+        {
+            // European: 30 or 31 → 30 for both dates.
+            if (day1 >= 30) day1 = 30;
+            if (day2 >= 30) day2 = 30;
+        }
+        else
+        {
+            // US method: start date 31 → 30.
+            if (day1 == 31) day1 = 30;
+            // End date 31 → 30 only if start date was also 31.
+            if (day2 == 31 && d1.Day == 31) day2 = 30;
+        }
+
         return Number((360 * (d2.Year - d1.Year)) + (30 * (d2.Month - d1.Month)) + (day2 - day1));
     }
 
-    private static FormulaValue EDate(IReadOnlyList<FormulaValue> values)
-    {
-        var date = DateTimeSerializer.ToDateTime(Num(values, 0), false);
-        if (date is null) return FormulaValue.FromError(CellError.Number);
-
-        var months = (int)Num(values, 1);
-        var result = new DateTime(date.Value.Year, date.Value.Month, 1).AddMonths(months);
-        var day = Math.Min(date.Value.Day, DateTime.DaysInMonth(result.Year, result.Month));
-        return Number(DateTimeSerializer.ToSerial(result.AddDays(day - 1), false));
-    }
+    private static FormulaValue EDate(IReadOnlyList<FormulaValue> values) =>
+        TryDate(
+            values,
+            date =>
+            {
+                var months = (int)Num(values, 1);
+                var result = new DateTime(date.Year, date.Month, 1).AddMonths(months);
+                var day = Math.Min(date.Day, DateTime.DaysInMonth(result.Year, result.Month));
+                return Number(DateTimeSerializer.ToSerial(result.AddDays(day - 1), false));
+            }
+        );
 
     private static FormulaValue WeekNum(IReadOnlyList<FormulaValue> values)
     {
-        var date = DateTimeSerializer.ToDateTime(Num(values, 0), false);
-        if (date is null) return FormulaValue.FromError(CellError.Number);
-
         var type = values.Count > 1 ? (int)Num(values, 1) : 1;
-        var cal = type == 21 ? new GregorianCalendar(GregorianCalendarTypes.USEnglish) : new GregorianCalendar();
-        return Number(cal.GetWeekOfYear(date.Value, CalendarWeekRule.FirstDay, (DayOfWeek)(type - 2)));
+        return TryDate(
+            values,
+            date =>
+            {
+                var cal = type == 21 ? new GregorianCalendar(GregorianCalendarTypes.USEnglish) : new GregorianCalendar();
+                var firstDay = type switch
+                {
+                    1 => DayOfWeek.Sunday,
+                    _ => DayOfWeek.Monday
+                };
+                return Number(cal.GetWeekOfYear(date, CalendarWeekRule.FirstDay, firstDay));
+            }
+        );
     }
 
-    private static FormulaValue IsoWeekNum(IReadOnlyList<FormulaValue> values)
-    {
-        var date = DateTimeSerializer.ToDateTime(Num(values, 0), false);
-        if (date is null) return FormulaValue.FromError(CellError.Number);
+    private static FormulaValue IsoWeekNum(IReadOnlyList<FormulaValue> values) =>
+        TryDate(
+            values,
+            static date =>
+            {
+                var dayOfWeek = (int)date.DayOfWeek;
+                if (dayOfWeek == 0) dayOfWeek = 7;
+                var thursday = date.AddDays(4 - dayOfWeek);
+                var isoYear = thursday.Year;
+                var jan4 = new DateTime(isoYear, 1, 4);
+                var jan4Dow = (int)jan4.DayOfWeek;
+                if (jan4Dow == 0) jan4Dow = 7;
+                var mondayOfWk1 = jan4.AddDays(-(jan4Dow - 1));
+                var week = ((thursday - mondayOfWk1).Days / 7) + 1;
+                return Number(week);
+            }
+        );
 
-        // ISO 8601: week 1 contains the year's first Thursday.
-        // Equivalent: the week containing Jan 4.
-        var dayOfWeek = (int)date.Value.DayOfWeek;
-        if (dayOfWeek == 0) dayOfWeek = 7;
-        var thursday = date.Value.AddDays(4 - dayOfWeek);
-        // ISO year: if Thursday is in next year, use next year's Jan 4 week.
-        var isoYear = thursday.Year;
-        var jan4 = new DateTime(isoYear, 1, 4);
-        var jan4Dow = (int)jan4.DayOfWeek;
-        if (jan4Dow == 0) jan4Dow = 7;
-        var mondayOfWk1 = jan4.AddDays(-(jan4Dow - 1));
-        var week = ((thursday - mondayOfWk1).Days / 7) + 1;
-        return Number(week);
-    }
-
-    private static FormulaValue DateDif(IReadOnlyList<FormulaValue> values)
+    private static FormulaValue TryTwoDates(IReadOnlyList<FormulaValue> values, Func<DateTime, DateTime, FormulaValue> fn)
     {
         var d1 = DateTimeSerializer.ToDateTime(Num(values, 0), false);
         var d2 = DateTimeSerializer.ToDateTime(Num(values, 1), false);
-        if (d1 is null || d2 is null) return FormulaValue.FromError(CellError.Number);
+        return d1 is null || d2 is null ? FormulaValue.FromError(CellError.Number) : fn(d1.Value, d2.Value);
+    }
 
-        var unit = Text(values, 2);
-        return unit switch
-        {
-            "D" => Number(Math.Floor(Num(values, 1)) - Math.Floor(Num(values, 0))),
-            "M" => Number(((d2.Value.Year - d1.Value.Year) * 12) + d2.Value.Month - d1.Value.Month),
-            "Y" => Number(d2.Value.Year - d1.Value.Year),
-            "MD" => Number(d2.Value.Day - d1.Value.Day),
-            "YM" => Number(d2.Value.Month - d1.Value.Month),
-            "YD" => Number((new DateTime(d2.Value.Year, d1.Value.Month, d1.Value.Day) - d1.Value).Days),
-            _ => FormulaValue.FromError(CellError.Value)
-        };
+    private static FormulaValue DateDif(IReadOnlyList<FormulaValue> values) =>
+        TryTwoDates(
+            values,
+            (d1, d2) =>
+            {
+                var unit = Text(values, 2);
+                return unit switch
+                {
+                    "D" => Number(Math.Floor(Num(values, 1)) - Math.Floor(Num(values, 0))),
+                    "M" => Number(((d2.Year - d1.Year) * 12) + d2.Month - d1.Month),
+                    "Y" => Number(d2.Year - d1.Year),
+                    "MD" => Number(
+                        d2.Day >= d1.Day
+                            ? d2.Day - d1.Day
+                            : d2.Day + DateTime.DaysInMonth(d2.Year, d2.Month - 1) - d1.Day
+                    ),
+                    "YM" => Number(d2.Month - d1.Month),
+                    "YD" => Number((new DateTime(d2.Year, d1.Month, d1.Day) - d1).Days),
+                    _ => FormulaValue.FromError(CellError.Value)
+                };
+            }
+        );
+
+    private static FormulaValue YearFrac(IReadOnlyList<FormulaValue> values)
+    {
+        var basis = values.Count > 2 ? (int)Math.Round(Num(values, 2)) : 0;
+        return TryTwoDates(
+            values,
+            (d1, d2) =>
+            {
+                var days = (d2 - d1).Days;
+
+                switch (basis)
+                {
+                    case 0 or 3:
+                        return Number(days / 365.0);
+                    case 1:
+                        return Number((double)days / (DateTime.IsLeapYear(d1.Year) ? 366 : 365));
+                    case 4:
+                    {
+                        var day1 = Math.Min(d1.Day, 30);
+                        var day2 = d2.Day == 31 && day1 >= 30 ? 30 : d2.Day;
+                        var y = ((d2.Year - d1.Year) * 360) + ((d2.Month - d1.Month) * 30) + (day2 - day1);
+                        return Number(y / 360.0);
+                    }
+                    default:
+                        return Number(days / 365.0);
+                }
+            }
+        );
     }
 
     // ── Combinators ─────────────────────────────────────────────────────────────
@@ -258,7 +327,7 @@ internal static partial class FormulaFunctions
 
     private static double Fv(double rate, double nper, double pmt, double pv = 0, int type = 0)
     {
-        if (rate == 0) return pv + (pmt * nper);
+        if (rate == 0) return -(pv + (pmt * nper));
 
         var factor = Math.Pow(1 + rate, nper);
         var annuity = pmt * (1 + (rate * type)) * (factor - 1) / rate;
@@ -280,9 +349,7 @@ internal static partial class FormulaFunctions
 
         var numerator = (pmt * (1 + rate)) - (fv * rate);
         var denominator = (pv * rate) + pmt;
-        if (denominator == 0) return double.NaN;
-
-        return Math.Log(numerator / denominator) / Math.Log(1 + rate);
+        return denominator == 0 ? double.NaN : Math.Log(numerator / denominator) / Math.Log(1 + rate);
     }
 
     private static FormulaValue Npv(IReadOnlyList<FormulaValue> values)
@@ -313,23 +380,22 @@ internal static partial class FormulaFunctions
             FormulaValueKind.Text => Number(4),
             FormulaValueKind.Boolean => Number(16),
             FormulaValueKind.Error => Number(16),
+            FormulaValueKind.Array => Number(64),
             _ => Number(1)
         };
     }
 
-    private static FormulaValue ErrorType(IReadOnlyList<FormulaValue> values)
-    {
-        if (values.Count == 0 || !values[0].IsError) return FormulaValue.FromError(CellError.Value);
-
-        return values[0].Error switch
-        {
-            CellError.Null => Number(1),
-            CellError.DivisionByZero => Number(2),
-            CellError.Value => Number(3),
-            CellError.Reference => Number(4),
-            CellError.Name => Number(5),
-            CellError.Number => Number(6),
-            _ => Number(7)
-        };
-    }
+    private static FormulaValue ErrorType(IReadOnlyList<FormulaValue> values) =>
+        values.Count == 0 || !values[0].IsError
+            ? FormulaValue.FromError(CellError.Value)
+            : values[0].Error switch
+            {
+                CellError.Null => Number(1),
+                CellError.DivisionByZero => Number(2),
+                CellError.Value => Number(3),
+                CellError.Reference => Number(4),
+                CellError.Name => Number(5),
+                CellError.Number => Number(6),
+                _ => Number(7)
+            };
 }

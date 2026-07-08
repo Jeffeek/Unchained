@@ -11,7 +11,7 @@ namespace Unchained.Pdf.Models;
 internal sealed class ColorSpaceInfo
 {
     /// <summary>Canonical color space kind name (e.g. "DeviceRGB", "Separation", "ICCBased").</summary>
-    public string Kind { get; init; } = "DeviceRGB";
+    public string Kind { get; init; } = PdfConstants.DeviceRgb;
 
     /// <summary>
     ///     For Separation and DeviceN: the tint transform function that maps component
@@ -23,7 +23,7 @@ internal sealed class ColorSpaceInfo
     ///     For Separation and DeviceN: the alternate color space name after tint transform
     ///     (e.g. "DeviceCMYK", "DeviceRGB"). Used to interpret the function output.
     /// </summary>
-    public string AlternateSpace { get; init; } = "DeviceRGB";
+    public string AlternateSpace { get; init; } = PdfConstants.DeviceRgb;
 
     /// <summary>
     ///     For Indexed: the palette lookup table (one entry per index, BaseChannels bytes each).
@@ -34,7 +34,7 @@ internal sealed class ColorSpaceInfo
     public int IndexedBaseChannels { get; init; }
 
     /// <summary>For Indexed: base color space name used by the palette.</summary>
-    public string IndexedBaseSpace { get; init; } = "DeviceRGB";
+    public string IndexedBaseSpace { get; init; } = PdfConstants.DeviceRgb;
 
     /// <summary>For CalRGB: gamma [Gr, Gg, Gb] and XYZ matrix [Mxx…Mzz].</summary>
     public double[]? CalRgbGamma { get; init; }
@@ -50,24 +50,24 @@ internal sealed class ColorSpaceInfo
     internal static ColorSpaceInfo Device(string name) => new() { Kind = name };
 
     internal static ColorSpaceInfo Separation(PdfFunction? fn, string alternate) =>
-        new() { Kind = "Separation", TintTransform = fn, AlternateSpace = alternate };
+        new() { Kind = PdfConstants.Separation, TintTransform = fn, AlternateSpace = alternate };
 
     internal static ColorSpaceInfo DeviceN(PdfFunction? fn, string alternate) =>
-        new() { Kind = "DeviceN", TintTransform = fn, AlternateSpace = alternate };
+        new() { Kind = PdfConstants.DeviceN, TintTransform = fn, AlternateSpace = alternate };
 
     internal static ColorSpaceInfo Indexed(byte[] lookup, int channels, string baseSpace) =>
-        new() { Kind = "Indexed", IndexedLookup = lookup, IndexedBaseChannels = channels, IndexedBaseSpace = baseSpace };
+        new() { Kind = PdfConstants.Indexed, IndexedLookup = lookup, IndexedBaseChannels = channels, IndexedBaseSpace = baseSpace };
 
     internal static ColorSpaceInfo IccBased(string alternate) =>
-        new() { Kind = "ICCBased", AlternateSpace = alternate };
+        new() { Kind = PdfConstants.IccBased, AlternateSpace = alternate };
 
     internal static ColorSpaceInfo CalRgb(double[]? gamma, double[]? matrix) =>
-        new() { Kind = "CalRGB", CalRgbGamma = gamma, CalRgbMatrix = matrix };
+        new() { Kind = PdfConstants.CalRgb, CalRgbGamma = gamma, CalRgbMatrix = matrix };
 
     internal static ColorSpaceInfo CalGrayInfo(double gamma) =>
-        new() { Kind = "CalGray", CalGrayGamma = gamma };
+        new() { Kind = PdfConstants.CalGray, CalGrayGamma = gamma };
 
-    internal static ColorSpaceInfo Lab() => new() { Kind = "Lab", AlternateSpace = "DeviceRGB" };
+    internal static ColorSpaceInfo Lab() => new() { Kind = PdfConstants.Lab, AlternateSpace = PdfConstants.DeviceRgb };
 
     // ── Conversion ────────────────────────────────────────────────────────────
 
@@ -81,23 +81,23 @@ internal sealed class ColorSpaceInfo
 
         switch (Kind)
         {
-            case "DeviceGray":
-            case "CalGray":
+            case PdfConstants.DeviceGray:
+            case PdfConstants.CalGray:
             {
                 var v = components.Length > 0 ? components[0] : 0.5;
-                if (Kind == "CalGray" && Math.Abs(CalGrayGamma - 1.0) > 0.05)
+                if (Kind == PdfConstants.CalGray && Math.Abs(CalGrayGamma - 1.0) > 0.05)
                     v = Math.Pow(Math.Max(0, v), CalGrayGamma);
                 var b = B255(v);
                 return (b, b, b);
             }
 
-            case "DeviceRGB":
+            case PdfConstants.DeviceRgb:
                 return components.Length >= 3
                     ? (B255(components[0]), B255(components[1]), B255(components[2]))
                     : ((byte)128, (byte)128, (byte)128);
 
-            case "DeviceCMYK":
-            case "ICCBased" when AlternateSpace == "DeviceCMYK":
+            case PdfConstants.DeviceCmyk:
+            case PdfConstants.IccBased when AlternateSpace == PdfConstants.DeviceCmyk:
             {
                 if (components.Length < 4)
                     return (128, 128, 128);
@@ -110,15 +110,15 @@ internal sealed class ColorSpaceInfo
                 return (B255(r), B255(g), B255(b));
             }
 
-            case "ICCBased":
+            case PdfConstants.IccBased:
             {
                 // Use alternate space for conversion.
                 var alt = new ColorSpaceInfo { Kind = AlternateSpace };
                 return alt.ToRgb(components);
             }
 
-            case "Separation":
-            case "DeviceN":
+            case PdfConstants.Separation:
+            case PdfConstants.DeviceN:
             {
                 var fn = overrideFn ?? TintTransform;
                 if (fn is null) return (128, 128, 128);
@@ -129,7 +129,7 @@ internal sealed class ColorSpaceInfo
                 return alt.ToRgb(output);
             }
 
-            case "Indexed":
+            case PdfConstants.Indexed:
             {
                 if (IndexedLookup is null || components.Length == 0)
                     return (128, 128, 128);
@@ -151,7 +151,7 @@ internal sealed class ColorSpaceInfo
                 };
             }
 
-            case "CalRGB":
+            case PdfConstants.CalRgb:
             {
                 if (components.Length < 3) return (128, 128, 128);
                 // Apply gamma then matrix to get CIE XYZ, then convert to sRGB.
@@ -184,7 +184,7 @@ internal sealed class ColorSpaceInfo
                 static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
             }
 
-            case "Lab":
+            case PdfConstants.Lab:
             {
                 if (components.Length < 3) return (128, 128, 128);
                 // L*a*b* → XYZ D50 → linear sRGB (approximate)

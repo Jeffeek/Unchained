@@ -47,19 +47,19 @@ internal static class CsvImporter
             return;
         }
 
+        if (!string.IsNullOrEmpty(options.DateFormat) &&
+            DateTime.TryParseExact(field, options.DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            sheet.SetValue(row, column, date);
+            return;
+        }
+
         // Avoid treating zero-padded ids ("007") as numbers.
         var looksNumeric = !(field.Length > 1 && field[0] == '0' && field[1] != '.');
         if (looksNumeric &&
             double.TryParse(field, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var number))
         {
             sheet.SetValue(row, column, number);
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(options.DateFormat) &&
-            DateTime.TryParseExact(field, options.DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-        {
-            sheet.SetValue(row, column, date);
             return;
         }
 

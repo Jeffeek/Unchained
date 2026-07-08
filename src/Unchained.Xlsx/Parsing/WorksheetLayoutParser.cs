@@ -63,7 +63,7 @@ internal static class WorksheetLayoutParser
 
         var protection = new SheetProtection
         {
-            IsProtected = element.GetAttrBool("sheet") == true,
+            IsProtected = element.GetAttrBool(SmlNames.AttrSheet) == true,
             PasswordHash = element.GetAttr("password"),
             AllowSelectLockedCells = element.GetAttrBool("selectLockedCells") != true,
             AllowSelectUnlockedCells = element.GetAttrBool("selectUnlockedCells") != true,

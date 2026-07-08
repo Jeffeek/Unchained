@@ -180,13 +180,12 @@ public sealed class FillParserTests
     [Fact]
     public void Parse_PatternFill_ReadsForegroundAndBackground()
     {
-        // The parser reads the foreground from a direct <a:solidFill> child and the background
-        // from the second child element (treated as a colour wrapper).
+        // Foreground is a direct <a:solidFill> child; background is wrapped in <a:bgClr>.
         var pattern = new XElement(
             DmlNames.PatternFill,
             new XAttribute("prst", "cross"),
             new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "112233"))),
-            new XElement(DmlNames.Dml + "bgClr", new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "445566")))
+            new XElement(DmlNames.Dml + "bgClr", new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "445566"))))
         );
         var parent = new XElement(DmlNames.Dml + "spPr", pattern);
         var fill = new FillFormat();
@@ -195,6 +194,26 @@ public sealed class FillParserTests
         fill.Type.ShouldBe(FillType.Pattern);
         fill.Pattern!.ForegroundColor.Resolve(null).ShouldBe(0xFF112233u);
         fill.Pattern.BackgroundColor.Resolve(null).ShouldBe(0xFF445566u);
+    }
+
+    [Fact]
+    public void Parse_PatternFill_BgClrWithSchemeClr_ParsesCorrectly()
+    {
+        // Per ECMA-376, bgClr wraps a colour element such as schemeClr (not srgbClr directly).
+        var pattern = new XElement(
+            DmlNames.PatternFill,
+            new XAttribute("prst", "pct50"),
+            new XElement(DmlNames.SolidFill, new XElement(DmlNames.SrgbColor, new XAttribute(DmlNames.AttributeValue, "AABBCC"))),
+            new XElement(DmlNames.Dml + "bgClr", new XElement(DmlNames.SchemeColor, new XAttribute(DmlNames.AttributeValue, "accent1")))
+        );
+        var parent = new XElement(DmlNames.Dml + "spPr", pattern);
+        var fill = new FillFormat();
+        FillParser.Parse(parent, fill);
+
+        fill.Type.ShouldBe(FillType.Pattern);
+        fill.Pattern!.ForegroundColor.Resolve(null).ShouldBe(0xFFAABBCCu);
+        fill.Pattern.BackgroundColor.Type.ShouldBe(ColorSpecType.ThemeSlot);
+        fill.Pattern.BackgroundColor.ThemeSlot.ShouldBe(ThemeColorSlot.Accent1);
     }
 
     [Fact]

@@ -39,6 +39,6 @@ internal static class Shape3DWriter
             A + name,
             new XAttribute("w", bevel.Width.Value),
             new XAttribute("h", bevel.Height.Value),
-            new XAttribute("prst", bevel.Preset)
+            new XAttribute(DmlNames.AttributePreset, bevel.Preset)
         );
 }

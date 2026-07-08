@@ -49,4 +49,7 @@ public sealed class ChartModel
 
     /// <summary>Chart-level data-label settings (series may override).</summary>
     public ChartDataLabels DataLabels { get; } = new();
+
+    /// <summary>The A1 range reference the chart was originally bound to. May be null for programmatically-created charts.</summary>
+    public string? SourceRange { get; set; }
 }

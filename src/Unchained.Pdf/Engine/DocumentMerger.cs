@@ -44,11 +44,7 @@ public sealed class DocumentMerger : IDocumentMerger
 
         foreach (var doc in documents)
         {
-            var adapter = doc as PdfDocumentAdapter
-                          ?? throw new ArgumentException(
-                              $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {doc.GetType().Name}.",
-                              nameof(documents)
-                          );
+            var adapter = MutationHelper.Cast(nameof(documents), doc);
 
             var objects = adapter.Core.CollectObjects();
             var sourceMax = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
@@ -196,7 +192,7 @@ public sealed class DocumentMerger : IDocumentMerger
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static bool IsStructural(PdfIndirectObject obj) =>
-        obj.Value is PdfDictionary d && d.GetName(PdfName.Type.Value) is "Catalog" or "Pages";
+        obj.Value is PdfDictionary d && (d.GetName(PdfName.Type.Value) == PdfName.Catalog.Value || d.GetName(PdfName.Type.Value) == PdfName.Pages.Value);
 
     private static bool IsPageLeaf(PdfIndirectObject obj) =>
         obj.Value is PdfDictionary d && d.IsPage();

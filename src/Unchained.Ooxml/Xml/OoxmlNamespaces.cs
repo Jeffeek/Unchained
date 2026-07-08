@@ -53,6 +53,14 @@ internal static class OoxmlNamespaces
     /// <summary>DrawingML table: <c>http://schemas.openxmlformats.org/drawingml/2006/table</c></summary>
     public const string Table = DrawingML + "/table";
 
+    // ── Microsoft encryption namespaces ─────────────────────────────────────
+
+    /// <summary>Microsoft encryption namespace: <c>http://schemas.microsoft.com/office/2006/encryption</c>.</summary>
+    public const string MsEncryption = "http://schemas.microsoft.com/office/2006/encryption";
+
+    /// <summary>Microsoft password key encryptor namespace.</summary>
+    public const string MsKeyEncryptorPassword = "http://schemas.microsoft.com/office/2006/keyEncryptor/password";
+
     // ── Relationship-type suffixes (append to OfficeDocument/PackageRelationships + '/') ──
 
     /// <summary>Image: <c>image</c></summary>

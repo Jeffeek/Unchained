@@ -376,8 +376,8 @@ internal static class LinearizedWriter
         var hintDict = new PdfDictionary(
             new Dictionary<string, PdfObject>
             {
-                ["Length"] = new PdfInteger(hintStreamBytes.Length),
-                ["Filter"] = PdfName.FlateDecode,
+                [PdfName.Length.Value] = new PdfInteger(hintStreamBytes.Length),
+                [PdfName.Filter.Value] = PdfName.FlateDecode,
                 ["S"] = new PdfInteger(0)
             }
         );
@@ -495,7 +495,7 @@ internal static class LinearizedWriter
         }
 
         // First-page trailer.
-        var rootRef = trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
+        var rootRef = MutationHelper.GetRootRef(trailer);
         var maxObj = firstObjNumbers.Append(hintObjNum).Max() + 1;
 
         var trailerDict = BuildAscii(
@@ -539,7 +539,7 @@ internal static class LinearizedWriter
             written += entry.Length;
         }
 
-        var rootRef = trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
+        var rootRef = MutationHelper.GetRootRef(trailer);
         var infoEntry = trailer[PdfName.Info] is { } info ? $"\n/Info {info}" : string.Empty;
 
         var trailerBytes = Encoding.ASCII.GetBytes(
@@ -622,7 +622,7 @@ internal static class LinearizedWriter
         long mainXrefOffset
     )
     {
-        var rootRef = trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
+        var rootRef = MutationHelper.GetRootRef(trailer);
         var maxObj = firstPageObjects
             .Concat(remainingObjects)
             .Select(static o => o.ObjectNumber)

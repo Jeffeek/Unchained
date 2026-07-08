@@ -216,7 +216,7 @@ internal static partial class FormulaFunctions
                 "EDATE" => EDate(values),
                 "WEEKNUM" => WeekNum(values),
                 "ISOWEEKNUM" => IsoWeekNum(values),
-                "YEARFRAC" => Number(Math.Abs(Num(values, 1) - Num(values, 0)) / 365.0),
+                "YEARFRAC" => YearFrac(values),
                 "DATEDIF" => DateDif(values),
                 // Financial.
                 "PMT" => Number(Pmt(Num(values, 0), Num(values, 1), Num(values, 2), values.Count > 3 ? Num(values, 3) : 0, values.Count > 4 ? (int)Num(values, 4) : 0)),

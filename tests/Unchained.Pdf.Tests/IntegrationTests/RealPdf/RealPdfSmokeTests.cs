@@ -1,7 +1,7 @@
 using Shouldly;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
-using Unchained.Pdf.Tests.Helpers;
+using Unchained.Pdf.Tests.Shared;
 using Xunit;
 
 namespace Unchained.Pdf.Tests.IntegrationTests.RealPdf;
@@ -25,8 +25,7 @@ public sealed class RealPdfSmokeTests : PdfTestBase
             tested++;
         }
 
-        if (tested == 0)
-            Assert.Skip("No PDF files found in TestFiles/.");
+        tested.ShouldBeGreaterThan(0, "No PDF files found in TestFiles/.");
     }
 
     [Fact]
@@ -113,8 +112,7 @@ public sealed class RealPdfSmokeTests : PdfTestBase
             tested++;
         }
 
-        if (tested == 0)
-            Assert.Skip("No parseable PDF files found in TestFiles/.");
+        tested.ShouldBeGreaterThan(0, "No parseable PDF files found in TestFiles/.");
     }
 
     private static async Task<IPdfDocument?> TryLoadDocAsync(string path)

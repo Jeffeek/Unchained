@@ -1,12 +1,9 @@
-using System.Buffers;
-using System.Security.Cryptography;
 using System.Xml.Linq;
 using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
+using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;
-using Unchained.Pdf.Writing;
-using SaveOptions = System.Xml.Linq.SaveOptions;
 
 namespace Unchained.Pdf.Engine;
 
@@ -20,75 +17,37 @@ namespace Unchained.Pdf.Engine;
 ///         Validate after conversion to see any remaining violations.
 ///     </para>
 /// </summary>
-internal static class PdfAConverter
+internal sealed class PdfAConverter(PdfAProfile profile) : PdfConversionBase
 {
-    internal static byte[] Convert(PdfDocumentCore core, PdfAProfile profile)
+    protected override ReadOnlySpan<byte> BuildXmp(PdfDocumentCore core, IReadOnlyDictionary<string, PdfObject> catalogEntries)
     {
-        if (core.IsEncrypted)
-            throw new InvalidOperationException("Cannot convert an encrypted PDF to PDF/A. Decrypt first.");
-
-        var objects = core.CollectObjects().ToList();
-        var maxObj = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
-
-        // Track modifications to the catalog entries
-        var catalogObjNum = (core.Trailer[PdfName.Root] as PdfIndirectReference)?.ObjectNumber ?? 0;
-        var catalogIdx = objects.FindIndex(o => o.ObjectNumber == catalogObjNum);
-        if (catalogIdx < 0)
-            throw new InvalidOperationException("Cannot locate catalog object.");
-
-        var catalogDict = objects[catalogIdx].Value as PdfDictionary ?? throw new InvalidOperationException("Catalog is not a dictionary.");
-
-        var catalogEntries = new Dictionary<string, PdfObject>(catalogDict.Entries);
-
-        // ── 1. Add/update /Metadata with pdfaid XMP ───────────────────────────
-        var metaObjNum = maxObj + 1;
-        var xmpBytes = BuildPdfAXmp(profile, catalogEntries, core);
-        var metaDict = new PdfDictionary(
-            new Dictionary<string, PdfObject>
-            {
-                ["Type"] = PdfName.Metadata,
-                ["Subtype"] = PdfName.XML,
-                ["Length"] = new PdfInteger(xmpBytes.Length)
-            }
-        );
-        objects.Add(new PdfIndirectObject(metaObjNum, 0, new PdfStream(metaDict, xmpBytes.ToArray())));
-        catalogEntries["Metadata"] = new PdfIndirectReference(metaObjNum, 0);
-
-        // ── 2. Remove /AA from catalog (prohibited additional actions) ─────────
-        catalogEntries.Remove("AA");
-
-        // ── 3. Remove /Collection (PDF Portfolio) ─────────────────────────────
-        catalogEntries.Remove("Collection");
-
-        // ── 4. Rebuild catalog ────────────────────────────────────────────────
-        objects[catalogIdx] = new PdfIndirectObject(catalogObjNum, 0, new PdfDictionary(catalogEntries));
-
-        // ── 5. Fix annotation Print flags across all pages ────────────────────
-        FixAnnotationFlags(objects, core);
-
-        // ── 6. Build trailer with /ID (required by PDF/A) ─────────────────────
-        var trailer = BuildTrailerWithId(objects, core);
-
-        // ── 7. Serialize ──────────────────────────────────────────────────────
-        var buf = new ArrayBufferWriter<byte>();
-        using var writer = new PdfWriter(buf);
-        writer.Write(objects, trailer);
-        return buf.WrittenMemory.ToArray();
-    }
-
-    // ── XMP ───────────────────────────────────────────────────────────────────
-
-    private static ReadOnlySpan<byte> BuildPdfAXmp(PdfAProfile profile, IReadOnlyDictionary<string, PdfObject> catalogEntries, PdfDocumentCore core)
-    {
-        // Try to preserve existing XMP
         var existing = XmpDocumentHelper.ReadExistingXmp(catalogEntries, core);
         var xmpDoc = existing is not null
             ? XmpDocumentHelper.TryParse(existing) ?? XmpDocumentHelper.CreateMinimalXmp()
             : XmpDocumentHelper.CreateMinimalXmp();
 
         SetPdfaidProperties(xmpDoc, profile);
+        return xmpDoc.ToString().ToUtf8Span();
+    }
 
-        return xmpDoc.ToString(SaveOptions.OmitDuplicateNamespaces).ToUtf8Span();
+    protected override IReadOnlyDictionary<string, PdfObject>? ExtraCatalogEntries => null;
+
+    protected override int PreMetadataHook(List<PdfIndirectObject> objects, int maxObj) => 0;
+
+    protected override void PostCatalogRebuild(List<PdfIndirectObject> objects, PdfDocumentCore core)
+    {
+        // Remove prohibited catalog entries
+        var (catalogObjNum, catalogIdx) = ResolveCatalog(core, objects);
+        if (catalogIdx >= 0 && objects[catalogIdx].Value is PdfDictionary cat)
+        {
+            var entries = new Dictionary<string, PdfObject>(cat.Entries);
+            entries.Remove("AA");
+            entries.Remove("Collection");
+            objects[catalogIdx] = new PdfIndirectObject(catalogObjNum, objects[catalogIdx].Generation, new PdfDictionary(entries));
+        }
+
+        // Fix annotation Print flags
+        FixAnnotationFlags(objects, core);
     }
 
     private static void SetPdfaidProperties(XContainer xmpDoc, PdfAProfile profile)
@@ -99,14 +58,10 @@ internal static class PdfAConverter
         var rdfRoot = xmpDoc.Descendants(rdf + "RDF").FirstOrDefault();
         if (rdfRoot is null) return;
 
-        // Find or create a rdf:Description that holds pdfaid properties
         var desc = rdfRoot.Elements(rdf + "Description").FirstOrDefault(d => d.Attribute(rdf + "about") is not null)
                    ?? new XElement(rdf + "Description", new XAttribute(rdf + "about", ""));
-
         if (!rdfRoot.Elements(rdf + "Description").Contains(desc))
             rdfRoot.Add(desc);
-
-        // Ensure pdfaid namespace is declared
         if (desc.Attribute(XNamespace.Xmlns + "pdfaid") is null)
             desc.Add(new XAttribute(XNamespace.Xmlns + "pdfaid", pdfaid.NamespaceName));
 
@@ -124,20 +79,12 @@ internal static class PdfAConverter
         XmpDocumentHelper.SetOrAdd(desc, pdfaid + "conformance", conformance);
     }
 
-    // ── Annotation Print flag ─────────────────────────────────────────────────
-
     private static void FixAnnotationFlags(List<PdfIndirectObject> objects, PdfDocumentCore core)
     {
         for (var page = 1; page <= core.PageCount; page++)
         {
             var pageDict = core.GetPage(page);
-            var annotsObj = pageDict[PdfName.Annots];
-            var annots = annotsObj switch
-            {
-                PdfArray a => a,
-                PdfIndirectReference r => core.ResolveIndirect(r.ObjectNumber).Value as PdfArray,
-                _ => null
-            };
+            var annots = core.ResolveAnnots(pageDict);
             if (annots is null) continue;
 
             foreach (var idx in annots.Elements
@@ -148,15 +95,14 @@ internal static class PdfAConverter
                 if (objects[idx].Value is not PdfDictionary annot)
                     continue;
 
-                var subtype = annot.GetName("Subtype") ?? string.Empty;
-                if (subtype == "Widget")
-                    continue; // Widget flags differ
+                var subtype = annot.GetName(PdfName.Subtype.Value) ?? string.Empty;
+                if (subtype == PdfName.Widget.Value)
+                    continue;
 
-                var flags = (int)(annot.Get<PdfInteger>("F")?.Value ?? 0);
+                var flags = (int)(annot.Get<PdfInteger>(PdfName.F.Value)?.Value ?? 0);
                 if ((flags & 4) != 0)
-                    continue; // Print bit already set
+                    continue;
 
-                // Set Print bit (bit 3 = value 4)
                 var updated = new Dictionary<string, PdfObject>(annot.Entries)
                 {
                     ["F"] = new PdfInteger(flags | 4)
@@ -164,32 +110,5 @@ internal static class PdfAConverter
                 objects[idx] = new PdfIndirectObject(objects[idx].ObjectNumber, objects[idx].Generation, new PdfDictionary(updated));
             }
         }
-    }
-
-    // ── Trailer ───────────────────────────────────────────────────────────────
-
-    private static PdfDictionary BuildTrailerWithId(IEnumerable<PdfIndirectObject> objects, PdfDocumentCore core)
-    {
-        var maxObj = objects.Max(static o => o.ObjectNumber);
-        var entries = new Dictionary<string, PdfObject>
-        {
-            [PdfName.Size.Value] = new PdfInteger(maxObj + 1),
-            [PdfName.Root.Value] = core.Trailer[PdfName.Root]!
-        };
-
-        if (core.Trailer[PdfName.Info] is { } info)
-            entries[PdfName.Info.Value] = info;
-
-        // /ID is required by PDF/A — preserve existing or generate new
-        var existingId = core.Trailer.Get<PdfArray>(PdfName.ID);
-        entries[PdfName.ID.Value] = existingId
-                                    ?? new PdfArray(
-                                        [
-                                            new PdfString(RandomNumberGenerator.GetBytes(16), true),
-                                            new PdfString(RandomNumberGenerator.GetBytes(16), true)
-                                        ]
-                                    );
-
-        return new PdfDictionary(entries);
     }
 }

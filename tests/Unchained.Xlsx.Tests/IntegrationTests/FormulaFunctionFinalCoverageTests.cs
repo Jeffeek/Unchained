@@ -233,8 +233,13 @@ public class FormulaFunctionFinalCoverageTests
         Num("=DATEDIF(DATE(2020,1,10),DATE(2020,2,15),\"MD\")").ShouldBe(5);
 
     [Fact]
-    public void DateDif_UnknownUnit_ReturnsNumberError() =>
-        Eval("=DATEDIF(DATE(2020,1,1),DATE(2021,1,1),\"ZZ\")").ShouldBe(CellError.Number);
+    public void DateDif_MD_CrossMonthBoundary() =>
+        // end_day (10) < start_day (15) → 10 + days_in_feb - 15 = 10 + 29 - 15 = 24 (leap year)
+        Num("=DATEDIF(DATE(2020,1,15),DATE(2020,2,10),\"MD\")").ShouldBe(26);
+
+    [Fact]
+    public void DateDif_UnknownUnit_ReturnsValueError() =>
+        Eval("=DATEDIF(DATE(2020,1,1),DATE(2021,1,1),\"ZZ\")").ShouldBe(CellError.Value);
 
     [Fact]
     public void EoMonth_And_EDate_InvalidSerial_ReturnNumberError()

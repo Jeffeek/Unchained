@@ -23,7 +23,7 @@ namespace Unchained.Pdf.Models;
 ///     <paramref name="Tagged" /> is <see langword="true" />.
 /// </param>
 public sealed record MdLoadOptions(
-    string BodyFontName = "Helvetica",
+    string BodyFontName = PdfConstants.FontHelvetica,
     float BodyFontSize = 11f,
     string CodeFontName = "Courier",
     float CodeFontSize = 10f,

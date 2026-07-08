@@ -36,9 +36,9 @@ internal static class AnimationWriter
         var nextId = new IdCounter();
 
         var rootCtn = new XElement(
-            Pml + "cTn",
+            PmlNames.AnimationContainer,
             new XAttribute("id", nextId.Next()),
-            new XAttribute("dur", "indefinite"),
+            new XAttribute("dur", AnimationStrings.RepeatIndefinite),
             new XAttribute("restart", "whenNotActive"),
             new XAttribute("nodeType", "tmRoot")
         );
@@ -62,9 +62,9 @@ internal static class AnimationWriter
     private static XElement WriteMainSeq(AnimationSequence sequence, IdCounter ids)
     {
         var seqCtn = new XElement(
-            Pml + "cTn",
+            PmlNames.AnimationContainer,
             new XAttribute("id", ids.Next()),
-            new XAttribute("dur", "indefinite"),
+            new XAttribute("dur", AnimationStrings.RepeatIndefinite),
             new XAttribute("nodeType", "mainSeq")
         );
         var seqChildren = new XElement(Pml + "childTnLst");
@@ -116,12 +116,12 @@ internal static class AnimationWriter
     )
     {
         var outerCtn = new XElement(
-            Pml + "cTn",
+            PmlNames.AnimationContainer,
             new XAttribute("id", ids.Next()),
-            new XAttribute("fill", "hold")
+            new XAttribute("fill", AnimationStrings.FillHold)
         );
 
-        // OnClick group has delay="indefinite"
+        // OnClick group has delay=RepeatIndefinite
         outerCtn.Add(
             new XElement(
                 Pml + "stCondLst",
@@ -170,12 +170,12 @@ internal static class AnimationWriter
         };
 
         var ctn = new XElement(
-            Pml + "cTn",
+            PmlNames.AnimationContainer,
             new XAttribute("id", ids.Next()),
             new XAttribute("presetID", (int)effect.Preset),
             new XAttribute("presetClass", presetClass),
             new XAttribute("presetSubtype", "0"),
-            new XAttribute("fill", "hold"),
+            new XAttribute("fill", AnimationStrings.FillHold),
             new XAttribute("grpId", grpId),
             new XAttribute("nodeType", nodeType),
             new XAttribute("dur", durMs)
@@ -193,7 +193,7 @@ internal static class AnimationWriter
             ctn.SetAttributeValue(
                 "repeatCount",
                 effect.Timing.RepeatCount < 0
-                    ? "indefinite"
+                    ? AnimationStrings.RepeatIndefinite
                     : (effect.Timing.RepeatCount * 1000).ToString(CultureInfo.InvariantCulture)
             );
         }
@@ -250,10 +250,10 @@ internal static class AnimationWriter
         var setBhvr = new XElement(
             Pml + "cBhvr",
             new XElement(
-                Pml + "cTn",
+                PmlNames.AnimationContainer,
                 new XAttribute("id", ids.Next()),
                 new XAttribute("dur", "1"),
-                new XAttribute("fill", "hold")
+                new XAttribute("fill", AnimationStrings.FillHold)
             ),
             new XElement(
                 Pml + "tgtEl",
@@ -286,7 +286,7 @@ internal static class AnimationWriter
         var bhvr = new XElement(
             Pml + "cBhvr",
             new XElement(
-                Pml + "cTn",
+                PmlNames.AnimationContainer,
                 new XAttribute("id", ids.Next()),
                 new XAttribute("dur", durMs)
             ),
@@ -326,9 +326,9 @@ internal static class AnimationWriter
     private static XElement WriteInteractiveSeq(InteractiveSequence interactive, IdCounter ids)
     {
         var seqCtn = new XElement(
-            Pml + "cTn",
+            PmlNames.AnimationContainer,
             new XAttribute("id", ids.Next()),
-            new XAttribute("dur", "indefinite"),
+            new XAttribute("dur", AnimationStrings.RepeatIndefinite),
             new XAttribute("nodeType", "interactiveSeq")
         );
         var seqChildren = new XElement(Pml + "childTnLst");

@@ -1,3 +1,5 @@
+using Unchained.Drawing.Constants;
+
 namespace Unchained.Pdf.Content;
 
 /// <summary>
@@ -312,17 +314,17 @@ internal static class Standard14Widths
 
     private static short[] Lookup(string fontName) => fontName switch
     {
-        "Courier" or "Courier-Bold" or "Courier-Oblique" or "Courier-BoldOblique" => CourierW,
-        "Helvetica" => HelveticaW,
-        "Helvetica-Bold" => HelveticaBoldW,
-        "Helvetica-Oblique" => HelveticaW,         // same metrics as regular
-        "Helvetica-BoldOblique" => HelveticaBoldW, // same metrics as bold
-        "Times-Roman" => TimesRomanW,
-        "Times-Bold" => TimesBoldW,
-        "Times-Italic" => TimesItalicW,
-        "Times-BoldItalic" => TimesBoldItalicW,
-        "Symbol" => SymbolW,
-        "ZapfDingbats" => ZapfDingbatsW,
+        FontFallbackNames.Courier or FontFallbackNames.CourierBold or FontFallbackNames.CourierOblique or FontFallbackNames.CourierBoldOblique => CourierW,
+        FontFallbackNames.Helvetica => HelveticaW,
+        FontFallbackNames.HelveticaBold => HelveticaBoldW,
+        FontFallbackNames.HelveticaOblique => HelveticaW,         // same metrics as regular
+        FontFallbackNames.HelveticaBoldOblique => HelveticaBoldW, // same metrics as bold
+        FontFallbackNames.TimesRoman => TimesRomanW,
+        FontFallbackNames.TimesBold => TimesBoldW,
+        FontFallbackNames.TimesItalic => TimesItalicW,
+        FontFallbackNames.TimesBoldItalic => TimesBoldItalicW,
+        FontFallbackNames.Symbol => SymbolW,
+        FontFallbackNames.ZapfDingbats => ZapfDingbatsW,
         _ => HelveticaW // sensible fallback
     };
 

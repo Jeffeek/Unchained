@@ -3,21 +3,6 @@ namespace Unchained.Pdf;
 /// <summary>PDF specification constants (ISO 32000-1).</summary>
 internal static class PdfConstants
 {
-    // ── Glyph space (ISO 32000-1 §9.2.4) ────────────────────────────────────
-
-    /// <summary>
-    ///     PDF glyph-space units per em: one em = 1000 glyph units.
-    ///     All glyph advance widths and bounding-box values are expressed in this unit.
-    ///     Divide by this value to convert to text-space units.
-    /// </summary>
-    internal const double GlyphSpaceUnitsPerEm = 1000.0;
-
-    /// <summary>
-    ///     Horizontal scale (Tz operator) is a percentage; divide by this to obtain a ratio.
-    ///     Default Tz = 100 → ratio = 1.0 (ISO 32000-1 §9.3.4).
-    /// </summary>
-    internal const double HorizontalScaleDivisor = 100.0;
-
     // ── Cross-reference table (ISO 32000-1 §7.5.4) ──────────────────────────
 
     /// <summary>
@@ -40,6 +25,54 @@ internal static class PdfConstants
     /// <summary>Second byte of the UTF-16 big-endian byte-order mark.</summary>
     internal const byte Utf16BeBomByte1 = 0xFF;
 
+    // ── Resource resolution limits ────────────────────────────────────────────
+
+    /// <summary>Maximum depth when recursing into nested Form XObjects — prevents infinite loops on malformed documents.</summary>
+    internal const int MaxFormXObjectDepth = 10;
+
+    // ── Device color spaces (ISO 32000-1 §8.6.2) ────────────────────────────
+
+    /// <summary>Device gray color space name.</summary>
+    internal const string DeviceGray = "DeviceGray";
+
+    /// <summary>Device RGB color space name.</summary>
+    internal const string DeviceRgb = "DeviceRGB";
+
+    /// <summary>Device CMYK color space name.</summary>
+    internal const string DeviceCmyk = "DeviceCMYK";
+
+    /// <summary>Calibrated gray color space name.</summary>
+    internal const string CalGray = "CalGray";
+
+    /// <summary>Calibrated RGB color space name.</summary>
+    internal const string CalRgb = "CalRGB";
+
+    /// <summary>ICC-based color space name.</summary>
+    internal const string IccBased = "ICCBased";
+
+    /// <summary>Separation color space name.</summary>
+    internal const string Separation = "Separation";
+
+    /// <summary>DeviceN color space name.</summary>
+    internal const string DeviceN = "DeviceN";
+
+    /// <summary>Indexed color space name.</summary>
+    internal const string Indexed = "Indexed";
+
+    /// <summary>Lab color space name.</summary>
+    internal const string Lab = "Lab";
+
+    /// <summary>Form XObject subtype value.</summary>
+    internal const string XObjectForm = "Form";
+
+    // ── Standard 14 fonts (ISO 32000-1 §9.6.2) ────────────────────────────────
+
+    /// <summary>Helvetica (sans-serif) Standard 14 font name.</summary>
+    internal const string FontHelvetica = "Helvetica";
+
+    /// <summary>Helvetica-Bold Standard 14 font name.</summary>
+    internal const string FontHelveticaBold = "Helvetica-Bold";
+
     // ── Printable ASCII range ────────────────────────────────────────────────
 
     /// <summary>First printable ASCII character (space, 0x20).</summary>
@@ -47,4 +80,9 @@ internal static class PdfConstants
 
     /// <summary>Last printable ASCII character (tilde ~, 0x7E).</summary>
     internal const byte PrintableAsciiMax = 0x7E;
+
+    // ── PDF/A compliance ─────────────────────────────────────────────────────
+
+    /// <summary>PDF/A-1b conformance marker in XMP metadata.</summary>
+    internal const string PdfAIdentifier = "pdfuaid";
 }

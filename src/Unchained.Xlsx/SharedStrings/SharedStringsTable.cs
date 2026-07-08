@@ -72,14 +72,14 @@ internal sealed class SharedStringsTable
     {
         // Plain string: <si><t>...</t></si>
         var direct = si.Child(SmlNames.Text);
-        if (direct != null && !si.Children(SmlNames.RichRun).Any())
-            return direct.Value;
-
-        // Rich text: <si><r><t>...</t></r>...</si>
-        return string.Concat(
-            si.Children(SmlNames.RichRun)
-                .Select(static r => r.Child(SmlNames.Text)?.Value ?? string.Empty)
-        );
+        return direct != null && !si.Children(SmlNames.RichRun).Any()
+            ? direct.Value
+            :
+            // Rich text: <si><r><t>...</t></r>...</si>
+            string.Concat(
+                si.Children(SmlNames.RichRun)
+                    .Select(static r => r.Child(SmlNames.Text)?.Value ?? string.Empty)
+            );
     }
 
     // ── Serialize ──────────────────────────────────────────────────────────────

@@ -72,17 +72,11 @@ public sealed class TableGenerator : ITableGenerator
 
     private static void Append(IPdfDocument document, TableData data, TableStyle style)
     {
-        var adapter = document as PdfDocumentAdapter
-                      ?? throw new ArgumentException(
-                          $"Document was not created by Unchained. Expected {nameof(PdfDocumentAdapter)}, got {document.GetType().Name}.",
-                          nameof(document)
-                      );
+        var adapter = MutationHelper.Cast(nameof(document), document);
 
-        var existing = adapter.Core.CollectObjects();
-        var maxObjNum = existing.Count > 0 ? existing.Max(static o => o.ObjectNumber) : 0;
+        var (existing, builder) = MutationHelper.CollectWithBuilder(adapter);
 
         var layout = TableLayout.Compute(data.Headers.Count, style, data.Title is not null, data);
-        var builder = new ObjectGraphBuilder(maxObjNum + 1);
         var resourcesRef = AddSharedResources(builder, style);
 
         var pagesRef = adapter.Core.Catalog[PdfName.Pages] as PdfIndirectReference
@@ -129,7 +123,7 @@ public sealed class TableGenerator : ITableGenerator
         // Inject tagged structure into catalog when data.Tagged is true.
         if (data.Tagged && allTaggedItems.Count > 0)
         {
-            var catalogRef = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Trailer missing /Root.");
+            var catalogRef = MutationHelper.GetCatalogRef(adapter);
             var catalogObjNum = catalogRef.ObjectNumber;
             var catalogIdx = finalObjects.FindIndex(o => o.ObjectNumber == catalogObjNum);
             if (catalogIdx >= 0 && finalObjects[catalogIdx].Value is PdfDictionary catalogDict)
@@ -159,18 +153,7 @@ public sealed class TableGenerator : ITableGenerator
             }
         }
 
-        var totalMax = finalObjects.Max(static o => o.ObjectNumber);
-        var rootRef2 = adapter.Core.Trailer[PdfName.Root] as PdfIndirectReference ?? throw new PdfException("Document trailer is missing /Root.");
-        var trailer = new PdfDictionary(
-            new Dictionary<string, PdfObject>
-            {
-                [PdfName.Size.Value] = new PdfInteger(totalMax + 1),
-                [PdfName.Root.Value] = rootRef2
-            }
-        );
-
-        var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(finalObjects, trailer);
-        adapter.ReplaceCore(newDoc.Core);
+        MutationHelper.SerializeAndReplace(adapter, finalObjects);
     }
 
     // ── Page building ─────────────────────────────────────────────────────────
@@ -464,7 +447,7 @@ public sealed class TableGenerator : ITableGenerator
         catalogEntries[PdfName.ViewerPreferences.Value] = new PdfDictionary(
             new Dictionary<string, PdfObject>
             {
-                ["DisplayDocTitle"] = PdfBoolean.True
+                [PdfName.DisplayDocTitle.Value] = PdfBoolean.True
             }
         );
 

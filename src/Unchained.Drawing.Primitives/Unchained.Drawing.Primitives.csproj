@@ -20,4 +20,16 @@
     <IsUserFacingPackage>false</IsUserFacingPackage>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Unchained.Drawing" />
+    <InternalsVisibleTo Include="Unchained.Drawing.Extensions" />
+    <InternalsVisibleTo Include="Unchained.Drawing.Fonts" />
+    <InternalsVisibleTo Include="Unchained.Drawing.Tests" />
+    <InternalsVisibleTo Include="Unchained.Pptx" />
+    <InternalsVisibleTo Include="Unchained.Pptx.Rendering" />
+    <InternalsVisibleTo Include="Unchained.Xlsx" />
+    <InternalsVisibleTo Include="Unchained.Xlsx.Extensions" />
+    <InternalsVisibleTo Include="Unchained.Xlsx.Tests" />
+  </ItemGroup>
+
 </Project>

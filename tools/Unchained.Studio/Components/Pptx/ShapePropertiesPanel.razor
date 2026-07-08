@@ -238,11 +238,31 @@
         Shape.FlipVertical = _flipV;
         Shape.IsHidden = _hidden;
         Shape.IsDecorative = _decorative;
-        Shape.Fill.SetSolid(XlsxColor.FromHex(_fillHex));
-        if (Shape.Fill.Pattern is { } pf)
+        // Only write the fill the user actually chose — unconditionally forcing SetSolid turned
+        // every no-fill shape (e.g. text boxes) black on Apply.
+        switch (_fillType)
         {
-            pf.ForegroundColor = XlsxColor.FromHex(_fgHex);
-            pf.BackgroundColor = XlsxColor.FromHex(_bgHex);
+            case FillType.None:
+                Shape.Fill.SetNone();
+            break;
+            case FillType.Solid:
+                Shape.Fill.SetSolid(XlsxColor.FromHex(_fillHex));
+            break;
+            case FillType.Pattern:
+                Shape.Fill.SetSolid(XlsxColor.FromHex(_fgHex));
+                if (Shape.Fill.Pattern is { } pf)
+                {
+                    pf.ForegroundColor = XlsxColor.FromHex(_fgHex);
+                    pf.BackgroundColor = XlsxColor.FromHex(_bgHex);
+                }
+
+            break;
+            case FillType.Gradient:
+            case FillType.Picture:
+            case FillType.Group:
+            default:
+                // Leave the existing fill untouched — the panel can't author these.
+            break;
         }
 
         if (_lineStyle != LineStyle.NoLine)

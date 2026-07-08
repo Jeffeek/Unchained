@@ -7,16 +7,12 @@
      @ondrop="OnDrop"
      @ondrop:preventDefault="true">
 
-    <MudIcon Icon="@Icon" Style="font-size:3rem; opacity:0.5;" Class="mb-2"/>
-    <MudText Typo="Typo.h6" Class="mb-1">@Title</MudText>
-    <MudText Typo="Typo.body2" Style="opacity:0.6" Class="mb-3">@Subtitle</MudText>
+    <MudText Typo="Typo.subtitle2" Class="drop-zone-title">@Title</MudText>
+    <MudText Typo="Typo.caption" Class="drop-zone-subtitle">@Subtitle</MudText>
 
-    <MudButton Variant="Variant.Outlined"
-               Color="Color.Primary"
-               StartIcon="@Icons.Material.Outlined.FolderOpen"
-               OnClick="OpenFilePicker">
-        Browse&hellip;
-    </MudButton>
+    <MudText Class="drop-zone-action" @onclick="OpenFilePicker">
+        [ browse… ]
+    </MudText>
 
     <InputFile id="@_inputId"
                OnChange="OnFileSelected"
@@ -31,9 +27,6 @@
 
     [Parameter]
     public string Subtitle { get; set; } = "or click Browse";
-
-    [Parameter]
-    public string Icon { get; set; } = Icons.Material.Outlined.UploadFile;
 
     [Parameter]
     public string Accept { get; set; } = ".pdf";

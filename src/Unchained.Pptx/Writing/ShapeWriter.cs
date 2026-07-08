@@ -128,20 +128,7 @@ internal static class ShapeWriter
 
         // Frame transform uses p:xfrm
         var xfrm = new XElement(PmlNames.Pml + "xfrm");
-        xfrm.Add(
-            new XElement(
-                DmlNames.Offset,
-                new XAttribute(DmlNames.AttributeX, shape.X.Value),
-                new XAttribute(DmlNames.AttributeY, shape.Y.Value)
-            )
-        );
-        xfrm.Add(
-            new XElement(
-                DmlNames.Extents,
-                new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
-                new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)
-            )
-        );
+        WriteXfrmOffsetExtents(xfrm, shape);
         frameEl.Add(xfrm);
 
         // Graphic data
@@ -312,20 +299,7 @@ internal static class ShapeWriter
 
         // Frame transform (p:xfrm, not a:xfrm)
         var xfrm = new XElement(PmlNames.Pml + "xfrm");
-        xfrm.Add(
-            new XElement(
-                DmlNames.Offset,
-                new XAttribute(DmlNames.AttributeX, shape.X.Value),
-                new XAttribute(DmlNames.AttributeY, shape.Y.Value)
-            )
-        );
-        xfrm.Add(
-            new XElement(
-                DmlNames.Extents,
-                new XAttribute(DmlNames.AttributeWidth, shape.Width.Value),
-                new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)
-            )
-        );
+        WriteXfrmOffsetExtents(xfrm, shape);
         frameEl.Add(xfrm);
 
         // Graphic data referencing the chart part by relationship ID
@@ -462,6 +436,13 @@ internal static class ShapeWriter
         if (shape.FlipVertical)
             xfrm.Add(new XAttribute(DmlNames.AttributeFlipVertical, "1"));
 
+        WriteXfrmOffsetExtents(xfrm, shape);
+
+        parent.Add(xfrm);
+    }
+
+    private static void WriteXfrmOffsetExtents(XContainer xfrm, Shape shape)
+    {
         xfrm.Add(
             new XElement(
                 DmlNames.Offset,
@@ -469,7 +450,6 @@ internal static class ShapeWriter
                 new XAttribute(DmlNames.AttributeY, shape.Y.Value)
             )
         );
-
         xfrm.Add(
             new XElement(
                 DmlNames.Extents,
@@ -477,8 +457,6 @@ internal static class ShapeWriter
                 new XAttribute(DmlNames.AttributeHeight, shape.Height.Value)
             )
         );
-
-        parent.Add(xfrm);
     }
 
     private static string PresetGeometryToString(AutoShapeType type) => type switch

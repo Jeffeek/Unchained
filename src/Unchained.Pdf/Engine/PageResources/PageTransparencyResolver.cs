@@ -1,3 +1,4 @@
+using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Content;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -49,6 +50,7 @@ internal static class PageTransparencyResolver
     internal static IReadOnlyDictionary<string, SoftMaskInfo> GetSoftMasks(
         PdfDictionary page,
         PdfDocumentCore core,
+        IPdfDocument document,
         int widthPx,
         int heightPx
     )
@@ -69,7 +71,7 @@ internal static class PageTransparencyResolver
             var formStream = formRef is PdfIndirectReference fRef
                 ? core.ResolveIndirect(fRef.ObjectNumber).Value as PdfStream
                 : formRef as PdfStream;
-            if (formStream?.Dictionary.GetName(PdfName.Subtype.Value) != "Form") continue;
+            if (formStream?.Dictionary.GetName(PdfName.Subtype.Value) != PdfConstants.XObjectForm) continue;
 
             var bbox = formStream.GetFormBBox();
             var matrix = formStream.GetFormMatrix();
@@ -80,7 +82,7 @@ internal static class PageTransparencyResolver
                 var operators = ContentStreamParser.Parse(decodedBytes);
 
                 // Use a page adapter with page number 0 (not a real page — just resource access).
-                var formAdapter = new PdfPageAdapter(formStream.Dictionary, 0, core);
+                var formAdapter = new PdfPageAdapter(formStream.Dictionary, 0, core, document);
 
                 result[name] = new SoftMaskInfo(
                     widthPx,
