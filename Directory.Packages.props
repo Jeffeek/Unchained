@@ -49,7 +49,7 @@
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="151.0.7920" />
     <PackageVersion Include="bblanchon.PDFium.Linux" Version="151.0.7920" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="151.0.7920" />
+    <PackageVersion Include="bblanchon.PDFium.macOS" Version="152.0.7947" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
   <ItemGroup Label="PerformanceTests">
