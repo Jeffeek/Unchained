@@ -5,7 +5,7 @@
   </PropertyGroup>
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
-    <PackageVersion Include="AngleSharp" Version="1.5.1" />
+    <PackageVersion Include="AngleSharp" Version="1.5.2" />
     <PackageVersion Include="bblanchon.PDFium.Win32" Version="151.0.7920" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
@@ -20,7 +20,7 @@
     <PackageVersion Include="JpegLibrary" Version="0.4.32" />
     <PackageVersion Include="JBig2Decoder.NETStandard" Version="1.5.2" />
     <PackageVersion Include="Markdig" Version="1.3.2" />
-    <PackageVersion Include="CoreJ2K" Version="2.3.0.81" />
+    <PackageVersion Include="CoreJ2K" Version="2.3.2.86" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.9" />
   </ItemGroup>
   <!-- ── Unchained.Drawing.Text — glyph rasterization (FreeType2) ──────────── -->
@@ -34,10 +34,10 @@
   </ItemGroup>
   <!-- ── Unchained.Pdf.Rendering — text shaping (HarfBuzz) ─────────────────── -->
   <ItemGroup Label="Unchained.Pdf.Rendering">
-    <PackageVersion Include="HarfBuzzSharp" Version="14.2.0" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.0" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.0" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.0" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1" />
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
   <ItemGroup Label="Unchained.Studio">
