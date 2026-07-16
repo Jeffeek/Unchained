@@ -6,7 +6,7 @@
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
     <PackageVersion Include="AngleSharp" Version="1.5.1" />
-    <PackageVersion Include="bblanchon.PDFium.Win32" Version="151.0.7920" />
+    <PackageVersion Include="bblanchon.PDFium.Win32" Version="152.0.7947" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
@@ -41,7 +41,7 @@
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
   <ItemGroup Label="Unchained.Studio">
-    <PackageVersion Include="MudBlazor" Version="9.5.0" />
+    <PackageVersion Include="MudBlazor" Version="9.7.0" />
     <!-- AspNetCore.SassCompiler (MIT): build-time SCSS → CSS. Bundles the Styles/ partials into
          a single wwwroot/css/app.css on build. No runtime dependency. -->
     <PackageVersion Include="AspNetCore.SassCompiler" Version="1.101.0" />
@@ -49,7 +49,7 @@
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="151.0.7920" />
     <PackageVersion Include="bblanchon.PDFium.Linux" Version="152.0.7947" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="151.0.7920" />
+    <PackageVersion Include="bblanchon.PDFium.macOS" Version="152.0.7947" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
   <ItemGroup Label="PerformanceTests">
