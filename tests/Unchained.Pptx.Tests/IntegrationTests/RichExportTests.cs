@@ -63,7 +63,7 @@ public sealed class RichExportTests
     public async Task ExportAsSvg_RichContent_ProducesSvgRoot()
     {
         await using var doc = BuildContentDocument();
-        var svgs = await new PresentationProcessor().ExportAsSvgAsync(doc);
+        var svgs = await new PresentationProcessor().ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         svgs.Length.ShouldBe(1);
         Encoding.UTF8.GetString(svgs[0]).ShouldContain("<svg");
     }
@@ -75,9 +75,9 @@ public sealed class RichExportTests
         var dir = Path.Combine(Path.GetTempPath(), "unchained-html-" + Path.GetRandomFileName());
         try
         {
-            var files = await new PresentationProcessor().SaveAsHtmlAsync(doc, dir);
+            var files = await new PresentationProcessor().SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
             files.ShouldNotBeEmpty();
-            var html = await File.ReadAllTextAsync(files[0]);
+            var html = await File.ReadAllTextAsync(files[0], TestContext.Current.CancellationToken);
             html.ShouldContain("<!DOCTYPE html>");
         }
         finally
@@ -90,7 +90,7 @@ public sealed class RichExportTests
     public async Task ExportHtmlPlayer_RichContent_ProducesHtml()
     {
         await using var doc = BuildContentDocument();
-        var bytes = await PresentationProcessor.ExportHtmlPlayerAsync(doc);
+        var bytes = await PresentationProcessor.ExportHtmlPlayerAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         Encoding.UTF8.GetString(bytes).ShouldContain("<");
     }
 
@@ -99,11 +99,11 @@ public sealed class RichExportTests
     {
         await using var doc = BuildContentDocument();
         var processor = new PresentationProcessor();
-        var odpBytes = await processor.ExportOdpAsync(doc);
+        var odpBytes = await processor.ExportOdpAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         odpBytes.ShouldNotBeEmpty();
 
         using var ms = new MemoryStream(odpBytes);
-        await using var reloaded = await processor.LoadAsync(ms);
+        await using var reloaded = await processor.LoadAsync(ms, cancellationToken: TestContext.Current.CancellationToken);
         reloaded.Slides.Count.ShouldBe(1);
         reloaded.Slides[0].Shapes.ShouldNotBeEmpty();
     }
@@ -113,7 +113,7 @@ public sealed class RichExportTests
     {
         await using var doc = BuildContentDocument();
         using var ms = new MemoryStream();
-        await new PresentationProcessor().SaveAsPdfAsync(doc, ms);
+        await new PresentationProcessor().SaveAsPdfAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Length.ShouldBeGreaterThan(0);
         // PDF files start with "%PDF".
         ms.Position = 0;

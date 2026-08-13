@@ -21,13 +21,13 @@ public interface IPageOrganizer
     /// <param name="pageNumbers">1-based page numbers to rotate.</param>
     /// <param name="degrees">Rotation in degrees; any multiple of 90 (may be negative).</param>
     /// <param name="relative">Add to the existing rotation when true; set absolutely when false.</param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task RotatePagesAsync(
         IPdfDocument document,
         IReadOnlyList<int> pageNumbers,
         int degrees,
         bool relative = true,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -35,11 +35,11 @@ public interface IPageOrganizer
     /// </summary>
     /// <param name="document">Document to mutate in place.</param>
     /// <param name="pageNumbers">1-based page numbers to delete (duplicates ignored).</param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task DeletePagesAsync(
         IPdfDocument document,
         IReadOnlyList<int> pageNumbers,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -48,11 +48,11 @@ public interface IPageOrganizer
     /// </summary>
     /// <param name="document">Document to mutate in place.</param>
     /// <param name="newOrder">The new page sequence as 1-based original page numbers.</param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task ReorderPagesAsync(
         IPdfDocument document,
         IReadOnlyList<int> newOrder,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -63,12 +63,12 @@ public interface IPageOrganizer
     /// <param name="document">Destination document, mutated in place.</param>
     /// <param name="atPageNumber">1-based position the first inserted page will occupy.</param>
     /// <param name="source">Document whose pages are copied in.</param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task InsertPagesAsync(
         IPdfDocument document,
         int atPageNumber,
         IPdfDocument source,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -79,11 +79,11 @@ public interface IPageOrganizer
     /// </summary>
     /// <param name="document">Source document (not modified).</param>
     /// <param name="ranges">Inclusive 1-based page ranges, one per output document.</param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>One new <see cref="IPdfDocument" /> per range, in the order supplied.</returns>
     Task<IReadOnlyList<IPdfDocument>> SplitAsync(
         IPdfDocument document,
         IReadOnlyList<(int Start, int End)> ranges,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 }

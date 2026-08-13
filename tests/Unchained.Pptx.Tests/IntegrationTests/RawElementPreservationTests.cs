@@ -32,13 +32,13 @@ public sealed class RawElementPreservationTests
     {
         var path = SamplePath("mst-slide-layouts.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var bytes = await File.ReadAllBytesAsync(path);
+        var bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
         // Load via SDK (sets master RawElement), save via the CUSTOM writer (default options).
-        var doc = await processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms);
+        await processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         var saved = ms.ToArray();
 
         var masterXml = ReadPart(saved, "/slideMasters/slideMaster");
@@ -53,10 +53,10 @@ public sealed class RawElementPreservationTests
     {
         var path = SamplePath("prs-notes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var bytes = await File.ReadAllBytesAsync(path);
+        var bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         // Capture the original notes text so we can assert it survives a custom-writer save.
         var notedSlide = doc.Slides.FirstOrDefault(static s => !string.IsNullOrWhiteSpace(s.Notes.NotesText));
@@ -64,9 +64,9 @@ public sealed class RawElementPreservationTests
         var originalNotes = notedSlide.Notes.NotesText;
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms);
+        await processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var reloadedNotes = reloaded.Slides
             .FirstOrDefault(static s => !string.IsNullOrWhiteSpace(s.Notes.NotesText))
             ?.Notes.NotesText;

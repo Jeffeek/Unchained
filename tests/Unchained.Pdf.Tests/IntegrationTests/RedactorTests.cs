@@ -15,7 +15,7 @@ public sealed class RedactorTests : PdfTestBase
     [Fact]
     public async Task Redact_TextInsideRegion_RemovesTextFromStream()
     {
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("SecretValue"));
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("SecretValue"), TestContext.Current.CancellationToken);
         doc.Pages[1].ExtractText().ShouldContain("SecretValue");
 
         // Region covering the text origin at (100, 700).
@@ -31,7 +31,7 @@ public sealed class RedactorTests : PdfTestBase
     [Fact]
     public async Task Redact_TextOutsideRegion_TextRemains()
     {
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("KeepMe"));
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("KeepMe"), TestContext.Current.CancellationToken);
         // Region far from the text at (100,700).
         await Redactor.RedactAsync(
             doc,
@@ -45,7 +45,7 @@ public sealed class RedactorTests : PdfTestBase
     [Fact]
     public async Task Redact_RemovalSurvivesSaveReload()
     {
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("TopSecret"));
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("TopSecret"), TestContext.Current.CancellationToken);
         await Redactor.RedactAsync(
             doc,
             [new RedactionRegion(1, 80, 690, 200, 30)],
@@ -59,7 +59,7 @@ public sealed class RedactorTests : PdfTestBase
     [Fact]
     public async Task Redact_PaintsCoverRectangle_ProducesFillOperator()
     {
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("Cover"));
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("Cover"), TestContext.Current.CancellationToken);
         await Redactor.RedactAsync(
             doc,
             [new RedactionRegion(1, 80, 690, 200, 30)],
@@ -77,7 +77,7 @@ public sealed class RedactorTests : PdfTestBase
     {
         var rgb = new byte[8 * 8 * 3];
         for (var i = 0; i < rgb.Length; i++) rgb[i] = 128;
-        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(8, 8, rgb));
+        await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(8, 8, rgb), TestContext.Current.CancellationToken);
 
         // Fixture draws the image with cm "(w*10) 0 0 (h*10) 0 0" → unit square maps to
         // [0,0]..[80,80]; centre ≈ (40,40). Redact a region covering it.
@@ -96,7 +96,7 @@ public sealed class RedactorTests : PdfTestBase
     [Fact]
     public async Task Redact_EmptyRegions_NoOp()
     {
-        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("Untouched"));
+        await using var doc = await LoadAsync(PdfFixtures.WithTextContent("Untouched"), TestContext.Current.CancellationToken);
         await Redactor.RedactAsync(doc, [], TestContext.Current.CancellationToken);
         doc.Pages[1].ExtractText().ShouldContain("Untouched");
     }
@@ -106,7 +106,7 @@ public sealed class RedactorTests : PdfTestBase
         Should.ThrowAsync<ArgumentOutOfRangeException>(static async () =>
             {
                 await using var doc = await LoadAsync(PdfFixtures.WithTextContent("X"));
-                await Redactor.RedactAsync(doc, [new RedactionRegion(5, 0, 0, 10, 10)]);
+                await Redactor.RedactAsync(doc, [new RedactionRegion(5, 0, 0, 10, 10)], TestContext.Current.CancellationToken);
             }
         );
 }

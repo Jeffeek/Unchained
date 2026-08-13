@@ -217,7 +217,7 @@ public sealed class InfoWriteTests : PdfTestBase
         // but we just need any doc — we create one via TxtConverter that lacks /Info).
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello",
-            ct: TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         await Processor.SetMetadataAsync(

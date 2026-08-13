@@ -84,7 +84,7 @@ public class PivotWriterCoverageTests
 #endif
         var entry = archive.Entries.First(static e => e.FullName.Contains("pivotTables/pivotTable"));
 #if NET10_0_OR_GREATER
-        using var reader = new StreamReader(await entry.OpenAsync());
+        using var reader = new StreamReader(await entry.OpenAsync(TestContext.Current.CancellationToken));
 #else
         using var reader = new StreamReader(entry.Open());
 #endif
@@ -122,7 +122,7 @@ public class PivotWriterCoverageTests
 #endif
         var entry = archive.Entries.First(static e => e.FullName.Contains("pivotCacheRecords"));
 #if NET10_0_OR_GREATER
-        using var reader = new StreamReader(await entry.OpenAsync());
+        using var reader = new StreamReader(await entry.OpenAsync(TestContext.Current.CancellationToken));
 #else
         using var reader = new StreamReader(entry.Open());
 #endif

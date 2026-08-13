@@ -28,9 +28,9 @@ public sealed class SampleRenderingTests : PptxTestBase
     public async Task SlidesWithContent_RenderVisibleInk(string sample)
     {
         var path = SamplePath(sample);
-        var doc = await Processor.LoadAsync(await File.ReadAllBytesAsync(path));
+        var doc = await Processor.LoadAsync(await File.ReadAllBytesAsync(path, cancellationToken: TestContext.Current.CancellationToken), cancellationToken: TestContext.Current.CancellationToken);
 
-        var images = await SlideRenderer.RenderAllAsync(doc, new RenderOptions { WidthPx = 1280, HeightPx = 720 });
+        var images = await SlideRenderer.RenderAllAsync(doc, new RenderOptions { WidthPx = 1280, HeightPx = 720 }, cancellationToken: TestContext.Current.CancellationToken);
 
         for (var i = 0; i < doc.Slides.Count; i++)
         {

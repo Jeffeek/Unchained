@@ -42,10 +42,10 @@ internal static class Program
             if (selection is "all")
             {
                 foreach (var demo in Demos)
-                    await RunOneAsync(demo);
+                    await RunOneAsync(demo).ConfigureAwait(false);
             }
             else if (Demos.FirstOrDefault(d => d.Key == selection) is { Run: not null } match)
-                await RunOneAsync(match);
+                await RunOneAsync(match).ConfigureAwait(false);
             else
             {
                 Console.WriteLine($"Unknown demo '{selection}'. Valid: {string.Join(", ", Demos.Select(static d => d.Key))}, all.");
@@ -78,7 +78,7 @@ internal static class Program
     private static async Task RunOneAsync((string Key, string Title, Func<Task> Run) demo)
     {
         Console.WriteLine($"▶ {demo.Title}");
-        await demo.Run();
+        await demo.Run().ConfigureAwait(false);
         Console.WriteLine();
     }
 
@@ -146,7 +146,7 @@ internal static class Program
             table[c, r].TextFrame.PlainText = cells[r, c];
 
         var path = Path.Combine(OutputDir, "deck.pptx");
-        await processor.SaveAsync(doc, path);
+        await processor.SaveAsync(doc, path).ConfigureAwait(false);
         Console.WriteLine($"  Wrote {doc.Slides.Count}-slide presentation → {Rel(path)}");
     }
 
@@ -154,10 +154,10 @@ internal static class Program
     private static async Task ReadTextAsync()
     {
         var source = Path.Combine(OutputDir, "deck.pptx");
-        if (!File.Exists(source)) await CreateDeckAsync();
+        if (!File.Exists(source)) await CreateDeckAsync().ConfigureAwait(false);
 
         var processor = new PresentationProcessor();
-        await using var doc = await processor.LoadAsync(source);
+        await using var doc = await processor.LoadAsync(source).ConfigureAwait(false);
 
         var index = 1;
         foreach (var text in doc.Slides.Select(static slide => slide.GetAllText().Replace("\n", " | ")))
@@ -168,22 +168,22 @@ internal static class Program
     private static async Task ExportAsync()
     {
         var source = Path.Combine(OutputDir, "deck.pptx");
-        if (!File.Exists(source)) await CreateDeckAsync();
+        if (!File.Exists(source)) await CreateDeckAsync().ConfigureAwait(false);
 
         var processor = new PresentationProcessor();
-        await using var doc = await processor.LoadAsync(source);
+        await using var doc = await processor.LoadAsync(source).ConfigureAwait(false);
 
         // PDF.
         var pdfPath = Path.Combine(OutputDir, "deck.pdf");
-        await processor.SaveAsPdfAsync(doc, pdfPath);
+        await processor.SaveAsPdfAsync(doc, pdfPath).ConfigureAwait(false);
         Console.WriteLine($"  PDF  → {Rel(pdfPath)}");
 
         // SVG (one byte[] per slide).
-        var svgs = await processor.ExportAsSvgAsync(doc);
+        var svgs = await processor.ExportAsSvgAsync(doc).ConfigureAwait(false);
         for (var i = 0; i < svgs.Length; i++)
         {
             var svgPath = Path.Combine(OutputDir, $"slide{i + 1}.svg");
-            await File.WriteAllBytesAsync(svgPath, svgs[i]);
+            await File.WriteAllBytesAsync(svgPath, svgs[i]).ConfigureAwait(false);
         }
 
         Console.WriteLine($"  SVG  → {svgs.Length} file(s) (slide1.svg …)");
@@ -191,7 +191,7 @@ internal static class Program
         // HTML (one file per slide written into a directory).
         var htmlDir = Path.Combine(OutputDir, "html");
         Directory.CreateDirectory(htmlDir);
-        var htmlFiles = await processor.SaveAsHtmlAsync(doc, htmlDir);
+        var htmlFiles = await processor.SaveAsHtmlAsync(doc, htmlDir).ConfigureAwait(false);
         Console.WriteLine($"  HTML → {htmlFiles.Count} file(s) in {Rel(htmlDir)}");
     }
 
@@ -199,15 +199,15 @@ internal static class Program
     private static async Task RenderAsync()
     {
         var source = Path.Combine(OutputDir, "deck.pptx");
-        if (!File.Exists(source)) await CreateDeckAsync();
+        if (!File.Exists(source)) await CreateDeckAsync().ConfigureAwait(false);
 
         var processor = new PresentationProcessor();
-        await using var doc = await processor.LoadAsync(source);
+        await using var doc = await processor.LoadAsync(source).ConfigureAwait(false);
 
         PptxImage[] images;
         try
         {
-            images = await SlideRenderer.RenderAllAsync(doc, new RenderOptions(1280, 720));
+            images = await SlideRenderer.RenderAllAsync(doc, new RenderOptions(1280, 720)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -219,7 +219,7 @@ internal static class Program
         for (var i = 0; i < images.Length; i++)
         {
             var path = Path.Combine(OutputDir, $"slide{i + 1}.png");
-            await images[i].SaveAsync(path);
+            await images[i].SaveAsync(path).ConfigureAwait(false);
         }
 
         Console.WriteLine($"  Rendered {images.Length} slide(s) → slide1.png … ({images[0].WidthPx}×{images[0].HeightPx})");
@@ -229,16 +229,16 @@ internal static class Program
     private static async Task EncryptAsync()
     {
         var source = Path.Combine(OutputDir, "deck.pptx");
-        if (!File.Exists(source)) await CreateDeckAsync();
+        if (!File.Exists(source)) await CreateDeckAsync().ConfigureAwait(false);
 
         var processor = new PresentationProcessor();
-        await using var doc = await processor.LoadAsync(source);
+        await using var doc = await processor.LoadAsync(source).ConfigureAwait(false);
 
         var path = Path.Combine(OutputDir, "deck-encrypted.pptx");
-        await processor.SaveAsync(doc, path, new SaveOptions { Password = "open-sesame" });
+        await processor.SaveAsync(doc, path, new SaveOptions { Password = "open-sesame" }).ConfigureAwait(false);
         Console.WriteLine($"  Wrote AES-256 encrypted presentation → {Rel(path)}");
 
-        await using var reopened = await processor.LoadAsync(path, new OpenOptions { Password = "open-sesame" });
+        await using var reopened = await processor.LoadAsync(path, new OpenOptions { Password = "open-sesame" }).ConfigureAwait(false);
         Console.WriteLine($"  Re-opened with password — {reopened.Slides.Count} slide(s) readable.");
     }
 

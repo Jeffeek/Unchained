@@ -36,8 +36,8 @@ public sealed class SdkEngineAttachmentTests : PptxTestBase
     {
         var bytes = BuildSimplePptx();
 
-        var custom = await Processor.LoadAsync(bytes);
-        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var custom = await Processor.LoadAsync(bytes, cancellationToken: TestContext.Current.CancellationToken);
+        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
 
         custom.Engine.ShouldBeNull("custom path must not hold an SDK engine");
         sdk.Engine.ShouldNotBeNull("SDK path must keep its engine open for in-place save");
@@ -57,7 +57,7 @@ public sealed class SdkEngineAttachmentTests : PptxTestBase
     public async Task DisposingSdkDocument_ReleasesEngineWithoutError()
     {
         var bytes = BuildSimplePptx();
-        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         // Double dispose must be safe.
         Should.NotThrow(() => sdk.Dispose());

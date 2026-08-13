@@ -117,8 +117,8 @@ public sealed class ParserCoverageTests : PptxTestBase
         var image = doc.Media.AddImage(SmallPng(), "image/png");
         doc.Slides[0].Shapes.AddPicture(image, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(2), Emu.FromInches(2));
 
-        var odp = await Processor.ExportOdpAsync(doc);
-        var reloaded = await Processor.LoadAsync(odp);
+        var odp = await Processor.ExportOdpAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
+        var reloaded = await Processor.LoadAsync(odp, cancellationToken: TestContext.Current.CancellationToken);
 
         reloaded.Slides[0].Shapes.OfType<PictureShape>().ShouldNotBeEmpty();
         reloaded.Media.Images.Count.ShouldBeGreaterThan(0);
@@ -132,8 +132,8 @@ public sealed class ParserCoverageTests : PptxTestBase
         var image = doc.Media.AddImage(SmallPng(), "image/png");
         doc.Slides[1].Shapes.AddPicture(image, Emu.Zero, Emu.Zero, Emu.FromInches(2), Emu.FromInches(2));
 
-        var odp = await Processor.ExportOdpAsync(doc);
-        var reloaded = await Processor.LoadAsync(odp);
+        var odp = await Processor.ExportOdpAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
+        var reloaded = await Processor.LoadAsync(odp, cancellationToken: TestContext.Current.CancellationToken);
 
         reloaded.Slides.Count.ShouldBe(2);
         reloaded.Slides[0].GetAllText().ShouldContain("page one");

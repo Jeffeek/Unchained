@@ -30,14 +30,14 @@ public static class SlideRenderer
     ///     render in their real shape. Pass <c>document.Media</c>; <see langword="null" /> falls
     ///     back to bundled substitute fonts.
     /// </param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<PptxImage> RenderAsync(
         Slide slide,
         SlideSize slideSize,
         RenderOptions? options = null,
         MediaStore? media = null,
-        CancellationToken ct = default
-    ) => RenderWithGateAsync(slide, slideSize, options ?? new RenderOptions(), media, ct);
+        CancellationToken cancellationToken = default
+    ) => RenderWithGateAsync(slide, slideSize, options ?? new RenderOptions(), media, cancellationToken);
 
     /// <summary>
     ///     Rasterizes all slides in the presentation and returns an image per slide.
@@ -45,11 +45,11 @@ public static class SlideRenderer
     /// </summary>
     /// <param name="document">The presentation to render.</param>
     /// <param name="options">Render options; defaults are used when <see langword="null" />.</param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public static Task<PptxImage[]> RenderAllAsync(
         PresentationDocument document,
         RenderOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         var opts = options ?? new RenderOptions();
@@ -61,7 +61,7 @@ public static class SlideRenderer
         for (var i = 0; i < slides.Count; i++)
         {
             var slide = slides[i];
-            tasks[i] = RenderWithGateAsync(slide, slideSize, opts, media, ct);
+            tasks[i] = RenderWithGateAsync(slide, slideSize, opts, media, cancellationToken);
         }
 
         return Task.WhenAll(tasks);
@@ -72,13 +72,13 @@ public static class SlideRenderer
         SlideSize slideSize,
         RenderOptions options,
         MediaStore? media,
-        CancellationToken ct
+        CancellationToken cancellationToken
     )
     {
-        await Gate.WaitAsync(ct).ConfigureAwait(false);
+        await Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return await Task.Run(() => Render(slide, slideSize, options, media), ct).ConfigureAwait(false);
+            return await Task.Run(() => Render(slide, slideSize, options, media), cancellationToken).ConfigureAwait(false);
         }
         finally
         {

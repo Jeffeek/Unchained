@@ -28,7 +28,7 @@ public sealed class MarkdownToPdfTests : PdfTestBase
     [Fact]
     public async Task LoadFromMarkdown_SimpleDocument_ProducesValidPdf()
     {
-        await using var doc = await Processor.LoadFromMarkdownAsync(SimpleMarkdown, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromMarkdownAsync(SimpleMarkdown, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBeGreaterThan(0);
         doc.Pages[1].Width.ShouldBeGreaterThan(0);
     }
@@ -36,7 +36,7 @@ public sealed class MarkdownToPdfTests : PdfTestBase
     [Fact]
     public async Task LoadFromMarkdown_EmptyString_ProducesAtLeastOnePage()
     {
-        await using var doc = await Processor.LoadFromMarkdownAsync(string.Empty, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromMarkdownAsync(string.Empty, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBeGreaterThanOrEqualTo(1);
     }
 
@@ -44,7 +44,7 @@ public sealed class MarkdownToPdfTests : PdfTestBase
     public async Task LoadFromMarkdown_Headings_ProducesSinglePage()
     {
         const string md = "# Title\n\n## Section\n\nBody text here.";
-        await using var doc = await Processor.LoadFromMarkdownAsync(md, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromMarkdownAsync(md, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -54,7 +54,7 @@ public sealed class MarkdownToPdfTests : PdfTestBase
         var sb = new StringBuilder();
         for (var i = 1; i <= 30; i++)
             sb.AppendLine($"## Section {i}\n\n{string.Join(" ", Enumerable.Repeat("This is body text.", 10))}\n");
-        await using var doc = await Processor.LoadFromMarkdownAsync(sb.ToString(), ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromMarkdownAsync(sb.ToString(), cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBeGreaterThan(1);
     }
 
@@ -62,7 +62,7 @@ public sealed class MarkdownToPdfTests : PdfTestBase
     public async Task LoadFromMarkdown_OrderedList_ProducesValidPdf()
     {
         const string md = "1. First item\n2. Second item\n3. Third item\n";
-        await using var doc = await Processor.LoadFromMarkdownAsync(md, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromMarkdownAsync(md, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -70,14 +70,14 @@ public sealed class MarkdownToPdfTests : PdfTestBase
     public async Task LoadFromMarkdown_ThematicBreak_ProducesValidPdf()
     {
         const string md = "Before\n\n---\n\nAfter";
-        await using var doc = await Processor.LoadFromMarkdownAsync(md, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromMarkdownAsync(md, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
     [Fact]
     public async Task LoadFromMarkdown_RoundTrip_PreservesPageCount()
     {
-        await using var doc = await Processor.LoadFromMarkdownAsync(SimpleMarkdown, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromMarkdownAsync(SimpleMarkdown, cancellationToken: TestContext.Current.CancellationToken);
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(doc.PageCount);
     }

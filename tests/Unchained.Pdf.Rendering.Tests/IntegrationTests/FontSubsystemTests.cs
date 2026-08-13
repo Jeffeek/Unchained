@@ -111,7 +111,7 @@ public sealed class FontSubsystemTests : RendererTestBase
         await using var doc = await gen.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
         // Round-trip should still produce correct page count.
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
@@ -335,7 +335,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
 
         // Save and reload to verify the change persisted.
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         var embedded = reloaded.Pages[1].GetEmbeddedFontBytes();
@@ -358,14 +358,14 @@ public sealed class FontUtilitiesTests : PdfTestBase
 
         // Record size before subsetting.
         using var msBefore = new MemoryStream();
-        await Processor.SaveAsync(doc, msBefore, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, msBefore, cancellationToken: TestContext.Current.CancellationToken);
         var sizeBefore = msBefore.Length;
 
         await Processor.SubsetFontsAsync(doc, TestContext.Current.CancellationToken);
 
         // Record size after subsetting.
         using var msAfter = new MemoryStream();
-        await Processor.SaveAsync(doc, msAfter, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, msAfter, cancellationToken: TestContext.Current.CancellationToken);
         var sizeAfter = msAfter.Length;
 
         // Subset must not make the file larger (it may be the same if font was already small).
@@ -405,7 +405,7 @@ public sealed class FontUtilitiesTests : PdfTestBase
         // The document must still round-trip after the subset pass (which walks Tf/Tj/TJ operators
         // and collects glyphs from the raw embedded font).
         using var after = new MemoryStream();
-        await Processor.SaveAsync(doc, after, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, after, cancellationToken: TestContext.Current.CancellationToken);
         after.Length.ShouldBeGreaterThan(0);
         await using var reloaded = await LoadAsync(after.ToArray(), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);

@@ -113,7 +113,7 @@ public sealed class AnnotationEditorTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.Pages[1].GetAnnotations().Count.ShouldBe(1);
@@ -277,7 +277,7 @@ public sealed class AnnotationEditorTests : PdfTestBase
         );
         await Editor.AddAnnotationAsync(doc, 1, ann, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.Pages[1].GetAnnotations()[0].Color.ShouldNotBeNull();

@@ -62,11 +62,11 @@ public sealed class ShadingRenderingTests : RendererTestBase
     }
 
     [Fact]
-    public void GetShadings_ParsesAxialShadingWithRamp()
+    public async Task GetShadings_ParsesAxialShadingWithRamp()
     {
         // Verify the adapter exposes the shading with a populated colour ramp.
         var bytes = PdfFixtures.WithAxialShading();
-        using var doc = Processor.LoadAsync(new MemoryStream(bytes)).GetAwaiter().GetResult();
+        await using var doc = await Processor.LoadAsync(new MemoryStream(bytes), TestContext.Current.CancellationToken);
         var shadings = doc.Pages[1].GetShadings();
         shadings.TryGetValue("Sh1", out var sh).ShouldBeTrue();
         sh.ShadingType.ShouldBe(2);
@@ -77,10 +77,10 @@ public sealed class ShadingRenderingTests : RendererTestBase
     // ── Tiling patterns ────────────────────────────────────────────────────────
 
     [Fact]
-    public void GetTilingPatterns_ParsesPatternCell()
+    public async Task GetTilingPatterns_ParsesPatternCell()
     {
         var bytes = PdfFixtures.WithTilingPattern();
-        using var doc = Processor.LoadAsync(new MemoryStream(bytes)).GetAwaiter().GetResult();
+        await using var doc = await Processor.LoadAsync(new MemoryStream(bytes), TestContext.Current.CancellationToken);
         var patterns = doc.Pages[1].GetTilingPatterns();
         patterns.TryGetValue("P1", out var p).ShouldBeTrue();
         p.PaintType.ShouldBe(1);

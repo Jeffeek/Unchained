@@ -50,7 +50,8 @@ public sealed class RenderingTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+            new RenderOptions { WidthPx = 320, HeightPx = 180 },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         image.Data.IsEmpty.ShouldBeFalse();
@@ -64,7 +65,8 @@ public sealed class RenderingTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+            new RenderOptions { WidthPx = 320, HeightPx = 180 },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         // PNG magic bytes: 89 50 4E 47
@@ -82,7 +84,8 @@ public sealed class RenderingTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 640, HeightPx = 360 }
+            new RenderOptions { WidthPx = 640, HeightPx = 360 },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         image.WidthPx.ShouldBe(640);
@@ -105,7 +108,8 @@ public sealed class RenderingTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+            new RenderOptions { WidthPx = 320, HeightPx = 180 },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         image.Data.Length.ShouldBeGreaterThan(100);
@@ -128,7 +132,8 @@ public sealed class RenderingTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+            new RenderOptions { WidthPx = 320, HeightPx = 180 },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -183,7 +188,8 @@ public sealed class RenderingTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Bmp }
+            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Bmp },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         image.Format.ShouldBe(RenderImageFormat.Bmp);
@@ -199,7 +205,8 @@ public sealed class RenderingTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Jpeg }
+            new RenderOptions { WidthPx = 64, HeightPx = 48, Format = RenderImageFormat.Jpeg },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         image.Format.ShouldBe(RenderImageFormat.Jpeg);

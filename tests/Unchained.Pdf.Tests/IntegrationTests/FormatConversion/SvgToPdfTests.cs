@@ -25,7 +25,7 @@ public sealed class SvgToPdfTests : PdfTestBase
     [Fact]
     public async Task LoadFromSvg_SimpleShapes_ProducesOnePage()
     {
-        await using var doc = await Processor.LoadFromSvgAsync(SimpleSvg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(SimpleSvg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
         doc.Pages[1].Width.ShouldBeGreaterThan(0);
         doc.Pages[1].Height.ShouldBeGreaterThan(0);
@@ -34,7 +34,7 @@ public sealed class SvgToPdfTests : PdfTestBase
     [Fact]
     public async Task LoadFromSvg_WithPaths_ProducesValidPdf()
     {
-        await using var doc = await Processor.LoadFromSvgAsync(PathSvg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(PathSvg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -55,7 +55,7 @@ public sealed class SvgToPdfTests : PdfTestBase
                              <rect x="0" y="0" width="300" height="200" fill="lightblue"/>
                            </svg>
                            """;
-        await using var doc = await Processor.LoadFromSvgAsync(svg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(svg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -69,14 +69,14 @@ public sealed class SvgToPdfTests : PdfTestBase
                              </g>
                            </svg>
                            """;
-        await using var doc = await Processor.LoadFromSvgAsync(svg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(svg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
     [Fact]
     public async Task LoadFromSvg_RoundTrip_PreservesPageCount()
     {
-        await using var doc = await Processor.LoadFromSvgAsync(SimpleSvg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(SimpleSvg, cancellationToken: TestContext.Current.CancellationToken);
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(doc.PageCount);
     }
@@ -89,7 +89,7 @@ public sealed class SvgToPdfTests : PdfTestBase
                              <ellipse cx="50" cy="50" rx="40" ry="25" fill="purple"/>
                            </svg>
                            """;
-        await using var doc = await Processor.LoadFromSvgAsync(svg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(svg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 }

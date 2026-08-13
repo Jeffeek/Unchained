@@ -66,7 +66,7 @@ public sealed class DocumentLifecycleTests : PptxTestBase
     {
         var doc = Processor.CreateBlank();
         var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Length.ShouldBeGreaterThan(0);
     }
 
@@ -75,10 +75,10 @@ public sealed class DocumentLifecycleTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(2);
         var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
 
-        var loaded = await Processor.LoadAsync(ms);
+        var loaded = await Processor.LoadAsync(ms, cancellationToken: TestContext.Current.CancellationToken);
         loaded.Slides.Count.ShouldBe(2);
     }
 

@@ -28,7 +28,7 @@ public sealed class VeraPdfSmokeTests(ITestOutputHelper outputHelper) : PdfTestB
         foreach (var pdfPath in VeraPdfFixtures.AllPdfFilePaths())
         {
             total++;
-            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(pdfPath, TestContext.Current.CancellationToken));
+            await using var doc = await TryLoadDocAsync(await File.ReadAllBytesAsync(pdfPath, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
 
             if (doc is not null)
                 loaded++;

@@ -32,7 +32,8 @@ public sealed class ShapeRenderTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            Small
+            Small,
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         // At least 1% of the canvas should be non-white (the blue cell fill).
@@ -59,7 +60,8 @@ public sealed class ShapeRenderTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            Small
+            Small,
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         var colored = CountColoredPixels(image.Data.ToArray(), 640, 360);

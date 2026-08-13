@@ -37,7 +37,7 @@ public sealed class DocumentOptimizerTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(3), TestContext.Current.CancellationToken);
         await Optimizer.OptimizeAsync(doc, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(3);
@@ -70,7 +70,7 @@ public sealed class DocumentOptimizerTests : PdfTestBase
         await Optimizer.OptimizeAsync(doc, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         // The round-trip document must load and retain its page.
         ms.Position = 0;
@@ -100,7 +100,7 @@ public sealed class DocumentOptimizerTests : PdfTestBase
         doc.PageCount.ShouldBe(1);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
@@ -155,7 +155,7 @@ public sealed class DocumentOptimizerTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
         await Optimizer.OptimizeResourcesAsync(doc, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(2);
@@ -185,7 +185,7 @@ public sealed class DocumentOptimizerTests : PdfTestBase
         await Optimizer.OptimizeResourcesAsync(doc, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         // Document must remain parseable.
         ms.Position = 0;
@@ -217,7 +217,7 @@ public sealed class DocumentOptimizerTests : PdfTestBase
         await Optimizer.OptimizeResourcesAsync(doc, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);

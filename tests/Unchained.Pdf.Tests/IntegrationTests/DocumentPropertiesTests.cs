@@ -56,7 +56,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
             TestContext.Current.CancellationToken
         );
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var reloaded = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         reloaded.IsTagged.ShouldBeTrue();
@@ -76,7 +76,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
     {
         await using var source = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(source, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.ConvertToPdfAAsync(source, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var doc = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         doc.IsPdfaCompliant.ShouldBeTrue();
@@ -125,7 +125,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
     {
         await using var source = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(source, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.ConvertToPdfAAsync(source, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var doc = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         var id = doc.Id;
@@ -171,7 +171,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         await Processor.SetOpenActionAsync(doc, 2, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         Encoding.Latin1.GetString(ms.ToArray()).ShouldContain("/OpenAction");
     }
 
@@ -193,7 +193,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         );
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("URI");
         text.ShouldContain("example.com");
@@ -210,7 +210,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         );
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("Named");
         text.ShouldContain("FirstPage");
@@ -227,7 +227,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
         );
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("GoTo");
         text.ShouldContain("OpenAction");
@@ -259,7 +259,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
     {
         await using var source = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var converted = new MemoryStream();
-        await Processor.ConvertToPdfAAsync(source, converted, ct: TestContext.Current.CancellationToken);
+        await Processor.ConvertToPdfAAsync(source, converted, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var doc = await LoadAsync(converted.ToArray(), TestContext.Current.CancellationToken);
         doc.IsPdfaCompliant.ShouldBeTrue();
@@ -281,7 +281,7 @@ public sealed class DocumentPropertiesTests : PdfTestBase
             TestContext.Current.CancellationToken
         );
         using var tagged = new MemoryStream();
-        await Processor.SaveAsync(source, tagged, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(source, tagged, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var doc = await LoadAsync(tagged.ToArray(), TestContext.Current.CancellationToken);
         doc.IsTagged.ShouldBeTrue();
@@ -314,12 +314,12 @@ public sealed class DocumentPropertiesTests : PdfTestBase
 
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello",
-            ct: TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
         await Processor.EmbedStandardFontsAsync(doc, fontMap, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         Encoding.Latin1.GetString(ms.ToArray()).ShouldContain("/FontFile2");
     }
 

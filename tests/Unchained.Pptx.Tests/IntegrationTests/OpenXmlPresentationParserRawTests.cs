@@ -129,7 +129,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var masterShapes = doc.Masters[0].Shapes;
         masterShapes.OfType<TableShape>().ShouldNotBeEmpty();
         masterShapes.OfType<ConnectorShape>().ShouldNotBeEmpty();
@@ -183,7 +183,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Slides.Count.ShouldBe(1);
         // Synthetic ids start at 256.
         doc.Slides[0].SlideId.ShouldBeGreaterThanOrEqualTo(256u);
@@ -208,7 +208,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.SlideSize.Width.Value.ShouldBe(SlideSize.Widescreen.Width.Value);
         await doc.DisposeAsync();
     }
@@ -239,7 +239,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var stub = doc.Slides[0].Shapes.OfType<AutoShape>().Single();
         stub.ShapeType.ShouldBe(AutoShapeType.Rectangle);
         await doc.DisposeAsync();
@@ -273,7 +273,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var chart = doc.Slides[0].Shapes.OfType<ChartShape>().Single();
         chart.Chart.Data.Series.Count.ShouldBe(0);
         await doc.DisposeAsync();
@@ -303,7 +303,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Slides[0].Shapes.OfType<AutoShape>().ShouldNotBeEmpty();
         await doc.DisposeAsync();
     }
@@ -325,7 +325,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Masters[0].Layouts[0].LayoutType.ShouldBe(LayoutType.TitleAndTwoContent);
         await doc.DisposeAsync();
     }
@@ -375,7 +375,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Slides.Count.ShouldBe(1);
         // The synthesized fallback layout is Blank and has a master.
         doc.Slides[0].Layout.ShouldNotBeNull();
@@ -412,7 +412,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var chart = doc.Slides[0].Shapes.OfType<ChartShape>().Single();
         chart.Chart.Data.Series.Count.ShouldBe(0);
         chart.PartUri.ShouldBeNullOrEmpty();
@@ -457,7 +457,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var shapes = doc.Slides[0].Shapes;
         shapes.OfType<AutoShape>().Count().ShouldBe(2);
         shapes.OfType<PictureShape>().ShouldNotBeEmpty();
@@ -496,7 +496,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var group = doc.Slides[0].Shapes.OfType<GroupShape>().Single();
         group.Width.Value.ShouldBeGreaterThan(0);
         group.Children.ShouldNotBeEmpty();
@@ -529,7 +529,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Slides[0].Shapes.OfType<GroupShape>().ShouldNotBeEmpty();
         await doc.DisposeAsync();
     }
@@ -557,7 +557,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Slides[0].IsHidden.ShouldBeFalse();
         await doc.DisposeAsync();
     }
@@ -598,7 +598,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var shapes = doc.Slides[0].Shapes;
         shapes.OfType<AutoShape>().ShouldNotBeEmpty();
         shapes.OfType<ConnectorShape>().Single().ConnectorType.ShouldBe(ConnectorType.Straight);
@@ -632,7 +632,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var m = doc.Masters[0];
         m.Shapes.ShouldBeEmpty();
         m.Layouts.Count.ShouldBe(1);
@@ -663,7 +663,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Properties.Title.ShouldBe("NoDates");
         await doc.DisposeAsync();
     }
@@ -705,7 +705,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var shapes = doc.Slides[0].Shapes;
         shapes.OfType<AutoShape>().Single().Width.Value.ShouldBe(0);
         var table = shapes.OfType<TableShape>().Single();
@@ -741,7 +741,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Slides[0].Shapes.OfType<AutoShape>().ShouldNotBeEmpty();
         await doc.DisposeAsync();
     }
@@ -776,7 +776,7 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
             }
         );
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         var pic = doc.Slides[0].Shapes.OfType<PictureShape>().Single();
         pic.Image.ShouldBeNull();
         await doc.DisposeAsync();

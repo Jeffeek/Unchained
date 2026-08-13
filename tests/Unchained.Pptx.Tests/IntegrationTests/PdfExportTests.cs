@@ -19,7 +19,7 @@ public sealed class PdfExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var bytes = ms.ToArray();
         bytes[0].ShouldBe((byte)'%');
         bytes[1].ShouldBe((byte)'P');
@@ -32,7 +32,7 @@ public sealed class PdfExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("%PDF-1.7");
     }
@@ -42,7 +42,7 @@ public sealed class PdfExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("%%EOF");
     }
@@ -52,7 +52,7 @@ public sealed class PdfExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(2);
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         ms.Length.ShouldBeGreaterThan(200);
     }
 
@@ -63,7 +63,7 @@ public sealed class PdfExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/Type /Page ");
         // /Count 1 appears in the Pages tree
@@ -75,7 +75,7 @@ public sealed class PdfExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(3);
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/Count 3");
     }
@@ -85,7 +85,7 @@ public sealed class PdfExportTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(5);
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/Count 5");
     }
@@ -99,7 +99,7 @@ public sealed class PdfExportTests : PptxTestBase
         doc.Slides[1].IsHidden = true;
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/Count 1");
     }
@@ -132,7 +132,7 @@ public sealed class PdfExportTests : PptxTestBase
         doc.Slides.AddBlank(doc.Masters[0].Layouts[0]);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/MediaBox");
         // 10 in = 720 pt, 7.5 in = 540 pt
@@ -156,7 +156,7 @@ public sealed class PdfExportTests : PptxTestBase
             );
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("Hello PDF World");
     }
@@ -183,7 +183,7 @@ public sealed class PdfExportTests : PptxTestBase
             );
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("Title text");
         text.ShouldContain("Body content here");
@@ -206,7 +206,7 @@ public sealed class PdfExportTests : PptxTestBase
         shape.Fill.SetSolid(ColorSpec.FromRgb(0, 112, 192));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         // PDF solid fill uses 'rg' operator
         text.ShouldContain("rg");
@@ -229,7 +229,7 @@ public sealed class PdfExportTests : PptxTestBase
     {
         var doc = PptxFixtures.BlankPresentation();
         using var ms = new MemoryStream();
-        await Processor.SaveAsPdfAsync(doc, ms);
+        await Processor.SaveAsPdfAsync(doc, ms, null, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("%PDF-1.7");
         text.ShouldContain("/Count 0");

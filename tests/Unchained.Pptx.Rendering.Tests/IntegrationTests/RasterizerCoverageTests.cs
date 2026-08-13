@@ -274,7 +274,8 @@ public sealed class RasterizerCoverageTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 64, HeightPx = 48 }
+            new RenderOptions { WidthPx = 64, HeightPx = 48 },
+            cancellationToken: TestContext.Current.CancellationToken
         );
         var greenish = PngTestUtils.CountPixels(image.Data.ToArray(), 64, 48, static (r, g, b) => g > 150 && r < 80 && b < 90);
         greenish.ShouldBeGreaterThan(100);

@@ -58,14 +58,14 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath(fileName);
         File.Exists(path).ShouldBeTrue($"sample {fileName} missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
         var beforeParts = CountParts(original);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         var saved = ms.ToArray();
 
         // The SDK save must not drop parts (the custom writer does).
@@ -79,16 +79,16 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         var originalShapeCounts = doc.Slides.Select(static s => s.Shapes.Count).ToArray();
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         reloaded.Slides.Count.ShouldBe(doc.Slides.Count, "slide count after SDK save round-trip");
         reloaded.Slides.Select(static s => s.Shapes.Count)
             .ToArray()
@@ -105,11 +105,11 @@ public sealed class SdkSaveTests
         // all parts (the writer used to regenerate the whole slide, breaking blip relationships).
         var path = SamplePath("shp-picture.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
         var beforeParts = CountParts(original);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var picture = doc.Slides.SelectMany(static s => s.Shapes).OfType<PictureShape>().First();
         picture.Image.ShouldNotBeNull();
@@ -117,12 +117,12 @@ public sealed class SdkSaveTests
         picture.X = movedX;
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         var saved = ms.ToArray();
 
         CountParts(saved).ShouldBe(beforeParts, "media and other parts must survive a geometry edit");
 
-        var reloaded = await processor.LoadAsync(saved, new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(saved, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         var movedPicture = reloaded.Slides.SelectMany(static s => s.Shapes).OfType<PictureShape>().First();
         movedPicture.X.Value.ShouldBe(movedX.Value, "moved picture position must persist through SDK save");
         movedPicture.Image.ShouldNotBeNull("picture image must survive the edit — this was the corruption");
@@ -138,11 +138,11 @@ public sealed class SdkSaveTests
         // keep all parts (the writer used to regenerate the slide and disturb text/relationships).
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
         var beforeParts = CountParts(original);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var paragraph = doc.Slides.SelectMany(static s => s.Shapes)
             .OfType<AutoShape>()
@@ -154,12 +154,12 @@ public sealed class SdkSaveTests
         paragraph.PlainText = edited;
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         var saved = ms.ToArray();
 
         CountParts(saved).ShouldBe(beforeParts, "parts must survive a text edit");
 
-        var reloaded = await processor.LoadAsync(saved, new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(saved, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         reloaded.Slides.SelectMany(static s => s.Shapes)
             .OfType<AutoShape>()
             .SelectMany(static s => s.TextFrame.Paragraphs)
@@ -175,10 +175,10 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var shape = doc.Slides.SelectMany(static s => s.Shapes).First();
         shape.Name = "Renamed marker";
@@ -186,9 +186,9 @@ public sealed class SdkSaveTests
         shape.IsHidden = true;
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var reloadedShape = reloaded.Slides.SelectMany(static s => s.Shapes).First(static s => s.Name == "Renamed marker");
         reloadedShape.AltText.ShouldBe("Alt marker");
         reloadedShape.IsHidden.ShouldBeTrue();
@@ -202,19 +202,19 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var shape = doc.Slides.SelectMany(static s => s.Shapes).OfType<AutoShape>().First();
         shape.Name = "Shadowed marker";
         shape.Effects.OuterShadow = new OuterShadowEffect();
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var reloadedShape = reloaded.Slides.SelectMany(static s => s.Shapes).First(static s => s.Name == "Shadowed marker");
         reloadedShape.Effects.OuterShadow.ShouldNotBeNull("added shadow must persist through SDK save");
 
@@ -227,10 +227,10 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var slideIndex = 0;
         while (slideIndex < doc.Slides.Count && doc.Slides[slideIndex].Shapes.Count == 0)
@@ -242,9 +242,9 @@ public sealed class SdkSaveTests
         slide.Shapes.Remove(slide.Shapes[0]);
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         reloaded.Slides[slideIndex].Shapes.Count.ShouldBe(before - 1, "deleted shape must not reappear");
 
         await doc.DisposeAsync();
@@ -256,10 +256,10 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var slide = doc.Slides[0];
         var before = slide.Shapes.Count;
@@ -272,9 +272,9 @@ public sealed class SdkSaveTests
         );
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         reloaded.Slides[0].Shapes.Count.ShouldBe(before + 1, "added shape must persist");
         reloaded.Slides[0]
             .Shapes
@@ -292,19 +292,19 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var shape = doc.Slides.SelectMany(static s => s.Shapes).First();
         shape.Name = "Linked marker";
         shape.ClickAction = HyperlinkAction.ToUrl("https://unchained.example/xyz");
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var reloadedShape = reloaded.Slides.SelectMany(static s => s.Shapes).First(static s => s.Name == "Linked marker");
         reloadedShape.ClickAction.ShouldNotBeNull();
         reloadedShape.ClickAction.Url.ShouldBe("https://unchained.example/xyz");
@@ -318,19 +318,19 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var shape = doc.Slides.SelectMany(static s => s.Shapes).First();
         shape.Name = "Decorative marker";
         shape.IsDecorative = true;
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         reloaded.Slides.SelectMany(static s => s.Shapes)
             .First(static s => s.Name == "Decorative marker")
             .IsDecorative.ShouldBeTrue();
@@ -344,10 +344,10 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-picture.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var source = doc.Slides.SelectMany(static s => s.Shapes).OfType<PictureShape>().First();
         source.Image.ShouldNotBeNull();
@@ -363,9 +363,9 @@ public sealed class SdkSaveTests
         );
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var reloadedPictures = reloaded.Slides[0].Shapes.OfType<PictureShape>().ToList();
         reloadedPictures.Count.ShouldBe(beforePictures + 1, "added picture must persist");
         reloadedPictures.ShouldAllBe(static p => p.Image != null, "every picture (incl. the added one) must keep its image");
@@ -379,10 +379,10 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         // A shape with no explicit fill inherits from the theme — the new writer must be able to
         // apply a fill to it (previously the edit was silently dropped).
@@ -395,9 +395,9 @@ public sealed class SdkSaveTests
         shape.Fill.SetSolid(ColorSpec.FromRgb(0x11, 0x99, 0x44));
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var reloadedShape = reloaded.Slides.SelectMany(static s => s.Shapes).First(static s => s.Name == "Filled marker");
         reloadedShape.Fill.Type.ShouldBe(FillType.Solid, "applied solid fill must persist");
         reloadedShape.Fill.Solid.ShouldNotBeNull();
@@ -412,10 +412,10 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var shape = doc.Slides.SelectMany(static s => s.Shapes)
             .OfType<AutoShape>()
@@ -426,9 +426,9 @@ public sealed class SdkSaveTests
         shape.Line.SetSolid(ColorSpec.FromRgb(0xCC, 0x00, 0x00), 2.5);
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var reloadedShape = reloaded.Slides.SelectMany(static s => s.Shapes).First(static s => s.Name == "Outlined marker");
         reloadedShape.Line.Fill.Type.ShouldBe(FillType.Solid, "applied outline must persist");
         reloadedShape.Line.WidthPoints.ShouldNotBeNull();
@@ -442,14 +442,14 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         doc.Slides[0].Transition.Effect = TransitionEffect.Fade;
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         SlideXmls(ms.ToArray()).ShouldContain(static x => x.Contains(":transition", StringComparison.Ordinal), "a transition element must be written");
         await doc.DisposeAsync();
@@ -460,14 +460,14 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         doc.Slides[0].Background.Fill.SetSolid(ColorSpec.FromRgb(0x12, 0x34, 0x56));
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         SlideXmls(ms.ToArray())
             .ShouldContain(
@@ -482,19 +482,19 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         doc.Slides.Count.ShouldBeGreaterThanOrEqualTo(2, "sample needs at least two slides");
 
         var secondId = doc.Slides[1].SlideId;
         doc.Slides.MoveTo(1, 0); // move the second slide to the front
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         reloaded.Slides[0].SlideId.ShouldBe(secondId, "reordered slide order must persist");
 
         await doc.DisposeAsync();
@@ -506,10 +506,10 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         doc.Slides.Count.ShouldBeGreaterThanOrEqualTo(2, "sample needs at least two slides");
 
         var before = doc.Slides.Count;
@@ -517,9 +517,9 @@ public sealed class SdkSaveTests
         doc.Slides.RemoveAt(1);
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         reloaded.Slides.Count.ShouldBe(before - 1, "deleted slide must not reappear");
         reloaded.Slides[0].SlideId.ShouldBe(keptId);
 
@@ -532,19 +532,19 @@ public sealed class SdkSaveTests
     {
         var path = SamplePath("shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("sample missing");
-        var original = await File.ReadAllBytesAsync(path);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(original, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         var before = doc.Slides.Count;
         var added = doc.Slides.AddBlank(doc.Masters[0].Layouts[0]);
         added.Shapes.AddTextBox(Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(4), Emu.FromInches(1), "New slide marker");
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true });
+        await processor.SaveAsync(doc, ms, new SaveOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
-        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var reloaded = await processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         reloaded.Slides.Count.ShouldBe(before + 1, "added slide must persist");
         reloaded.Slides.SelectMany(static s => s.Shapes)
             .OfType<AutoShape>()

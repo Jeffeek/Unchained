@@ -14,7 +14,7 @@ public sealed class SvgToPdfConverterBranchTests : PdfTestBase
 {
     private static async Task<string> ContentTextAsync(string svg)
     {
-        await using var doc = await Processor.LoadFromSvgAsync(svg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(svg, cancellationToken: TestContext.Current.CancellationToken);
         var ops = doc.Pages[1].GetContentOperators();
         return string.Join(" ", ops.Select(static o => o.Name));
     }
@@ -68,7 +68,7 @@ public sealed class SvgToPdfConverterBranchTests : PdfTestBase
                              <path d="m 10 10 l 20 0 h 10 v 10 c 5 5 10 5 15 0" fill="#abcdef"/>
                            </svg>
                            """;
-        await using var doc = await Processor.LoadFromSvgAsync(svg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(svg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
         var names = string.Join(" ", doc.Pages[1].GetContentOperators().Select(static o => o.Name));
         // Relative l, h, v all emit line segments; relative c emits a cubic curve.
@@ -105,7 +105,7 @@ public sealed class SvgToPdfConverterBranchTests : PdfTestBase
                      <rect x="0" y="0" width="10" height="10" fill="{color}"/>
                    </svg>
                    """;
-        await using var doc = await Processor.LoadFromSvgAsync(svg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(svg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -171,7 +171,7 @@ public sealed class SvgToPdfConverterBranchTests : PdfTestBase
                              <circle cx="60" cy="40" r="30" fill="blue"/>
                            </svg>
                            """;
-        await using var doc = await Processor.LoadFromSvgAsync(svg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(svg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -184,7 +184,7 @@ public sealed class SvgToPdfConverterBranchTests : PdfTestBase
                              <rect x="0" y="0" width="50" height="50" fill="red"/>
                            </svg>
                            """;
-        await using var doc = await Processor.LoadFromSvgAsync(svg, ct: TestContext.Current.CancellationToken);
+        await using var doc = await Processor.LoadFromSvgAsync(svg, cancellationToken: TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 

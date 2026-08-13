@@ -26,7 +26,7 @@ public sealed class SmartArtTests : PptxTestBase
     public async Task Load_SurfacesSmartArtShape()
     {
         var bytes = await SampleBytesAsync("shp-shapes.pptx");
-        var doc = await Processor.LoadAsync(bytes);
+        var doc = await Processor.LoadAsync(bytes, cancellationToken: TestContext.Current.CancellationToken);
 
         var smartArt = doc.Slides.SelectMany(static s => s.Shapes).OfType<SmartArtShape>().FirstOrDefault();
         smartArt.ShouldNotBeNull("shp-shapes.pptx contains a SmartArt diagram");
@@ -39,7 +39,7 @@ public sealed class SmartArtTests : PptxTestBase
     public async Task Load_ReadsNodeText()
     {
         var bytes = await SampleBytesAsync("shp-shapes.pptx");
-        var doc = await Processor.LoadAsync(bytes);
+        var doc = await Processor.LoadAsync(bytes, cancellationToken: TestContext.Current.CancellationToken);
 
         var smartArt = doc.Slides.SelectMany(static s => s.Shapes).OfType<SmartArtShape>().First();
 
@@ -52,10 +52,10 @@ public sealed class SmartArtTests : PptxTestBase
     public async Task RoundTrip_PreservesAllDiagramParts()
     {
         var bytes = await SampleBytesAsync("shp-shapes.pptx");
-        var doc = await Processor.LoadAsync(bytes);
+        var doc = await Processor.LoadAsync(bytes, cancellationToken: TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         var saved = ms.ToArray();
 
         // Every diagram part present in the source must survive the round-trip.
@@ -74,7 +74,7 @@ public sealed class SmartArtTests : PptxTestBase
     public async Task RoundTrip_ReloadsNodeText()
     {
         var bytes = await SampleBytesAsync("shp-shapes.pptx");
-        var doc = await Processor.LoadAsync(bytes);
+        var doc = await Processor.LoadAsync(bytes, cancellationToken: TestContext.Current.CancellationToken);
         var original = doc.Slides.SelectMany(static s => s.Shapes).OfType<SmartArtShape>().First().GetAllText();
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
@@ -90,7 +90,7 @@ public sealed class SmartArtTests : PptxTestBase
     public async Task EditNodeText_ReflectedAfterReload()
     {
         var bytes = await SampleBytesAsync("shp-shapes.pptx");
-        var doc = await Processor.LoadAsync(bytes);
+        var doc = await Processor.LoadAsync(bytes, cancellationToken: TestContext.Current.CancellationToken);
 
         var smartArt = doc.Slides.SelectMany(static s => s.Shapes).OfType<SmartArtShape>().First();
         var target = FindNodeWithText(smartArt.Nodes, "Smart Art");

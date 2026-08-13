@@ -35,7 +35,7 @@ public sealed class OpenXmlPresentationWriterTests
     {
         var bytes = await BuildSimplePptxBytes();
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         OpenXmlPresentationWriter.CanSave(doc).ShouldBeTrue();
         OpenXmlPresentationWriter.Save(doc).Length.ShouldBeGreaterThan(0);
@@ -48,7 +48,7 @@ public sealed class OpenXmlPresentationWriterTests
     {
         var bytes = await BuildSimplePptxBytes();
         using var processor = new PresentationProcessor();
-        var doc = await processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         // Drop the SlideIdList from the held SDK presentation so OrderedSlideParts takes the
         // fallback "enumerate SlideParts directly" branch.

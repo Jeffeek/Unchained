@@ -39,7 +39,7 @@ public sealed class PdfXConversionTests : PdfTestBase
     public async Task ConvertToPdfX_ProducesReloadableDocument()
     {
         var converted = await ConvertAsync(PdfFixtures.MultiPage(3), PdfXProfile.PdfX1A2001);
-        await using var reloaded = await LoadAsync(converted);
+        await using var reloaded = await LoadAsync(converted, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(3);
     }
 
@@ -47,7 +47,7 @@ public sealed class PdfXConversionTests : PdfTestBase
     public async Task ConvertToPdfX_CatalogHasOutputIntents()
     {
         var converted = await ConvertAsync(PdfFixtures.SinglePage(), PdfXProfile.PdfX4);
-        await using var reloaded = await LoadAsync(converted);
+        await using var reloaded = await LoadAsync(converted, TestContext.Current.CancellationToken);
         // The output intent object should be reachable and carry the GTS_PDFX subtype.
         reloaded.PageCount.ShouldBe(1);
         var text = Encoding.Latin1.GetString(converted);
@@ -58,7 +58,7 @@ public sealed class PdfXConversionTests : PdfTestBase
     public async Task ConvertToPdfX_PreservesInfoTitle()
     {
         var converted = await ConvertAsync(PdfFixtures.WithInfo("MyDoc", "Author"), PdfXProfile.PdfX1A2001);
-        await using var reloaded = await LoadAsync(converted);
+        await using var reloaded = await LoadAsync(converted, TestContext.Current.CancellationToken);
         // GTS_PDFXVersion is added to /Info; the existing Title is preserved.
         reloaded.Metadata.Title.ShouldBe("MyDoc");
     }
@@ -82,19 +82,19 @@ public sealed class PdfXConversionTests : PdfTestBase
     {
         // A document with an existing /ID (any saved document) must keep an /ID through conversion.
         var converted = await ConvertAsync(PdfFixtures.SinglePage(), PdfXProfile.PdfX1A2001);
-        await using var reloaded = await LoadAsync(converted);
+        await using var reloaded = await LoadAsync(converted, TestContext.Current.CancellationToken);
         reloaded.Id.ShouldNotBeNull();
     }
 
     [Fact]
     public async Task ConvertToPdfX_EncryptedDocument_Throws()
     {
-        await using var doc = await LoadAsync(PdfFixtures.SinglePage());
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         using var encMs = new MemoryStream();
-        await Processor.SaveAsync(doc, encMs, new SaveOptions(Encryption: new EncryptionOptions("pw")));
+        await Processor.SaveAsync(doc, encMs, new SaveOptions(Encryption: new EncryptionOptions("pw")), TestContext.Current.CancellationToken);
 
         encMs.Position = 0;
-        await using var encDoc = await Processor.LoadAsync(encMs, "pw");
+        await using var encDoc = await Processor.LoadAsync(encMs, "pw", TestContext.Current.CancellationToken);
         using var outMs = new MemoryStream();
         await Should.ThrowAsync<InvalidOperationException>(() =>
             // ReSharper disable once RedundantArgumentDefaultValue

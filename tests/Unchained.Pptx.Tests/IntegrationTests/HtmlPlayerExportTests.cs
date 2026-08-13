@@ -20,7 +20,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
     public async Task ExportHtmlPlayer_ProducesSingleDocument()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var bytes = await PresentationProcessor.ExportHtmlPlayerAsync(doc);
+        var bytes = await PresentationProcessor.ExportHtmlPlayerAsync(doc, null, TestContext.Current.CancellationToken);
         var html = Html(bytes);
 
         html.ShouldContain("<!DOCTYPE html>");
@@ -33,7 +33,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
     public async Task ExportHtmlPlayer_IncludesNavigationAndCounter()
     {
         var doc = PptxFixtures.WithSlides(2);
-        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc, null, TestContext.Current.CancellationToken));
 
         html.ShouldContain("id=\"next\"");
         html.ShouldContain("id=\"prev\"");
@@ -48,7 +48,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         doc.Slides[0].Shapes.AddTextBox(Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(1), "PlayerHello");
 
-        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc, null, TestContext.Current.CancellationToken));
         html.ShouldContain("PlayerHello");
     }
 
@@ -58,7 +58,7 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(3);
         doc.Slides[1].IsHidden = true;
 
-        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc));
+        var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc, null, TestContext.Current.CancellationToken));
         Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(2);
 
         var withHidden = Html(
@@ -90,9 +90,9 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".html");
         try
         {
-            await Processor.SaveAsHtmlPlayerAsync(doc, path, new HtmlPlayerSaveOptions { Title = "My Deck" });
+            await Processor.SaveAsHtmlPlayerAsync(doc, path, new HtmlPlayerSaveOptions { Title = "My Deck" }, TestContext.Current.CancellationToken);
             File.Exists(path).ShouldBeTrue();
-            var html = await File.ReadAllTextAsync(path);
+            var html = await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken);
             html.ShouldContain("<title>My Deck</title>");
         }
         finally

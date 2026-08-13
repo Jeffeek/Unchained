@@ -191,7 +191,7 @@ public sealed class EncryptionTests : PdfTestBase
 
         await using var decrypted = await Processor.LoadAsync(new MemoryStream(firstMs.ToArray()), "old", TestContext.Current.CancellationToken);
         var changedMs = new MemoryStream();
-        await Processor.ChangePasswordsAsync(decrypted, "new", "new", changedMs, ct: TestContext.Current.CancellationToken);
+        await Processor.ChangePasswordsAsync(decrypted, "new", "new", changedMs, cancellationToken: TestContext.Current.CancellationToken);
 
         // Old password no longer works
         await Should.ThrowAsync<PdfEncryptedException>(() =>
@@ -217,7 +217,7 @@ public sealed class EncryptionTests : PdfTestBase
 
         await using var decrypted = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "secret", TestContext.Current.CancellationToken);
         var decryptedMs = new MemoryStream();
-        await Processor.ChangePasswordsAsync(decrypted, string.Empty, string.Empty, decryptedMs, ct: TestContext.Current.CancellationToken);
+        await Processor.ChangePasswordsAsync(decrypted, string.Empty, string.Empty, decryptedMs, cancellationToken: TestContext.Current.CancellationToken);
 
         // No password needed anymore
         await using var plain = await Processor.LoadAsync(new MemoryStream(decryptedMs.ToArray()), TestContext.Current.CancellationToken);
@@ -239,7 +239,7 @@ public sealed class EncryptionTests : PdfTestBase
 
         await using var decrypted = await Processor.LoadAsync(new MemoryStream(encMs.ToArray()), "initial", TestContext.Current.CancellationToken);
         var changedMs = new MemoryStream();
-        await Processor.ChangePasswordsAsync(decrypted, "user2", "owner2", changedMs, ct: TestContext.Current.CancellationToken);
+        await Processor.ChangePasswordsAsync(decrypted, "user2", "owner2", changedMs, cancellationToken: TestContext.Current.CancellationToken);
 
         // Both new passwords work
         await using var byUser = await Processor.LoadAsync(new MemoryStream(changedMs.ToArray()), "user2", TestContext.Current.CancellationToken);

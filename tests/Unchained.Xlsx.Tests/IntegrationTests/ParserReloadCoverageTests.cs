@@ -76,7 +76,7 @@ public class ParserReloadCoverageTests
             $"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="{ns}"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>""";
 
         using var ms = new MemoryStream();
-        await ms.WriteAsync(bytes);
+        await ms.WriteAsync(bytes, TestContext.Current.CancellationToken);
 #if NET10_0_OR_GREATER
         await using (var archive = new ZipArchive(ms, ZipArchiveMode.Update, true))
         {
