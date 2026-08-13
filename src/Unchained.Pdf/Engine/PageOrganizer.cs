@@ -26,37 +26,37 @@ public sealed class PageOrganizer : IPageOrganizer
         IReadOnlyList<int> pageNumbers,
         int degrees,
         bool relative = true,
-        CancellationToken ct = default
-    ) => Task.Run(() => RotatePages(document, pageNumbers, degrees, relative), ct);
+        CancellationToken cancellationToken = default
+    ) => Task.Run(() => RotatePages(document, pageNumbers, degrees, relative), cancellationToken);
 
     /// <inheritdoc />
     public Task DeletePagesAsync(
         IPdfDocument document,
         IReadOnlyList<int> pageNumbers,
-        CancellationToken ct = default
-    ) => Task.Run(() => DeletePages(document, pageNumbers), ct);
+        CancellationToken cancellationToken = default
+    ) => Task.Run(() => DeletePages(document, pageNumbers), cancellationToken);
 
     /// <inheritdoc />
     public Task ReorderPagesAsync(
         IPdfDocument document,
         IReadOnlyList<int> newOrder,
-        CancellationToken ct = default
-    ) => Task.Run(() => ReorderPages(document, newOrder), ct);
+        CancellationToken cancellationToken = default
+    ) => Task.Run(() => ReorderPages(document, newOrder), cancellationToken);
 
     /// <inheritdoc />
     public Task InsertPagesAsync(
         IPdfDocument document,
         int atPageNumber,
         IPdfDocument source,
-        CancellationToken ct = default
-    ) => Task.Run(() => InsertPages(document, atPageNumber, source), ct);
+        CancellationToken cancellationToken = default
+    ) => Task.Run(() => InsertPages(document, atPageNumber, source), cancellationToken);
 
     /// <inheritdoc />
     public Task<IReadOnlyList<IPdfDocument>> SplitAsync(
         IPdfDocument document,
         IReadOnlyList<(int Start, int End)> ranges,
-        CancellationToken ct = default
-    ) => Task.Run(() => Split(document, ranges), ct);
+        CancellationToken cancellationToken = default
+    ) => Task.Run(() => Split(document, ranges), cancellationToken);
 
     // ── Rotate ──────────────────────────────────────────────────────────────────
 

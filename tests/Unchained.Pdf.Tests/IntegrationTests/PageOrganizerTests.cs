@@ -31,8 +31,8 @@ public sealed class PageOrganizerTests : PdfTestBase
     public async Task RotatePages_RelativeAccumulates_AndNormalises()
     {
         await using var doc = await LoadFixtureAsync(1);
-        await Organizer.RotatePagesAsync(doc, [1], 270, ct: TestContext.Current.CancellationToken);
-        await Organizer.RotatePagesAsync(doc, [1], 180, ct: TestContext.Current.CancellationToken);
+        await Organizer.RotatePagesAsync(doc, [1], 270, cancellationToken: TestContext.Current.CancellationToken);
+        await Organizer.RotatePagesAsync(doc, [1], 180, cancellationToken: TestContext.Current.CancellationToken);
         doc.Pages[1].Rotate.ShouldBe(90); // (270 + 180) % 360
     }
 
@@ -40,7 +40,7 @@ public sealed class PageOrganizerTests : PdfTestBase
     public async Task RotatePages_NegativeAngle_Normalises()
     {
         await using var doc = await LoadFixtureAsync(1);
-        await Organizer.RotatePagesAsync(doc, [1], -90, ct: TestContext.Current.CancellationToken);
+        await Organizer.RotatePagesAsync(doc, [1], -90, cancellationToken: TestContext.Current.CancellationToken);
         doc.Pages[1].Rotate.ShouldBe(270);
     }
 
@@ -57,7 +57,7 @@ public sealed class PageOrganizerTests : PdfTestBase
     public async Task RotatePages_SurvivesSaveReload()
     {
         await using var doc = await LoadFixtureAsync(2);
-        await Organizer.RotatePagesAsync(doc, [1], 90, ct: TestContext.Current.CancellationToken);
+        await Organizer.RotatePagesAsync(doc, [1], 90, cancellationToken: TestContext.Current.CancellationToken);
         await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.Pages[1].Rotate.ShouldBe(90);
         reloaded.PageCount.ShouldBe(2);
@@ -87,15 +87,15 @@ public sealed class PageOrganizerTests : PdfTestBase
     {
         // Each page owns a private ~30KB image. Deleting page 1 orphans its image,
         // which must be pruned from the output (otherwise the scanned-PDF file never shrinks).
-        await using var doc = await LoadAsync(PdfFixtures.TwoPagesEachWithPrivateImage(100, 100));
+        await using var doc = await LoadAsync(PdfFixtures.TwoPagesEachWithPrivateImage(100, 100), TestContext.Current.CancellationToken);
         using var originalMs = new MemoryStream();
-        await Processor.SaveAsync(doc, originalMs, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, originalMs, cancellationToken: TestContext.Current.CancellationToken);
         var originalSize = originalMs.Length;
 
         await Organizer.DeletePagesAsync(doc, [1], TestContext.Current.CancellationToken);
 
         using var afterMs = new MemoryStream();
-        await Processor.SaveAsync(doc, afterMs, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, afterMs, cancellationToken: TestContext.Current.CancellationToken);
 
         // Dropping one of two ~30KB images should remove roughly one image's worth of bytes.
         (originalSize - afterMs.Length).ShouldBeGreaterThan(25_000);

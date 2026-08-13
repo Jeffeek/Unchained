@@ -102,7 +102,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
         await Editor.SetPageLayoutAsync(doc, PageLayout.SinglePage, TestContext.Current.CancellationToken);
         await Editor.SetPageModeAsync(doc, PageMode.UseThumbs, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageLayout.ShouldBe(PageLayout.SinglePage);
@@ -235,7 +235,7 @@ public sealed class ViewerPreferencesTests : PdfTestBase
         await Editor.SetViewerPreferencesAsync(doc, prefs, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
 

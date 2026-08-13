@@ -19,7 +19,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
             files.Count.ShouldBe(1);
             File.Exists(files[0]).ShouldBeTrue();
         }
@@ -36,7 +36,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
             files.Count.ShouldBe(3);
         }
         finally
@@ -52,7 +52,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), "output");
         try
         {
-            await Processor.SaveAsHtmlAsync(doc, dir);
+            await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
             Directory.Exists(dir).ShouldBeTrue();
         }
         finally
@@ -70,8 +70,8 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc, dir);
-            var html = await File.ReadAllTextAsync(files[0]);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
+            var html = await File.ReadAllTextAsync(files[0], TestContext.Current.CancellationToken);
             html.ShouldContain("<!DOCTYPE html>");
         }
         finally
@@ -87,8 +87,8 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc, dir);
-            var html = await File.ReadAllTextAsync(files[0]);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
+            var html = await File.ReadAllTextAsync(files[0], TestContext.Current.CancellationToken);
             html.ShouldContain("class=\"slide\"");
         }
         finally
@@ -113,8 +113,8 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc, dir);
-            var html = await File.ReadAllTextAsync(files[0]);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
+            var html = await File.ReadAllTextAsync(files[0], TestContext.Current.CancellationToken);
             html.ShouldContain("Hello HTML World");
         }
         finally
@@ -132,7 +132,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
             files.Count.ShouldBe(1);
         }
         finally
@@ -180,8 +180,8 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc, dir);
-            var html = await File.ReadAllTextAsync(files[0]);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
+            var html = await File.ReadAllTextAsync(files[0], TestContext.Current.CancellationToken);
             html.ShouldContain("background:rgb(0,112,192)");
         }
         finally
@@ -197,7 +197,7 @@ public sealed class HtmlExportTests : PptxTestBase
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         try
         {
-            var files = await Processor.SaveAsHtmlAsync(doc, dir);
+            var files = await Processor.SaveAsHtmlAsync(doc, dir, cancellationToken: TestContext.Current.CancellationToken);
             files.Count.ShouldBe(0);
         }
         finally

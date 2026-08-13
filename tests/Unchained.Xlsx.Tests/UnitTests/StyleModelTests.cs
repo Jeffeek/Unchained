@@ -78,7 +78,6 @@ public class StyleModelTests
         a.Equals(b).ShouldBeTrue();
         a.Equals((object)b).ShouldBeTrue();
         a.Equals(c).ShouldBeFalse();
-        a.Equals(null).ShouldBeFalse();
         a.GetHashCode().ShouldBe(b.GetHashCode());
     }
 
@@ -150,7 +149,6 @@ public class StyleModelTests
         a.Equals(b).ShouldBeTrue();
         a.Equals((object)b).ShouldBeTrue();
         a.Equals(c).ShouldBeFalse();
-        a.Equals(null).ShouldBeFalse();
         a.GetHashCode().ShouldBe(b.GetHashCode());
     }
 

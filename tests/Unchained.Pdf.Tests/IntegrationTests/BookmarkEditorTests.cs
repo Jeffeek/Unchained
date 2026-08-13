@@ -103,7 +103,7 @@ public sealed class BookmarkEditorTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
         await Editor.SetBookmarksAsync(doc, [new("X", 1), new("Y", 2)], TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.GetBookmarks().Count.ShouldBe(2);

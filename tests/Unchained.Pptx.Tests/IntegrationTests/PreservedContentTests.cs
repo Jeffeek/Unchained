@@ -15,11 +15,11 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 public sealed class PreservedContentTests : PptxTestBase
 {
     /// <summary>Produces a base PPTX (1 slide) as bytes.</summary>
-    private async Task<byte[]> BaseDeckAsync()
+    private async Task<byte[]> BaseDeckAsync(CancellationToken cancellationToken)
     {
         var doc = PptxFixtures.WithSlides(1);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: cancellationToken);
         return ms.ToArray();
     }
 
@@ -104,13 +104,13 @@ public sealed class PreservedContentTests : PptxTestBase
     public async Task Vba_RoundTrips_AndFlagsMacros()
     {
         var vbaBytes = new byte[] { 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 0x00, 1, 2, 3 };
-        var withVba = InjectVba(await BaseDeckAsync(), vbaBytes);
+        var withVba = InjectVba(await BaseDeckAsync(TestContext.Current.CancellationToken), vbaBytes);
 
-        var doc = await Processor.LoadAsync(withVba);
+        var doc = await Processor.LoadAsync(withVba, cancellationToken: TestContext.Current.CancellationToken);
         doc.HasMacros.ShouldBeTrue();
 
         using var outMs = new MemoryStream();
-        await Processor.SaveAsync(doc, outMs);
+        await Processor.SaveAsync(doc, outMs, cancellationToken: TestContext.Current.CancellationToken);
         var saved = outMs.ToArray();
 
         PartExists(saved, "ppt/vbaProject.bin").ShouldBeTrue("VBA project must survive round-trip");
@@ -120,11 +120,11 @@ public sealed class PreservedContentTests : PptxTestBase
     [Fact]
     public async Task Vba_PresentationUsesMacroEnabledContentType()
     {
-        var withVba = InjectVba(await BaseDeckAsync(), [0xCF, 0x11, 0xE0, 0xA1]);
+        var withVba = InjectVba(await BaseDeckAsync(TestContext.Current.CancellationToken), [0xCF, 0x11, 0xE0, 0xA1]);
 
-        var doc = await Processor.LoadAsync(withVba);
+        var doc = await Processor.LoadAsync(withVba, cancellationToken: TestContext.Current.CancellationToken);
         using var outMs = new MemoryStream();
-        await Processor.SaveAsync(doc, outMs);
+        await Processor.SaveAsync(doc, outMs, cancellationToken: TestContext.Current.CancellationToken);
         var saved = outMs.ToArray();
 
         var ct = Encoding.UTF8.GetString(PartBytes(saved, "[Content_Types].xml"));
@@ -138,11 +138,11 @@ public sealed class PreservedContentTests : PptxTestBase
     public async Task Signatures_RoundTripVerbatim()
     {
         var sigXml = "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><SignatureValue>AAAA</SignatureValue></Signature>"u8.ToArray();
-        var withSig = InjectSignature(await BaseDeckAsync(), sigXml);
+        var withSig = InjectSignature(await BaseDeckAsync(TestContext.Current.CancellationToken), sigXml);
 
-        var doc = await Processor.LoadAsync(withSig);
+        var doc = await Processor.LoadAsync(withSig, cancellationToken: TestContext.Current.CancellationToken);
         using var outMs = new MemoryStream();
-        await Processor.SaveAsync(doc, outMs);
+        await Processor.SaveAsync(doc, outMs, cancellationToken: TestContext.Current.CancellationToken);
         var saved = outMs.ToArray();
 
         PartExists(saved, "_xmlsignatures/origin.sigs").ShouldBeTrue("signature origin must survive");
@@ -153,11 +153,11 @@ public sealed class PreservedContentTests : PptxTestBase
     [Fact]
     public async Task NoPreservedContent_ForPlainDeck()
     {
-        var doc = await Processor.LoadAsync(await BaseDeckAsync());
+        var doc = await Processor.LoadAsync(await BaseDeckAsync(TestContext.Current.CancellationToken));
         doc.HasMacros.ShouldBeFalse();
 
         using var outMs = new MemoryStream();
-        await Processor.SaveAsync(doc, outMs);
+        await Processor.SaveAsync(doc, outMs, cancellationToken: TestContext.Current.CancellationToken);
         PartExists(outMs.ToArray(), "ppt/vbaProject.bin").ShouldBeFalse();
     }
 }

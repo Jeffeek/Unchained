@@ -17,7 +17,7 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_SingleSlide_ReturnsSvgBytes()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         svgs.Length.ShouldBe(1);
         svgs[0].Length.ShouldBeGreaterThan(50);
     }
@@ -26,7 +26,7 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_ThreeSlides_ReturnsThreeSvgs()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         svgs.Length.ShouldBe(3);
     }
 
@@ -34,7 +34,7 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_OutputContainsSvgRootElement()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.UTF8.GetString(svgs[0]);
         text.ShouldContain("<svg ");
         text.ShouldContain("</svg>");
@@ -44,7 +44,7 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_OutputContainsXmlDeclaration()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.UTF8.GetString(svgs[0]);
         text.ShouldContain("<?xml");
     }
@@ -53,7 +53,7 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_OutputContainsViewBox()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.UTF8.GetString(svgs[0]);
         text.ShouldContain("viewBox=");
     }
@@ -71,7 +71,7 @@ public sealed class SvgExportTests : PptxTestBase
                 "Hello SVG"
             );
 
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.UTF8.GetString(svgs[0]);
         text.ShouldContain("Hello SVG");
     }
@@ -90,7 +90,7 @@ public sealed class SvgExportTests : PptxTestBase
             );
         shape.Fill.SetSolid(ColorSpec.FromRgb(255, 0, 0));
 
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.UTF8.GetString(svgs[0]);
         text.ShouldContain("#FF0000");
     }
@@ -101,7 +101,7 @@ public sealed class SvgExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(2);
         doc.Slides[1].IsHidden = true;
 
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         svgs.Length.ShouldBe(1);
     }
 
@@ -138,8 +138,8 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportSlideAsSvg_SingleSlide_MatchesBulkExport()
     {
         var doc = PptxFixtures.WithSlides(1);
-        var single = await Processor.ExportSlideAsSvgAsync(doc.Slides[0], doc.SlideSize);
-        var bulk = await Processor.ExportAsSvgAsync(doc);
+        var single = await Processor.ExportSlideAsSvgAsync(doc.Slides[0], doc.SlideSize, cancellationToken: TestContext.Current.CancellationToken);
+        var bulk = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
 
         single.Length.ShouldBe(bulk[0].Length);
     }
@@ -148,7 +148,7 @@ public sealed class SvgExportTests : PptxTestBase
     public async Task ExportAsSvg_EmptyPresentation_ReturnsEmptyArray()
     {
         var doc = Processor.CreateBlank();
-        var svgs = await Processor.ExportAsSvgAsync(doc);
+        var svgs = await Processor.ExportAsSvgAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         svgs.Length.ShouldBe(0);
     }
 }

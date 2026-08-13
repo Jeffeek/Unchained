@@ -111,7 +111,7 @@ public sealed class DocumentProcessorSaveTests : IDisposable
     {
         await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
         var output = new MemoryStream();
-        await _processor.SaveAsync(doc, output, ct: TestContext.Current.CancellationToken);
+        await _processor.SaveAsync(doc, output, cancellationToken: TestContext.Current.CancellationToken);
         output.Length.ShouldBeGreaterThan(0);
     }
 
@@ -120,7 +120,7 @@ public sealed class DocumentProcessorSaveTests : IDisposable
     {
         await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
         var output = new MemoryStream();
-        await _processor.SaveAsync(doc, output, ct: TestContext.Current.CancellationToken);
+        await _processor.SaveAsync(doc, output, cancellationToken: TestContext.Current.CancellationToken);
         var header = Encoding.Latin1.GetString(output.ToArray(), 0, 7);
         header.ShouldBe("%PDF-1.");
     }
@@ -132,7 +132,7 @@ public sealed class DocumentProcessorSaveTests : IDisposable
         try
         {
             await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
-            await _processor.SaveAsync(doc, path, ct: TestContext.Current.CancellationToken);
+            await _processor.SaveAsync(doc, path, cancellationToken: TestContext.Current.CancellationToken);
             new FileInfo(path).Length.ShouldBeGreaterThan(0);
         }
         finally
@@ -217,7 +217,7 @@ public sealed class DocumentProcessorFilePathTests : IDisposable
         try
         {
             await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
-            await _processor.ConvertToPdfAAsync(doc, path, ct: TestContext.Current.CancellationToken);
+            await _processor.ConvertToPdfAAsync(doc, path, cancellationToken: TestContext.Current.CancellationToken);
             new FileInfo(path).Length.ShouldBeGreaterThan(0);
         }
         finally
@@ -233,7 +233,7 @@ public sealed class DocumentProcessorFilePathTests : IDisposable
         try
         {
             await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
-            await _processor.ConvertToPdfXAsync(doc, path, ct: TestContext.Current.CancellationToken);
+            await _processor.ConvertToPdfXAsync(doc, path, cancellationToken: TestContext.Current.CancellationToken);
             new FileInfo(path).Length.ShouldBeGreaterThan(0);
         }
         finally
@@ -247,7 +247,7 @@ public sealed class DocumentProcessorFilePathTests : IDisposable
     {
         await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await _processor.ChangePasswordsAsync(doc, "u", "o", ms, ct: TestContext.Current.CancellationToken);
+        await _processor.ChangePasswordsAsync(doc, "u", "o", ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Length.ShouldBeGreaterThan(0);
     }
 
@@ -258,7 +258,7 @@ public sealed class DocumentProcessorFilePathTests : IDisposable
         try
         {
             await using var doc = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
-            await _processor.ChangePasswordsAsync(doc, "u", "o", path, ct: TestContext.Current.CancellationToken);
+            await _processor.ChangePasswordsAsync(doc, "u", "o", path, cancellationToken: TestContext.Current.CancellationToken);
             new FileInfo(path).Length.ShouldBeGreaterThan(0);
         }
         finally

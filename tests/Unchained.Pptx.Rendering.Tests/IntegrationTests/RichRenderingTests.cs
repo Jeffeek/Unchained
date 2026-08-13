@@ -37,7 +37,7 @@ public sealed class RichRenderingTests
         series.Values.AddRange([10.0, 25.0, 15.0, 30.0]);
         chart.Chart.Data.Series.Add(series);
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small, cancellationToken: TestContext.Current.CancellationToken);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 
@@ -58,7 +58,7 @@ public sealed class RichRenderingTests
         series.Values.AddRange([50.0, 30.0, 20.0]);
         chart.Chart.Data.Series.Add(series);
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small, cancellationToken: TestContext.Current.CancellationToken);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 
@@ -79,7 +79,7 @@ public sealed class RichRenderingTests
         series.Values.AddRange([5.0, 12.0, 18.0]);
         chart.Chart.Data.Series.Add(series);
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small, cancellationToken: TestContext.Current.CancellationToken);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 
@@ -97,7 +97,7 @@ public sealed class RichRenderingTests
         table.Grid[0, 0].TextFrame.Paragraphs.Add("Header");
         table.Grid[1, 1].TextFrame.Paragraphs.Add("Cell");
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small, cancellationToken: TestContext.Current.CancellationToken);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 
@@ -113,7 +113,7 @@ public sealed class RichRenderingTests
                 Emu.FromInches(4)
             );
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small, cancellationToken: TestContext.Current.CancellationToken);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 
@@ -138,7 +138,7 @@ public sealed class RichRenderingTests
             DirectionDegrees = 45
         };
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small, cancellationToken: TestContext.Current.CancellationToken);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 
@@ -157,7 +157,7 @@ public sealed class RichRenderingTests
         shape.Fill.SetSolid(ColorSpec.FromRgb(255, 0, 0));
         shape.Effects.Glow = new GlowEffect { Color = ColorSpec.FromRgb(255, 255, 0), Radius = Emu.FromPoints(8) };
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small, cancellationToken: TestContext.Current.CancellationToken);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 
@@ -179,7 +179,7 @@ public sealed class RichRenderingTests
         run.Format.Fill = new FillFormat();
         run.Format.Fill.SetSolid(ColorSpec.FromRgb(0x10, 0x80, 0x40));
 
-        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small);
+        var image = await SlideRenderer.RenderAsync(doc.Slides[0], doc.SlideSize, Small, cancellationToken: TestContext.Current.CancellationToken);
         image.Data.Length.ShouldBeGreaterThan(0);
     }
 }

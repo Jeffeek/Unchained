@@ -5,15 +5,29 @@
   </PropertyGroup>
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
-    <PackageVersion Include="AngleSharp" Version="1.5.2" />
-    <PackageVersion Include="bblanchon.PDFium.Win32" Version="153.0.7988" />
+    <PackageVersion Include="AngleSharp" Version="1.7.1" />
+    <PackageVersion Include="Aspose.Cells" Version="26.6.0" />
+    <PackageVersion Include="Aspose.Drawing" Version="26.6.0" />
+    <PackageVersion Include="Aspose.Drawing.Common" Version="26.6.0" />
+    <PackageVersion Include="Aspose.Font" Version="26.6.0" />
+    <PackageVersion Include="Aspose.Imaging.Drawing" Version="26.7.0" />
+    <PackageVersion Include="Aspose.OCR" Version="26.6.0" />
+    <PackageVersion Include="Aspose.OCR-GPU" Version="26.3.0" />
+    <PackageVersion Include="Aspose.PDF" Version="26.6.0" />
+    <PackageVersion Include="Aspose.Pdf.Builder" Version="1.0.0.4" />
+    <PackageVersion Include="Aspose.PDF.Drawing" Version="26.6.0" />
+    <PackageVersion Include="Aspose.Slides.NET" Version="26.7.0" />
+    <PackageVersion Include="Aspose.Slides.NET6.CrossPlatform" Version="26.7.0" />
+    <PackageVersion Include="Aspose.Slides.WebExtensions" Version="21.4.0" />
+    <PackageVersion Include="Aspose.Words" Version="26.7.0" />
+    <PackageVersion Include="bblanchon.PDFium.Win32" Version="153.0.7999" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
-    <PackageVersion Include="Microsoft.Bcl.Cryptography" Version="10.0.9" />
-    <PackageVersion Include="System.Formats.Asn1" Version="10.0.9" />
-    <PackageVersion Include="System.IO.Packaging" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Bcl.Cryptography" Version="10.0.11" />
+    <PackageVersion Include="System.Formats.Asn1" Version="10.0.11" />
+    <PackageVersion Include="System.IO.Packaging" Version="10.0.11" />
   </ItemGroup>
   <!-- ── Unchained.Pdf — image / document processing ──────────────────────── -->
   <ItemGroup Label="Unchained.Pdf">
@@ -21,7 +35,7 @@
     <PackageVersion Include="JBig2Decoder.NETStandard" Version="1.5.2" />
     <PackageVersion Include="Markdig" Version="1.3.2" />
     <PackageVersion Include="CoreJ2K" Version="2.3.3.91" />
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.10" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.11" />
   </ItemGroup>
   <!-- ── Unchained.Drawing.Text — glyph rasterization (FreeType2) ──────────── -->
   <ItemGroup Label="Unchained.Drawing.Text">
@@ -41,16 +55,15 @@
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
   <ItemGroup Label="Unchained.Studio">
-    <PackageVersion Include="MudBlazor" Version="9.7.0" />
+    <PackageVersion Include="MudBlazor" Version="9.8.0" />
     <!-- AspNetCore.SassCompiler (MIT): build-time SCSS → CSS. Bundles the Styles/ partials into
          a single wwwroot/css/app.css on build. No runtime dependency. -->
-    <PackageVersion Include="AspNetCore.SassCompiler" Version="1.101.0" />
+    <PackageVersion Include="AspNetCore.SassCompiler" Version="1.102.0" />
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="152.0.7961" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="153.0.7988" />
-    <PackageVersion Include="bblanchon.PDFium.Linux" Version="153.0.7988" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="152.0.7988" />
+    <PackageVersion Include="bblanchon.PDFium.Linux" Version="153.0.7999" />
+    <PackageVersion Include="bblanchon.PDFium.macOS" Version="153.0.7999" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
   <ItemGroup Label="PerformanceTests">
@@ -73,8 +86,8 @@
   </ItemGroup>
   <!-- ── Studio tests — Blazor component (bUnit) + browser E2E (Playwright) ──── -->
   <ItemGroup Label="StudioTests">
-    <PackageVersion Include="bunit" Version="2.7.2" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.18" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
+    <PackageVersion Include="bunit" Version="2.9.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.62.0" />
   </ItemGroup>
 </Project>

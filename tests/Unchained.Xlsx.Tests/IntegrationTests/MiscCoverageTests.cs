@@ -36,7 +36,7 @@ public class MiscCoverageTests
 #endif
         var entry = archive.GetEntry("xl/worksheets/sheet1.xml")!;
 #if NET10_0_OR_GREATER
-        using var reader = new StreamReader(await entry.OpenAsync());
+        using var reader = new StreamReader(await entry.OpenAsync(TestContext.Current.CancellationToken));
 #else
         using var reader = new StreamReader(entry.Open());
 #endif

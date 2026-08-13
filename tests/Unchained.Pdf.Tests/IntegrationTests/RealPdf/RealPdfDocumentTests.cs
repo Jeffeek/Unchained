@@ -21,7 +21,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Simple);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBe(1);
     }
 
@@ -30,7 +30,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Simple);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         // Metadata may or may not be present; the call must not throw.
         _ = doc.Metadata;
     }
@@ -40,7 +40,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Simple);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         // A4 portrait ≈ 595 × 842 pt; US Letter ≈ 612 × 792 pt — allow ±20 pt.
         doc.Pages[1].Width.ShouldBeInRange(400, 900);
         doc.Pages[1].Height.ShouldBeInRange(400, 1200);
@@ -53,7 +53,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Multipage);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
@@ -62,7 +62,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Multipage);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         for (var i = 1; i <= doc.PageCount; i++)
             doc.Pages[i].PageNumber.ShouldBe(i);
     }
@@ -72,9 +72,9 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Multipage);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var before = doc.PageCount;
-        await using var reloaded = await SaveAndReloadAsync(doc);
+        await using var reloaded = await SaveAndReloadAsync(doc, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(before);
     }
 
@@ -85,7 +85,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithAnnotations);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         // At least one page must carry annotations.
         var anyAnnots = Enumerable.Range(1, doc.PageCount)
             .Any(i => doc.Pages[i].GetAnnotations().Count > 0);
@@ -97,7 +97,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithAnnotations);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var annots = Enumerable.Range(1, doc.PageCount)
             .SelectMany(i => doc.Pages[i].GetAnnotations())
             .ToList();
@@ -116,7 +116,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithBookmarks);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.GetBookmarks().ShouldNotBeEmpty();
     }
 
@@ -127,7 +127,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
         if (bytes is null)
             return;
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
 
         Check(doc.GetBookmarks());
 
@@ -152,7 +152,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithForms);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.GetFormFields().ShouldNotBeEmpty();
     }
 
@@ -161,7 +161,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithForms);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.GetFormFields().ShouldAllBe(static f => !string.IsNullOrEmpty(f.Name));
     }
 
@@ -170,7 +170,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithForms);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var validTypes = new HashSet<string>(StringComparer.Ordinal) { "Tx", "Btn", "Ch", "Sig" };
         doc.GetFormFields().ShouldAllBe(f => validTypes.Contains(f.FieldType));
     }
@@ -182,7 +182,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
     {
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Scanned);
 
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         doc.PageCount.ShouldBeGreaterThan(0);
     }
 
@@ -196,7 +196,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
         // or throws PdfException / PdfEncryptedException (correct behaviour for protected files).
         try
         {
-            await using var doc = await LoadAsync(bytes);
+            await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
             doc.PageCount.ShouldBeGreaterThan(0);
         }
         catch (PdfException) { }
@@ -211,7 +211,7 @@ public sealed class RealPdfDocumentTests : PdfTestBase
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.Large);
 
         var sw = Stopwatch.StartNew();
-        await using var doc = await LoadAsync(bytes);
+        await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         sw.Stop();
         doc.PageCount.ShouldBeGreaterThan(0);
         sw.ElapsedMilliseconds.ShouldBeLessThan(

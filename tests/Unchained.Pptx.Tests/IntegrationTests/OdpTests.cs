@@ -35,7 +35,7 @@ public sealed class OdpTests : PptxTestBase
     public async Task ExportOdp_HasValidPackageStructure()
     {
         var doc = PptxFixtures.WithSlides(2);
-        var odp = await Processor.ExportOdpAsync(doc);
+        var odp = await Processor.ExportOdpAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
 
         // mimetype must exist, be first, and be stored uncompressed.
         using var ms = new MemoryStream(odp);
@@ -58,7 +58,7 @@ public sealed class OdpTests : PptxTestBase
     public async Task ExportOdp_ContentHasOnePagePerSlide()
     {
         var doc = PptxFixtures.WithSlides(3);
-        var odp = await Processor.ExportOdpAsync(doc);
+        var odp = await Processor.ExportOdpAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         var content = Encoding.UTF8.GetString(EntryBytes(odp, "content.xml"));
 
         Regex.Matches(content, "<draw:page").Count.ShouldBe(3);
@@ -70,7 +70,7 @@ public sealed class OdpTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         doc.Slides[0].Shapes.AddTextBox(Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(1), "OdpHello");
 
-        var odp = await Processor.ExportOdpAsync(doc);
+        var odp = await Processor.ExportOdpAsync(doc, cancellationToken: TestContext.Current.CancellationToken);
         var content = Encoding.UTF8.GetString(EntryBytes(odp, "content.xml"));
         content.ShouldContain("OdpHello");
     }
@@ -83,10 +83,10 @@ public sealed class OdpTests : PptxTestBase
         var original = PptxFixtures.WithSlides(2);
         original.Slides[0].Shapes.AddTextBox(Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(1), "Slide one text");
 
-        var odp = await Processor.ExportOdpAsync(original);
+        var odp = await Processor.ExportOdpAsync(original, cancellationToken: TestContext.Current.CancellationToken);
 
         // Load the ODP back through the model (auto-detected by LoadAsync).
-        var reloaded = await Processor.LoadAsync(odp);
+        var reloaded = await Processor.LoadAsync(odp, cancellationToken: TestContext.Current.CancellationToken);
 
         reloaded.Slides.Count.ShouldBe(2);
         reloaded.Slides[0]
@@ -101,13 +101,13 @@ public sealed class OdpTests : PptxTestBase
         var original = PptxFixtures.WithSlides(1);
         original.Slides[0].Shapes.AddTextBox(Emu.Zero, Emu.Zero, Emu.FromInches(4), Emu.FromInches(1), "Cross format");
 
-        var odp = await Processor.ExportOdpAsync(original);
-        var fromOdp = await Processor.LoadAsync(odp);
+        var odp = await Processor.ExportOdpAsync(original, cancellationToken: TestContext.Current.CancellationToken);
+        var fromOdp = await Processor.LoadAsync(odp, cancellationToken: TestContext.Current.CancellationToken);
 
         // Save the ODP-sourced model as PPTX and reload.
         using var pptxMs = new MemoryStream();
-        await Processor.SaveAsync(fromOdp, pptxMs);
-        var pptx = await Processor.LoadAsync(pptxMs.ToArray());
+        await Processor.SaveAsync(fromOdp, pptxMs, cancellationToken: TestContext.Current.CancellationToken);
+        var pptx = await Processor.LoadAsync(pptxMs.ToArray(), cancellationToken: TestContext.Current.CancellationToken);
 
         pptx.Slides.Count.ShouldBe(1);
         pptx.Slides[0].GetAllText().ShouldContain("Cross format");
@@ -117,8 +117,8 @@ public sealed class OdpTests : PptxTestBase
     public async Task ImportOdp_PreservesSlideSize()
     {
         var original = PptxFixtures.WithSlides(1);
-        var odp = await Processor.ExportOdpAsync(original);
-        var reloaded = await Processor.LoadAsync(odp);
+        var odp = await Processor.ExportOdpAsync(original, cancellationToken: TestContext.Current.CancellationToken);
+        var reloaded = await Processor.LoadAsync(odp, cancellationToken: TestContext.Current.CancellationToken);
 
         // Allow a small tolerance for cm rounding on the EMU↔cm round-trip.
         var dw = Math.Abs(reloaded.SlideSize.Width.Value - original.SlideSize.Width.Value);
@@ -133,8 +133,8 @@ public sealed class OdpTests : PptxTestBase
         var original = PptxFixtures.WithSlides(2);
         original.Slides[1].IsHidden = true;
 
-        var odp = await Processor.ExportOdpAsync(original);
-        var reloaded = await Processor.LoadAsync(odp);
+        var odp = await Processor.ExportOdpAsync(original, cancellationToken: TestContext.Current.CancellationToken);
+        var reloaded = await Processor.LoadAsync(odp, cancellationToken: TestContext.Current.CancellationToken);
 
         reloaded.Slides[1].IsHidden.ShouldBeTrue();
     }

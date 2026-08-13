@@ -19,7 +19,7 @@ public sealed class TaggedPdfTests : PdfTestBase
     private static async Task<byte[]> SaveBytesAsync(IPdfDocument doc, CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: ct);
+        await Processor.SaveAsync(doc, ms, cancellationToken: ct);
         return ms.ToArray();
     }
 
@@ -161,7 +161,7 @@ public sealed class TaggedPdfTests : PdfTestBase
     {
         await using var doc = await Processor.LoadFromTxtAsync(
             "Hello world",
-            ct: TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(bytes);
@@ -325,7 +325,7 @@ public sealed class TaggedPdfTests : PdfTestBase
         const string svg = """<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>""";
         await using var doc = await Processor.LoadFromSvgAsync(
             svg,
-            ct: TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
         var bytes = await SaveBytesAsync(doc, TestContext.Current.CancellationToken);
 

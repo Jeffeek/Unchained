@@ -38,11 +38,11 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         doc.Slides[1].IsHidden = true;
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         var bytes = ms.ToArray();
 
-        var custom = await Processor.LoadAsync(bytes);
-        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var custom = await Processor.LoadAsync(bytes, cancellationToken: TestContext.Current.CancellationToken);
+        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
 
         sdk.Slides.Count.ShouldBe(custom.Slides.Count);
         sdk.SlideSize.Width.Value.ShouldBe(custom.SlideSize.Width.Value);
@@ -80,10 +80,10 @@ public sealed class OpenXmlParserParityTests : PptxTestBase
         var path = SamplePath(fileName);
         File.Exists(path).ShouldBeTrue($"Sample {fileName} not found at {path}. Ensure TestFiles/python-pptx/ is copied to output.");
 
-        var bytes = await File.ReadAllBytesAsync(path);
+        var bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
-        var custom = await Processor.LoadAsync(bytes);
-        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var custom = await Processor.LoadAsync(bytes, cancellationToken: TestContext.Current.CancellationToken);
+        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
 
         sdk.Slides.Count.ShouldBe(custom.Slides.Count, $"{fileName}: slide count");
         sdk.SlideSize.Width.Value.ShouldBe(custom.SlideSize.Width.Value, $"{fileName}: width");

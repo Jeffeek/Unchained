@@ -309,7 +309,7 @@ public sealed class OpenXmlPresentationParserCoverageTests : PptxTestBase
         var bytes = await SampleBytesOrNullAsync(fileName);
         bytes.ShouldNotBeNull($"sample missing: {fileName}");
 
-        var doc = await new PresentationProcessor().LoadAsync(bytes!, Sdk);
+        var doc = await new PresentationProcessor().LoadAsync(bytes!, Sdk, cancellationToken: TestContext.Current.CancellationToken);
         doc.Masters.Count.ShouldBeGreaterThan(0);
         foreach (var master in doc.Masters)
         {

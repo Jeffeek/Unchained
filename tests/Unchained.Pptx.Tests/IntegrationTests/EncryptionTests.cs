@@ -18,7 +18,7 @@ public sealed class EncryptionTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(2);
         var processor = new PresentationProcessor();
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" }, TestContext.Current.CancellationToken);
 
         var bytes = ms.ToArray();
         // ZIP starts with PK\x03\x04; CFB (encrypted) starts with D0 CF 11 E0
@@ -33,10 +33,10 @@ public sealed class EncryptionTests : PptxTestBase
         var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "mypassword" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "mypassword" }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
-        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "mypassword" });
+        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "mypassword" }, TestContext.Current.CancellationToken);
         reloaded.Slides.Count.ShouldBe(3);
     }
 
@@ -55,10 +55,10 @@ public sealed class EncryptionTests : PptxTestBase
 
         var processor = new PresentationProcessor();
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "pass123" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "pass123" }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
-        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "pass123" });
+        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "pass123" }, TestContext.Current.CancellationToken);
         reloaded.Slides[0].GetAllText().ShouldContain("Encrypted content");
     }
 
@@ -69,10 +69,10 @@ public sealed class EncryptionTests : PptxTestBase
         var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "abc" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "abc" }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
-        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "abc" });
+        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "abc" }, TestContext.Current.CancellationToken);
         reloaded.SlideSize.Width.ShouldBe(doc.SlideSize.Width);
         reloaded.SlideSize.Height.ShouldBe(doc.SlideSize.Height);
     }
@@ -85,10 +85,10 @@ public sealed class EncryptionTests : PptxTestBase
         var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = password });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = password }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
-        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = password });
+        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = password }, TestContext.Current.CancellationToken);
         reloaded.Slides.Count.ShouldBe(1);
     }
 
@@ -99,10 +99,10 @@ public sealed class EncryptionTests : PptxTestBase
         var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "test" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "test" }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
-        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "test" });
+        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "test" }, TestContext.Current.CancellationToken);
         reloaded.Slides.Count.ShouldBe(5);
     }
 
@@ -115,7 +115,7 @@ public sealed class EncryptionTests : PptxTestBase
         var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "correctpassword" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "correctpassword" }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
         await Should.ThrowAsync<PptxEncryptedException>(() => processor.LoadAsync(ms, new OpenOptions { Password = "wrongpassword" }));
@@ -128,7 +128,7 @@ public sealed class EncryptionTests : PptxTestBase
         var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
         await Should.ThrowAsync<PptxEncryptedException>(() => processor.LoadAsync(ms)); // no password supplied
@@ -141,7 +141,7 @@ public sealed class EncryptionTests : PptxTestBase
         var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "secret" }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
         await Should.ThrowAsync<PptxEncryptedException>(() => processor.LoadAsync(ms, new OpenOptions { Password = string.Empty }));
@@ -156,10 +156,10 @@ public sealed class EncryptionTests : PptxTestBase
         var processor = new PresentationProcessor();
 
         var ms = new MemoryStream();
-        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "pwd" });
+        await processor.SaveAsync(doc, ms, new SaveOptions { Password = "pwd" }, TestContext.Current.CancellationToken);
         ms.Position = 0;
 
-        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "pwd" });
+        var reloaded = await processor.LoadAsync(ms, new OpenOptions { Password = "pwd" }, TestContext.Current.CancellationToken);
         // The loaded file was decrypted; IsEncrypted reflects the source was encrypted
         // (set during parse when CFB is detected)
         reloaded.Protection.IsEncrypted.ShouldBeTrue();

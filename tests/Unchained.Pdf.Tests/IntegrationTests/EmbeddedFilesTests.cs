@@ -126,7 +126,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
         await editor.EnablePortfolioModeAsync(doc, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         Encoding.Latin1.GetString(ms.ToArray()).ShouldContain("/Collection");
     }
 
@@ -140,7 +140,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
         await editor.DisablePortfolioModeAsync(doc, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         Encoding.Latin1.GetString(ms.ToArray()).ShouldNotContain("/Collection");
     }
 

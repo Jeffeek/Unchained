@@ -46,7 +46,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         var bytes = await SampleBytesOrNullAsync(fileName);
         bytes.ShouldNotBeNull($"sample missing: {fileName}");
 
-        var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         doc.Masters.Count.ShouldBeGreaterThan(0);
         doc.Masters[0].Layouts.Count.ShouldBeGreaterThan(0);
@@ -63,7 +63,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         var bytes = await SampleBytesOrNullAsync("shp-shapes.pptx");
         bytes.ShouldNotBeNull("sample missing: shp-shapes.pptx");
 
-        var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         doc.Slides.SelectMany(static s => s.Shapes).ShouldNotBeEmpty();
         await doc.DisposeAsync();
     }
@@ -79,10 +79,10 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         doc.Slides[1].IsHidden = true;
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         var bytes = ms.ToArray();
 
-        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.Slides.Count.ShouldBe(2);
         sdk.Slides[1].IsHidden.ShouldBeTrue();
         sdk.Slides[0].GetAllText().ShouldContain("SDK text");
@@ -104,9 +104,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         table.Grid[0, 0].TextFrame.Paragraphs.Add("R0C0");
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var rt = sdk.Slides[0].Shapes.OfType<TableShape>().Single();
         rt.Grid.RowCount.ShouldBe(2);
         rt.Grid.ColumnCount.ShouldBe(2);
@@ -121,9 +121,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         doc.Slides[0].Notes.NotesText = "engine notes text";
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.Slides[0].Notes.NotesText.ShouldContain("engine notes text");
         await sdk.DisposeAsync();
     }
@@ -136,9 +136,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         group.Children.AddShape(AutoShapeType.Rectangle, Emu.Zero, Emu.Zero, Emu.FromInches(1), Emu.FromInches(1));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.Slides[0].Shapes.OfType<GroupShape>().ShouldNotBeEmpty();
         await sdk.DisposeAsync();
     }
@@ -157,9 +157,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         chart.Chart.Data.Series.Add(series);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var rc = sdk.Slides[0].Shapes.OfType<ChartShape>().Single();
         rc.Chart.Type.ShouldBe(ChartType.BarClustered);
         await sdk.DisposeAsync();
@@ -178,9 +178,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
             .Shapes.AddConnector(type, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(3), Emu.FromInches(1));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.Slides[0].Shapes.OfType<ConnectorShape>().Single().ConnectorType.ShouldBe(type);
         await sdk.DisposeAsync();
     }
@@ -193,9 +193,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         doc.Slides[0].AddComment("hi", new SlidePosition(Emu.Zero, Emu.Zero), author);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.CommentAuthors.Count.ShouldBeGreaterThan(0);
         await sdk.DisposeAsync();
     }
@@ -207,9 +207,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         doc.Sections.Add("Intro", [doc.Slides[0].SlideId]);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.Sections.Count.ShouldBeGreaterThan(0);
         await sdk.DisposeAsync();
     }
@@ -227,9 +227,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         doc.Properties.ContentStatus = "Final";
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.Properties.Title.ShouldBe("T");
         sdk.Properties.Subject.ShouldBe("Su");
         sdk.Properties.Author.ShouldBe("Au");
@@ -248,9 +248,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         doc.Slides[0].Shapes.AddPicture(image, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(2), Emu.FromInches(2));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.Slides[0].Shapes.OfType<PictureShape>().ShouldNotBeEmpty();
         await sdk.DisposeAsync();
     }
@@ -266,9 +266,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
             .Shapes.AddChart(ChartType.Pie, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(4), Emu.FromInches(3));
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         sdk.Slides[0].Shapes.OfType<ChartShape>().ShouldNotBeEmpty();
         await sdk.DisposeAsync();
     }
@@ -287,7 +287,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         var bytes = await SampleBytesOrNullAsync(fileName);
         bytes.ShouldNotBeNull($"sample missing: {fileName}");
 
-        var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         // Every master exposes at least one layout, and every layout maps to a LayoutType — this
         // drives the MapLayoutType switch across the corpus's variety of layout types.
@@ -304,7 +304,7 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         var bytes = await SampleBytesOrNullAsync("cht-charts.pptx");
         bytes.ShouldNotBeNull("sample missing: cht-charts.pptx");
 
-        var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true });
+        var doc = await Processor.LoadAsync(bytes!, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
         doc.Slides.SelectMany(static s => s.Shapes).OfType<ChartShape>().ShouldNotBeEmpty();
         await doc.DisposeAsync();
     }
@@ -324,9 +324,9 @@ public sealed class OpenXmlEngineParserTests : PptxTestBase
         layouts.AddLayout("L-ctrTitle", LayoutType.TitleSlide);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true });
+        var sdk = await Processor.LoadAsync(ms.ToArray(), new OpenOptions { UseOpenXmlEngine = true }, cancellationToken: TestContext.Current.CancellationToken);
         var roundTripped = sdk.Masters.SelectMany(static m => m.Layouts).Select(static l => l.LayoutType).ToList();
         roundTripped.ShouldContain(LayoutType.SectionHeader);
         roundTripped.ShouldContain(LayoutType.TitleSlide);

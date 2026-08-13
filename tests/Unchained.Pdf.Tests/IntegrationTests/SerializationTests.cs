@@ -130,7 +130,7 @@ public sealed class SerializationTests : IDisposable
     private async Task<byte[]> SaveToBytes(IPdfDocument doc, CancellationToken ct = default)
     {
         var ms = new MemoryStream();
-        await _processor.SaveAsync(doc, ms, ct: ct);
+        await _processor.SaveAsync(doc, ms, cancellationToken: ct);
         return ms.ToArray();
     }
 }

@@ -40,7 +40,7 @@ public abstract class PdfTestBase
     protected static async Task<IPdfDocument> SaveAndReloadAsync(IPdfDocument doc, CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: ct);
+        await Processor.SaveAsync(doc, ms, cancellationToken: ct);
         ms.Position = 0;
         return await Processor.LoadAsync(ms, ct);
     }

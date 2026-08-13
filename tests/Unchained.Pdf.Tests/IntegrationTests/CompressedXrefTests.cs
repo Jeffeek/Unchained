@@ -65,7 +65,7 @@ public sealed class CompressedXrefTests : IDisposable
         await using var original = await _processor.LoadAsync(new MemoryStream(bytes), TestContext.Current.CancellationToken);
 
         var saved = new MemoryStream();
-        await _processor.SaveAsync(original, saved, ct: TestContext.Current.CancellationToken);
+        await _processor.SaveAsync(original, saved, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var reloaded = await _processor.LoadAsync(new MemoryStream(saved.ToArray()), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(2);

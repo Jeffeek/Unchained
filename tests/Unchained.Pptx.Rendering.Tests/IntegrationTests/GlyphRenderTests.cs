@@ -62,7 +62,8 @@ public sealed class GlyphRenderTests : PptxTestBase
             doc.Slides[0],
             doc.SlideSize,
             new RenderOptions { WidthPx = 640, HeightPx = 360 },
-            TestFontStore
+            TestFontStore,
+            TestContext.Current.CancellationToken
         );
 
         var darkPixels = CountDarkPixels(image.Data.ToArray(), 640, 360);
@@ -77,7 +78,8 @@ public sealed class GlyphRenderTests : PptxTestBase
         var image = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 640, HeightPx = 360 }
+            new RenderOptions { WidthPx = 640, HeightPx = 360 },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         CountDarkPixels(image.Data.ToArray(), 640, 360).ShouldBe(0);
@@ -106,7 +108,8 @@ public sealed class GlyphRenderTests : PptxTestBase
         var rendered = await SlideRenderer.RenderAsync(
             doc.Slides[0],
             doc.SlideSize,
-            new RenderOptions { WidthPx = 640, HeightPx = 360 }
+            new RenderOptions { WidthPx = 640, HeightPx = 360 },
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         var magenta = CountMagentaPixels(rendered.Data.ToArray(), 640, 360);

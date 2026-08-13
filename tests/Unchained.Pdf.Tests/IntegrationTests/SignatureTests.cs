@@ -43,13 +43,13 @@ public sealed class SignatureTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SignAsync(doc, cert, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         ms.ToArray()[..5].ShouldBe("%PDF-"u8.ToArray());
         ms.Length.ShouldBeGreaterThan(0);
         // Verify the signed output still parses and contains a signature dictionary.
         var bytes = ms.ToArray();
-        var parsed = await LoadAsync(bytes);
+        var parsed = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var fields = parsed.GetFormFields();
         fields.ShouldNotBeNull();
     }
@@ -61,7 +61,7 @@ public sealed class SignatureTests : PdfTestBase
         await using var original = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(original, cert, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SignAsync(original, cert, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var reloaded = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(2);
@@ -98,7 +98,7 @@ public sealed class SignatureTests : PdfTestBase
         await using var original = await gen.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(original, cert, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SignAsync(original, cert, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var reloaded = await LoadAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(original.PageCount);
@@ -113,7 +113,7 @@ public sealed class SignatureTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SignAsync(doc, cert, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         var signatures = await Processor.VerifySignaturesAsync(ms.ToArray(), TestContext.Current.CancellationToken);
         signatures.Count.ShouldBe(1);
@@ -166,7 +166,7 @@ public sealed class SignatureTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SignAsync(doc, cert, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         // Tamper: flip a byte near the start of the file — always within the signed byte range,
         // well before the /Contents placeholder which sits toward the end.
@@ -243,7 +243,7 @@ public sealed class SignatureTests : PdfTestBase
         using var ms = new MemoryStream();
 
         await Should.ThrowAsync<ArgumentNullException>(() =>
-            Processor.SignAsync(doc, null!, ms, ct: TestContext.Current.CancellationToken)
+            Processor.SignAsync(doc, null!, ms, cancellationToken: TestContext.Current.CancellationToken)
         );
     }
 
@@ -328,7 +328,7 @@ public sealed class SignatureTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SignAsync(doc, cert, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SignAsync(doc, cert, ms, cancellationToken: TestContext.Current.CancellationToken);
 
         var bytes = ms.ToArray();
 

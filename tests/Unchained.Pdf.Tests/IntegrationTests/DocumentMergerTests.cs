@@ -56,7 +56,7 @@ public sealed class DocumentMergerTests : PdfTestBase
         await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(merged, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(merged, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
 
@@ -119,7 +119,7 @@ public sealed class DocumentMergerTests : PdfTestBase
         await using var merged = await Merger.MergeAsync([a, b], MergeOptions.Default, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(merged, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(merged, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
 

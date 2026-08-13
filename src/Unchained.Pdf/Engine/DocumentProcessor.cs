@@ -45,55 +45,55 @@ public sealed class DocumentProcessor : IDocumentProcessor
     }
 
     /// <inheritdoc />
-    public async Task<IPdfDocument> LoadAsync(string filePath, CancellationToken ct = default)
+    public async Task<IPdfDocument> LoadAsync(string filePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        var bytes = await File.ReadAllBytesAsync(filePath, ct).ConfigureAwait(false);
-        return await ParseAsync(bytes, null, ct).ConfigureAwait(false);
+        var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
+        return await ParseAsync(bytes, null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<IPdfDocument> LoadAsync(string filePath, string password, CancellationToken ct = default)
+    public async Task<IPdfDocument> LoadAsync(string filePath, string password, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(password);
-        var bytes = await File.ReadAllBytesAsync(filePath, ct).ConfigureAwait(false);
-        return await ParseAsync(bytes, password, ct).ConfigureAwait(false);
+        var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
+        return await ParseAsync(bytes, password, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<IPdfDocument> LoadAsync(Stream stream, CancellationToken ct = default)
+    public async Task<IPdfDocument> LoadAsync(Stream stream, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(stream);
         using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
-        return await ParseAsync(ms.ToArray(), null, ct).ConfigureAwait(false);
+        await stream.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
+        return await ParseAsync(ms.ToArray(), null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<IPdfDocument> LoadAsync(Stream stream, string password, CancellationToken ct = default)
+    public async Task<IPdfDocument> LoadAsync(Stream stream, string password, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(password);
         using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
-        return await ParseAsync(ms.ToArray(), password, ct).ConfigureAwait(false);
+        await stream.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
+        return await ParseAsync(ms.ToArray(), password, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public Task<PdfAValidationResult> ValidatePdfAAsync(byte[] pdfBytes, PdfAProfile profile = PdfAProfile.PdfA1B, CancellationToken ct = default)
+    public Task<PdfAValidationResult> ValidatePdfAAsync(byte[] pdfBytes, PdfAProfile profile = PdfAProfile.PdfA1B, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdfBytes);
 
-        return Task.Run(() => PdfAValidator.Validate(pdfBytes, profile), ct);
+        return Task.Run(() => PdfAValidator.Validate(pdfBytes, profile), cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<PdfUAValidationResult> ValidatePdfUAAsync(byte[] pdfBytes, CancellationToken ct = default)
+    public Task<PdfUAValidationResult> ValidatePdfUAAsync(byte[] pdfBytes, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdfBytes);
 
-        return Task.Run(() => PdfUAValidator.Validate(pdfBytes), ct);
+        return Task.Run(() => PdfUAValidator.Validate(pdfBytes), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -101,15 +101,15 @@ public sealed class DocumentProcessor : IDocumentProcessor
         IPdfDocument document,
         Stream outputStream,
         PdfAProfile profile = PdfAProfile.PdfA1B,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(outputStream);
 
         var adapter = CastAdapter(document);
-        var converted = await Task.Run(() => new PdfAConverter(profile).Convert(adapter.Core), ct).ConfigureAwait(false);
-        await outputStream.WriteAsync(converted, ct).ConfigureAwait(false);
+        var converted = await Task.Run(() => new PdfAConverter(profile).Convert(adapter.Core), cancellationToken).ConfigureAwait(false);
+        await outputStream.WriteAsync(converted, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -117,15 +117,15 @@ public sealed class DocumentProcessor : IDocumentProcessor
         IPdfDocument document,
         string filePath,
         PdfAProfile profile = PdfAProfile.PdfA1B,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
         var adapter = CastAdapter(document);
-        var converted = await Task.Run(() => new PdfAConverter(profile).Convert(adapter.Core), ct).ConfigureAwait(false);
-        await File.WriteAllBytesAsync(filePath, converted, ct).ConfigureAwait(false);
+        var converted = await Task.Run(() => new PdfAConverter(profile).Convert(adapter.Core), cancellationToken).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(filePath, converted, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -134,15 +134,15 @@ public sealed class DocumentProcessor : IDocumentProcessor
         Stream outputStream,
         PdfXProfile profile = PdfXProfile.PdfX1A2001,
         string outputConditionIdentifier = "CGATS TR 001",
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(outputStream);
 
         var adapter = CastAdapter(document);
-        var converted = await Task.Run(() => new PdfXConverter(profile, outputConditionIdentifier).Convert(adapter.Core), ct).ConfigureAwait(false);
-        await outputStream.WriteAsync(converted, ct).ConfigureAwait(false);
+        var converted = await Task.Run(() => new PdfXConverter(profile, outputConditionIdentifier).Convert(adapter.Core), cancellationToken).ConfigureAwait(false);
+        await outputStream.WriteAsync(converted, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -151,15 +151,15 @@ public sealed class DocumentProcessor : IDocumentProcessor
         string filePath,
         PdfXProfile profile = PdfXProfile.PdfX1A2001,
         string outputConditionIdentifier = "CGATS TR 001",
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
         var adapter = CastAdapter(document);
-        var converted = await Task.Run(() => new PdfXConverter(profile, outputConditionIdentifier).Convert(adapter.Core), ct).ConfigureAwait(false);
-        await File.WriteAllBytesAsync(filePath, converted, ct).ConfigureAwait(false);
+        var converted = await Task.Run(() => new PdfXConverter(profile, outputConditionIdentifier).Convert(adapter.Core), cancellationToken).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(filePath, converted, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -168,7 +168,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         X509Certificate2 certificate,
         Stream outputStream,
         SignatureOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -176,8 +176,8 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(outputStream);
 
         var adapter = CastAdapter(document);
-        var signed = await Task.Run(() => PdfSigner.Sign(adapter.Core, certificate, options ?? SignatureOptions.Default), ct).ConfigureAwait(false);
-        await outputStream.WriteAsync(signed, ct).ConfigureAwait(false);
+        var signed = await Task.Run(() => PdfSigner.Sign(adapter.Core, certificate, options ?? SignatureOptions.Default), cancellationToken).ConfigureAwait(false);
+        await outputStream.WriteAsync(signed, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -186,7 +186,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         X509Certificate2 certificate,
         string filePath,
         SignatureOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -194,12 +194,12 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
         var adapter = CastAdapter(document);
-        var signed = await Task.Run(() => PdfSigner.Sign(adapter.Core, certificate, options ?? SignatureOptions.Default), ct).ConfigureAwait(false);
-        await File.WriteAllBytesAsync(filePath, signed, ct).ConfigureAwait(false);
+        var signed = await Task.Run(() => PdfSigner.Sign(adapter.Core, certificate, options ?? SignatureOptions.Default), cancellationToken).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(filePath, signed, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<PdfSignatureInfo>> VerifySignaturesAsync(byte[] pdfBytes, CancellationToken ct = default)
+    public Task<IReadOnlyList<PdfSignatureInfo>> VerifySignaturesAsync(byte[] pdfBytes, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdfBytes);
 
@@ -209,7 +209,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
                 var core = PdfDocumentCore.Parse(pdfBytes);
                 return PdfSignatureVerifier.Verify(pdfBytes, core);
             },
-            ct
+            cancellationToken
         );
     }
 
@@ -220,7 +220,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         string newOwnerPassword,
         Stream outputStream,
         PdfEncryptionAlgorithm algorithm = PdfEncryptionAlgorithm.Aes256,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -232,7 +232,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
             document,
             outputStream,
             BuildChangePasswordOptions(newUserPassword, newOwnerPassword, algorithm),
-            ct
+            cancellationToken
         );
     }
 
@@ -243,7 +243,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         string newOwnerPassword,
         string filePath,
         PdfEncryptionAlgorithm algorithm = PdfEncryptionAlgorithm.Aes256,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -255,7 +255,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
             document,
             filePath,
             BuildChangePasswordOptions(newUserPassword, newOwnerPassword, algorithm),
-            ct
+            cancellationToken
         );
     }
 
@@ -264,14 +264,14 @@ public sealed class DocumentProcessor : IDocumentProcessor
         IPdfDocument document,
         string filePath,
         SaveOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         var adapter = CastAdapter(document);
-        var bytes = await SerializeAsync(adapter, options, ct).ConfigureAwait(false);
-        await File.WriteAllBytesAsync(filePath, bytes, ct).ConfigureAwait(false);
+        var bytes = await SerializeAsync(adapter, options, cancellationToken).ConfigureAwait(false);
+        await File.WriteAllBytesAsync(filePath, bytes, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -279,35 +279,35 @@ public sealed class DocumentProcessor : IDocumentProcessor
         IPdfDocument document,
         Stream stream,
         SaveOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(stream);
         var adapter = CastAdapter(document);
-        var bytes = await SerializeAsync(adapter, options, ct).ConfigureAwait(false);
-        await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
+        var bytes = await SerializeAsync(adapter, options, cancellationToken).ConfigureAwait(false);
+        await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public Task<IPdfDocument> LoadFromTxtAsync(string text, TxtLoadOptions? options = null, CancellationToken ct = default)
+    public Task<IPdfDocument> LoadFromTxtAsync(string text, TxtLoadOptions? options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(text);
-        return Task.Run(() => TxtToPdfConverter.Convert(text, options ?? TxtLoadOptions.Default), ct);
+        return Task.Run(() => TxtToPdfConverter.Convert(text, options ?? TxtLoadOptions.Default), cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<IPdfDocument> LoadFromMarkdownAsync(string markdown, MdLoadOptions? options = null, CancellationToken ct = default)
+    public Task<IPdfDocument> LoadFromMarkdownAsync(string markdown, MdLoadOptions? options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(markdown);
-        return Task.Run(() => MarkdownToPdfConverter.Convert(markdown, options ?? MdLoadOptions.Default), ct);
+        return Task.Run(() => MarkdownToPdfConverter.Convert(markdown, options ?? MdLoadOptions.Default), cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken ct = default)
+    public Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(svgXml);
-        return Task.Run(() => SvgToPdfConverter.Convert(svgXml, options ?? SvgLoadOptions.Default), ct);
+        return Task.Run(() => SvgToPdfConverter.Convert(svgXml, options ?? SvgLoadOptions.Default), cancellationToken);
     }
 
 
@@ -315,59 +315,59 @@ public sealed class DocumentProcessor : IDocumentProcessor
     public Task SetMetadataAsync(
         IPdfDocument document,
         DocumentMetadata metadata,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(metadata);
 
         var adapter = CastAdapter(document);
-        return Task.Run(() => MetadataMutator.SetMetadata(adapter, metadata), ct);
+        return Task.Run(() => MetadataMutator.SetMetadata(adapter, metadata), cancellationToken);
     }
 
     /// <inheritdoc />
     public Task EmbedStandardFontsAsync(
         IPdfDocument document,
         IReadOnlyDictionary<string, byte[]> fontMap,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(fontMap);
         var adapter = CastAdapter(document);
-        return Task.Run(() => FontMutator.EmbedStandardFonts(adapter, fontMap), ct);
+        return Task.Run(() => FontMutator.EmbedStandardFonts(adapter, fontMap), cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<string> SaveAsXmlAsync(IPdfDocument document, CancellationToken ct = default)
+    public Task<string> SaveAsXmlAsync(IPdfDocument document, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
         var adapter = CastAdapter(document);
-        return Task.Run(() => XmlDocumentConverter.SaveXml(adapter.Core, document), ct);
+        return Task.Run(() => XmlDocumentConverter.SaveXml(adapter.Core, document), cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<IPdfDocument> LoadFromXmlAsync(string xmlContent, CancellationToken ct = default)
+    public Task<IPdfDocument> LoadFromXmlAsync(string xmlContent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(xmlContent);
-        return Task.Run(() => XmlDocumentConverter.LoadFromXml(xmlContent), ct);
+        return Task.Run(() => XmlDocumentConverter.LoadFromXml(xmlContent), cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken ct = default)
+    public async Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(bytes);
         try
         {
-            return await ParseAsync(bytes, null, ct).ConfigureAwait(false);
+            return await ParseAsync(bytes, null, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
             // Normal parse failed — try byte-scan recovery.
-            await _gate.WaitAsync(ct).ConfigureAwait(false);
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                var core = await Task.Run(() => PdfDocumentCore.Repair(bytes), ct).ConfigureAwait(false);
+                var core = await Task.Run(() => PdfDocumentCore.Repair(bytes), cancellationToken).ConfigureAwait(false);
                 return new PdfDocumentAdapter(core);
             }
             finally
@@ -390,7 +390,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
     public Task<PdfObject?> GetObjectByIdAsync(
         IPdfDocument document,
         int objectNumber,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -402,24 +402,24 @@ public sealed class DocumentProcessor : IDocumentProcessor
                 try { return adapter.Core.ResolveIndirect(objectNumber).Value; }
                 catch { return null; }
             },
-            ct
+            cancellationToken
         );
     }
 
     /// <inheritdoc />
-    public Task TrimCacheAsync(IPdfDocument document, CancellationToken ct = default)
+    public Task TrimCacheAsync(IPdfDocument document, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
 
         var adapter = CastAdapter(document);
-        return Task.Run(() => adapter.Core.TrimCache(), ct);
+        return Task.Run(() => adapter.Core.TrimCache(), cancellationToken);
     }
 
     /// <inheritdoc />
     public Task SetOpenActionAsync(
         IPdfDocument document,
         int pageNumber,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -427,38 +427,38 @@ public sealed class DocumentProcessor : IDocumentProcessor
             throw new ArgumentOutOfRangeException(nameof(pageNumber));
 
         var adapter = CastAdapter(document);
-        return Task.Run(() => OpenActionMutator.SetOpenAction(adapter, pageNumber), ct);
+        return Task.Run(() => OpenActionMutator.SetOpenAction(adapter, pageNumber), cancellationToken);
     }
 
     /// <inheritdoc />
     public Task SetOpenActionAsync(
         IPdfDocument document,
         PdfOpenAction action,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(action);
 
         var adapter = CastAdapter(document);
-        return Task.Run(() => OpenActionMutator.SetOpenActionFromModel(adapter, action), ct);
+        return Task.Run(() => OpenActionMutator.SetOpenActionFromModel(adapter, action), cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task RemovePdfaComplianceAsync(IPdfDocument document, CancellationToken ct = default)
+    public Task RemovePdfaComplianceAsync(IPdfDocument document, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
         var adapter = CastAdapter(document);
-        return Task.Run(() => MetadataMutator.RemovePdfaCompliance(adapter), ct);
+        return Task.Run(() => MetadataMutator.RemovePdfaCompliance(adapter), cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task RemovePdfUaComplianceAsync(IPdfDocument document, CancellationToken ct = default)
+    public Task RemovePdfUaComplianceAsync(IPdfDocument document, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
 
         var adapter = CastAdapter(document);
-        return Task.Run(() => MetadataMutator.RemovePdfUaCompliance(adapter), ct);
+        return Task.Run(() => MetadataMutator.RemovePdfUaCompliance(adapter), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -466,7 +466,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         IPdfDocument document,
         string fontName,
         byte[] newFontBytes,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -474,18 +474,18 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(newFontBytes);
 
         var adapter = CastAdapter(document);
-        return Task.Run(() => FontMutator.ReplaceFont(adapter, fontName, newFontBytes), ct);
+        return Task.Run(() => FontMutator.ReplaceFont(adapter, fontName, newFontBytes), cancellationToken);
     }
 
     /// <inheritdoc />
     public Task SubsetFontsAsync(
         IPdfDocument document,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
     {
         ArgumentNullException.ThrowIfNull(document);
         var adapter = CastAdapter(document);
-        return Task.Run(() => FontMutator.SubsetFonts(adapter), ct);
+        return Task.Run(() => FontMutator.SubsetFonts(adapter), cancellationToken);
     }
 
     // Builds SaveOptions for a password-change operation.

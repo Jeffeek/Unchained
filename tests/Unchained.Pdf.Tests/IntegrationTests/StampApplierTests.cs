@@ -58,7 +58,7 @@ public sealed class StampApplierTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         await Applier.StampAsync(doc, DefaultStamp, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
@@ -111,7 +111,7 @@ public sealed class StampApplierTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.MultiPage(2), TestContext.Current.CancellationToken);
         await Applier.StampPageAsync(doc, 1, DefaultStamp, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(2);
@@ -201,7 +201,7 @@ public sealed class StampApplierTests : PdfTestBase
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
         await Applier.StampAsync(doc, stamp, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);

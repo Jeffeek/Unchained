@@ -50,7 +50,7 @@ public sealed class PdfSessionState : DocumentSessionBase<IPdfDocument, Document
     protected override async Task<byte[]> SerializeAsync(CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(Document, ms, ct: ct).ConfigureAwait(false);
+        await Processor.SaveAsync(Document, ms, cancellationToken: ct).ConfigureAwait(false);
         return ms.ToArray();
     }
 

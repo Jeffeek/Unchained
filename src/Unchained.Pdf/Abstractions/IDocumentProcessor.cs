@@ -20,29 +20,29 @@ public interface IDocumentProcessor : IDisposable
     ///     The returned document is caller-owned; dispose it when done.
     /// </summary>
     /// <param name="filePath">Absolute or relative path to the PDF file.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The loaded <see cref="IPdfDocument" />.</returns>
     /// <exception cref="FileNotFoundException">Thrown when the file does not exist.</exception>
     /// <exception cref="Unchained.Pdf.Core.PdfException">Thrown when the file is not a valid PDF.</exception>
-    Task<IPdfDocument> LoadAsync(string filePath, CancellationToken ct = default);
+    Task<IPdfDocument> LoadAsync(string filePath, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Opens a password-protected PDF at <paramref name="filePath" /> using <paramref name="password" />.
     /// </summary>
     /// <param name="filePath">Path to the encrypted PDF file.</param>
     /// <param name="password">User or owner password. Pass an empty string for no-password encrypted PDFs.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <exception cref="Core.PdfEncryptedException">Thrown when the password is incorrect.</exception>
-    Task<IPdfDocument> LoadAsync(string filePath, string password, CancellationToken ct = default);
+    Task<IPdfDocument> LoadAsync(string filePath, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Opens a password-protected PDF from <paramref name="stream" /> using <paramref name="password" />.
     /// </summary>
     /// <param name="stream">A readable stream containing encrypted PDF data.</param>
     /// <param name="password">User or owner password.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <exception cref="Core.PdfEncryptedException">Thrown when the password is incorrect.</exception>
-    Task<IPdfDocument> LoadAsync(Stream stream, string password, CancellationToken ct = default);
+    Task<IPdfDocument> LoadAsync(Stream stream, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Reads and parses PDF content from <paramref name="stream" />.
@@ -50,18 +50,18 @@ public interface IDocumentProcessor : IDisposable
     ///     The returned document is caller-owned; dispose it when done.
     /// </summary>
     /// <param name="stream">A readable stream containing PDF data.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The loaded <see cref="IPdfDocument" />.</returns>
     /// <exception cref="Unchained.Pdf.Core.PdfException">Thrown when the stream content is not a valid PDF.</exception>
-    Task<IPdfDocument> LoadAsync(Stream stream, CancellationToken ct = default);
+    Task<IPdfDocument> LoadAsync(Stream stream, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Converts plain text to a new PDF document, with automatic word-wrap and pagination.
     /// </summary>
     /// <param name="text">The source text content.</param>
     /// <param name="options">Layout options, or <see langword="null" /> to use <see cref="TxtLoadOptions.Default" />.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
-    Task<IPdfDocument> LoadFromTxtAsync(string text, TxtLoadOptions? options = null, CancellationToken ct = default);
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task<IPdfDocument> LoadFromTxtAsync(string text, TxtLoadOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Converts Markdown text to a new PDF document.
@@ -69,8 +69,8 @@ public interface IDocumentProcessor : IDisposable
     /// </summary>
     /// <param name="markdown">The source Markdown content.</param>
     /// <param name="options">Layout options, or <see langword="null" /> to use <see cref="MdLoadOptions.Default" />.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
-    Task<IPdfDocument> LoadFromMarkdownAsync(string markdown, MdLoadOptions? options = null, CancellationToken ct = default);
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task<IPdfDocument> LoadFromMarkdownAsync(string markdown, MdLoadOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Converts an SVG document to a single-page PDF.
@@ -78,8 +78,8 @@ public interface IDocumentProcessor : IDisposable
     /// </summary>
     /// <param name="svgXml">The SVG source as an XML string.</param>
     /// <param name="options">Fit and page options, or <see langword="null" /> to use <see cref="SvgLoadOptions.Default" />.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
-    Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken ct = default);
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task<IPdfDocument> LoadFromSvgAsync(string svgXml, SvgLoadOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Validates <paramref name="pdfBytes" /> against the specified PDF/A conformance profile.
@@ -88,11 +88,11 @@ public interface IDocumentProcessor : IDisposable
     /// </summary>
     /// <param name="pdfBytes">Raw bytes of the PDF to validate.</param>
     /// <param name="profile">PDF/A profile to check against (default PDF/A-1b).</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task<PdfAValidationResult> ValidatePdfAAsync(
         byte[] pdfBytes,
         PdfAProfile profile = PdfAProfile.PdfA1B,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -111,10 +111,10 @@ public interface IDocumentProcessor : IDisposable
     ///     </para>
     /// </summary>
     /// <param name="pdfBytes">Raw bytes of the PDF to validate.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task<PdfUAValidationResult> ValidatePdfUAAsync(
         byte[] pdfBytes,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -123,8 +123,8 @@ public interface IDocumentProcessor : IDisposable
     ///     or missing cross-reference table.
     /// </summary>
     /// <param name="bytes">Raw bytes of the PDF to repair.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
-    Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken ct = default);
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task<IPdfDocument> RepairAsync(byte[] bytes, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Applies structural PDF/A conformance fixes to <paramref name="document" /> and
@@ -138,12 +138,12 @@ public interface IDocumentProcessor : IDisposable
     /// <param name="document">Source document (must not be encrypted).</param>
     /// <param name="outputStream">Destination stream for the converted PDF.</param>
     /// <param name="profile">Target PDF/A profile (default PDF/A-1b).</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task ConvertToPdfAAsync(
         IPdfDocument document,
         Stream outputStream,
         PdfAProfile profile = PdfAProfile.PdfA1B,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -153,7 +153,7 @@ public interface IDocumentProcessor : IDisposable
         IPdfDocument document,
         string filePath,
         PdfAProfile profile = PdfAProfile.PdfA1B,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -166,13 +166,13 @@ public interface IDocumentProcessor : IDisposable
     /// <param name="outputStream">Destination stream for the converted PDF.</param>
     /// <param name="profile">Target PDF/X profile (default PDF/X-1a:2001).</param>
     /// <param name="outputConditionIdentifier">Print-condition identifier for the output intent.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task ConvertToPdfXAsync(
         IPdfDocument document,
         Stream outputStream,
         PdfXProfile profile = PdfXProfile.PdfX1A2001,
         string outputConditionIdentifier = "CGATS TR 001",
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -183,7 +183,7 @@ public interface IDocumentProcessor : IDisposable
         string filePath,
         PdfXProfile profile = PdfXProfile.PdfX1A2001,
         string outputConditionIdentifier = "CGATS TR 001",
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -195,13 +195,13 @@ public interface IDocumentProcessor : IDisposable
     /// <param name="certificate">Certificate with an associated private key used to sign.</param>
     /// <param name="outputStream">Destination for the signed PDF bytes.</param>
     /// <param name="options">Signing metadata (reason, location, etc.).</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SignAsync(
         IPdfDocument document,
         X509Certificate2 certificate,
         Stream outputStream,
         SignatureOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -212,7 +212,7 @@ public interface IDocumentProcessor : IDisposable
         X509Certificate2 certificate,
         string filePath,
         SignatureOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -224,8 +224,8 @@ public interface IDocumentProcessor : IDisposable
     ///     The raw bytes of a PDF file (may be password-protected for structure, but signature verification
     ///     is independent of encryption).
     /// </param>
-    /// <param name="ct">Token to cancel the operation.</param>
-    Task<IReadOnlyList<PdfSignatureInfo>> VerifySignaturesAsync(byte[] pdfBytes, CancellationToken ct = default);
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task<IReadOnlyList<PdfSignatureInfo>> VerifySignaturesAsync(byte[] pdfBytes, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Re-encrypts <paramref name="document" /> with new passwords and writes the result to
@@ -237,14 +237,14 @@ public interface IDocumentProcessor : IDisposable
     /// <param name="newOwnerPassword">New owner password. Empty → defaults to <paramref name="newUserPassword" />.</param>
     /// <param name="outputStream">Destination stream for the re-encrypted PDF.</param>
     /// <param name="algorithm">Encryption algorithm for the new file (default AES-256).</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task ChangePasswordsAsync(
         IPdfDocument document,
         string newUserPassword,
         string newOwnerPassword,
         Stream outputStream,
         PdfEncryptionAlgorithm algorithm = PdfEncryptionAlgorithm.Aes256,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -257,7 +257,7 @@ public interface IDocumentProcessor : IDisposable
         string newOwnerPassword,
         string filePath,
         PdfEncryptionAlgorithm algorithm = PdfEncryptionAlgorithm.Aes256,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -267,12 +267,12 @@ public interface IDocumentProcessor : IDisposable
     /// <param name="document">The document to serialize.</param>
     /// <param name="filePath">Destination file path. Created or overwritten.</param>
     /// <param name="options">Serialization options, or <see langword="null" /> to use <see cref="SaveOptions.Default" />.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SaveAsync(
         IPdfDocument document,
         string filePath,
         SaveOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -282,12 +282,12 @@ public interface IDocumentProcessor : IDisposable
     /// <param name="document">The document to serialize.</param>
     /// <param name="stream">A writable stream that receives the PDF bytes.</param>
     /// <param name="options">Serialization options, or <see langword="null" /> to use <see cref="SaveOptions.Default" />.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SaveAsync(
         IPdfDocument document,
         Stream stream,
         SaveOptions? options = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -302,11 +302,11 @@ public interface IDocumentProcessor : IDisposable
     /// </summary>
     /// <param name="document">The document to update. Must not be disposed.</param>
     /// <param name="metadata">Metadata fields to set. <see langword="null" /> fields are skipped.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SetMetadataAsync(
         IPdfDocument document,
         DocumentMetadata metadata,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -316,11 +316,11 @@ public interface IDocumentProcessor : IDisposable
     /// </summary>
     /// <param name="document">The source document.</param>
     /// <param name="objectNumber">The 1-based indirect object number to resolve.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task<PdfObject?> GetObjectByIdAsync(
         IPdfDocument document,
         int objectNumber,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -329,10 +329,10 @@ public interface IDocumentProcessor : IDisposable
     ///     Call this after processing large pages to reduce memory pressure.
     /// </summary>
     /// <param name="document">The document whose cache should be trimmed.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task TrimCacheAsync(
         IPdfDocument document,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -341,11 +341,11 @@ public interface IDocumentProcessor : IDisposable
     /// </summary>
     /// <param name="document">The document to update.</param>
     /// <param name="pageNumber">1-based page number to navigate to on open.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SetOpenActionAsync(
         IPdfDocument document,
         int pageNumber,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -356,11 +356,11 @@ public interface IDocumentProcessor : IDisposable
     /// </summary>
     /// <param name="document">The document to update.</param>
     /// <param name="action">The open action to set.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SetOpenActionAsync(
         IPdfDocument document,
         PdfOpenAction action,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -369,10 +369,10 @@ public interface IDocumentProcessor : IDisposable
     ///     <c>pdfaid:part</c> and <c>pdfaid:conformance</c> properties from the XMP stream.
     /// </summary>
     /// <param name="document">The document to modify.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task RemovePdfaComplianceAsync(
         IPdfDocument document,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -381,10 +381,10 @@ public interface IDocumentProcessor : IDisposable
     ///     entry from the catalog.
     /// </summary>
     /// <param name="document">The document to modify.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task RemovePdfUaComplianceAsync(
         IPdfDocument document,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -406,11 +406,11 @@ public interface IDocumentProcessor : IDisposable
     ///     Use <c>Unchained.Pdf.Rendering</c>'s <c>StandardFontEmbedder.DefaultFontMap</c>
     ///     for the bundled DejaVu substitutions.
     /// </param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task EmbedStandardFontsAsync(
         IPdfDocument document,
         IReadOnlyDictionary<string, byte[]> fontMap,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -423,10 +423,10 @@ public interface IDocumentProcessor : IDisposable
     ///     </para>
     /// </summary>
     /// <param name="document">The document to serialize.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task<string> SaveAsXmlAsync(
         IPdfDocument document,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -437,10 +437,10 @@ public interface IDocumentProcessor : IDisposable
     ///     </para>
     /// </summary>
     /// <param name="xmlContent">The Unchained document XML string to parse.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task<IPdfDocument> LoadFromXmlAsync(
         string xmlContent,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -453,12 +453,12 @@ public interface IDocumentProcessor : IDisposable
     /// <param name="document">The document to update.</param>
     /// <param name="fontName">Base font name to replace (e.g. "Helvetica", "Arial").</param>
     /// <param name="newFontBytes">Raw TrueType/OpenType font bytes for the replacement.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task ReplaceFontAsync(
         IPdfDocument document,
         string fontName,
         byte[] newFontBytes,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 
     /// <summary>
@@ -468,9 +468,9 @@ public interface IDocumentProcessor : IDisposable
     ///     Fonts that are not embedded, not TrueType, or already small are left unchanged.
     /// </summary>
     /// <param name="document">The document whose embedded fonts to subset.</param>
-    /// <param name="ct">Token to cancel the operation.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SubsetFontsAsync(
         IPdfDocument document,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     );
 }

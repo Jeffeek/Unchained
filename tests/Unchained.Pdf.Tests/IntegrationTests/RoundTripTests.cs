@@ -105,7 +105,7 @@ public sealed class RoundTripTests : IDisposable
         await using var original = await _processor.LoadAsync(new MemoryStream(PdfFixtures.SinglePage()), TestContext.Current.CancellationToken);
 
         var saved = new MemoryStream();
-        await _processor.SaveAsync(original, saved, ct: TestContext.Current.CancellationToken);
+        await _processor.SaveAsync(original, saved, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var reloaded = await _processor.LoadAsync(new MemoryStream(saved.ToArray()), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
@@ -118,7 +118,7 @@ public sealed class RoundTripTests : IDisposable
         var textBefore = original.Pages[1].ExtractText();
 
         var saved = new MemoryStream();
-        await _processor.SaveAsync(original, saved, ct: TestContext.Current.CancellationToken);
+        await _processor.SaveAsync(original, saved, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var reloaded = await _processor.LoadAsync(new MemoryStream(saved.ToArray()), TestContext.Current.CancellationToken);
         var textAfter = reloaded.Pages[1].ExtractText();
@@ -131,7 +131,7 @@ public sealed class RoundTripTests : IDisposable
         await using var original = await _processor.LoadAsync(new MemoryStream(PdfFixtures.MultiPage(4)), TestContext.Current.CancellationToken);
 
         var saved = new MemoryStream();
-        await _processor.SaveAsync(original, saved, ct: TestContext.Current.CancellationToken);
+        await _processor.SaveAsync(original, saved, cancellationToken: TestContext.Current.CancellationToken);
 
         await using var reloaded = await _processor.LoadAsync(new MemoryStream(saved.ToArray()), TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(4);

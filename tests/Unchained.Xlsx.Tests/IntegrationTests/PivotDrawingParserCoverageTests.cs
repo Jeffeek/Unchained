@@ -71,7 +71,7 @@ public class PivotDrawingParserCoverageTests
         var bytes = await XlsxFixtures.SaveBytesAsync(seed);
 
         using var ms = new MemoryStream();
-        await ms.WriteAsync(bytes);
+        await ms.WriteAsync(bytes, TestContext.Current.CancellationToken);
         string? drawingPath;
 #if NET10_0_OR_GREATER
         await using (var probe = new ZipArchive(ms, ZipArchiveMode.Read, true))
@@ -88,7 +88,7 @@ public class PivotDrawingParserCoverageTests
 #if NET10_0_OR_GREATER
         await using (var read = new ZipArchive(ms, ZipArchiveMode.Read, true))
         {
-            using var r = new StreamReader(await read.GetEntry(drawingPath)!.OpenAsync());
+            using var r = new StreamReader(await read.GetEntry(drawingPath)!.OpenAsync(TestContext.Current.CancellationToken));
             var xml = await r.ReadToEndAsync(TestContext.Current.CancellationToken);
             var idx = xml.IndexOf("r:embed=\"", StringComparison.Ordinal) + 9;
             embedId = xml[idx..xml.IndexOf('"', idx)];
@@ -111,7 +111,7 @@ public class PivotDrawingParserCoverageTests
         {
             update.GetEntry(drawingPath)!.Delete();
             var entry = update.CreateEntry(drawingPath);
-            await using var w = new StreamWriter(await entry.OpenAsync(), new UTF8Encoding(false));
+            await using var w = new StreamWriter(await entry.OpenAsync(TestContext.Current.CancellationToken), new UTF8Encoding(false));
             await w.WriteAsync(absolute);
         }
 #else
@@ -140,7 +140,7 @@ public class PivotDrawingParserCoverageTests
         var bytes = await XlsxFixtures.SaveBytesAsync(seed);
 
         using var ms = new MemoryStream();
-        await ms.WriteAsync(bytes);
+        await ms.WriteAsync(bytes, TestContext.Current.CancellationToken);
         string drawingPath;
 #if NET10_0_OR_GREATER
         await using (var probe = new ZipArchive(ms, ZipArchiveMode.Read, true))
@@ -159,7 +159,7 @@ public class PivotDrawingParserCoverageTests
         {
             update.GetEntry(drawingPath)!.Delete();
             var entry = update.CreateEntry(drawingPath);
-            await using var w = new StreamWriter(await entry.OpenAsync(), new UTF8Encoding(false));
+            await using var w = new StreamWriter(await entry.OpenAsync(TestContext.Current.CancellationToken), new UTF8Encoding(false));
             await w.WriteAsync(noEmbed);
         }
 #else

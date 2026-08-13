@@ -65,7 +65,7 @@ public sealed class TableGeneratorTests : PdfTestBase
         };
         await using var doc = await Generator.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(1);
@@ -77,7 +77,7 @@ public sealed class TableGeneratorTests : PdfTestBase
         var data = SimpleData(10);
         await using var doc = await Generator.GenerateAsync(data, TableStyle.Default, TestContext.Current.CancellationToken);
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.PageCount.ShouldBe(doc.PageCount);
@@ -170,7 +170,7 @@ public sealed class TableGeneratorTests : PdfTestBase
         await Generator.AppendTableAsync(doc, data, TableStyle.Default, TestContext.Current.CancellationToken);
 
         using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         ms.Position = 0;
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
 
@@ -217,7 +217,7 @@ public sealed class TableGeneratorTests : PdfTestBase
         await Generator.AppendTableAsync(doc, tagged, TableStyle.Default, TestContext.Current.CancellationToken);
 
         await using var ms = new MemoryStream();
-        await Processor.SaveAsync(doc, ms, ct: TestContext.Current.CancellationToken);
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/StructTreeRoot");
         text.ShouldContain("/MarkInfo");

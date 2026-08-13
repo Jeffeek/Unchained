@@ -18,7 +18,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     public async Task Simple_LoadsWithoutException()
     {
         await using var stream = File.OpenRead(FilePath("sld-slides.pptx"));
-        var doc = await Processor.LoadAsync(stream);
+        var doc = await Processor.LoadAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         doc.ShouldNotBeNull();
         doc.Slides.Count.ShouldBeGreaterThan(0);
     }
@@ -27,7 +27,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     public async Task Simple_RoundTrip_PreservesSlideCount()
     {
         await using var stream = File.OpenRead(FilePath("sld-slides.pptx"));
-        var doc = await Processor.LoadAsync(stream);
+        var doc = await Processor.LoadAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         var count = doc.Slides.Count;
 
         var reloaded = await PptxFixtures.RoundTripAsync(doc);
@@ -38,7 +38,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     public async Task Multipage_HasExpectedSlideCount()
     {
         await using var stream = File.OpenRead(FilePath("sld-slides.pptx"));
-        var doc = await Processor.LoadAsync(stream);
+        var doc = await Processor.LoadAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         doc.Slides.Count.ShouldBeGreaterThanOrEqualTo(2);
     }
 
@@ -46,7 +46,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     public async Task WithTables_ContainsTableShape()
     {
         await using var stream = File.OpenRead(FilePath("tbl-cell.pptx"));
-        var doc = await Processor.LoadAsync(stream);
+        var doc = await Processor.LoadAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
 
         var hasTable = doc.Slides
             .Any(static s => s.Shapes.OfType<TableShape>().Any());
@@ -57,7 +57,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     public async Task WithImages_ContainsPictureShape()
     {
         await using var stream = File.OpenRead(FilePath("shp-picture.pptx"));
-        var doc = await Processor.LoadAsync(stream);
+        var doc = await Processor.LoadAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
 
         var hasPicture = doc.Slides
             .Any(static s => s.Shapes.OfType<PictureShape>().Any());
@@ -68,7 +68,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
     public async Task AnyPptx_GetAllText_DoesNotThrow()
     {
         await using var stream = File.OpenRead(FilePath("sld-slides.pptx"));
-        var doc = await Processor.LoadAsync(stream);
+        var doc = await Processor.LoadAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
 
         foreach (var text in doc.Slides.Select(static slide => slide.GetAllText())) text.ShouldNotBeNull();
     }
