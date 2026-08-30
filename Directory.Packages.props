@@ -58,7 +58,7 @@
     <PackageVersion Include="MudBlazor" Version="9.8.0" />
     <!-- AspNetCore.SassCompiler (MIT): build-time SCSS → CSS. Bundles the Styles/ partials into
          a single wwwroot/css/app.css on build. No runtime dependency. -->
-    <PackageVersion Include="AspNetCore.SassCompiler" Version="1.102.0" />
+    <PackageVersion Include="AspNetCore.SassCompiler" Version="1.103.0" />
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="152.0.7961" />
