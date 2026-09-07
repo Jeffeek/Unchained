@@ -20,7 +20,7 @@
     <PackageVersion Include="Aspose.Slides.NET6.CrossPlatform" Version="26.7.0" />
     <PackageVersion Include="Aspose.Slides.WebExtensions" Version="21.4.0" />
     <PackageVersion Include="Aspose.Words" Version="26.7.0" />
-    <PackageVersion Include="bblanchon.PDFium.Win32" Version="154.0.8021" />
+    <PackageVersion Include="bblanchon.PDFium.Win32" Version="154.0.8035" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
@@ -61,9 +61,9 @@
     <PackageVersion Include="AspNetCore.SassCompiler" Version="1.103.0" />
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
-    <PackageVersion Include="PDFiumCore" Version="153.0.7999" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="154.0.8021" />
-    <PackageVersion Include="bblanchon.PDFium.Linux" Version="154.0.8021" />
+    <PackageVersion Include="PDFiumCore" Version="154.0.8035" />
+    <PackageVersion Include="bblanchon.PDFium.macOS" Version="154.0.8035" />
+    <PackageVersion Include="bblanchon.PDFium.Linux" Version="154.0.8035" />
     <PackageVersion Include="bblanchon.PDFium.macOS" Version="153.0.8009" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
