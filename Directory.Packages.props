@@ -5,7 +5,7 @@
   </PropertyGroup>
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
-    <PackageVersion Include="AngleSharp" Version="1.7.3" />
+    <PackageVersion Include="AngleSharp" Version="1.8.0" />
     <PackageVersion Include="Aspose.Cells" Version="26.6.0" />
     <PackageVersion Include="Aspose.Drawing" Version="26.6.0" />
     <PackageVersion Include="Aspose.Drawing.Common" Version="26.6.0" />
