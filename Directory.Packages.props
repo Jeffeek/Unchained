@@ -5,7 +5,7 @@
   </PropertyGroup>
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
-    <PackageVersion Include="AngleSharp" Version="1.7.2" />
+    <PackageVersion Include="AngleSharp" Version="1.7.3" />
     <PackageVersion Include="Aspose.Cells" Version="26.6.0" />
     <PackageVersion Include="Aspose.Drawing" Version="26.6.0" />
     <PackageVersion Include="Aspose.Drawing.Common" Version="26.6.0" />
@@ -20,7 +20,7 @@
     <PackageVersion Include="Aspose.Slides.NET6.CrossPlatform" Version="26.7.0" />
     <PackageVersion Include="Aspose.Slides.WebExtensions" Version="21.4.0" />
     <PackageVersion Include="Aspose.Words" Version="26.7.0" />
-    <PackageVersion Include="bblanchon.PDFium.Win32" Version="154.0.8021" />
+    <PackageVersion Include="bblanchon.PDFium.Win32" Version="154.0.8035" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
@@ -48,10 +48,10 @@
   </ItemGroup>
   <!-- ── Unchained.Pdf.Rendering — text shaping (HarfBuzz) ─────────────────── -->
   <ItemGroup Label="Unchained.Pdf.Rendering">
-    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.2" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.2" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.2" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.2" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.102" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.102" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.102" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.102" />
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
   <ItemGroup Label="Unchained.Studio">
@@ -62,8 +62,8 @@
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="153.0.7999" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="154.0.8021" />
-    <PackageVersion Include="bblanchon.PDFium.Linux" Version="154.0.8021" />
+    <PackageVersion Include="bblanchon.PDFium.macOS" Version="154.0.8035" />
+    <PackageVersion Include="bblanchon.PDFium.Linux" Version="154.0.8035" />
     <PackageVersion Include="bblanchon.PDFium.macOS" Version="153.0.8009" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
