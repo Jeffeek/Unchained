@@ -5,7 +5,7 @@
   </PropertyGroup>
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
-    <PackageVersion Include="AngleSharp" Version="1.7.2" />
+    <PackageVersion Include="AngleSharp" Version="1.8.0" />
     <PackageVersion Include="Aspose.Cells" Version="26.6.0" />
     <PackageVersion Include="Aspose.Drawing" Version="26.6.0" />
     <PackageVersion Include="Aspose.Drawing.Common" Version="26.6.0" />
@@ -48,10 +48,10 @@
   </ItemGroup>
   <!-- ── Unchained.Pdf.Rendering — text shaping (HarfBuzz) ─────────────────── -->
   <ItemGroup Label="Unchained.Pdf.Rendering">
-    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.2" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.2" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.2" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.2" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.102" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.102" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.102" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.102" />
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
   <ItemGroup Label="Unchained.Studio">
@@ -79,7 +79,7 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
-    <PackageVersion Include="xunit.v3.assert" Version="3.2.2" />
+    <PackageVersion Include="xunit.v3.assert" Version="4.0.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
