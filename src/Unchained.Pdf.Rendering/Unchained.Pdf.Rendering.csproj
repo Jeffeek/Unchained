@@ -24,6 +24,10 @@
     <PackageReference Include="bblanchon.PDFium.Linux" />
     <PackageReference Include="bblanchon.PDFium.macOS" />
     <PackageReference Include="bblanchon.PDFium.Win32" />
+    <PackageReference Include="bblanchon.PDFium.WebAssembly" />
+    <PackageReference Include="bblanchon.PDFium.Android" />
+    <PackageReference Include="bblanchon.PDFium.iOS" />
+    <PackageReference Include="bblanchon.PDFium" />
     <PackageReference Include="PDFiumCore" />
   </ItemGroup>
 

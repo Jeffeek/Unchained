@@ -48,9 +48,13 @@
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="155.0.8044" />
+    <PackageVersion Include="bblanchon.PDFium" Version="155.0.8044" />
     <PackageVersion Include="bblanchon.PDFium.macOS" Version="155.0.8044" />
     <PackageVersion Include="bblanchon.PDFium.Linux" Version="155.0.8044" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="155.0.8044" />
+    <PackageVersion Include="bblanchon.PDFium.Win32" Version="155.0.8044" />
+    <PackageVersion Include="bblanchon.PDFium.WebAssembly" Version="155.0.8044" />
+    <PackageVersion Include="bblanchon.PDFium.Android" Version="155.0.8044" />
+    <PackageVersion Include="bblanchon.PDFium.iOS " Version="155.0.8044" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
   <ItemGroup Label="PerformanceTests">
