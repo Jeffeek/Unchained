@@ -90,7 +90,6 @@ jobs:
           --verbosity normal
           --coverage
           --coverage-output-format cobertura
-          --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
         if: ${{ always() && inputs.coverage }}
