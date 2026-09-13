@@ -19,8 +19,8 @@
     <File Path=".gitignore" />
     <File Path="NuGet.config" />
     <File Path="README.md" />
-    <File Path="Unchained.slnx.DotSettings" />
-    <File Path="Unchained.slnx.DotSettings.user" />
+    <File Path="Unchained.sln.DotSettings" />
+    <File Path="Unchained.sln.DotSettings.user" />
   </Folder>
   <Folder Name="/Solution items/.github/">
     <File Path=".github/dependabot.yml" />
