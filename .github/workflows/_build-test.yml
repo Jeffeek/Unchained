@@ -73,32 +73,41 @@ jobs:
       - name: Test
         if: ${{ !inputs.coverage }}
         timeout-minutes: 30
-        run: dotnet test -c Release --no-build
+        run: >
+          dotnet test
+          --solution Unchained.slnx
+          -c Release
+          --no-build
+          --verbosity normal
 
       - name: Test with coverage
         if: ${{ inputs.coverage }}
         timeout-minutes: 30
         run: >
           dotnet test
-          -c Release --no-build
-          --collect:"XPlat Code Coverage"
+          --solution Unchained.slnx
+          -c Release
+          --no-build
+          --verbosity normal
+          --coverage
+          --coverage-output-format cobertura
           --logger "trx;LogFileName=test-results.trx"
-          --results-directory artifacts/test-results
 
       - name: Upload test results
         if: ${{ always() && inputs.coverage }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-${{ inputs.rid }}
-          path: artifacts/test-results
+          path: TestResults/**/*.cobertura.xml
           if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload coverage to Codecov
         if: ${{ inputs.coverage }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.codecov-token }}
-          directory: ./artifacts/test-results
+          directory: TestResults/**/*.cobertura.xml
           flags: ${{ inputs.rid }}
           fail_ci_if_error: false
-          verbose: false
+          verbose: true
