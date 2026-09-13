@@ -87,7 +87,6 @@ jobs:
           dotnet test
           --solution Unchained.slnx
           -c Release
-          --no-build
           --verbosity normal
           --coverage
           --coverage-output-format cobertura
