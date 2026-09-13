@@ -19,3 +19,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Unchained.Render")]
 [assembly: InternalsVisibleTo("Unchained.Studio")]
 [assembly: InternalsVisibleTo("Unchained.Pdf.Rendering.Proprietary")]
+[assembly: InternalsVisibleTo("Unchained.Xlsx")]
+[assembly: InternalsVisibleTo("Unchained.Xlsx.Extensions")]
