@@ -25,8 +25,8 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
 
         html.ShouldContain("<!DOCTYPE html>");
         // Exactly one document, three slide pages.
-        Regex.Matches(html, "<!DOCTYPE html>").Count.ShouldBe(1);
-        Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(3);
+        Regex.Count(html, "<!DOCTYPE html>").ShouldBe(1);
+        Regex.Count(html, "class=\"slide-page\"").ShouldBe(3);
     }
 
     [Fact]
@@ -59,15 +59,16 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         doc.Slides[1].IsHidden = true;
 
         var html = Html(await PresentationProcessor.ExportHtmlPlayerAsync(doc, null, TestContext.Current.CancellationToken));
-        Regex.Matches(html, "class=\"slide-page\"").Count.ShouldBe(2);
+        Regex.Count(html, "class=\"slide-page\"").ShouldBe(2);
 
         var withHidden = Html(
             await PresentationProcessor.ExportHtmlPlayerAsync(
                 doc,
-                new HtmlPlayerSaveOptions { IncludeHiddenSlides = true }
+                new HtmlPlayerSaveOptions { IncludeHiddenSlides = true },
+                TestContext.Current.CancellationToken
             )
         );
-        Regex.Matches(withHidden, "class=\"slide-page\"").Count.ShouldBe(3);
+        Regex.Count(withHidden, "class=\"slide-page\"").ShouldBe(3);
     }
 
     [Fact]
@@ -77,7 +78,8 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         var html = Html(
             await PresentationProcessor.ExportHtmlPlayerAsync(
                 doc,
-                new HtmlPlayerSaveOptions { ShowSlideCounter = false }
+                new HtmlPlayerSaveOptions { ShowSlideCounter = false },
+                TestContext.Current.CancellationToken
             )
         );
         html.ShouldNotContain("id=\"counter\"");

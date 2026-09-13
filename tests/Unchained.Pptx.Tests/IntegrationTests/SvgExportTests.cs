@@ -113,7 +113,8 @@ public sealed class SvgExportTests : PptxTestBase
 
         var svgs = await Processor.ExportAsSvgAsync(
             doc,
-            new SvgSaveOptions { IncludeHiddenSlides = true }
+            new SvgSaveOptions { IncludeHiddenSlides = true },
+            TestContext.Current.CancellationToken
         );
         svgs.Length.ShouldBe(2);
     }
@@ -124,7 +125,8 @@ public sealed class SvgExportTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         var svgs = await Processor.ExportAsSvgAsync(
             doc,
-            new SvgSaveOptions { Responsive = true }
+            new SvgSaveOptions { Responsive = true },
+            TestContext.Current.CancellationToken
         );
         var text = Encoding.UTF8.GetString(svgs[0]);
         // Responsive SVG: <svg> root has no fixed width/height, only viewBox

@@ -153,7 +153,8 @@ public sealed class HtmlExportTests : PptxTestBase
             var files = await Processor.SaveAsHtmlAsync(
                 doc,
                 dir,
-                new HtmlSaveOptions { IncludeHiddenSlides = true }
+                new HtmlSaveOptions { IncludeHiddenSlides = true },
+                TestContext.Current.CancellationToken
             );
             files.Count.ShouldBe(2);
         }

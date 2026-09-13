@@ -153,7 +153,7 @@ public sealed class PreservedContentTests : PptxTestBase
     [Fact]
     public async Task NoPreservedContent_ForPlainDeck()
     {
-        var doc = await Processor.LoadAsync(await BaseDeckAsync(TestContext.Current.CancellationToken));
+        var doc = await Processor.LoadAsync(await BaseDeckAsync(TestContext.Current.CancellationToken), cancellationToken: TestContext.Current.CancellationToken);
         doc.HasMacros.ShouldBeFalse();
 
         using var outMs = new MemoryStream();

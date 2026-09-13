@@ -114,7 +114,8 @@ public sealed class PdfExportTests : PptxTestBase
         await Processor.SaveAsPdfAsync(
             doc,
             ms,
-            new PdfSaveOptions { IncludeHiddenSlides = true }
+            new PdfSaveOptions { IncludeHiddenSlides = true },
+            TestContext.Current.CancellationToken
         );
         var text = Encoding.Latin1.GetString(ms.ToArray());
         text.ShouldContain("/Count 2");

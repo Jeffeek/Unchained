@@ -145,7 +145,8 @@ public sealed class RenderingTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(5);
         var images = await SlideRenderer.RenderAllAsync(
             doc,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+            new RenderOptions { WidthPx = 320, HeightPx = 180 },
+            TestContext.Current.CancellationToken
         );
 
         images.Length.ShouldBe(5);
@@ -159,7 +160,8 @@ public sealed class RenderingTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(3);
         var images = await SlideRenderer.RenderAllAsync(
             doc,
-            new RenderOptions { WidthPx = 160, HeightPx = 90 }
+            new RenderOptions { WidthPx = 160, HeightPx = 90 },
+            TestContext.Current.CancellationToken
         );
 
         foreach (var img in images)
@@ -175,7 +177,8 @@ public sealed class RenderingTests : PptxTestBase
         var doc = new PresentationProcessor().CreateBlank();
         var images = await SlideRenderer.RenderAllAsync(
             doc,
-            new RenderOptions { WidthPx = 320, HeightPx = 180 }
+            new RenderOptions { WidthPx = 320, HeightPx = 180 },
+            TestContext.Current.CancellationToken
         );
 
         images.Length.ShouldBe(0);
