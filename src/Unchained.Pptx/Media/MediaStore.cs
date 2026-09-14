@@ -50,6 +50,54 @@ public sealed class MediaStore
         return image;
     }
 
+    /// <summary>
+    ///     Imports an image from another presentation's store. Returns the existing instance when
+    ///     already present (by reference or by identical content), otherwise adds a fresh copy with
+    ///     clean part/relationship identity and returns it. Used by cross-presentation slide cloning
+    ///     so the imported picture resolves against this document's media on save.
+    /// </summary>
+    internal EmbeddedImage ImportImage(EmbeddedImage source)
+    {
+        if (_images.Any(existing => ReferenceEquals(existing, source)))
+            return source;
+
+        var match = _images.FirstOrDefault(existing =>
+            existing.ContentType == source.ContentType && existing.Data.Span.SequenceEqual(source.Data.Span)
+        );
+        if (match is not null)
+            return match;
+
+        var copy = new EmbeddedImage(source.ContentType, source.Data)
+        {
+            PixelWidth = source.PixelWidth,
+            PixelHeight = source.PixelHeight
+        };
+        _images.Add(copy);
+        return copy;
+    }
+
+    /// <summary>
+    ///     Imports an audio clip from another presentation's store, adding it when not already
+    ///     present. <see cref="EmbeddedAudio" /> is immutable, so the instance is shared directly.
+    /// </summary>
+    internal EmbeddedAudio ImportAudio(EmbeddedAudio source)
+    {
+        if (!_audioFiles.Any(existing => ReferenceEquals(existing, source)))
+            _audioFiles.Add(source);
+        return source;
+    }
+
+    /// <summary>
+    ///     Imports a video clip from another presentation's store, adding it when not already
+    ///     present. <see cref="EmbeddedVideo" /> is immutable, so the instance is shared directly.
+    /// </summary>
+    internal EmbeddedVideo ImportVideo(EmbeddedVideo source)
+    {
+        if (!_videoFiles.Any(existing => ReferenceEquals(existing, source)))
+            _videoFiles.Add(source);
+        return source;
+    }
+
     // ── Audio ────────────────────────────────────────────────────────────────
 
     /// <summary>Adds an audio clip to the store.</summary>

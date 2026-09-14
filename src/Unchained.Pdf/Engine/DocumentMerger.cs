@@ -18,7 +18,10 @@ public sealed class DocumentMerger : IDocumentMerger
         IReadOnlyList<IPdfDocument> documents,
         MergeOptions options,
         CancellationToken ct = default
-    ) => Task.Run(() => MergeDocuments(documents, options, false), ct);
+    ) => Task.Run(
+        () => MergeSources(documents.Select(static d => new MergeSource(d)).ToList(), options, false),
+        ct
+    );
 
     /// <inheritdoc />
     public Task<IPdfDocument> MergeAsync(
@@ -27,45 +30,122 @@ public sealed class DocumentMerger : IDocumentMerger
         CancellationToken ct = default
     ) => MergeStreamsAsync(streams, options, ct);
 
-    // ── Merge from pre-loaded IPdfDocument list ───────────────────────────────
+    /// <inheritdoc />
+    public Task<IPdfDocument> MergeAsync(
+        IReadOnlyList<MergeSource> sources,
+        MergeOptions options,
+        CancellationToken ct = default
+    ) => Task.Run(() => MergeSources(sources, options, false), ct);
 
-    private static IPdfDocument MergeDocuments(
-        IReadOnlyList<IPdfDocument> documents,
+    // ── Merge from pre-loaded source list ─────────────────────────────────────
+
+    private static IPdfDocument MergeSources(
+        IReadOnlyList<MergeSource> sources,
         MergeOptions options,
         bool copyStreamData
     )
     {
-        if (documents.Count == 0)
-            throw new ArgumentException("At least one source document is required.", nameof(documents));
+        if (sources.Count == 0)
+            throw new ArgumentException("At least one source document is required.", nameof(sources));
 
         var globalObjects = new List<PdfIndirectObject>();
         var pageRefs = new List<PdfIndirectReference>();
         var globalMax = 0;
 
-        foreach (var doc in documents)
+        foreach (var source in sources)
         {
-            var adapter = MutationHelper.Cast(nameof(documents), doc);
+            var adapter = MutationHelper.Cast(nameof(sources), source.Document);
 
             var objects = adapter.Core.CollectObjects();
             var sourceMax = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
             var offset = globalMax;
 
-            foreach (var remapped in from obj in objects
-                                     where !IsStructural(obj)
-                                     select (PdfIndirectObject)PdfObjectRemapper.Remap(obj, offset)
-                                     into remapped
-                                     select copyStreamData ? CopyStreamData(remapped) : remapped)
-            {
-                globalObjects.Add(remapped);
-
-                if (IsPageLeaf(remapped))
-                    pageRefs.Add(remapped.ToReference());
-            }
+            if (source.PageRanges is null)
+                AppendAllPages(objects, offset, copyStreamData, globalObjects, pageRefs);
+            else
+                AppendSelectedPages(source, adapter.Core, objects, offset, copyStreamData, globalObjects, pageRefs);
 
             globalMax += sourceMax;
         }
 
         return BuildMergedDocument(globalObjects, pageRefs, globalMax, options);
+    }
+
+    // Copies every non-structural object from a source and records each page leaf, in
+    // object-collection order. This is the whole-document merge path.
+    private static void AppendAllPages(
+        IEnumerable<PdfIndirectObject> objects,
+        int offset,
+        bool copyStreamData,
+        ICollection<PdfIndirectObject> globalObjects,
+        ICollection<PdfIndirectReference> pageRefs
+    )
+    {
+        foreach (var remapped in from obj in objects
+                                 where !IsStructural(obj)
+                                 select (PdfIndirectObject)PdfObjectRemapper.Remap(obj, offset)
+                                 into remapped
+                                 select copyStreamData ? CopyStreamData(remapped) : remapped)
+        {
+            globalObjects.Add(remapped);
+
+            if (IsPageLeaf(remapped))
+                pageRefs.Add(remapped.ToReference());
+        }
+    }
+
+    // Copies only the objects reachable from the selected page leaves and records the selected
+    // pages in range order. Reachability is walked from /Parent-stripped copies so it cannot
+    // climb the source page tree into unrelated pages; BuildMergedDocument re-points /Parent on
+    // the leaves that remain in globalObjects.
+    private static void AppendSelectedPages(
+        MergeSource source,
+        PdfDocumentCore core,
+        IReadOnlyList<PdfIndirectObject> objects,
+        int offset,
+        bool copyStreamData,
+        ICollection<PdfIndirectObject> globalObjects,
+        ICollection<PdfIndirectReference> pageRefs
+    )
+    {
+        var pageCount = source.Document.PageCount;
+        var selectedLeaves = new List<int>();
+        var leafDicts = new Dictionary<int, PdfDictionary>();
+
+        foreach (var (start, end) in source.PageRanges!)
+        {
+            if (start < 1 || end > pageCount || start > end)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(source),
+                    (start, end),
+                    $"Page range [{start}, {end}] is outside the document bounds [1, {pageCount}]."
+                );
+            }
+
+            for (var page = start; page <= end; page++)
+            {
+                var dict = core.GetPage(page);
+                var objNum = FindObjectNumber(objects, dict);
+                selectedLeaves.Add(objNum);
+                leafDicts[objNum] = dict;
+            }
+        }
+
+        var strippedLeaves = leafDicts
+            .Select(static kvp => new PdfIndirectObject(kvp.Key, 0, WithoutParent(kvp.Value)));
+        var reachable = PdfReachability.CollectReachableFromLeaves(strippedLeaves, core);
+
+        foreach (var remapped in from obj in objects
+                                 where reachable.Contains(obj.ObjectNumber)
+                                 where !IsStructural(obj)
+                                 select (PdfIndirectObject)PdfObjectRemapper.Remap(obj, offset)
+                                 into remapped
+                                 select copyStreamData ? CopyStreamData(remapped) : remapped)
+            globalObjects.Add(remapped);
+
+        foreach (var objNum in selectedLeaves)
+            pageRefs.Add(new PdfIndirectReference(objNum + offset, 0));
     }
 
     // ── Merge from Stream list (sequential: parse, process, dispose) ──────────
@@ -96,17 +176,7 @@ public sealed class DocumentMerger : IDocumentMerger
             var sourceMax = objects.Count > 0 ? objects.Max(static o => o.ObjectNumber) : 0;
             var offset = globalMax;
 
-            foreach (var remapped in from obj in objects
-                                     where !IsStructural(obj)
-                                     select (PdfIndirectObject)PdfObjectRemapper.Remap(obj, offset)
-                                     into remapped
-                                     select CopyStreamData(remapped))
-            {
-                globalObjects.Add(remapped);
-
-                if (IsPageLeaf(remapped))
-                    pageRefs.Add(remapped.ToReference());
-            }
+            AppendAllPages(objects, offset, copyStreamData: true, globalObjects, pageRefs);
 
             globalMax += sourceMax;
         }
@@ -196,6 +266,21 @@ public sealed class DocumentMerger : IDocumentMerger
 
     private static bool IsPageLeaf(PdfIndirectObject obj) =>
         obj.Value is PdfDictionary d && d.IsPage();
+
+    // Locates the object number of a page leaf by reference identity. GetPage returns the same
+    // cached dictionary instance that CollectObjects wraps, so reference equality is reliable.
+    private static int FindObjectNumber(IEnumerable<PdfIndirectObject> objects, PdfDictionary dict) =>
+        objects.FirstOrDefault(o => ReferenceEquals(o.Value, dict))?.ObjectNumber
+        ?? throw new PdfException("Selected page was not found among the document's objects.");
+
+    // Returns a copy of a page dictionary with /Parent removed, so a reachability walk started
+    // from it cannot climb back up the page tree into unrelated pages.
+    private static PdfDictionary WithoutParent(PdfDictionary dict)
+    {
+        var entries = new Dictionary<string, PdfObject>(dict.Entries);
+        entries.Remove(PdfName.Parent.Value);
+        return new PdfDictionary(entries);
+    }
 
     // Returns a new PdfIndirectObject where every PdfStream's Data is an independent
     // byte array, severing the reference to the source document's backing buffer.

@@ -23,6 +23,12 @@ public sealed class ChartShape : Shape
     internal byte[]? ChartPartData { get; set; }
 
     /// <summary>
+    ///     Parts referenced by the chart part's own relationships — the embedded spreadsheet and any
+    ///     chart style/colour parts — captured at load so they survive load/save and cross-deck clone.
+    /// </summary>
+    internal List<ChartRelatedPart> RelatedParts { get; } = [];
+
+    /// <summary>
     ///     The OPC relationship ID that references this chart part from the slide.
     ///     Assigned during parsing (from the file) or during the write step (for new charts).
     /// </summary>

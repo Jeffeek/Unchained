@@ -38,6 +38,10 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
         Slides = slides;
         Masters = masters;
         Media = mediaStore;
+        // Wire the slide collection to this document's media/master stores so cross-presentation
+        // clones can import referenced media and layouts into the correct target.
+        slides.OwnerMedia = mediaStore;
+        slides.OwnerMasters = masters;
         Properties = properties;
         Protection = protection;
         SlideSize = slideSize;
@@ -225,6 +229,21 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
         Properties.SlideCount = Slides.Count;
         Properties.HiddenSlideCount = Slides.Count(static s => s.IsHidden);
         Properties.NoteCount = Slides.Count(static s => s.HasNotes);
+    }
+
+    // ── Merge ───────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    ///     Appends deep copies of every slide from <paramref name="source" /> to this presentation,
+    ///     importing each slide's referenced media and its layout/master subtree so the merged
+    ///     slides render and save correctly. <paramref name="source" /> is not modified.
+    /// </summary>
+    /// <param name="source">The presentation whose slides are copied into this one.</param>
+    /// <returns>The newly-added slides, in source order.</returns>
+    public IReadOnlyList<Slide> MergeSlidesFrom(PresentationDocument source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return source.Slides.Select(Slides.AddClone).ToList();
     }
 
     // ── Find & replace ────────────────────────────────────────────────────────
