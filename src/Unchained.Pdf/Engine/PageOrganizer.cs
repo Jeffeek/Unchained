@@ -321,9 +321,15 @@ public sealed class PageOrganizer : IPageOrganizer
         var pageTreeNums = PageTreeNodeNumbers(adapter.Core);
 
         var orderedNums = new HashSet<int>(ordered.Select(static p => p.ObjNum));
+        // The new /Pages root must not collide with any object number in play. Besides existing
+        // objects and extraObjects, the ordered leaves can carry remapped source numbers that
+        // exceed both (e.g. a single-page source whose only non-structural object is the leaf),
+        // so they must be included here too.
         var combinedMax = existing.Max(static o => o.ObjectNumber);
         if (extraObjects is { Count: > 0 })
             combinedMax = Math.Max(combinedMax, extraObjects.Max(static o => o.ObjectNumber));
+        if (orderedNums.Count > 0)
+            combinedMax = Math.Max(combinedMax, orderedNums.Max());
         var pagesRootNum = combinedMax + 1;
         var pagesRef = new PdfIndirectReference(pagesRootNum, 0);
 
@@ -338,7 +344,7 @@ public sealed class PageOrganizer : IPageOrganizer
         // their resources (fonts, images, content streams) by indirect object number; walking
         // from them discovers everything a kept page needs. Objects referenced only by deleted
         // pages are unreachable and get pruned here — this is what shrinks the output file.
-        var reachable = CollectReachableFromLeaves(emittedLeaves, adapter.Core);
+        var reachable = PdfReachability.CollectReachableFromLeaves(emittedLeaves, adapter.Core);
 
         // Keep existing objects that are not page-tree nodes, not the ordered leaves
         // (re-emitted below), not the catalog (re-emitted below), and still reachable
@@ -392,64 +398,6 @@ public sealed class PageOrganizer : IPageOrganizer
         );
         var newDoc = (PdfDocumentAdapter)ObjectGraphBuilder.SerializeToDocument(objects, trailer);
         adapter.ReplaceCore(newDoc.Core);
-    }
-
-    // ── Reachability ──────────────────────────────────────────────────────────────
-
-    // Walks the object graph starting from the given page leaves and returns every object
-    // number transitively referenced. References are followed by object number (no inlining),
-    // so the output stays byte-for-byte identical to the input except for dropped objects.
-    // The leaves themselves are included. Objects free in the old xref (already dropped) are
-    // skipped defensively.
-    private static HashSet<int> CollectReachableFromLeaves(
-        IEnumerable<PdfIndirectObject> leaves,
-        PdfDocumentCore core
-    )
-    {
-        var reachable = new HashSet<int>();
-        var queue = new Queue<PdfObject>();
-
-        foreach (var leaf in leaves)
-        {
-            reachable.Add(leaf.ObjectNumber);
-            queue.Enqueue(leaf.Value);
-        }
-
-        while (queue.Count > 0)
-        {
-            var obj = queue.Dequeue();
-            switch (obj)
-            {
-                case PdfIndirectReference r:
-                    if (reachable.Add(r.ObjectNumber))
-                    {
-                        try
-                        {
-                            queue.Enqueue(core.ResolveIndirect(r.ObjectNumber).Value);
-                        }
-                        catch (PdfException)
-                        {
-                            // Free in the old xref (belonged to a deleted page) — nothing to walk.
-                        }
-                    }
-
-                break;
-                case PdfArray arr:
-                    foreach (var el in arr.Elements)
-                        queue.Enqueue(el);
-                break;
-                case PdfDictionary dict:
-                    foreach (var entry in dict.Entries.Values)
-                        queue.Enqueue(entry);
-                break;
-                case PdfStream stream:
-                    foreach (var entry in stream.Dictionary.Entries.Values)
-                        queue.Enqueue(entry);
-                break;
-            }
-        }
-
-        return reachable;
     }
 
     // ── Page-tree traversal helpers ───────────────────────────────────────────────

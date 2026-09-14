@@ -282,4 +282,107 @@ public sealed class AnnotationEditorTests : PdfTestBase
         await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
         reloaded.Pages[1].GetAnnotations()[0].Color.ShouldNotBeNull();
     }
+
+    // ── RemoveAnnotationAsync ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RemoveAnnotationAsync_SingleAnnotation_PageHasNone()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, TestContext.Current.CancellationToken);
+        await Editor.RemoveAnnotationAsync(doc, 1, 0, TestContext.Current.CancellationToken);
+        doc.Pages[1].GetAnnotations().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RemoveAnnotationAsync_MiddleAnnotation_RemovesCorrectOne()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation with { Contents = "First" }, TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation with { Contents = "Second" }, TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation with { Contents = "Third" }, TestContext.Current.CancellationToken);
+
+        await Editor.RemoveAnnotationAsync(doc, 1, 1, TestContext.Current.CancellationToken);
+
+        var annots = doc.Pages[1].GetAnnotations();
+        annots.Count.ShouldBe(2);
+        annots.Select(static a => a.Contents).ShouldBe(["First", "Third"]);
+    }
+
+    [Fact]
+    public async Task RemoveAnnotationAsync_FromFixtureArray_RemovesIt()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.WithAnnotation("Existing"), TestContext.Current.CancellationToken);
+        await Editor.RemoveAnnotationAsync(doc, 1, 0, TestContext.Current.CancellationToken);
+        doc.Pages[1].GetAnnotations().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RemoveAnnotationAsync_RoundTrip_PersistsAfterSave()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, TestContext.Current.CancellationToken);
+        await Editor.RemoveAnnotationAsync(doc, 1, 0, TestContext.Current.CancellationToken);
+        using var ms = new MemoryStream();
+        await Processor.SaveAsync(doc, ms, cancellationToken: TestContext.Current.CancellationToken);
+        ms.Position = 0;
+        await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
+        reloaded.Pages[1].GetAnnotations().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RemoveAnnotationAsync_IndexOutOfRange_Throws()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, TestContext.Current.CancellationToken);
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(() => Editor.RemoveAnnotationAsync(doc, 1, 5, TestContext.Current.CancellationToken));
+    }
+
+    // ── UpdateAnnotationAsync ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateAnnotationAsync_ChangesContents()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, TestContext.Current.CancellationToken);
+        await Editor.UpdateAnnotationAsync(doc, 1, 0, SampleAnnotation with { Contents = "Edited" }, TestContext.Current.CancellationToken);
+
+        var annots = doc.Pages[1].GetAnnotations();
+        annots.Count.ShouldBe(1);
+        annots[0].Contents.ShouldBe("Edited");
+    }
+
+    [Fact]
+    public async Task UpdateAnnotationAsync_ChangesSubtypeAndRect()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, TestContext.Current.CancellationToken);
+        var replacement = new Annotation(AnnotationSubtype.Square, 20, 30, 40, 50);
+        await Editor.UpdateAnnotationAsync(doc, 1, 0, replacement, TestContext.Current.CancellationToken);
+
+        var result = doc.Pages[1].GetAnnotations()[0];
+        result.Subtype.ShouldBe(AnnotationSubtype.Square);
+        result.X.ShouldBe(20, 0.01f);
+        result.Width.ShouldBe(40, 0.01f);
+    }
+
+    [Fact]
+    public async Task UpdateAnnotationAsync_LeavesOthersIntact()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation with { Contents = "First" }, TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation with { Contents = "Second" }, TestContext.Current.CancellationToken);
+
+        await Editor.UpdateAnnotationAsync(doc, 1, 0, SampleAnnotation with { Contents = "Changed" }, TestContext.Current.CancellationToken);
+
+        doc.Pages[1].GetAnnotations().Select(static a => a.Contents).ShouldBe(["Changed", "Second"]);
+    }
+
+    [Fact]
+    public async Task UpdateAnnotationAsync_IndexOutOfRange_Throws()
+    {
+        await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
+        await Editor.AddAnnotationAsync(doc, 1, SampleAnnotation, TestContext.Current.CancellationToken);
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(() => Editor.UpdateAnnotationAsync(doc, 1, 3, SampleAnnotation, TestContext.Current.CancellationToken));
+    }
 }

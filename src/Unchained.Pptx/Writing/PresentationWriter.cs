@@ -291,6 +291,16 @@ internal sealed class PresentationWriter
                 slides[i].PartUri = $"/ppt/slides/slide{i + 1}.xml";
         }
 
+        // Unique index for diagram parts belonging to cloned SmartArt shapes (those whose
+        // relationship identity was cleared on clone); keeps their part URIs from colliding
+        // with the target's own diagrams or with each other across slides.
+        var clonedDiagramIndex = 1;
+
+        // Tracks chart sub-part URIs already written this save so a second chart referencing the
+        // same source part (e.g. after a clone) gets a fresh, non-colliding URI instead.
+        var usedChartSubPartUris = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var clonedChartSubPartIndex = 1;
+
         foreach (var slide in slides)
         {
             var slideUri = slide.PartUri;
@@ -311,6 +321,13 @@ internal sealed class PresentationWriter
                 if (string.IsNullOrEmpty(chartShape.RelationshipId))
                     chartShape.RelationshipId = $"rId{rId++}";
             }
+
+            // Cloned SmartArt shapes arrive with their relationship identity cleared (see
+            // SlideCollection cross-deck clone) so their diagram parts get fresh, non-colliding
+            // relationship IDs and part URIs here, and the graphic frame's <dgm:relIds> are patched.
+            foreach (var smartArt in slide.Shapes.OfType<SmartArtShape>()
+                         .Where(static s => string.IsNullOrEmpty(s.DataRelationshipId) && s.DataPartData is not null))
+                AssignClonedSmartArtIdentity(smartArt, ref rId, ref clonedDiagramIndex);
 
             // Assign relationship IDs for shape click-hyperlinks (recursing through groups).
             foreach (var shape in EnumerateAllShapes(slide.Shapes)
@@ -370,6 +387,10 @@ internal sealed class PresentationWriter
                     PmlNames.RelTypeChart,
                     OpcPackage.GetRelativeUri(slideUri, chartShape.PartUri)
                 );
+
+                // Re-emit the chart part's own relationships — the embedded workbook and any
+                // chart style/colour parts — so the chart's r:id references keep resolving.
+                WriteChartRelatedParts(package, contentTypes, chartShape, usedChartSubPartUris, ref clonedChartSubPartIndex);
             }
 
             // SmartArt diagrams (M-F): write the referenced diagram parts using the
@@ -527,6 +548,70 @@ internal sealed class PresentationWriter
         }
     }
 
+    // ── Chart related parts (embedded workbook, style/colour parts) ──────────────
+
+    /// <summary>
+    ///     Writes the parts referenced by a chart's own relationships (embedded spreadsheet, chart
+    ///     style/colour parts) and the chart part's <c>.rels</c>, so the chart's <c>r:id</c> references
+    ///     resolve. Internal targets get a fresh URI when the source URI is already taken this save
+    ///     (as happens when a chart is cloned), keeping copies independent.
+    /// </summary>
+    private static void WriteChartRelatedParts(
+        OpcPackage package,
+        ContentTypeMap contentTypes,
+        ChartShape chartShape,
+        ISet<string> usedSubPartUris,
+        ref int clonedIndex
+    )
+    {
+        foreach (var related in chartShape.RelatedParts)
+        {
+            if (related.IsExternal)
+            {
+                package.AddRelationship(
+                    chartShape.PartUri,
+                    related.RelationshipId,
+                    related.RelationshipType,
+                    related.Target,
+                    isExternal: true
+                );
+                continue;
+            }
+
+            if (related.Data is null) continue;
+
+            var subUri = UniquePartUri(related.Target, usedSubPartUris, ref clonedIndex);
+            package.AddOrReplacePart(subUri, related.ContentType, related.Data);
+            contentTypes.Register(subUri, related.ContentType);
+            package.AddRelationship(
+                chartShape.PartUri,
+                related.RelationshipId,
+                related.RelationshipType,
+                OpcPackage.GetRelativeUri(chartShape.PartUri, subUri)
+            );
+        }
+    }
+
+    // Returns the original URI when free this save, otherwise a fresh URI in the same directory
+    // (preserving the file extension) so identical source parts from cloned shapes don't collide.
+    private static string UniquePartUri(string original, ISet<string> used, ref int index)
+    {
+        if (used.Add(original))
+            return original;
+
+        var slash = original.LastIndexOf('/');
+        var directory = slash >= 0 ? original[..(slash + 1)] : "/";
+        var fileName = slash >= 0 ? original[(slash + 1)..] : original;
+
+        string candidate;
+        do
+        {
+            candidate = $"{directory}imported{index++}_{fileName}";
+        } while (!used.Add(candidate));
+
+        return candidate;
+    }
+
     // ── SmartArt diagram parts (M-F) ─────────────────────────────────────────────
     /// <summary>
     ///     Writes the up-to-five OPC parts backing a SmartArt diagram (data, layout, quick-style,
@@ -623,6 +708,83 @@ internal sealed class PresentationWriter
         package.AddOrReplacePart(partUri, contentType, data);
         contentTypes.Register(partUri, contentType);
         package.AddRelationship(slideUri, relationshipId, relType, OpcPackage.GetRelativeUri(slideUri, partUri));
+    }
+
+    /// <summary>
+    ///     Assigns fresh slide relationship IDs and unique part URIs to a cloned SmartArt shape's
+    ///     diagram parts (only those actually present), then patches the graphic frame's
+    ///     <c>&lt;dgm:relIds&gt;</c> and drawing-extension references so they resolve on save.
+    /// </summary>
+    private static void AssignClonedSmartArtIdentity(SmartArtShape shape, ref int rId, ref int diagramIndex)
+    {
+        var index = diagramIndex++;
+
+        if (shape.DataPartData is not null)
+        {
+            shape.DataRelationshipId = $"rId{rId++}";
+            shape.DataPartUri = $"/ppt/diagrams/importedData{index}.xml";
+        }
+
+        if (shape.LayoutPartData is not null)
+        {
+            shape.LayoutRelationshipId = $"rId{rId++}";
+            shape.LayoutPartUri = $"/ppt/diagrams/importedLayout{index}.xml";
+        }
+
+        if (shape.QuickStylePartData is not null)
+        {
+            shape.QuickStyleRelationshipId = $"rId{rId++}";
+            shape.QuickStylePartUri = $"/ppt/diagrams/importedQuickStyle{index}.xml";
+        }
+
+        if (shape.ColorsPartData is not null)
+        {
+            shape.ColorsRelationshipId = $"rId{rId++}";
+            shape.ColorsPartUri = $"/ppt/diagrams/importedColors{index}.xml";
+        }
+
+        if (shape.DrawingPartData is not null)
+        {
+            shape.DrawingRelationshipId = $"rId{rId++}";
+            shape.DrawingPartUri = $"/ppt/diagrams/importedDrawing{index}.xml";
+        }
+
+        PatchSmartArtRelationshipIds(shape);
+    }
+
+    /// <summary>
+    ///     Rewrites the <c>&lt;dgm:relIds&gt;</c> attributes (and the Microsoft drawing-extension
+    ///     <c>relId</c>) in a cloned SmartArt's preserved graphic-frame XML to the freshly-assigned
+    ///     relationship IDs, so the emitted frame references the new diagram parts.
+    /// </summary>
+    private static void PatchSmartArtRelationshipIds(SmartArtShape shape)
+    {
+        if (shape.RawElement is null) return;
+
+        var r = PmlNames.Relationships;
+        var relIds = shape.RawElement.Descendants(DmlNames.DiagramRelIds).FirstOrDefault()
+                     ?? shape.RawElement.Descendants().FirstOrDefault(static e => e.Name.LocalName == "relIds");
+        if (relIds is not null)
+        {
+            SetAttributeIfPresent(relIds, r + "dm", shape.DataRelationshipId);
+            SetAttributeIfPresent(relIds, r + "lo", shape.LayoutRelationshipId);
+            SetAttributeIfPresent(relIds, r + "qs", shape.QuickStyleRelationshipId);
+            SetAttributeIfPresent(relIds, r + "cs", shape.ColorsRelationshipId);
+        }
+
+        if (!string.IsNullOrEmpty(shape.DrawingRelationshipId))
+        {
+            var ext = shape.RawElement.Descendants().FirstOrDefault(static e => e.Name.LocalName == "dataModelExt");
+            ext?.SetAttributeValue("relId", shape.DrawingRelationshipId);
+        }
+
+        return;
+
+        static void SetAttributeIfPresent(XElement element, XName name, string value)
+        {
+            if (element.Attribute(name) is not null && !string.IsNullOrEmpty(value))
+                element.SetAttributeValue(name, value);
+        }
     }
 
     private static void WriteCommentAuthors(

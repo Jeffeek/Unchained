@@ -226,6 +226,40 @@ internal sealed class SlideParser(
         // Preserve raw bytes for lossless round-trip
         shape.ChartPartData = chartPart.Data;
 
+        // Capture the chart part's own relationships (embedded workbook, chart style/colour parts)
+        // so the writer can re-emit them and the chart's r:id references keep resolving.
+        foreach (var chartRel in chartPart.Relationships)
+        {
+            if (chartRel.IsExternal)
+            {
+                shape.RelatedParts.Add(
+                    new ChartRelatedPart
+                    {
+                        RelationshipId = chartRel.Id,
+                        RelationshipType = chartRel.RelationshipType,
+                        IsExternal = true,
+                        Target = chartRel.TargetUri
+                    }
+                );
+                continue;
+            }
+
+            var subUri = chartPart.ResolveUri(chartRel.TargetUri);
+            var subPart = package.TryGetPart(subUri);
+            if (subPart == null) continue;
+
+            shape.RelatedParts.Add(
+                new ChartRelatedPart
+                {
+                    RelationshipId = chartRel.Id,
+                    RelationshipType = chartRel.RelationshipType,
+                    Target = subUri,
+                    ContentType = subPart.ContentType,
+                    Data = subPart.Data
+                }
+            );
+        }
+
         // Parse into ChartModel so callers can inspect and modify chart data
         var chartDoc = OoXmlHelper.ParseXml(chartPart.Data);
         if (chartDoc.Root != null)

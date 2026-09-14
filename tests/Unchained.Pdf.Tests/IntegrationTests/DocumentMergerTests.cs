@@ -10,10 +10,27 @@ namespace Unchained.Pdf.Tests.IntegrationTests;
 public sealed class DocumentMergerTests : PdfTestBase
 {
     private static readonly DocumentMerger Merger = new();
+    private static readonly AnnotationEditor Annotations = new();
 
     // Convenience wrapper that builds a MultiPage fixture and loads it.
     private static Task<IPdfDocument> LoadFixtureAsync(int pages) =>
         LoadAsync(PdfFixtures.MultiPage(pages));
+
+    // Builds a document whose pages are individually identifiable: each page carries a single
+    // annotation whose Contents is its 1-based page number (e.g. "P3"). This lets range-merge
+    // tests assert exactly which pages were selected and in what order.
+    private static async Task<IPdfDocument> LoadTaggedAsync(int pages)
+    {
+        var doc = await LoadFixtureAsync(pages);
+        for (var page = 1; page <= pages; page++)
+            await Annotations.AddAnnotationAsync(doc, page, new Annotation(AnnotationSubtype.Text, 10, 10, 20, 20, $"P{page}"));
+        return doc;
+    }
+
+    private static IReadOnlyList<string?> PageTags(IPdfDocument doc) =>
+        Enumerable.Range(1, doc.PageCount)
+            .Select(p => doc.Pages[p].GetAnnotations().SingleOrDefault()?.Contents)
+            .ToList();
 
     // ── IReadOnlyList<IPdfDocument> overload ──────────────────────────────────
 
@@ -178,4 +195,105 @@ public sealed class DocumentMergerTests : PdfTestBase
 
         merged.PageCount.ShouldBe(3);
     }
+
+    // ── IReadOnlyList<MergeSource> overload (page-range merge) ─────────────────
+
+    [Fact]
+    public async Task MergeAsync_Sources_SingleRange_SelectsOnlyThosePages()
+    {
+        await using var a = await LoadTaggedAsync(5);
+        await using var merged = await Merger.MergeAsync(
+            [new MergeSource(a, [(3, 5)])],
+            MergeOptions.Default,
+            TestContext.Current.CancellationToken
+        );
+
+        merged.PageCount.ShouldBe(3);
+        PageTags(merged).ShouldBe(["P3", "P4", "P5"]);
+    }
+
+    [Fact]
+    public async Task MergeAsync_Sources_RangesReorderPages()
+    {
+        await using var a = await LoadTaggedAsync(4);
+        await using var merged = await Merger.MergeAsync(
+            [new MergeSource(a, [(4, 4), (1, 2)])],
+            MergeOptions.Default,
+            TestContext.Current.CancellationToken
+        );
+
+        PageTags(merged).ShouldBe(["P4", "P1", "P2"]);
+    }
+
+    [Fact]
+    public async Task MergeAsync_Sources_RepeatedPage_AppearsTwice()
+    {
+        await using var a = await LoadTaggedAsync(3);
+        await using var merged = await Merger.MergeAsync(
+            [new MergeSource(a, [(2, 2), (2, 2)])],
+            MergeOptions.Default,
+            TestContext.Current.CancellationToken
+        );
+
+        PageTags(merged).ShouldBe(["P2", "P2"]);
+    }
+
+    [Fact]
+    public async Task MergeAsync_Sources_MultipleDocuments_InterleaveRanges()
+    {
+        await using var a = await LoadTaggedAsync(3);
+        await using var b = await LoadTaggedAsync(3);
+        await using var merged = await Merger.MergeAsync(
+            [new MergeSource(a, [(1, 1)]), new MergeSource(b, [(2, 3)])],
+            MergeOptions.Default,
+            TestContext.Current.CancellationToken
+        );
+
+        PageTags(merged).ShouldBe(["P1", "P2", "P3"]);
+    }
+
+    [Fact]
+    public async Task MergeAsync_Sources_NullRange_TakesAllPages()
+    {
+        await using var a = await LoadTaggedAsync(2);
+        await using var b = await LoadTaggedAsync(2);
+        await using var merged = await Merger.MergeAsync(
+            [new MergeSource(a), new MergeSource(b, [(1, 1)])],
+            MergeOptions.Default,
+            TestContext.Current.CancellationToken
+        );
+
+        merged.PageCount.ShouldBe(3);
+        PageTags(merged).ShouldBe(["P1", "P2", "P1"]);
+    }
+
+    [Fact]
+    public async Task MergeAsync_Sources_RangeMerge_ParseableAfterSave()
+    {
+        await using var a = await LoadTaggedAsync(4);
+        await using var merged = await Merger.MergeAsync(
+            [new MergeSource(a, [(2, 3)])],
+            MergeOptions.Default,
+            TestContext.Current.CancellationToken
+        );
+
+        using var ms = new MemoryStream();
+        await Processor.SaveAsync(merged, ms, cancellationToken: TestContext.Current.CancellationToken);
+        ms.Position = 0;
+        await using var reloaded = await LoadAsync(ms, TestContext.Current.CancellationToken);
+
+        reloaded.PageCount.ShouldBe(2);
+        PageTags(reloaded).ShouldBe(["P2", "P3"]);
+    }
+
+    [Fact]
+    public async Task MergeAsync_Sources_RangeOutOfBounds_Throws()
+    {
+        await using var a = await LoadTaggedAsync(3);
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(() => Merger.MergeAsync([new MergeSource(a, [(2, 9)])], MergeOptions.Default, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task MergeAsync_Sources_EmptyList_Throws() =>
+        await Should.ThrowAsync<ArgumentException>(static () => Merger.MergeAsync(Array.Empty<MergeSource>(), MergeOptions.Default));
 }

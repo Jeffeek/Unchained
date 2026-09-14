@@ -126,44 +126,13 @@ public sealed class StampApplier : IStampApplier
         PdfObject fontRef,
         bool isBackground,
         PdfDocumentCore core
-    )
-    {
-        // Merge /Contents
-        var existing = page[PdfName.Contents];
-        PdfObject newContents;
-        if (existing is null)
-            newContents = stampRef;
-        else
-        {
-            var existingList = existing is PdfArray a
-                ? a.Elements.ToList()
-                : [existing];
-            var allRefs = isBackground
-                ? new[] { stampRef }.Concat(existingList).ToArray()
-                : existingList.Append(stampRef).ToArray();
-            newContents = new PdfArray(allRefs);
-        }
-
-        // Merge /Resources /Font
-        var existingResources = core.ResolveDict(page[PdfName.Resources]);
-        var existingFonts = existingResources?.Get<PdfDictionary>(PdfName.Font);
-        var fontEntries = existingFonts?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value) ?? new Dictionary<string, PdfObject>();
-        fontEntries[StampFontKey] = fontRef;
-
-        var newFontDict = new PdfDictionary(fontEntries);
-        var resourceEntries = existingResources?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value) ??
-                              new Dictionary<string, PdfObject>();
-        resourceEntries[PdfName.Font.Value] = newFontDict;
-
-        var newResources = new PdfDictionary(resourceEntries);
-        var entries = new Dictionary<string, PdfObject>(page.Entries)
-        {
-            [PdfName.Contents.Value] = newContents,
-            [PdfName.Resources.Value] = newResources
-        };
-
-        return new PdfDictionary(entries);
-    }
+    ) => PageContentComposer.RebuildPage(
+        page,
+        stampRef,
+        prepend: isBackground,
+        (IReadOnlyList<(string Category, string Key, PdfObject Ref)>)[(PdfName.Font.Value, StampFontKey, fontRef)],
+        core
+    );
 
     private static PdfDictionary MakeFontDict(string baseFontName) =>
         new(

@@ -41,4 +41,25 @@ public interface IDocumentMerger
         MergeOptions options,
         CancellationToken ct = default
     );
+
+    /// <summary>
+    ///     Merges selected page ranges from several documents into a single new document.
+    ///     Each <see cref="MergeSource" /> contributes the pages named by its ranges, in the order
+    ///     given; a source with no ranges contributes all its pages. This is the one-call
+    ///     equivalent of splitting each source and merging the pieces.
+    ///     Callers retain ownership of each input document — they are not disposed by this method.
+    ///     The returned document is caller-owned.
+    /// </summary>
+    /// <param name="sources">Ordered list of documents and the page ranges to take from each.</param>
+    /// <param name="options">Controls which metadata is copied into the merged output.</param>
+    /// <param name="ct">Token to cancel the operation.</param>
+    /// <returns>A new <see cref="IPdfDocument" /> containing the selected pages in source order.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    ///     Thrown when a range falls outside the bounds of its source document.
+    /// </exception>
+    Task<IPdfDocument> MergeAsync(
+        IReadOnlyList<MergeSource> sources,
+        MergeOptions options,
+        CancellationToken ct = default
+    );
 }

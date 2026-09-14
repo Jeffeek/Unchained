@@ -717,6 +717,39 @@ internal static class OpenXmlPresentationParser
         var bytes = ms.ToArray();
         shape.ChartPartData = bytes; // preserve raw bytes for round-trip parity
 
+        // Capture the chart part's own referenced parts (embedded workbook, chart style/colour
+        // parts) and external links, mirroring the custom parser so the writer re-emits them.
+        foreach (var pair in chartPart.Parts)
+        {
+            var part = pair.OpenXmlPart;
+            using var partStream = part.GetStream();
+            using var partMs = new MemoryStream();
+            partStream.CopyTo(partMs);
+            shape.RelatedParts.Add(
+                new ChartRelatedPart
+                {
+                    RelationshipId = pair.RelationshipId,
+                    RelationshipType = part.RelationshipType,
+                    Target = part.Uri.ToString(),
+                    ContentType = part.ContentType,
+                    Data = partMs.ToArray()
+                }
+            );
+        }
+
+        foreach (var external in chartPart.ExternalRelationships)
+        {
+            shape.RelatedParts.Add(
+                new ChartRelatedPart
+                {
+                    RelationshipId = external.Id,
+                    RelationshipType = external.RelationshipType,
+                    IsExternal = true,
+                    Target = external.Uri?.ToString() ?? string.Empty
+                }
+            );
+        }
+
         var chartDoc = OoXmlHelper.ParseXml(bytes);
         if (chartDoc.Root != null)
             ChartParser.Parse(chartDoc.Root, shape.Chart);
