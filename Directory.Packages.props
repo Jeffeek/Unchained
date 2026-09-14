@@ -40,7 +40,7 @@
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
   <ItemGroup Label="Unchained.Studio">
-    <PackageVersion Include="MudBlazor" Version="9.9.0" />
+    <PackageVersion Include="MudBlazor" Version="9.10.0" />
     <!-- AspNetCore.SassCompiler (MIT): build-time SCSS → CSS. Bundles the Styles/ partials into
          a single wwwroot/css/app.css on build. No runtime dependency. -->
     <PackageVersion Include="AspNetCore.SassCompiler" Version="1.103.0" />
