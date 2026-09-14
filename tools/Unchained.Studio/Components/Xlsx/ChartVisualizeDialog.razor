@@ -69,8 +69,7 @@
 
     protected override void OnInitialized()
     {
-        var converter = new HighchartsConverter();
-        _options = converter.Convert(ChartDrawing);
+        _options = HighchartsConverter.Convert(ChartDrawing);
         _baseType = _options.Chart.Type;
         _json = _options.ToJson();
     }

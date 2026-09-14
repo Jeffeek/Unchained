@@ -53,7 +53,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(type, "Sales Report", ["Jan", "Feb", "Mar"], [("Revenue", [100.0, 200.0, 150.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Chart.Type.ShouldBe(expectedHighchartsType);
     }
@@ -64,7 +64,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.ColumnClustered, string.Empty, ["Q1", "Q2"], [("Product A", [50.0, 60.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Title.Text.ShouldBe("Untitled Chart");
     }
@@ -79,7 +79,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.Line, "Monthly Revenue", categories, [("Revenue A", seriesA), ("Revenue B", seriesB)]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.XAxis.ShouldNotBeNull();
         result.XAxis.Categories.ShouldBe(categories);
@@ -101,7 +101,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.Pie, "Distribution", [], [("Category", [50.0, 30.0, 20.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.XAxis.ShouldNotBeNull();
         result.XAxis.Categories.ShouldBeNull();
@@ -120,7 +120,7 @@ public class HighchartsConverterTests
         };
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Series[0].Color.ShouldBe("#CC4411");
     }
@@ -132,7 +132,7 @@ public class HighchartsConverterTests
         chart.Chart.Data.Series[0].Fill = null;
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Series[0].Color.ShouldBeNull();
     }
@@ -143,7 +143,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.Line, "Edge Cases", ["A", "B", "C"], [("Data", [1.0, double.NaN, double.PositiveInfinity])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Series[0].Data[0].ShouldBe(1.0);
         result.Series[0].Data[1].ShouldBeNull();
@@ -156,7 +156,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.ColumnClustered, "Test Chart", ["Jan", "Feb"], [("Sales", [10.0, 20.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         var json = result.ToJson();
 
@@ -189,7 +189,7 @@ public class HighchartsConverterTests
         };
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Colors.ShouldBe(["#CC4411", "#112233"]);
     }
@@ -201,7 +201,7 @@ public class HighchartsConverterTests
         chart.Chart.Data.Series[0].Fill = null;
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Colors.ShouldBeNull();
     }
@@ -219,7 +219,7 @@ public class HighchartsConverterTests
         chart.Chart.ValueAxis.Maximum = 1000;
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.YAxis[0].Title!.ShouldBe("Revenue ($)");
         result.YAxis[0].Min.ShouldBe(0);
@@ -236,7 +236,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.Line, "Test", ["A"], [("X", [1.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Tooltip.ShouldNotBeNull();
         result.Tooltip.Crosshairs.ShouldNotBeNull();
@@ -262,7 +262,7 @@ public class HighchartsConverterTests
         );
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.PlotOptions.ShouldNotBeNull();
         result.PlotOptions.Series!.Stacking.ShouldBe("normal");
@@ -279,7 +279,7 @@ public class HighchartsConverterTests
         );
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.PlotOptions.ShouldNotBeNull();
         result.PlotOptions.Series!.Stacking.ShouldBe("percent");
@@ -296,7 +296,7 @@ public class HighchartsConverterTests
         );
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Chart.Type.ShouldBe("bar");
         result.PlotOptions!.Series!.Stacking.ShouldBe("normal");
@@ -313,7 +313,7 @@ public class HighchartsConverterTests
         );
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         var json = result.ToJson();
 
@@ -338,7 +338,7 @@ public class HighchartsConverterTests
         );
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.YAxis.Count.ShouldBe(1);
         result.YAxis[0].Index.ShouldBe(0);
@@ -359,7 +359,7 @@ public class HighchartsConverterTests
         chart.Chart.Data.Series[1].DataLabels = new() { Position = "secondary" };
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.YAxis.Count.ShouldBe(2);
         result.YAxis[0].Index.ShouldBe(0);
@@ -381,7 +381,7 @@ public class HighchartsConverterTests
         );
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Series.All(static s => s.YAxis == 0).ShouldBeTrue();
     }
@@ -397,7 +397,7 @@ public class HighchartsConverterTests
         chart.Chart.Legend.Position = ChartLegendPosition.Bottom;
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Legend.ShouldNotBeNull();
         result.Legend.Enabled.ShouldBeTrue();
@@ -412,7 +412,7 @@ public class HighchartsConverterTests
         chart.Chart.Legend.Position = ChartLegendPosition.Left;
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Legend.ShouldNotBeNull();
         result.Legend.LayoutAlign.ShouldBe("vertical");
@@ -427,7 +427,7 @@ public class HighchartsConverterTests
         chart.Chart.Legend.Position = ChartLegendPosition.Right;
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Legend.ShouldNotBeNull();
         result.Legend.Align.ShouldBe("right");
@@ -441,7 +441,7 @@ public class HighchartsConverterTests
         chart.Chart.Legend.IsVisible = false;
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Legend.ShouldNotBeNull();
         result.Legend.Enabled.ShouldBeFalse();
@@ -462,7 +462,7 @@ public class HighchartsConverterTests
         );
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.XAxis.ShouldNotBeNull();
         result.XAxis.Type.ShouldBeNull();
@@ -481,7 +481,7 @@ public class HighchartsConverterTests
         chart.Chart.CategoryAxis.NumberFormat = "yyyy-mm-dd";
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.XAxis.ShouldNotBeNull();
         result.XAxis.Type.ShouldBe("datetime");
@@ -534,7 +534,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.Line, "Test", ["A"], [("X", [1.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.Series[0].DataPoints.ShouldBeEmpty();
         result.Series[0].Data.ShouldNotBeEmpty();
@@ -555,7 +555,7 @@ public class HighchartsConverterTests
         );
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         var json = result.ToJson();
 
@@ -576,7 +576,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.Pie, "Full", [], [("X", [100.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         // All top-level properties exist (may be null)
         result.Chart.ShouldNotBeNull();
@@ -597,7 +597,7 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.AreaStacked, "Area", ["A"], [("X", [1.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.PlotOptions.ShouldNotBeNull();
         result.PlotOptions.Area.ShouldNotBeNull();
@@ -610,11 +610,240 @@ public class HighchartsConverterTests
         var chart = BuildChart(ChartType.BarFullStacked, "Bar", ["A"], [("X", [1.0])]);
 
         var converter = new HighchartsConverter();
-        var result = converter.Convert(chart);
+        var result = HighchartsConverter.Convert(chart);
 
         result.PlotOptions.ShouldNotBeNull();
         result.PlotOptions.Bar.ShouldNotBeNull();
         result.PlotOptions.Bar.Stacking.ShouldBe("percent");
+    }
+
+    [Fact]
+    public void Convert_RadarChart_PopulatesRadarPlotOptions()
+    {
+        var chart = BuildChart(ChartType.Radar, "Radar", ["A", "B", "C"], [("Skills", [1.0, 2.0, 3.0])]);
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.PlotOptions.ShouldNotBeNull();
+        result.PlotOptions.Radar.ShouldNotBeNull();
+    }
+
+    #endregion
+
+    #region Chart Type Mapping — fallback
+
+    [Fact]
+    public void Convert_UnmappedChartType_FallsBackToLine()
+    {
+        var chart = BuildChart((ChartType)9999, "Unknown", ["A"], [("S", [1.0])]);
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Chart.Type.ShouldBe("line");
+    }
+
+    #endregion
+
+    #region Series colour extraction — non-solid fills
+
+    [Fact]
+    public void Convert_GradientFill_ColorIsNull()
+    {
+        var chart = BuildChart(ChartType.ColumnClustered, "Gradient", ["A"], [("S", [1.0])]);
+        chart.Chart.Data.Series[0].Fill = new() { Type = FillType.Gradient };
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Series[0].Color.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Convert_SolidFillWithNullColor_ColorIsNull()
+    {
+        var chart = BuildChart(ChartType.ColumnClustered, "Solid", ["A"], [("S", [1.0])]);
+        chart.Chart.Data.Series[0].Fill = new() { Type = FillType.Solid, Solid = null };
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Series[0].Color.ShouldBeNull();
+    }
+
+    #endregion
+
+    #region Scatter / Bubble data points
+
+    [Fact]
+    public void Convert_ScatterWithXValues_PopulatesDataPointsWithXY()
+    {
+        var chart = BuildChart(ChartType.ScatterWithMarkersOnly, "Scatter", [], [("Points", [10.0, 20.0])]);
+        chart.Chart.Data.Series[0].XValues.AddRange([1.5, 2.5]);
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        var series = result.Series[0];
+        series.Data.ShouldBeEmpty();
+        series.DataPoints.Count.ShouldBe(2);
+        series.DataPoints[0]!.X.ShouldBe(1.5);
+        series.DataPoints[0]!.Y.ShouldBe(10.0);
+        series.DataPoints[1]!.ShouldNotBeNull();
+        series.DataPoints[1]!.X.ShouldBe(2.5);
+    }
+
+    [Fact]
+    public void Convert_ScatterWithoutXValues_DataPointXIsNull()
+    {
+        var chart = BuildChart(ChartType.ScatterWithMarkersOnly, "Scatter", [], [("Points", [10.0])]);
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Series[0].DataPoints[0]!.X.ShouldBeNull();
+        result.Series[0].DataPoints[0]!.Y.ShouldBe(10.0);
+    }
+
+    [Fact]
+    public void Convert_BubbleWithXValues_SetsSizeAndNullX()
+    {
+        var chart = BuildChart(ChartType.Bubble, "Bubble", [], [("Points", [10.0, 20.0])]);
+        chart.Chart.Data.Series[0].XValues.AddRange([5.0, 6.0]);
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        var dp = result.Series[0].DataPoints[0];
+        dp.Y.ShouldBe(10.0);
+        dp.Size.ShouldBe(5.0);
+        dp.X.ShouldBeNull();
+    }
+
+    #endregion
+
+    #region X-Axis — datetime detection and label rotation
+
+    [
+        Theory,
+        InlineData("mm/dd"),
+        InlineData("dd/mm")
+    ]
+    public void Convert_ShortDateFormat_DetectsDatetime(string numberFormat)
+    {
+        var chart = BuildChart(ChartType.Line, "Time", [], [("S", [1.0])]);
+        chart.Chart.CategoryAxis.NumberFormat = numberFormat;
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.XAxis.ShouldNotBeNull();
+        result.XAxis.Type.ShouldBe("datetime");
+    }
+
+    [
+        Theory,
+        InlineData("r", 45),
+        InlineData("b", 0)
+    ]
+    public void Convert_CategoryAxisPosition_SetsLabelRotation(string position, int expectedRotation)
+    {
+        var chart = BuildChart(ChartType.ColumnClustered, "Rot", ["A"], [("S", [1.0])]);
+        chart.Chart.CategoryAxis.Position = position;
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.XAxis.ShouldNotBeNull();
+        result.XAxis.Labels.ShouldNotBeNull();
+        result.XAxis.Labels.Rotation.ShouldBe(expectedRotation);
+    }
+
+    [Fact]
+    public void Convert_CategoryAxisTitle_SetOnXAxis()
+    {
+        var chart = BuildChart(ChartType.ColumnClustered, "T", ["A"], [("S", [1.0])]);
+        chart.Chart.CategoryAxis.Title = "Months";
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.XAxis.ShouldNotBeNull();
+        result.XAxis.Title.ShouldBe("Months");
+    }
+
+    #endregion
+
+    #region Legend — remaining positions
+
+    [Fact]
+    public void Convert_LegendTop_TopCentered()
+    {
+        var chart = BuildChart(ChartType.Line, "T", ["A"], [("S", [1.0])]);
+        chart.Chart.Legend.Position = ChartLegendPosition.Top;
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Legend.ShouldNotBeNull();
+        result.Legend.Align.ShouldBe("center");
+        result.Legend.VerticalAlign.ShouldBe("top");
+        result.Legend.LayoutAlign.ShouldBe("horizontal");
+    }
+
+    [Fact]
+    public void Convert_LegendTopRight_RightMiddle()
+    {
+        var chart = BuildChart(ChartType.Line, "T", ["A"], [("S", [1.0])]);
+        chart.Chart.Legend.Position = ChartLegendPosition.TopRight;
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Legend.ShouldNotBeNull();
+        result.Legend.Align.ShouldBe("right");
+        result.Legend.VerticalAlign.ShouldBe("middle");
+        result.Legend.LayoutAlign.ShouldBe("horizontal");
+    }
+
+    #endregion
+
+    #region Tooltip — header/point formats
+
+    [Fact]
+    public void Convert_ShowSeriesName_SetsTooltipHeaderFormat()
+    {
+        var chart = BuildChart(ChartType.Line, "T", ["A"], [("S", [1.0])]);
+        chart.Chart.DataLabels.ShowSeriesName = true;
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Tooltip!.HeaderFormat.ShouldBe("<b>{series.name}</b><br/>");
+    }
+
+    [Fact]
+    public void Convert_ShowValueDefault_SetsTooltipPointFormat()
+    {
+        var chart = BuildChart(ChartType.Line, "T", ["A"], [("S", [1.0])]);
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Tooltip!.PointFormat.ShouldBe("{point.y}");
+    }
+
+    [Fact]
+    public void Convert_ShowValueFalse_TooltipPointFormatNull()
+    {
+        var chart = BuildChart(ChartType.Line, "T", ["A"], [("S", [1.0])]);
+        chart.Chart.DataLabels.ShowValue = false;
+
+        var converter = new HighchartsConverter();
+        var result = HighchartsConverter.Convert(chart);
+
+        result.Tooltip!.PointFormat.ShouldBeNull();
     }
 
     #endregion
