@@ -3,7 +3,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 /// <summary>
 ///     Legend configuration.
 /// </summary>
-public class LegendConfig : IHasAdditionalProperties
+public class LegendConfig
 {
     /// <summary>Whether the legend is displayed. Default <c>true</c>.</summary>
     public bool Enabled { get; set; } = true;
@@ -62,5 +62,5 @@ public class LegendConfig : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

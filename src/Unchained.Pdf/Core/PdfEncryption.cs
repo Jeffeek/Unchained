@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Models;
 
 namespace Unchained.Pdf.Core;
@@ -459,7 +458,7 @@ internal static class PdfEncryption
 
     private static ReadOnlySpan<byte> NormalizePasswordV5(string password)
     {
-        var bytes = password.ToUtf8Span();
+        var bytes = Encoding.UTF8.GetBytes(password);
 
         return bytes.Length <= 127 ? bytes : bytes[..127];
     }

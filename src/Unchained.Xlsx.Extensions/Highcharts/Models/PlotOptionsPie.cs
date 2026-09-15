@@ -1,7 +1,7 @@
 namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 
 /// <summary>Per-series defaults for pie charts.</summary>
-public class PlotOptionsPie : IHasAdditionalProperties
+public class PlotOptionsPie
 {
     /// <summary>Whether slices are pulled apart (exploded) on hover.</summary>
     public bool AllowPointSelect { get; set; } = true;
@@ -33,5 +33,5 @@ public class PlotOptionsPie : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

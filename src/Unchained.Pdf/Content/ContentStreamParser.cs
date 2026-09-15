@@ -1,6 +1,6 @@
+using Unchained.Drawing.Primitives.Extensions;
 using System.Text;
 using Unchained.Drawing.Primitives;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Engine.PageResources;
 using Unchained.Pdf.Models;

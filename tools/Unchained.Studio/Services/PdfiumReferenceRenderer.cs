@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text;
 using PDFiumCore;
 using Unchained.Drawing.Constants;
 using Unchained.Drawing.Primitives.Extensions;
@@ -169,7 +170,7 @@ public sealed class PdfiumReferenceRenderer
         ms.Write(PngConstants.Signature);
         WriteIhdr(ms, width, height);
         WriteIdat(ms, rgb, width, height);
-        WriteChunk(ms, PngConstants.IEND.ToUtf8Span(), ReadOnlySpan<byte>.Empty);
+        WriteChunk(ms, "IEND"u8, ReadOnlySpan<byte>.Empty);
         return ms.ToArray();
     }
 
@@ -180,7 +181,7 @@ public sealed class PdfiumReferenceRenderer
         BinaryPrimitives.WriteInt32BigEndian(d[4..], h);
         d[8] = 8;
         d[9] = 2; // bit depth=8, colour type=RGB
-        WriteChunk(s, PngConstants.IHDR.ToUtf8Span(), d);
+        WriteChunk(s, "IHDR"u8, d);
     }
 
     private static void WriteIdat(
@@ -199,7 +200,7 @@ public sealed class PdfiumReferenceRenderer
         using var compressed = new MemoryStream();
         using (var zlib = new ZLibStream(compressed, CompressionLevel.Optimal, true))
             zlib.Write(raw);
-        WriteChunk(s, PngConstants.IDAT.ToUtf8Span(), compressed.ToArray());
+        WriteChunk(s, "IDAT"u8, compressed.ToArray());
     }
 
     private static void WriteChunk(Stream s, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)

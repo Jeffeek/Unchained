@@ -1,5 +1,5 @@
+using System.Text;
 using Unchained.Drawing;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Drawing.Text;
 using Unchained.Drawing.Text.Extensions;
 using Unchained.Ooxml;
@@ -337,7 +337,7 @@ internal sealed partial class SlideRasterizer
             hbFont.SetScale(hbScale, hbScale);
 
             using var hbBuffer = new Buffer();
-            hbBuffer.AddUtf8(text.ToUtf8Span());
+            hbBuffer.AddUtf8(Encoding.UTF8.GetBytes(text));
             hbBuffer.GuessSegmentProperties();
             hbFont.Shape(hbBuffer);
 
@@ -381,7 +381,7 @@ internal sealed partial class SlideRasterizer
             hbFont.SetScale(hbScale, hbScale);
 
             using var hbBuffer = new Buffer();
-            hbBuffer.AddUtf8(text.ToUtf8Span());
+            hbBuffer.AddUtf8(Encoding.UTF8.GetBytes(text));
             hbBuffer.GuessSegmentProperties();
             hbFont.Shape(hbBuffer);
 

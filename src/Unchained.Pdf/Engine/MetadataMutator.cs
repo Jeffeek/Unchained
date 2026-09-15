@@ -1,5 +1,5 @@
+using System.Text;
 using System.Text.RegularExpressions;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -126,9 +126,9 @@ internal static class MetadataMutator
             var metaStream = adapter.Core.ResolveStream(metaObj);
             if (metaStream is not null)
             {
-                var xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
+                var xmp = Encoding.UTF8.GetString(StreamFilters.Decode(metaStream).Span);
                 var cleaned = StripXmpNamespace(xmp, xmpNamespacePrefix);
-                var cleanedBytes = cleaned.ToUtf8Span();
+                var cleanedBytes = Encoding.UTF8.GetBytes(cleaned);
                 var newStreamDict = new PdfDictionary(
                     new Dictionary<string, PdfObject>(metaStream.Dictionary.Entries)
                     {

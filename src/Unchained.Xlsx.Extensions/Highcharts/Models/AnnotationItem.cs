@@ -3,7 +3,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 /// <summary>
 ///     A single annotation item.
 /// </summary>
-public class AnnotationItem : IHasAdditionalProperties
+public class AnnotationItem
 {
     /// <summary>Unique identifier for the annotation.</summary>
     public string? Id { get; set; }
@@ -26,5 +26,5 @@ public class AnnotationItem : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

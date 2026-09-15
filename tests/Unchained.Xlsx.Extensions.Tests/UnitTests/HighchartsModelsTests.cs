@@ -8,16 +8,14 @@ namespace Unchained.Xlsx.Extensions.Tests.UnitTests;
 public sealed class HighchartsModelsTests
 {
     [Fact]
-    public void AnnotationItem_ExposesAdditionalPropertiesThroughInterface()
+    public void AnnotationItem_ExposesAdditionalPropertiesProperty()
     {
         var item = new AnnotationItem
         {
             AdditionalProperties = new Dictionary<string, object> { ["labelrank"] = 3 }
         };
 
-        var exposed = ((IHasAdditionalProperties)item).GetAdditionalProperties();
-
-        exposed.ShouldNotBeNull();
-        exposed.ShouldContainKeyAndValue("labelrank", 3);
+        item.AdditionalProperties.ShouldNotBeNull();
+        item.AdditionalProperties.ShouldContainKeyAndValue("labelrank", 3);
     }
 }

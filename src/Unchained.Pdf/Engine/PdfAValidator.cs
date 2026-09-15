@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -373,7 +373,7 @@ internal static class PdfAValidator
         string xmp;
         try
         {
-            xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
+            xmp = Encoding.UTF8.GetString(StreamFilters.Decode(metaStream).Span);
         }
         catch
         {

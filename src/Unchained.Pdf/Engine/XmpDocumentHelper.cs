@@ -1,5 +1,5 @@
+using System.Text;
 using System.Xml.Linq;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -25,7 +25,7 @@ internal static class XmpDocumentHelper
 
         try
         {
-            return StreamFilters.Decode(stream).Span.FromUtf8Span();
+            return Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
         }
         catch
         {

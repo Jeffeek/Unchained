@@ -7,7 +7,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 ///     via <see cref="JsonSerializerOptions" /> with <see cref="JsonNamingPolicy.CamelCase" />
 ///     and <see cref="JsonSerializerOptions.IgnoreNullValues" />.
 /// </summary>
-public class HighchartsOptions : IHasAdditionalProperties
+public class HighchartsOptions
 {
     /// <summary>Chart type and basic render options.</summary>
     public ChartConfig Chart { get; set; } = new();
@@ -63,5 +63,5 @@ public class HighchartsOptions : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

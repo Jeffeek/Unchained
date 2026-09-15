@@ -56,10 +56,11 @@ public static class Extensions
         return node.ToJsonString(HighchartsConverter.JsonOptions);
     }
 
-    /// <summary>Walks the object graph and merges <see cref="IHasAdditionalProperties" /> dicts into the JSON tree.</summary>
+    /// <summary>Walks the object graph and merges GetAdditionalProperties dicts into the JSON tree.</summary>
     private static void CollectAndMergeAdditionalProperties(object obj, JsonNode node)
     {
-        if (obj is IHasAdditionalProperties hp && hp.GetAdditionalProperties() is { Count: > 0 } dict)
+        var getMethod = obj.GetType().GetMethod("GetAdditionalProperties");
+        if (getMethod?.Invoke(obj, null) is Dictionary<string, object> { Count: > 0 } dict)
             MergeAdditionalProperties(node, dict, allowOverride: false);
 
         // Recurse into object-valued properties.

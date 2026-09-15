@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -167,7 +166,7 @@ internal static class PdfUAValidator
 
         try
         {
-            var xmp = StreamFilters.Decode(stream).Span.FromUtf8Span();
+            var xmp = Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
             return xmp.Contains("dc:title", StringComparison.OrdinalIgnoreCase) ||
                    xmp.Contains("dc:Title", StringComparison.Ordinal);
         }
@@ -547,7 +546,7 @@ internal static class PdfUAValidator
         string xmp;
         try
         {
-            xmp = StreamFilters.Decode(stream).Span.FromUtf8Span();
+            xmp = Encoding.UTF8.GetString(StreamFilters.Decode(stream).Span);
         }
         catch
         {

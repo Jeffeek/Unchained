@@ -1,7 +1,7 @@
+using Unchained.Drawing.Primitives.Extensions;
 using System.Globalization;
 using System.Text;
 using Unchained.Drawing.Primitives;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
