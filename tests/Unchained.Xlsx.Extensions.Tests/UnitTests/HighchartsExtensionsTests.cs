@@ -519,7 +519,8 @@ public class HighchartsExtensionsTests
                         Hover = new PlotOptionsState { Halo = new PlotOptionsHalo() }
                     }
                 },
-                Pie = new PlotOptionsPie { DataLabels = new PlotOptionsDataLabels() }
+                Pie = new PlotOptionsPie { DataLabels = new PlotOptionsDataLabels() },
+                Bubble = new PlotOptionsBubble { MinSize = 5, MaxSize = 20 }
             },
             Legend = new LegendConfig { Enabled = true, Navigation = new LegendNavigation() },
             Tooltip = new Tooltip { Shared = true },
