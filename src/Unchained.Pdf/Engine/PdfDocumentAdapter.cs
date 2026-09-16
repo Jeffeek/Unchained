@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -190,7 +189,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         if (stream is null) return null;
 
         var decoded = StreamFilters.Decode(stream);
-        return decoded.Span.FromUtf8Span();
+        return Encoding.UTF8.GetString(decoded.Span);
     }
 
     // ── Named destinations ────────────────────────────────────────────────────

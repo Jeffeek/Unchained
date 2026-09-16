@@ -3,7 +3,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 /// <summary>
 ///     Chart configuration (type, colors, plot options, etc.).
 /// </summary>
-public class ChartConfig : IHasAdditionalProperties
+public class ChartConfig
 {
     /// <summary>The chart type: "column", "line", "bar", "pie", etc.</summary>
     public string Type { get; set; } = string.Empty;
@@ -57,5 +57,5 @@ public class ChartConfig : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

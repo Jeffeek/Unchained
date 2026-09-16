@@ -3,7 +3,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 /// <summary>
 ///     Navigator configuration. Shows a mini overview of the data.
 /// </summary>
-public class Navigator : IHasAdditionalProperties
+public class Navigator
 {
     /// <summary>Navigator series configuration.</summary>
     public SeriesConfig? Series { get; set; }
@@ -29,5 +29,5 @@ public class Navigator : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

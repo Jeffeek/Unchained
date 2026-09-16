@@ -1,7 +1,7 @@
 namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 
 /// <summary>Chart title.</summary>
-public class TitleConfig : IHasAdditionalProperties
+public class TitleConfig
 {
     /// <summary>The display text of the chart title.</summary>
     public string Text { get; set; } = string.Empty;
@@ -15,5 +15,5 @@ public class TitleConfig : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

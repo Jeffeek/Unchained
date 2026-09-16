@@ -1,5 +1,5 @@
-using Unchained.Drawing.Constants;
 using Unchained.Drawing.Primitives.Extensions;
+using Unchained.Drawing.Constants;
 using Unchained.Pdf.Core;
 
 namespace Unchained.Pdf.Parsing;
@@ -226,7 +226,7 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
         if (raw.SequenceEqual("stream"u8)) return PdfTokenKind.Stream;
         if (raw.SequenceEqual("endstream"u8)) return PdfTokenKind.EndStream;
         if (raw.SequenceEqual("R"u8)) return PdfTokenKind.IndirectRef;
-        if (raw.SequenceEqual(KeywordsConstants.KeywordXref.ToUtf8Span())) return PdfTokenKind.Xref;
+        if (raw.SequenceEqual("xref"u8)) return PdfTokenKind.Xref;
         if (raw.SequenceEqual("trailer"u8)) return PdfTokenKind.Trailer;
         // ReSharper disable once ConvertIfStatementToReturnStatement
         if (raw.SequenceEqual("startxref"u8)) return PdfTokenKind.StartXref;

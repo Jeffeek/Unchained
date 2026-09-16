@@ -26,7 +26,7 @@ public class HighchartsConverter
     /// </summary>
     /// <param name="excelChart">The chart drawing to convert.</param>
     /// <returns>A <see cref="HighchartsOptions" /> ready for JSON serialisation.</returns>
-    public HighchartsOptions Convert(ChartDrawing excelChart)
+    public static HighchartsOptions Convert(ChartDrawing excelChart)
     {
         var model = excelChart.Chart;
         var seriesType = MapChartType(model.Type);
@@ -58,7 +58,7 @@ public class HighchartsConverter
     // ── Chart type mapping ────────────────────────────────────────────────
 
     /// <summary>Maps Excel chart types to their Highcharts string equivalents.</summary>
-    internal static string MapChartType(ChartType type) =>
+    private static string MapChartType(ChartType type) =>
         type switch
         {
             // Column charts

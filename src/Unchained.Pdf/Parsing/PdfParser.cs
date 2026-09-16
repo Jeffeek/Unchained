@@ -1,7 +1,7 @@
+using Unchained.Drawing.Primitives.Extensions;
 using System.Globalization;
 using System.Text;
 using Unchained.Drawing.Constants;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -312,7 +312,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
             if (span[i] != (byte)'x')
                 continue;
 
-            if (!span.Slice(i, 4).SequenceEqual(KeywordsConstants.KeywordXref.ToUtf8Span()))
+            if (!span.Slice(i, 4).SequenceEqual("xref"u8))
                 continue;
 
             if (i == 0 || span[i - 1] is (byte)'\r' or (byte)'\n')

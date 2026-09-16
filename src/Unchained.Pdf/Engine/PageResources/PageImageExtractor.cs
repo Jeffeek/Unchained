@@ -1,5 +1,5 @@
-using Unchained.Drawing.Primitives;
 using Unchained.Drawing.Primitives.Extensions;
+using Unchained.Drawing.Primitives;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;

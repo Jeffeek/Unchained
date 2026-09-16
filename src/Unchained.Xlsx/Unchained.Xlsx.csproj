@@ -22,9 +22,6 @@
 
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" />
-    <PackageReference Include="DocumentFormat.OpenXml.Features" />
-    <PackageReference Include="DocumentFormat.OpenXml.Framework" />
-    <PackageReference Include="DocumentFormat.OpenXml.Linq" />
     <PackageReference Include="System.IO.Packaging" />
   </ItemGroup>
 

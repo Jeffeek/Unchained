@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
+using System.Text;
 using Unchained.Drawing.Constants;
-using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Pdf.Models;
 
@@ -52,9 +52,9 @@ internal static class PngWriter
 
         using var ms = new MemoryStream();
         ms.Write(PngConstants.Signature, 0, PngConstants.Signature.Length);
-        WriteChunk(ms, PngConstants.IHDR.ToUtf8Span(), Ihdr(width, height, colorType));
-        WriteChunk(ms, PngConstants.IDAT.ToUtf8Span(), idat);
-        WriteChunk(ms, PngConstants.IEND.ToUtf8Span(), []);
+        WriteChunk(ms, Encoding.UTF8.GetBytes(PngConstants.IHDR), Ihdr(width, height, colorType));
+        WriteChunk(ms, Encoding.UTF8.GetBytes(PngConstants.IDAT), idat);
+        WriteChunk(ms, Encoding.UTF8.GetBytes(PngConstants.IEND), []);
 
         return ms.ToArray();
     }

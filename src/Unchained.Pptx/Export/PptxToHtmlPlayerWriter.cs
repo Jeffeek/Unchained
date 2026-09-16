@@ -1,5 +1,4 @@
 using System.Text;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Ooxml;
 using Unchained.Pptx.Engine;
 
@@ -61,7 +60,7 @@ internal static class PptxToHtmlPlayerWriter
         sb.AppendLine("</html>");
 
         options.Progress?.Report(1.0);
-        return sb.ToString().ToUtf8Span().ToArray();
+        return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
     private static void WriteStyle(

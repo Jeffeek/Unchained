@@ -1,4 +1,4 @@
-using Unchained.Drawing.Primitives.Extensions;
+using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 
@@ -26,7 +26,7 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
         var adapter = MutationHelper.Cast(nameof(document), document);
         var (existing, builder) = MutationHelper.CollectWithBuilder(adapter);
 
-        var xmpBytes = xmpXml.ToUtf8Span();
+        var xmpBytes = Encoding.UTF8.GetBytes(xmpXml);
         var metaStream = builder.Add(
             new PdfStream(
                 new PdfDictionary(
