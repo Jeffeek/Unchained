@@ -38,7 +38,7 @@ public sealed class PageContentEditor : IPageContentEditor
 
 #pragma warning disable CA2007
         await using var blank = CreateBlankDocument(width, height);
-#pragma warning enable CA2007
+#pragma warning restore CA2007
         await new PageOrganizer().InsertPagesAsync(document, insertAt, blank, ct).ConfigureAwait(false);
         return insertAt;
     }

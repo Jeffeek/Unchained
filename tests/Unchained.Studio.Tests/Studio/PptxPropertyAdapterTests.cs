@@ -1,4 +1,3 @@
-using System.Linq;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Media;
 using Unchained.Pptx.Engine;
