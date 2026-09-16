@@ -93,17 +93,14 @@ public sealed class FormulaLogicalTests
     [
         Theory,
         InlineData("=IFNA(NA(),\"caught\")", "caught"),
-        InlineData("=IFNA(42,\"caught\")", 42.0),
-        InlineData("=IFNA(1/0,\"not caught\")", "not caught")
+        InlineData("=IFNA(42,\"caught\")", 42.0)
     ]
-    public void IfNa_CatchesNaErrorOnly(string formula, object? expected = null)
-    {
-        var result = Eval(formula);
-        if (expected == null)
-            result.ShouldBe(CellError.DivisionByZero); // Not caught
-        else
-            result.ShouldBe(expected);
-    }
+    public void IfNa_CatchesNaErrorOnly(string formula, object expected) =>
+        Eval(formula).ShouldBe(expected);
+
+    [Fact]
+    public void IfNa_NonNaError_NotCaught() =>
+        Eval("=IFNA(1/0,\"not caught\")").ShouldBe(CellError.DivisionByZero);
 
     [Fact]
     public void IfNa_InsufficientArgs_ReturnsValueError() =>
