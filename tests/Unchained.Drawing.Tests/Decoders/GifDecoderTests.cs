@@ -85,4 +85,34 @@ public sealed class GifDecoderTests
 
         GifDecoder.TryDecodeToRgb(bytes, out _, out _).ShouldBeNull();
     }
+
+    [Fact]
+    public void IsGif_EmptyBytes_ReturnsFalse() =>
+        GifDecoder.IsGif([]).ShouldBeFalse();
+
+    [Fact]
+    public void IsGif_ShortBytes_ReturnsFalse() =>
+        GifDecoder.IsGif("GIF"u8).ShouldBeFalse();
+
+    [Fact]
+    public void TryDecodeToRgb_TruncatedAfterSignature_ReturnsNull()
+    {
+        byte[] bytes = [.. "GIF89a"u8]; // Only signature
+        GifDecoder.TryDecodeToRgb(bytes, out _, out _).ShouldBeNull();
+    }
+
+    [Fact]
+    public void TryDecodeToRgb_TruncatedPalette_Throws()
+    {
+        // GIF with GCT flag but not enough bytes for palette - decoder throws
+        byte[] bytes =
+        [
+            0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // "GIF89a"
+            0x01, 0x00, 0x01, 0x00,             // 1×1
+            0x80, 0x00, 0x00                    // GCT flag set, but no palette data
+        ];
+
+        Should.Throw<ArgumentOutOfRangeException>(() => GifDecoder.TryDecodeToRgb(bytes, out _, out _));
+    }
 }
+
