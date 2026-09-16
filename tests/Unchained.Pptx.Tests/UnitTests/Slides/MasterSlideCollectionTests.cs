@@ -63,4 +63,49 @@ public sealed class MasterSlideCollectionTests
         var count = nonGeneric.Cast<object?>().Count();
         count.ShouldBe(1);
     }
+
+    [Fact]
+    public void Indexer_Get_ReturnsCorrectMaster()
+    {
+        var collection = new MasterSlideCollection();
+        var a = new MasterSlide { Name = "A" };
+        var b = new MasterSlide { Name = "B" };
+        collection.Add(a);
+        collection.Add(b);
+        collection[0].ShouldBeSameAs(a);
+        collection[1].ShouldBeSameAs(b);
+    }
+
+    [Fact]
+    public void Indexer_Get_NegativeIndex_Throws()
+    {
+        var collection = new MasterSlideCollection { new MasterSlide() };
+        Should.Throw<ArgumentOutOfRangeException>(() => collection[-1]);
+    }
+
+    [Fact]
+    public void Indexer_Get_IndexTooHigh_Throws()
+    {
+        var collection = new MasterSlideCollection { new MasterSlide() };
+        Should.Throw<ArgumentOutOfRangeException>(() => collection[10]);
+    }
+
+    [Fact]
+    public void Remove_MasterNotInCollection_DoesNotThrow()
+    {
+        var collection = new MasterSlideCollection { new MasterSlide() };
+        var foreign = new MasterSlide();
+        Should.NotThrow(() => collection.Remove(foreign));
+        collection.Count.ShouldBe(1); // Original master still there
+    }
+
+    [Fact]
+    public void Remove_ExistingMaster_RemovesIt()
+    {
+        var collection = new MasterSlideCollection();
+        var master = new MasterSlide();
+        collection.Add(master);
+        collection.Remove(master);
+        collection.Count.ShouldBe(0);
+    }
 }

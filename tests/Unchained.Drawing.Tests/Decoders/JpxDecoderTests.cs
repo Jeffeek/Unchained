@@ -66,4 +66,24 @@ public sealed class JpxDecoderTests
 
         anyChannelDiffers.ShouldBeTrue();
     }
+
+    [Fact]
+    public void Decode_MalformedData_ThrowsInvalidOperationException()
+    {
+        var malformed = new byte[] { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0xFF, 0xFF };
+
+        Should.Throw<InvalidOperationException>(() => JpxDecoder.Decode(malformed));
+    }
+
+    [Fact]
+    public void Decode_EmptyData_ThrowsInvalidOperationException() =>
+        Should.Throw<InvalidOperationException>(static () => JpxDecoder.Decode(Array.Empty<byte>()));
+
+    [Fact]
+    public void Decode_TruncatedHeader_ThrowsInvalidOperationException()
+    {
+        var truncated = "\0\0\0"u8.ToArray();
+
+        Should.Throw<InvalidOperationException>(() => JpxDecoder.Decode(truncated));
+    }
 }

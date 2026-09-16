@@ -15,12 +15,13 @@ public sealed class FormulaConditionalTests
     private static object? Eval(string formula, bool withData = false)
     {
         using var document = XlsxFixtures.WithSheets("Sheet1");
-        if (withData)
-        {
-            document.Sheets[0].SetValue(1, 1, 1.0);
-            document.Sheets[0].SetValue(2, 1, 2.0);
-            document.Sheets[0].SetValue(3, 1, 3.0);
-        }
+
+        if (!withData)
+            return SpreadsheetDocument.EvaluateFormula(document.Sheets[0], formula);
+
+        document.Sheets[0].SetValue(1, 1, 1.0);
+        document.Sheets[0].SetValue(2, 1, 2.0);
+        document.Sheets[0].SetValue(3, 1, 3.0);
 
         return SpreadsheetDocument.EvaluateFormula(document.Sheets[0], formula);
     }
@@ -98,5 +99,63 @@ public sealed class FormulaConditionalTests
         doc.Sheets[0].SetValue(2, 2, 2.0);  // B2
         var result = SpreadsheetDocument.EvaluateFormula(doc.Sheets[0], "=AVERAGEIF(B1:B2,\">1\",A1:A2)");
         result.ShouldBe(20.0); // Only A2 where B2>1
+    }
+
+    [Fact]
+    public void AverageIf_NoMatches_ReturnsDivByZero()
+    {
+        using var doc = XlsxFixtures.WithSheets("Sheet1");
+        doc.Sheets[0].SetValue(1, 1, 1.0);
+        doc.Sheets[0].SetValue(2, 1, 2.0);
+        var result = SpreadsheetDocument.EvaluateFormula(doc.Sheets[0], "=AVERAGEIF(A1:A2,\">100\")");
+        result.ShouldBe(CellError.DivisionByZero);
+    }
+
+    [Fact]
+    public void AverageIfs_NoMatches_ReturnsDivByZero()
+    {
+        using var doc = XlsxFixtures.WithSheets("Sheet1");
+        doc.Sheets[0].SetValue(1, 1, 1.0);
+        doc.Sheets[0].SetValue(2, 1, 2.0);
+        var result = SpreadsheetDocument.EvaluateFormula(doc.Sheets[0], "=AVERAGEIFS(A1:A2,A1:A2,\">100\")");
+        result.ShouldBe(CellError.DivisionByZero);
+    }
+
+    [Fact]
+    public void CountIfs_EmptyPairs_ReturnsValueError() => Eval("=COUNTIFS()").ShouldBe(CellError.Value);
+
+    [Fact]
+    public void SumProduct_EmptyArgs_ReturnsZero() => Eval("=SUMPRODUCT()").ShouldBe(0.0);
+
+    [Fact]
+    public void SumProduct_TwoArrays_MultiplyAndSum()
+    {
+        using var doc = XlsxFixtures.WithSheets("Sheet1");
+        doc.Sheets[0].SetValue(1, 1, 2.0); // A1
+        doc.Sheets[0].SetValue(2, 1, 3.0); // A2
+        doc.Sheets[0].SetValue(1, 2, 4.0); // B1
+        doc.Sheets[0].SetValue(2, 2, 5.0); // B2
+        var result = SpreadsheetDocument.EvaluateFormula(doc.Sheets[0], "=SUMPRODUCT(A1:A2,B1:B2)");
+        result.ShouldBe(23.0); // 2*4 + 3*5
+    }
+
+    [Fact]
+    public void MinIfs_NoMatches_ReturnsDivByZero()
+    {
+        using var doc = XlsxFixtures.WithSheets("Sheet1");
+        doc.Sheets[0].SetValue(1, 1, 10.0);
+        doc.Sheets[0].SetValue(2, 1, 20.0);
+        var result = SpreadsheetDocument.EvaluateFormula(doc.Sheets[0], "=MINIFS(A1:A2,A1:A2,\">100\")");
+        result.ShouldBe(CellError.DivisionByZero);
+    }
+
+    [Fact]
+    public void MaxIfs_NoMatches_ReturnsDivByZero()
+    {
+        using var doc = XlsxFixtures.WithSheets("Sheet1");
+        doc.Sheets[0].SetValue(1, 1, 10.0);
+        doc.Sheets[0].SetValue(2, 1, 20.0);
+        var result = SpreadsheetDocument.EvaluateFormula(doc.Sheets[0], "=MAXIFS(A1:A2,A1:A2,\">100\")");
+        result.ShouldBe(CellError.DivisionByZero);
     }
 }
