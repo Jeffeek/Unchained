@@ -10,6 +10,7 @@ using Unchained.Studio.Services;
 using Unchained.Studio.Tests.Services;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Worksheets;
+using TestContext = Xunit.TestContext;
 
 namespace Unchained.Studio.Tests.Components;
 
@@ -89,9 +90,9 @@ public sealed class XlsxTabTests : MudTestContext
         var processor = new SpreadsheetProcessor();
         var workbook = processor.CreateBlank("Sheet1");
         using var ms = new MemoryStream();
-        await processor.SaveAsync(workbook, ms);
+        await processor.SaveAsync(workbook, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx");
+        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx", TestContext.Current.CancellationToken);
 
         var cut = Render<XlsxTab>();
 
@@ -107,9 +108,9 @@ public sealed class XlsxTabTests : MudTestContext
         var processor = new SpreadsheetProcessor();
         var workbook = processor.CreateBlank("Sheet1");
         using var ms = new MemoryStream();
-        await processor.SaveAsync(workbook, ms);
+        await processor.SaveAsync(workbook, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx");
+        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx", TestContext.Current.CancellationToken);
 
         var cut = Render<XlsxTab>();
 
@@ -125,9 +126,9 @@ public sealed class XlsxTabTests : MudTestContext
         var processor = new SpreadsheetProcessor();
         var workbook = processor.CreateBlank("Sheet1");
         using var ms = new MemoryStream();
-        await processor.SaveAsync(workbook, ms);
+        await processor.SaveAsync(workbook, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx");
+        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx", TestContext.Current.CancellationToken);
 
         var cut = Render<XlsxTab>();
 
@@ -143,9 +144,9 @@ public sealed class XlsxTabTests : MudTestContext
         var processor = new SpreadsheetProcessor();
         var workbook = processor.CreateBlank("MySheet");
         using var ms = new MemoryStream();
-        await processor.SaveAsync(workbook, ms);
+        await processor.SaveAsync(workbook, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx");
+        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx", TestContext.Current.CancellationToken);
 
         var cut = Render<XlsxTab>();
 
@@ -161,9 +162,9 @@ public sealed class XlsxTabTests : MudTestContext
         var processor = new SpreadsheetProcessor();
         var workbook = processor.CreateBlank("Sheet1");
         using var ms = new MemoryStream();
-        await processor.SaveAsync(workbook, ms);
+        await processor.SaveAsync(workbook, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx");
+        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx", TestContext.Current.CancellationToken);
 
         var cut = Render<XlsxTab>();
 
@@ -182,9 +183,9 @@ public sealed class XlsxTabTests : MudTestContext
         workbook.Sheets.Add("Sheet3");
 
         using var ms = new MemoryStream();
-        await processor.SaveAsync(workbook, ms);
+        await processor.SaveAsync(workbook, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx");
+        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx", TestContext.Current.CancellationToken);
 
         var cut = Render<XlsxTab>();
 
@@ -202,9 +203,9 @@ public sealed class XlsxTabTests : MudTestContext
         var processor = new SpreadsheetProcessor();
         var workbook = processor.CreateBlank("Sheet1");
         using var ms = new MemoryStream();
-        await processor.SaveAsync(workbook, ms);
+        await processor.SaveAsync(workbook, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx");
+        await session.LoadXlsxAsync(ms.ToArray(), "test.xlsx", TestContext.Current.CancellationToken);
 
         var cut = Render<XlsxTab>();
 

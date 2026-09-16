@@ -54,4 +54,49 @@ public sealed class FormulaConditionalTests
     ]
     public void RangeAggregates_WithCriteria(string formula, double expected) =>
         ((double)Eval(formula, withData: true)!).ShouldBe(expected, 1e-9);
+
+    [Fact]
+    public void SumIf_InsufficientArgs_ReturnsValueError() => Eval("=SUMIF(A1:A3)").ShouldBe(CellError.Value);
+
+    [Fact]
+    public void CountIf_InsufficientArgs_ReturnsValueError() => Eval("=COUNTIF(A1:A3)").ShouldBe(CellError.Value);
+
+    [Fact]
+    public void AverageIf_InsufficientArgs_ReturnsValueError() => Eval("=AVERAGEIF(A1:A3)").ShouldBe(CellError.Value);
+
+    [Fact]
+    public void SumIfs_InsufficientArgs_ReturnsValueError() => Eval("=SUMIFS(A1:A3,A1:A3)").ShouldBe(CellError.Value);
+
+    [Fact]
+    public void AverageIfs_InsufficientArgs_ReturnsValueError() => Eval("=AVERAGEIFS(A1:A3,A1:A3)").ShouldBe(CellError.Value);
+
+    [Fact]
+    public void MaxIfs_InsufficientArgs_ReturnsValueError() => Eval("=MAXIFS(A1:A3,A1:A3)").ShouldBe(CellError.Value);
+
+    [Fact]
+    public void MinIfs_InsufficientArgs_ReturnsValueError() => Eval("=MINIFS(A1:A3,A1:A3)").ShouldBe(CellError.Value);
+
+    [Fact]
+    public void SumIf_WithSumRange_AggregatesDifferentRange()
+    {
+        using var doc = XlsxFixtures.WithSheets("Sheet1");
+        doc.Sheets[0].SetValue(1, 1, 10.0); // A1
+        doc.Sheets[0].SetValue(2, 1, 20.0); // A2
+        doc.Sheets[0].SetValue(1, 2, 1.0);  // B1
+        doc.Sheets[0].SetValue(2, 2, 2.0);  // B2
+        var result = SpreadsheetDocument.EvaluateFormula(doc.Sheets[0], "=SUMIF(B1:B2,\">1\",A1:A2)");
+        result.ShouldBe(20.0); // Only A2 where B2>1
+    }
+
+    [Fact]
+    public void AverageIf_WithRange_AggregatesDifferentRange()
+    {
+        using var doc = XlsxFixtures.WithSheets("Sheet1");
+        doc.Sheets[0].SetValue(1, 1, 10.0); // A1
+        doc.Sheets[0].SetValue(2, 1, 20.0); // A2
+        doc.Sheets[0].SetValue(1, 2, 1.0);  // B1
+        doc.Sheets[0].SetValue(2, 2, 2.0);  // B2
+        var result = SpreadsheetDocument.EvaluateFormula(doc.Sheets[0], "=AVERAGEIF(B1:B2,\">1\",A1:A2)");
+        result.ShouldBe(20.0); // Only A2 where B2>1
+    }
 }

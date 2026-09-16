@@ -134,7 +134,7 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue MinMaxIfs(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev, bool max)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 3) return FormulaValue.FromError(CellError.Value);
 
         var values = ev.Evaluate(args[0]).Flatten().ToList();
         var pairs = CriteriaPairs(args, ev, 1);

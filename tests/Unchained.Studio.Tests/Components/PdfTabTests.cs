@@ -8,6 +8,7 @@ using Unchained.Studio.Infrastructure;
 using Unchained.Studio.Services;
 using Unchained.Studio.Tests.Services;
 using Unchained.Xlsx.Engine;
+using TestContext = Xunit.TestContext;
 
 namespace Unchained.Studio.Tests.Components;
 
@@ -47,7 +48,7 @@ public sealed class PdfTabTests : MudTestContext
             fullPath = Path.Combine(AppContext.BaseDirectory, "EmptyFiles", "document", "empty.pdf");
         }
 
-        return File.ReadAllBytesAsync(fullPath);
+        return File.ReadAllBytesAsync(fullPath, TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public sealed class PdfTabTests : MudTestContext
         RegisterServices(session, renderer);
 
         var pdfBytes = await GetTestPdfBytes();
-        await session.LoadPdfAsync(pdfBytes, "test.pdf");
+        await session.LoadPdfAsync(pdfBytes, "test.pdf", TestContext.Current.CancellationToken);
 
         // Render AFTER loading document
         var cut = Render<PdfTab>();
@@ -99,7 +100,7 @@ public sealed class PdfTabTests : MudTestContext
         RegisterServices(session, renderer);
 
         var pdfBytes = await GetTestPdfBytes();
-        await session.LoadPdfAsync(pdfBytes, "test.pdf");
+        await session.LoadPdfAsync(pdfBytes, "test.pdf", TestContext.Current.CancellationToken);
 
         var cut = Render<PdfTab>();
 
@@ -114,7 +115,7 @@ public sealed class PdfTabTests : MudTestContext
         RegisterServices(session, renderer);
 
         var pdfBytes = await GetTestPdfBytes();
-        await session.LoadPdfAsync(pdfBytes, "test.pdf");
+        await session.LoadPdfAsync(pdfBytes, "test.pdf", TestContext.Current.CancellationToken);
 
         var cut = Render<PdfTab>();
 
@@ -131,7 +132,7 @@ public sealed class PdfTabTests : MudTestContext
         RegisterServices(session, renderer);
 
         var pdfBytes = await GetTestPdfBytes();
-        await session.LoadPdfAsync(pdfBytes, "test.pdf");
+        await session.LoadPdfAsync(pdfBytes, "test.pdf", TestContext.Current.CancellationToken);
 
         var cut = Render<PdfTab>();
 
@@ -146,7 +147,7 @@ public sealed class PdfTabTests : MudTestContext
         RegisterServices(session, renderer);
 
         var pdfBytes = await GetTestPdfBytes();
-        await session.LoadPdfAsync(pdfBytes, "test.pdf");
+        await session.LoadPdfAsync(pdfBytes, "test.pdf", TestContext.Current.CancellationToken);
 
         var cut = Render<PdfTab>();
 
@@ -161,7 +162,7 @@ public sealed class PdfTabTests : MudTestContext
         RegisterServices(session, renderer);
 
         var pdfBytes = await GetTestPdfBytes();
-        await session.LoadPdfAsync(pdfBytes, "test.pdf");
+        await session.LoadPdfAsync(pdfBytes, "test.pdf", TestContext.Current.CancellationToken);
 
         session.Pdf.ShouldNotBeNull();
         session.Pdf.Document.ShouldNotBeNull();
@@ -176,7 +177,7 @@ public sealed class PdfTabTests : MudTestContext
         RegisterServices(session, renderer);
 
         var pdfBytes = await GetTestPdfBytes();
-        await session.LoadPdfAsync(pdfBytes, "test.pdf");
+        await session.LoadPdfAsync(pdfBytes, "test.pdf", TestContext.Current.CancellationToken);
 
         var cut = Render<PdfTab>();
 

@@ -21,6 +21,9 @@ internal sealed class PdfiumPdfRenderer : IPdfRenderer
 {
     // ReSharper disable once ChangeFieldTypeToSystemThreadingLock
     private static readonly object InitLock = new();
+    // global render lock — PDFium native state not thread-safe on ARM64
+    // ReSharper disable once ChangeFieldTypeToSystemThreadingLock
+    private static readonly object RenderLock = new();
     private static bool _initialized;
     private static bool _available;
 
@@ -76,64 +79,67 @@ internal sealed class PdfiumPdfRenderer : IPdfRenderer
 
     private static byte[] RenderPage(IReadOnlyCollection<byte> pdfBytes, int pageNumber, int dpi)
     {
-        FpdfDocumentT? doc = null;
-        FpdfPageT? fpage = null;
-        FpdfBitmapT? bitmap = null;
-
-        // Pin the byte array so Pdfium can read it via IntPtr without GC relocation.
-        var gch = GCHandle.Alloc(pdfBytes, GCHandleType.Pinned);
-        try
+        lock (RenderLock)
         {
-            // Load document from memory — requires pinned IntPtr
-            doc = fpdfview.FPDF_LoadMemDocument(gch.AddrOfPinnedObject(), pdfBytes.Count, null);
-            gch.Free(); // document is now loaded; we no longer need the pin
-            if (doc is null)
-                throw new InvalidOperationException("Failed to load PDF document.");
+            FpdfDocumentT? doc = null;
+            FpdfPageT? fpage = null;
+            FpdfBitmapT? bitmap = null;
 
-            var pageCount = fpdfview.FPDF_GetPageCount(doc);
-            if (pageNumber < 1 || pageNumber > pageCount)
-                throw new ArgumentOutOfRangeException(nameof(pageNumber));
+            // Pin the byte array so Pdfium can read it via IntPtr without GC relocation.
+            var gch = GCHandle.Alloc(pdfBytes, GCHandleType.Pinned);
+            try
+            {
+                // Load document from memory — requires pinned IntPtr
+                doc = fpdfview.FPDF_LoadMemDocument(gch.AddrOfPinnedObject(), pdfBytes.Count, null);
+                gch.Free(); // document is now loaded; we no longer need the pin
+                if (doc is null)
+                    throw new InvalidOperationException("Failed to load PDF document.");
 
-            // Load page (0-based index)
-            fpage = fpdfview.FPDF_LoadPage(doc, pageNumber - 1);
-            if (fpage is null)
-                throw new InvalidOperationException("Failed to load PDF page.");
+                var pageCount = fpdfview.FPDF_GetPageCount(doc);
+                if (pageNumber < 1 || pageNumber > pageCount)
+                    throw new ArgumentOutOfRangeException(nameof(pageNumber));
 
-            // Compute pixel dimensions
-            var widthPt = fpdfview.FPDF_GetPageWidthF(fpage);
-            var heightPt = fpdfview.FPDF_GetPageHeightF(fpage);
-            var scale = dpi / 72.0;
-            var pixW = Math.Max(1, (int)Math.Ceiling(widthPt * scale));
-            var pixH = Math.Max(1, (int)Math.Ceiling(heightPt * scale));
+                // Load page (0-based index)
+                fpage = fpdfview.FPDF_LoadPage(doc, pageNumber - 1);
+                if (fpage is null)
+                    throw new InvalidOperationException("Failed to load PDF page.");
 
-            // Create BGRA bitmap, fill with white, render
-            bitmap = fpdfview.FPDFBitmapCreate(pixW, pixH, 0 /* no alpha */);
-            if (bitmap is null)
-                throw new InvalidOperationException("Failed to create bitmap.");
+                // Compute pixel dimensions
+                var widthPt = fpdfview.FPDF_GetPageWidthF(fpage);
+                var heightPt = fpdfview.FPDF_GetPageHeightF(fpage);
+                var scale = dpi / 72.0;
+                var pixW = Math.Max(1, (int)Math.Ceiling(widthPt * scale));
+                var pixH = Math.Max(1, (int)Math.Ceiling(heightPt * scale));
 
-            // ReSharper disable once BadListLineBreaks
-            fpdfview.FPDFBitmapFillRect(bitmap, 0, 0, pixW, pixH, 0xFFFFFFFF);
+                // Create BGRA bitmap, fill with white, render
+                bitmap = fpdfview.FPDFBitmapCreate(pixW, pixH, 0 /* no alpha */);
+                if (bitmap is null)
+                    throw new InvalidOperationException("Failed to create bitmap.");
 
-            // FPDF_ANNOT = 0x01 — also render annotations (matches Chrome's default view)
-            // ReSharper disable BadListLineBreaks
-            fpdfview.FPDF_RenderPageBitmap(bitmap, fpage, 0, 0, pixW, pixH, 0, 0x01);
-            // ReSharper restore BadListLineBreaks
+                // ReSharper disable once BadListLineBreaks
+                fpdfview.FPDFBitmapFillRect(bitmap, 0, 0, pixW, pixH, 0xFFFFFFFF);
 
-            // Read BGRA pixel data and encode to PNG
-            var bufferPtr = fpdfview.FPDFBitmapGetBuffer(bitmap);
-            var stride = fpdfview.FPDFBitmapGetStride(bitmap);
-            return BgraToPng(bufferPtr, stride, pixW, pixH);
-        }
-        finally
-        {
-            if (gch.IsAllocated)
-                gch.Free(); // safety: free if exception before explicit Free
-            if (bitmap is not null)
-                fpdfview.FPDFBitmapDestroy(bitmap);
-            if (fpage is not null)
-                fpdfview.FPDF_ClosePage(fpage);
-            if (doc is not null)
-                fpdfview.FPDF_CloseDocument(doc);
+                // FPDF_ANNOT = 0x01 — also render annotations (matches Chrome's default view)
+                // ReSharper disable BadListLineBreaks
+                fpdfview.FPDF_RenderPageBitmap(bitmap, fpage, 0, 0, pixW, pixH, 0, 0x01);
+                // ReSharper restore BadListLineBreaks
+
+                // Read BGRA pixel data and encode to PNG
+                var bufferPtr = fpdfview.FPDFBitmapGetBuffer(bitmap);
+                var stride = fpdfview.FPDFBitmapGetStride(bitmap);
+                return BgraToPng(bufferPtr, stride, pixW, pixH);
+            }
+            finally
+            {
+                if (gch.IsAllocated)
+                    gch.Free(); // safety: free if exception before explicit Free
+                if (bitmap is not null)
+                    fpdfview.FPDFBitmapDestroy(bitmap);
+                if (fpage is not null)
+                    fpdfview.FPDF_ClosePage(fpage);
+                if (doc is not null)
+                    fpdfview.FPDF_CloseDocument(doc);
+            }
         }
     }
 
