@@ -26,7 +26,7 @@ public sealed class PageContentEditor : IPageContentEditor
     {
         var adapter = MutationHelper.Cast(nameof(document), document);
         var destCount = adapter.Core.PageCount;
-        var insertAt = atPageNumber ?? destCount + 1;
+        var insertAt = atPageNumber ?? (destCount + 1);
         if (insertAt < 1 || insertAt > destCount + 1)
         {
             throw new ArgumentOutOfRangeException(
@@ -36,7 +36,9 @@ public sealed class PageContentEditor : IPageContentEditor
             );
         }
 
+#pragma warning disable CA2007
         await using var blank = CreateBlankDocument(width, height);
+#pragma warning restore CA2007
         await new PageOrganizer().InsertPagesAsync(document, insertAt, blank, ct).ConfigureAwait(false);
         return insertAt;
     }
@@ -50,7 +52,9 @@ public sealed class PageContentEditor : IPageContentEditor
         double y,
         TextDrawOptions? options = null,
         CancellationToken ct = default
+        // ReSharper disable BadListLineBreaks
     ) => Task.Run(() => DrawText(document, pageNumber, text, x, y, options ?? TextDrawOptions.Default), ct);
+    // ReSharper restore BadListLineBreaks
 
     /// <inheritdoc />
     public Task DrawImageAsync(
@@ -62,7 +66,9 @@ public sealed class PageContentEditor : IPageContentEditor
         double width,
         double height,
         CancellationToken ct = default
+        // ReSharper disable BadListLineBreaks
     ) => Task.Run(() => DrawImage(document, pageNumber, image, x, y, width, height), ct);
+    // ReSharper restore BadListLineBreaks
 
     // ── Draw text ─────────────────────────────────────────────────────────────
 
@@ -131,15 +137,20 @@ public sealed class PageContentEditor : IPageContentEditor
     )
     {
         if (image.RgbData.Length != image.Width * image.Height * 3)
+        {
             throw new ArgumentException(
                 $"RgbData length {image.RgbData.Length} does not match {image.Width}x{image.Height}x3 = {image.Width * image.Height * 3}.",
                 nameof(image)
             );
+        }
+
         if (image.Alpha is not null && image.Alpha.Length != image.Width * image.Height)
+        {
             throw new ArgumentException(
                 $"Alpha length {image.Alpha.Length} does not match {image.Width}x{image.Height} = {image.Width * image.Height}.",
                 nameof(image)
             );
+        }
 
         var adapter = MutationHelper.Cast(nameof(document), document);
         var (existing, builder) = MutationHelper.CollectWithBuilder(adapter);
@@ -215,7 +226,7 @@ public sealed class PageContentEditor : IPageContentEditor
 
     private static void CommitPageContent(
         PdfDocumentAdapter adapter,
-        List<PdfIndirectObject> existing,
+        IReadOnlyCollection<PdfIndirectObject> existing,
         ObjectGraphBuilder builder,
         PdfDictionary targetDict,
         byte[] contentBytes,
@@ -265,10 +276,11 @@ public sealed class PageContentEditor : IPageContentEditor
         var categoryDict = core.ResolveDict(resources?[PdfName.Get(category)]);
         var used = new HashSet<string>(categoryDict?.Entries.Keys ?? []);
 
-        for (var i = 0; ; i++)
+        for (var i = 0;; i++)
         {
             var key = $"{prefix}{i}";
-            if (used.Add(key)) return key;
+            if (used.Add(key))
+                return key;
         }
     }
 

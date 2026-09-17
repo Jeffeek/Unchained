@@ -34,13 +34,27 @@ public sealed partial class Worksheet
     {
         switch (value)
         {
-            case null: ClearCell(row, column); break;
-            case string s: SetValue(row, column, s); break;
-            case bool b: SetValue(row, column, b); break;
-            case DateTime dt: SetValue(row, column, dt); break;
-            case DateTimeOffset dto: SetValue(row, column, dto); break;
-            case CellError e: this[row, column].SetValue(e); break;
-            case IConvertible conv: SetValue(row, column, conv.ToDouble(CultureInfo.InvariantCulture)); break;
+            case null:
+                ClearCell(row, column);
+            break;
+            case string s:
+                SetValue(row, column, s);
+            break;
+            case bool b:
+                SetValue(row, column, b);
+            break;
+            case DateTime dt:
+                SetValue(row, column, dt);
+            break;
+            case DateTimeOffset dto:
+                SetValue(row, column, dto);
+            break;
+            case CellError e:
+                this[row, column].SetValue(e);
+            break;
+            case IConvertible conv:
+                SetValue(row, column, conv.ToDouble(CultureInfo.InvariantCulture));
+            break;
             default:
                 throw new ArgumentException($"Unsupported cell value type '{value.GetType().Name}'.", nameof(value));
         }
@@ -91,8 +105,10 @@ public sealed partial class Worksheet
         var rows = data.GetLength(0);
         var cols = data.GetLength(1);
         for (var r = 0; r < rows; r++)
-        for (var c = 0; c < cols; c++)
-            SetValue(topRow + r, leftColumn + c, data[r, c]);
+        {
+            for (var c = 0; c < cols; c++)
+                SetValue(topRow + r, leftColumn + c, data[r, c]);
+        }
     }
 
     /// <summary>Writes a sequence of value rows starting at <paramref name="topRow" />, <paramref name="leftColumn" />.</summary>

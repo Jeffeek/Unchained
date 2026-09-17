@@ -85,7 +85,7 @@ public sealed class UnchainedPdfRenderer : IPdfRenderer
         }
         finally
         {
-            _lock.Release();
+            _ = _lock.Release();
         }
     }
 
@@ -117,14 +117,15 @@ public sealed class UnchainedPdfRenderer : IPdfRenderer
         }
         finally
         {
-            _lock.Release();
+            _ = _lock.Release();
         }
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
 
         FontsForDiagnostics.Dispose();
         _lock.Dispose();

@@ -51,7 +51,8 @@ internal static class MeshShadingDecoder
                         nComp,
                         fn,
                         triangles
-                    ); break;
+                    );
+                break;
                 case 5:
                     DecodeType5(
                         reader,
@@ -62,7 +63,8 @@ internal static class MeshShadingDecoder
                         fn,
                         vpr,
                         triangles
-                    ); break;
+                    );
+                break;
                 case 6:
                     DecodePatches(
                         reader,
@@ -74,7 +76,8 @@ internal static class MeshShadingDecoder
                         fn,
                         12,
                         triangles
-                    ); break;
+                    );
+                break;
                 case 7:
                     DecodePatches(
                         reader,
@@ -86,7 +89,8 @@ internal static class MeshShadingDecoder
                         fn,
                         16,
                         triangles
-                    ); break;
+                    );
+                break;
             }
         }
         catch
@@ -128,7 +132,7 @@ internal static class MeshShadingDecoder
                     if (!r.HasBits(2 * (bpf + (2 * bpc) + (nComp * bpComp))))
                         return;
 
-                    r.Read(bpf);
+                    _ = r.Read(bpf);
                     var v1 = ReadVertex(
                         r,
                         bpc,
@@ -137,7 +141,7 @@ internal static class MeshShadingDecoder
                         nComp,
                         fn
                     );
-                    r.Read(bpf);
+                    _ = r.Read(bpf);
                     var v2 = ReadVertex(
                         r,
                         bpc,
@@ -225,14 +229,16 @@ internal static class MeshShadingDecoder
         }
 
         for (var rr = 0; rr + 1 < rows.Count; rr++)
-        for (var cc = 0; cc + 1 < vpr; cc++)
         {
-            var a = rows[rr][cc];
-            var b = rows[rr][cc + 1];
-            var c = rows[rr + 1][cc];
-            var d = rows[rr + 1][cc + 1];
-            tris.Add(Tri(a, b, c));
-            tris.Add(Tri(b, d, c));
+            for (var cc = 0; cc + 1 < vpr; cc++)
+            {
+                var a = rows[rr][cc];
+                var b = rows[rr][cc + 1];
+                var c = rows[rr + 1][cc];
+                var d = rows[rr + 1][cc + 1];
+                tris.Add(Tri(a, b, c));
+                tris.Add(Tri(b, d, c));
+            }
         }
     }
 
@@ -279,11 +285,11 @@ internal static class MeshShadingDecoder
             // starts at indices 0, 3, 6, 9 (Coons/tensor share this corner ordering).
             if (flag == 0 && newPoints >= 10)
             {
-                var c0 = pts[0];
+                var (x, y) = pts[0];
                 var c1 = pts[3];
                 var c2 = pts[6];
                 var c3 = pts[9];
-                var a = new Vertex(c0.X, c0.Y, cols[0].R, cols[0].G, cols[0].B);
+                var a = new Vertex(x, y, cols[0].R, cols[0].G, cols[0].B);
                 var b = new Vertex(c1.X, c1.Y, cols[1].R, cols[1].G, cols[1].B);
                 var c = new Vertex(c2.X, c2.Y, cols[2].R, cols[2].G, cols[2].B);
                 var d = new Vertex(c3.X, c3.Y, cols[3].R, cols[3].G, cols[3].B);
@@ -388,7 +394,7 @@ internal static class MeshShadingDecoder
         );
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj is PdfArray a
-        ? a.Elements.Select(static e => e.ReadIntOrReal()).ToArray()
+        ? [.. a.Elements.Select(static e => e.ReadIntOrReal())]
         : null;
 
     // ── Vertex / point / colour readers ─────────────────────────────────────────
@@ -403,7 +409,7 @@ internal static class MeshShadingDecoder
     // MSB-first bit cursor over a byte span.
     private sealed class BitCursor(ReadOnlySpan<byte> data)
     {
-        private readonly byte[] _data = data.ToArray();
+        private readonly byte[] _data = [.. data];
         private int _bit;
 
         public bool HasBits(int n) => _bit + n <= _data.Length * 8;

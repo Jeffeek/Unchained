@@ -1,7 +1,7 @@
 namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 
 /// <summary>A single data series within a chart.</summary>
-public class SeriesConfig : IHasAdditionalProperties
+public class SeriesConfig
 {
     /// <summary>Series display name.</summary>
     public string Name { get; set; } = string.Empty;
@@ -16,10 +16,10 @@ public class SeriesConfig : IHasAdditionalProperties
     public string? Color { get; set; }
 
     /// <summary>Data points (simple scalar values). <see langword="null" /> entries represent missing data.</summary>
-    public List<double?> Data { get; set; } = new();
+    public List<double?> Data { get; set; } = [];
 
     /// <summary>Advanced data points with per-point properties (colour, sliced, etc.).</summary>
-    public List<DataPoint?> DataPoints { get; set; } = new();
+    public List<DataPoint?> DataPoints { get; set; } = [];
 
     /// <summary>
     ///     Index of the Y-axis this series renders on.
@@ -33,5 +33,5 @@ public class SeriesConfig : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

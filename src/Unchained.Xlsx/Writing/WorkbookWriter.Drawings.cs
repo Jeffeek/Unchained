@@ -80,7 +80,7 @@ internal static partial class WorkbookWriter
             var drawings = sheet.DrawingsOrNull!.All;
 
             // 1. The drawing part itself.
-            package.AddOrReplacePart(sheet.DrawingPartUri, SmlNames.ContentTypeDrawing, DrawingWriter.Write(drawings));
+            _ = package.AddOrReplacePart(sheet.DrawingPartUri, SmlNames.ContentTypeDrawing, DrawingWriter.Write(drawings));
 
             // 2. Sheet → drawing relationship (idempotent).
             EnsureRelationship(
@@ -98,7 +98,7 @@ internal static partial class WorkbookWriter
                 switch (drawing)
                 {
                     case PictureDrawing pic:
-                        package.AddOrReplacePart(pic.MediaPartUri, pic.Image.ContentType, pic.Image.Data.ToArray());
+                        _ = package.AddOrReplacePart(pic.MediaPartUri, pic.Image.ContentType, pic.Image.Data.ToArray());
                         package.AddRelationship(
                             sheet.DrawingPartUri,
                             drawing.RelationshipId,
@@ -108,7 +108,7 @@ internal static partial class WorkbookWriter
                     break;
                     case ChartDrawing chart:
                         var bytes = chart.ChartPartData ?? ChartXml.Write(chart.Chart);
-                        package.AddOrReplacePart(chart.ChartPartUri, SmlNames.ContentTypeChart, bytes);
+                        _ = package.AddOrReplacePart(chart.ChartPartUri, SmlNames.ContentTypeChart, bytes);
                         package.AddRelationship(
                             sheet.DrawingPartUri,
                             drawing.RelationshipId,

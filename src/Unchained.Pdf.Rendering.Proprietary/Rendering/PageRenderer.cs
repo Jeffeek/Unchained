@@ -119,7 +119,8 @@ internal sealed partial class PageRenderer(
             }
             case "Q":
             {
-                if (_gsStack.Count > 0) _gs = _gsStack.Pop();
+                if (_gsStack.Count > 0)
+                    _gs = _gsStack.Pop();
                 // Restore the buffer clip to match the restored graphics state.
                 SyncClip();
                 break;
@@ -136,14 +137,20 @@ internal sealed partial class PageRenderer(
             }
 
             // ── Colour — DeviceGray ───────────────────────────────────────────
-            case "g" when op.Operands.Count >= 1: SetFillGray(Num(op, 0)); break;
-            case "G" when op.Operands.Count >= 1: SetStrokeGray(Num(op, 0)); break;
+            case "g" when op.Operands.Count >= 1:
+                SetFillGray(Num(op, 0));
+            break;
+            case "G" when op.Operands.Count >= 1:
+                SetStrokeGray(Num(op, 0));
+            break;
 
             // ── Colour — DeviceRGB ────────────────────────────────────────────
             case "rg" when op.Operands.Count >= 3:
-                SetFillRgb(Num(op, 0), Num(op, 1), Num(op, 2)); break;
+                SetFillRgb(Num(op, 0), Num(op, 1), Num(op, 2));
+            break;
             case "RG" when op.Operands.Count >= 3:
-                SetStrokeRgb(Num(op, 0), Num(op, 1), Num(op, 2)); break;
+                SetStrokeRgb(Num(op, 0), Num(op, 1), Num(op, 2));
+            break;
 
             // ── Colour — DeviceCMYK ───────────────────────────────────────────
             case "k" when op.Operands.Count >= 4:
@@ -168,7 +175,8 @@ internal sealed partial class PageRenderer(
             case "CS" when op.Operands.Count >= 1:
                 _gs.StrokeColorSpace = (op.Operands[0] as PdfName)?.Value ?? RenderingConstants.DeviceGray;
             break;
-            case "cs" or "CS": break; // no operand — consume
+            case "cs" or "CS":
+            break; // no operand — consume
 
             case "sc" or "SC" when op.Operands.Count >= 1:
             {
@@ -177,8 +185,10 @@ internal sealed partial class PageRenderer(
                     .ToArray();
                 var csName = op.Name == "sc" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
                 var (r2, g2, b2) = ResolveColorComponents(nums, csName);
-                if (op.Name == "sc") SetFillRgb(r2, g2, b2);
-                else SetStrokeRgb(r2, g2, b2);
+                if (op.Name == "sc")
+                    SetFillRgb(r2, g2, b2);
+                else
+                    SetStrokeRgb(r2, g2, b2);
                 break;
             }
 
@@ -197,8 +207,10 @@ internal sealed partial class PageRenderer(
                         var csName = op.Name == "scn" ? _gs.FillColorSpace : _gs.StrokeColorSpace;
                         var components = nums.Select(static o => o.ReadIntOrReal()).ToArray();
                         var (r2, g2, b2) = ResolveColorComponents(components, csName);
-                        if (op.Name == "scn") SetFillRgb(r2, g2, b2);
-                        else SetStrokeRgb(r2, g2, b2);
+                        if (op.Name == "scn")
+                            SetFillRgb(r2, g2, b2);
+                        else
+                            SetStrokeRgb(r2, g2, b2);
                         break;
                     }
                     case > 0:
@@ -208,15 +220,19 @@ internal sealed partial class PageRenderer(
                             case 1:
                             {
                                 var v = nums[0].ReadIntOrReal();
-                                if (op.Name == "scn") SetFillGray(v);
-                                else SetStrokeGray(v);
+                                if (op.Name == "scn")
+                                    SetFillGray(v);
+                                else
+                                    SetStrokeGray(v);
                                 break;
                             }
                             case 3:
                             {
                                 var (r2, g2, b2) = (nums[0].ReadIntOrReal(), nums[1].ReadIntOrReal(), nums[2].ReadIntOrReal());
-                                if (op.Name == "scn") SetFillRgb(r2, g2, b2);
-                                else SetStrokeRgb(r2, g2, b2);
+                                if (op.Name == "scn")
+                                    SetFillRgb(r2, g2, b2);
+                                else
+                                    SetStrokeRgb(r2, g2, b2);
                                 break;
                             }
                             case 4:
@@ -227,8 +243,10 @@ internal sealed partial class PageRenderer(
                                     nums[2].ReadIntOrReal(),
                                     nums[3].ReadIntOrReal()
                                 );
-                                if (op.Name == "scn") SetFillRgb(r2, g2, b2);
-                                else SetStrokeRgb(r2, g2, b2);
+                                if (op.Name == "scn")
+                                    SetFillRgb(r2, g2, b2);
+                                else
+                                    SetStrokeRgb(r2, g2, b2);
                                 break;
                             }
                         }
@@ -255,19 +273,28 @@ internal sealed partial class PageRenderer(
             }
 
             // ── Misc graphics state ───────────────────────────────────────────
-            case "w" when op.Operands.Count >= 1: _gs.LineWidth = Num(op, 0); break;
+            case "w" when op.Operands.Count >= 1:
+                _gs.LineWidth = Num(op, 0);
+            break;
             case "d" when op.Operands.Count >= 1:
             {
                 // d [dashArray] dashPhase — store the on/off lengths (phase ignored).
                 _gs.DashLengths = op.Operands[0] is PdfArray da
-                    ? da.Elements.Select(static o => o.ReadIntOrReal()).Where(static v => v >= 0).ToArray()
+                    ? [.. da.Elements.Select(static o => o.ReadIntOrReal()).Where(static v => v >= 0)]
                     : [];
                 break;
             }
-            case "J" when op.Operands.Count >= 1: _gs.LineCap = (int)Num(op, 0); break;
-            case "j" when op.Operands.Count >= 1: _gs.LineJoin = (int)Num(op, 0); break;
-            case "M" when op.Operands.Count >= 1: _gs.MiterLimit = Num(op, 0); break;
-            case "J" or "j" or "M" or "ri" or "i": break; // consume; not rendered
+            case "J" when op.Operands.Count >= 1:
+                _gs.LineCap = (int)Num(op, 0);
+            break;
+            case "j" when op.Operands.Count >= 1:
+                _gs.LineJoin = (int)Num(op, 0);
+            break;
+            case "M" when op.Operands.Count >= 1:
+                _gs.MiterLimit = Num(op, 0);
+            break;
+            case "J" or "j" or "M" or "ri" or "i":
+            break; // consume; not rendered
             case "gs" when op.Operands.Count >= 1:
             {
                 // Apply the named /ExtGState's constant alpha (/ca fill, /CA stroke),
@@ -293,11 +320,16 @@ internal sealed partial class PageRenderer(
 
                 break;
             }
-            case "gs": break;
+            case "gs":
+            break;
 
             // ── Path construction ─────────────────────────────────────────────
-            case "m" when op.Operands.Count >= 2: PathMoveTo(Num(op, 0), Num(op, 1)); break;
-            case "l" when op.Operands.Count >= 2: PathLineTo(Num(op, 0), Num(op, 1)); break;
+            case "m" when op.Operands.Count >= 2:
+                PathMoveTo(Num(op, 0), Num(op, 1));
+            break;
+            case "l" when op.Operands.Count >= 2:
+                PathLineTo(Num(op, 0), Num(op, 1));
+            break;
             case "c" when op.Operands.Count >= 6:
                 PathCurveTo(
                     Num(op, 0),
@@ -377,7 +409,9 @@ internal sealed partial class PageRenderer(
                 DrawStroke();
                 ClearPath();
             break;
-            case "n": ClearPath(); break;
+            case "n":
+                ClearPath();
+            break;
 
 
             // ── Clip ──────────────────────────────────────────────────────────
@@ -394,14 +428,16 @@ internal sealed partial class PageRenderer(
             break;
 
             // ── Marked content (consume) ──────────────────────────────────────
-            case "BMC" or "BDC" or "EMC" or "MP" or "DP": break;
+            case "BMC" or "BDC" or "EMC" or "MP" or "DP":
+            break;
 
             // ── Text object ───────────────────────────────────────────────────
             case "BT":
                 _gs.TextMatrix = [1, 0, 0, 1, 0, 0];
                 _gs.TextLineMatrix = [1, 0, 0, 1, 0, 0];
             break;
-            case "ET": break;
+            case "ET":
+            break;
 
             // ── Text state ────────────────────────────────────────────────────
             case "Tf" when op.Operands.Count >= 2:
@@ -412,12 +448,24 @@ internal sealed partial class PageRenderer(
                 _gs.FontSize = Num(op, 1);
                 break;
             }
-            case "Tc" when op.Operands.Count >= 1: _gs.CharSpace = Num(op, 0); break;
-            case "Tw" when op.Operands.Count >= 1: _gs.WordSpace = Num(op, 0); break;
-            case "Tz" when op.Operands.Count >= 1: _gs.HorizontalScale = Num(op, 0); break;
-            case "TL" when op.Operands.Count >= 1: _gs.Leading = Num(op, 0); break;
-            case "Tr" when op.Operands.Count >= 1: _gs.TextRenderMode = (int)Num(op, 0); break;
-            case "Ts" when op.Operands.Count >= 1: _gs.TextRise = Num(op, 0); break;
+            case "Tc" when op.Operands.Count >= 1:
+                _gs.CharSpace = Num(op, 0);
+            break;
+            case "Tw" when op.Operands.Count >= 1:
+                _gs.WordSpace = Num(op, 0);
+            break;
+            case "Tz" when op.Operands.Count >= 1:
+                _gs.HorizontalScale = Num(op, 0);
+            break;
+            case "TL" when op.Operands.Count >= 1:
+                _gs.Leading = Num(op, 0);
+            break;
+            case "Tr" when op.Operands.Count >= 1:
+                _gs.TextRenderMode = (int)Num(op, 0);
+            break;
+            case "Ts" when op.Operands.Count >= 1:
+                _gs.TextRise = Num(op, 0);
+            break;
 
             // ── Text positioning ──────────────────────────────────────────────
             case "Tm" when op.Operands.Count >= 6:
@@ -431,36 +479,44 @@ internal sealed partial class PageRenderer(
                 _gs.Leading = -Num(op, 1);
                 MoveTextLine(Num(op, 0), Num(op, 1));
             break;
-            case "T*": MoveTextLine(0, -_gs.Leading); break;
+            case "T*":
+                MoveTextLine(0, -_gs.Leading);
+            break;
 
             // ── Text showing ──────────────────────────────────────────────────
             case "Tj" when op.Operands.Count >= 1:
-                if (op.Operands[0] is PdfString tj) ShowString(tj.GetBinaryBytes().Span);
+                if (op.Operands[0] is PdfString tj)
+                    ShowString(tj.GetBinaryBytes().Span);
             break;
             case "'":
                 MoveTextLine(0, -_gs.Leading);
-                if (op.Operands is [PdfString sq, ..]) ShowString(sq.GetBinaryBytes().Span);
+                if (op.Operands is [PdfString sq, ..])
+                    ShowString(sq.GetBinaryBytes().Span);
             break;
             case "\"" when op.Operands.Count >= 3:
                 _gs.WordSpace = Num(op, 0);
                 _gs.CharSpace = Num(op, 1);
                 MoveTextLine(0, -_gs.Leading);
-                if (op.Operands[2] is PdfString sdq) ShowString(sdq.GetBinaryBytes().Span);
+                if (op.Operands[2] is PdfString sdq)
+                    ShowString(sdq.GetBinaryBytes().Span);
             break;
             case "TJ" when op.Operands.Count >= 1:
-                if (op.Operands[0] is PdfArray arr) ShowArray(arr);
+                if (op.Operands[0] is PdfArray arr)
+                    ShowArray(arr);
             break;
 
             // ── XObject ───────────────────────────────────────────────────────
             case "Do" when op.Operands.Count >= 1:
-                if (op.Operands[0] is PdfName xName) PaintXObject(xName.Value);
+                if (op.Operands[0] is PdfName xName)
+                    PaintXObject(xName.Value);
             break;
 
             // ── Inline image — decoded at parse time into PdfInlineImage ─────
             case "BI" when op.Operands is [PdfInlineImage inlineImg, ..]:
                 PaintInlineImage(inlineImg);
             break;
-            case "BI": break; // parser produced no image (unsupported format)
+            case "BI":
+            break; // parser produced no image (unsupported format)
 
             // ── Shading (sh) — paints an axial/radial gradient over the current clip ──
             case "sh" when op.Operands.Count >= 1:
@@ -470,7 +526,8 @@ internal sealed partial class PageRenderer(
                     PaintShadingInClip(sh);
                 break;
             }
-            case "sh": break;
+            case "sh":
+            break;
         }
     }
 
@@ -564,7 +621,8 @@ internal sealed partial class PageRenderer(
                     : (0, 0, 0);
             case RenderingConstants.DeviceCmyk:
             {
-                if (components.Length < 4) return (0, 0, 0);
+                if (components.Length < 4)
+                    return (0, 0, 0);
 
                 var (r, g, b) = CmykToRgb(components[0], components[1], components[2], components[3]);
                 return (r, g, b);

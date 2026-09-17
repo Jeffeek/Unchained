@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Drawing;
@@ -82,7 +82,8 @@ public sealed class RichExportTests
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 

@@ -1,7 +1,7 @@
 namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 
 /// <summary>Per-series defaults within <see cref="PlotOptions" />.</summary>
-public class PlotOptionsSeries : IHasAdditionalProperties
+public class PlotOptionsSeries
 {
     /// <summary>
     ///     Stacking mode: <c>null</c> = no stacking, <c>"normal"</c> = stacked,
@@ -27,5 +27,5 @@ public class PlotOptionsSeries : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

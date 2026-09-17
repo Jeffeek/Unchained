@@ -59,7 +59,8 @@ internal static class ShadingMath
 
         if (t < 0)
         {
-            if (!sh.ExtendStart) return false;
+            if (!sh.ExtendStart)
+                return false;
 
             t = 0;
         }

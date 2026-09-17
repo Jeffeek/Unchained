@@ -1,4 +1,3 @@
-using Unchained.Xlsx.Cell;
 using Unchained.Xlsx.Formatting;
 using Unchained.Xlsx.Models;
 
@@ -12,15 +11,15 @@ namespace Unchained.Xlsx.Styles;
 /// </summary>
 public sealed class StyleBook
 {
-    private readonly Dictionary<CellBorder, int> _borderLookup = new();
+    private readonly Dictionary<CellBorder, int> _borderLookup = [];
     private readonly List<CellBorder> _borders = [];
     private readonly List<CellXf> _cellStyleXfs = [];
-    private readonly Dictionary<CellXf, int> _cellXfLookup = new();
+    private readonly Dictionary<CellXf, int> _cellXfLookup = [];
     private readonly List<CellXf> _cellXfs = [];
-    private readonly Dictionary<CellFill, int> _fillLookup = new();
+    private readonly Dictionary<CellFill, int> _fillLookup = [];
     private readonly List<CellFill> _fills = [];
 
-    private readonly Dictionary<CellFont, int> _fontLookup = new();
+    private readonly Dictionary<CellFont, int> _fontLookup = [];
     private readonly List<CellFont> _fonts = [];
     private readonly List<NamedCellStyle> _namedStyles = [];
     private readonly Dictionary<string, int> _numberFormatLookup = new(StringComparer.Ordinal);
@@ -42,7 +41,7 @@ public sealed class StyleBook
     /// <summary>The number-format table (custom formats only; built-ins are implicit).</summary>
     public IReadOnlyList<NumberFormat> NumberFormats => _numberFormats;
 
-    /// <summary>The <c>cellXfs</c> table — the table a cell's <see cref="Cell.StyleIndex" /> points into.</summary>
+    /// <summary>The <c>cellXfs</c> table — the table a cell's <see cref="Unchained.Xlsx.Cell.Cell.StyleIndex" /> points into.</summary>
     public IReadOnlyList<CellXf> CellXfs => _cellXfs;
 
     /// <summary>The <c>cellStyleXfs</c> table — the base formats referenced by named styles.</summary>
@@ -218,28 +217,37 @@ public sealed class StyleBook
         _numberFormatLookup.Clear();
         _cellXfLookup.Clear();
 
-        for (var i = 0; i < _fonts.Count; i++) _fontLookup.TryAdd(_fonts[i], i);
-        for (var i = 0; i < _fills.Count; i++) _fillLookup.TryAdd(_fills[i], i);
-        for (var i = 0; i < _borders.Count; i++) _borderLookup.TryAdd(_borders[i], i);
-        for (var i = 0; i < _cellXfs.Count; i++) _cellXfLookup.TryAdd(_cellXfs[i], i);
+        for (var i = 0; i < _fonts.Count; i++)
+            _ = _fontLookup.TryAdd(_fonts[i], i);
+        for (var i = 0; i < _fills.Count; i++)
+            _ = _fillLookup.TryAdd(_fills[i], i);
+        for (var i = 0; i < _borders.Count; i++)
+            _ = _borderLookup.TryAdd(_borders[i], i);
+        for (var i = 0; i < _cellXfs.Count; i++)
+            _ = _cellXfLookup.TryAdd(_cellXfs[i], i);
 
         foreach (var format in _numberFormats)
         {
-            _numberFormatLookup.TryAdd(format.FormatCode, format.FormatId);
+            _ = _numberFormatLookup.TryAdd(format.FormatCode, format.FormatId);
             if (format.FormatId >= _nextCustomFormatId)
                 _nextCustomFormatId = format.FormatId + 1;
         }
 
         // Guarantee the minimal required entries exist even for sparse loaded books.
-        if (_fonts.Count == 0) GetOrAddFont(new CellFont());
+        if (_fonts.Count == 0)
+            _ = GetOrAddFont(new CellFont());
         if (_fills.Count < 2)
         {
-            if (_fills.Count == 0) _fills.Add(new CellFill { PatternType = FillPattern.None });
-            if (_fills.Count == 1) _fills.Add(new CellFill { PatternType = FillPattern.Gray125 });
+            if (_fills.Count == 0)
+                _fills.Add(new CellFill { PatternType = FillPattern.None });
+            if (_fills.Count == 1)
+                _fills.Add(new CellFill { PatternType = FillPattern.Gray125 });
             RebuildLookups();
         }
 
-        if (_borders.Count == 0) GetOrAddBorder(new CellBorder());
-        if (_cellXfs.Count == 0) _cellXfs.Add(new CellXf());
+        if (_borders.Count == 0)
+            _ = GetOrAddBorder(new CellBorder());
+        if (_cellXfs.Count == 0)
+            _cellXfs.Add(new CellXf());
     }
 }

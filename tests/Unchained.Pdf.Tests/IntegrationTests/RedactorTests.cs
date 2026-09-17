@@ -76,7 +76,8 @@ public sealed class RedactorTests : PdfTestBase
     public async Task Redact_Image_RemovesDoOperator()
     {
         var rgb = new byte[8 * 8 * 3];
-        for (var i = 0; i < rgb.Length; i++) rgb[i] = 128;
+        for (var i = 0; i < rgb.Length; i++)
+            rgb[i] = 128;
         await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(8, 8, rgb), TestContext.Current.CancellationToken);
 
         // Fixture draws the image with cm "(w*10) 0 0 (h*10) 0 0" → unit square maps to

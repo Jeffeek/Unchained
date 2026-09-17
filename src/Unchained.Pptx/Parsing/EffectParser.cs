@@ -15,7 +15,8 @@ internal static class EffectParser
     public static void Parse(XElement? spPr, EffectFormat effects)
     {
         var effectLst = spPr?.Element(A + "effectLst");
-        if (effectLst is null) return;
+        if (effectLst is null)
+            return;
 
         if (effectLst.Element(A + "outerShdw") is { } outer)
             effects.OuterShadow = ParseOuterShadow(outer);

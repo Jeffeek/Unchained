@@ -92,7 +92,8 @@ internal static class TrueTypeMetrics
         // TrueType/OpenType offset table starts at byte 0.
         // Bytes 0–3: sfVersion (0x00010000 for TrueType, 'OTTO' for CFF).
         // Bytes 4–5: numTables.
-        if (b.Length < 12) return HelveticaFallback;
+        if (b.Length < 12)
+            return HelveticaFallback;
 
         var numTables = ReadU16(b, 4);
         // Table directory entries start at offset 12; each is 16 bytes.
@@ -101,15 +102,22 @@ internal static class TrueTypeMetrics
         for (var i = 0; i < numTables; i++)
         {
             var entry = 12 + (i * 16);
-            if (entry + 16 > b.Length) break;
+            if (entry + 16 > b.Length)
+                break;
 
             var tag = ReadTag(b, entry);
             var offset = (int)ReadU32(b, entry + 8);
             switch (tag)
             {
-                case "OS/2": os2Off = offset; break;
-                case "hhea": hheaOff = offset; break;
-                case TableHead: headOff = offset; break;
+                case "OS/2":
+                    os2Off = offset;
+                break;
+                case "hhea":
+                    hheaOff = offset;
+                break;
+                case TableHead:
+                    headOff = offset;
+                break;
             }
         }
 
@@ -117,7 +125,8 @@ internal static class TrueTypeMetrics
         var unitsPerEm = headOff is { } ho && ho + 54 <= b.Length
             ? ReadU16(b, ho + 18)
             : NormalizedUnitsPerEm;
-        if (unitsPerEm == 0) unitsPerEm = NormalizedUnitsPerEm;
+        if (unitsPerEm == 0)
+            unitsPerEm = NormalizedUnitsPerEm;
         var scale = NormalizedUnitsPerEmDouble / unitsPerEm;
 
         // head table: font bounding box (at offsets 36–43, signed shorts).

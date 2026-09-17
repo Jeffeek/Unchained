@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Unchained.Xlsx.Drawings;
@@ -16,11 +17,7 @@ public static class Extensions
         /// <summary>
         ///     Converts the chart drawing and returns the JSON string directly.
         /// </summary>
-        public string ToHighchartsJson()
-        {
-            var converter = new HighchartsConverter();
-            return converter.Convert(chart).ToJson();
-        }
+        public string ToHighchartsJson() => HighchartsConverter.Convert(chart).ToJson();
 
         /// <summary>
         ///     Converts the chart drawing into a <see cref="HighchartsOptions" /> object
@@ -28,8 +25,7 @@ public static class Extensions
         /// </summary>
         public HighchartsOptions ToHighchartsObject(HighchartsSettings? settings = null)
         {
-            var converter = new HighchartsConverter();
-            var options = converter.Convert(chart);
+            var options = HighchartsConverter.Convert(chart);
 
             if (settings?.AdditionalProperties is null)
                 return options;
@@ -48,7 +44,7 @@ public static class Extensions
     /// </summary>
     public static string ToJson(this HighchartsOptions options, HighchartsSettings? settings = null)
     {
-        var node = JsonSerializer.SerializeToNode(options)!;
+        var node = JsonSerializer.SerializeToNode(options, HighchartsConverter.JsonOptions)!;
 
         // Merge additional properties from the object graph (fills gaps in the typed API).
         CollectAndMergeAdditionalProperties(options, node);
@@ -60,18 +56,21 @@ public static class Extensions
         return node.ToJsonString(HighchartsConverter.JsonOptions);
     }
 
-    /// <summary>Walks the object graph and merges <see cref="IHasAdditionalProperties" /> dicts into the JSON tree.</summary>
+    /// <summary>Walks the object graph and merges GetAdditionalProperties dicts into the JSON tree.</summary>
     private static void CollectAndMergeAdditionalProperties(object obj, JsonNode node)
     {
-        if (obj is IHasAdditionalProperties hp && hp.GetAdditionalProperties() is { Count: > 0 } dict)
+        var getMethod = obj.GetType().GetMethod("GetAdditionalProperties");
+        if (getMethod?.Invoke(obj, null) is Dictionary<string, object> { Count: > 0 } dict)
             MergeAdditionalProperties(node, dict, allowOverride: false);
 
         // Recurse into object-valued properties.
-        if (node is not JsonObject objNode) return;
+        if (node is not JsonObject objNode)
+            return;
 
         foreach (var (key, child) in objNode)
         {
-            if (child is null) continue;
+            if (child is null)
+                continue;
 
             // Find the corresponding child object in the original graph.
             var childObj = FindChild(obj, key);
@@ -83,13 +82,17 @@ public static class Extensions
     /// <summary>Finds the child object in <paramref name="parent" /> matching the given JSON key.</summary>
     private static object? FindChild(object parent, string key)
     {
-        var prop = parent.GetType().GetProperty(key);
+        // JSON keys are camelCase (see HighchartsConverter.JsonOptions) while CLR properties
+        // are PascalCase, so the lookup must ignore case to descend into child configs.
+        var prop = parent.GetType().GetProperty(key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
         return prop?.GetValue(parent);
     }
 
     private static void MergeAdditionalProperties(JsonNode target, IDictionary<string, object>? additional, bool allowOverride)
     {
-        if (additional is null || additional.Count == 0) return;
+        if (additional is null || additional.Count == 0)
+            return;
 
         foreach (var (key, value) in additional)
         {

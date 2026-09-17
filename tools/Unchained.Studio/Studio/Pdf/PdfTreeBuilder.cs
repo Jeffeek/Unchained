@@ -30,7 +30,7 @@ public static class PdfTreeBuilder
         };
 
         // Remove nodes that have no content
-        root.Children.RemoveAll(static n => n.Children.Count == 0 && n.Label.EndsWith(" (none)", StringComparison.Ordinal));
+        _ = root.Children.RemoveAll(static n => n.Children.Count == 0 && n.Label.EndsWith(" (none)", StringComparison.Ordinal));
 
         return root;
     }
@@ -241,7 +241,8 @@ public static class PdfTreeBuilder
             NodeType = TreeNodeType.Bookmark,
             Payload = bm
         };
-        if (bm.Children is not { Count: > 0 } children) return node;
+        if (bm.Children is not { Count: > 0 } children)
+            return node;
 
         foreach (var child in children)
             node.Children.Add(BuildBookmarkNode(child));

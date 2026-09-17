@@ -222,7 +222,8 @@ public sealed class PageOrganizerTests : PdfTestBase
         parts.Count.ShouldBe(2);
         parts[0].PageCount.ShouldBe(2);
         parts[1].PageCount.ShouldBe(3);
-        foreach (var p in parts) await p.DisposeAsync();
+        foreach (var p in parts)
+            await p.DisposeAsync();
     }
 
     [Fact]

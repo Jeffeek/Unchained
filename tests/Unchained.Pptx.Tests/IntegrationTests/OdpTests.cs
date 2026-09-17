@@ -1,7 +1,7 @@
+using Shouldly;
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
-using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Shared;
@@ -21,7 +21,8 @@ public sealed class OdpTests : PptxTestBase
         using var ms = new MemoryStream(zip);
         using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
         var entry = archive.GetEntry(name);
-        if (entry == null) return [];
+        if (entry == null)
+            return [];
 
         using var s = entry.Open();
         using var outMs = new MemoryStream();

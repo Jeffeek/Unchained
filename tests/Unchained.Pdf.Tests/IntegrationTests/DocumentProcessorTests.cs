@@ -1,6 +1,6 @@
-using System.Text;
 using Moq;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Engine;
@@ -71,7 +71,7 @@ public sealed class DocumentProcessorLoadTests : IDisposable
     [Fact]
     public async Task LoadAsync_InvalidPdf_ThrowsPdfException()
     {
-        var garbage = new MemoryStream("this is not a pdf"u8.ToArray());
+        var garbage = new MemoryStream([.. "this is not a pdf"u8]);
         await Should.ThrowAsync<PdfException>(() => _processor.LoadAsync(garbage));
     }
 
@@ -275,7 +275,7 @@ public sealed class DocumentProcessorLifetimeTests
     {
         var processor = new DocumentProcessor();
         processor.Dispose();
-        Should.NotThrow(() => processor.Dispose());
+        Should.NotThrow(processor.Dispose);
     }
 
     [Fact]
@@ -288,7 +288,7 @@ public sealed class DocumentProcessorLifetimeTests
 }
 
 /// <summary>Wraps a byte array in a non-seekable stream to test the copy-to-buffer path.</summary>
-sealed file class NonSeekableStream(byte[] data) : Stream
+file sealed class NonSeekableStream(byte[] data) : Stream
 {
     private readonly MemoryStream _inner = new(data);
     public override bool CanRead => true;

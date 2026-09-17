@@ -82,7 +82,7 @@ public static class SlideRenderer
         }
         finally
         {
-            Gate.Release();
+            _ = Gate.Release();
         }
     }
 

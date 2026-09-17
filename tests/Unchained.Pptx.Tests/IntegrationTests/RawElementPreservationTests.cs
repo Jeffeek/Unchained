@@ -1,5 +1,5 @@
-using System.IO.Packaging;
 using Shouldly;
+using System.IO.Packaging;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
 using Xunit;
@@ -21,7 +21,8 @@ public sealed class RawElementPreservationTests
         using var ms = new MemoryStream(pptx);
         using var pkg = Package.Open(ms, FileMode.Open, FileAccess.Read);
         var part = pkg.GetParts().FirstOrDefault(p => p.Uri.ToString().Contains(uriContains));
-        if (part is null) return string.Empty;
+        if (part is null)
+            return string.Empty;
 
         using var r = new StreamReader(part.GetStream());
         return r.ReadToEnd();

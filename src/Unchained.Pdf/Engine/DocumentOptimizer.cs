@@ -33,13 +33,17 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
         var changed = false;
         var finalObjects = existing.Select(o =>
                 {
-                    if (o.Value is not PdfStream stream) return o;
+                    if (o.Value is not PdfStream stream)
+                        return o;
                     // Skip already-filtered streams and tiny ones that wouldn't benefit.
-                    if (stream.Dictionary[PdfName.Filter] is not null) return o;
-                    if (stream.Data.Length < CompressionThresholdBytes) return o;
+                    if (stream.Dictionary[PdfName.Filter] is not null)
+                        return o;
+                    if (stream.Data.Length < CompressionThresholdBytes)
+                        return o;
 
                     var compressed = Compress(stream.Data.Span);
-                    if (compressed.Length >= stream.Data.Length) return o; // no gain
+                    if (compressed.Length >= stream.Data.Length)
+                        return o; // no gain
 
                     var newDict = new PdfDictionary(
                         new Dictionary<string, PdfObject>(stream.Dictionary.Entries)
@@ -79,7 +83,8 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
                 seenHashes[key] = obj.ObjectNumber;
         }
 
-        if (remapping.Count == 0) return;
+        if (remapping.Count == 0)
+            return;
 
         // Remap all indirect references and drop duplicate stream objects.
         var finalObjects = existing
@@ -105,7 +110,7 @@ public sealed class DocumentOptimizer : IDocumentOptimizer
         // Use a cheap content hash: Length + first/last 64 bytes + total length.
         var data = stream.Data.Span;
         var prefix = data.Length > 64 ? data[..64] : data;
-        var suffix = data.Length > 128 ? data[^64..] : ReadOnlySpan<byte>.Empty;
+        var suffix = data.Length > 128 ? data[^64..] : [];
         return $"{data.Length}:{Convert.ToBase64String(prefix)}{Convert.ToBase64String(suffix)}";
     }
 

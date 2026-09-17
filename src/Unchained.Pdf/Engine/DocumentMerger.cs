@@ -63,7 +63,9 @@ public sealed class DocumentMerger : IDocumentMerger
             if (source.PageRanges is null)
                 AppendAllPages(objects, offset, copyStreamData, globalObjects, pageRefs);
             else
+                // ReSharper disable BadListLineBreaks
                 AppendSelectedPages(source, adapter.Core, objects, offset, copyStreamData, globalObjects, pageRefs);
+            // ReSharper restore BadListLineBreaks
 
             globalMax += sourceMax;
         }
@@ -278,7 +280,7 @@ public sealed class DocumentMerger : IDocumentMerger
     private static PdfDictionary WithoutParent(PdfDictionary dict)
     {
         var entries = new Dictionary<string, PdfObject>(dict.Entries);
-        entries.Remove(PdfName.Parent.Value);
+        _ = entries.Remove(PdfName.Parent.Value);
         return new PdfDictionary(entries);
     }
 

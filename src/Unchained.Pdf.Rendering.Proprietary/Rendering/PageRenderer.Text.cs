@@ -50,8 +50,10 @@ internal sealed partial class PageRenderer
     private void ShowString(ReadOnlySpan<byte> bytes)
     {
         // Text rendering mode 3 = invisible; do not draw.
-        if (_gs.TextRenderMode == RenderingConstants.TextModeInvisible) return;
-        if (_gs.FontSize <= 0 || _gs.FontName.Length == 0 || bytes.IsEmpty) return;
+        if (_gs.TextRenderMode == RenderingConstants.TextModeInvisible)
+            return;
+        if (_gs.FontSize <= 0 || _gs.FontName.Length == 0 || bytes.IsEmpty)
+            return;
 
         // Type3 font: glyphs are content streams, not binary font files.
         if (type3Fonts is not null && type3Fonts.TryGetValue(_gs.FontResourceName, out var t3))
@@ -88,7 +90,7 @@ internal sealed partial class PageRenderer
         // final shaped glyph sequence, so we must NOT re-shape through HarfBuzz or
         // remap via /ToUnicode — that produces wrong glyphs and positions.
         CompositeFontInfo? composite = null;
-        compositeFonts?.TryGetValue(_gs.FontResourceName, out composite);
+        _ = compositeFonts?.TryGetValue(_gs.FontResourceName, out composite);
         if (composite is { IdentityEncoding: true } && embeddedBytes is { Length: > 0 })
         {
             ShowStringComposite(bytes, ftFace, composite);
@@ -99,9 +101,9 @@ internal sealed partial class PageRenderer
         // decode each char code to the correct Unicode string. Otherwise fall back to
         // Latin-1 (covers Standard 14 and most WinAnsi-encoded fonts correctly).
         IReadOnlyDictionary<uint, string>? toUnicodeMap = null;
-        toUnicodeMaps?.TryGetValue(_gs.FontResourceName, out toUnicodeMap);
+        _ = toUnicodeMaps?.TryGetValue(_gs.FontResourceName, out toUnicodeMap);
         if (toUnicodeMap is null)
-            toUnicodeMaps?.TryGetValue(_gs.FontName, out toUnicodeMap);
+            _ = toUnicodeMaps?.TryGetValue(_gs.FontName, out toUnicodeMap);
 
         string unicodeText;
         if (toUnicodeMap is { Count: > 0 })
@@ -115,19 +117,19 @@ internal sealed partial class PageRenderer
                 uint code1 = span[0];
                 if (span.Length >= 2 && toUnicodeMap.TryGetValue(code2, out var u2))
                 {
-                    sb.Append(u2);
+                    _ = sb.Append(u2);
                     span = span[2..];
                 }
                 else if (toUnicodeMap.TryGetValue(code1, out var u1))
                 {
-                    sb.Append(u1);
+                    _ = sb.Append(u1);
                     span = span[1..];
                 }
                 else
                 {
                     // Code not in ToUnicode — fall back to Latin-1 char so HarfBuzz shapes it;
                     // U+FFFD causes some fonts to return non-.notdef, suppressing ShowStringDirect.
-                    sb.Append((char)code1);
+                    _ = sb.Append((char)code1);
                     span = span[1..];
                 }
             }
@@ -352,7 +354,7 @@ internal sealed partial class PageRenderer
     // Renders a string set in a Type3 font. Each glyph is a mini content stream
     // (PDF operators) stored in the font's /CharProcs dictionary. The stream is
     // rendered into the main buffer by creating a child PageRenderer with a CTM
-    // composed from: FontMatrix × current text+CTM, translated to the glyph origin.
+    // composed of: FontMatrix × current text+CTM, translated to the glyph origin.
     // ISO 32000-1 §9.6.5.
     private void ShowStringType3(ReadOnlySpan<byte> bytes, Type3FontInfo t3)
     {
@@ -437,13 +439,15 @@ internal sealed partial class PageRenderer
     {
         // Use the outline of the already-loaded glyph (FT_LOAD_RENDER keeps it for vector fonts).
         var contours = ftFace.GetGlyphContours();
-        if (contours.Count == 0) return;
+        if (contours.Count == 0)
+            return;
 
         // Build polygon list, mapping font pixels (Y up) to device pixels (Y down).
         var polys = new List<(double X, double Y)[]>();
         foreach (var contour in contours)
         {
-            if (contour.Length < 3) continue;
+            if (contour.Length < 3)
+                continue;
 
             var poly = new (double X, double Y)[contour.Length];
             for (var j = 0; j < contour.Length; j++)
@@ -452,7 +456,8 @@ internal sealed partial class PageRenderer
             polys.Add(poly);
         }
 
-        if (polys.Count == 0) return;
+        if (polys.Count == 0)
+            return;
 
         // Intersect the glyph outline into the buffer's clip mask.
         // Even-odd rule matches the PDF spec for glyph outlines.
@@ -470,7 +475,8 @@ internal sealed partial class PageRenderer
     )
     {
         var contours = ftFace.GetGlyphContours();
-        if (contours.Count == 0) return;
+        if (contours.Count == 0)
+            return;
 
         // Stroke width for text: use LineWidth scaled by the text size.
         var ctmScale = CtmAverageScale();
@@ -511,7 +517,8 @@ internal sealed partial class PageRenderer
             }
 
             // Close the contour back to the first point.
-            if (first || contour.Length <= 0) continue;
+            if (first || contour.Length <= 0)
+                continue;
 
             var firstX = penX + contour[0].X;
             var firstY = penY - contour[0].Y;

@@ -33,7 +33,8 @@ internal static class Ascii85Decoder
                 throw new InvalidDataException("ASCII85Decode: unexpected '~' not followed by '>'.");
             }
 
-            if (b.IsWhitespace()) continue;
+            if (b.IsWhitespace())
+                continue;
 
             switch (b)
             {

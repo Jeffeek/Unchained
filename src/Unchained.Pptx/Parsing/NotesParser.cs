@@ -27,7 +27,8 @@ internal static class NotesParser
 
         // Find the body placeholder (type="body" idx="1") inside the shape tree
         var spTree = notesRoot.Element(pml + "cSld")?.Element(pml + "spTree");
-        if (spTree == null) return;
+        if (spTree == null)
+            return;
 
         // ReSharper disable once LoopCanBePartlyConvertedToQuery
         foreach (var sp in spTree.Elements(pml + "sp"))
@@ -35,14 +36,17 @@ internal static class NotesParser
             var phEl = sp.Element(pml + "nvSpPr")
                 ?.Element(pml + "nvPr")
                 ?.Element(pml + "ph");
-            if (phEl == null) continue;
+            if (phEl == null)
+                continue;
 
             var phType = phEl.GetAttr("type", string.Empty);
             // Notes text placeholder: type="body" or (type omitted) idx="1"
-            if (phType != "body" && phEl.GetAttr(CmlNames.AttributeIndex) != "1") continue;
+            if (phType != "body" && phEl.GetAttr(CmlNames.AttributeIndex) != "1")
+                continue;
 
             var txBody = sp.Element(pml + "txBody");
-            if (txBody == null) break;
+            if (txBody == null)
+                break;
 
             var textFrame = TextParser.ParseTextBody(txBody);
             notes.NotesTextFrame = textFrame;

@@ -1,4 +1,3 @@
-using Unchained.Drawing.Constants;
 using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 
@@ -86,8 +85,10 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     /// </summary>
     public void SkipLineEnding()
     {
-        if (!AtEnd && source.Span[Position] == (byte)'\r') Position++;
-        if (!AtEnd && source.Span[Position] == (byte)'\n') Position++;
+        if (!AtEnd && source.Span[Position] == (byte)'\r')
+            Position++;
+        if (!AtEnd && source.Span[Position] == (byte)'\n')
+            Position++;
     }
 
     // ── Private readers ───────────────────────────────────────────────────────
@@ -153,7 +154,8 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
         while (!AtEnd && Current() != (byte)'>')
             Advance();
 
-        if (!AtEnd) Advance(); // consume '>'
+        if (!AtEnd)
+            Advance(); // consume '>'
         return new PdfToken(PdfTokenKind.HexString, Slice(start, Position), start);
     }
 
@@ -161,10 +163,12 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     {
         var start = Position;
         var isReal = false;
-        if (Current() is (byte)'-' or (byte)'+') Advance();
+        if (Current() is (byte)'-' or (byte)'+')
+            Advance();
         while (!AtEnd && (IsDigit(Current()) || Current() == (byte)'.'))
         {
-            if (Current() == (byte)'.') isReal = true;
+            if (Current() == (byte)'.')
+                isReal = true;
             Advance();
         }
 
@@ -203,7 +207,7 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     private void Advance() => Position++;
 
     private ReadOnlyMemory<byte> Slice(int start, int end) =>
-        source.Slice(start, end - start);
+        source[start..end];
 
     // §7.2.2 — whitespace characters: NUL, TAB, LF, FF, CR, SPACE
 
@@ -218,18 +222,31 @@ internal sealed class Lexer(ReadOnlyMemory<byte> source, int startPosition = 0)
     private static PdfTokenKind MatchKeyword(ReadOnlySpan<byte> raw)
     {
         // Compare against known keywords — no string allocation.
-        if (raw.SequenceEqual("true"u8)) return PdfTokenKind.BooleanTrue;
-        if (raw.SequenceEqual("false"u8)) return PdfTokenKind.BooleanFalse;
-        if (raw.SequenceEqual("null"u8)) return PdfTokenKind.Null;
-        if (raw.SequenceEqual("obj"u8)) return PdfTokenKind.Obj;
-        if (raw.SequenceEqual("endobj"u8)) return PdfTokenKind.EndObj;
-        if (raw.SequenceEqual("stream"u8)) return PdfTokenKind.Stream;
-        if (raw.SequenceEqual("endstream"u8)) return PdfTokenKind.EndStream;
-        if (raw.SequenceEqual("R"u8)) return PdfTokenKind.IndirectRef;
-        if (raw.SequenceEqual(KeywordsConstants.KeywordXref.ToUtf8Span())) return PdfTokenKind.Xref;
-        if (raw.SequenceEqual("trailer"u8)) return PdfTokenKind.Trailer;
+        if (raw.SequenceEqual("true"u8))
+            return PdfTokenKind.BooleanTrue;
+        if (raw.SequenceEqual("false"u8))
+            return PdfTokenKind.BooleanFalse;
+        if (raw.SequenceEqual("null"u8))
+            return PdfTokenKind.Null;
+        if (raw.SequenceEqual("obj"u8))
+            return PdfTokenKind.Obj;
+        if (raw.SequenceEqual("endobj"u8))
+            return PdfTokenKind.EndObj;
+        if (raw.SequenceEqual("stream"u8))
+            return PdfTokenKind.Stream;
+        if (raw.SequenceEqual("endstream"u8))
+            return PdfTokenKind.EndStream;
+        if (raw.SequenceEqual("R"u8))
+            return PdfTokenKind.IndirectRef;
+        if (raw.SequenceEqual("xref"u8))
+            return PdfTokenKind.Xref;
+        if (raw.SequenceEqual("trailer"u8))
+            return PdfTokenKind.Trailer;
         // ReSharper disable once ConvertIfStatementToReturnStatement
-        if (raw.SequenceEqual("startxref"u8)) return PdfTokenKind.StartXref;
+#pragma warning disable IDE0046
+        if (raw.SequenceEqual("startxref"u8))
+#pragma warning restore IDE0046
+            return PdfTokenKind.StartXref;
 
         // Unknown keyword — treat as a bare name-like token; parser will reject if invalid.
         return PdfTokenKind.Name;

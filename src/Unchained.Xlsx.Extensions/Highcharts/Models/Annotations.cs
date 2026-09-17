@@ -6,5 +6,5 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 public class Annotations
 {
     /// <summary>List of annotation items.</summary>
-    public List<AnnotationItem> Items { get; set; } = new();
+    public List<AnnotationItem> Items { get; set; } = [];
 }

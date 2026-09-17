@@ -78,7 +78,7 @@ public sealed class WorksheetCollection : IReadOnlyList<Worksheet>
         if (_sheets.Count <= 1)
             throw new InvalidOperationException("A workbook must contain at least one worksheet.");
 
-        _sheets.Remove(sheet);
+        _ = _sheets.Remove(sheet);
     }
 
     /// <summary>Removes the worksheet at the given tab index.</summary>

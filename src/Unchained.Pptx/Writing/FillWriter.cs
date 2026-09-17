@@ -68,7 +68,8 @@ internal static class FillWriter
 
         gradFill.Add(gsLst);
 
-        if (!gradient.IsLinear) return gradFill;
+        if (!gradient.IsLinear)
+            return gradFill;
 
         var ang = OoXmlHelper.DegreesToOoxmlRotation(gradient.LinearAngleDegrees);
         gradFill.Add(

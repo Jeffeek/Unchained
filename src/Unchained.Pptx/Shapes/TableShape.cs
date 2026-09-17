@@ -41,7 +41,7 @@ public sealed class TableShape : Shape
     ///     <see cref="TableCell.ColumnSpan" />/<see cref="TableCell.RowSpan" />; every other cell in
     ///     the block is flagged as a merge continuation (the OOXML <c>hMerge</c>/<c>vMerge</c> model).
     /// </summary>
-    public void MergeCells(
+    internal void MergeCells(
         int firstColumn,
         int firstRow,
         int lastColumn,
@@ -64,33 +64,40 @@ public sealed class TableShape : Shape
         anchor.RowSpan = r1 - r0 + 1;
 
         for (var r = r0; r <= r1; r++)
-        for (var c = c0; c <= c1; c++)
         {
-            if (c == c0 && r == r0) continue;
+            for (var c = c0; c <= c1; c++)
+            {
+                if (c == c0 && r == r0)
+                    continue;
 
-            var cell = Grid[c, r];
-            // A cell to the right of the anchor in the same row continues horizontally; a cell
-            // below continues vertically. Cells in the interior continue both ways.
-            if (c > c0) cell.IsHorizontalMergeContinuation = true;
-            if (r > r0) cell.IsVerticalMergeContinuation = true;
+                var cell = Grid[c, r];
+                // A cell to the right of the anchor in the same row continues horizontally; a cell
+                // below continues vertically. Cells in the interior continue both ways.
+                if (c > c0)
+                    cell.IsHorizontalMergeContinuation = true;
+                if (r > r0)
+                    cell.IsVerticalMergeContinuation = true;
+            }
         }
     }
 
     /// <summary>Merges the two given cells' bounding block. Convenience over the index overload.</summary>
-    public void MergeCells(TableCell first, TableCell second)
+    internal void MergeCells(TableCell first, TableCell second)
     {
-        var a = Locate(first) ?? throw new ArgumentException("Cell is not part of this table.", nameof(first));
+        var (column, row) = Locate(first) ?? throw new ArgumentException("Cell is not part of this table.", nameof(first));
         var b = Locate(second) ?? throw new ArgumentException("Cell is not part of this table.", nameof(second));
-        MergeCells(a.Column, a.Row, b.Column, b.Row);
+        MergeCells(column, row, b.Column, b.Row);
     }
 
     private (int Column, int Row)? Locate(TableCell target)
     {
         for (var r = 0; r < Grid.RowCount; r++)
-        for (var c = 0; c < Grid.ColumnCount; c++)
         {
-            if (ReferenceEquals(Grid[c, r], target))
-                return (c, r);
+            for (var c = 0; c < Grid.ColumnCount; c++)
+            {
+                if (ReferenceEquals(Grid[c, r], target))
+                    return (c, r);
+            }
         }
 
         return null;

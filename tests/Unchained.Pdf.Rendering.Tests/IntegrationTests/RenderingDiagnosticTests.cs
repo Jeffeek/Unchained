@@ -1,6 +1,6 @@
-using System.Runtime.InteropServices;
 using HarfBuzzSharp;
 using Shouldly;
+using System.Runtime.InteropServices;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Rendering.Tests.Helpers;
@@ -80,7 +80,7 @@ public sealed class RenderingDiagnosticTests : RendererTestBase
         var rectPdf = PdfFixtures.WithImageXObject(
             200,
             50,
-            Enumerable.Repeat((byte)0, 200 * 50 * 3).ToArray()
+            [.. Enumerable.Repeat((byte)0, 200 * 50 * 3)]
         ); // all-black image
         await using var rectDoc = await LoadAsync(rectPdf, TestContext.Current.CancellationToken);
         var rectPng = await Renderer.RenderPageAsync(rectDoc.Pages[1], new RenderOptions(72), TestContext.Current.CancellationToken);

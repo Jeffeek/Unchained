@@ -1,5 +1,5 @@
-using System.IO.Compression;
 using Shouldly;
+using System.IO.Compression;
 using Unchained.Drawing;
 using Unchained.Drawing.Encoders;
 using Unchained.Ooxml;

@@ -65,7 +65,8 @@ public sealed class ProtectionInfo
     /// </summary>
     public bool CheckWriteProtection(string password)
     {
-        if (!IsWriteProtected) return false;
+        if (!IsWriteProtected)
+            return false;
 
         var salt = Convert.FromBase64String(WriteProtectionSaltBase64!);
         var expected = Convert.FromBase64String(WriteProtectionHashBase64!);

@@ -26,7 +26,7 @@ internal static class FillParser
         var solid = parent.Element(DmlNames.SolidFill);
         if (solid != null)
         {
-            fill.SetSolid(ColorParser.Parse(solid));
+            _ = fill.SetSolid(ColorParser.Parse(solid));
             return;
         }
 
@@ -45,7 +45,8 @@ internal static class FillParser
         }
 
         var blip = parent.Element(DmlNames.BlipFill);
-        if (blip != null) ParsePicture(blip, fill);
+        if (blip != null)
+            ParsePicture(blip, fill);
     }
 
     // ── Sub-parsers ───────────────────────────────────────────────────────────
@@ -63,7 +64,8 @@ internal static class FillParser
         }
 
         var stopList = gradientElement.Element(DmlNames.GradientStopList);
-        if (stopList == null) return;
+        if (stopList == null)
+            return;
 
         foreach (var gs in stopList.Elements(DmlNames.GradientStop))
         {

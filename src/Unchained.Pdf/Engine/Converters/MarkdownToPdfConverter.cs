@@ -1,8 +1,8 @@
-using System.Buffers;
-using System.Text;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using System.Buffers;
+using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Content;
 using Unchained.Pdf.Core;
@@ -245,17 +245,26 @@ internal static class MarkdownToPdfConverter
 
     private static string ExtractInlineText(ContainerInline? container)
     {
-        if (container is null) return string.Empty;
+        if (container is null)
+            return string.Empty;
 
         var sb = new StringBuilder();
         foreach (var inline in container)
         {
             switch (inline)
             {
-                case LiteralInline lit: sb.Append(lit.Content); break;
-                case EmphasisInline em: sb.Append(ExtractInlineText(em)); break;
-                case CodeInline code: sb.Append(code.Content); break;
-                case LineBreakInline: sb.Append(' '); break;
+                case LiteralInline lit:
+                    sb.Append(lit.Content);
+                break;
+                case EmphasisInline em:
+                    sb.Append(ExtractInlineText(em));
+                break;
+                case CodeInline code:
+                    sb.Append(code.Content);
+                break;
+                case LineBreakInline:
+                    sb.Append(' ');
+                break;
             }
         }
 
@@ -280,7 +289,8 @@ internal static class MarkdownToPdfConverter
         float fontSize
     )
     {
-        if (container is null) return;
+        if (container is null)
+            return;
 
         foreach (var inline in container)
         {
@@ -322,7 +332,8 @@ internal static class MarkdownToPdfConverter
         string structTag = "P"
     )
     {
-        if (continuationIndent < 0) continuationIndent = indent;
+        if (continuationIndent < 0)
+            continuationIndent = indent;
         var lineRuns = new List<(string, string, float)>();
         var lineWidth = 0f;
         var isFirst = true;
@@ -376,13 +387,14 @@ internal static class MarkdownToPdfConverter
         {
             if (k != lastKey || Math.Abs(s - lastSize) > 0.01f)
             {
-                if (sb.Length > 0) runs.Add(new TextRun(sb.ToString(), lastKey!, lastSize, indent, structTag: structTag));
-                sb.Clear().Append(t);
+                if (sb.Length > 0)
+                    runs.Add(new TextRun(sb.ToString(), lastKey!, lastSize, indent, structTag: structTag));
+                _ = sb.Clear().Append(t);
                 lastKey = k;
                 lastSize = s;
             }
             else
-                sb.Append(t);
+                _ = sb.Append(t);
         }
 
         if (sb.Length > 0 && lastKey is not null)
@@ -417,8 +429,10 @@ internal static class MarkdownToPdfConverter
             usedY += runH;
         }
 
-        if (current.Count > 0) pages.Add(current);
-        if (pages.Count == 0) pages.Add([]);
+        if (current.Count > 0)
+            pages.Add(current);
+        if (pages.Count == 0)
+            pages.Add([]);
 
         return pages;
     }
@@ -650,7 +664,8 @@ internal static class MarkdownToPdfConverter
         w.LiteralString(run.Text);
         w.Op("Tj"u8);
 
-        if (!isTagged) return;
+        if (!isTagged)
+            return;
 
         w.Op("ET"u8);
         w.MarkedContentEnd();

@@ -23,8 +23,8 @@ internal static class CsvExporter
                 for (var col = range.Value.TopLeft.Column; col <= range.Value.BottomRight.Column; col++)
                     fields.Add(Escape(FormatCell(sheet.GetCell(row, col), options), options));
 
-                builder.Append(string.Join(options.Delimiter, fields));
-                builder.Append("\r\n");
+                _ = builder.Append(string.Join(options.Delimiter, fields));
+                _ = builder.Append("\r\n");
             }
         }
 

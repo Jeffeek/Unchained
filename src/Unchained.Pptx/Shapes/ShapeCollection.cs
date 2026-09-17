@@ -145,8 +145,10 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     {
         ArgumentNullException.ThrowIfNull(columnWidths);
         ArgumentNullException.ThrowIfNull(rowHeights);
-        if (columnWidths.Length == 0) throw new ArgumentException("At least one column is required.", nameof(columnWidths));
-        if (rowHeights.Length == 0) throw new ArgumentException("At least one row is required.", nameof(rowHeights));
+        if (columnWidths.Length == 0)
+            throw new ArgumentException("At least one column is required.", nameof(columnWidths));
+        if (rowHeights.Length == 0)
+            throw new ArgumentException("At least one row is required.", nameof(rowHeights));
 
         var totalWidth = columnWidths.Aggregate(Emu.Zero, static (a, b) => a + b);
         var totalHeight = rowHeights.Aggregate(Emu.Zero, static (a, b) => a + b);
@@ -284,16 +286,18 @@ public sealed class ShapeCollection : IReadOnlyList<Shape>
     {
         ArgumentNullException.ThrowIfNull(shape);
         var index = _shapes.IndexOf(shape);
-        if (index < 0) throw new ArgumentException("The shape does not belong to this collection.", nameof(shape));
+        if (index < 0)
+            throw new ArgumentException("The shape does not belong to this collection.", nameof(shape));
 
-        if (index == _shapes.Count - 1) return;
+        if (index == _shapes.Count - 1)
+            return;
 
         _shapes.RemoveAt(index);
         _shapes.Add(shape);
     }
 
     /// <summary>Moves the given shape to the back of the Z-order (drawn first, appears behind everything).</summary>
-    public void SendToBack(Shape shape)
+    internal void SendToBack(Shape shape)
     {
         ArgumentNullException.ThrowIfNull(shape);
         var index = _shapes.IndexOf(shape);

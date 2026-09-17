@@ -34,34 +34,35 @@ internal sealed class PdfEncryptionContext
     internal byte[] EncryptStream(ReadOnlySpan<byte> data, int objNum, int genNum)
     {
         if (_algorithm == PdfEncryptionAlgorithm.Aes256)
-            return PdfEncryption.AesEncryptCbcWithIv(_fileKey, data.ToArray());
+            return PdfEncryption.AesEncryptCbcWithIv(_fileKey, [.. data]);
 
         var key = PdfEncryption.DeriveObjectKey(_fileKey, objNum, genNum, _algorithm == PdfEncryptionAlgorithm.Aes128);
 
         return _algorithm == PdfEncryptionAlgorithm.Aes128
-            ? PdfEncryption.AesEncryptCbcWithIv(key, data.ToArray())
-            : PdfEncryption.Rc4(key, data.ToArray());
+            ? PdfEncryption.AesEncryptCbcWithIv(key, [.. data])
+            : PdfEncryption.Rc4(key, [.. data]);
     }
 
     /// <summary>Decrypts stream data. Handles IV-prefix for AES; RC4 is self-inverse.</summary>
     internal byte[] DecryptStream(ReadOnlySpan<byte> data, int objNum, int genNum)
     {
-        if (data.IsEmpty) return [];
+        if (data.IsEmpty)
+            return [];
 
         if (_algorithm == PdfEncryptionAlgorithm.Aes256)
         {
             return data.Length < 16
-                ? data.ToArray() // too short to be valid AES
-                : PdfEncryption.AesDecryptCbc(_fileKey, data[..16].ToArray(), data[16..].ToArray());
+                ? [.. data] // too short to be valid AES
+                : PdfEncryption.AesDecryptCbc(_fileKey, [.. data[..16]], [.. data[16..]]);
         }
 
         var key = PdfEncryption.DeriveObjectKey(_fileKey, objNum, genNum, _algorithm == PdfEncryptionAlgorithm.Aes128);
 
         return _algorithm != PdfEncryptionAlgorithm.Aes128
-            ? PdfEncryption.Rc4(key, data.ToArray())
+            ? PdfEncryption.Rc4(key, [.. data])
             : data.Length < 16
-                ? data.ToArray()
-                : PdfEncryption.AesDecryptCbc(key, data[..16].ToArray(), data[16..].ToArray());
+                ? [.. data]
+                : PdfEncryption.AesDecryptCbc(key, [.. data[..16]], [.. data[16..]]);
     }
 
     // ── String encrypt / decrypt ──────────────────────────────────────────────

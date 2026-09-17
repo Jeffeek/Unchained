@@ -30,7 +30,7 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
-        Directory.CreateDirectory(OutputDir);
+        _ = Directory.CreateDirectory(OutputDir);
         Console.WriteLine("Unchained.Pptx samples");
         Console.WriteLine($"Output directory: {OutputDir}");
         Console.WriteLine();
@@ -96,14 +96,14 @@ internal static class Program
 
         // Title slide.
         var title = doc.Slides.AddBlank(layout);
-        title.Shapes.AddTextBox(
+        _ = title.Shapes.AddTextBox(
             Emu.FromInches(1),
             Emu.FromInches(2.5),
             Emu.FromInches(11),
             Emu.FromInches(1.5),
             "Unchained.Pptx"
         );
-        title.Shapes.AddTextBox(
+        _ = title.Shapes.AddTextBox(
             Emu.FromInches(1),
             Emu.FromInches(4),
             Emu.FromInches(11),
@@ -113,7 +113,7 @@ internal static class Program
 
         // Content slide with an auto shape.
         var content = doc.Slides.AddBlank(layout);
-        content.Shapes.AddTextBox(
+        _ = content.Shapes.AddTextBox(
             Emu.FromInches(0.5),
             Emu.FromInches(0.4),
             Emu.FromInches(12),
@@ -142,8 +142,10 @@ internal static class Program
             { "Slide render", "Supported" }
         };
         for (var r = 0; r < 3; r++)
-        for (var c = 0; c < 2; c++)
-            table[c, r].TextFrame.PlainText = cells[r, c];
+        {
+            for (var c = 0; c < 2; c++)
+                table[c, r].TextFrame.PlainText = cells[r, c];
+        }
 
         var path = Path.Combine(OutputDir, "deck.pptx");
         await processor.SaveAsync(doc, path).ConfigureAwait(false);
@@ -154,7 +156,8 @@ internal static class Program
     private static async Task ReadTextAsync()
     {
         var source = Path.Combine(OutputDir, "deck.pptx");
-        if (!File.Exists(source)) await CreateDeckAsync().ConfigureAwait(false);
+        if (!File.Exists(source))
+            await CreateDeckAsync().ConfigureAwait(false);
 
         var processor = new PresentationProcessor();
         await using var doc = await processor.LoadAsync(source).ConfigureAwait(false);
@@ -168,7 +171,8 @@ internal static class Program
     private static async Task ExportAsync()
     {
         var source = Path.Combine(OutputDir, "deck.pptx");
-        if (!File.Exists(source)) await CreateDeckAsync().ConfigureAwait(false);
+        if (!File.Exists(source))
+            await CreateDeckAsync().ConfigureAwait(false);
 
         var processor = new PresentationProcessor();
         await using var doc = await processor.LoadAsync(source).ConfigureAwait(false);
@@ -190,7 +194,7 @@ internal static class Program
 
         // HTML (one file per slide written into a directory).
         var htmlDir = Path.Combine(OutputDir, "html");
-        Directory.CreateDirectory(htmlDir);
+        _ = Directory.CreateDirectory(htmlDir);
         var htmlFiles = await processor.SaveAsHtmlAsync(doc, htmlDir).ConfigureAwait(false);
         Console.WriteLine($"  HTML → {htmlFiles.Count} file(s) in {Rel(htmlDir)}");
     }
@@ -199,7 +203,8 @@ internal static class Program
     private static async Task RenderAsync()
     {
         var source = Path.Combine(OutputDir, "deck.pptx");
-        if (!File.Exists(source)) await CreateDeckAsync().ConfigureAwait(false);
+        if (!File.Exists(source))
+            await CreateDeckAsync().ConfigureAwait(false);
 
         var processor = new PresentationProcessor();
         await using var doc = await processor.LoadAsync(source).ConfigureAwait(false);
@@ -229,7 +234,8 @@ internal static class Program
     private static async Task EncryptAsync()
     {
         var source = Path.Combine(OutputDir, "deck.pptx");
-        if (!File.Exists(source)) await CreateDeckAsync().ConfigureAwait(false);
+        if (!File.Exists(source))
+            await CreateDeckAsync().ConfigureAwait(false);
 
         var processor = new PresentationProcessor();
         await using var doc = await processor.LoadAsync(source).ConfigureAwait(false);

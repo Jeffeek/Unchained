@@ -122,60 +122,64 @@ internal static class JpegEncoder
         int dcY = 0, dcCb = 0, dcCr = 0;
 
         for (var by = 0; by < h; by += 8)
-        for (var bx = 0; bx < w; bx += 8)
         {
-            var y = new double[64];
-            var cb = new double[64];
-            var cr = new double[64];
-
-            for (var dy = 0; dy < 8; dy++)
-            for (var dx = 0; dx < 8; dx++)
+            for (var bx = 0; bx < w; bx += 8)
             {
-                var px = Math.Min(bx + dx, w - 1);
-                var py = Math.Min(by + dy, h - 1);
-                var o = ((py * w) + px) * 4;
-                var r = src[o];
-                var g = src[o + 1];
-                var b2 = src[o + 2];
-                var idx = (dy * 8) + dx;
+                var y = new double[64];
+                var cb = new double[64];
+                var cr = new double[64];
 
-                y[idx] = (YCbCrConstants.RToY * r) + (YCbCrConstants.GToY * g) + (YCbCrConstants.BToY * b2) - 128;
-                cb[idx] = -(YCbCrConstants.RtoCbNeg * r) - (YCbCrConstants.GtoCbNeg * g) + (0.5 * b2);
-                cr[idx] = (0.5 * r) - (YCbCrConstants.GtoCrNeg * g) - (YCbCrConstants.BtoCrNeg * b2);
+                for (var dy = 0; dy < 8; dy++)
+                {
+                    for (var dx = 0; dx < 8; dx++)
+                    {
+                        var px = Math.Min(bx + dx, w - 1);
+                        var py = Math.Min(by + dy, h - 1);
+                        var o = ((py * w) + px) * 4;
+                        var r = src[o];
+                        var g = src[o + 1];
+                        var b2 = src[o + 2];
+                        var idx = (dy * 8) + dx;
+
+                        y[idx] = (YCbCrConstants.RToY * r) + (YCbCrConstants.GToY * g) + (YCbCrConstants.BToY * b2) - 128;
+                        cb[idx] = -(YCbCrConstants.RtoCbNeg * r) - (YCbCrConstants.GtoCbNeg * g) + (0.5 * b2);
+                        cr[idx] = (0.5 * r) - (YCbCrConstants.GtoCrNeg * g) - (YCbCrConstants.BtoCrNeg * b2);
+                    }
+                }
+
+                // ReSharper disable BadListLineBreaks
+                EncodeBlock(
+                    y,
+                    lumQt,
+                    dcLumCodes,
+                    dcLumLens,
+                    acLumCodes,
+                    acLumLens,
+                    ref dcY,
+                    bw
+                );
+                EncodeBlock(
+                    cb,
+                    chrQt,
+                    dcChrCodes,
+                    dcChrLens,
+                    acChrCodes,
+                    acChrLens,
+                    ref dcCb,
+                    bw
+                );
+                EncodeBlock(
+                    cr,
+                    chrQt,
+                    dcChrCodes,
+                    dcChrLens,
+                    acChrCodes,
+                    acChrLens,
+                    ref dcCr,
+                    bw
+                );
+                // ReSharper restore BadListLineBreaks
             }
-
-            // ReSharper disable BadListLineBreaks
-            EncodeBlock(
-                y,
-                lumQt,
-                dcLumCodes,
-                dcLumLens,
-                acLumCodes,
-                acLumLens,
-                ref dcY,
-                bw
-            );
-            EncodeBlock(
-                cb,
-                chrQt,
-                dcChrCodes,
-                dcChrLens,
-                acChrCodes,
-                acChrLens,
-                ref dcCb,
-                bw
-            );
-            EncodeBlock(
-                cr,
-                chrQt,
-                dcChrCodes,
-                dcChrLens,
-                acChrCodes,
-                acChrLens,
-                ref dcCr,
-                bw
-            );
-            // ReSharper restore BadListLineBreaks
         }
 
         bw.Flush();
@@ -291,12 +295,14 @@ internal static class JpegEncoder
 
         // Column pass
         for (var col = 0; col < 8; col++)
-        for (var v = 0; v < 8; v++)
         {
-            var sum = 0d;
-            for (var y = 0; y < 8; y++)
-                sum += tmp[(y * 8) + col] * Math.Cos(((2.0 * y) + 1) * v * Math.PI / 16d);
-            out2[(v * 8) + col] = 0.25 * (v == 0 ? 1d / Math.Sqrt(2) : 1d) * sum;
+            for (var v = 0; v < 8; v++)
+            {
+                var sum = 0d;
+                for (var y = 0; y < 8; y++)
+                    sum += tmp[(y * 8) + col] * Math.Cos(((2.0 * y) + 1) * v * Math.PI / 16d);
+                out2[(v * 8) + col] = 0.25 * (v == 0 ? 1d / Math.Sqrt(2) : 1d) * sum;
+            }
         }
 
         return out2;

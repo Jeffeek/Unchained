@@ -89,14 +89,14 @@ internal static class NumberFormatter
             {
                 case '"':
                     inQuotes = !inQuotes;
-                    current.Append(c);
+                    _ = current.Append(c);
                 break;
                 case ';' when !inQuotes:
                     sections.Add(current.ToString());
-                    current.Clear();
+                    _ = current.Clear();
                 break;
                 default:
-                    current.Append(c);
+                    _ = current.Append(c);
                 break;
             }
         }
@@ -156,8 +156,7 @@ internal static class NumberFormatter
 
         static bool IsPlaceholderChar(char c) => c is '0' or '#' or '?';
 
-        static string CleanLiteral(string raw) =>
-            raw.Replace("\"", string.Empty).Replace("\\", string.Empty);
+        static string CleanLiteral(string raw) => raw.Replace("\"", string.Empty).Replace("\\", string.Empty);
     }
 
     private static int CountDecimals(string section)
@@ -202,14 +201,14 @@ internal static class NumberFormatter
 
             if (inQuotes)
             {
-                result.Append(c);
+                _ = result.Append(c);
                 continue;
             }
 
             // AM/PM marker → tt.
             if (hasAmPm && i + 5 <= excel.Length && excel.Substring(i, 5).Equals("AM/PM", StringComparison.OrdinalIgnoreCase))
             {
-                result.Append("tt");
+                _ = result.Append("tt");
                 i += 4;
                 continue;
             }
@@ -218,11 +217,11 @@ internal static class NumberFormatter
             {
                 case 'y':
                 case 'd':
-                    result.Append(c);
+                    _ = result.Append(c);
                     lastTimeUnit = '\0';
                 break;
                 case 's':
-                    result.Append('s');
+                    _ = result.Append('s');
                     lastTimeUnit = 's';
                 break;
                 case 'm':
@@ -231,19 +230,19 @@ internal static class NumberFormatter
                     // 'm' is minutes when it directly follows an hour or directly precedes seconds;
                     // otherwise it is a month.
                     var isMinute = lastTimeUnit is 'h' or 'H' || NextNonMSatChar(excel, i) is 's';
-                    result.Append(isMinute ? 'm' : 'M');
+                    _ = result.Append(isMinute ? 'm' : 'M');
                     break;
                 }
                 case 'h':
-                    result.Append(hasAmPm ? 'h' : 'H');
+                    _ = result.Append(hasAmPm ? 'h' : 'H');
                     lastTimeUnit = 'h';
                 break;
                 case 'H':
-                    result.Append('H');
+                    _ = result.Append('H');
                     lastTimeUnit = 'H';
                 break;
                 default:
-                    result.Append(c);
+                    _ = result.Append(c);
                     lastTimeUnit = '\0';
                 break;
             }

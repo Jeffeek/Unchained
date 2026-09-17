@@ -3,7 +3,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 /// <summary>
 ///     Drilldown configuration. Maps parent series to drilldown child series.
 /// </summary>
-public class Drilldown : IHasAdditionalProperties
+public class Drilldown
 {
     /// <summary>
     ///     Active-series style when a series is drilled into.
@@ -18,10 +18,10 @@ public class Drilldown : IHasAdditionalProperties
     /// <summary>
     ///     Drilldown series keyed by parent series name.
     /// </summary>
-    public Dictionary<string, List<DrilldownSeries>> Series { get; set; } = new();
+    public Dictionary<string, List<DrilldownSeries>> Series { get; set; } = [];
 
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

@@ -35,7 +35,8 @@ public static class CfbDocument
     /// </summary>
     public static Dictionary<string, byte[]> Read(byte[] data)
     {
-        if (data.Length < SectorSize) ThrowInvalid("File too small");
+        if (data.Length < SectorSize)
+            ThrowInvalid("File too small");
         for (var i = 0; i < Magic.Length; i++)
         {
             if (data[i] != Magic[i])
@@ -58,7 +59,8 @@ public static class CfbDocument
         // Read directory
         var dirEntries = ReadDirectory(data, firstDirSector, fat, sectorSize);
 
-        if (dirEntries.Count == 0) ThrowInvalid("Empty directory");
+        if (dirEntries.Count == 0)
+            ThrowInvalid("Empty directory");
         var rootEntry = dirEntries[0];
 
         // Read mini-stream container (from root entry)
@@ -75,7 +77,8 @@ public static class CfbDocument
         for (var i = 1; i < dirEntries.Count; i++)
         {
             var entry = dirEntries[i];
-            if (entry.ObjectType != 2 || string.IsNullOrEmpty(entry.Name)) continue;
+            if (entry.ObjectType != 2 || string.IsNullOrEmpty(entry.Name))
+                continue;
 
             byte[] streamBytes;
             if ((long)entry.Size < miniStreamCutoff && miniStream != null)
@@ -105,7 +108,8 @@ public static class CfbDocument
         for (var i = 0; i < 109 && i < numFatSectors; i++)
         {
             var s = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(76 + (i * 4)));
-            if (s is FreeSect or EndOfChain or < 0) break;
+            if (s is FreeSect or EndOfChain or < 0)
+                break;
 
             fatSectors.Add(s);
         }
@@ -127,7 +131,8 @@ public static class CfbDocument
         int sectorSize
     )
     {
-        if (firstMiniFatSector is FreeSect or EndOfChain or < 0) return [];
+        if (firstMiniFatSector is FreeSect or EndOfChain or < 0)
+            return [];
 
         var entries = new List<int>();
         var chain = FollowChain(fat, firstMiniFatSector);
@@ -184,7 +189,8 @@ public static class CfbDocument
         {
             chain.Add(current);
             current = fat[current];
-            if (chain.Count > fat.Count) break; // cycle guard
+            if (chain.Count > fat.Count)
+                break; // cycle guard
         }
 
         return chain;
@@ -205,7 +211,8 @@ public static class CfbDocument
             var toCopy = Math.Min(sectorSize, size - written);
             Array.Copy(data, offset, result, written, toCopy);
             written += toCopy;
-            if (written >= size) break;
+            if (written >= size)
+                break;
         }
 
         return result;
@@ -226,7 +233,8 @@ public static class CfbDocument
             var toCopy = Math.Min(miniSectorSize, size - written);
             Array.Copy(miniStream, offset, result, written, toCopy);
             written += toCopy;
-            if (written >= size) break;
+            if (written >= size)
+                break;
         }
 
         return result;
@@ -248,8 +256,10 @@ public static class CfbDocument
         var largeEntries = new List<(string name, byte[] data)>();
         foreach (var (name, data) in streams)
         {
-            if (data.Length < MiniStreamCutoff) miniEntries.Add((name, data));
-            else largeEntries.Add((name, data));
+            if (data.Length < MiniStreamCutoff)
+                miniEntries.Add((name, data));
+            else
+                largeEntries.Add((name, data));
         }
 
         // Calculate mini-stream layout
@@ -308,7 +318,8 @@ public static class CfbDocument
             largeSectorCounts,
             hasMini
         );
-        if (hasMini) WriteMiniFat(result, miniEntries);
+        if (hasMini)
+            WriteMiniFat(result, miniEntries);
         WriteDirectory(
             result,
             miniEntries,
@@ -318,7 +329,8 @@ public static class CfbDocument
             totalMiniBytes,
             hasMini
         );
-        if (hasMini) WriteMiniStreamContainer(result, miniEntries);
+        if (hasMini)
+            WriteMiniStreamContainer(result, miniEntries);
         WriteLargeStreams(result, largeEntries, largeSectorStarts);
 
         return result;
@@ -400,8 +412,7 @@ public static class CfbDocument
 
         return;
 
-        void WriteFatEntry(int sector, int value) =>
-            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(SectorSize + (sector * 4)), value);
+        void WriteFatEntry(int sector, int value) => BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(SectorSize + (sector * 4)), value);
     }
 
     private static void WriteMiniFat(byte[] buf, IEnumerable<(string name, byte[] data)> miniEntries)

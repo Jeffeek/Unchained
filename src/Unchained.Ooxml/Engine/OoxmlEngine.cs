@@ -147,6 +147,7 @@ public sealed class OoxmlEngine : IDisposable
             if (ct.Contains("presentationml.presentation.main", StringComparison.OrdinalIgnoreCase)
                 || ct.Contains("presentationml.slideshow.main", StringComparison.OrdinalIgnoreCase))
                 return OoxmlFormat.Presentation;
+
             if (ct.Contains("wordprocessingml.document.main", StringComparison.OrdinalIgnoreCase))
                 return OoxmlFormat.Wordprocessing;
             if (ct.Contains("spreadsheetml.sheet.main", StringComparison.OrdinalIgnoreCase))

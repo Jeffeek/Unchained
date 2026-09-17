@@ -121,7 +121,8 @@ internal sealed class ColorSpaceInfo
             case PdfConstants.DeviceN:
             {
                 var fn = overrideFn ?? TintTransform;
-                if (fn is null) return (128, 128, 128);
+                if (fn is null)
+                    return (128, 128, 128);
                 // Evaluation: single tint value for Separation, multi-component for DeviceN.
                 var tint = components.Length > 0 ? components[0] : 0.5;
                 var output = fn.Eval(tint);
@@ -153,7 +154,8 @@ internal sealed class ColorSpaceInfo
 
             case PdfConstants.CalRgb:
             {
-                if (components.Length < 3) return (128, 128, 128);
+                if (components.Length < 3)
+                    return (128, 128, 128);
                 // Apply gamma then matrix to get CIE XYZ, then convert to sRGB.
                 var gamma = CalRgbGamma ?? [1.0, 1.0, 1.0];
                 var ar = Math.Pow(Math.Max(0, components[0]), gamma.Length > 0 ? gamma[0] : 1.0);
@@ -186,7 +188,8 @@ internal sealed class ColorSpaceInfo
 
             case PdfConstants.Lab:
             {
-                if (components.Length < 3) return (128, 128, 128);
+                if (components.Length < 3)
+                    return (128, 128, 128);
                 // L*a*b* → XYZ D50 → linear sRGB (approximate)
                 var lStar = components[0];
                 var a = components[1];
@@ -203,6 +206,7 @@ internal sealed class ColorSpaceInfo
                 return (B255(Gamma(Math.Max(0, lr2))), B255(Gamma(Math.Max(0, lg2))), B255(Gamma(Math.Max(0, lb2))));
 
                 static double Gamma(double v) => v <= 0.0031308 ? 12.92 * v : (1.055 * Math.Pow(v, 1.0 / 2.4)) - 0.055;
+
                 static double F(double t) => t > 0.206897 ? t * t * t : (t - (16.0 / 116.0)) / 7.787;
             }
 

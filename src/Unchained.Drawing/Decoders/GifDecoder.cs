@@ -18,12 +18,15 @@ internal static class GifDecoder
         width = 0;
         height = 0;
 
-        if (bytes.Length < 13) return null;
-        if (!IsGif(bytes)) return null;
+        if (bytes.Length < 13)
+            return null;
+        if (!IsGif(bytes))
+            return null;
 
         width = BinaryPrimitives.ReadInt16LittleEndian(bytes[6..]);
         height = BinaryPrimitives.ReadInt16LittleEndian(bytes[8..]);
-        if (width == 0 || height == 0) return null;
+        if (width == 0 || height == 0)
+            return null;
 
         var flags = bytes[10];
         var hasGct = (flags & 0x80) != 0;
@@ -63,7 +66,8 @@ internal static class GifDecoder
     )
     {
         pos++;
-        if (pos + 10 > bytes.Length) return null;
+        if (pos + 10 > bytes.Length)
+            return null;
 
         pos += 8;
         var imgFlags = bytes[pos++];
@@ -71,7 +75,8 @@ internal static class GifDecoder
         var lctSize = hasLct ? 1 << ((imgFlags & 0x07) + 1) : 0;
 
         var pal = hasLct ? ReadPalette(bytes[pos..], lctSize) : palette;
-        if (pal == null || pal.Length == 0) return null;
+        if (pal == null || pal.Length == 0)
+            return null;
 
         pos += lctSize * 3;
         pos++;
@@ -81,7 +86,8 @@ internal static class GifDecoder
         // The LzwDecoder defaults to earlyChange=1 which shifts threshold,
         // but GIF requires the GIF-specific variant. Decode inline.
         var pixels = DecodeGifLzw(data, width, height);
-        if (pixels.Length != width * height) return null;
+        if (pixels.Length != width * height)
+            return null;
 
         var rgb = new byte[width * height * 3];
         for (var i = 0; i < pixels.Length; i++)
@@ -107,7 +113,7 @@ internal static class GifDecoder
     private static byte[] ReadPalette(ReadOnlySpan<byte> bytes, int count)
     {
         var size = count * 3;
-        return bytes[..size].ToArray();
+        return [.. bytes[..size]];
     }
 
     private static byte[] ReadSubBlocks(ReadOnlySpan<byte> bytes, ref int pos)
@@ -116,25 +122,28 @@ internal static class GifDecoder
         while (pos < bytes.Length)
         {
             var blockSize = bytes[pos++];
-            if (blockSize == 0) break;
+            if (blockSize == 0)
+                break;
 
             outBytes.AddRange(bytes.Slice(pos, blockSize));
             pos += blockSize;
         }
 
-        return outBytes.ToArray();
+        return [.. outBytes];
     }
 
     private static int SkipExtension(ReadOnlySpan<byte> bytes, int pos)
     {
         pos++;
-        if (pos >= bytes.Length) return -1;
+        if (pos >= bytes.Length)
+            return -1;
 
         pos++;
         while (pos < bytes.Length)
         {
             var blockSize = bytes[pos++];
-            if (blockSize == 0) break;
+            if (blockSize == 0)
+                break;
 
             pos += blockSize;
         }
@@ -167,7 +176,8 @@ internal static class GifDecoder
         while (true)
         {
             var code = ReadBits(data, ref bitPos, codeWidth);
-            if (code is < 0 or eoiCode) break;
+            if (code is < 0 or eoiCode)
+                break;
 
             if (code == clearCode)
             {
@@ -177,12 +187,14 @@ internal static class GifDecoder
                 continue;
             }
 
-            if (code > nextCode) break;
+            if (code > nextCode)
+                break;
 
             if (code == nextCode && lastCode >= 0)
             {
                 var root = lastCode;
-                while (root >= clearCode) root = prefix[root];
+                while (root >= clearCode)
+                    root = prefix[root];
                 prefix[lastCode] = lastCode;
                 suffix[lastCode] = suffix[root];
             }
@@ -226,7 +238,8 @@ internal static class GifDecoder
         for (var i = 0; i < count; i++)
         {
             var byteIdx = bitPos >> 3;
-            if (byteIdx >= data.Length) return -1;
+            if (byteIdx >= data.Length)
+                return -1;
 
             result = (result << 1) | ((data[byteIdx] >> (7 - (bitPos & 7))) & 1);
             bitPos++;

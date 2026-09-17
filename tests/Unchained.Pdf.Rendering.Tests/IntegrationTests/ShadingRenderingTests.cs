@@ -12,7 +12,8 @@ public sealed class ShadingRenderingTests : RendererTestBase
     {
         var w = g.GetLength(1);
         long sum = 0;
-        for (var x = 0; x < w; x++) sum += g[y, x];
+        for (var x = 0; x < w; x++)
+            sum += g[y, x];
         return (double)sum / w;
     }
 
@@ -101,10 +102,12 @@ public sealed class ShadingRenderingTests : RendererTestBase
         var w = g.GetLength(1);
         var nonWhite = 0;
         for (var y = 0; y < h; y++)
-        for (var x = 0; x < w; x++)
         {
-            if (g[y, x] < 200)
-                nonWhite++;
+            for (var x = 0; x < w; x++)
+            {
+                if (g[y, x] < 200)
+                    nonWhite++;
+            }
         }
 
         nonWhite.ShouldBeGreaterThan(w * h / 10); // pattern covers a meaningful fraction
@@ -137,24 +140,28 @@ public sealed class ShadingRenderingTests : RendererTestBase
         // Sample a 10×10 block near the top-left — all pixels should be ≥ 240 (near-white).
         var cornerSize = Math.Max(2, Math.Min(10, w / 10));
         for (var y = 0; y < cornerSize; y++)
-        for (var x = 0; x < cornerSize; x++)
         {
-            g[y, x]
-                .ShouldBeGreaterThanOrEqualTo(
-                    230,
-                    $"pixel ({x},{y}) should be white (outside triangle clip) but was {g[y, x]}"
-                );
+            for (var x = 0; x < cornerSize; x++)
+            {
+                g[y, x]
+                    .ShouldBeGreaterThanOrEqualTo(
+                        230,
+                        $"pixel ({x},{y}) should be white (outside triangle clip) but was {g[y, x]}"
+                    );
+            }
         }
 
         // Bottom-right corner region must be black (inside the triangle).
         for (var y = h - cornerSize; y < h; y++)
-        for (var x = w - cornerSize; x < w; x++)
         {
-            g[y, x]
-                .ShouldBeLessThan(
-                    50,
-                    $"pixel ({x},{y}) should be black (inside triangle clip) but was {g[y, x]}"
-                );
+            for (var x = w - cornerSize; x < w; x++)
+            {
+                g[y, x]
+                    .ShouldBeLessThan(
+                        50,
+                        $"pixel ({x},{y}) should be black (inside triangle clip) but was {g[y, x]}"
+                    );
+            }
         }
     }
 
@@ -195,10 +202,14 @@ public sealed class ShadingRenderingTests : RendererTestBase
         var nonWhite = 0;
         var minVal = 255;
         for (var y = 0; y < h; y++)
-        for (var x = 0; x < w; x++)
         {
-            if (g[y, x] < minVal) minVal = g[y, x];
-            if (g[y, x] < 253) nonWhite++;
+            for (var x = 0; x < w; x++)
+            {
+                if (g[y, x] < minVal)
+                    minVal = g[y, x];
+                if (g[y, x] < 253)
+                    nonWhite++;
+            }
         }
 
         nonWhite.ShouldBeGreaterThan(0, $"BlendMode {blendMode}: all pixels ≥ 253 (min={minVal}) — blend had no effect");

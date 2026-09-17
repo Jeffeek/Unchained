@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Unchained.Drawing;
@@ -83,8 +82,10 @@ internal sealed class RasterBuffer(int width, int height)
         y1 = Math.Min(Height, y1);
         _clipMask = new byte[Width * Height];
         for (var py = y0; py < y1; py++)
-        for (var px = x0; px < x1; px++)
-            _clipMask[(py * Width) + px] = 255;
+        {
+            for (var px = x0; px < x1; px++)
+                _clipMask[(py * Width) + px] = 255;
+        }
     }
 
     /// <summary>
@@ -126,15 +127,20 @@ internal sealed class RasterBuffer(int width, int height)
     )
     {
         var mask = new byte[Width * Height];
-        if (polys.Count == 0) return mask;
+        if (polys.Count == 0)
+            return mask;
 
         var minY = double.MaxValue;
         var maxY = double.MinValue;
         foreach (var pts in polys)
-        foreach (var (_, py) in pts)
         {
-            if (py < minY) minY = py;
-            if (py > maxY) maxY = py;
+            foreach (var (_, py) in pts)
+            {
+                if (py < minY)
+                    minY = py;
+                if (py > maxY)
+                    maxY = py;
+            }
         }
 
         var y0 = Math.Max(0, (int)Math.Floor(minY));
@@ -197,7 +203,6 @@ internal sealed class RasterBuffer(int width, int height)
         }
     }
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     internal void SetPixel(
         int x,
         int y,
@@ -730,9 +735,11 @@ internal sealed class RasterBuffer(int width, int height)
         }
 
         s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
-        if (Math.Abs(max - rf) < 0.05) h = (((gf - bf) / delta) + (gf < bf ? 6 : 0)) / 6.0;
-        else if (Math.Abs(max - gf) < 0.05) h = (((bf - rf) / delta) + 2) / 6.0;
-        else h = (((rf - gf) / delta) + 4) / 6.0;
+        h = Math.Abs(max - rf) < 0.05
+            ? (((gf - bf) / delta) + (gf < bf ? 6 : 0)) / 6.0
+            : Math.Abs(max - gf) < 0.05
+                ? (((bf - rf) / delta) + 2) / 6.0
+                : (((rf - gf) / delta) + 4) / 6.0;
     }
 
     // Converts HSL (H in [0,1), S in [0,1], L in [0,1]) to 0-255 RGB.
@@ -761,8 +768,10 @@ internal sealed class RasterBuffer(int width, int height)
 
     private static double HueToRgb(double p, double q, double t)
     {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
+        if (t < 0)
+            t += 1;
+        if (t > 1)
+            t -= 1;
         return t switch
         {
             < 1.0 / 6 => p + ((q - p) * 6 * t),
@@ -772,7 +781,6 @@ internal sealed class RasterBuffer(int width, int height)
         };
     }
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     internal void FillRect(
         int x,
         int y,
@@ -790,17 +798,19 @@ internal sealed class RasterBuffer(int width, int height)
         var x2 = Math.Min(Width, x + w);
         var y2 = Math.Min(Height, y + h);
         for (var py = y1; py < y2; py++)
-        for (var px = x1; px < x2; px++)
         {
-            SetPixel(
-                px,
-                py,
-                r,
-                g,
-                b,
-                a,
-                blendMode
-            );
+            for (var px = x1; px < x2; px++)
+            {
+                SetPixel(
+                    px,
+                    py,
+                    r,
+                    g,
+                    b,
+                    a,
+                    blendMode
+                );
+            }
         }
     }
 
@@ -837,7 +847,6 @@ internal sealed class RasterBuffer(int width, int height)
     }
 
     // Bresenham line with configurable thickness.
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     internal void DrawLine(
         int x0,
         int y0,
@@ -861,17 +870,19 @@ internal sealed class RasterBuffer(int width, int height)
         while (true)
         {
             for (var ty = -half; ty <= half; ty++)
-            for (var tx = -half; tx <= half; tx++)
             {
-                SetPixel(
-                    x0 + tx,
-                    y0 + ty,
-                    r,
-                    g,
-                    b,
-                    a,
-                    blendMode
-                );
+                for (var tx = -half; tx <= half; tx++)
+                {
+                    SetPixel(
+                        x0 + tx,
+                        y0 + ty,
+                        r,
+                        g,
+                        b,
+                        a,
+                        blendMode
+                    );
+                }
             }
 
             if (x0 == x1 && y0 == y1)
@@ -930,7 +941,6 @@ internal sealed class RasterBuffer(int width, int height)
     }
 
     // Writes an opaque RGB pixel directly (used for image blitting, no alpha).
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     internal void BlitImagePixel(
         int x,
         int y,
@@ -994,15 +1004,21 @@ internal sealed class RasterBuffer(int width, int height)
         var x1 = 0;
         var y1 = 0;
         for (var y = 0; y < Height; y++)
-        for (var x = 0; x < Width; x++)
         {
-            if (_clipMask[(y * Width) + x] == 0)
-                continue;
+            for (var x = 0; x < Width; x++)
+            {
+                if (_clipMask[(y * Width) + x] == 0)
+                    continue;
 
-            if (x < x0) x0 = x;
-            if (y < y0) y0 = y;
-            if (x > x1) x1 = x;
-            if (y > y1) y1 = y;
+                if (x < x0)
+                    x0 = x;
+                if (y < y0)
+                    y0 = y;
+                if (x > x1)
+                    x1 = x;
+                if (y > y1)
+                    y1 = y;
+            }
         }
 
         // No pixel was inside — return empty rect.
@@ -1025,19 +1041,21 @@ internal sealed class RasterBuffer(int width, int height)
     {
         var r2 = r * r;
         for (var dy = -r; dy <= r; dy++)
-        for (var dx = -r; dx <= r; dx++)
         {
-            if ((dx * dx) + (dy * dy) <= r2)
+            for (var dx = -r; dx <= r; dx++)
             {
-                SetPixel(
-                    cx + dx,
-                    cy + dy,
-                    red,
-                    grn,
-                    blu,
-                    a,
-                    blendMode
-                );
+                if ((dx * dx) + (dy * dy) <= r2)
+                {
+                    SetPixel(
+                        cx + dx,
+                        cy + dy,
+                        red,
+                        grn,
+                        blu,
+                        a,
+                        blendMode
+                    );
+                }
             }
         }
     }

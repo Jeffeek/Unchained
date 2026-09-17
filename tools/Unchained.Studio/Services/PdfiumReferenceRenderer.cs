@@ -1,9 +1,8 @@
+using PDFiumCore;
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
-using PDFiumCore;
 using Unchained.Drawing.Constants;
-using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Studio.Services;
 
@@ -19,7 +18,8 @@ public sealed class PdfiumReferenceRenderer
 
     private static bool EnsureInit()
     {
-        if (_initialized) return _available;
+        if (_initialized)
+            return _available;
 
         InitLock.Enter();
 
@@ -74,14 +74,17 @@ public sealed class PdfiumReferenceRenderer
             // Load document from memory — requires pinned IntPtr
             doc = fpdfview.FPDF_LoadMemDocument(gch.AddrOfPinnedObject(), pdfBytes.Count, null);
             gch.Free(); // document is now loaded; we no longer need the pin
-            if (doc is null) return null;
+            if (doc is null)
+                return null;
 
             var pageCount = fpdfview.FPDF_GetPageCount(doc);
-            if (pageNumber < 1 || pageNumber > pageCount) return null;
+            if (pageNumber < 1 || pageNumber > pageCount)
+                return null;
 
             // Load page (0-based index)
             page = fpdfview.FPDF_LoadPage(doc, pageNumber - 1);
-            if (page is null) return null;
+            if (page is null)
+                return null;
 
             // Compute pixel dimensions
             var widthPt = fpdfview.FPDF_GetPageWidthF(page);
@@ -92,9 +95,10 @@ public sealed class PdfiumReferenceRenderer
 
             // Create BGRA bitmap, fill with white, render
             bitmap = fpdfview.FPDFBitmapCreate(pixW, pixH, 0 /* no alpha */);
-            if (bitmap is null) return null;
+            if (bitmap is null)
+                return null;
 
-            fpdfview.FPDFBitmapFillRect(
+            _ = fpdfview.FPDFBitmapFillRect(
                 bitmap,
                 0,
                 0,
@@ -126,10 +130,14 @@ public sealed class PdfiumReferenceRenderer
         }
         finally
         {
-            if (gch.IsAllocated) gch.Free(); // safety: free if exception before explicit Free
-            if (bitmap is not null) fpdfview.FPDFBitmapDestroy(bitmap);
-            if (page is not null) fpdfview.FPDF_ClosePage(page);
-            if (doc is not null) fpdfview.FPDF_CloseDocument(doc);
+            if (gch.IsAllocated)
+                gch.Free(); // safety: free if exception before explicit Free
+            if (bitmap is not null)
+                fpdfview.FPDFBitmapDestroy(bitmap);
+            if (page is not null)
+                fpdfview.FPDF_ClosePage(page);
+            if (doc is not null)
+                fpdfview.FPDF_CloseDocument(doc);
         }
     }
 
@@ -151,13 +159,15 @@ public sealed class PdfiumReferenceRenderer
         // Convert BGRA → RGB (Pdfium pixel order: B G R A; PNG wants R G B)
         var rgb = new byte[width * height * 3];
         for (var row = 0; row < height; row++)
-        for (var col = 0; col < width; col++)
         {
-            var src = (row * stride) + (col * 4);
-            var dst = ((row * width) + col) * 3;
-            rgb[dst] = bgra[src + 2];     // R
-            rgb[dst + 1] = bgra[src + 1]; // G
-            rgb[dst + 2] = bgra[src];     // B
+            for (var col = 0; col < width; col++)
+            {
+                var src = (row * stride) + (col * 4);
+                var dst = ((row * width) + col) * 3;
+                rgb[dst] = bgra[src + 2];     // R
+                rgb[dst + 1] = bgra[src + 1]; // G
+                rgb[dst + 2] = bgra[src];     // B
+            }
         }
 
         return EncodeRgbPng(rgb, width, height);
@@ -169,7 +179,7 @@ public sealed class PdfiumReferenceRenderer
         ms.Write(PngConstants.Signature);
         WriteIhdr(ms, width, height);
         WriteIdat(ms, rgb, width, height);
-        WriteChunk(ms, PngConstants.IEND.ToUtf8Span(), ReadOnlySpan<byte>.Empty);
+        WriteChunk(ms, "IEND"u8, []);
         return ms.ToArray();
     }
 
@@ -180,7 +190,7 @@ public sealed class PdfiumReferenceRenderer
         BinaryPrimitives.WriteInt32BigEndian(d[4..], h);
         d[8] = 8;
         d[9] = 2; // bit depth=8, colour type=RGB
-        WriteChunk(s, PngConstants.IHDR.ToUtf8Span(), d);
+        WriteChunk(s, "IHDR"u8, d);
     }
 
     private static void WriteIdat(
@@ -199,7 +209,7 @@ public sealed class PdfiumReferenceRenderer
         using var compressed = new MemoryStream();
         using (var zlib = new ZLibStream(compressed, CompressionLevel.Optimal, true))
             zlib.Write(raw);
-        WriteChunk(s, PngConstants.IDAT.ToUtf8Span(), compressed.ToArray());
+        WriteChunk(s, "IDAT"u8, compressed.ToArray());
     }
 
     private static void WriteChunk(Stream s, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
@@ -208,7 +218,8 @@ public sealed class PdfiumReferenceRenderer
         BinaryPrimitives.WriteUInt32BigEndian(len, (uint)data.Length);
         s.Write(len);
         s.Write(type);
-        if (data.Length > 0) s.Write(data);
+        if (data.Length > 0)
+            s.Write(data);
         var crc = UpdateCrc(0xffffffff, type);
         crc = UpdateCrc(crc, data) ^ 0xffffffff;
         Span<byte> crcBuf = stackalloc byte[4];
@@ -218,7 +229,8 @@ public sealed class PdfiumReferenceRenderer
 
     private static uint UpdateCrc(uint crc, ReadOnlySpan<byte> data)
     {
-        foreach (var b in data) crc = PngConstants.CtcTable[(crc ^ b) & JpegConstants.MarkerPrefix] ^ (crc >> 8);
+        foreach (var b in data)
+            crc = PngConstants.CtcTable[(crc ^ b) & JpegConstants.MarkerPrefix] ^ (crc >> 8);
         return crc;
     }
 }

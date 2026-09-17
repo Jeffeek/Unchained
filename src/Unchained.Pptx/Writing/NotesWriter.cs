@@ -23,7 +23,8 @@ internal static class NotesWriter
             return new XDocument(notes.RawElement);
 
         var text = notes.NotesText;
-        if (string.IsNullOrEmpty(text)) return null;
+        if (string.IsNullOrEmpty(text))
+            return null;
 
         var pml = PmlNames.Pml;
         var dml = DmlNames.Dml;

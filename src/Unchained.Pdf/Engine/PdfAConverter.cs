@@ -1,5 +1,5 @@
+using System.Text;
 using System.Xml.Linq;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -27,7 +27,7 @@ internal sealed class PdfAConverter(PdfAProfile profile) : PdfConversionBase
             : XmpDocumentHelper.CreateMinimalXmp();
 
         SetPdfaidProperties(xmpDoc, profile);
-        return xmpDoc.ToString().ToUtf8Span();
+        return Encoding.UTF8.GetBytes(xmpDoc.ToString());
     }
 
     protected override IReadOnlyDictionary<string, PdfObject>? ExtraCatalogEntries => null;
@@ -41,8 +41,8 @@ internal sealed class PdfAConverter(PdfAProfile profile) : PdfConversionBase
         if (catalogIdx >= 0 && objects[catalogIdx].Value is PdfDictionary cat)
         {
             var entries = new Dictionary<string, PdfObject>(cat.Entries);
-            entries.Remove("AA");
-            entries.Remove("Collection");
+            _ = entries.Remove("AA");
+            _ = entries.Remove("Collection");
             objects[catalogIdx] = new PdfIndirectObject(catalogObjNum, objects[catalogIdx].Generation, new PdfDictionary(entries));
         }
 
@@ -56,7 +56,8 @@ internal sealed class PdfAConverter(PdfAProfile profile) : PdfConversionBase
         XNamespace pdfaid = "http://www.aiim.org/pdfa/ns/id/";
 
         var rdfRoot = xmpDoc.Descendants(rdf + "RDF").FirstOrDefault();
-        if (rdfRoot is null) return;
+        if (rdfRoot is null)
+            return;
 
         var desc = rdfRoot.Elements(rdf + "Description").FirstOrDefault(d => d.Attribute(rdf + "about") is not null)
                    ?? new XElement(rdf + "Description", new XAttribute(rdf + "about", ""));
@@ -85,7 +86,8 @@ internal sealed class PdfAConverter(PdfAProfile profile) : PdfConversionBase
         {
             var pageDict = core.GetPage(page);
             var annots = core.ResolveAnnots(pageDict);
-            if (annots is null) continue;
+            if (annots is null)
+                continue;
 
             foreach (var idx in annots.Elements
                          .OfType<PdfIndirectReference>()

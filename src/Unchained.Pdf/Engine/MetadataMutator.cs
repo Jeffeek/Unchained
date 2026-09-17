@@ -1,5 +1,5 @@
+using System.Text;
 using System.Text.RegularExpressions;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -31,12 +31,18 @@ internal static class MetadataMutator
                 infoEntries[key] = value;
         }
 
-        if (ToStr(metadata.Title) is { } title) infoEntries[PdfName.Title.Value] = title;
-        if (ToStr(metadata.Author) is { } author) infoEntries["Author"] = author;
-        if (ToStr(metadata.Subject) is { } subject) infoEntries["Subject"] = subject;
-        if (ToStr(metadata.Keywords) is { } keywords) infoEntries["Keywords"] = keywords;
-        if (ToStr(metadata.Creator) is { } creator) infoEntries["Creator"] = creator;
-        if (ToStr(metadata.Producer) is { } producer) infoEntries["Producer"] = producer;
+        if (ToStr(metadata.Title) is { } title)
+            infoEntries[PdfName.Title.Value] = title;
+        if (ToStr(metadata.Author) is { } author)
+            infoEntries["Author"] = author;
+        if (ToStr(metadata.Subject) is { } subject)
+            infoEntries["Subject"] = subject;
+        if (ToStr(metadata.Keywords) is { } keywords)
+            infoEntries["Keywords"] = keywords;
+        if (ToStr(metadata.Creator) is { } creator)
+            infoEntries["Creator"] = creator;
+        if (ToStr(metadata.Producer) is { } producer)
+            infoEntries["Producer"] = producer;
 
         var infoDict = new PdfDictionary(infoEntries);
 
@@ -90,8 +96,7 @@ internal static class MetadataMutator
         return;
 
         // Write only the non-null fields from the supplied metadata.
-        static PdfString? ToStr(string? value) =>
-            value is null ? null : PdfString.FromLatin1(value);
+        static PdfString? ToStr(string? value) => value is null ? null : PdfString.FromLatin1(value);
     }
 
     internal static void RemovePdfaCompliance(PdfDocumentAdapter adapter) =>
@@ -114,11 +119,12 @@ internal static class MetadataMutator
     {
         var existing = adapter.Core.CollectObjects().ToList();
         var (found, catalogIdx, catalogDict) = MutationHelper.TryGetCatalogDict(adapter, existing);
-        if (!found) return;
+        if (!found)
+            return;
 
         // Remove the compliance marker from the catalog.
         var entries = new Dictionary<string, PdfObject>(catalogDict.Entries);
-        entries.Remove(catalogKeyToRemove);
+        _ = entries.Remove(catalogKeyToRemove);
 
         // Strip the compliance namespace's properties from XMP if present.
         if (entries.TryGetValue("Metadata", out var metaObj))
@@ -126,9 +132,9 @@ internal static class MetadataMutator
             var metaStream = adapter.Core.ResolveStream(metaObj);
             if (metaStream is not null)
             {
-                var xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
+                var xmp = Encoding.UTF8.GetString(StreamFilters.Decode(metaStream).Span);
                 var cleaned = StripXmpNamespace(xmp, xmpNamespacePrefix);
-                var cleanedBytes = cleaned.ToUtf8Span();
+                var cleanedBytes = Encoding.UTF8.GetBytes(cleaned);
                 var newStreamDict = new PdfDictionary(
                     new Dictionary<string, PdfObject>(metaStream.Dictionary.Entries)
                     {

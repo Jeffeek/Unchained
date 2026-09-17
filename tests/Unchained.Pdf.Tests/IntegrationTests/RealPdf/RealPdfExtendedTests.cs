@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Tests.Shared;
 using Xunit;
@@ -229,7 +229,8 @@ public sealed class RealPdfExtendedTests : PdfTestBase
         var bytes = RealPdfFixtures.Load(RealPdfFixtures.Files.WithXmp);
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var xmp = doc.GetXmpMetadata();
-        if (xmp is null) return;
+        if (xmp is null)
+            return;
         // Must parse as well-formed XML (XMP is RDF/XML).
         Should.NotThrow(() => XDocument.Parse(
                 xmp.Trim().TrimStart('﻿')

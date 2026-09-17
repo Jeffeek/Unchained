@@ -96,7 +96,8 @@ public sealed class RealPdfTextTests : PdfTestBase
 
         await using var doc = await LoadAsync(bytes, TestContext.Current.CancellationToken);
         var spans = doc.Pages[1].GetTextSpans().ToList();
-        if (spans.Count < 2) return;
+        if (spans.Count < 2)
+            return;
 
         for (var i = 1; i < spans.Count; i++)
         {

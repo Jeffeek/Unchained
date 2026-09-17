@@ -70,6 +70,7 @@ public sealed class RealPptxDocumentTests : PptxTestBase
         await using var stream = File.OpenRead(FilePath("sld-slides.pptx"));
         var doc = await Processor.LoadAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
 
-        foreach (var text in doc.Slides.Select(static slide => slide.GetAllText())) text.ShouldNotBeNull();
+        foreach (var text in doc.Slides.Select(static slide => slide.GetAllText()))
+            text.ShouldNotBeNull();
     }
 }

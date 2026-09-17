@@ -90,7 +90,7 @@ internal sealed class OpcPart
                 case "..":
                 {
                     if (stack.Count > 0)
-                        stack.Pop();
+                        _ = stack.Pop();
                     break;
                 }
                 default:

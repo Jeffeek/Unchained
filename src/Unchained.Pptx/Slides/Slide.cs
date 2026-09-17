@@ -205,7 +205,8 @@ public sealed class Slide
             {
                 yield return shape;
 
-                if (shape is not GroupShape group) continue;
+                if (shape is not GroupShape group)
+                    continue;
 
                 foreach (var child in EnumerateShapes(group.Children))
                     yield return child;

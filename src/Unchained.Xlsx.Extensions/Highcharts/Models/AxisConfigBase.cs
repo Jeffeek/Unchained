@@ -5,7 +5,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 ///     value/Y axes (<see cref="YAxisConfig" />). Holds the styling and scaling properties that
 ///     Highcharts treats identically across axis kinds.
 /// </summary>
-public abstract class AxisConfigBase : IHasAdditionalProperties
+public abstract class AxisConfigBase
 {
     /// <summary>Axis type: "category", "datetime", "linear", "logarithmic".</summary>
     public string? Type { get; set; }
@@ -79,5 +79,5 @@ public abstract class AxisConfigBase : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

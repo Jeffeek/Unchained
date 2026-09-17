@@ -1,8 +1,8 @@
+using Shouldly;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Shouldly;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Shared;
@@ -45,7 +45,7 @@ public sealed class SignatureTests : PdfTestBase
         using var ms = new MemoryStream();
         await Processor.SignAsync(doc, cert, ms, cancellationToken: TestContext.Current.CancellationToken);
 
-        ms.ToArray()[..5].ShouldBe("%PDF-"u8.ToArray());
+        ms.ToArray()[..5].ShouldBe([.. "%PDF-"u8]);
         ms.Length.ShouldBeGreaterThan(0);
         // Verify the signed output still parses and contains a signature dictionary.
         var bytes = ms.ToArray();

@@ -26,7 +26,7 @@ internal static class JpxDecoder
             var height = image.Height;
             var nc = image.NumberOfComponents;
 
-            if (nc != 1 && nc != 3)
+            if (nc is not 1 and not 3)
                 throw new NotSupportedException($"JPXDecode: unsupported {nc}-component image (expected 1 or 3).");
 
             var rgb = new byte[width * height * 3];

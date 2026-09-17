@@ -1,6 +1,6 @@
+using Shouldly;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Shouldly;
 using Unchained.Drawing.Text.Extensions;
 using Xunit;
 
@@ -57,7 +57,8 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
         }
         finally
         {
-            if (ptr != IntPtr.Zero) Marshal.FreeHGlobal(ptr);
+            if (ptr != IntPtr.Zero)
+                Marshal.FreeHGlobal(ptr);
         }
     }
 
@@ -65,10 +66,13 @@ public sealed class RasterBufferGlyphExtensionsBranchTests
     {
         var dark = 0;
         for (var y = 0; y < buffer.Height; y++)
-        for (var x = 0; x < buffer.Width; x++)
         {
-            var (r, g, b) = buffer.GetPixelRgb(x, y);
-            if (r < 128 && g < 128 && b < 128) dark++;
+            for (var x = 0; x < buffer.Width; x++)
+            {
+                var (r, g, b) = buffer.GetPixelRgb(x, y);
+                if (r < 128 && g < 128 && b < 128)
+                    dark++;
+            }
         }
 
         return dark;

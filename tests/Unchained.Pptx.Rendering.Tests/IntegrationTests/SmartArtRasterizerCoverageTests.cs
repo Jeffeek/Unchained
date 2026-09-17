@@ -41,7 +41,8 @@ public sealed class SmartArtRasterizerCoverageTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         // Tall + many nodes routes past matrix (count 4) and cycle (count 3-6) to the pyramid branch.
         var sa = AddSmartArt(doc, Emu.FromInches(3), Emu.FromInches(7));
-        for (var i = 0; i < 7; i++) sa.Nodes.Add(new SmartArtNode { Text = $"Level {i}" });
+        for (var i = 0; i < 7; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"Level {i}" });
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -53,7 +54,8 @@ public sealed class SmartArtRasterizerCoverageTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         // More than six flat tall nodes: the pyramid renderer caps n at 6 but still iterates.
         var sa = AddSmartArt(doc, Emu.FromInches(2), Emu.FromInches(7));
-        for (var i = 0; i < 10; i++) sa.Nodes.Add(new SmartArtNode { Text = $"P{i}" });
+        for (var i = 0; i < 10; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"P{i}" });
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -66,7 +68,8 @@ public sealed class SmartArtRasterizerCoverageTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var sa = AddSmartArt(doc, Emu.FromInches(8), Emu.FromInches(4));
-        for (var i = 0; i < 4; i++) sa.Nodes.Add(new SmartArtNode { Text = $"Quadrant {i}" });
+        for (var i = 0; i < 4; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"Quadrant {i}" });
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -84,7 +87,8 @@ public sealed class SmartArtRasterizerCoverageTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var sa = AddSmartArt(doc, Emu.FromInches(7), Emu.FromInches(7));
-        for (var i = 0; i < count; i++) sa.Nodes.Add(new SmartArtNode { Text = $"Phase {i} with a long label" });
+        for (var i = 0; i < count; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"Phase {i} with a long label" });
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -103,7 +107,8 @@ public sealed class SmartArtRasterizerCoverageTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         // Wide aspect with 7+ nodes falls through matrix/cycle/pyramid guards to the linear default.
         var sa = AddSmartArt(doc, Emu.FromInches(9), Emu.FromInches(4));
-        for (var i = 0; i < count; i++) sa.Nodes.Add(new SmartArtNode { Text = $"Step {i}" });
+        for (var i = 0; i < count; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"Step {i}" });
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -115,7 +120,8 @@ public sealed class SmartArtRasterizerCoverageTests : PptxTestBase
         var doc = PptxFixtures.WithSlides(1);
         // Lots of nodes in a short box forces the cy > y+height break inside the linear renderer.
         var sa = AddSmartArt(doc, Emu.FromInches(9), Emu.FromInches(2));
-        for (var i = 0; i < 30; i++) sa.Nodes.Add(new SmartArtNode { Text = $"Row {i}" });
+        for (var i = 0; i < 30; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"Row {i}" });
 
         var image = await RenderLargeAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);

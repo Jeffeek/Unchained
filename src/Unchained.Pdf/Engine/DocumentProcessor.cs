@@ -372,7 +372,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
             }
             finally
             {
-                _gate.Release();
+                _ = _gate.Release();
             }
         }
     }
@@ -399,8 +399,14 @@ public sealed class DocumentProcessor : IDocumentProcessor
         return Task.Run<PdfObject?>(
             () =>
             {
-                try { return adapter.Core.ResolveIndirect(objectNumber).Value; }
-                catch { return null; }
+                try
+                {
+                    return adapter.Core.ResolveIndirect(objectNumber).Value;
+                }
+                catch
+                {
+                    return null;
+                }
             },
             cancellationToken
         );
@@ -412,7 +418,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         ArgumentNullException.ThrowIfNull(document);
 
         var adapter = CastAdapter(document);
-        return Task.Run(() => adapter.Core.TrimCache(), cancellationToken);
+        return Task.Run(adapter.Core.TrimCache, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -522,7 +528,7 @@ public sealed class DocumentProcessor : IDocumentProcessor
         }
         finally
         {
-            _gate.Release();
+            _ = _gate.Release();
         }
     }
 

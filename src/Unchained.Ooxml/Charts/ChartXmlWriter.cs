@@ -323,7 +323,7 @@ public static class ChartXmlWriter
 
         var xValues = series.XValues.Count > 0
             ? series.XValues
-            : Enumerable.Range(1, series.Values.Count).Select(static n => (double)n).ToList();
+            : [.. Enumerable.Range(1, series.Values.Count).Select(static n => (double)n)];
         ser.Add(new XElement(CmlNames.XValues, WriteNumberLiteral(xValues)));
         ser.Add(new XElement(CmlNames.YValues, WriteNumberLiteral(series.Values)));
         return ser;
@@ -413,9 +413,12 @@ public static class ChartXmlWriter
         ax.Add(WriteScaling(axis));
         ax.Add(new XElement(CmlNames.Delete, new XAttribute(DmlNames.AttributeValue, axis.IsVisible ? "0" : "1")));
         ax.Add(new XElement(CmlNames.AxisPosition, new XAttribute(DmlNames.AttributeValue, axis.Position ?? catPos)));
-        if (axis.HasMajorGridlines) ax.Add(new XElement(CmlNames.Cml + "majorGridlines"));
-        if (axis.HasMinorGridlines) ax.Add(new XElement(CmlNames.Cml + "minorGridlines"));
-        if (!string.IsNullOrEmpty(axis.Title)) ax.Add(WriteAxisTitle(axis.Title));
+        if (axis.HasMajorGridlines)
+            ax.Add(new XElement(CmlNames.Cml + "majorGridlines"));
+        if (axis.HasMinorGridlines)
+            ax.Add(new XElement(CmlNames.Cml + "minorGridlines"));
+        if (!string.IsNullOrEmpty(axis.Title))
+            ax.Add(WriteAxisTitle(axis.Title));
         if (!string.IsNullOrEmpty(axis.NumberFormat))
             ax.Add(new XElement(CmlNames.Cml + "numFmt", new XAttribute("formatCode", axis.NumberFormat), new XAttribute("sourceLinked", "0")));
         ax.Add(new XElement(CmlNames.CrossAxis, new XAttribute(DmlNames.AttributeValue, ValueAxisId)));
@@ -430,9 +433,12 @@ public static class ChartXmlWriter
         ax.Add(WriteScaling(axis));
         ax.Add(new XElement(CmlNames.Delete, new XAttribute(DmlNames.AttributeValue, axis.IsVisible ? "0" : "1")));
         ax.Add(new XElement(CmlNames.AxisPosition, new XAttribute(DmlNames.AttributeValue, axis.Position ?? valPos)));
-        if (axis.HasMajorGridlines) ax.Add(new XElement(CmlNames.Cml + "majorGridlines"));
-        if (axis.HasMinorGridlines) ax.Add(new XElement(CmlNames.Cml + "minorGridlines"));
-        if (!string.IsNullOrEmpty(axis.Title)) ax.Add(WriteAxisTitle(axis.Title));
+        if (axis.HasMajorGridlines)
+            ax.Add(new XElement(CmlNames.Cml + "majorGridlines"));
+        if (axis.HasMinorGridlines)
+            ax.Add(new XElement(CmlNames.Cml + "minorGridlines"));
+        if (!string.IsNullOrEmpty(axis.Title))
+            ax.Add(WriteAxisTitle(axis.Title));
         if (!string.IsNullOrEmpty(axis.NumberFormat))
             ax.Add(new XElement(CmlNames.Cml + "numFmt", new XAttribute("formatCode", axis.NumberFormat), new XAttribute("sourceLinked", "0")));
         ax.Add(new XElement(CmlNames.CrossAxis, new XAttribute(DmlNames.AttributeValue, CategoryAxisId)));

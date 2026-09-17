@@ -3,7 +3,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 /// <summary>
 ///     Pane configuration for polar and angular charts.
 /// </summary>
-public class Pane : IHasAdditionalProperties
+public class Pane
 {
     /// <summary>Start angle in degrees (0 = top).</summary>
     public double StartAngle { get; set; }
@@ -18,10 +18,10 @@ public class Pane : IHasAdditionalProperties
     public double? OuterRadius { get; set; }
 
     /// <summary>Pane background(s).</summary>
-    public List<BackgroundConfig> Background { get; set; } = new();
+    public List<BackgroundConfig> Background { get; set; } = [];
 
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

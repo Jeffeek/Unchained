@@ -183,18 +183,23 @@ internal sealed class ShapeParser
 
         var tcPr = tcEl.Element(DmlNames.TableCellProperties);
 
-        if (tcPr == null) return cell;
+        if (tcPr == null)
+            return cell;
 
         FillParser.Parse(tcPr, cell.Fill);
         // Cell border lines: lnL, lnR, lnT, lnB
         var lnL = tcPr.Element(DmlNames.Dml + "lnL");
-        if (lnL != null) LineParser.ParseElement(lnL, cell.LeftBorder);
+        if (lnL != null)
+            LineParser.ParseElement(lnL, cell.LeftBorder);
         var lnR = tcPr.Element(DmlNames.Dml + "lnR");
-        if (lnR != null) LineParser.ParseElement(lnR, cell.RightBorder);
+        if (lnR != null)
+            LineParser.ParseElement(lnR, cell.RightBorder);
         var lnT = tcPr.Element(DmlNames.Dml + "lnT");
-        if (lnT != null) LineParser.ParseElement(lnT, cell.TopBorder);
+        if (lnT != null)
+            LineParser.ParseElement(lnT, cell.TopBorder);
         var lnB = tcPr.Element(DmlNames.Dml + "lnB");
-        if (lnB != null) LineParser.ParseElement(lnB, cell.BottomBorder);
+        if (lnB != null)
+            LineParser.ParseElement(lnB, cell.BottomBorder);
 
         return cell;
     }
@@ -298,10 +303,12 @@ internal sealed class ShapeParser
     private static void ReadNonVisualProperties(XContainer? nvPrContainer, Shape shape)
     {
         var cNvPr = nvPrContainer?.Element(PmlNames.CommonNonVisualProperties);
-        if (cNvPr == null) return;
+        if (cNvPr == null)
+            return;
 
         var id = cNvPr.GetAttrInt(PmlNames.AttributeId);
-        if (id.HasValue) shape.ShapeId = (uint)id.Value;
+        if (id.HasValue)
+            shape.ShapeId = (uint)id.Value;
 
         shape.Name = cNvPr.GetAttr(PmlNames.AttributeName, string.Empty);
         shape.AltText = cNvPr.GetAttr(DmlNames.AttributeDescription);
@@ -331,11 +338,13 @@ internal sealed class ShapeParser
         // Placeholder reference (<p:nvPr>/<p:ph>) — captures the role + index so the slide
         // parser can inherit geometry/formatting from the matching layout placeholder.
         var ph = nvPrContainer!.Element(PmlNames.ApplicationNonVisualProperties)?.Element(PmlNames.Placeholder);
-        if (ph == null) return;
+        if (ph == null)
+            return;
 
         shape.PlaceholderType = ParsePlaceholderType(ph.GetAttr(PmlNames.AttributeType));
         var idx = ph.GetAttrInt(CmlNames.AttributeIndex);
-        if (idx.HasValue) shape.PlaceholderIndex = idx.Value;
+        if (idx.HasValue)
+            shape.PlaceholderIndex = idx.Value;
     }
 
     /// <summary>Maps a <c>p:ph/@type</c> value to <see cref="PlaceholderType" />. Absent = Content.</summary>
@@ -372,7 +381,8 @@ internal sealed class ShapeParser
     private static void ReadTransform(XContainer? spPr, Shape shape)
     {
         var xfrm = spPr?.Element(DmlNames.Transform);
-        if (xfrm == null) return;
+        if (xfrm == null)
+            return;
 
         ReadTransformFromXfrm(xfrm, shape);
     }
@@ -388,11 +398,13 @@ internal sealed class ShapeParser
     private static void ReadGroupTransform(XContainer grpSpPr, Shape shape)
     {
         var xfrm = grpSpPr.Element(DmlNames.Transform);
-        if (xfrm == null) return;
+        if (xfrm == null)
+            return;
 
         ReadTransformFromXfrm(xfrm, shape);
 
-        if (shape is not GroupShape group) return;
+        if (shape is not GroupShape group)
+            return;
 
         var chOff = xfrm.Element(DmlNames.ChildOffset);
         if (chOff != null)
@@ -402,7 +414,8 @@ internal sealed class ShapeParser
         }
 
         var chExt = xfrm.Element(DmlNames.ChildExtent);
-        if (chExt == null) return;
+        if (chExt == null)
+            return;
 
         group.ChildExtentWidth = chExt.GetAttrEmu(DmlNames.AttributeWidth);
         group.ChildExtentHeight = chExt.GetAttrEmu(DmlNames.AttributeHeight);
@@ -434,7 +447,8 @@ internal sealed class ShapeParser
 
     private static void ReadGeometry(XContainer? spPr, AutoShape shape)
     {
-        if (spPr == null) return;
+        if (spPr == null)
+            return;
 
         var prstGeom = spPr.Element(DmlNames.PresetGeometry);
         if (prstGeom != null)
@@ -449,7 +463,8 @@ internal sealed class ShapeParser
 
     private static void ReadFillAndLine(XElement? spPr, Shape shape)
     {
-        if (spPr == null) return;
+        if (spPr == null)
+            return;
 
         FillParser.Parse(spPr, shape.Fill);
         LineParser.Parse(spPr, shape.Line);
@@ -462,7 +477,8 @@ internal sealed class ShapeParser
     private static void ReadStyleFill(XContainer shapeEl, Shape shape)
     {
         var styleEl = shapeEl.Element(PmlNames.Pml + "style");
-        if (styleEl is null) return;
+        if (styleEl is null)
+            return;
 
         var fillRef = styleEl.Element(DmlNames.Dml + "fillRef");
         if (fillRef is not null)

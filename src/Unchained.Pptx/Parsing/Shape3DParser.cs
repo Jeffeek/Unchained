@@ -14,17 +14,22 @@ internal static class Shape3DParser
 
     public static void Parse(XElement? spPr, Shape3DFormat threeD)
     {
-        var sp3d = spPr?.Element(A + "sp3d");
-        if (sp3d is null) return;
+        var sp3D = spPr?.Element(A + "sp3d");
+        if (sp3D is null)
+            return;
 
-        threeD.ExtrusionHeight = sp3d.GetAttrEmu("extrusionH");
-        threeD.ContourWidth = sp3d.GetAttrEmu("contourW");
-        threeD.Material = sp3d.GetAttr(PmlNames.AttributePrstMaterial);
+        threeD.ExtrusionHeight = sp3D.GetAttrEmu("extrusionH");
+        threeD.ContourWidth = sp3D.GetAttrEmu("contourW");
+        threeD.Material = sp3D.GetAttr(PmlNames.AttributePrstMaterial);
 
-        if (sp3d.Element(A + "bevelT") is { } bt) threeD.TopBevel = ParseBevel(bt);
-        if (sp3d.Element(A + "bevelB") is { } bb) threeD.BottomBevel = ParseBevel(bb);
-        if (sp3d.Element(A + "extrusionClr") is { } ec) threeD.ExtrusionColor = ColorParser.Parse(ec);
-        if (sp3d.Element(A + "contourClr") is { } cc) threeD.ContourColor = ColorParser.Parse(cc);
+        if (sp3D.Element(A + "bevelT") is { } bt)
+            threeD.TopBevel = ParseBevel(bt);
+        if (sp3D.Element(A + "bevelB") is { } bb)
+            threeD.BottomBevel = ParseBevel(bb);
+        if (sp3D.Element(A + "extrusionClr") is { } ec)
+            threeD.ExtrusionColor = ColorParser.Parse(ec);
+        if (sp3D.Element(A + "contourClr") is { } cc)
+            threeD.ContourColor = ColorParser.Parse(cc);
     }
 
     private static BevelFormat ParseBevel(XElement el) => new()

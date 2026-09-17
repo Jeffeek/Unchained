@@ -1,6 +1,6 @@
+using Shouldly;
 using System.IO.Compression;
 using System.Text;
-using Shouldly;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Shapes;
@@ -33,9 +33,12 @@ public sealed class OdpParserTests
         {
             Write(zip, "mimetype", Encoding.ASCII.GetBytes(mimetype));
             Write(zip, "content.xml", Encoding.UTF8.GetBytes(contentXml));
-            if (stylesXml != null) Write(zip, "styles.xml", Encoding.UTF8.GetBytes(stylesXml));
-            if (metaXml != null) Write(zip, "meta.xml", Encoding.UTF8.GetBytes(metaXml));
-            if (media is { } m) Write(zip, m.Name, m.Bytes);
+            if (stylesXml != null)
+                Write(zip, "styles.xml", Encoding.UTF8.GetBytes(stylesXml));
+            if (metaXml != null)
+                Write(zip, "meta.xml", Encoding.UTF8.GetBytes(metaXml));
+            if (media is { } m)
+                Write(zip, m.Name, m.Bytes);
         }
 
         return ms.ToArray();
@@ -74,7 +77,7 @@ public sealed class OdpParserTests
 
     [Fact]
     public void IsOdp_NotAZip_ReturnsFalse() =>
-        OdpParser.IsOdp("not a zip"u8.ToArray()).ShouldBeFalse();
+        OdpParser.IsOdp([.. "not a zip"u8]).ShouldBeFalse();
 
     [Fact]
     public void IsOdp_WrongMimetype_ReturnsFalse()

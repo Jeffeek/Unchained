@@ -58,29 +58,30 @@ internal static class PptxToHtmlWriter
     )
     {
         var sb = new StringBuilder();
-        sb.AppendLine("<!DOCTYPE html>");
-        sb.AppendLine("<html lang=\"en\">");
-        sb.AppendLine("<head>");
-        sb.AppendLine("<meta charset=\"utf-8\">");
-        sb.AppendLine($"<meta name=\"viewport\" content=\"width={slideW:F0}, initial-scale=1\">");
-        sb.AppendLine($"<title>{ExportText.EscapeHtml(slide.Name.Length > 0 ? slide.Name : "Slide")}</title>");
-        sb.AppendLine("<style>");
-        sb.AppendLine("*{box-sizing:border-box;margin:0;padding:0}");
-        sb.AppendLine($".slide{{position:relative;width:{slideW:F2}px;height:{slideH:F2}px;overflow:hidden;background:white}}");
-        sb.AppendLine(".shape{position:absolute;overflow:hidden}");
-        sb.AppendLine(".text-frame{width:100%;height:100%;padding:4px}");
-        sb.AppendLine(".para{margin:0;line-height:1.25}");
-        if (options.AdditionalCss != null) sb.AppendLine(options.AdditionalCss);
-        sb.AppendLine("</style>");
-        sb.AppendLine("</head>");
-        sb.AppendLine("<body>");
-        sb.AppendLine("<div class=\"slide\">");
+        _ = sb.AppendLine("<!DOCTYPE html>");
+        _ = sb.AppendLine("<html lang=\"en\">");
+        _ = sb.AppendLine("<head>");
+        _ = sb.AppendLine("<meta charset=\"utf-8\">");
+        _ = sb.AppendLine($"<meta name=\"viewport\" content=\"width={slideW:F0}, initial-scale=1\">");
+        _ = sb.AppendLine($"<title>{ExportText.EscapeHtml(slide.Name.Length > 0 ? slide.Name : "Slide")}</title>");
+        _ = sb.AppendLine("<style>");
+        _ = sb.AppendLine("*{box-sizing:border-box;margin:0;padding:0}");
+        _ = sb.AppendLine($".slide{{position:relative;width:{slideW:F2}px;height:{slideH:F2}px;overflow:hidden;background:white}}");
+        _ = sb.AppendLine(".shape{position:absolute;overflow:hidden}");
+        _ = sb.AppendLine(".text-frame{width:100%;height:100%;padding:4px}");
+        _ = sb.AppendLine(".para{margin:0;line-height:1.25}");
+        if (options.AdditionalCss != null)
+            _ = sb.AppendLine(options.AdditionalCss);
+        _ = sb.AppendLine("</style>");
+        _ = sb.AppendLine("</head>");
+        _ = sb.AppendLine("<body>");
+        _ = sb.AppendLine("<div class=\"slide\">");
 
         WriteSlideContent(sb, slide, slideW, slideH, options);
 
-        sb.AppendLine("</div>");
-        sb.AppendLine("</body>");
-        sb.AppendLine("</html>");
+        _ = sb.AppendLine("</div>");
+        _ = sb.AppendLine("</body>");
+        _ = sb.AppendLine("</html>");
         return sb.ToString();
     }
 
@@ -113,10 +114,11 @@ internal static class PptxToHtmlWriter
     )
     {
         var fill = ResolveBackground(slide);
-        if (fill is null || fill.Type != FillType.Solid || fill.Solid == null) return;
+        if (fill is null || fill.Type != FillType.Solid || fill.Solid == null)
+            return;
 
         var color = ToCssColor(fill.Solid.Color.Resolve(colorScheme));
-        sb.AppendLine($"<div style=\"position:absolute;left:0;top:0;width:{w:F2}px;height:{h:F2}px;background:{color}\"></div>");
+        _ = sb.AppendLine($"<div style=\"position:absolute;left:0;top:0;width:{w:F2}px;height:{h:F2}px;background:{color}\"></div>");
     }
 
     // Resolves background fill walking slide → layout → master.
@@ -144,36 +146,24 @@ internal static class PptxToHtmlWriter
 
         var style = new StringBuilder($"left:{x:F2}px;top:{y:F2}px;width:{w:F2}px;height:{h:F2}px;");
 
-        if (shape.Fill is { Type: FillType.Solid, Solid: not null })
-            style.Append($"background:{ToCssColor(shape.Fill.Solid.Color.Resolve(colorScheme))};");
-        else
-        {
-            switch (shape.Fill.Type)
+        _ = shape.Fill is { Type: FillType.Solid, Solid: not null }
+            ? style.Append($"background:{ToCssColor(shape.Fill.Solid.Color.Resolve(colorScheme))};")
+            // ReSharper disable once SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
+            : shape.Fill.Type switch
             {
-                case FillType.None when shape.StyleFillColor.HasValue:
-                    style.Append($"background:{ToCssColor(shape.StyleFillColor.Value.Resolve(colorScheme))};");
-                break;
-                case FillType.None:
-                    style.Append("background:transparent;");
-                break;
-                case FillType.Solid:
-                case FillType.Gradient:
-                case FillType.Pattern:
-                case FillType.Picture:
-                case FillType.Group:
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
+                FillType.None when shape.StyleFillColor.HasValue => style.Append($"background:{ToCssColor(shape.StyleFillColor.Value.Resolve(colorScheme))};"),
+                FillType.None => style.Append("background:transparent;"),
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
         // Border
         if (shape.Line.Fill is { Type: FillType.Solid, Solid: not null })
         {
             var lw = shape.Line.WidthPoints ?? 1.0;
-            style.Append($"border:{lw:F1}px solid {ToCssColor(shape.Line.Fill.Solid.Color.Resolve(colorScheme))};");
+            _ = style.Append($"border:{lw:F1}px solid {ToCssColor(shape.Line.Fill.Solid.Color.Resolve(colorScheme))};");
         }
 
-        sb.AppendLine($"<div class=\"shape\" style=\"{style}\">");
+        _ = sb.AppendLine($"<div class=\"shape\" style=\"{style}\">");
 
         switch (shape)
         {
@@ -185,21 +175,19 @@ internal static class PptxToHtmlWriter
             break;
         }
 
-        sb.AppendLine("</div>");
+        _ = sb.AppendLine("</div>");
     }
 
     private static void WriteTextFrame(StringBuilder sb, AutoShape shape, ColorScheme? colorScheme, FontScheme fontScheme)
     {
         // Default text color: StyleTextColor → dk1 → black.
-        string defaultColor;
-        if (shape.StyleTextColor.HasValue)
-            defaultColor = ToCssColor(shape.StyleTextColor.Value.Resolve(colorScheme));
-        else if (colorScheme is not null)
-            defaultColor = ToCssColor(colorScheme.Dark1.Resolve(colorScheme));
-        else
-            defaultColor = "#000000";
+        var defaultColor = shape.StyleTextColor.HasValue
+            ? ToCssColor(shape.StyleTextColor.Value.Resolve(colorScheme))
+            : colorScheme is not null
+                ? ToCssColor(colorScheme.Dark1.Resolve(colorScheme))
+                : "#000000";
 
-        sb.AppendLine("<div class=\"text-frame\">");
+        _ = sb.AppendLine("<div class=\"text-frame\">");
         foreach (var para in shape.TextFrame.Paragraphs)
         {
             var align = para.Alignment switch
@@ -209,30 +197,32 @@ internal static class PptxToHtmlWriter
                 TextAlignment.Justify => HtmlTextAlign.Justify,
                 _ => HtmlTextAlign.Left
             };
-            sb.Append($"<p class=\"para\" style=\"text-align:{align}\">");
+            _ = sb.Append($"<p class=\"para\" style=\"text-align:{align}\">");
 
             var runStyle = new StringBuilder();
             foreach (var run in para.Runs.Where(static run => !string.IsNullOrEmpty(run.Text)))
             {
                 var fs = run.Format.FontSizePoints ?? TextConstants.DefaultFontSizePt;
-                runStyle.Append($"font-size:{fs:F1}pt;");
-                if (run.Format.Bold.Value == true) runStyle.Append("font-weight:bold;");
-                if (run.Format.Italic.Value == true) runStyle.Append("font-style:italic;");
+                _ = runStyle.Append($"font-size:{fs:F1}pt;");
+                if (run.Format.Bold.Value == true)
+                    _ = runStyle.Append("font-weight:bold;");
+                if (run.Format.Italic.Value == true)
+                    _ = runStyle.Append("font-style:italic;");
                 var fontFamily = ResolveFontFamily(run.Format.LatinFont, fontScheme);
-                runStyle.Append($"font-family:\"{EscapeCssIdentifier(fontFamily)}\";");
+                _ = runStyle.Append($"font-family:\"{EscapeCssIdentifier(fontFamily)}\";");
                 var textColor = run.Format.Fill?.Solid != null
                     ? ToCssColor(run.Format.Fill.Solid.Color.Resolve(colorScheme))
                     : defaultColor;
-                runStyle.Append($"color:{textColor};");
+                _ = runStyle.Append($"color:{textColor};");
 
-                sb.Append($"<span style=\"{runStyle}\">{ExportText.EscapeHtml(run.Text)}</span>");
-                runStyle.Clear();
+                _ = sb.Append($"<span style=\"{runStyle}\">{ExportText.EscapeHtml(run.Text)}</span>");
+                _ = runStyle.Clear();
             }
 
-            sb.AppendLine("</p>");
+            _ = sb.AppendLine("</p>");
         }
 
-        sb.AppendLine("</div>");
+        _ = sb.AppendLine("</div>");
     }
 
     private static string EscapeCssIdentifier(string value) =>
@@ -255,7 +245,7 @@ internal static class PptxToHtmlWriter
     private static void WritePicture(StringBuilder sb, PictureShape pic)
     {
         var dataUri = ExportText.ToBase64DataUri(pic.Image!.Data, pic.Image.ContentType);
-        sb.AppendLine(
+        _ = sb.AppendLine(
             $"<img style=\"width:100%;height:100%;object-fit:fill\" src=\"{dataUri}\" alt=\"{ExportText.EscapeHtml(pic.AltText ?? string.Empty)}\">"
         );
     }

@@ -3,7 +3,6 @@ using System.IO.Compression;
 using System.Xml.Linq;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Media;
-using Unchained.Pptx.Comments;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Export;
 using Unchained.Pptx.Media;
@@ -43,7 +42,8 @@ internal static class OdpParser
             using var ms = new MemoryStream(data);
             using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
             var mime = zip.GetEntry("mimetype");
-            if (mime == null) return false;
+            if (mime == null)
+                return false;
 
             using var s = mime.Open();
             using var r = new StreamReader(s);
@@ -105,8 +105,8 @@ internal static class OdpParser
             properties,
             new ProtectionInfo(),
             slideSize,
-            new CommentAuthorCollection(),
-            new SectionCollection()
+            [],
+            []
         );
     }
 
@@ -138,7 +138,8 @@ internal static class OdpParser
         }
 
         var textBox = frame.Element(Draw + "text-box");
-        if (textBox == null) return;
+        if (textBox == null)
+            return;
 
         var shape = new AutoShape
         {
@@ -161,11 +162,11 @@ internal static class OdpParser
                 switch (node)
                 {
                     case XElement span when span.Name == TextNs + "span":
-                        para.Runs.Add(span.Value);
+                        _ = para.Runs.Add(span.Value);
                         hasRun = true;
                     break;
                     case XText text:
-                        para.Runs.Add(text.Value);
+                        _ = para.Runs.Add(text.Value);
                         hasRun = true;
                     break;
                 }
@@ -173,17 +174,19 @@ internal static class OdpParser
 
             // A paragraph with text directly in <text:p> (no span) — capture it.
             if (!hasRun && !string.IsNullOrEmpty(pEl.Value))
-                para.Runs.Add(pEl.Value);
+                _ = para.Runs.Add(pEl.Value);
         }
     }
 
     private static EmbeddedImage? LoadImage(string? href, ZipArchive zip, MediaStore mediaStore)
     {
-        if (string.IsNullOrEmpty(href)) return null;
+        if (string.IsNullOrEmpty(href))
+            return null;
 
         var entryName = href.TrimStart('/');
         var entry = zip.GetEntry(entryName);
-        if (entry == null) return null;
+        if (entry == null)
+            return null;
 
         using var s = entry.Open();
         using var outMs = new MemoryStream();
@@ -218,7 +221,8 @@ internal static class OdpParser
         var props = new DocumentProperties();
         var meta = ReadXml(zip, "meta.xml");
         var metaEl = meta?.Root?.Element(Office + "meta");
-        if (metaEl == null) return props;
+        if (metaEl == null)
+            return props;
 
         var dc = XNamespace.Get("http://purl.org/dc/elements/1.1/");
         var metaNs = XNamespace.Get("urn:oasis:names:tc:opendocument:xmlns:meta:1.0");
@@ -232,7 +236,8 @@ internal static class OdpParser
     private static XDocument? ReadXml(ZipArchive zip, string entryName)
     {
         var entry = zip.GetEntry(entryName);
-        if (entry == null) return null;
+        if (entry == null)
+            return null;
 
         using var s = entry.Open();
         return XDocument.Load(s);
@@ -241,7 +246,8 @@ internal static class OdpParser
     /// <summary>Parses an ODF length (e.g. "12.7cm", "360pt", "5in") into EMU.</summary>
     private static Emu ParseLength(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return Emu.Zero;
+        if (string.IsNullOrWhiteSpace(value))
+            return Emu.Zero;
 
         var unit = value.Length >= 2 ? value[^2..] : string.Empty;
         var numberText = value[..^unit.Length];

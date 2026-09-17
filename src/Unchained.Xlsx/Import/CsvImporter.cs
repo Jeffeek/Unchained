@@ -30,7 +30,6 @@ internal static class CsvImporter
 
     // ReSharper disable BadListLineBreaks
     private static void AssignValue(Worksheet sheet, int row, int column, string field, CsvLoadOptions options)
-        // ReSharper restore BadListLineBreaks
     {
         if (field.Length == 0)
             return;
@@ -85,13 +84,14 @@ internal static class CsvImporter
                 {
                     if (i + 1 < text.Length && text[i + 1] == '"')
                     {
-                        field.Append('"');
+                        _ = field.Append('"');
                         i++;
                     }
-                    else inQuotes = false;
+                    else
+                        inQuotes = false;
                 }
                 else
-                    field.Append(c);
+                    _ = field.Append(c);
 
                 continue;
             }
@@ -105,7 +105,7 @@ internal static class CsvImporter
                 break; // handled by \n
                 case '\n':
                     current.Add(field.ToString());
-                    field.Clear();
+                    _ = field.Clear();
                     rows.Add(current);
                     current = [];
                 break;
@@ -114,17 +114,18 @@ internal static class CsvImporter
                     if (c == delimiter)
                     {
                         current.Add(field.ToString());
-                        field.Clear();
+                        _ = field.Clear();
                     }
                     else
-                        field.Append(c);
+                        _ = field.Append(c);
 
                     break;
                 }
             }
         }
 
-        if (field.Length <= 0 && current.Count <= 0) return rows;
+        if (field.Length <= 0 && current.Count <= 0)
+            return rows;
 
         current.Add(field.ToString());
         rows.Add(current);

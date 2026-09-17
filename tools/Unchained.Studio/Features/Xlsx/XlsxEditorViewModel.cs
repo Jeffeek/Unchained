@@ -1,7 +1,7 @@
-using System.Globalization;
-using System.Text;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using System.Globalization;
+using System.Text;
 using Unchained.Studio.Components.Xlsx;
 using Unchained.Studio.Infrastructure;
 using Unchained.Studio.Services;
@@ -25,9 +25,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
 {
     // ── Selection ─────────────────────────────────────────────────────────────
 
-    private CellRange _selection = new(new CellReference(1, 1), new CellReference(1, 1));
-
-    public CellRange Selection => _selection;
+    public CellRange Selection { get; private set; } = new(new CellReference(1, 1), new CellReference(1, 1));
 
     public CellReference FormulaReference { get; private set; } = new(1, 1);
 
@@ -68,7 +66,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
 
     internal void OnSelectionChanged(CellRange range)
     {
-        _selection = range;
+        Selection = range;
         FormulaReference = range.TopLeft;
         FormulaText = string.Empty;
         NotifyChanged();
@@ -85,9 +83,10 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     internal void OnGridEdited()
     {
         var session1 = session.Xlsx;
-        if (session1 is null) return;
+        if (session1 is null)
+            return;
 
-        session1.Document.Recalculate();
+        _ = session1.Document.Recalculate();
         session1.MarkDirty();
         NotifyChanged();
     }
@@ -96,7 +95,8 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     {
         var sheet = sheetFn();
         var session1 = session.Xlsx;
-        if (sheet is null || session1 is null) return;
+        if (sheet is null || session1 is null)
+            return;
 
         var row = FormulaReference.Row;
         var col = FormulaReference.Column;
@@ -112,7 +112,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
         else
             sheet.SetValue(row, col, text);
 
-        session1.Document.Recalculate();
+        _ = session1.Document.Recalculate();
         session1.MarkDirty();
         var cell = sheet.GetCell(row, col);
         FormulaText = cell switch
@@ -138,9 +138,10 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     private void ApplyToSelection(Action<Cell> action)
     {
         var sheet = sheetFn();
-        if (sheet is null) return;
+        if (sheet is null)
+            return;
 
-        foreach (var reference in _selection.Cells())
+        foreach (var reference in Selection.Cells())
             action(sheet[reference.Row, reference.Column]);
 
         session.Xlsx!.MarkDirty();
@@ -150,9 +151,10 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     internal void MergeSelection()
     {
         var sheet = sheetFn();
-        if (sheet is null) return;
+        if (sheet is null)
+            return;
 
-        sheet.MergeCells(_selection);
+        sheet.MergeCells(Selection);
         session.Xlsx!.MarkDirty();
         NotifyChanged();
     }
@@ -160,9 +162,10 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     internal void UnmergeSelection()
     {
         var sheet = sheetFn();
-        if (sheet is null) return;
+        if (sheet is null)
+            return;
 
-        sheet.UnmergeCells(_selection);
+        sheet.UnmergeCells(Selection);
         session.Xlsx!.MarkDirty();
         NotifyChanged();
     }
@@ -172,20 +175,22 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     internal void SelectSheet(int number)
     {
         var session1 = session.Xlsx;
-        if (session1 is null) return;
+        if (session1 is null)
+            return;
 
         session1.CurrentSheet = number;
-        _selection = new CellRange(new CellReference(1, 1), new CellReference(1, 1));
+        Selection = new CellRange(new CellReference(1, 1), new CellReference(1, 1));
         NotifyChanged();
     }
 
     internal void AddSheet()
     {
         var session1 = session.Xlsx;
-        if (session1 is null) return;
+        if (session1 is null)
+            return;
 
         var doc = session1.Document;
-        doc.Sheets.Add(UniqueSheetName(doc));
+        _ = doc.Sheets.Add(UniqueSheetName(doc));
         session1.CurrentSheet = doc.Sheets.Count;
         session1.MarkDirty();
         NotifyChanged();
@@ -194,7 +199,8 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     internal async Task DeleteSheet(Worksheet sheet)
     {
         var session1 = session.Xlsx;
-        if (session1 is null || session1.Document.Sheets.Count <= 1) return;
+        if (session1 is null || session1.Document.Sheets.Count <= 1)
+            return;
 
         var confirmed = await dialogs.ShowMessageBoxAsync(
             "Delete sheet",
@@ -202,7 +208,8 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
             "Delete",
             "Cancel"
         );
-        if (confirmed != true) return;
+        if (confirmed != true)
+            return;
 
         session1.Document.Sheets.Remove(sheet);
         session1.CurrentSheet = Math.Clamp(session1.CurrentSheet, 1, session1.Document.Sheets.Count);
@@ -213,14 +220,16 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     internal async Task RenameSheet(Worksheet sheet)
     {
         var session1 = session.Xlsx;
-        if (session1 is null) return;
+        if (session1 is null)
+            return;
 
         var newName = await dialogs.ShowAsync<RenameSheetDialog, string>(
             "Rename Sheet",
             p => p[nameof(RenameSheetDialog.CurrentName)] = sheet.Name,
             MaxWidth.ExtraSmall
         );
-        if (string.IsNullOrWhiteSpace(newName)) return;
+        if (string.IsNullOrWhiteSpace(newName))
+            return;
 
         try
         {
@@ -237,11 +246,13 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     {
         var sheet = sheetFn();
         var session1 = session.Xlsx;
-        if (sheet is null || session1 is null) return;
+        if (sheet is null || session1 is null)
+            return;
 
         var current = session1.Document.Sheets.IndexOf(sheet);
         var target = Math.Clamp(current + delta, 0, session1.Document.Sheets.Count - 1);
-        if (target == current) return;
+        if (target == current)
+            return;
 
         session1.Document.Sheets.MoveTo(sheet, target);
         session1.CurrentSheet = target + 1;
@@ -253,7 +264,8 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     {
         var sheet = sheetFn();
         var session1 = session.Xlsx;
-        if (sheet is null || session1 is null) return;
+        if (sheet is null || session1 is null)
+            return;
 
         if (sheet.State == SheetState.Visible &&
             session1.Document.Sheets.Count(static s => s.State == SheetState.Visible) <= 1)
@@ -290,7 +302,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
                 p =>
                 {
                     p[nameof(CellFormatDialog.Sheet)] = sheet;
-                    p[nameof(CellFormatDialog.Range)] = _selection;
+                    p[nameof(CellFormatDialog.Range)] = Selection;
                     p[nameof(CellFormatDialog.OnApplied)] = VoidCallback(MarkDirtyAndInvalidate);
                 }
             );
@@ -306,8 +318,8 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
                 p =>
                 {
                     p[nameof(RowColumnDialog.Sheet)] = sheet;
-                    p[nameof(RowColumnDialog.InitialRow)] = _selection.TopLeft.Row;
-                    p[nameof(RowColumnDialog.InitialColumn)] = _selection.TopLeft.Column;
+                    p[nameof(RowColumnDialog.InitialRow)] = Selection.TopLeft.Row;
+                    p[nameof(RowColumnDialog.InitialColumn)] = Selection.TopLeft.Column;
                     p[nameof(RowColumnDialog.OnChanged)] = VoidCallback(MarkDirty);
                 }
             );
@@ -323,7 +335,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
                 p =>
                 {
                     p[nameof(TablesDialog.Sheet)] = sheet;
-                    p[nameof(TablesDialog.InitialRange)] = _selection.ToA1();
+                    p[nameof(TablesDialog.InitialRange)] = Selection.ToA1();
                     p[nameof(TablesDialog.OnChanged)] = VoidCallback(MarkDirty);
                 }
             );
@@ -355,7 +367,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
                 p =>
                 {
                     p[nameof(DataValidationDialog.Sheet)] = sheet;
-                    p[nameof(DataValidationDialog.InitialRange)] = _selection.ToA1();
+                    p[nameof(DataValidationDialog.InitialRange)] = Selection.ToA1();
                     p[nameof(DataValidationDialog.OnChanged)] = VoidCallback(MarkDirty);
                 }
             );
@@ -371,7 +383,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
                 p =>
                 {
                     p[nameof(InsertImageDialog.Sheet)] = sheet;
-                    p[nameof(InsertImageDialog.InitialAnchor)] = _selection.TopLeft.ToA1();
+                    p[nameof(InsertImageDialog.InitialAnchor)] = Selection.TopLeft.ToA1();
                     p[nameof(InsertImageDialog.OnInserted)] = VoidCallback(MarkDirtyAndInvalidate);
                 }
             );
@@ -387,7 +399,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
                 p =>
                 {
                     p[nameof(InsertChartDialog.Sheet)] = sheet;
-                    p[nameof(InsertChartDialog.InitialRange)] = _selection.ToA1();
+                    p[nameof(InsertChartDialog.InitialRange)] = Selection.ToA1();
                     p[nameof(InsertChartDialog.OnInserted)] = VoidCallback(MarkDirtyAndInvalidate);
                 }
             );
@@ -403,7 +415,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
                 p =>
                 {
                     p[nameof(GenerateDataDialog.Sheet)] = sheet;
-                    p[nameof(GenerateDataDialog.Selection)] = _selection;
+                    p[nameof(GenerateDataDialog.Selection)] = Selection;
                     p[nameof(GenerateDataDialog.OnGenerated)] = VoidCallback(MarkDirtyAndInvalidate);
                 }
             );
@@ -481,7 +493,7 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
                 p =>
                 {
                     p[nameof(PasteImportDialog.Sheet)] = sheet;
-                    p[nameof(PasteImportDialog.InitialTarget)] = _selection.TopLeft.ToA1();
+                    p[nameof(PasteImportDialog.InitialTarget)] = Selection.TopLeft.ToA1();
                     p[nameof(PasteImportDialog.OnImported)] = VoidCallback(MarkDirtyAndInvalidate);
                 }
             );
@@ -536,7 +548,8 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
     internal void ExtractText()
     {
         var sheet = sheetFn();
-        if (sheet is null) return;
+        if (sheet is null)
+            return;
 
         ExtractedText = sheet.GetAllText();
         ShowTextPanel = true;
@@ -544,7 +557,8 @@ public sealed class XlsxEditorViewModel(SessionStateService session, IStudioDial
 
     internal void DownloadText(FileExportService exporter)
     {
-        if (ExtractedText is null) return;
+        if (ExtractedText is null)
+            return;
 
         var session1 = session.Xlsx;
         _ = exporter.TriggerDownloadAsync(

@@ -1,7 +1,7 @@
 namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 
 /// <summary>Per-series defaults for bubble charts.</summary>
-public class PlotOptionsBubble : IHasAdditionalProperties
+public class PlotOptionsBubble
 {
     /// <summary>Minimum bubble size in pixels.</summary>
     public double? MinSize { get; set; }
@@ -12,5 +12,5 @@ public class PlotOptionsBubble : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

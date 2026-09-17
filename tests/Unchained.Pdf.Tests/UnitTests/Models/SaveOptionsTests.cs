@@ -66,7 +66,7 @@ public sealed class PdfVersionTests
         Enum.IsDefined(PdfVersion.Pdf14).ShouldBeTrue();
         Enum.IsDefined(PdfVersion.Pdf15).ShouldBeTrue();
         Enum.IsDefined(PdfVersion.Pdf17).ShouldBeTrue();
-        Enum.IsDefined(PdfVersion.PdfA1b).ShouldBeTrue();
-        Enum.IsDefined(PdfVersion.PdfA2b).ShouldBeTrue();
+        Enum.IsDefined(PdfVersion.PdfA1B).ShouldBeTrue();
+        Enum.IsDefined(PdfVersion.PdfA2B).ShouldBeTrue();
     }
 }

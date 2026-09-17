@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Shared;
 using Xunit;
@@ -587,7 +587,8 @@ public sealed class PdfATests : PdfTestBase
         PdfFixtures.Ln(sb, $"<< /Type /Metadata /Subtype /XML /Length {metaBytes.Length} >>");
         sb.Append("stream\n");
         // Embed raw XMP bytes as Latin-1 (all chars ≤255; UTF-8 bytes land in Latin-1 passthrough)
-        foreach (var b in metaBytes) sb.Append((char)b);
+        foreach (var b in metaBytes)
+            sb.Append((char)b);
         PdfFixtures.Ln(sb, "\nendstream");
         PdfFixtures.Ln(sb, "endobj");
 

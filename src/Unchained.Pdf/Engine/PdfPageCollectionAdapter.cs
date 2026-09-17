@@ -182,7 +182,8 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         while (current is not null)
         {
             var dict = core.ResolveDict(current);
-            if (dict is null) break;
+            if (dict is null)
+                break;
 
             var obj = dict[key];
 
@@ -221,7 +222,8 @@ internal sealed class PdfPageAdapter(PdfDictionary page, int pageNumber, PdfDocu
         while (current is not null && depth++ < 64)
         {
             var dict = core.ResolveDict(current);
-            if (dict is null) break;
+            if (dict is null)
+                break;
 
             var boxObj = dict[key];
             if (boxObj is PdfIndirectReference br)

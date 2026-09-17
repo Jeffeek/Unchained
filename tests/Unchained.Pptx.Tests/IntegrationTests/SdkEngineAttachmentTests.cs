@@ -60,7 +60,7 @@ public sealed class SdkEngineAttachmentTests : PptxTestBase
         var sdk = await Processor.LoadAsync(bytes, new OpenOptions { UseOpenXmlEngine = true }, TestContext.Current.CancellationToken);
 
         // Double dispose must be safe.
-        Should.NotThrow(() => sdk.Dispose());
-        Should.NotThrow(() => sdk.Dispose());
+        Should.NotThrow(sdk.Dispose);
+        Should.NotThrow(sdk.Dispose);
     }
 }

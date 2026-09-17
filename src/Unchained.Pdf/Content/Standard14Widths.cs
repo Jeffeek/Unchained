@@ -331,7 +331,8 @@ internal static class Standard14Widths
     private static short[] BuildCourier()
     {
         var w = new short[256];
-        for (var i = 32; i <= 255; i++) w[i] = 600;
+        for (var i = 32; i <= 255; i++)
+            w[i] = 600;
         w[0] = 0;
 
         return w;

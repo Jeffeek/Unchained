@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Ooxml;
 using Unchained.Pptx.Comments;
 using Unchained.Pptx.Core.Xml;
@@ -27,17 +27,21 @@ public sealed class CommentParserTests
     )
     {
         var cm = new XElement(Pml + "cm", new XAttribute("authorId", authorId), new XAttribute("idx", idx));
-        if (dt != null) cm.Add(new XAttribute("dt", dt));
+        if (dt != null)
+            cm.Add(new XAttribute("dt", dt));
         if (withPos)
             cm.Add(new XElement(Pml + "pos", new XAttribute("x", "914400"), new XAttribute("y", "457200")));
-        if (withText) cm.Add(new XElement(Pml + "text", "hello"));
+        if (withText)
+            cm.Add(new XElement(Pml + "text", "hello"));
         return cm;
     }
 
     private static (Slide slide, CommentAuthorCollection authors) Fixture()
     {
-        var authors = new CommentAuthorCollection();
-        authors.Add("Alice");
+        var authors = new CommentAuthorCollection
+        {
+            "Alice"
+        };
         return (new Slide(), authors);
     }
 

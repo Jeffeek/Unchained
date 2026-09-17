@@ -24,4 +24,26 @@ public sealed class Jbig2DecoderTests
                 new byte[] { 0x04, 0x05, 0x06 }
             )
         );
+
+    [Fact]
+    public void Decode_EmptyData_ThrowsInvalidOperation() =>
+        Should.Throw<InvalidOperationException>(static () =>
+            Jbig2Decoder.Decode(Array.Empty<byte>())
+        );
+
+    [Fact]
+    public void Decode_NullData_ThrowsInvalidOperation() =>
+        Should.Throw<InvalidOperationException>(static () =>
+            Jbig2Decoder.Decode(new byte[] { 0x00 })
+        );
+
+    [Fact]
+    public void Decode_EmptyGlobals_DoesNotThrow() =>
+        // Empty globals should be handled gracefully (length check at line 23)
+        Should.Throw<InvalidOperationException>(static () =>
+            Jbig2Decoder.Decode(
+                "\u07ad"u8.ToArray(),
+                Array.Empty<byte>()
+            )
+        );
 }

@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Rendering.Tests.Helpers;
 using Unchained.Pdf.Tests.Shared;
@@ -45,7 +45,8 @@ public sealed class PageRendererContentTests : RendererTestBase
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 5");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 5 /Root 1 0 R >>");
         PdfFixtures.Ln(sb, "startxref");
@@ -296,7 +297,8 @@ public sealed class PageRendererContentTests : RendererTestBase
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 6");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         PdfFixtures.Ln(sb, "startxref");
@@ -348,14 +350,16 @@ public sealed class PageRendererContentTests : RendererTestBase
         PdfFixtures.Ln(sb, "   /BitsPerFlag 8 /Decode [0 100 0 100 0 1 0 1 0 1]");
         PdfFixtures.Ln(sb, $"   /Length {mesh.Length} >>");
         sb.Append("stream\n");
-        foreach (var b in mesh) sb.Append((char)b);
+        foreach (var b in mesh)
+            sb.Append((char)b);
         PdfFixtures.Ln(sb, "\nendstream");
         PdfFixtures.Ln(sb, "endobj");
         var xref = PdfFixtures.Len(sb);
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 6");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         PdfFixtures.Ln(sb, "startxref");
@@ -406,7 +410,8 @@ public sealed class PageRendererContentTests : RendererTestBase
         PdfFixtures.Ln(sb, "   /BitsPerFlag 8 /Decode [0 100 0 100 0 1 0 1 0 1]");
         PdfFixtures.Ln(sb, $"   /Length {mesh.Length} >>");
         sb.Append("stream\n");
-        foreach (var b in mesh) sb.Append((char)b);
+        foreach (var b in mesh)
+            sb.Append((char)b);
         PdfFixtures.Ln(sb, "\nendstream");
         PdfFixtures.Ln(sb, "endobj");
         offsets.Add(PdfFixtures.Len(sb));
@@ -417,7 +422,8 @@ public sealed class PageRendererContentTests : RendererTestBase
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 7");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 7 /Root 1 0 R >>");
         PdfFixtures.Ln(sb, "startxref");
@@ -464,7 +470,8 @@ public sealed class PageRendererContentTests : RendererTestBase
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 6");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         PdfFixtures.Ln(sb, "startxref");

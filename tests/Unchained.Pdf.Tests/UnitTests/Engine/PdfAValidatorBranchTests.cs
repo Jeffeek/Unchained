@@ -184,12 +184,12 @@ public sealed class PdfAValidatorBranchTests
     [Fact]
     public void ShortFile_ReportsStructureViolation() =>
         // Too short to parse → the structure-parse guard reports a §6.1 violation.
-        PdfAValidator.Validate("%PD"u8.ToArray(), PdfAProfile.PdfA1B)
+        PdfAValidator.Validate([.. "%PD"u8], PdfAProfile.PdfA1B)
             .Violations.ShouldContain(static v => v.RuleId.StartsWith("6.1"));
 
     [Fact]
     public void NonPdfBytes_ReportsStructureViolation() =>
-        PdfAValidator.Validate("NOTAPDF-HEADER-XX"u8.ToArray(), PdfAProfile.PdfA1B)
+        PdfAValidator.Validate([.. "NOTAPDF-HEADER-XX"u8], PdfAProfile.PdfA1B)
             .Violations.ShouldContain(static v => v.RuleId.StartsWith("6.1"));
 
     [Fact]

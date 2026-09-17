@@ -40,7 +40,7 @@ public sealed class RenderingService(IPdfRenderer renderer)
             if (_cache.Count >= MaxEntries)
                 TrimCache();
 
-            _cache.TryAdd(key, bytes);
+            _ = _cache.TryAdd(key, bytes);
             return bytes;
         }
         catch (OperationCanceledException)
@@ -62,7 +62,7 @@ public sealed class RenderingService(IPdfRenderer renderer)
     {
         var docId = RuntimeHelpers.GetHashCode(document);
         foreach (var key in _cache.Keys.Where(k => k.DocId == docId).ToList())
-            _cache.TryRemove(key, out _);
+            _ = _cache.TryRemove(key, out _);
     }
 
     public void ClearAll() => _cache.Clear();
@@ -72,12 +72,12 @@ public sealed class RenderingService(IPdfRenderer renderer)
         // Remove approximately half the entries (arbitrary order is fine for a dev cache)
         var toRemove = _cache.Keys.Take(MaxEntries / 2).ToList();
         foreach (var key in toRemove)
-            _cache.TryRemove(key, out _);
+            _ = _cache.TryRemove(key, out _);
     }
 }
 
 // Bring System.Runtime.CompilerServices.RuntimeHelpers into scope cleanly
-static file class RuntimeHelpers
+file static class RuntimeHelpers
 {
     public static int GetHashCode(object obj) =>
         System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);

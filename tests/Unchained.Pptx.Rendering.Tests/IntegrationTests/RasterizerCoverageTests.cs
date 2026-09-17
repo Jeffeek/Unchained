@@ -69,7 +69,8 @@ public sealed class RasterizerCoverageTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var sa = AddSmartArt(doc, Emu.FromInches(5), Emu.FromInches(5));
-        for (var i = 0; i < 4; i++) sa.Nodes.Add(new SmartArtNode { Text = $"N{i}" });
+        for (var i = 0; i < 4; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"N{i}" });
 
         var image = await RenderAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -80,7 +81,8 @@ public sealed class RasterizerCoverageTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var sa = AddSmartArt(doc, Emu.FromInches(6), Emu.FromInches(4));
-        for (var i = 0; i < 4; i++) sa.Nodes.Add(new SmartArtNode { Text = $"Q{i}" });
+        for (var i = 0; i < 4; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"Q{i}" });
 
         var image = await RenderAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -91,7 +93,8 @@ public sealed class RasterizerCoverageTests : PptxTestBase
     {
         var doc = PptxFixtures.WithSlides(1);
         var sa = AddSmartArt(doc, Emu.FromInches(3), Emu.FromInches(6));
-        for (var i = 0; i < 4; i++) sa.Nodes.Add(new SmartArtNode { Text = $"L{i}" });
+        for (var i = 0; i < 4; i++)
+            sa.Nodes.Add(new SmartArtNode { Text = $"L{i}" });
 
         var image = await RenderAsync(doc);
         image.Data.Length.ShouldBeGreaterThan(0);
@@ -444,7 +447,8 @@ public sealed class RasterizerCoverageTests : PptxTestBase
         var chart = doc.Slides[0]
             .Shapes.AddChart(type, Emu.FromInches(1), Emu.FromInches(1), Emu.FromInches(6), Emu.FromInches(4));
         chart.Chart.HasTitle = title;
-        if (title) chart.Chart.Title = $"{type} chart";
+        if (title)
+            chart.Chart.Title = $"{type} chart";
         chart.Chart.Legend.IsVisible = legend;
         chart.Chart.Data.Categories.AddRange(["Q1", "Q2", "Q3", "Q4"]);
         for (var i = 0; i < seriesCount; i++)

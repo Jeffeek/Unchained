@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
@@ -208,7 +208,8 @@ public sealed class DocumentOptimizerTests : PdfTestBase
         // Reuse the embedded-font fixture with a synthetic 200-byte font "program"
         // duplicated into a second stream object so the optimizer has a match.
         var fontData = new byte[200];
-        for (var i = 0; i < fontData.Length; i++) fontData[i] = (byte)(i & 0xFF);
+        for (var i = 0; i < fontData.Length; i++)
+            fontData[i] = (byte)(i & 0xFF);
 
         var pdfBytes = PdfFixtures.WithDuplicateFontStreams(fontData);
         var originalObjectCount = CountIndirectObjects(pdfBytes);

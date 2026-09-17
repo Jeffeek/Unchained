@@ -7,7 +7,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 ///     via <see cref="JsonSerializerOptions" /> with <see cref="JsonNamingPolicy.CamelCase" />
 ///     and <see cref="JsonSerializerOptions.IgnoreNullValues" />.
 /// </summary>
-public class HighchartsOptions : IHasAdditionalProperties
+public class HighchartsOptions
 {
     /// <summary>Chart type and basic render options.</summary>
     public ChartConfig Chart { get; set; } = new();
@@ -22,10 +22,10 @@ public class HighchartsOptions : IHasAdditionalProperties
     public AxisConfig? XAxis { get; set; }
 
     /// <summary>Value (Y) axes — single axis by default, multiple for dual-axis charts.</summary>
-    public List<YAxisConfig> YAxis { get; set; } = new();
+    public List<YAxisConfig> YAxis { get; set; } = [];
 
     /// <summary>Data series.</summary>
-    public List<SeriesConfig> Series { get; set; } = new();
+    public List<SeriesConfig> Series { get; set; } = [];
 
     /// <summary>Global plot options (e.g. stacking rules applied to all series).</summary>
     public PlotOptions? PlotOptions { get; set; }
@@ -63,5 +63,5 @@ public class HighchartsOptions : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

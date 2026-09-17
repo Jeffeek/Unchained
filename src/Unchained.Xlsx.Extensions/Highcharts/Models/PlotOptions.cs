@@ -3,7 +3,7 @@ namespace Unchained.Xlsx.Extensions.Highcharts.Models;
 /// <summary>
 ///     Global plot options applied to all series.
 /// </summary>
-public class PlotOptions : IHasAdditionalProperties
+public class PlotOptions
 {
     /// <summary>Per-series defaults.</summary>
     public PlotOptionsSeries? Series { get; set; }
@@ -32,5 +32,5 @@ public class PlotOptions : IHasAdditionalProperties
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }
 
-    Dictionary<string, object>? IHasAdditionalProperties.GetAdditionalProperties() => AdditionalProperties;
+    public Dictionary<string, object>? GetAdditionalProperties() => AdditionalProperties;
 }

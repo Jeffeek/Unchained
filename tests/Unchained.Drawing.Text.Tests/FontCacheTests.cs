@@ -44,11 +44,11 @@ public sealed class FontCacheTests
     public void GetFonts_SameKey_ReturnsCachedInstance()
     {
         using var cache = new FontCache();
-        var first = cache.GetFonts("Helvetica");
+        var (face, hbFont) = cache.GetFonts("Helvetica");
         var second = cache.GetFonts("Helvetica");
 
-        second.Face.ShouldBeSameAs(first.Face);
-        second.HbFont.ShouldBeSameAs(first.HbFont);
+        second.Face.ShouldBeSameAs(face);
+        second.HbFont.ShouldBeSameAs(hbFont);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class FontCacheTests
         var cache = new FontCache();
         cache.GetFace("Helvetica");
         cache.Dispose();
-        Should.NotThrow(() => cache.Dispose());
+        Should.NotThrow(cache.Dispose);
     }
 
     [Fact]

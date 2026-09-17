@@ -85,7 +85,8 @@ public sealed class RichRenderingTests : RendererTestBase
     public async Task RenderPage_WithImageXObject_ProducesPng()
     {
         var rgb = new byte[4 * 4 * 3];
-        for (var i = 0; i < rgb.Length; i++) rgb[i] = (byte)(i % 256);
+        for (var i = 0; i < rgb.Length; i++)
+            rgb[i] = (byte)(i % 256);
         await using var doc = await LoadAsync(PdfFixtures.WithImageXObject(4, 4, rgb), TestContext.Current.CancellationToken);
         var png = await Renderer.RenderPageAsync(doc.Pages[1], RenderOptions.Default, TestContext.Current.CancellationToken);
         png[..4].ShouldBe(PngStart());

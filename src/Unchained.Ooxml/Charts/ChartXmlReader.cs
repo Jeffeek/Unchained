@@ -26,7 +26,8 @@ public static class ChartXmlReader
     public static void Parse(XElement chartSpaceRoot, ChartModel model, Action<XElement, FillFormat>? fillReader = null)
     {
         var chartEl = chartSpaceRoot.Element(CmlNames.Chart);
-        if (chartEl == null) return;
+        if (chartEl == null)
+            return;
 
         ParseTitle(chartEl.Element(CmlNames.Title), model);
 
@@ -57,7 +58,8 @@ public static class ChartXmlReader
         }
 
         var strCache = titleEl.Element(CmlNames.Text)?.Element(CmlNames.StringReference)?.Element(CmlNames.StringCache);
-        if (strCache == null) return;
+        if (strCache == null)
+            return;
 
         var pt = strCache.Elements(CmlNames.Point).FirstOrDefault();
         model.Title = pt?.Element(CmlNames.PointValue)?.Value ?? string.Empty;
@@ -70,7 +72,8 @@ public static class ChartXmlReader
         foreach (var child in plotArea.Elements())
         {
             var (chartType, found) = MapElementToChartType(child);
-            if (!found) continue;
+            if (!found)
+                continue;
 
             model.Type = chartType;
             ParseSeries(child, model.Data, fillReader);
@@ -107,10 +110,12 @@ public static class ChartXmlReader
             ?.Element(CmlNames.Rich)
             ?.Descendants(DmlNames.Dml + "t")
             .Select(static t => t.Value);
-        if (titleRuns is null) return;
+        if (titleRuns is null)
+            return;
 
         var title = string.Concat(titleRuns);
-        if (!string.IsNullOrEmpty(title)) axis.Title = title;
+        if (!string.IsNullOrEmpty(title))
+            axis.Title = title;
     }
 
     private static (ChartType type, bool found) MapElementToChartType(XElement element)
@@ -251,8 +256,7 @@ public static class ChartXmlReader
             NumberFormat = dLbls.Element(c + "numFmt")?.GetAttr("formatCode")
         };
 
-        bool Show(string name, bool dflt) =>
-            dLbls.Element(c + name)?.GetAttrInt(DmlNames.AttributeValue) is { } v ? v == 1 : dflt;
+        bool Show(string name, bool dflt) => dLbls.Element(c + name)?.GetAttrInt(DmlNames.AttributeValue) is { } v ? v == 1 : dflt;
     }
 
     private static ChartTrendline ParseTrendline(XContainer tl)
@@ -272,7 +276,8 @@ public static class ChartXmlReader
     private static string ParseSeriesName(XContainer serEl)
     {
         var txEl = serEl.Element(CmlNames.Text);
-        if (txEl == null) return string.Empty;
+        if (txEl == null)
+            return string.Empty;
 
         // Plain <c:v> form (CT_SerTx) — what we now write.
         var direct = txEl.Element(CmlNames.PointValue);
@@ -300,7 +305,8 @@ public static class ChartXmlReader
     private static void ParseCategories(XContainer serEl, ChartData data)
     {
         var catEl = serEl.Element(CmlNames.Category);
-        if (catEl == null) return;
+        if (catEl == null)
+            return;
 
         data.Categories.AddRange(ReadStringPoints(catEl));
     }
@@ -308,7 +314,8 @@ public static class ChartXmlReader
     private static void ParseXValues(XContainer serEl, ChartSeries series)
     {
         var xValEl = serEl.Element(CmlNames.XValues);
-        if (xValEl == null) return;
+        if (xValEl == null)
+            return;
 
         series.XValues.AddRange(ReadNumericPoints(xValEl));
     }
@@ -316,7 +323,8 @@ public static class ChartXmlReader
     private static void ParseValues(XContainer serEl, ChartSeries series)
     {
         var valEl = serEl.Element(CmlNames.Values) ?? serEl.Element(CmlNames.YValues);
-        if (valEl == null) return;
+        if (valEl == null)
+            return;
 
         series.Values.AddRange(ReadNumericPoints(valEl));
     }
@@ -395,7 +403,8 @@ public static class ChartXmlReader
         }
 
         var numCache = containerEl.Element(CmlNames.NumberReference)?.Element(CmlNames.NumberCache);
-        if (numCache == null) return results;
+        if (numCache == null)
+            return results;
 
         foreach (var pt in numCache.Elements(CmlNames.Point))
         {

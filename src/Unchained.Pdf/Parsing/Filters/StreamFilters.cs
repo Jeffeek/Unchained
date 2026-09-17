@@ -25,7 +25,8 @@ internal static class StreamFilters
     public static ReadOnlyMemory<byte> Decode(PdfStream stream)
     {
         var filter = stream.Dictionary[PdfName.Filter];
-        if (filter is null) return stream.Data;
+        if (filter is null)
+            return stream.Data;
 
         IReadOnlyList<PdfName> names = filter switch
         {

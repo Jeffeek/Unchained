@@ -1,6 +1,6 @@
+using Shouldly;
 using System.Buffers;
 using System.Text;
-using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Writing;
 using Xunit;

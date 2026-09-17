@@ -1,7 +1,7 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Drawing.Decoders;
 
@@ -28,10 +28,11 @@ internal static class SvgDecoder
         height = targetHeight;
         try
         {
-            var xml = svgBytes.FromUtf8Span();
+            var xml = Encoding.UTF8.GetString(svgBytes);
             var doc = XDocument.Parse(xml);
             var root = doc.Root;
-            if (root is null) return null;
+            if (root is null)
+                return null;
 
             // Parse viewBox and SVG dimensions.
             var (vx, vy, vw, vh) = ParseViewBox(root);
@@ -61,7 +62,8 @@ internal static class SvgDecoder
 
             // White background.
             var pixels = new byte[targetWidth * targetHeight * 3];
-            for (var i = 0; i < pixels.Length; i++) pixels[i] = 255;
+            for (var i = 0; i < pixels.Length; i++)
+                pixels[i] = 255;
 
             var ctx = new RenderContext(
                 pixels,
@@ -101,7 +103,8 @@ internal static class SvgDecoder
             var stroke = el.Attribute("stroke")?.Value ?? inheritStroke;
             var opacity = ParseFloat(el.Attribute("opacity")?.Value) ?? inheritOpacity;
             var style = el.Attribute("style")?.Value;
-            if (style is not null) ParseStyle(style, ref fill, ref stroke);
+            if (style is not null)
+                ParseStyle(style, ref fill, ref stroke);
 
             switch (localName)
             {
@@ -165,7 +168,8 @@ internal static class SvgDecoder
         var y = (float)(ParseLength(el.Attribute("y")?.Value) ?? 0);
         var w = (float)(ParseLength(el.Attribute("width")?.Value) ?? 0);
         var h = (float)(ParseLength(el.Attribute("height")?.Value) ?? 0);
-        if (w <= 0 || h <= 0) return;
+        if (w <= 0 || h <= 0)
+            return;
 
         if (fill != "none")
         {
@@ -186,7 +190,7 @@ internal static class SvgDecoder
         }
 
         // ReSharper disable once InvertIf
-        if (stroke != "none" && stroke != "")
+        if (stroke is not "none" and not "")
         {
             var (r, g, b) = ParseColor(stroke);
             // ReSharper disable BadListLineBreaks
@@ -216,7 +220,8 @@ internal static class SvgDecoder
         var cx = (float)(ParseLength(el.Attribute("cx")?.Value) ?? 0);
         var cy = (float)(ParseLength(el.Attribute("cy")?.Value) ?? 0);
         var r = (float)(ParseLength(el.Attribute("r")?.Value) ?? 0);
-        if (r <= 0) return;
+        if (r <= 0)
+            return;
 
         if (fill != "none")
         {
@@ -237,7 +242,7 @@ internal static class SvgDecoder
         }
 
         // ReSharper disable once InvertIf
-        if (stroke != "none" && stroke != "")
+        if (stroke is not "none" and not "")
         {
             var (sr, sg, sb) = ParseColor(stroke);
             // ReSharper disable BadListLineBreaks
@@ -331,7 +336,8 @@ internal static class SvgDecoder
     )
     {
         var pts = ParsePoints(el.Attribute("points")?.Value);
-        if (pts.Count < 2) return;
+        if (pts.Count < 2)
+            return;
 
         if (fill != "none" && close)
         {
@@ -348,7 +354,7 @@ internal static class SvgDecoder
         }
 
         // ReSharper disable once InvertIf
-        if (stroke != "none" && stroke != "")
+        if (stroke is not "none" and not "")
         {
             var (sr, sg, sb) = ParseColor(stroke);
             // ReSharper disable BadListLineBreaks
@@ -399,7 +405,7 @@ internal static class SvgDecoder
 
         var polygons = ParsePathToPolygons(d);
 
-        if (fill != "none" && fill != "")
+        if (fill is not "none" and not "")
         {
             var (fr, fg, fb) = ParseColor(fill);
             foreach (var poly in polygons.Where(static poly => poly.Count >= 3))
@@ -417,7 +423,7 @@ internal static class SvgDecoder
         }
 
         // ReSharper disable once InvertIf
-        if (stroke != "none" && stroke != "")
+        if (stroke is not "none" and not "")
         {
             var (sr, sg, sb) = ParseColor(stroke);
             foreach (var poly in polygons)
@@ -458,16 +464,18 @@ internal static class SvgDecoder
     {
         var (px, py, pw, ph) = ctx.TransformRect(x, y, w, h);
         for (var row = py; row < py + ph; row++)
-        for (var col = px; col < px + pw; col++)
         {
-            ctx.BlendPixel(
-                col,
-                row,
-                r,
-                g,
-                b,
-                opacity
-            );
+            for (var col = px; col < px + pw; col++)
+            {
+                ctx.BlendPixel(
+                    col,
+                    row,
+                    r,
+                    g,
+                    b,
+                    opacity
+                );
+            }
         }
     }
 
@@ -552,20 +560,22 @@ internal static class SvgDecoder
             return;
 
         for (var row = py; row < py + ph; row++)
-        for (var col = px; col < px + pw; col++)
         {
-            var dx = (col - cx) / rx;
-            var dy = (row - cy) / ry;
-            if ((dx * dx) + (dy * dy) <= 1.0f)
+            for (var col = px; col < px + pw; col++)
             {
-                ctx.BlendPixel(
-                    col,
-                    row,
-                    r,
-                    g,
-                    b,
-                    opacity
-                );
+                var dx = (col - cx) / rx;
+                var dy = (row - cy) / ry;
+                if ((dx * dx) + (dy * dy) <= 1.0f)
+                {
+                    ctx.BlendPixel(
+                        col,
+                        row,
+                        r,
+                        g,
+                        b,
+                        opacity
+                    );
+                }
             }
         }
     }
@@ -642,7 +652,8 @@ internal static class SvgDecoder
                 b,
                 opacity
             );
-            if (cx == px1 && cy == py1) break;
+            if (cx == px1 && cy == py1)
+                break;
 
             var e2 = 2 * err;
             if (e2 > -dy)
@@ -669,7 +680,8 @@ internal static class SvgDecoder
         float opacity
     )
     {
-        if (points.Count < 3) return;
+        if (points.Count < 3)
+            return;
 
         // Transform points to pixel space.
         var px = points.Select(p => ctx.Transform(p.X, p.Y)).ToList();
@@ -683,13 +695,13 @@ internal static class SvgDecoder
             for (var i = 0; i < px.Count; i++)
             {
                 var j = (i + 1) % px.Count;
-                var y0 = px[i].Item2;
-                var y1 = px[j].Item2;
+                var y0 = px[i].Y;
+                var y1 = px[j].Y;
 
                 // ReSharper disable once InvertIf
                 if ((y0 <= scanY && y1 > scanY) || (y1 <= scanY && y0 > scanY))
                 {
-                    var x = px[i].Item1 + ((scanY - y0) * (px[j].Item1 - px[i].Item1) / (y1 - y0));
+                    var x = px[i].X + ((scanY - y0) * (px[j].X - px[i].X) / (y1 - y0));
                     intersections.Add(x);
                 }
             }
@@ -886,11 +898,11 @@ internal static class SvgDecoder
                     // Arc — approximate as line to endpoint.
                     while (i < tokens.Count && float.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     {
-                        NextFloat(tokens, ref i);
-                        NextFloat(tokens, ref i); // rx, ry
-                        NextFloat(tokens, ref i);
-                        NextFloat(tokens, ref i);
-                        NextFloat(tokens, ref i); // rotation, largeArc, sweep
+                        _ = NextFloat(tokens, ref i);
+                        _ = NextFloat(tokens, ref i); // rx, ry
+                        _ = NextFloat(tokens, ref i);
+                        _ = NextFloat(tokens, ref i);
+                        _ = NextFloat(tokens, ref i); // rotation, largeArc, sweep
                         var x = NextFloat(tokens, ref i);
                         var y = NextFloat(tokens, ref i);
                         if (isRelative)
@@ -959,7 +971,8 @@ internal static class SvgDecoder
             }
         }
 
-        if (current.Count >= 2) result.Add(current);
+        if (current.Count >= 2)
+            result.Add(current);
         return result;
     }
 
@@ -1046,18 +1059,24 @@ internal static class SvgDecoder
 
             // Number (possibly starting with '-').
             var start = i;
-            if (d[i] == '-') i++;
-            while (i < d.Length && (char.IsDigit(d[i]) || d[i] == '.')) i++;
+            if (d[i] == '-')
+                i++;
+            while (i < d.Length && (char.IsDigit(d[i]) || d[i] == '.'))
+                i++;
             // Handle scientific notation.
             if (i < d.Length && (d[i] == 'e' || d[i] == 'E'))
             {
                 i++;
-                if (i < d.Length && (d[i] == '+' || d[i] == '-')) i++;
-                while (i < d.Length && char.IsDigit(d[i])) i++;
+                if (i < d.Length && (d[i] == '+' || d[i] == '-'))
+                    i++;
+                while (i < d.Length && char.IsDigit(d[i]))
+                    i++;
             }
 
-            if (i > start) result.Add(d[start..i]);
-            else i++; // skip unknown char
+            if (i > start)
+                result.Add(d[start..i]);
+            else
+                i++; // skip unknown char
         }
 
         return result;
@@ -1067,13 +1086,15 @@ internal static class SvgDecoder
 
     private static (byte R, byte G, byte B) ParseColor(string color)
     {
-        if (string.IsNullOrEmpty(color) || color == "none") return (0, 0, 0);
+        if (string.IsNullOrEmpty(color) || color == "none")
+            return (0, 0, 0);
 
         // #RGB or #RRGGBB
         if (color.StartsWith('#'))
         {
             var hex = color[1..];
-            if (hex.Length == 3) hex = $"{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}";
+            if (hex.Length == 3)
+                hex = $"{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}";
             if (hex.Length >= 6 && uint.TryParse(hex[..6], NumberStyles.HexNumber, null, out var v))
                 return ((byte)((v >> 16) & 0xFF), (byte)((v >> 8) & 0xFF), (byte)(v & 0xFF));
         }
@@ -1109,7 +1130,8 @@ internal static class SvgDecoder
         foreach (var part in style.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
             var kv = part.Split(':', 2);
-            if (kv.Length != 2) continue;
+            if (kv.Length != 2)
+                continue;
 
             var key = kv[0].Trim();
             var val = kv[1].Trim();
@@ -1128,23 +1150,24 @@ internal static class SvgDecoder
 
     private static double? ParseLength(string? value)
     {
-        if (string.IsNullOrEmpty(value)) return null;
+        if (string.IsNullOrEmpty(value))
+            return null;
 
         value = value.TrimEnd('p', 'x', 'e', 'm', '%');
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
     }
 
-    private static float? ParseFloat(string? value)
-    {
-        if (string.IsNullOrEmpty(value)) return null;
-
-        return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
-    }
+    private static float? ParseFloat(string? value) => string.IsNullOrEmpty(value)
+        ? null
+        : float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)
+            ? v
+            : null;
 
     private static List<(float X, float Y)> ParsePoints(string? value)
     {
         var result = new List<(float X, float Y)>();
-        if (string.IsNullOrEmpty(value)) return result;
+        if (string.IsNullOrEmpty(value))
+            return result;
 
         var nums = Regex.Split(value.Trim(), @"[\s,]+")
             .Where(static s => s.Length > 0)
@@ -1158,7 +1181,8 @@ internal static class SvgDecoder
     private static (double Vx, double Vy, double Vw, double Vh) ParseViewBox(XElement root)
     {
         var vb = root.Attribute("viewBox")?.Value;
-        if (string.IsNullOrEmpty(vb)) return (0, 0, 0, 0);
+        if (string.IsNullOrEmpty(vb))
+            return (0, 0, 0, 0);
 
         var parts = Regex.Split(vb.Trim(), @"[\s,]+");
 

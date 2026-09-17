@@ -21,7 +21,8 @@ internal static class AnimationWriter
     /// </summary>
     public static XElement? Write(AnimationTimeline timeline)
     {
-        if (!timeline.HasAnimations) return null;
+        if (!timeline.HasAnimations)
+            return null;
 
         var timing = new XElement(PmlNames.Timing);
         timing.Add(WriteTnLst(timeline));

@@ -15,5 +15,5 @@ public class DrilldownSeries
     public string? Title { get; set; }
 
     /// <summary>Data series for the drilldown level.</summary>
-    public List<SeriesConfig> Data { get; set; } = new();
+    public List<SeriesConfig> Data { get; set; } = [];
 }

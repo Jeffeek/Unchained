@@ -120,7 +120,7 @@ internal sealed partial class SlideRasterizer(FontCache fonts, MediaStore? media
     {
         var map = new Dictionary<int, Shape>();
         foreach (var s in slide.Layout.Master.Shapes.Where(static s => s.PlaceholderIndex.HasValue))
-            map.TryAdd(s.PlaceholderIndex!.Value, s);
+            _ = map.TryAdd(s.PlaceholderIndex!.Value, s);
 
         foreach (var s in slide.Layout.Shapes.Where(static s => s.PlaceholderIndex.HasValue))
             map[s.PlaceholderIndex!.Value] = s;

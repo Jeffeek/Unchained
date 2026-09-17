@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
+using System.Text;
 using Unchained.Drawing.Constants;
-using Unchained.Drawing.Primitives.Extensions;
 
 namespace Unchained.Drawing.Encoders;
 
@@ -20,7 +20,7 @@ internal static class PngEncoder
         ms.Write(PngSignature);
         WriteIHDR(ms, buffer.Width, buffer.Height);
         WriteIDAT(ms, buffer);
-        WriteChunk(ms, PngConstants.IEND.ToUtf8Span(), ReadOnlySpan<byte>.Empty);
+        WriteChunk(ms, Encoding.UTF8.GetBytes(PngConstants.IEND), []);
 
         return ms.ToArray();
     }
@@ -37,7 +37,7 @@ internal static class PngEncoder
         data[10] = 0; // compression method
         data[11] = 0; // filter method
         data[12] = 0; // interlace: none
-        WriteChunk(stream, PngConstants.IHDR.ToUtf8Span(), data);
+        WriteChunk(stream, Encoding.UTF8.GetBytes(PngConstants.IHDR), data);
     }
 
     // ReSharper disable once InconsistentNaming
@@ -61,7 +61,7 @@ internal static class PngEncoder
         using (var zlib = new ZLibStream(compressedMs, CompressionLevel.Optimal, true))
             zlib.Write(raw);
 
-        WriteChunk(stream, PngConstants.IDAT.ToUtf8Span(), compressedMs.ToArray());
+        WriteChunk(stream, Encoding.UTF8.GetBytes(PngConstants.IDAT), compressedMs.ToArray());
     }
 
     private static void WriteChunk(Stream stream, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
@@ -70,7 +70,8 @@ internal static class PngEncoder
         BinaryPrimitives.WriteUInt32BigEndian(lenBuf, (uint)data.Length);
         stream.Write(lenBuf);
         stream.Write(type);
-        if (data.Length > 0) stream.Write(data);
+        if (data.Length > 0)
+            stream.Write(data);
 
         var crc = UpdateCrc(PngConstants.Crc32Init, type);
         crc = UpdateCrc(crc, data);

@@ -27,7 +27,8 @@ internal static class AnimationParser
         var rootPar = tnLst?.Element(pml + "par");
         var rootCtn = rootPar?.Element(PmlNames.AnimationContainer);
         var rootChildren = rootCtn?.Element(pml + "childTnLst");
-        if (rootChildren == null) return;
+        if (rootChildren == null)
+            return;
 
         // Main sequence: the first <p:seq> inside the root
         var mainSeq = rootChildren.Element(pml + "seq");
@@ -38,7 +39,8 @@ internal static class AnimationParser
         foreach (var interSeq in rootChildren.Elements(pml + "seq").Skip(1))
         {
             var triggerShapeId = GetInteractiveTriggerShapeId(interSeq, pml);
-            if (triggerShapeId == 0) continue;
+            if (triggerShapeId == 0)
+                continue;
 
             var interactive = timeline.AddInteractiveSequence(triggerShapeId);
             var seqCtn = interSeq.Element(PmlNames.AnimationContainer);
@@ -54,7 +56,8 @@ internal static class AnimationParser
     {
         var ctn = seqEl.Element(PmlNames.AnimationContainer);
         var children = ctn?.Element(pml + "childTnLst");
-        if (children == null) return;
+        if (children == null)
+            return;
 
         ParseClickGroups(children, sequence, pml);
     }
@@ -66,7 +69,8 @@ internal static class AnimationParser
         {
             var groupCtn = clickGroup.Element(PmlNames.AnimationContainer);
             var groupChildren = groupCtn?.Element(pml + "childTnLst");
-            if (groupChildren == null) continue;
+            if (groupChildren == null)
+                continue;
 
             // Determine if this is an OnClick group (has delay=RepeatIndefinite condition)
             var isOnClick = IsClickGroup(groupCtn!, pml);
@@ -76,7 +80,8 @@ internal static class AnimationParser
             foreach (var effectPar in groupChildren.Elements(pml + "par"))
             {
                 var effect = ParseEffect(effectPar, pml);
-                if (effect == null) continue;
+                if (effect == null)
+                    continue;
 
                 // Assign trigger based on group type and position
                 effect.Trigger = isFirst && isOnClick
@@ -94,11 +99,13 @@ internal static class AnimationParser
     private static AnimationEffect? ParseEffect(XContainer effectPar, XNamespace pml)
     {
         var ctn = effectPar.Element(PmlNames.AnimationContainer);
-        if (ctn == null) return null;
+        if (ctn == null)
+            return null;
 
         // Read preset metadata
         var presetIdRaw = ctn.GetAttr("presetID");
-        if (!int.TryParse(presetIdRaw, out var presetId)) return null;
+        if (!int.TryParse(presetIdRaw, out var presetId))
+            return null;
 
         var presetClass = ctn.GetAttr("presetClass", "entr");
         var durRaw = ctn.GetAttr(PmlNames.AttributeDuration);
@@ -108,7 +115,8 @@ internal static class AnimationParser
 
         // Find the target shape ID from nested elements
         var targetShapePid = FindTargetShapeId(ctn, pml);
-        if (targetShapePid == 0) return null;
+        if (targetShapePid == 0)
+            return null;
 
         // Delay from the condition
         double delay = 0;
@@ -161,7 +169,8 @@ internal static class AnimationParser
     {
         // Target shape is in a nested <p:spTgt spid="N"/> element anywhere in descendants
         var spTgt = ctn.Descendants(pml + "spTgt").FirstOrDefault();
-        if (spTgt == null) return 0;
+        if (spTgt == null)
+            return 0;
 
         var spid = spTgt.GetAttr("spid");
         return spid != null && uint.TryParse(spid, out var id) ? id : 0;
@@ -175,7 +184,8 @@ internal static class AnimationParser
 
     private static EffectTrigger GetTrigger(XElement? ctn)
     {
-        if (ctn == null) return EffectTrigger.WithPrevious;
+        if (ctn == null)
+            return EffectTrigger.WithPrevious;
 
         var nodeType = ctn.GetAttr("nodeType", string.Empty);
         return nodeType switch
@@ -191,7 +201,8 @@ internal static class AnimationParser
         // The trigger shape ID is on a nested <p:spTgt spid="N"/> inside prevCondLst/cond/tgtEl.
         var prevCond = seqEl.Element(pml + "prevCondLst")?.Element(pml + "cond");
         var spTgt = prevCond?.Descendants(pml + "spTgt").FirstOrDefault();
-        if (spTgt == null) return 0;
+        if (spTgt == null)
+            return 0;
 
         var spid = spTgt.GetAttr("spid");
         return spid != null && uint.TryParse(spid, out var id) ? id : 0;

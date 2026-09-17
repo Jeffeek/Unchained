@@ -156,7 +156,7 @@ internal sealed class PdfPageAccumulator
                 [PdfName.Count.Value] = new PdfInteger(_pageRefs.Count)
             }
         );
-        _builder.AddAt(_pagesNum, pagesDict);
+        _ = _builder.AddAt(_pagesNum, pagesDict);
 
         var catalogEntries = new Dictionary<string, PdfObject>
         {

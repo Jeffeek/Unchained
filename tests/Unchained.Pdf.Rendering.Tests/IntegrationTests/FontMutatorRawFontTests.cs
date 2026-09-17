@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Rendering.Tests.Helpers;
 using Unchained.Pdf.Tests.Shared;
 using Xunit;
@@ -78,7 +78,8 @@ public sealed class FontMutatorRawFontTests : RendererTestBase
         PdfFixtures.Line(ms, "xref");
         PdfFixtures.Line(ms, "0 8");
         PdfFixtures.Line(ms, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Line(ms, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Line(ms, $"{o:D10} 00000 n ");
         PdfFixtures.Line(ms, "trailer");
         PdfFixtures.Line(ms, "<< /Size 8 /Root 1 0 R >>");
         PdfFixtures.Line(ms, "startxref");

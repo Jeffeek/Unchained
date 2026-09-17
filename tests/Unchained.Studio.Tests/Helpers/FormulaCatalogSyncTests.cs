@@ -43,7 +43,8 @@ public sealed class FormulaCatalogSyncTests
     {
         var paren = signature.IndexOf('(');
         var close = signature.LastIndexOf(')');
-        if (paren < 0 || close < 0) return 0;
+        if (paren < 0 || close < 0)
+            return 0;
 
         var body = signature.Substring(paren + 1, close - paren - 1);
         return string.IsNullOrWhiteSpace(body) ? 0 : body.Split(',').Length;

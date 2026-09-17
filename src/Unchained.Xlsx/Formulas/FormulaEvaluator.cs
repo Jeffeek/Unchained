@@ -110,7 +110,7 @@ internal sealed class FormulaEvaluator(Worksheet sheet, HashSet<string>? evaluat
         }
         finally
         {
-            _evaluating.Remove(key);
+            _ = _evaluating.Remove(key);
         }
     }
 
@@ -133,10 +133,12 @@ internal sealed class FormulaEvaluator(Worksheet sheet, HashSet<string>? evaluat
     private FormulaValue EvaluateBinary(BinaryNode node)
     {
         var left = Evaluate(node.Left);
-        if (left.IsError) return left;
+        if (left.IsError)
+            return left;
 
         var right = Evaluate(node.Right);
-        if (right.IsError) return right;
+        if (right.IsError)
+            return right;
 
         var op = node.Operator;
         switch (op)
@@ -163,12 +165,10 @@ internal sealed class FormulaEvaluator(Worksheet sheet, HashSet<string>? evaluat
 
     private static bool Compare(FormulaValue left, FormulaValue right, string op)
     {
-        int cmp;
+        var cmp = IsNumericish(left) && IsNumericish(right)
+            ? ToNumber(left).CompareTo(ToNumber(right))
+            : string.Compare(ToText(left), ToText(right), StringComparison.OrdinalIgnoreCase);
         // Numeric comparison when both coerce to numbers; else ordinal text comparison.
-        if (IsNumericish(left) && IsNumericish(right))
-            cmp = ToNumber(left).CompareTo(ToNumber(right));
-        else
-            cmp = string.Compare(ToText(left), ToText(right), StringComparison.OrdinalIgnoreCase);
 
         return op switch
         {

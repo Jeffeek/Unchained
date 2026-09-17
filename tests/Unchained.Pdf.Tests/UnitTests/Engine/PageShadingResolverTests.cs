@@ -19,7 +19,8 @@ public sealed class PageShadingResolverTests
     private static PdfDictionary PageWithShading(params (string Name, PdfObject Shading)[] shadings)
     {
         var entries = new Dictionary<string, PdfObject>();
-        foreach (var (name, sh) in shadings) entries[name] = sh;
+        foreach (var (name, sh) in shadings)
+            entries[name] = sh;
         var resources = new PdfDictionary(
             new Dictionary<string, PdfObject> { ["Shading"] = new PdfDictionary(entries) }
         );

@@ -51,7 +51,8 @@ internal static class GrayscaleJpegBuilder
         WriteSof0(ms, width, height);
         WriteDht(ms, DcLumBits, DcLumVals, 0, 0);
         WriteDht(ms, AcLumBits, AcLumVals, 1, 0);
-        if (restartInterval > 0) WriteDri(ms, restartInterval);
+        if (restartInterval > 0)
+            WriteDri(ms, restartInterval);
 
         WriteSos(ms);
 
@@ -62,30 +63,32 @@ internal static class GrayscaleJpegBuilder
         var mcuCount = 0;
 
         for (var my = 0; my < mcusY; my++)
-        for (var mx = 0; mx < mcusX; mx++)
         {
-            var block = new double[64];
-            Array.Fill(block, gray - 128.0);
-            EncodeBlock(
-                block,
-                qt,
-                dcCodes,
-                dcLens,
-                acCodes,
-                acLens,
-                ref dcPrev,
-                bw
-            );
+            for (var mx = 0; mx < mcusX; mx++)
+            {
+                var block = new double[64];
+                Array.Fill(block, gray - 128.0);
+                EncodeBlock(
+                    block,
+                    qt,
+                    dcCodes,
+                    dcLens,
+                    acCodes,
+                    acLens,
+                    ref dcPrev,
+                    bw
+                );
 
-            mcuCount++;
-            if (restartInterval <= 0 || mcuCount % restartInterval != 0 || (my == mcusY - 1 && mx == mcusX - 1))
-                continue;
+                mcuCount++;
+                if (restartInterval <= 0 || mcuCount % restartInterval != 0 || (my == mcusY - 1 && mx == mcusX - 1))
+                    continue;
 
-            bw.Flush();
-            var rst = (byte)(JpegConstants.RstFirst + (((mcuCount / restartInterval) - 1) % 8));
-            ms.WriteByte(JpegConstants.MarkerPrefix);
-            ms.WriteByte(rst);
-            dcPrev = 0;
+                bw.Flush();
+                var rst = (byte)(JpegConstants.RstFirst + (((mcuCount / restartInterval) - 1) % 8));
+                ms.WriteByte(JpegConstants.MarkerPrefix);
+                ms.WriteByte(rst);
+                dcPrev = 0;
+            }
         }
 
         bw.Flush();
@@ -153,7 +156,8 @@ internal static class GrayscaleJpegBuilder
 
     private static int SizeOf(int v)
     {
-        if (v == 0) return 0;
+        if (v == 0)
+            return 0;
 
         v = Math.Abs(v);
         var s = 0;
@@ -185,12 +189,14 @@ internal static class GrayscaleJpegBuilder
         }
 
         for (var col = 0; col < 8; col++)
-        for (var v = 0; v < 8; v++)
         {
-            var sum = 0d;
-            for (var y = 0; y < 8; y++)
-                sum += tmp[(y * 8) + col] * Math.Cos(((2.0 * y) + 1) * v * Math.PI / 16d);
-            output[(v * 8) + col] = 0.25 * (v == 0 ? 1d / Math.Sqrt(2) : 1d) * sum;
+            for (var v = 0; v < 8; v++)
+            {
+                var sum = 0d;
+                for (var y = 0; y < 8; y++)
+                    sum += tmp[(y * 8) + col] * Math.Cos(((2.0 * y) + 1) * v * Math.PI / 16d);
+                output[(v * 8) + col] = 0.25 * (v == 0 ? 1d / Math.Sqrt(2) : 1d) * sum;
+            }
         }
 
         return output;

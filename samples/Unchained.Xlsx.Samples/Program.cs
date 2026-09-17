@@ -34,7 +34,7 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
-        Directory.CreateDirectory(OutputDir);
+        _ = Directory.CreateDirectory(OutputDir);
         Console.WriteLine("Unchained.Xlsx samples");
         Console.WriteLine($"Output directory: {OutputDir}");
         Console.WriteLine();
@@ -235,11 +235,11 @@ internal static class Program
 
         // Drop-down on the Status column (B2:B3).
         var statusRange = new CellRange(new CellReference(2, 2), new CellReference(3, 2));
-        sheet.AddDropdownValidation(statusRange, "New", "Shipped", "Closed");
+        _ = sheet.AddDropdownValidation(statusRange, "New", "Shipped", "Closed");
 
         // Workbook-scoped named range over the prices.
         var priceRange = new CellRange(new CellReference(2, 3), new CellReference(3, 3));
-        doc.DefinedNames.Add("Prices", priceRange.ToSheetQualifiedA1(sheet.Name));
+        _ = doc.DefinedNames.Add("Prices", priceRange.ToSheetQualifiedA1(sheet.Name));
 
         Console.WriteLine($"  Drop-down on {statusRange.ToA1()} (New / Shipped / Closed)");
         Console.WriteLine($"  Named range 'Prices' → {priceRange.ToA1()}");
@@ -274,7 +274,7 @@ internal static class Program
 
         var dataRange = new CellRange(new CellReference(1, 1), new CellReference(data.Length + 1, 2));
         var anchor = DrawingAnchor.TwoCell(new CellReference(1, 4), new CellReference(16, 12));
-        sheet.AddChart(ChartType.ColumnClustered, dataRange, anchor, "Units by Month");
+        _ = sheet.AddChart(ChartType.ColumnClustered, dataRange, anchor, "Units by Month");
 
         var path = Path.Combine(OutputDir, "chart.xlsx");
         await processor.SaveAsync(doc, path);
@@ -314,7 +314,7 @@ internal static class Program
         var pivot = summary.PivotTables.Add(sourceRange, new CellReference(1, 1), "RegionTotals", data);
         pivot.AddRowField("Region");
         // ReSharper disable once RedundantArgumentDefaultValue
-        pivot.AddDataField("Amount", PivotDataFunction.Sum);
+        _ = pivot.AddDataField("Amount", PivotDataFunction.Sum);
 
         var path = Path.Combine(OutputDir, "pivot.xlsx");
         await processor.SaveAsync(doc, path);
@@ -374,7 +374,8 @@ internal static class Program
     private static async Task ReadAsync()
     {
         var source = Path.Combine(OutputDir, "workbook.xlsx");
-        if (!File.Exists(source)) await CreateWorkbookAsync();
+        if (!File.Exists(source))
+            await CreateWorkbookAsync();
 
         using var processor = new SpreadsheetProcessor();
         using var doc = await processor.LoadAsync(source);
@@ -392,7 +393,8 @@ internal static class Program
             foreach (var reference in used.Value.Cells())
             {
                 var cell = sheet.GetCell(reference);
-                if (cell is null || cell.CellType == CellType.Empty) continue;
+                if (cell is null || cell.CellType == CellType.Empty)
+                    continue;
 
                 Console.WriteLine($"    {reference.ToA1(),-4} = {cell.GetFormattedString()}");
             }

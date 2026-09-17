@@ -113,10 +113,13 @@ public sealed class GlyphFaceTests : IDisposable
 
         var dark = 0;
         for (var y = 0; y < 80; y++)
-        for (var x = 0; x < 80; x++)
         {
-            var (r, g, b) = buffer.GetPixelRgb(x, y);
-            if (r < 128 && g < 128 && b < 128) dark++;
+            for (var x = 0; x < 80; x++)
+            {
+                var (r, g, b) = buffer.GetPixelRgb(x, y);
+                if (r < 128 && g < 128 && b < 128)
+                    dark++;
+            }
         }
 
         dark.ShouldBeGreaterThan(10, "blitting 'H' at 48px should produce visible dark pixels");
@@ -143,14 +146,17 @@ public sealed class GlyphFaceTests : IDisposable
 
         var redFound = false;
         for (var y = 0; y < 80 && !redFound; y++)
-        for (var x = 0; x < 80; x++)
         {
-            var (r, g, b) = buffer.GetPixelRgb(x, y);
-            // Color dominance: red is dominant and notably brighter than green/blue.
-            if (r <= g + 80 || r <= b + 80) continue;
+            for (var x = 0; x < 80; x++)
+            {
+                var (r, g, b) = buffer.GetPixelRgb(x, y);
+                // Color dominance: red is dominant and notably brighter than green/blue.
+                if (r <= g + 80 || r <= b + 80)
+                    continue;
 
-            redFound = true;
-            break;
+                redFound = true;
+                break;
+            }
         }
 
         redFound.ShouldBeTrue("a red glyph should leave reddish pixels");

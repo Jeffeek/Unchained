@@ -161,4 +161,91 @@ public sealed class SlideCollectionTests
         slides.Count().ShouldBe(2);                 // generic IEnumerator
         slides.Cast<object?>().Count().ShouldBe(2); // non-generic IEnumerator
     }
+
+    [Fact]
+    public void InsertBlank_NegativeIndex_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.InsertBlank(-1, layout));
+    }
+
+    [Fact]
+    public void InsertBlank_IndexTooHigh_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.InsertBlank(10, layout));
+    }
+
+    [Fact]
+    public void InsertClone_NegativeIndex_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        var source = slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.InsertClone(-1, source));
+    }
+
+    [Fact]
+    public void MoveTo_NegativeFromIndex_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.MoveTo(-1, 0));
+    }
+
+    [Fact]
+    public void MoveTo_NegativeToIndex_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.MoveTo(0, -1));
+    }
+
+    [Fact]
+    public void MoveTo_FromIndexTooHigh_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.MoveTo(10, 0));
+    }
+
+    [Fact]
+    public void MoveTo_ToIndexTooHigh_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.MoveTo(0, 10));
+    }
+
+    [Fact]
+    public void RemoveAt_NegativeIndex_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.RemoveAt(-1));
+    }
+
+    [Fact]
+    public void RemoveAt_IndexTooHigh_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides.RemoveAt(10));
+    }
+
+    [Fact]
+    public void Indexer_Get_NegativeIndex_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides[-1]);
+    }
+
+    [Fact]
+    public void Indexer_Get_IndexTooHigh_Throws()
+    {
+        var (slides, layout) = NewDeck();
+        slides.AddBlank(layout);
+        Should.Throw<ArgumentOutOfRangeException>(() => slides[10]);
+    }
 }

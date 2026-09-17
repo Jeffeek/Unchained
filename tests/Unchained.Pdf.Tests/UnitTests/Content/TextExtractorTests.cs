@@ -19,7 +19,7 @@ public sealed class TextExtractorTests
     [Fact]
     public void Extract_NoOperators_ReturnsEmpty()
     {
-        var spans = TextExtractor.Extract((IReadOnlyList<ContentOperator>)[], EmptyMap);
+        var spans = TextExtractor.Extract([], EmptyMap);
         spans.ShouldBeEmpty();
     }
 

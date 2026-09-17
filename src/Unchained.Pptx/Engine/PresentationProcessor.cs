@@ -176,7 +176,7 @@ public sealed class PresentationProcessor : IDisposable
             )
             .ConfigureAwait(false);
 
-        Directory.CreateDirectory(directoryPath);
+        _ = Directory.CreateDirectory(directoryPath);
         var written = new List<string>(files.Count);
         foreach (var (name, bytes) in files)
         {

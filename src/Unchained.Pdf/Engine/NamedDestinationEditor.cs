@@ -53,7 +53,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
                 // Read existing /Names /Dests flat name list, then add/remove our entry.
                 var existingDests = ReadFlatDests(catDict, adapter.Core);
                 if (pageNumber <= 0)
-                    existingDests.Remove(name);
+                    _ = existingDests.Remove(name);
                 else if (pageRef is not null)
                     existingDests[name] = new PdfArray([pageRef, PdfName.Fit]);
 
@@ -79,7 +79,7 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
                 if (namesEntries.Count > 0)
                     catEntries[PdfName.Names.Value] = new PdfDictionary(namesEntries);
                 else
-                    catEntries.Remove(PdfName.Names.Value);
+                    _ = catEntries.Remove(PdfName.Names.Value);
             }
         );
 
@@ -95,7 +95,8 @@ public sealed class NamedDestinationEditor : INamedDestinationEditor
         var destsObj = namesDict?[PdfName.Dests];
         var destsDict = core.ResolveDict(destsObj);
         var namesArr = destsDict?.Get<PdfArray>(PdfName.Names);
-        if (namesArr is null) return result;
+        if (namesArr is null)
+            return result;
 
         for (var i = 0; i + 1 < namesArr.Count; i += 2)
         {

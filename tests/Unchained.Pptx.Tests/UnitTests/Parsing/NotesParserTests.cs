@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Parsing;
@@ -16,8 +16,10 @@ public sealed class NotesParserTests
     private static XElement BodyShape(string text, string? phType = "body", string? idx = null)
     {
         var ph = new XElement(PmlNames.Placeholder);
-        if (phType != null) ph.Add(new XAttribute("type", phType));
-        if (idx != null) ph.Add(new XAttribute("idx", idx));
+        if (phType != null)
+            ph.Add(new XAttribute("type", phType));
+        if (idx != null)
+            ph.Add(new XAttribute("idx", idx));
 
         return new XElement(
             PmlNames.Shape,
@@ -35,7 +37,7 @@ public sealed class NotesParserTests
     private static XElement NotesRoot(params XElement[] shapes) =>
         new(
             P + "notes",
-            new XElement(PmlNames.CommonSlideData, new XElement(PmlNames.ShapeTree, shapes.Cast<object>().ToArray()))
+            new XElement(PmlNames.CommonSlideData, new XElement(PmlNames.ShapeTree, [.. shapes]))
         );
 
     [Fact]

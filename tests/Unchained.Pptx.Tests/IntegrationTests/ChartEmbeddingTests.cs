@@ -1,5 +1,5 @@
-using System.IO.Compression;
 using Shouldly;
+using System.IO.Compression;
 using Unchained.Pptx.Models;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Shared;
@@ -13,11 +13,11 @@ namespace Unchained.Pptx.Tests.IntegrationTests;
 /// </summary>
 public sealed class ChartEmbeddingTests : PptxTestBase
 {
-    private static async Task<byte[]> ChartSampleAsync()
+    private static Task<byte[]> ChartSampleAsync()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "TestFiles", "python-pptx", "cht-charts.pptx");
         File.Exists(path).ShouldBeTrue("chart sample missing");
-        return await File.ReadAllBytesAsync(path);
+        return File.ReadAllBytesAsync(path);
     }
 
     private static IEnumerable<string> PartNames(byte[] pptx)

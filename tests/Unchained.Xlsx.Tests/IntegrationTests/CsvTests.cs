@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Tests.Helpers;

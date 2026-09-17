@@ -25,7 +25,8 @@ public sealed class PageAnnotationReaderTests
             ["Subtype"] = PdfName.Get(subtype),
             ["Rect"] = new PdfArray([new PdfInteger(10), new PdfInteger(20), new PdfInteger(110), new PdfInteger(70)])
         };
-        foreach (var (k, v) in extra) d[k] = v;
+        foreach (var (k, v) in extra)
+            d[k] = v;
         return new PdfDictionary(d);
     }
 

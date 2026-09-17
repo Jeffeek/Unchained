@@ -526,7 +526,7 @@ public sealed class TableGenerator : ITableGenerator
     {
         var slices = new List<List<IReadOnlyList<string>>>();
         for (var i = 0; i < rows.Count; i += pageSize)
-            slices.Add(rows.Skip(i).Take(pageSize).ToList());
+            slices.Add([.. rows.Skip(i).Take(pageSize)]);
         return slices;
     }
 

@@ -1,6 +1,6 @@
+using Shouldly;
 using System.Text;
 using System.Text.RegularExpressions;
-using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Export;
@@ -99,7 +99,8 @@ public sealed class HtmlPlayerExportTests : PptxTestBase
         }
         finally
         {
-            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path))
+                File.Delete(path);
         }
     }
 }

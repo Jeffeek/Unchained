@@ -54,8 +54,8 @@ var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error");
-    app.UseHsts();
+    _ = app.UseExceptionHandler("/Error");
+    _ = app.UseHsts();
 }
 
 app.UseStaticFiles();

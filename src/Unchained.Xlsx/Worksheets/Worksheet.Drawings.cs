@@ -18,7 +18,7 @@ public sealed partial class Worksheet
             if (DrawingsOrNull != null)
                 return DrawingsOrNull;
 
-            DrawingsOrNull = new DrawingCollection();
+            DrawingsOrNull = [];
             ParseDrawings(DrawingsOrNull);
             return DrawingsOrNull;
         }

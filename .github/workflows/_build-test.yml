@@ -100,12 +100,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Collect coverage report paths
+        if: ${{ inputs.coverage }}
+        id: coverage-files
+        shell: bash
+        run: echo "files=$(find TestResults -name '*.cobertura.xml' | paste -sd, -)" >> "$GITHUB_OUTPUT"
+
       - name: Upload coverage to Codecov
         if: ${{ inputs.coverage }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.codecov-token }}
-          directory: TestResults/**/*.cobertura.xml
+          files: ${{ steps.coverage-files.outputs.files }}
+          disable_search: true
           flags: ${{ inputs.rid }}
           fail_ci_if_error: false
           verbose: true

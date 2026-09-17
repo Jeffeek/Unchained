@@ -1,6 +1,6 @@
+using Shouldly;
 using System.IO.Compression;
 using System.Text;
-using Shouldly;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
 using Unchained.Pptx.Models;
@@ -77,7 +77,8 @@ public sealed class OpenXmlPresentationParserRawTests : PptxTestBase
 
             foreach (var (name, content) in overrides)
             {
-                if (written.Contains(name)) continue;
+                if (written.Contains(name))
+                    continue;
 
                 var newEntry = dst.CreateEntry(name);
                 using var ws = newEntry.Open();

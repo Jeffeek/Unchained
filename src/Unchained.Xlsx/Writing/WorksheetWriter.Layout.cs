@@ -92,10 +92,14 @@ internal static partial class WorksheetWriter
             SmlNames.SheetView,
             new XAttribute("workbookViewId", "0")
         );
-        if (!view.ShowGridLines) sheetView.SetAttributeValue("showGridLines", "0");
-        if (!view.ShowRowColHeaders) sheetView.SetAttributeValue("showRowColHeaders", "0");
-        if (view.ShowFormulas) sheetView.SetAttributeValue("showFormulas", "1");
-        if (view.ZoomScale != 100) sheetView.SetAttributeValue("zoomScale", view.ZoomScale.ToString(CultureInfo.InvariantCulture));
+        if (!view.ShowGridLines)
+            sheetView.SetAttributeValue("showGridLines", "0");
+        if (!view.ShowRowColHeaders)
+            sheetView.SetAttributeValue("showRowColHeaders", "0");
+        if (view.ShowFormulas)
+            sheetView.SetAttributeValue("showFormulas", "1");
+        if (view.ZoomScale != 100)
+            sheetView.SetAttributeValue("zoomScale", view.ZoomScale.ToString(CultureInfo.InvariantCulture));
 
         if (view.FrozenPanes is { } frozen && (frozen.FrozenRows > 0 || frozen.FrozenColumns > 0))
         {
@@ -105,8 +109,10 @@ internal static partial class WorksheetWriter
                 new XAttribute("state", "frozen"),
                 new XAttribute("topLeftCell", topLeft)
             );
-            if (frozen.FrozenColumns > 0) pane.SetAttributeValue("xSplit", frozen.FrozenColumns.ToString(CultureInfo.InvariantCulture));
-            if (frozen.FrozenRows > 0) pane.SetAttributeValue("ySplit", frozen.FrozenRows.ToString(CultureInfo.InvariantCulture));
+            if (frozen.FrozenColumns > 0)
+                pane.SetAttributeValue("xSplit", frozen.FrozenColumns.ToString(CultureInfo.InvariantCulture));
+            if (frozen.FrozenRows > 0)
+                pane.SetAttributeValue("ySplit", frozen.FrozenRows.ToString(CultureInfo.InvariantCulture));
             sheetView.Add(pane);
         }
 
@@ -124,16 +130,26 @@ internal static partial class WorksheetWriter
             return;
 
         var element = new XElement(SmlNames.SheetProtection, new XAttribute(SmlNames.AttrSheet, "1"));
-        if (protection.PasswordHash != null) element.SetAttributeValue("password", protection.PasswordHash);
-        if (!protection.AllowSelectLockedCells) element.SetAttributeValue("selectLockedCells", "1");
-        if (!protection.AllowSelectUnlockedCells) element.SetAttributeValue("selectUnlockedCells", "1");
-        if (!protection.AllowFormatCells) element.SetAttributeValue("formatCells", "1");
-        if (!protection.AllowInsertRows) element.SetAttributeValue("insertRows", "1");
-        if (!protection.AllowInsertColumns) element.SetAttributeValue("insertColumns", "1");
-        if (!protection.AllowDeleteRows) element.SetAttributeValue("deleteRows", "1");
-        if (!protection.AllowDeleteColumns) element.SetAttributeValue("deleteColumns", "1");
-        if (!protection.AllowSort) element.SetAttributeValue("sort", "1");
-        if (!protection.AllowAutoFilter) element.SetAttributeValue("autoFilter", "1");
+        if (protection.PasswordHash != null)
+            element.SetAttributeValue("password", protection.PasswordHash);
+        if (!protection.AllowSelectLockedCells)
+            element.SetAttributeValue("selectLockedCells", "1");
+        if (!protection.AllowSelectUnlockedCells)
+            element.SetAttributeValue("selectUnlockedCells", "1");
+        if (!protection.AllowFormatCells)
+            element.SetAttributeValue("formatCells", "1");
+        if (!protection.AllowInsertRows)
+            element.SetAttributeValue("insertRows", "1");
+        if (!protection.AllowInsertColumns)
+            element.SetAttributeValue("insertColumns", "1");
+        if (!protection.AllowDeleteRows)
+            element.SetAttributeValue("deleteRows", "1");
+        if (!protection.AllowDeleteColumns)
+            element.SetAttributeValue("deleteColumns", "1");
+        if (!protection.AllowSort)
+            element.SetAttributeValue("sort", "1");
+        if (!protection.AllowAutoFilter)
+            element.SetAttributeValue("autoFilter", "1");
 
         InsertOrdered(root, element);
     }
@@ -176,10 +192,14 @@ internal static partial class WorksheetWriter
 
         root.Child(SmlNames.PageSetup)?.Remove();
         var element = new XElement(SmlNames.PageSetup);
-        if (setup.PaperSize > 0) element.SetAttributeValue("paperSize", setup.PaperSize.ToString(CultureInfo.InvariantCulture));
-        if (setup.Scale > 0) element.SetAttributeValue("scale", setup.Scale.ToString(CultureInfo.InvariantCulture));
-        if (setup.FitToWidth > 0) element.SetAttributeValue("fitToWidth", setup.FitToWidth.ToString(CultureInfo.InvariantCulture));
-        if (setup.FitToHeight > 0) element.SetAttributeValue("fitToHeight", setup.FitToHeight.ToString(CultureInfo.InvariantCulture));
+        if (setup.PaperSize > 0)
+            element.SetAttributeValue("paperSize", setup.PaperSize.ToString(CultureInfo.InvariantCulture));
+        if (setup.Scale > 0)
+            element.SetAttributeValue("scale", setup.Scale.ToString(CultureInfo.InvariantCulture));
+        if (setup.FitToWidth > 0)
+            element.SetAttributeValue("fitToWidth", setup.FitToWidth.ToString(CultureInfo.InvariantCulture));
+        if (setup.FitToHeight > 0)
+            element.SetAttributeValue("fitToHeight", setup.FitToHeight.ToString(CultureInfo.InvariantCulture));
         if (setup.FirstPageNumber > 0)
         {
             element.SetAttributeValue("firstPageNumber", setup.FirstPageNumber.ToString(CultureInfo.InvariantCulture));
@@ -188,9 +208,12 @@ internal static partial class WorksheetWriter
 
         if (setup.Orientation != PageOrientation.Default)
             element.SetAttributeValue("orientation", setup.Orientation == PageOrientation.Portrait ? "portrait" : "landscape");
-        if (setup.BlackAndWhite) element.SetAttributeValue("blackAndWhite", "1");
-        if (setup.Draft) element.SetAttributeValue("draft", "1");
-        if (setup.PrintOrder == PrintOrder.OverThenDown) element.SetAttributeValue("pageOrder", "overThenDown");
+        if (setup.BlackAndWhite)
+            element.SetAttributeValue("blackAndWhite", "1");
+        if (setup.Draft)
+            element.SetAttributeValue("draft", "1");
+        if (setup.PrintOrder == PrintOrder.OverThenDown)
+            element.SetAttributeValue("pageOrder", "overThenDown");
 
         InsertOrdered(root, element);
     }
@@ -203,10 +226,14 @@ internal static partial class WorksheetWriter
 
         root.Child(SmlNames.HeaderFooter)?.Remove();
         var element = new XElement(SmlNames.HeaderFooter);
-        if (hf.DifferentFirstPage) element.SetAttributeValue("differentFirst", "1");
-        if (hf.DifferentOddEven) element.SetAttributeValue("differentOddEven", "1");
-        if (!hf.ScaleWithDocument) element.SetAttributeValue("scaleWithDoc", "0");
-        if (!hf.AlignWithMargins) element.SetAttributeValue("alignWithMargins", "0");
+        if (hf.DifferentFirstPage)
+            element.SetAttributeValue("differentFirst", "1");
+        if (hf.DifferentOddEven)
+            element.SetAttributeValue("differentOddEven", "1");
+        if (!hf.ScaleWithDocument)
+            element.SetAttributeValue("scaleWithDoc", "0");
+        if (!hf.AlignWithMargins)
+            element.SetAttributeValue("alignWithMargins", "0");
 
         AddHeaderFooterChild(element, SmlNames.OddHeader, hf.OddHeader);
         AddHeaderFooterChild(element, SmlNames.OddFooter, hf.OddFooter);

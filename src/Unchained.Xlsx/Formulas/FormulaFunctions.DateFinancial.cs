@@ -85,15 +85,19 @@ internal static partial class FormulaFunctions
         if (usa)
         {
             // European: 30 or 31 → 30 for both dates.
-            if (day1 >= 30) day1 = 30;
-            if (day2 >= 30) day2 = 30;
+            if (day1 >= 30)
+                day1 = 30;
+            if (day2 >= 30)
+                day2 = 30;
         }
         else
         {
             // US method: start date 31 → 30.
-            if (day1 == 31) day1 = 30;
+            if (day1 == 31)
+                day1 = 30;
             // End date 31 → 30 only if start date was also 31.
-            if (day2 == 31 && d1.Day == 31) day2 = 30;
+            if (day2 == 31 && d1.Day == 31)
+                day2 = 30;
         }
 
         return Number((360 * (d2.Year - d1.Year)) + (30 * (d2.Month - d1.Month)) + (day2 - day1));
@@ -135,12 +139,14 @@ internal static partial class FormulaFunctions
             static date =>
             {
                 var dayOfWeek = (int)date.DayOfWeek;
-                if (dayOfWeek == 0) dayOfWeek = 7;
+                if (dayOfWeek == 0)
+                    dayOfWeek = 7;
                 var thursday = date.AddDays(4 - dayOfWeek);
                 var isoYear = thursday.Year;
                 var jan4 = new DateTime(isoYear, 1, 4);
                 var jan4Dow = (int)jan4.DayOfWeek;
-                if (jan4Dow == 0) jan4Dow = 7;
+                if (jan4Dow == 0)
+                    jan4Dow = 7;
                 var mondayOfWk1 = jan4.AddDays(-(jan4Dow - 1));
                 var week = ((thursday - mondayOfWk1).Days / 7) + 1;
                 return Number(week);
@@ -212,7 +218,8 @@ internal static partial class FormulaFunctions
     {
         var x = Num(values, 0);
         var significance = values.Count > 1 ? Num(values, 1) : 1;
-        if (significance == 0) return Number(0);
+        if (significance == 0)
+            return Number(0);
 
         var sig = Math.Abs(significance);
         var scaled = x / sig;
@@ -223,40 +230,46 @@ internal static partial class FormulaFunctions
     private static double Combinations(double n, double k)
     {
         int ni = (int)n, ki = (int)k;
-        if (ki < 0 || ki > ni) return 0;
+        if (ki < 0 || ki > ni)
+            return 0;
 
         double result = 1;
-        for (var i = 0; i < ki; i++) result = result * (ni - i) / (i + 1);
+        for (var i = 0; i < ki; i++)
+            result = result * (ni - i) / (i + 1);
         return Math.Round(result);
     }
 
     private static double Permutations(double n, double k)
     {
         int ni = (int)n, ki = (int)k;
-        if (ki < 0 || ki > ni) return 0;
+        if (ki < 0 || ki > ni)
+            return 0;
 
         double result = 1;
-        for (var i = 0; i < ki; i++) result *= ni - i;
+        for (var i = 0; i < ki; i++)
+            result *= ni - i;
         return result;
     }
 
     private static double DoubleFactorial(int n)
     {
         double result = 1;
-        for (var i = n; i > 1; i -= 2) result *= i;
+        for (var i = n; i > 1; i -= 2)
+            result *= i;
         return result;
     }
 
     private static string ToRoman(int value)
     {
-        if (value is <= 0 or > 3999) return string.Empty;
+        if (value is <= 0 or > 3999)
+            return string.Empty;
 
         var sb = new StringBuilder();
         foreach (var (v, sym) in RomanTable)
         {
             while (value >= v)
             {
-                sb.Append(sym);
+                _ = sb.Append(sym);
                 value -= v;
             }
         }
@@ -271,7 +284,8 @@ internal static partial class FormulaFunctions
         var total = 0;
         for (var i = 0; i < upper.Length; i++)
         {
-            if (!map.TryGetValue(upper[i], out var cur)) return 0;
+            if (!map.TryGetValue(upper[i], out var cur))
+                return 0;
 
             var next = i + 1 < upper.Length && map.TryGetValue(upper[i + 1], out var n) ? n : 0;
             total += cur < next ? -cur : cur;
@@ -282,16 +296,18 @@ internal static partial class FormulaFunctions
 
     private static string ToBase(long value, int radix, int minLength)
     {
-        if (radix is < 2 or > 36) return string.Empty;
+        if (radix is < 2 or > 36)
+            return string.Empty;
 
         const string digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        if (value == 0) return "0".PadLeft(Math.Max(1, minLength), '0');
+        if (value == 0)
+            return "0".PadLeft(Math.Max(1, minLength), '0');
 
         var sb = new StringBuilder();
         var v = Math.Abs(value);
         while (v > 0)
         {
-            sb.Insert(0, digits[(int)(v % radix)]);
+            _ = sb.Insert(0, digits[(int)(v % radix)]);
             v /= radix;
         }
 
@@ -300,13 +316,15 @@ internal static partial class FormulaFunctions
 
     private static double FromBase(string text, int radix)
     {
-        if (radix is < 2 or > 36) return 0;
+        if (radix is < 2 or > 36)
+            return 0;
 
         const string digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         double result = 0;
         foreach (var d in text.Trim().ToUpperInvariant().Select(static ch => digits.IndexOf(ch)))
         {
-            if (d < 0 || d >= radix) return 0;
+            if (d < 0 || d >= radix)
+                return 0;
 
             result = (result * radix) + d;
         }
@@ -318,7 +336,8 @@ internal static partial class FormulaFunctions
 
     private static double Pmt(double rate, double nper, double pv, double fv = 0, int type = 0)
     {
-        if (rate == 0) return -(pv + fv) / nper;
+        if (rate == 0)
+            return -(pv + fv) / nper;
 
         var factor = Math.Pow(1 + rate, nper);
         var annuity = (pv * factor) + fv;
@@ -327,7 +346,8 @@ internal static partial class FormulaFunctions
 
     private static double Fv(double rate, double nper, double pmt, double pv = 0, int type = 0)
     {
-        if (rate == 0) return -(pv + (pmt * nper));
+        if (rate == 0)
+            return -(pv + (pmt * nper));
 
         var factor = Math.Pow(1 + rate, nper);
         var annuity = pmt * (1 + (rate * type)) * (factor - 1) / rate;
@@ -336,7 +356,8 @@ internal static partial class FormulaFunctions
 
     private static double Pv(double rate, double nper, double pmt, double fv = 0, int type = 0)
     {
-        if (rate == 0) return -(fv + (pmt * nper));
+        if (rate == 0)
+            return -(fv + (pmt * nper));
 
         var factor = Math.Pow(1 + rate, nper);
         var annuity = pmt * (1 + (rate * type)) * (factor - 1) / (rate * factor);
@@ -345,7 +366,8 @@ internal static partial class FormulaFunctions
 
     private static double NPer(double rate, double pmt, double pv, double fv = 0)
     {
-        if (rate == 0) return -(pv + fv) / pmt;
+        if (rate == 0)
+            return -(pv + fv) / pmt;
 
         var numerator = (pmt * (1 + rate)) - (fv * rate);
         var denominator = (pv * rate) + pmt;
@@ -354,13 +376,16 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue Npv(IReadOnlyList<FormulaValue> values)
     {
-        if (values.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (values.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var rate = Num(values, 0);
-        if (rate < 0) return FormulaValue.FromError(CellError.Number);
+        if (rate < 0)
+            return FormulaValue.FromError(CellError.Number);
 
         var cashflows = values.Skip(1).Select(FormulaEvaluator.ToNumber).ToList();
-        if (cashflows.Count == 0) return Number(0);
+        if (cashflows.Count == 0)
+            return Number(0);
 
         var npv = cashflows.Select((t1, t) => t1 / Math.Pow(1 + rate, t + 1)).Sum();
         return Number(npv);
@@ -370,7 +395,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue TypeOf(IReadOnlyList<FormulaValue> values)
     {
-        if (values.Count == 0) return Number(1);
+        if (values.Count == 0)
+            return Number(1);
 
         var v = values[0];
         return v.Kind switch

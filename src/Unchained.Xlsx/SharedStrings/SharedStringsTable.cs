@@ -61,7 +61,7 @@ internal sealed class SharedStringsTable
             var index = table._strings.Count;
             table._strings.Add(text);
             table._rawElements.Add(si);
-            table._lookup.TryAdd(text, index);
+            _ = table._lookup.TryAdd(text, index);
         }
 
         return table;

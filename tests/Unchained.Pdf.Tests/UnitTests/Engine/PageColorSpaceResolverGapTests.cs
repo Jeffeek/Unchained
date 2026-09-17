@@ -21,7 +21,8 @@ public sealed class PageColorSpaceResolverGapTests
     private static PdfDictionary PageWith(params (string Name, PdfObject Space)[] spaces)
     {
         var cs = new Dictionary<string, PdfObject>();
-        foreach (var (name, space) in spaces) cs[name] = space;
+        foreach (var (name, space) in spaces)
+            cs[name] = space;
         var resources = new PdfDictionary(
             new Dictionary<string, PdfObject> { ["ColorSpace"] = new PdfDictionary(cs) }
         );

@@ -1,5 +1,5 @@
+using System.Text;
 using System.Xml.Linq;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -25,7 +25,7 @@ internal sealed class PdfXConverter(PdfXProfile profile, string outputConditionI
         var rdfRoot = xmpDoc.Descendants(rdf + "RDF").FirstOrDefault();
 
         if (rdfRoot is null)
-            return xmpDoc.ToString().ToUtf8Span();
+            return Encoding.UTF8.GetBytes(xmpDoc.ToString());
 
         var desc = rdfRoot.Elements(rdf + "Description").FirstOrDefault(d => d.Attribute(rdf + "about") is not null)
                    ?? new XElement(rdf + "Description", new XAttribute(rdf + "about", ""));
@@ -35,7 +35,7 @@ internal sealed class PdfXConverter(PdfXProfile profile, string outputConditionI
             desc.Add(new XAttribute(XNamespace.Xmlns + "pdfxid", pdfxid.NamespaceName));
         XmpDocumentHelper.SetOrAdd(desc, pdfxid + "GTS_PDFXVersion", VersionString(profile));
 
-        return xmpDoc.ToString().ToUtf8Span();
+        return Encoding.UTF8.GetBytes(xmpDoc.ToString());
     }
 
     protected override int PreMetadataHook(List<PdfIndirectObject> objects, int maxObj)
@@ -75,7 +75,7 @@ internal sealed class PdfXConverter(PdfXProfile profile, string outputConditionI
         var infoObjNum = infoRef?.ObjectNumber ?? (catalogObjNum + 3);
         var infoEntries = new Dictionary<string, PdfObject>();
         if (infoRef is not null && core.ResolveIndirect(infoRef.ObjectNumber).Value is PdfDictionary existingInfo)
-            infoEntries = new Dictionary<string, PdfObject>(existingInfo.Entries);
+            infoEntries = new(existingInfo.Entries);
 
         infoEntries["GTS_PDFXVersion"] = PdfString.FromLatin1(VersionString(profile));
         if (!infoEntries.ContainsKey(PdfName.Title.Value))

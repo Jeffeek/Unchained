@@ -62,7 +62,7 @@ internal static class ContentStreamParser
                         operands.Add(parser.ReadValue(lexer));
                     else
                     {
-                        lexer.ReadNext();
+                        _ = lexer.ReadNext();
                         var opName = Encoding.Latin1.GetString(raw);
 
                         if (opName == PdfName.ID.Value)
@@ -96,7 +96,7 @@ internal static class ContentStreamParser
                 case PdfTokenKind.Comment:
                 default:
                 {
-                    lexer.ReadNext();
+                    _ = lexer.ReadNext();
                     break;
                 }
             }
@@ -134,7 +134,8 @@ internal static class ContentStreamParser
             var cs = GetName(dict, "CS", PdfName.ColorSpace.Value);
             var filters = GetFilters(dict);
 
-            if (w <= 0 || h <= 0) return null;
+            if (w <= 0 || h <= 0)
+                return null;
 
             // For unfiltered inline images the data length is deterministic, so read
             // exactly that many bytes. Scanning for "EI" alone is unsafe: raw binary image
@@ -148,7 +149,8 @@ internal static class ContentStreamParser
                 : 0;
 
             var rawBytes = ExtractInlineImageBytes(lexer, source, expectedLen);
-            if (rawBytes.Length == 0) return null;
+            if (rawBytes.Length == 0)
+                return null;
 
             // ── Apply filters in sequence ─────────────────────────────────
             var decoded = ApplyInlineFilters(filters, rawBytes);
@@ -213,7 +215,8 @@ internal static class ContentStreamParser
         var pos = lexer.Position;
 
         // Skip exactly one byte of whitespace that immediately follows the ID keyword.
-        if (pos < span.Length && span[pos].IsWhitespace()) pos++;
+        if (pos < span.Length && span[pos].IsWhitespace())
+            pos++;
 
         var dataStart = pos;
 
@@ -223,7 +226,8 @@ internal static class ContentStreamParser
             var data = span[dataStart..end].ToArray();
             // Advance past optional whitespace + EI so the stream stays in sync.
             var p = end;
-            while (p < span.Length && span[p].IsWhitespace()) p++;
+            while (p < span.Length && span[p].IsWhitespace())
+                p++;
             if (p + 1 < span.Length && span[p] == (byte)'E' && span[p + 1] == (byte)'I')
                 p += 2;
             lexer.Seek(p);
@@ -310,7 +314,8 @@ internal static class ContentStreamParser
             _ => filterName
         };
 
-        if (expanded is null) return raw;
+        if (expanded is null)
+            return raw;
 
         // Build a minimal PdfStream wrapping the raw bytes so we can reuse StreamFilters.
         try
@@ -380,17 +385,19 @@ internal static class ContentStreamParser
                 var rgb = new byte[pixelCount * 3];
                 var rowBytes = (w + 7) / 8;
                 for (var row = 0; row < h; row++)
-                for (var col = 0; col < w; col++)
                 {
-                    var byteIdx = (row * rowBytes) + (col >> 3);
-                    if (byteIdx >= src.Length)
-                        break;
+                    for (var col = 0; col < w; col++)
+                    {
+                        var byteIdx = (row * rowBytes) + (col >> 3);
+                        if (byteIdx >= src.Length)
+                            break;
 
-                    var bit = src[byteIdx].BitMsbFirst(col);
-                    // bit=0 → white (paper), bit=1 → black (ink)
-                    var v = (byte)(bit == 0 ? 255 : 0);
-                    var j = ((row * w) + col) * 3;
-                    rgb[j] = rgb[j + 1] = rgb[j + 2] = v;
+                        var bit = src[byteIdx].BitMsbFirst(col);
+                        // bit=0 → white (paper), bit=1 → black (ink)
+                        var v = (byte)(bit == 0 ? 255 : 0);
+                        var j = ((row * w) + col) * 3;
+                        rgb[j] = rgb[j + 1] = rgb[j + 2] = v;
+                    }
                 }
 
                 return rgb;

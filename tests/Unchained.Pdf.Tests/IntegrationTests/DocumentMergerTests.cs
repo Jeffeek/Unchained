@@ -23,6 +23,7 @@ public sealed class DocumentMergerTests : PdfTestBase
     {
         var doc = await LoadFixtureAsync(pages);
         for (var page = 1; page <= pages; page++)
+            // ReSharper disable once BadListLineBreaks
             await Annotations.AddAnnotationAsync(doc, page, new Annotation(AnnotationSubtype.Text, 10, 10, 20, 20, $"P{page}"));
         return doc;
     }

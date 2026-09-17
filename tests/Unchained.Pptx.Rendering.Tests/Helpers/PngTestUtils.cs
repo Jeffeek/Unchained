@@ -27,7 +27,8 @@ internal static class PngTestUtils
             if (type == PngConstants.IDAT)
                 output.Write(png, dataStart, len);
             pos = dataStart + len + 4; // data + CRC
-            if (type == PngConstants.IEND) break;
+            if (type == PngConstants.IEND)
+                break;
         }
 
         return output.ToArray();

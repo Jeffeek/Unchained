@@ -53,7 +53,8 @@ internal static class DrawingParser
             }
 
             var frame = anchorEl.Element(Xdr + "graphicFrame");
-            if (frame == null) continue;
+            if (frame == null)
+                continue;
 
             var chart = ReadChart(document, drawingPart, frame, anchor);
             if (chart != null)
@@ -89,7 +90,8 @@ internal static class DrawingParser
         }
 
         var pos = anchorEl.Element(Xdr + "pos");
-        if (pos == null) return anchor;
+        if (pos == null)
+            return anchor;
 
         anchor.OffsetX = new Emu(LongAttr(pos, "x"));
         anchor.OffsetY = new Emu(LongAttr(pos, "y"));

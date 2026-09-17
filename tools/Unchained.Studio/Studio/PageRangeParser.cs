@@ -43,7 +43,8 @@ public static class PageRangeParser
                     return null;
                 }
 
-                for (var p = from; p <= to; p++) pages.Add(p);
+                for (var p = from; p <= to; p++)
+                    _ = pages.Add(p);
             }
             else
             {
@@ -53,11 +54,12 @@ public static class PageRangeParser
                     return null;
                 }
 
-                pages.Add(p);
+                _ = pages.Add(p);
             }
         }
 
-        if (pages.Count != 0) return [.. pages];
+        if (pages.Count != 0)
+            return [.. pages];
 
         error = "No valid pages found.";
         return null;

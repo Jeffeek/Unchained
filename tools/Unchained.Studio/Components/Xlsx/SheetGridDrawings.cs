@@ -138,7 +138,8 @@ public sealed partial class SheetGrid
         const double minW = 100.0;
         const double minH = 60.0;
 
-        if (anchor.AnchorType != DrawingAnchorType.OneCell) return;
+        if (anchor.AnchorType != DrawingAnchorType.OneCell)
+            return;
 
         var w = (anchor.Width.Value / EmusPerPixel) +
                 (_resizeDirection is DrawingResizeDir.TopLeft or DrawingResizeDir.BottomLeft ? -deltaX : deltaX);
@@ -152,7 +153,8 @@ public sealed partial class SheetGrid
                 anchor.FromOffsetX = Emu.FromPixels(deltaX, 96);
         }
 
-        if (!(h >= minH)) return;
+        if (!(h >= minH))
+            return;
 
         anchor.Height = Emu.FromPixels(h, 96);
         if (_resizeDirection is DrawingResizeDir.TopLeft or DrawingResizeDir.TopRight)

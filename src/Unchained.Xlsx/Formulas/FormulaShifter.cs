@@ -34,7 +34,10 @@ internal static partial class FormulaShifter
         }
 
         int column;
-        try { column = CellReference.ColumnLettersToNumber(letters); }
+        try
+        {
+            column = CellReference.ColumnLettersToNumber(letters);
+        }
         catch (FormatException)
         {
             parsed = null!;
@@ -57,10 +60,12 @@ internal static partial class FormulaShifter
             return "#REF!";
 
         var builder = new StringBuilder();
-        if (parsed.ColAbsolute) builder.Append('$');
-        builder.Append(CellReference.ColumnNumberToLetters(column));
-        if (parsed.RowAbsolute) builder.Append('$');
-        builder.Append(row);
+        if (parsed.ColAbsolute)
+            _ = builder.Append('$');
+        _ = builder.Append(CellReference.ColumnNumberToLetters(column));
+        if (parsed.RowAbsolute)
+            _ = builder.Append('$');
+        _ = builder.Append(row);
         return builder.ToString();
     }
 
@@ -100,8 +105,10 @@ internal static partial class FormulaShifter
         var row = parsed.Row;
         var column = parsed.Column;
 
-        if (!parsed.RowAbsolute) row += rowDelta;
-        if (!parsed.ColAbsolute) column += columnDelta;
+        if (!parsed.RowAbsolute)
+            row += rowDelta;
+        if (!parsed.ColAbsolute)
+            column += columnDelta;
 
         return BuildCellRef(parsed, row, column);
     }
@@ -156,23 +163,20 @@ internal static partial class FormulaShifter
             {
                 if (!inQuotes)
                 {
-                    result.Append(transform(segment.ToString()));
-                    segment.Clear();
+                    _ = result.Append(transform(segment.ToString()));
+                    _ = segment.Clear();
                 }
 
                 inQuotes = !inQuotes;
-                result.Append(c);
+                _ = result.Append(c);
                 continue;
             }
 
-            if (inQuotes)
-                result.Append(c);
-            else
-                segment.Append(c);
+            _ = inQuotes ? result.Append(c) : segment.Append(c);
         }
 
         if (segment.Length > 0)
-            result.Append(transform(segment.ToString()));
+            _ = result.Append(transform(segment.ToString()));
 
         return result.ToString();
     }

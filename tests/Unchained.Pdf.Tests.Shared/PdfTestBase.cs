@@ -28,9 +28,18 @@ public abstract class PdfTestBase
     /// </summary>
     protected static async Task<IPdfDocument?> TryLoadDocAsync(byte[] bytes, CancellationToken ct = default)
     {
-        try { return await LoadAsync(bytes, ct); }
-        catch (PdfException) { return null; }
-        catch (PdfEncryptedException) { return null; } // encrypted without password — skip gracefully
+        try
+        {
+            return await LoadAsync(bytes, ct);
+        }
+        catch (PdfException)
+        {
+            return null;
+        }
+        catch (PdfEncryptedException)
+        {
+            return null;
+        } // encrypted without password — skip gracefully
     }
 
     /// <summary>

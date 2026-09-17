@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Drawing.Decoders;
 using Xunit;
 
@@ -440,5 +440,5 @@ public sealed class SvgDecoderTests
 
     [Fact]
     public void EmptyInput_ReturnsNull() =>
-        SvgDecoder.TryDecodeToRgb(ReadOnlySpan<byte>.Empty, 10, 10, out _, out _).ShouldBeNull();
+        SvgDecoder.TryDecodeToRgb([], 10, 10, out _, out _).ShouldBeNull();
 }

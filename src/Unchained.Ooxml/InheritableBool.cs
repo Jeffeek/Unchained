@@ -30,9 +30,7 @@ namespace Unchained.Ooxml;
 /// </remarks>
 public readonly struct InheritableBool : IEquatable<InheritableBool>
 {
-    private readonly bool? _value;
-
-    private InheritableBool(bool? value) => _value = value;
+    private InheritableBool(bool? value) => Value = value;
 
     // ── Named instances ─────────────────────────────────────────────────────
 
@@ -52,13 +50,13 @@ public readonly struct InheritableBool : IEquatable<InheritableBool>
     ///     (<see cref="True" /> or <see cref="False" />); <see langword="false" /> when
     ///     the value should be inherited.
     /// </summary>
-    public bool IsSet => _value.HasValue;
+    public bool IsSet => Value.HasValue;
 
     /// <summary>
     ///     The explicit value, or <see langword="null" /> when the attribute is unset
     ///     and should be inherited.
     /// </summary>
-    public bool? Value => _value;
+    public bool? Value { get; }
 
     // ── Factory ─────────────────────────────────────────────────────────────
 
@@ -72,13 +70,13 @@ public readonly struct InheritableBool : IEquatable<InheritableBool>
     // ── Equality ────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public bool Equals(InheritableBool other) => _value == other._value;
+    public bool Equals(InheritableBool other) => Value == other.Value;
 
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is InheritableBool other && Equals(other);
 
     /// <inheritdoc />
-    public override int GetHashCode() => _value.GetHashCode();
+    public override int GetHashCode() => Value.GetHashCode();
 
     /// <summary>Returns <see langword="true" /> when both values represent the same state.</summary>
     public static bool operator ==(InheritableBool left, InheritableBool right) => left.Equals(right);
@@ -87,5 +85,5 @@ public readonly struct InheritableBool : IEquatable<InheritableBool>
     public static bool operator !=(InheritableBool left, InheritableBool right) => !left.Equals(right);
 
     /// <inheritdoc />
-    public override string ToString() => _value?.ToString() ?? "Inherit";
+    public override string ToString() => Value?.ToString() ?? "Inherit";
 }

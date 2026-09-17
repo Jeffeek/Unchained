@@ -63,7 +63,7 @@ public sealed class ViewerPreferencesEditor : IViewerPreferencesEditor
                         vpEntries["Direction"] = PdfName.R2L;
                     if (prefs.Duplex != DuplexMode.None)
                         vpEntries["Duplex"] = PdfName.Get(prefs.Duplex.ToString());
-                    if (prefs.NonFullScreenPageMode != PageMode.Default && prefs.NonFullScreenPageMode != PageMode.UseNone)
+                    if (prefs.NonFullScreenPageMode is not PageMode.Default and not PageMode.UseNone)
                         vpEntries["NonFullScreenPageMode"] = PdfName.Get(prefs.NonFullScreenPageMode.ToString());
 
                     catEntries[PdfName.ViewerPreferences.Value] = new PdfDictionary(vpEntries);

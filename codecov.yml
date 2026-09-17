@@ -24,6 +24,7 @@ coverage:
     - "**/*.g.i.cs"
     - "**/AssemblyInfo.cs"
     - "scripts/**"
+    - "tools/Unchained.Studio/**/*"
 
 comment:
   layout: "reach,diff,flags,tree,footer"

@@ -1,6 +1,6 @@
+using Shouldly;
 using System.Reflection;
 using System.Text;
-using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Opc;
 using Unchained.Pptx.Comments;
@@ -48,7 +48,7 @@ public sealed class SlideParserDirectTests
             package,
             new MediaStore(),
             new[] { master },
-            new CommentAuthorCollection()
+            []
         );
         return (parser, package);
     }
@@ -89,7 +89,7 @@ public sealed class SlideParserDirectTests
     public void Parse_NoMasters_SynthesisesFallbackLayout()
     {
         var package = OpcPackage.CreateEmpty();
-        var parser = new SlideParser(package, new MediaStore(), [], new CommentAuthorCollection());
+        var parser = new SlideParser(package, new MediaStore(), [], []);
         var slide = parser.Parse(SlideUri, "rId1", 1);
         slide.Layout.ShouldNotBeNull();
         slide.Layout.Name.ShouldBe("Default");
@@ -259,7 +259,8 @@ public sealed class SlideParserDirectTests
             Width = Emu.FromPoints(300),
             Height = Emu.FromPoints(100)
         };
-        if (index is { } i) ph.PlaceholderIndex = i;
+        if (index is { } i)
+            ph.PlaceholderIndex = i;
         master.Layouts[0].Shapes.AddParsed(ph);
         return master;
     }

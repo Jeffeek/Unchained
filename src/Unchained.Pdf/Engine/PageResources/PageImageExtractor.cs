@@ -26,12 +26,15 @@ internal static class PageImageExtractor
         {
             var stream = core.ResolveStream(value);
 
-            if (stream is null) continue;
-            if (stream.Dictionary.GetName(PdfName.Subtype.Value) != "Image") continue;
+            if (stream is null)
+                continue;
+            if (stream.Dictionary.GetName(PdfName.Subtype.Value) != "Image")
+                continue;
 
             var w = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Width)?.Value ?? 0);
             var h = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.Height)?.Value ?? 0);
-            if (w <= 0 || h <= 0) continue;
+            if (w <= 0 || h <= 0)
+                continue;
 
             var cs = core.ReadColorSpace(stream.Dictionary);
             var bpc = (int)(stream.Dictionary.Get<PdfInteger>(PdfName.BitsPerComponent)?.Value ?? 8);
@@ -105,12 +108,14 @@ internal static class PageImageExtractor
 
             var alpha = new byte[baseW * baseH];
             for (var y = 0; y < baseH; y++)
-            for (var x = 0; x < baseW; x++)
             {
-                // Nearest-neighbour resample the mask to the base image grid.
-                var sx = smw == baseW ? x : x * smw / baseW;
-                var sy = smh == baseH ? y : y * smh / baseH;
-                alpha[(y * baseW) + x] = smRgb[((sy * smw) + sx) * 3];
+                for (var x = 0; x < baseW; x++)
+                {
+                    // Nearest-neighbour resample the mask to the base image grid.
+                    var sx = smw == baseW ? x : x * smw / baseW;
+                    var sy = smh == baseH ? y : y * smh / baseH;
+                    alpha[(y * baseW) + x] = smRgb[((sy * smw) + sx) * 3];
+                }
             }
 
             return alpha;
@@ -154,7 +159,10 @@ internal static class PageImageExtractor
 
         var baseChannels = baseName switch
         {
-            PdfConstants.DeviceGray => 1, PdfConstants.DeviceRgb => 3, PdfConstants.DeviceCmyk => 4, _ => 0
+            PdfConstants.DeviceGray => 1,
+            PdfConstants.DeviceRgb => 3,
+            PdfConstants.DeviceCmyk => 4,
+            _ => 0
         };
         if (baseChannels == 0)
             return null;
@@ -195,47 +203,50 @@ internal static class PageImageExtractor
         var rowBytes = ((w * bpc) + 7) / 8;
 
         for (var row = 0; row < h; row++)
-        for (var col = 0; col < w; col++)
         {
-            var index = ReadSample(data, row, col, bpc, rowBytes);
-            if (index > pal.HiVal) index = pal.HiVal;
-
-            var off = index * bc;
-            byte rr, gg, bb;
-            if (off + bc > lut.Length)
-                rr = gg = bb = 0;
-            else
+            for (var col = 0; col < w; col++)
             {
-                switch (bc)
+                var index = ReadSample(data, row, col, bpc, rowBytes);
+                if (index > pal.HiVal)
+                    index = pal.HiVal;
+
+                var off = index * bc;
+                byte rr, gg, bb;
+                if (off + bc > lut.Length)
+                    rr = gg = bb = 0;
+                else
                 {
-                    case 1:
-                        rr = gg = bb = lut[off];
-                    break;
-                    case 3:
-                        rr = lut[off];
-                        gg = lut[off + 1];
-                        bb = lut[off + 2];
-                    break;
-                    // CMYK base
-                    default:
+                    switch (bc)
                     {
-                        var c = lut[off] / 255.0;
-                        var m = lut[off + 1] / 255.0;
-                        var y = lut[off + 2] / 255.0;
-                        var k = lut[off + 3] / 255.0;
-                        var (cr, cg, cb) = ColorMath.CmykToRgb(c, m, y, k);
-                        rr = (byte)Math.Clamp(cr * 255, 0, 255);
-                        gg = (byte)Math.Clamp(cg * 255, 0, 255);
-                        bb = (byte)Math.Clamp(cb * 255, 0, 255);
+                        case 1:
+                            rr = gg = bb = lut[off];
                         break;
+                        case 3:
+                            rr = lut[off];
+                            gg = lut[off + 1];
+                            bb = lut[off + 2];
+                        break;
+                        // CMYK base
+                        default:
+                        {
+                            var c = lut[off] / 255.0;
+                            var m = lut[off + 1] / 255.0;
+                            var y = lut[off + 2] / 255.0;
+                            var k = lut[off + 3] / 255.0;
+                            var (cr, cg, cb) = ColorMath.CmykToRgb(c, m, y, k);
+                            rr = (byte)Math.Clamp(cr * 255, 0, 255);
+                            gg = (byte)Math.Clamp(cg * 255, 0, 255);
+                            bb = (byte)Math.Clamp(cb * 255, 0, 255);
+                            break;
+                        }
                     }
                 }
-            }
 
-            var j = ((row * w) + col) * 3;
-            rgb[j] = rr;
-            rgb[j + 1] = gg;
-            rgb[j + 2] = bb;
+                var j = ((row * w) + col) * 3;
+                rgb[j] = rr;
+                rgb[j + 1] = gg;
+                rgb[j + 2] = bb;
+            }
         }
 
         return rgb;
@@ -312,7 +323,10 @@ internal static class PageImageExtractor
         // rather than a grey placeholder.
         var expectedChannels = cs switch
         {
-            PdfConstants.DeviceCmyk => 4, PdfConstants.DeviceRgb => 3, PdfConstants.DeviceGray => 1, _ => 0
+            PdfConstants.DeviceCmyk => 4,
+            PdfConstants.DeviceRgb => 3,
+            PdfConstants.DeviceGray => 1,
+            _ => 0
         };
         if (bpc == 8 && expectedChannels > 0 && decoded.Length != pixelCount * expectedChannels)
             cs = null; // declared cs doesn't match data; re-infer below
@@ -329,7 +343,8 @@ internal static class PageImageExtractor
             // DeviceRGB — direct 3-channel, 8 bpc
             case PdfConstants.DeviceRgb when bpc == 8 && decoded.Length == pixelCount * 3:
             {
-                if (decode is null) return decoded.ToArray();
+                if (decode is null)
+                    return decoded.ToArray();
 
                 var span = decoded.Span;
                 var rgb = new byte[pixelCount * 3];
@@ -387,16 +402,20 @@ internal static class PageImageExtractor
                 var rgb = new byte[pixelCount * 3];
                 var rowBytes = (w + 7) / 8;
                 for (var row = 0; row < h; row++)
-                for (var col = 0; col < w; col++)
                 {
-                    var byteIdx = (row * rowBytes) + (col >> 3);
-                    if (byteIdx >= span.Length) break;
+                    for (var col = 0; col < w; col++)
+                    {
+                        var byteIdx = (row * rowBytes) + (col >> 3);
+                        if (byteIdx >= span.Length)
+                            break;
 
-                    var bit = span[byteIdx].BitMsbFirst(col);
-                    if (invertBits) bit = 1 - bit;
-                    var val = (byte)(bit == 0 ? 0 : 255); // 0=black, 1=white (DeviceGray)
-                    var j = ((row * w) + col) * 3;
-                    rgb[j] = rgb[j + 1] = rgb[j + 2] = val;
+                        var bit = span[byteIdx].BitMsbFirst(col);
+                        if (invertBits)
+                            bit = 1 - bit;
+                        var val = (byte)(bit == 0 ? 0 : 255); // 0=black, 1=white (DeviceGray)
+                        var j = ((row * w) + col) * 3;
+                        rgb[j] = rgb[j + 1] = rgb[j + 2] = val;
+                    }
                 }
 
                 return rgb;

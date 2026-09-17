@@ -64,7 +64,8 @@ internal static class TrueTypeSubsetter
         // Read maxp: numGlyphs.
         var maxpOff = maxpTable.Offset;
         var numGlyphs = ReadU16(b, maxpOff + 4);
-        if (numGlyphs == 0) return b;
+        if (numGlyphs == 0)
+            return b;
 
         // Read loca: array of numGlyphs+1 offsets into glyf.
         var locaOff = locaTable.Offset;
@@ -108,15 +109,20 @@ internal static class TrueTypeSubsetter
                 // Advance past this component record.
                 pos += 4;                              // flags + glyphIndex
                 pos += (flags & 1) != 0 ? 4 : 2;       // ARG_1_AND_2_ARE_WORDS
-                if ((flags & 8) != 0) pos += 2;        // WE_HAVE_A_SCALE
-                else if ((flags & 64) != 0) pos += 4;  // WE_HAVE_AN_X_AND_Y_SCALE
-                else if ((flags & 128) != 0) pos += 8; // WE_HAVE_A_TWO_BY_TWO
-                if ((flags & 32) == 0) break;          // MORE_COMPONENTS not set
+                if ((flags & 8) != 0)
+                    pos += 2;        // WE_HAVE_A_SCALE
+                else if ((flags & 64) != 0)
+                    pos += 4;  // WE_HAVE_AN_X_AND_Y_SCALE
+                else if ((flags & 128) != 0)
+                    pos += 8; // WE_HAVE_A_TWO_BY_TWO
+                if ((flags & 32) == 0)
+                    break;          // MORE_COMPONENTS not set
             }
         }
 
         // If we're keeping all glyphs, subsetting has no benefit.
-        if (keepGlyphs.Count >= numGlyphs) return b;
+        if (keepGlyphs.Count >= numGlyphs)
+            return b;
 
         // Rebuild glyf and loca tables with only kept glyphs.
         var newGlyfBytes = new List<byte>();
@@ -141,7 +147,8 @@ internal static class TrueTypeSubsetter
 
             newGlyfBytes.AddRange(b.AsSpan(gStart, gLen).ToArray());
             // Pad to 4-byte boundary (TrueType requires 4-byte glyph alignment).
-            while (newGlyfBytes.Count % 4 != 0) newGlyfBytes.Add(0);
+            while (newGlyfBytes.Count % 4 != 0)
+                newGlyfBytes.Add(0);
             // Unused glyphs: loca[gid] == loca[gid+1] (zero-length entry)
         }
 
@@ -211,7 +218,8 @@ internal static class TrueTypeSubsetter
             newLengths[tag] = len;
             currentOffset += len;
             // Pad to 4-byte boundary.
-            if (currentOffset % 4 != 0) currentOffset += 4 - (currentOffset % 4);
+            if (currentOffset % 4 != 0)
+                currentOffset += 4 - (currentOffset % 4);
         }
 
         var totalSize = currentOffset;
@@ -223,7 +231,8 @@ internal static class TrueTypeSubsetter
         // searchRange, entrySelector, rangeShift (not critical for reading, but write them).
         var n = tableOrder.Count;
         var sr = 1;
-        while (sr * 2 <= n) sr *= 2;
+        while (sr * 2 <= n)
+            sr *= 2;
         WriteU16(result, 6, (ushort)(sr * 16));
         WriteU16(result, 8, (ushort)(int)Math.Log2(sr));
         WriteU16(result, 10, (ushort)((n - sr) * 16));
@@ -253,9 +262,9 @@ internal static class TrueTypeSubsetter
                 break;
                 default:
                 {
-                    var src = tables[tag];
-                    var len = Math.Min(src.Length, orig.Length - src.Offset);
-                    Array.Copy(orig, src.Offset, result, off, len);
+                    var (_, offset, length) = tables[tag];
+                    var len = Math.Min(length, orig.Length - offset);
+                    Array.Copy(orig, offset, result, off, len);
                     break;
                 }
             }

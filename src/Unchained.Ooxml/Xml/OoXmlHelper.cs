@@ -55,7 +55,8 @@ internal static class OoXmlHelper
         }
 
         var h = hex.StartsWith('#') ? hex[1..] : hex;
-        if (h.Length == 6) h = "FF" + h;
+        if (h.Length == 6)
+            h = "FF" + h;
         if (h.Length == 8 && uint.TryParse(h, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out argb))
             return true;
 
@@ -144,11 +145,13 @@ internal static class OoXmlHelper
         public bool? GetAttrBool(string attributeName)
         {
             var raw = (string?)element.Attribute(attributeName);
-            if (raw is null) return null;
-            if (raw == "1" || raw.Equals("true", StringComparison.OrdinalIgnoreCase)) return true;
-            if (raw == "0" || raw.Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
-
-            return null;
+            return raw is null
+                ? null
+                : raw == "1" || raw.Equals("true", StringComparison.OrdinalIgnoreCase)
+                    ? true
+                    : raw == "0" || raw.Equals("false", StringComparison.OrdinalIgnoreCase)
+                        ? false
+                        : null;
         }
 
         /// <summary>

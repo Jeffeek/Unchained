@@ -40,7 +40,8 @@ internal static class PageShadingResolver
         ISet<int> seen
     )
     {
-        if (resources is null || depth > PdfConstants.MaxFormXObjectDepth) return;
+        if (resources is null || depth > PdfConstants.MaxFormXObjectDepth)
+            return;
 
         // /Shading resources — painted directly by the `sh` operator.
         var shadingDict = core.ResolveDict(resources[PdfName.Shading]);
@@ -59,11 +60,14 @@ internal static class PageShadingResolver
         {
             foreach (var (name, value) in patternDict.Entries)
             {
-                if (result.ContainsKey(name)) continue;
+                if (result.ContainsKey(name))
+                    continue;
 
                 var pat = core.ResolveDictOrStreamDict(value);
-                if (pat is null) continue;
-                if ((int)(pat.Get<PdfInteger>(PdfName.PatternType)?.Value ?? 0) != 2) continue;
+                if (pat is null)
+                    continue;
+                if ((int)(pat.Get<PdfInteger>(PdfName.PatternType)?.Value ?? 0) != 2)
+                    continue;
 
                 if (BuildShading(core, core.ResolveAny(pat["Shading"])) is { } s)
                     result[name] = s;
@@ -83,7 +87,8 @@ internal static class PageShadingResolver
         ISet<int> seen
     )
     {
-        if (resources is null || depth > PdfConstants.MaxFormXObjectDepth) return;
+        if (resources is null || depth > PdfConstants.MaxFormXObjectDepth)
+            return;
 
         var patternDict = core.ResolveDict(resources[PdfName.Pattern]);
         if (patternDict is not null)
@@ -94,13 +99,16 @@ internal static class PageShadingResolver
                     continue;
 
                 var resolved = core.ResolveAny(value);
-                if (resolved is not PdfStream stream) continue; // tiling patterns are streams
+                if (resolved is not PdfStream stream)
+                    continue; // tiling patterns are streams
 
                 var d = stream.Dictionary;
-                if ((int)(d.Get<PdfInteger>(PdfName.PatternType)?.Value ?? 0) != 1) continue;
+                if ((int)(d.Get<PdfInteger>(PdfName.PatternType)?.Value ?? 0) != 1)
+                    continue;
 
                 var bbox = d["BBox"].ReadFloatArray();
-                if (bbox is null || bbox.Length < 4) continue;
+                if (bbox is null || bbox.Length < 4)
+                    continue;
 
                 var paintType = (int)(d.Get<PdfInteger>(PdfName.PaintType)?.Value ?? 1);
                 var xstep = d["XStep"].ReadFloat();
@@ -108,15 +116,21 @@ internal static class PageShadingResolver
                 var matrix = d["Matrix"].ReadFloatArray() ?? [1, 0, 0, 1, 0, 0];
 
                 IReadOnlyList<ContentOperator> ops;
-                try { ops = ContentStreamParser.Parse(StreamFilters.Decode(stream)); }
-                catch { continue; }
+                try
+                {
+                    ops = ContentStreamParser.Parse(StreamFilters.Decode(stream));
+                }
+                catch
+                {
+                    continue;
+                }
 
                 result[name] = new TilingPatternInfo(
                     paintType,
-                    bbox.Select(static f => (double)f).ToArray(),
+                    [.. bbox.Select(static f => (double)f)],
                     xstep,
                     ystep,
-                    matrix.Select(static f => (double)f).ToArray(),
+                    [.. matrix.Select(static f => (double)f)],
                     ops
                 );
             }
@@ -137,7 +151,8 @@ internal static class PageShadingResolver
             PdfDictionary d => d,
             _ => null
         };
-        if (dict is null) return null;
+        if (dict is null)
+            return null;
 
         var type = (int)(dict.Get<PdfInteger>(PdfName.ShadingType)?.Value ?? 0);
 
@@ -161,10 +176,12 @@ internal static class PageShadingResolver
                 );
         }
 
-        if (type is not (2 or 3)) return null; // only axial/radial below
+        if (type is not (2 or 3))
+            return null; // only axial/radial below
 
         var coords = dict["Coords"].ReadFloatArray();
-        if (coords is null || coords.Length < (type == 2 ? 4 : 6)) return null;
+        if (coords is null || coords.Length < (type == 2 ? 4 : 6))
+            return null;
 
         var domain = dict["Domain"].ReadFloatArray() ?? [0, 1];
         var (extStart, extEnd) = ReadExtend(dict["Extend"]);
@@ -184,7 +201,7 @@ internal static class PageShadingResolver
             ramp[(i * 3) + 2] = b;
         }
 
-        return new ShadingInfo(type, coords.Select(static f => (double)f).ToArray(), extStart, extEnd, ramp);
+        return new ShadingInfo(type, [.. coords.Select(static f => (double)f)], extStart, extEnd, ramp);
     }
 
     private static (byte R, byte G, byte B) ComponentsToRgb(IReadOnlyList<double> c, string cs)

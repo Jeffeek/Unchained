@@ -44,7 +44,7 @@ public sealed class ListObjectCollection : IReadOnlyList<ListObject>
             var header = hasHeaders
                 ? _worksheet.GetCell(range.TopLeft.Row, col)?.GetString() ?? $"Column{col - range.TopLeft.Column + 1}"
                 : $"Column{col - range.TopLeft.Column + 1}";
-            table.AddColumn(EnsureUnique(table, header));
+            _ = table.AddColumn(EnsureUnique(table, header));
         }
 
         _tables.Add(table);
@@ -63,7 +63,8 @@ public sealed class ListObjectCollection : IReadOnlyList<ListObject>
 
         var n = 2;
         string candidate;
-        do candidate = $"{header}{n++}";
+        do
+            candidate = $"{header}{n++}";
         while (table.Columns.Any(c => c.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase)));
 
         return candidate;

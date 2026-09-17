@@ -27,7 +27,8 @@ public sealed class FormFiller : IFormFiller
 
     private static void Fill(IPdfDocument document, IReadOnlyDictionary<string, string> values)
     {
-        if (values.Count == 0) return;
+        if (values.Count == 0)
+            return;
 
         var adapter = MutationHelper.Cast(nameof(document), document);
 
@@ -75,7 +76,8 @@ public sealed class FormFiller : IFormFiller
             swaps[fieldObj.ObjectNumber] = new PdfIndirectObject(fieldObj.ObjectNumber, fieldObj.Generation, new PdfDictionary(entries));
         }
 
-        if (swaps.Count == 0) return;
+        if (swaps.Count == 0)
+            return;
 
         var finalObjects = existing
             .Select(o => swaps.GetValueOrDefault(o.ObjectNumber, o))
@@ -153,7 +155,7 @@ public sealed class FormFiller : IFormFiller
         var catalogObj = existing.First(static o => o.Value is PdfDictionary d && d.IsCatalog());
         var catDict = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catDict.Entries);
-        catEntries.Remove(PdfName.AcroForm.Value);
+        _ = catEntries.Remove(PdfName.AcroForm.Value);
         swaps[catalogObj.ObjectNumber] = new PdfIndirectObject(catalogObj.ObjectNumber, catalogObj.Generation, new PdfDictionary(catEntries));
 
         var finalObjects = existing
@@ -174,16 +176,16 @@ public sealed class FormFiller : IFormFiller
     {
         var acroFormObj = existing.FirstOrDefault(static o => o.Value is PdfDictionary d && d.IsCatalog());
         if (acroFormObj is null)
-            return new Dictionary<string, PdfIndirectObject>();
+            return [];
 
         var catalog = (PdfDictionary)acroFormObj.Value;
         var acroForm = core.ResolveDict(catalog[PdfName.AcroForm]);
         if (acroForm is null)
-            return new Dictionary<string, PdfIndirectObject>();
+            return [];
 
         var fields = acroForm.Get<PdfArray>(PdfName.Fields);
         if (fields is null)
-            return new Dictionary<string, PdfIndirectObject>();
+            return [];
 
         var result = new Dictionary<string, PdfIndirectObject>();
         CollectFieldMap(fields, string.Empty, existing, result);

@@ -131,7 +131,7 @@ public sealed class LayoutAndSlideShowTests : PptxTestBase
         var master = doc.Masters[0];
         master.Layouts.Where(static l => l.LayoutType == LayoutType.SectionHeader)
             .ToList()
-            .ForEach(l => master.Layouts.Remove(l));
+            .ForEach(master.Layouts.Remove);
 
         master.Layouts.FindByType(LayoutType.SectionHeader).ShouldBeNull();
     }

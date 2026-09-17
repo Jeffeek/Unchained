@@ -66,7 +66,8 @@ internal sealed class PdfFunction
             PdfDictionary d => d,
             _ => null
         };
-        if (dict is null) return null;
+        if (dict is null)
+            return null;
 
         var ft = (int)(dict.Get<PdfInteger>(PdfName.FunctionType)?.Value ?? -1);
         var domain = ReadDoubles(dict["Domain"]) ?? [0, 1];
@@ -156,7 +157,8 @@ internal sealed class PdfFunction
             {
                 // Find the sub-function whose half-open bound range contains x.
                 var k = 0;
-                while (k < _bounds.Length && x >= _bounds[k]) k++;
+                while (k < _bounds.Length && x >= _bounds[k])
+                    k++;
                 var lo = k == 0 ? _domain[0] : _bounds[k - 1];
                 var hi = k < _bounds.Length ? _bounds[k] : _domain[1];
                 var e0 = 2 * k < _encode.Length ? _encode[2 * k] : 0;
@@ -176,7 +178,7 @@ internal sealed class PdfFunction
 
     private static double[]? ReadDoubles(PdfObject? obj) => obj switch
     {
-        PdfArray a => a.Elements.Select(static e => e.ReadIntOrReal()).ToArray(),
+        PdfArray a => [.. a.Elements.Select(static e => e.ReadIntOrReal())],
         _ => null
     };
 }

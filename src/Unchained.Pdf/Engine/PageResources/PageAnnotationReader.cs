@@ -27,7 +27,8 @@ internal static class PageAnnotationReader
         foreach (var elem in annotationsArr.Elements)
         {
             var dict = core.ResolveDict(elem);
-            if (dict is null) continue;
+            if (dict is null)
+                continue;
 
             var subtypeName = dict.GetName(PdfName.Subtype.Value) ?? string.Empty;
             var subtype = subtypeName switch

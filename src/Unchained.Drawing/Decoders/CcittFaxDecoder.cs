@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Unchained.Drawing.Decoders;
 
 /// <summary>
@@ -151,7 +149,6 @@ internal static class CcittFaxDecoder
         return table;
     }
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static void FillTable(
         IList<int> table,
         int codeLen,
@@ -284,7 +281,7 @@ internal static class CcittFaxDecoder
                 bitPos = saved;
             }
 
-            var mode = Read2dMode(input, ref bitPos);
+            var mode = Read2DMode(input, ref bitPos);
             if (mode < 0)
                 break;
 
@@ -472,7 +469,7 @@ internal static class CcittFaxDecoder
         return true;
     }
 
-    private static int Read2dMode(ReadOnlySpan<byte> data, ref int bitPos)
+    private static int Read2DMode(ReadOnlySpan<byte> data, ref int bitPos)
     {
         var b = PeekBit(data, bitPos);
         switch (b)
@@ -556,7 +553,6 @@ internal static class CcittFaxDecoder
         }
     }
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static (int b1, int b2) FindB1B2(
         IReadOnlyList<bool> refRow,
         int a0,
@@ -674,7 +670,6 @@ internal static class CcittFaxDecoder
             bitPos++;
     }
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static void FillRun(
         IList<bool> row,
         int start,
@@ -687,7 +682,6 @@ internal static class CcittFaxDecoder
             row[i] = color;
     }
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static void WriteRow(
         Stream output,
         IList<bool> row,

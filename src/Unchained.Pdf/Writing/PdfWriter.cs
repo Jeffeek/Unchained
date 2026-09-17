@@ -24,7 +24,7 @@ namespace Unchained.Pdf.Writing;
 internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
 {
     // Maps object number → byte offset of the corresponding "N G obj" header.
-    private readonly Dictionary<int, long> _objectOffsets = new();
+    private readonly Dictionary<int, long> _objectOffsets = [];
     // Tracks the current byte position so that xref offsets can be recorded accurately.
     private long _position;
 
@@ -97,17 +97,38 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
     {
         switch (obj)
         {
-            case PdfBoolean b: WriteBytes(b.Value ? "true"u8 : "false"u8); break;
-            case PdfInteger i: WriteAscii(i.Value.ToString()); break;
-            case PdfReal r: WriteAscii(r.Value.ToString("G", CultureInfo.InvariantCulture)); break;
-            case PdfNull: WriteBytes("null"u8); break;
-            case PdfName n: WriteName(n); break;
-            case PdfString s: WriteString(s); break;
-            case PdfArray a: WriteArray(a); break;
-            case PdfDictionary d: WriteDictionary(d); break;
-            case PdfStream s: WriteStream(s); break;
-            case PdfIndirectReference r: WriteAscii($"{r.ObjectNumber} {r.Generation} R"); break;
-            default: throw new PdfException($"Cannot serialize {obj.GetType().Name}.");
+            case PdfBoolean b:
+                WriteBytes(b.Value ? "true"u8 : "false"u8);
+            break;
+            case PdfInteger i:
+                WriteAscii(i.Value.ToString());
+            break;
+            case PdfReal r:
+                WriteAscii(r.Value.ToString("G", CultureInfo.InvariantCulture));
+            break;
+            case PdfNull:
+                WriteBytes("null"u8);
+            break;
+            case PdfName n:
+                WriteName(n);
+            break;
+            case PdfString s:
+                WriteString(s);
+            break;
+            case PdfArray a:
+                WriteArray(a);
+            break;
+            case PdfDictionary d:
+                WriteDictionary(d);
+            break;
+            case PdfStream s:
+                WriteStream(s);
+            break;
+            case PdfIndirectReference r:
+                WriteAscii($"{r.ObjectNumber} {r.Generation} R");
+            break;
+            default:
+                throw new PdfException($"Cannot serialize {obj.GetType().Name}.");
         }
     }
 
@@ -154,7 +175,8 @@ internal sealed class PdfWriter(IBufferWriter<byte> output) : IDisposable
         WriteBytes("["u8);
         for (var i = 0; i < array.Count; i++)
         {
-            if (i > 0) WriteBytes(" "u8);
+            if (i > 0)
+                WriteBytes(" "u8);
             WriteValue(array[i]);
         }
 

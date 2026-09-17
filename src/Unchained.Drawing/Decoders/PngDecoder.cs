@@ -47,12 +47,12 @@ internal static class PngDecoder
                 }
                 case PngConstants.PLTE:
                 {
-                    palette = png.Slice(dataStart, len).ToArray();
+                    palette = [.. png.Slice(dataStart, len)];
                     break;
                 }
                 case PngConstants.TRNS:
                 {
-                    png.Slice(dataStart, len).ToArray();
+                    _ = png.Slice(dataStart, len).ToArray();
                     break;
                 }
                 case PngConstants.IDAT:

@@ -199,7 +199,7 @@ internal static class PdfSigner
         // Start from existing entries, or an empty dict
         var entries = existingDict is not null
             ? new Dictionary<string, PdfObject>(existingDict.Entries)
-            : new Dictionary<string, PdfObject>();
+            : [];
 
         // Append sig field to /Fields
         var fields = entries.GetValueOrDefault("Fields") switch
@@ -251,7 +251,8 @@ internal static class PdfSigner
         var anchor = "<00000000"u8;
         for (var i = 0; i <= buf.Length - ContentsHexLen; i++)
         {
-            if (!buf.AsSpan(i, anchor.Length).SequenceEqual(anchor)) continue;
+            if (!buf.AsSpan(i, anchor.Length).SequenceEqual(anchor))
+                continue;
 
             // Verify full placeholder: '<' + (ReservedBytes*2) zeros + '>'
             if (buf[i] != '<')
@@ -344,7 +345,7 @@ internal static class PdfSigner
 
         // Use the same timestamp that was written to /M so the Pkcs9SigningTime
         // attribute is always consistent with the /M entry in the sig dictionary.
-        signer.SignedAttributes.Add(new Pkcs9SigningTime(now.UtcDateTime));
+        _ = signer.SignedAttributes.Add(new Pkcs9SigningTime(now.UtcDateTime));
 
         cms.ComputeSignature(signer);
 

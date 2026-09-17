@@ -15,7 +15,7 @@ internal static partial class FormulaFunctions
             return false;
         }
 
-        range = ev.Evaluate(args[0]).Flatten().ToList();
+        range = [.. ev.Evaluate(args[0]).Flatten()];
         criterion = ev.Evaluate(args[1]);
         return true;
     }
@@ -25,7 +25,7 @@ internal static partial class FormulaFunctions
         if (!TryParseIfArgs(args, ev, out var range, out var criterion))
             return FormulaValue.FromError(CellError.Value);
 
-        var sumRange = args.Count >= 3 ? ev.Evaluate(args[2]).Flatten().ToList() : range;
+        var sumRange = args.Count >= 3 ? [.. ev.Evaluate(args[2]).Flatten()] : range;
 
         var total = 0.0;
         for (var i = 0; i < range.Count; i++)
@@ -39,15 +39,17 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue AverageIf(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (!TryParseIfArgs(args, ev, out var range, out var criterion)) return FormulaValue.FromError(CellError.Value);
+        if (!TryParseIfArgs(args, ev, out var range, out var criterion))
+            return FormulaValue.FromError(CellError.Value);
 
-        var avgRange = args.Count >= 3 ? ev.Evaluate(args[2]).Flatten().ToList() : range;
+        var avgRange = args.Count >= 3 ? [.. ev.Evaluate(args[2]).Flatten()] : range;
 
         double total = 0;
         var count = 0;
         for (var i = 0; i < range.Count; i++)
         {
-            if (!MatchesCriterion(range[i], criterion) || i >= avgRange.Count || !IsNumber(avgRange[i])) continue;
+            if (!MatchesCriterion(range[i], criterion) || i >= avgRange.Count || !IsNumber(avgRange[i]))
+                continue;
 
             total += FormulaEvaluator.ToNumber(avgRange[i]);
             count++;
@@ -64,7 +66,8 @@ internal static partial class FormulaFunctions
     private static FormulaValue ConditionalSumIfs(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev, bool average)
     {
         // SUMIFS(sumRange, critRange1, crit1, ...); AVERAGEIFS shares the layout.
-        if (args.Count < 3) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 3)
+            return FormulaValue.FromError(CellError.Value);
 
         var aggregate = ev.Evaluate(args[0]).Flatten().ToList();
         var pairs = CriteriaPairs(args, ev, 1);
@@ -73,8 +76,10 @@ internal static partial class FormulaFunctions
         var count = 0;
         for (var i = 0; i < aggregate.Count; i++)
         {
-            if (!RowMatchesAll(pairs, i)) continue;
-            if (!IsNumber(aggregate[i])) continue;
+            if (!RowMatchesAll(pairs, i))
+                continue;
+            if (!IsNumber(aggregate[i]))
+                continue;
 
             total += FormulaEvaluator.ToNumber(aggregate[i]);
             count++;
@@ -89,10 +94,12 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue CountIfs(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var pairs = CriteriaPairs(args, ev, 0);
-        if (pairs.Count == 0) return Number(0);
+        if (pairs.Count == 0)
+            return Number(0);
 
         var length = pairs.Min(static p => p.Range.Count);
         var count = 0;
@@ -109,7 +116,7 @@ internal static partial class FormulaFunctions
     {
         var pairs = new List<(List<FormulaValue>, FormulaValue)>();
         for (var i = startIndex; i + 1 < args.Count; i += 2)
-            pairs.Add((ev.Evaluate(args[i]).Flatten().ToList(), ev.Evaluate(args[i + 1])));
+            pairs.Add(([.. ev.Evaluate(args[i]).Flatten()], ev.Evaluate(args[i + 1])));
         return pairs;
     }
 
@@ -118,7 +125,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue SumProduct(IReadOnlyCollection<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count == 0) return Number(0);
+        if (args.Count == 0)
+            return Number(0);
 
         var arrays = args.Select(a => ev.Evaluate(a).Flatten().ToList()).ToList();
         var length = arrays.Min(static a => a.Count);
@@ -134,7 +142,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue MinMaxIfs(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev, bool max)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 3)
+            return FormulaValue.FromError(CellError.Value);
 
         var values = ev.Evaluate(args[0]).Flatten().ToList();
         var pairs = CriteriaPairs(args, ev, 1);
@@ -145,17 +154,21 @@ internal static partial class FormulaFunctions
 
         for (var i = 0; i < length; i++)
         {
-            if (!RowMatchesAll(pairs, i)) continue;
-            if (!IsNumber(values[i])) continue;
+            if (!RowMatchesAll(pairs, i))
+                continue;
+            if (!IsNumber(values[i]))
+                continue;
 
             var v = FormulaEvaluator.ToNumber(values[i]);
             if (max)
             {
-                if (v > maxVal) maxVal = v;
+                if (v > maxVal)
+                    maxVal = v;
             }
             else
             {
-                if (v < min) min = v;
+                if (v < min)
+                    min = v;
             }
 
             count++;

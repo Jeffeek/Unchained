@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Xml.Linq;
 using Unchained.Pdf.Abstractions;
@@ -114,15 +113,33 @@ internal static class SvgToPdfConverter
             var local = child.Name.LocalName;
             switch (local)
             {
-                case "g": EmitGroup(child, w, ns); break;
-                case "rect": EmitRect(child, w); break;
-                case "circle": EmitCircle(child, w); break;
-                case "ellipse": EmitEllipse(child, w); break;
-                case "line": EmitLine(child, w); break;
-                case "polyline": EmitPolyline(child, w, false); break;
-                case "polygon": EmitPolyline(child, w, true); break;
-                case "path": EmitPath(child, w); break;
-                case "text": EmitText(child, w); break;
+                case "g":
+                    EmitGroup(child, w, ns);
+                break;
+                case "rect":
+                    EmitRect(child, w);
+                break;
+                case "circle":
+                    EmitCircle(child, w);
+                break;
+                case "ellipse":
+                    EmitEllipse(child, w);
+                break;
+                case "line":
+                    EmitLine(child, w);
+                break;
+                case "polyline":
+                    EmitPolyline(child, w, false);
+                break;
+                case "polygon":
+                    EmitPolyline(child, w, true);
+                break;
+                case "path":
+                    EmitPath(child, w);
+                break;
+                case "text":
+                    EmitText(child, w);
+                break;
             }
         }
     }
@@ -131,7 +148,8 @@ internal static class SvgToPdfConverter
     {
         w.Op("q"u8);
         var transform = el.Attribute("transform")?.Value;
-        if (transform is not null) EmitTransform(transform, w);
+        if (transform is not null)
+            EmitTransform(transform, w);
         ApplyStyle(el, w);
         WalkElement(el, w, ns);
         w.Op("Q"u8);
@@ -191,7 +209,6 @@ internal static class SvgToPdfConverter
     }
 
     // Approximate ellipse/circle with four cubic Bézier curves (kappa = 0.5523).
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static void EmitEllipsePath(
         float cx,
         float cy,
@@ -290,7 +307,8 @@ internal static class SvgToPdfConverter
     private static void EmitText(XElement el, ContentStreamWriter w)
     {
         var text = el.Value;
-        if (string.IsNullOrWhiteSpace(text)) return;
+        if (string.IsNullOrWhiteSpace(text))
+            return;
 
         var x = F(el, "x");
         var y = F(el, "y");
@@ -331,7 +349,7 @@ internal static class SvgToPdfConverter
             EmitColor(fill, w, false);
 
         var stroke = el.Attribute("stroke")?.Value;
-        if (stroke is not null && stroke != "none")
+        if (stroke is not null and not "none")
             EmitColor(stroke, w, true);
     }
 
@@ -349,12 +367,16 @@ internal static class SvgToPdfConverter
         var fill = el.Attribute("fill")?.Value ?? "black";
         var stroke = el.Attribute("stroke")?.Value;
         var hasFill = fill != "none";
-        var hasStroke = stroke is not null && stroke != "none";
+        var hasStroke = stroke is not null and not "none";
 
         switch (hasFill)
         {
-            case true when hasStroke: w.Op("B"u8); break;
-            case true: w.Op("f"u8); break;
+            case true when hasStroke:
+                w.Op("B"u8);
+            break;
+            case true:
+                w.Op("f"u8);
+            break;
             default:
             {
                 w.Op(hasStroke ? "S"u8 : "n"u8);
@@ -521,7 +543,7 @@ internal static class SvgToPdfConverter
             }
 
             var j = i;
-            if (d[j] == '-' || d[j] == '+')
+            if (d[j] is '-' or '+')
                 j++;
 
             while (j < d.Length && IsNumberChar(d[j], j > i))
@@ -532,8 +554,7 @@ internal static class SvgToPdfConverter
 
         return result;
 
-        static bool IsNumberChar(char ch, bool afterStart) =>
-            char.IsDigit(ch) || ch == '.' || ch == 'e' || ch == 'E' || (afterStart && ch is '-' or '+');
+        static bool IsNumberChar(char ch, bool afterStart) => char.IsDigit(ch) || ch == '.' || ch == 'e' || ch == 'E' || (afterStart && ch is '-' or '+');
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
@@ -598,7 +619,8 @@ internal static class SvgToPdfConverter
     private static List<(float x, float y)> ParsePoints(string? points)
     {
         var result = new List<(float, float)>();
-        if (points is null) return result;
+        if (points is null)
+            return result;
 
         var nums = points.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
         for (var i = 0; i + 1 < nums.Length; i += 2)

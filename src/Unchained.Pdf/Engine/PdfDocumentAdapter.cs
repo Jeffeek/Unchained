@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -187,10 +186,11 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     {
         var metaRef = Core.Catalog[PdfName.Metadata];
         var stream = Core.ResolveStream(metaRef);
-        if (stream is null) return null;
+        if (stream is null)
+            return null;
 
         var decoded = StreamFilters.Decode(stream);
-        return decoded.Span.FromUtf8Span();
+        return Encoding.UTF8.GetString(decoded.Span);
     }
 
     // ── Named destinations ────────────────────────────────────────────────────
@@ -230,7 +230,8 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
     {
         var result = new List<OptionalContentGroup>();
         var ocProps = Core.ResolveDict(Core.Catalog[PdfName.OCProperties]);
-        if (ocProps is null) return result;
+        if (ocProps is null)
+            return result;
 
         // Collect the set of OCGs that are OFF in the default (/D) configuration.
         var off = new HashSet<int>();
@@ -238,7 +239,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         if (defaultCfg?[PdfName.OFF] is PdfArray offArr)
         {
             foreach (var offRef in offArr.Elements.OfType<PdfIndirectReference>())
-                off.Add(offRef.ObjectNumber);
+                _ = off.Add(offRef.ObjectNumber);
         }
 
         if (ocProps[PdfName.OCGs] is not PdfArray ocgs)
@@ -246,7 +247,8 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
 
         foreach (var r in ocgs.Elements.OfType<PdfIndirectReference>())
         {
-            if (Core.ResolveIndirect(r.ObjectNumber).Value is not PdfDictionary ocg) continue;
+            if (Core.ResolveIndirect(r.ObjectNumber).Value is not PdfDictionary ocg)
+                continue;
 
             var name = ocg[PdfName.Name] is PdfString s
                 ? Encoding.Latin1.GetString(s.Bytes.Span)
@@ -315,7 +317,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
             // Run both optimizers in-place via the mutation helpers before collecting.
             DocumentOptimizer.OptimizeInPlace(this);
             DocumentOptimizer.OptimizeResourcesInPlace(this);
-            objects = Core.CollectObjects().ToList();
+            objects = [.. Core.CollectObjects()];
         }
 
         // ── AllowReusePageContent — deduplicate identical content streams ──────
@@ -348,7 +350,7 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
 
             // Encrypt all objects except the /Encrypt dict itself.
             var encryptedObjects = objects
-                .Select(obj => ctx.EncryptObject(obj))
+                .Select(ctx.EncryptObject)
                 .Append(new PdfIndirectObject(encObjNum, 0, encryptDict))
                 .ToList();
 
@@ -395,7 +397,8 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
                 var key = arr[i] is PdfString ks
                     ? Encoding.Latin1.GetString(ks.Bytes.Span)
                     : (arr[i] as PdfName)?.Value ?? string.Empty;
-                if (key.Length == 0) return null;
+                if (key.Length == 0)
+                    return null;
 
                 var dest = arr[i + 1] is PdfIndirectReference nr
                     ? Core.ResolveIndirect(nr.ObjectNumber).Value
@@ -539,11 +542,13 @@ internal sealed class PdfDocumentAdapter : IPdfDocument
         }
 
         return remapping.Count == 0
-            ? objects.ToList()
-            : objects
-                .Where(o => !remapping.ContainsKey(o.ObjectNumber))
-                .Select(o => PdfObjectRemapper.RemapSelective(o, remapping) as PdfIndirectObject ?? o)
-                .ToList();
+            ? [.. objects]
+            :
+            [
+                .. objects
+                    .Where(o => !remapping.ContainsKey(o.ObjectNumber))
+                    .Select(o => PdfObjectRemapper.RemapSelective(o, remapping) as PdfIndirectObject ?? o)
+            ];
     }
 
     private static string? GetInfoString(PdfDictionary info, string key) =>

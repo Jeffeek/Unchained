@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
-using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -209,7 +208,7 @@ internal static class PdfAValidator
 
             // Look for ExtGState dicts that have transparency settings
             var type = dict.GetName(PdfName.Type.Value);
-            if (type != "ExtGState" && type is not null)
+            if (type is not "ExtGState" and not null)
                 continue; // skip non-ExtGState (unless no type)
 
             if (dict[PdfName.SMask] is not null and not PdfName { Value: "None" })
@@ -373,7 +372,7 @@ internal static class PdfAValidator
         string xmp;
         try
         {
-            xmp = StreamFilters.Decode(metaStream).Span.FromUtf8Span();
+            xmp = Encoding.UTF8.GetString(StreamFilters.Decode(metaStream).Span);
         }
         catch
         {

@@ -13,8 +13,8 @@ public sealed class TableGridTests
 {
     private static TableGrid Make(int columns, int rows) =>
         TableGrid.Create(
-            Enumerable.Range(0, columns).Select(static _ => Emu.FromInches(1)).ToArray(),
-            Enumerable.Range(0, rows).Select(static _ => Emu.FromInches(0.5)).ToArray()
+            [.. Enumerable.Range(0, columns).Select(static _ => Emu.FromInches(1))],
+            [.. Enumerable.Range(0, rows).Select(static _ => Emu.FromInches(0.5))]
         );
 
     [Fact]

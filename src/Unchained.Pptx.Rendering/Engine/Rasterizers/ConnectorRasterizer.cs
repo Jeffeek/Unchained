@@ -26,8 +26,10 @@ internal static class ConnectorRasterizer
         var y0 = y;
         var x1 = x + width;
         var y1 = y + height;
-        if (shape.FlipHorizontal) (x0, x1) = (x1, x0);
-        if (shape.FlipVertical) (y0, y1) = (y1, y0);
+        if (shape.FlipHorizontal)
+            (x0, x1) = (x1, x0);
+        if (shape.FlipVertical)
+            (y0, y1) = (y1, y0);
 
         byte r = 0, g = 0, b = 0;
         if (shape.Line.Fill is { Type: FillType.Solid, Solid: not null })
@@ -96,7 +98,8 @@ internal static class ConnectorRasterizer
         byte b
     )
     {
-        if (headType == ArrowHeadType.None) return;
+        if (headType == ArrowHeadType.None)
+            return;
 
         var size = headLength switch
         {
@@ -114,7 +117,8 @@ internal static class ConnectorRasterizer
         var dx = tipX - fromX;
         var dy = tipY - fromY;
         var len = Math.Sqrt(((double)dx * dx) + ((double)dy * dy));
-        if (len < 1) return;
+        if (len < 1)
+            return;
 
         var ux = dx / len;
         var uy = dy / len;
@@ -201,7 +205,8 @@ internal static class ConnectorRasterizer
                 ? (int)(x0 + ((x1 - x0) * beta))
                 : (int)(x1 + ((x2 - x1) * beta));
 
-            if (ax > bx2) (ax, bx2) = (bx2, ax);
+            if (ax > bx2)
+                (ax, bx2) = (bx2, ax);
             buffer.FillRect(
                 ax,
                 scanY,

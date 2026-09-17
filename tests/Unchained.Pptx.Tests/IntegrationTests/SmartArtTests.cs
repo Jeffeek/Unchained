@@ -1,5 +1,5 @@
-using System.IO.Compression;
 using Shouldly;
+using System.IO.Compression;
 using Unchained.Pptx.Shapes;
 using Unchained.Pptx.Tests.Shared;
 using Xunit;
@@ -111,10 +111,12 @@ public sealed class SmartArtTests : PptxTestBase
     {
         foreach (var node in nodes)
         {
-            if (node.Text.Contains(contains)) return node;
+            if (node.Text.Contains(contains))
+                return node;
 
             var hit = FindNodeWithText(node.Children, contains);
-            if (hit != null) return hit;
+            if (hit != null)
+                return hit;
         }
 
         return null;

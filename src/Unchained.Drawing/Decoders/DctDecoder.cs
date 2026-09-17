@@ -1,6 +1,6 @@
+using JpegLibrary;
 using System.Buffers;
 using System.Runtime.InteropServices;
-using JpegLibrary;
 using Unchained.Drawing.Constants;
 
 namespace Unchained.Drawing.Decoders;
@@ -25,10 +25,10 @@ internal static class DctDecoder
     {
         var decoder = new JpegLibrary.JpegDecoder();
         decoder.SetInput(new ReadOnlySequence<byte>(data));
-        decoder.Identify();
+        _ = decoder.Identify();
 
         var nc = decoder.NumberOfComponents;
-        if (nc != 1 && nc != 3)
+        if (nc is not 1 and not 3)
             throw new NotSupportedException($"DCTDecode: unsupported JPEG color space ({nc} components).");
 
         var width = decoder.Width;
@@ -91,7 +91,8 @@ internal static class DctDecoder
             int y
         )
         {
-            if (componentIndex >= componentCount) return;
+            if (componentIndex >= componentCount)
+                return;
 
             var block = MemoryMarshal.CreateSpan(ref blockRef, 64);
             var plane = planes[componentIndex];

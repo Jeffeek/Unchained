@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Content;
 using Unchained.Pdf.Core;
 using Xunit;
@@ -20,7 +20,7 @@ public sealed class ContentStreamParserInlineImageTests
         bytes.AddRange(Encoding.Latin1.GetBytes(header));
         bytes.AddRange(imageData);
         bytes.AddRange(Encoding.Latin1.GetBytes(trailer));
-        return bytes.ToArray();
+        return [.. bytes];
     }
 
     private static PdfInlineImage? FirstInlineImage(byte[] data)

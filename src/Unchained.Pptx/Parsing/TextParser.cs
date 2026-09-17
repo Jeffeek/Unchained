@@ -40,7 +40,8 @@ internal static class TextParser
 
     private static void ParseBodyProperties(XElement? bodyPr, TextFrameFormat format)
     {
-        if (bodyPr == null) return;
+        if (bodyPr == null)
+            return;
 
         var anchor = bodyPr.GetAttr(PmlNames.AttributeAnchor);
         if (anchor != null)
@@ -51,33 +52,39 @@ internal static class TextParser
             format.WrapText = wrap != "none";
 
         var marL = bodyPr.GetAttrLong("marL");
-        if (marL.HasValue) format.MarginLeft = new Emu(marL.Value);
+        if (marL.HasValue)
+            format.MarginLeft = new Emu(marL.Value);
 
         var marR = bodyPr.GetAttrLong("marR");
-        if (marR.HasValue) format.MarginRight = new Emu(marR.Value);
+        if (marR.HasValue)
+            format.MarginRight = new Emu(marR.Value);
 
         var marT = bodyPr.GetAttrLong("marT");
-        if (marT.HasValue) format.MarginTop = new Emu(marT.Value);
+        if (marT.HasValue)
+            format.MarginTop = new Emu(marT.Value);
 
         var marB = bodyPr.GetAttrLong("marB");
-        if (marB.HasValue) format.MarginBottom = new Emu(marB.Value);
+        if (marB.HasValue)
+            format.MarginBottom = new Emu(marB.Value);
 
         var numCol = bodyPr.GetAttrInt("numCol");
-        if (numCol.HasValue) format.ColumnCount = numCol.Value;
+        if (numCol.HasValue)
+            format.ColumnCount = numCol.Value;
 
         var spcCol = bodyPr.GetAttrLong("spcCol");
-        if (spcCol.HasValue) format.ColumnSpacing = new Emu(spcCol.Value);
+        if (spcCol.HasValue)
+            format.ColumnSpacing = new Emu(spcCol.Value);
 
         var vert = bodyPr.GetAttr("vert");
-        if (vert != null) format.Direction = ParseTextDirection(vert);
+        if (vert != null)
+            format.Direction = ParseTextDirection(vert);
 
         // Autofit
-        if (bodyPr.Element(DmlNames.Dml + "normAutofit") != null)
-            format.Autofit = TextAutofit.ShrinkText;
-        else if (bodyPr.Element(DmlNames.Dml + "spAutoFit") != null)
-            format.Autofit = TextAutofit.ResizeShape;
-        else
-            format.Autofit = TextAutofit.None;
+        format.Autofit = bodyPr.Element(DmlNames.Dml + "normAutofit") != null
+            ? TextAutofit.ShrinkText
+            : bodyPr.Element(DmlNames.Dml + "spAutoFit") != null
+                ? TextAutofit.ResizeShape
+                : TextAutofit.None;
 
         // WordArt text warp (<a:prstTxWarp prst="...">).
         var warp = bodyPr.Element(DmlNames.Dml + "prstTxWarp");
@@ -110,33 +117,42 @@ internal static class TextParser
     private static void ParseParagraphProperties(XElement pPr, Paragraph para)
     {
         var algn = pPr.GetAttr(DmlNames.AttributeAlignment);
-        if (algn != null) para.Alignment = ParseAlignment(algn);
+        if (algn != null)
+            para.Alignment = ParseAlignment(algn);
 
         var marL = pPr.GetAttrLong("marL");
-        if (marL.HasValue) para.MarginLeft = new Emu(marL.Value);
+        if (marL.HasValue)
+            para.MarginLeft = new Emu(marL.Value);
 
         var marR = pPr.GetAttrLong("marR");
-        if (marR.HasValue) para.MarginRight = new Emu(marR.Value);
+        if (marR.HasValue)
+            para.MarginRight = new Emu(marR.Value);
 
         var indent = pPr.GetAttrLong("indent");
-        if (indent.HasValue) para.Indent = new Emu(indent.Value);
+        if (indent.HasValue)
+            para.Indent = new Emu(indent.Value);
 
         var lvl = pPr.GetAttrInt("lvl");
-        if (lvl.HasValue) para.OutlineLevel = lvl.Value;
+        if (lvl.HasValue)
+            para.OutlineLevel = lvl.Value;
 
         var rtl = pPr.GetAttrBool("rtl");
-        if (rtl.HasValue) para.RightToLeft = rtl.Value;
+        if (rtl.HasValue)
+            para.RightToLeft = rtl.Value;
 
         // Line spacing
         var lnSpc = pPr.Element(DmlNames.LineSpacing);
-        if (lnSpc != null) para.Spacing = ParseSpacing(lnSpc);
+        if (lnSpc != null)
+            para.Spacing = ParseSpacing(lnSpc);
 
         // Space before / after
         var spcBef = pPr.Element(DmlNames.SpaceBefore);
-        if (spcBef != null) para.SpaceBeforePoints = ParseSpacingPoints(spcBef);
+        if (spcBef != null)
+            para.SpaceBeforePoints = ParseSpacingPoints(spcBef);
 
         var spcAft = pPr.Element(DmlNames.SpaceAfter);
-        if (spcAft != null) para.SpaceAfterPoints = ParseSpacingPoints(spcAft);
+        if (spcAft != null)
+            para.SpaceAfterPoints = ParseSpacingPoints(spcAft);
 
         // Bullets
         ParseBullet(pPr, para.Bullet);
@@ -170,10 +186,12 @@ internal static class TextParser
     private static void ParseRunProperties(XElement rPr, RunFormat format)
     {
         var lang = rPr.GetAttr(DmlNames.AttributeLanguage);
-        if (lang != null) format.LanguageTag = lang;
+        if (lang != null)
+            format.LanguageTag = lang;
 
         var sz = rPr.GetAttrInt(DmlNames.AttributeFontSize);
-        if (sz.HasValue) format.FontSizePoints = sz.Value / 100.0;
+        if (sz.HasValue)
+            format.FontSizePoints = sz.Value / 100.0;
 
         var bold = rPr.GetAttrBool(DmlNames.AttributeBold);
         format.Bold = InheritableBool.From(bold);
@@ -182,35 +200,43 @@ internal static class TextParser
         format.Italic = InheritableBool.From(italic);
 
         var underline = rPr.GetAttr(DmlNames.AttributeUnderline);
-        if (underline != null) format.Underline = ParseUnderline(underline);
+        if (underline != null)
+            format.Underline = ParseUnderline(underline);
 
         var strike = rPr.GetAttr(DmlNames.AttributeStrike);
-        if (strike != null) format.Strikethrough = ParseStrikethrough(strike);
+        if (strike != null)
+            format.Strikethrough = ParseStrikethrough(strike);
 
         var caps = rPr.GetAttr("cap");
-        if (caps != null) format.Capitalisation = ParseCapType(caps);
+        if (caps != null)
+            format.Capitalisation = ParseCapType(caps);
 
         var latin = rPr.Element(DmlNames.LatinFont);
-        if (latin != null) format.LatinFont = latin.GetAttr(DmlNames.AttributeTypeface);
+        if (latin != null)
+            format.LatinFont = latin.GetAttr(DmlNames.AttributeTypeface);
 
         var ea = rPr.Element(DmlNames.EastAsianFont);
-        if (ea != null) format.EastAsianFont = ea.GetAttr(DmlNames.AttributeTypeface);
+        if (ea != null)
+            format.EastAsianFont = ea.GetAttr(DmlNames.AttributeTypeface);
 
         var cs = rPr.Element(DmlNames.ComplexScriptFont);
-        if (cs != null) format.ComplexScriptFont = cs.GetAttr(DmlNames.AttributeTypeface);
+        if (cs != null)
+            format.ComplexScriptFont = cs.GetAttr(DmlNames.AttributeTypeface);
 
         var spc = rPr.GetAttrInt("spc");
-        if (spc.HasValue) format.CharacterSpacingPoints = spc.Value / 100.0;
+        if (spc.HasValue)
+            format.CharacterSpacingPoints = spc.Value / 100.0;
 
         var baseline = rPr.GetAttrInt("baseline");
-        if (baseline.HasValue) format.BaselineShiftPercent = baseline.Value / 1_000.0;
+        if (baseline.HasValue)
+            format.BaselineShiftPercent = baseline.Value / 1_000.0;
 
         // Text fill colour
         var solidFill = rPr.Element(DmlNames.SolidFill);
         if (solidFill != null)
         {
             format.Fill ??= new FillFormat();
-            format.Fill.SetSolid(ColorParser.Parse(solidFill));
+            _ = format.Fill.SetSolid(ColorParser.Parse(solidFill));
         }
 
         // WordArt: glyph outline (<a:ln>) and text effects (<a:effectLst>).

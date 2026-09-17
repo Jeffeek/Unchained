@@ -42,7 +42,8 @@ public static class AgileEncryption
     /// </summary>
     public static bool IsCfb(byte[] data)
     {
-        if (data.Length < 8) return false;
+        if (data.Length < 8)
+            return false;
 
         ReadOnlySpan<byte> magic = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
         return data.AsSpan(0, 8).SequenceEqual(magic);
@@ -80,9 +81,9 @@ public static class AgileEncryption
         var hmacKey = RandomBytes(64);
         using var hmac = new HMACSHA512(hmacKey);
         var hmacValue = hmac.ComputeHash(encryptedPackage);
-        var hmacKeyIv = DeriveHmacIv(documentKey, documentSalt, BlockKeyHmacKey);
+        var (key, iv) = DeriveHmacIv(documentKey, documentSalt, BlockKeyHmacKey);
         var hmacValIv = DeriveHmacIv(documentKey, documentSalt, BlockKeyHmacValue);
-        var encryptedHmacKey = AesCbcEncryptZeroPad(hmacKey, hmacKeyIv.key, hmacKeyIv.iv);
+        var encryptedHmacKey = AesCbcEncryptZeroPad(hmacKey, key, iv);
         var encryptedHmacValue = AesCbcEncryptZeroPad(hmacValue, hmacValIv.key, hmacValIv.iv);
 
         // Step 6: Build EncryptionInfo XML and wrap in CFB
@@ -117,7 +118,10 @@ public static class AgileEncryption
     public static byte[] Decrypt(byte[] cfbBytes, string password)
     {
         Dictionary<string, byte[]> streams;
-        try { streams = CfbDocument.Read(cfbBytes); }
+        try
+        {
+            streams = CfbDocument.Read(cfbBytes);
+        }
         catch (OoXmlException ex)
         {
             throw new OoXmlEncryptedException("The file is not a valid OOXML encrypted file.", ex);
@@ -228,7 +232,8 @@ public static class AgileEncryption
         result.Write(sizeBytes);
 
         var segmentCount = (zipBytes.Length + SegmentSize - 1) / SegmentSize;
-        if (segmentCount == 0) segmentCount = 1; // always at least one segment
+        if (segmentCount == 0)
+            segmentCount = 1; // always at least one segment
 
         for (var i = 0; i < segmentCount; i++)
         {
@@ -274,7 +279,8 @@ public static class AgileEncryption
         }
 
         var raw = result.ToArray();
-        if (raw.Length > originalSize) Array.Resize(ref raw, originalSize);
+        if (raw.Length > originalSize)
+            Array.Resize(ref raw, originalSize);
         return raw;
     }
 

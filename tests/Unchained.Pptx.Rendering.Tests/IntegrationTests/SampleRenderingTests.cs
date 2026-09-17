@@ -1,6 +1,6 @@
+using Shouldly;
 using System.IO.Compression;
 using System.Text;
-using Shouldly;
 using Unchained.Drawing.Constants;
 using Unchained.Pptx.Rendering.Engine;
 using Unchained.Pptx.Rendering.Models;
@@ -89,10 +89,12 @@ public sealed class SampleRenderingTests : PptxTestBase
         static bool HasCellText(TableShape t)
         {
             for (var r = 0; r < t.Grid.RowCount; r++)
-            for (var c = 0; c < t.Grid.ColumnCount; c++)
             {
-                if (!string.IsNullOrWhiteSpace(t.Grid[c, r].TextFrame.PlainText))
-                    return true;
+                for (var c = 0; c < t.Grid.ColumnCount; c++)
+                {
+                    if (!string.IsNullOrWhiteSpace(t.Grid[c, r].TextFrame.PlainText))
+                        return true;
+                }
             }
 
             return false;
@@ -108,7 +110,8 @@ public sealed class SampleRenderingTests : PptxTestBase
     private static double InkPercent(PptxImage image)
     {
         var rgb = DecodePng(image.Data.ToArray(), out var w, out var h);
-        if (rgb is null) return 0;
+        if (rgb is null)
+            return 0;
 
         var counts = new Dictionary<int, int>();
         var pixels = w * h;
@@ -130,7 +133,8 @@ public sealed class SampleRenderingTests : PptxTestBase
     {
         width = 0;
         height = 0;
-        if (png.Length < 8 || png[0] != 0x89 || png[1] != 0x50) return null;
+        if (png.Length < 8 || png[0] != 0x89 || png[1] != 0x50)
+            return null;
 
         var pos = 8;
         var idat = new MemoryStream();
@@ -151,15 +155,18 @@ public sealed class SampleRenderingTests : PptxTestBase
             }
             else if (type == PngConstants.IDAT)
                 idat.Write(png, dataStart, len);
-            else if (type == PngConstants.IEND) break;
+            else if (type == PngConstants.IEND)
+                break;
 
             pos = dataStart + len + 4; // skip data + CRC
         }
 
-        if (width <= 0 || height <= 0 || bitDepth != 8) return null;
+        if (width <= 0 || height <= 0 || bitDepth != 8)
+            return null;
 
         var channels = colorType switch { 2 => 3, 6 => 4, _ => 0 };
-        if (channels == 0) return null;
+        if (channels == 0)
+            return null;
 
         idat.Position = 0;
         idat.ReadByte(); // skip 2-byte zlib header
@@ -176,7 +183,8 @@ public sealed class SampleRenderingTests : PptxTestBase
         var srcPos = 0;
         for (var y = 0; y < height; y++)
         {
-            if (srcPos >= data.Length) break;
+            if (srcPos >= data.Length)
+                break;
 
             var filter = data[srcPos++];
             Array.Copy(data, srcPos, cur, 0, Math.Min(stride, data.Length - srcPos));

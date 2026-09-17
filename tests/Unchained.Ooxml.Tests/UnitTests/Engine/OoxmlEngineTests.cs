@@ -52,7 +52,7 @@ public sealed class OoxmlEngineTests
         // A structurally valid OPC package whose only part is not a presentation/document/workbook
         // main part → DetectFormat falls through to the "could not determine format" throw.
         var package = OpcPackage.CreateEmpty();
-        package.AddOrReplacePart("/custom/part.xml", OoxmlContentTypes.ApplicationXml, "<root/>"u8.ToArray());
+        package.AddOrReplacePart("/custom/part.xml", OoxmlContentTypes.ApplicationXml, [.. "<root/>"u8]);
         var bytes = package.Save();
 
         Should.Throw<OoXmlException>(() => OoxmlEngine.Open(bytes, false));
@@ -83,7 +83,7 @@ public sealed class OoxmlEngineTests
         }
 
         using var readOnly = OoxmlEngine.Open(bytes, false);
-        Should.Throw<InvalidOperationException>(() => readOnly.Save());
+        Should.Throw<InvalidOperationException>(readOnly.Save);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class OoxmlEngineTests
     {
         var engine = OoxmlEngine.Create(OoxmlFormat.Spreadsheet);
         engine.Dispose();
-        Should.NotThrow(() => engine.Dispose());
+        Should.NotThrow(engine.Dispose);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public sealed class OoxmlEngineTests
     {
         var engine = OoxmlEngine.Create(OoxmlFormat.Presentation);
         engine.Dispose();
-        Should.Throw<ObjectDisposedException>(() => engine.Save());
+        Should.Throw<ObjectDisposedException>(engine.Save);
     }
 
     [Fact]

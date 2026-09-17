@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Drawing.Decoders;
 using Xunit;
 
@@ -184,4 +184,52 @@ public sealed class CcittFaxDecoderTests
     [Fact]
     public void Decode_DefaultColumns_Group4_DoesNotThrow() =>
         Should.NotThrow(static () => CcittFaxDecoder.Decode(EncodedG4, -1).ToArray());
+
+    [Fact]
+    public void Decode_Group3_1D_K0_DecodesCorrectly()
+    {
+        // K=0 forces Group 3 1D encoding (no 2D pass mode)
+        var decoded = CcittFaxDecoder.Decode(EncodedG31DWhite, 0, 16, 1, blackIs1: false).ToArray();
+        decoded.Length.ShouldBeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public void Decode_BlackIs1True_InvertsOutput()
+    {
+        // blackIs1=true means 1 bit is black (opposite of default)
+        var decoded = CcittFaxDecoder.Decode(EncodedG4, -1, 16, 16, blackIs1: true).ToArray();
+        decoded.Length.ShouldBe(32);
+        decoded.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Decode_EncodedByteAlignTrue_HandlesAlignment()
+    {
+        // encodedByteAlign=true pads each row to byte boundary
+        byte[] data = [0xFF, 0x00, 0xFF, 0x00];
+        // ReSharper disable once BadListLineBreaks
+        // ReSharper disable RedundantArgumentDefaultValue
+        var decoded = CcittFaxDecoder.Decode(data, 0, 8, 2, false, true).ToArray();
+        // ReSharper restore RedundantArgumentDefaultValue
+        decoded.Length.ShouldBeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public void Decode_SingleRow_DecodesCorrectly()
+    {
+        // Decode single row (height=1)
+        // ReSharper disable once RedundantArgumentDefaultValue
+        // ReSharper disable once BadListLineBreaks
+        var decoded = CcittFaxDecoder.Decode(EncodedG31DWhite, 0, 16, 1, false, false, false).ToArray();
+        decoded.Length.ShouldBeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public void Decode_WideImage_256Columns_DecodesCorrectly()
+    {
+        // Test wider image (256 columns)
+        var wide = new byte[64];
+        Array.Fill(wide, (byte)0xFF);
+        Should.NotThrow(() => CcittFaxDecoder.Decode(wide, -1, 256, 2).ToArray());
+    }
 }

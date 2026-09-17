@@ -28,7 +28,7 @@ internal static class JpegDecoder
 
     private sealed class Decoder(ReadOnlySpan<byte> data)
     {
-        private readonly byte[] _data = data.ToArray();
+        private readonly byte[] _data = [.. data];
 
         // Huffman tables: [class(0=DC,1=AC)][id]
         private readonly HuffTable?[,] _huff = new HuffTable?[2, 4];
@@ -156,7 +156,7 @@ internal static class JpegDecoder
             _width = ReadU16();
 
             var count = _data[_pos++];
-            if (count != 1 && count != 3)
+            if (count is not 1 and not 3)
             {
                 _pos = end;
                 throw new NotSupportedException("components");
@@ -228,7 +228,7 @@ internal static class JpegDecoder
 
         private void ReadRestartInterval()
         {
-            ReadU16();
+            _ = ReadU16();
             _restartInterval = ReadU16();
         }
 
@@ -280,28 +280,32 @@ internal static class JpegDecoder
             var mcuCount = 0;
 
             for (var my = 0; my < mcusY; my++)
-            for (var mx = 0; mx < mcusX; mx++)
             {
-                foreach (var (ci, dcId, acId) in scanComps)
+                for (var mx = 0; mx < mcusX; mx++)
                 {
-                    var comp = _components[ci];
-                    for (var by = 0; by < comp.VSamp; by++)
-                    for (var bx = 0; bx < comp.HSamp; bx++)
+                    foreach (var (ci, dcId, acId) in scanComps)
                     {
-                        var block = DecodeBlock(comp, dcId, acId);
-                        if (block is null)
-                            return null;
+                        var comp = _components[ci];
+                        for (var by = 0; by < comp.VSamp; by++)
+                        {
+                            for (var bx = 0; bx < comp.HSamp; bx++)
+                            {
+                                var block = DecodeBlock(comp, dcId, acId);
+                                if (block is null)
+                                    return null;
 
-                        var blockX = ((mx * comp.HSamp) + bx) * 8;
-                        var blockY = ((my * comp.VSamp) + by) * 8;
-                        var stride = comp.BlocksPerLine * 8;
-                        PlaceBlock(block, comp.Pixels!, blockX, blockY, stride);
+                                var blockX = ((mx * comp.HSamp) + bx) * 8;
+                                var blockY = ((my * comp.VSamp) + by) * 8;
+                                var stride = comp.BlocksPerLine * 8;
+                                PlaceBlock(block, comp.Pixels!, blockX, blockY, stride);
+                            }
+                        }
                     }
-                }
 
-                mcuCount++;
-                if (_restartInterval > 0 && mcuCount % _restartInterval == 0 && !(my == mcusY - 1 && mx == mcusX - 1))
-                    HandleRestart();
+                    mcuCount++;
+                    if (_restartInterval > 0 && mcuCount % _restartInterval == 0 && !(my == mcusY - 1 && mx == mcusX - 1))
+                        HandleRestart();
+                }
             }
 
             return Upsample(hMax, vMax);
@@ -325,7 +329,8 @@ internal static class JpegDecoder
                 _pos++;
             }
 
-            foreach (var c in _components) c.Prediction = 0;
+            foreach (var c in _components)
+                c.Prediction = 0;
         }
 
         private int[]? DecodeBlock(Component comp, int dcId, int acId)
@@ -334,7 +339,8 @@ internal static class JpegDecoder
             var acTable = _huff[1, acId];
             var quant = _quant[comp.QuantId];
 
-            if (dcTable is null || acTable is null || quant is null) return null;
+            if (dcTable is null || acTable is null || quant is null)
+                return null;
 
             var coefficients = new int[64];
 
@@ -445,7 +451,8 @@ internal static class JpegDecoder
             // Row-column separable IDCT.
             var output = new int[64];
             var block = new double[64];
-            for (var i = 0; i < 64; i++) block[i] = coefficients[i];
+            for (var i = 0; i < 64; i++)
+                block[i] = coefficients[i];
 
             for (var row = 0; row < 8; row++)
                 Idct1D(block, row * 8, 1);
@@ -465,7 +472,8 @@ internal static class JpegDecoder
         {
             // Naive 8-point IDCT — clear and correct; performance is acceptable for slides.
             Span<double> s = stackalloc double[8];
-            for (var i = 0; i < 8; i++) s[i] = b[offset + (i * stride)];
+            for (var i = 0; i < 8; i++)
+                s[i] = b[offset + (i * stride)];
 
             Span<double> o = stackalloc double[8];
             for (var x = 0; x < 8; x++)
@@ -516,11 +524,13 @@ internal static class JpegDecoder
                 var c = _components[0];
                 var stride = c.BlocksPerLine * 8;
                 for (var y = 0; y < _height; y++)
-                for (var x = 0; x < _width; x++)
                 {
-                    var gray = c.Pixels![(y * stride) + x];
-                    var d = ((y * _width) + x) * 3;
-                    rgb[d] = rgb[d + 1] = rgb[d + 2] = gray;
+                    for (var x = 0; x < _width; x++)
+                    {
+                        var gray = c.Pixels![(y * stride) + x];
+                        var d = ((y * _width) + x) * 3;
+                        rgb[d] = rgb[d + 1] = rgb[d + 2] = gray;
+                    }
                 }
 
                 return rgb;
@@ -534,24 +544,26 @@ internal static class JpegDecoder
             var crStride = cr.BlocksPerLine * 8;
 
             for (var y = 0; y < _height; y++)
-            for (var x = 0; x < _width; x++)
             {
-                var yy = yc.Pixels![(y * yStride) + x];
-                var cbx = x * cb.HSamp / hMax;
-                var cby = y * cb.VSamp / vMax;
-                var crx = x * cr.HSamp / hMax;
-                var cry = y * cr.VSamp / vMax;
-                var cbv = cb.Pixels![(cby * cbStride) + cbx] - 128;
-                var crv = cr.Pixels![(cry * crStride) + crx] - 128;
+                for (var x = 0; x < _width; x++)
+                {
+                    var yy = yc.Pixels![(y * yStride) + x];
+                    var cbx = x * cb.HSamp / hMax;
+                    var cby = y * cb.VSamp / vMax;
+                    var crx = x * cr.HSamp / hMax;
+                    var cry = y * cr.VSamp / vMax;
+                    var cbv = cb.Pixels![(cby * cbStride) + cbx] - 128;
+                    var crv = cr.Pixels![(cry * crStride) + crx] - 128;
 
-                var r = yy + (YCbCrConstants.CrToR * crv);
-                var g = yy - (YCbCrConstants.CbToGCb * cbv) - (YCbCrConstants.CrToGCr * crv);
-                var b = yy + (YCbCrConstants.CbToB * cbv);
+                    var r = yy + (YCbCrConstants.CrToR * crv);
+                    var g = yy - (YCbCrConstants.CbToGCb * cbv) - (YCbCrConstants.CrToGCr * crv);
+                    var b = yy + (YCbCrConstants.CbToB * cbv);
 
-                var d = ((y * _width) + x) * 3;
-                rgb[d] = Clamp(r);
-                rgb[d + 1] = Clamp(g);
-                rgb[d + 2] = Clamp(b);
+                    var d = ((y * _width) + x) * 3;
+                    rgb[d] = Clamp(r);
+                    rgb[d + 1] = Clamp(g);
+                    rgb[d + 2] = Clamp(b);
+                }
             }
 
             return rgb;

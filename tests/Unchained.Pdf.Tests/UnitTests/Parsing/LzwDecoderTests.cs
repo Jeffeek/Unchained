@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Drawing.Decoders;
 using Xunit;
 
@@ -27,7 +27,8 @@ public sealed class LzwDecoderTests
         }
 
         // Pad to byte boundary.
-        while (bits.Count % 8 != 0) bits.Add(false);
+        while (bits.Count % 8 != 0)
+            bits.Add(false);
 
         var bytes = new byte[bits.Count / 8];
         for (var i = 0; i < bits.Count; i++)

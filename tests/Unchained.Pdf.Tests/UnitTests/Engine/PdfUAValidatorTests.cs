@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Shared;
@@ -37,12 +37,12 @@ public sealed class PdfUAValidatorTests
 
     [Fact]
     public void TooShortFile_ReportsVersionViolation() =>
-        PdfUAValidator.Validate("%PD"u8.ToArray())
+        PdfUAValidator.Validate([.. "%PD"u8])
             .Violations.ShouldContain(static v => v.RuleId == "7.1");
 
     [Fact]
     public void NonPdfHeader_ReportsVersionViolation() =>
-        PdfUAValidator.Validate("NOTAPDF1234"u8.ToArray())
+        PdfUAValidator.Validate([.. "NOTAPDF1234"u8])
             .Violations.ShouldContain(static v => v.RuleId == "7.1");
 
     [Fact]

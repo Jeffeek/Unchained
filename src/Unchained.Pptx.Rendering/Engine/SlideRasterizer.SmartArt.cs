@@ -116,15 +116,15 @@ internal sealed partial class SlideRasterizer
         var cy = y + 2;
         for (var i = 0; i < nodes.Count; i++)
         {
-            var color = SeriesPalette[i % SeriesPalette.Length];
+            var (r, g, b) = SeriesPalette[i % SeriesPalette.Length];
             buffer.FillRect(
                 x + 2,
                 cy,
                 width - 4,
                 boxH,
-                color.R,
-                color.G,
-                color.B
+                r,
+                g,
+                b
             );
             RenderTextFrameText(
                 buffer,
@@ -139,7 +139,8 @@ internal sealed partial class SlideRasterizer
                 255
             );
             cy += boxH + 4;
-            if (cy > y + height) break;
+            if (cy > y + height)
+                break;
         }
     }
 
@@ -163,15 +164,17 @@ internal sealed partial class SlideRasterizer
             var angle = (2 * Math.PI * i / nodes.Count) - (Math.PI / 2);
             var nx = cx + (int)(radius * Math.Cos(angle));
             var ny = cy2 + (int)(radius * Math.Sin(angle));
-            var color = SeriesPalette[i % SeriesPalette.Length];
+            var (r, g, b) = SeriesPalette[i % SeriesPalette.Length];
             // Draw circle by filling a square and cropping with distance check.
             for (var py = ny - nodeR; py <= ny + nodeR; py++)
-            for (var px = nx - nodeR; px <= nx + nodeR; px++)
             {
-                var dx = px - nx;
-                var dy = py - ny;
-                if ((dx * dx) + (dy * dy) <= nodeR * nodeR)
-                    buffer.BlitImagePixel(px, py, color.R, color.G, color.B);
+                for (var px = nx - nodeR; px <= nx + nodeR; px++)
+                {
+                    var dx = px - nx;
+                    var dy = py - ny;
+                    if ((dx * dx) + (dy * dy) <= nodeR * nodeR)
+                        buffer.BlitImagePixel(px, py, r, g, b);
+                }
             }
 
             RenderTextFrameText(
@@ -217,15 +220,15 @@ internal sealed partial class SlideRasterizer
             int colorIdx
         )
         {
-            var color = SeriesPalette[colorIdx % SeriesPalette.Length];
+            var (r, g, b) = SeriesPalette[colorIdx % SeriesPalette.Length];
             buffer.FillRect(
                 nx,
                 ny,
                 boxW,
                 boxH,
-                color.R,
-                color.G,
-                color.B
+                r,
+                g,
+                b
             );
             RenderTextFrameText(
                 buffer,
@@ -240,11 +243,13 @@ internal sealed partial class SlideRasterizer
                 255
             );
 
-            if (node.Children.Count == 0) return;
+            if (node.Children.Count == 0)
+                return;
 
             var childW = Math.Max(30, (width - 8) / Math.Max(1, node.Children.Count));
             var childY = ny + levelH;
-            if (childY > y + height) return;
+            if (childY > y + height)
+                return;
 
             for (var ci = 0; ci < node.Children.Count; ci++)
             {
@@ -283,15 +288,15 @@ internal sealed partial class SlideRasterizer
             var row = i / 2;
             var cx2 = x + 2 + (col * (cellW + 2));
             var cy3 = y + 2 + (row * (cellH + 2));
-            var color = SeriesPalette[i % SeriesPalette.Length];
+            var (r, g, b) = SeriesPalette[i % SeriesPalette.Length];
             buffer.FillRect(
                 cx2,
                 cy3,
                 cellW,
                 cellH,
-                color.R,
-                color.G,
-                color.B
+                r,
+                g,
+                b
             );
             RenderTextFrameText(
                 buffer,
@@ -328,15 +333,15 @@ internal sealed partial class SlideRasterizer
             var rowW = (int)(width * frac);
             var rx = x + ((width - rowW) / 2);
             var ry = y + (i * rowH);
-            var color = SeriesPalette[i % SeriesPalette.Length];
+            var (r, g, b) = SeriesPalette[i % SeriesPalette.Length];
             buffer.FillRect(
                 rx,
                 ry,
                 rowW,
                 rowH - 2,
-                color.R,
-                color.G,
-                color.B
+                r,
+                g,
+                b
             );
             RenderTextFrameText(
                 buffer,

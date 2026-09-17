@@ -16,7 +16,8 @@ internal static class EffectWriter
 
     public static XElement? Write(EffectFormat effects)
     {
-        if (effects.IsEmpty) return null;
+        if (effects.IsEmpty)
+            return null;
 
         var lst = new XElement(A + "effectLst");
 

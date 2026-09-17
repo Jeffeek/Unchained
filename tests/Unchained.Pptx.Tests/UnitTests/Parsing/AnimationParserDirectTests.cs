@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Parsing;
 using Xunit;
@@ -46,19 +46,19 @@ public sealed class AnimationParserDirectTests
         var groupCtn = new XElement(P + "cTn");
         if (onClick)
             groupCtn.Add(Cond("indefinite"));
-        groupCtn.Add(new XElement(P + "childTnLst", effectPars.Cast<object>().ToArray()));
+        groupCtn.Add(new XElement(P + "childTnLst", [.. effectPars]));
         return new XElement(P + "par", groupCtn);
     }
 
     private static XElement MainSeq(params XElement[] clickGroups)
     {
-        var seqCtn = new XElement(P + "cTn", new XElement(P + "childTnLst", clickGroups.Cast<object>().ToArray()));
+        var seqCtn = new XElement(P + "cTn", new XElement(P + "childTnLst", [.. clickGroups]));
         return new XElement(P + "seq", seqCtn);
     }
 
     private static XElement Timing(params XElement[] seqElements)
     {
-        var rootChildren = new XElement(P + "childTnLst", seqElements.Cast<object>().ToArray());
+        var rootChildren = new XElement(P + "childTnLst", [.. seqElements]);
         var rootCtn = new XElement(P + "cTn", rootChildren);
         var rootPar = new XElement(P + "par", rootCtn);
         var tnLst = new XElement(P + "tnLst", rootPar);

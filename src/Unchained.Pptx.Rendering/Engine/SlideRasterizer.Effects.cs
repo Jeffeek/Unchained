@@ -31,7 +31,8 @@ internal sealed partial class SlideRasterizer
             {
                 var (r, g, b) = textBuffer.GetPixelRgb(col, row);
                 // Only blit non-white pixels (text ink).
-                if (r >= 250 && g >= 250 && b >= 250) continue;
+                if (r >= 250 && g >= 250 && b >= 250)
+                    continue;
 
                 var destRow = row + yOffset;
                 buffer.BlitImagePixel(x + col, y + destRow, r, g, b);
@@ -149,7 +150,8 @@ internal sealed partial class SlideRasterizer
     {
         var argb = shadow.Color.Resolve(colorScheme);
         ExtractArgb(argb, out var baseA, out var sr, out var sg, out var sb);
-        if (baseA == 0) return;
+        if (baseA == 0)
+            return;
 
         // Convert EMU offsets to pixels.
         var scale = dpi / Emu.EmusPerInch; // EMU → inches → px
@@ -166,7 +168,8 @@ internal sealed partial class SlideRasterizer
         for (var layer = 0; layer < layers; layer++)
         {
             var alpha = (byte)(baseA * (layers - layer) / layers);
-            if (alpha == 0) continue;
+            if (alpha == 0)
+                continue;
 
             var sx = x + offX - layer;
             var sy = y + offY - layer;
@@ -223,77 +226,79 @@ internal sealed partial class SlideRasterizer
         }
 
         for (var r = 0; r < grid.RowCount; r++)
-        for (var c = 0; c < grid.ColumnCount; c++)
         {
-            var cell = grid[c, r];
-            if (cell.IsHorizontalMergeContinuation || cell.IsVerticalMergeContinuation)
-                continue;
+            for (var c = 0; c < grid.ColumnCount; c++)
+            {
+                var cell = grid[c, r];
+                if (cell.IsHorizontalMergeContinuation || cell.IsVerticalMergeContinuation)
+                    continue;
 
-            var cx = colEdges[c];
-            var cy = rowEdges[r];
-            var cw = colEdges[Math.Min(c + cell.ColumnSpan, grid.ColumnCount)] - cx;
-            var ch = rowEdges[Math.Min(r + cell.RowSpan, grid.RowCount)] - cy;
-            if (cw <= 0 || ch <= 0)
-                continue;
+                var cx = colEdges[c];
+                var cy = rowEdges[r];
+                var cw = colEdges[Math.Min(c + cell.ColumnSpan, grid.ColumnCount)] - cx;
+                var ch = rowEdges[Math.Min(r + cell.RowSpan, grid.RowCount)] - cy;
+                if (cw <= 0 || ch <= 0)
+                    continue;
 
-            PaintFill(
-                buffer,
-                cell.Fill,
-                cx,
-                cy,
-                cw,
-                ch,
-                colorScheme
-            );
+                PaintFill(
+                    buffer,
+                    cell.Fill,
+                    cx,
+                    cy,
+                    cw,
+                    ch,
+                    colorScheme
+                );
 
-            // Cell borders — use explicit border colors when set, fall back to light grey grid lines.
-            DrawCellBorder(
-                buffer,
-                cell.TopBorder,
-                cx,
-                cy,
-                cw,
-                1,
-                colorScheme
-            );
-            DrawCellBorder(
-                buffer,
-                cell.LeftBorder,
-                cx,
-                cy,
-                1,
-                ch,
-                colorScheme
-            );
-            DrawCellBorder(
-                buffer,
-                cell.BottomBorder,
-                cx,
-                cy + ch - 1,
-                cw,
-                1,
-                colorScheme
-            );
-            DrawCellBorder(
-                buffer,
-                cell.RightBorder,
-                cx + cw - 1,
-                cy,
-                1,
-                ch,
-                colorScheme
-            );
+                // Cell borders — use explicit border colors when set, fall back to light grey grid lines.
+                DrawCellBorder(
+                    buffer,
+                    cell.TopBorder,
+                    cx,
+                    cy,
+                    cw,
+                    1,
+                    colorScheme
+                );
+                DrawCellBorder(
+                    buffer,
+                    cell.LeftBorder,
+                    cx,
+                    cy,
+                    1,
+                    ch,
+                    colorScheme
+                );
+                DrawCellBorder(
+                    buffer,
+                    cell.BottomBorder,
+                    cx,
+                    cy + ch - 1,
+                    cw,
+                    1,
+                    colorScheme
+                );
+                DrawCellBorder(
+                    buffer,
+                    cell.RightBorder,
+                    cx + cw - 1,
+                    cy,
+                    1,
+                    ch,
+                    colorScheme
+                );
 
-            RenderTextFrame(
-                buffer,
-                cell.TextFrame,
-                cx + 2,
-                cy + 2,
-                cw - 4,
-                ch - 4,
-                dpi,
-                colorScheme
-            );
+                RenderTextFrame(
+                    buffer,
+                    cell.TextFrame,
+                    cx + 2,
+                    cy + 2,
+                    cw - 4,
+                    ch - 4,
+                    dpi,
+                    colorScheme
+                );
+            }
         }
     }
 

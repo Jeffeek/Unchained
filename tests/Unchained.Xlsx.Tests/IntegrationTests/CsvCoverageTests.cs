@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
@@ -120,7 +120,8 @@ public class CsvCoverageTests
         }
         finally
         {
-            if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path))
+                File.Delete(path);
         }
     }
 
@@ -186,7 +187,7 @@ public class CsvCoverageTests
     {
         using var processor = new SpreadsheetProcessor();
         using var document = await processor.LoadFromCsvAsync(
-            new MemoryStream("x\r\n"u8.ToArray()),
+            new MemoryStream([.. "x\r\n"u8]),
             new CsvLoadOptions { SheetName = "Imported" },
             TestContext.Current.CancellationToken
         );

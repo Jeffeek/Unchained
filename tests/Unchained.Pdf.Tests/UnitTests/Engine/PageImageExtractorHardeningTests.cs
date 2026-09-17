@@ -89,7 +89,7 @@ public sealed class PageImageExtractorHardeningTests
     public void Indexed_CmykBase_ConvertsPaletteToRgb()
     {
         // Indexed over DeviceCMYK: palette entry 0 = 0,0,0,0 (white).
-        var cs = Indexed("DeviceCMYK", 0, "\0\0\0\0"u8.ToArray());
+        var cs = Indexed("DeviceCMYK", 0, [.. "\0\0\0\0"u8]);
         var img = PageImageExtractor.GetImageXObjects(PageWithImage(Image(1, 1, 8, [0], cs)), Core())["Im1"];
         img.RgbData[0].ShouldBe((byte)255);
     }

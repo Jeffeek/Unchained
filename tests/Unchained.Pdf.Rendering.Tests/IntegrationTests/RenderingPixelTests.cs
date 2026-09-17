@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Rendering.Tests.Helpers;
 using Unchained.Pdf.Tests.Shared;

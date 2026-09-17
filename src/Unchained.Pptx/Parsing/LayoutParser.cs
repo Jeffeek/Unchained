@@ -29,7 +29,8 @@ internal sealed class LayoutParser(OpcPackage package)
             RelationshipId = relationshipId
         };
 
-        if (root == null) return layout;
+        if (root == null)
+            return layout;
 
         layout.Name = root.GetAttr(PmlNames.AttributeName, string.Empty);
         layout.LayoutType = ParseLayoutType(root.GetAttr("type", string.Empty));
@@ -39,7 +40,8 @@ internal sealed class LayoutParser(OpcPackage package)
         var cSld = root.Element(PmlNames.CommonSlideData);
         var spTree = cSld?.Element(PmlNames.ShapeTree);
 
-        if (spTree == null) return layout;
+        if (spTree == null)
+            return layout;
 
         var shapeParser = new ShapeParser();
         shapeParser.ParseTree(spTree, layout.Shapes);

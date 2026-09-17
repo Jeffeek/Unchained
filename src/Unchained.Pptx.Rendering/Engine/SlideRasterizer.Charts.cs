@@ -39,7 +39,8 @@ internal sealed partial class SlideRasterizer
         );
 
         var model = shape.Chart;
-        if (model.Data.Series.Count == 0) return;
+        if (model.Data.Series.Count == 0)
+            return;
 
         var titleH = 0;
         if (model.HasTitle && !string.IsNullOrWhiteSpace(model.Title))
@@ -66,7 +67,8 @@ internal sealed partial class SlideRasterizer
         var plotY = y + titleH + 6;
         var plotW = width - axisLeft - 8;
         var plotH = height - titleH - axisBottom - 8;
-        if (plotW <= 4 || plotH <= 4) return;
+        if (plotW <= 4 || plotH <= 4)
+            return;
 
         var series = model.Data.Series;
         var type = model.Type.ToString();
@@ -162,7 +164,8 @@ internal sealed partial class SlideRasterizer
         bool horizontal
     )
     {
-        if (Math.Abs(maxVal - minVal) < 0.0001) maxVal = minVal + 1;
+        if (Math.Abs(maxVal - minVal) < 0.0001)
+            maxVal = minVal + 1;
         var range = maxVal - minVal;
 
         // Value axis: 4 evenly spaced ticks.
@@ -306,15 +309,15 @@ internal sealed partial class SlideRasterizer
         var cursorX = x + 8;
         for (var si = 0; si < Math.Min(series.Count, 6); si++)
         {
-            var color = SeriesPalette[si % SeriesPalette.Length];
+            var (r, g, b) = SeriesPalette[si % SeriesPalette.Length];
             buffer.FillRect(
                 cursorX,
                 y + 3,
                 swatchSize,
                 swatchSize,
-                color.R,
-                color.G,
-                color.B
+                r,
+                g,
+                b
             );
             cursorX += swatchSize + 2;
             var name = TruncateLabel(series[si].Name, 10);
@@ -331,7 +334,8 @@ internal sealed partial class SlideRasterizer
                 RenderingConstants.LabelGrey
             );
             cursorX += 90;
-            if (cursorX > x + width - 20) break;
+            if (cursorX > x + width - 20)
+                break;
         }
     }
 
@@ -357,9 +361,11 @@ internal sealed partial class SlideRasterizer
     )
     {
         var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(0).Max();
-        if (maxVal <= 0) maxVal = 1;
+        if (maxVal <= 0)
+            maxVal = 1;
         var categories = series.Max(static s => s.Values.Count);
-        if (categories == 0) return;
+        if (categories == 0)
+            return;
 
         const int groupGap = 4;
         var groupSpan = (horizontal ? h : w) / categories;
@@ -369,10 +375,11 @@ internal sealed partial class SlideRasterizer
         {
             for (var s = 0; s < series.Count; s++)
             {
-                if (c >= series[s].Values.Count) continue;
+                if (c >= series[s].Values.Count)
+                    continue;
 
                 var val = series[s].Values[c];
-                var color = SeriesPalette[s % SeriesPalette.Length];
+                var (r, g, b) = SeriesPalette[s % SeriesPalette.Length];
 
                 if (horizontal)
                 {
@@ -383,9 +390,9 @@ internal sealed partial class SlideRasterizer
                         by,
                         barLen,
                         barSpan - 1,
-                        color.R,
-                        color.G,
-                        color.B
+                        r,
+                        g,
+                        b
                     );
                 }
                 else
@@ -397,9 +404,9 @@ internal sealed partial class SlideRasterizer
                         y + h - barLen,
                         barSpan - 1,
                         barLen,
-                        color.R,
-                        color.G,
-                        color.B
+                        r,
+                        g,
+                        b
                     );
                 }
             }
@@ -416,14 +423,16 @@ internal sealed partial class SlideRasterizer
     )
     {
         var maxVal = series.SelectMany(static s => s.Values).DefaultIfEmpty(0).Max();
-        if (maxVal <= 0) maxVal = 1;
+        if (maxVal <= 0)
+            maxVal = 1;
 
         for (var s = 0; s < series.Count; s++)
         {
             var vals = series[s].Values;
-            if (vals.Count < 2) continue;
+            if (vals.Count < 2)
+                continue;
 
-            var color = SeriesPalette[s % SeriesPalette.Length];
+            var (r, g, b) = SeriesPalette[s % SeriesPalette.Length];
             var stepX = (double)w / (vals.Count - 1);
 
             for (var i = 0; i < vals.Count - 1; i++)
@@ -437,9 +446,9 @@ internal sealed partial class SlideRasterizer
                     y0,
                     x1,
                     y1,
-                    color.R,
-                    color.G,
-                    color.B,
+                    r,
+                    g,
+                    b,
                     2
                 );
             }
@@ -456,35 +465,41 @@ internal sealed partial class SlideRasterizer
     )
     {
         var total = series.Values.Sum();
-        if (total <= 0) return;
+        if (total <= 0)
+            return;
 
         var cx = x + (w / 2);
         var cy = y + (h / 2);
         var radius = (Math.Min(w, h) / 2) - 2;
-        if (radius <= 0) return;
+        if (radius <= 0)
+            return;
 
         var bounds = new double[series.Values.Count + 1];
         for (var i = 0; i < series.Values.Count; i++)
             bounds[i + 1] = bounds[i] + (series.Values[i] / total);
 
         for (var py = -radius; py <= radius; py++)
-        for (var px = -radius; px <= radius; px++)
         {
-            if ((px * px) + (py * py) > radius * radius) continue;
-
-            var angle = Math.Atan2(py, px);
-            var frac = (angle + Math.PI) / (2 * Math.PI);
-            var slice = 0;
-            for (var i = 0; i < series.Values.Count; i++)
+            for (var px = -radius; px <= radius; px++)
             {
-                if (frac < bounds[i] || frac >= bounds[i + 1]) continue;
+                if ((px * px) + (py * py) > radius * radius)
+                    continue;
 
-                slice = i;
-                break;
+                var angle = Math.Atan2(py, px);
+                var frac = (angle + Math.PI) / (2 * Math.PI);
+                var slice = 0;
+                for (var i = 0; i < series.Values.Count; i++)
+                {
+                    if (frac < bounds[i] || frac >= bounds[i + 1])
+                        continue;
+
+                    slice = i;
+                    break;
+                }
+
+                var (r, g, b) = SeriesPalette[slice % SeriesPalette.Length];
+                buffer.BlitImagePixel(cx + px, cy + py, r, g, b);
             }
-
-            var color = SeriesPalette[slice % SeriesPalette.Length];
-            buffer.BlitImagePixel(cx + px, cy + py, color.R, color.G, color.B);
         }
     }
 }
