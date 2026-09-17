@@ -102,7 +102,7 @@ public sealed class SpreadsheetProcessor : ISpreadsheetProcessor
                 Modified = DateTimeOffset.UtcNow
             }
         };
-        document.Sheets.Add(firstSheetName);
+        _ = document.Sheets.Add(firstSheetName);
         return document;
     }
 

@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Models;
@@ -306,7 +306,8 @@ public sealed class PdfDocumentCoreHardeningTests
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 4");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, $"<< /Size 4 /Root 1 0 R /ID [<AABBCCDD><AABBCCDD>] {extra} >>");
         PdfFixtures.Ln(sb, "startxref");
@@ -341,7 +342,8 @@ public sealed class PdfDocumentCoreHardeningTests
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 4");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 4 /ID [<AABBCCDD><AABBCCDD>] >>"); // no /Root
         PdfFixtures.Ln(sb, "startxref");

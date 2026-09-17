@@ -133,7 +133,7 @@ internal static class StructureTreeBuilder
                 if (altText is not null)
                     elemEntries[PdfName.Alt.Value] = PdfString.FromUtf16(altText);
 
-                builder.AddAt(elemObjNum, new PdfDictionary(elemEntries));
+                _ = builder.AddAt(elemObjNum, new PdfDictionary(elemEntries));
                 elemRefs.Add(elemRef);
             }
         }
@@ -146,7 +146,7 @@ internal static class StructureTreeBuilder
             [PdfName.P.Value] = rootRef,
             [PdfName.K.Value] = new PdfArray(elemRefs.Cast<PdfObject>().ToList())
         };
-        builder.AddAt(docElemObjNum, new PdfDictionary(docEntries));
+        _ = builder.AddAt(docElemObjNum, new PdfDictionary(docEntries));
 
         // ── 4. ParentTree number tree ──────────────────────────────────────────
         // Flat leaf node: /Nums [ key1 val1 key2 val2 ... ]
@@ -158,7 +158,7 @@ internal static class StructureTreeBuilder
                 [PdfName.Nums.Value] = new PdfArray(parentTreeNums)
             }
         );
-        builder.AddAt(parentTreeObjNum, parentTreeDict);
+        _ = builder.AddAt(parentTreeObjNum, parentTreeDict);
 
         // ── 5. StructTreeRoot ──────────────────────────────────────────────────
         var rootEntries = new Dictionary<string, PdfObject>
@@ -169,7 +169,7 @@ internal static class StructureTreeBuilder
             [PdfName.ParentTreeNextKey.Value] = new PdfInteger(parentTreeNums.Count / 2),
             [PdfName.RoleMap.Value] = new PdfDictionary()
         };
-        builder.AddAt(rootObjNum, new PdfDictionary(rootEntries));
+        _ = builder.AddAt(rootObjNum, new PdfDictionary(rootEntries));
 
         return rootRef;
     }
@@ -182,7 +182,8 @@ internal static class StructureTreeBuilder
     private static List<List<TaggedContentItem>> GroupByType(IReadOnlyList<TaggedContentItem> items)
     {
         var groups = new List<List<TaggedContentItem>>();
-        if (items.Count == 0) return groups;
+        if (items.Count == 0)
+            return groups;
 
         var current = new List<TaggedContentItem> { items[0] };
         for (var i = 1; i < items.Count; i++)

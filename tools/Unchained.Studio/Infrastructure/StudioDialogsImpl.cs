@@ -51,7 +51,7 @@ public sealed class StudioDialogs(IDialogService dialogService) : IStudioDialogs
             CloseButton = closeButton
         };
 
-        await dialogService.ShowAsync<TDialog>(title, parameters, options);
+        _ = await dialogService.ShowAsync<TDialog>(title, parameters, options);
     }
 
     public Task<bool?> ShowMessageBoxAsync(

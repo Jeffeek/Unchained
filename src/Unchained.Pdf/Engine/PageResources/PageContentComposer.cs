@@ -41,7 +41,7 @@ internal static class PageContentComposer
         var list = existing is PdfArray a ? a.Elements.ToList() : [existing];
         var all = prepend
             ? new[] { contentRef }.Concat(list).ToArray()
-            : list.Append(contentRef).ToArray();
+            : [.. list, contentRef];
         return new PdfArray(all);
     }
 
@@ -52,13 +52,13 @@ internal static class PageContentComposer
     )
     {
         var resourceEntries = existingResources?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value)
-                              ?? new Dictionary<string, PdfObject>();
+                              ?? [];
 
         foreach (var group in resources.GroupBy(static r => r.Category))
         {
             var categoryDict = core.ResolveDict(resourceEntries.GetValueOrDefault(group.Key));
             var categoryEntries = categoryDict?.Entries.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value)
-                                  ?? new Dictionary<string, PdfObject>();
+                                  ?? [];
             foreach (var (_, key, refObj) in group)
                 categoryEntries[key] = refObj;
             resourceEntries[group.Key] = new PdfDictionary(categoryEntries);

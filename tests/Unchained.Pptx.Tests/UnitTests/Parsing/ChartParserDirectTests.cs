@@ -1,6 +1,6 @@
+using Shouldly;
 using System.Globalization;
 using System.Xml.Linq;
-using Shouldly;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Parsing;

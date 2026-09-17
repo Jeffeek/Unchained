@@ -49,7 +49,8 @@ public sealed class PageImageExtractorTests
             ["BitsPerComponent"] = new PdfInteger(bpc),
             ["Length"] = new PdfInteger(data.Length)
         };
-        foreach (var (k, v) in extra) entries[k] = v;
+        foreach (var (k, v) in extra)
+            entries[k] = v;
         return new PdfStream(new PdfDictionary(entries), data);
     }
 

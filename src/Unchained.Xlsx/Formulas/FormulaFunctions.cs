@@ -23,28 +23,50 @@ internal static partial class FormulaFunctions
         // ── Functions with lazy / structural argument handling ──────────────────
         switch (upper)
         {
-            case "IF": return If(args, evaluator);
-            case "IFS": return Ifs(args, evaluator);
-            case "IFERROR": return IfError(args, evaluator, false);
-            case "IFNA": return IfError(args, evaluator, true);
-            case "SWITCH": return Switch(args, evaluator);
-            case "AND": return BoolAggregate(args, evaluator, BoolMode.And);
-            case "OR": return BoolAggregate(args, evaluator, BoolMode.Or);
-            case "XOR": return BoolAggregate(args, evaluator, BoolMode.Xor);
-            case "TRUE": return FormulaValue.FromBoolean(true);
-            case "FALSE": return FormulaValue.FromBoolean(false);
-            case "SUMIF": return SumIf(args, evaluator);
-            case "AVERAGEIF": return AverageIf(args, evaluator);
-            case "COUNTIF": return CountIf(args, evaluator);
-            case "SUMIFS": return ConditionalSumIfs(args, evaluator, false);
-            case "AVERAGEIFS": return ConditionalSumIfs(args, evaluator, true);
-            case "COUNTIFS": return CountIfs(args, evaluator);
-            case "SUMPRODUCT": return SumProduct(args, evaluator);
-            case "VLOOKUP": return VLookup(args, evaluator);
-            case "HLOOKUP": return HLookup(args, evaluator);
-            case "INDEX": return Index(args, evaluator);
-            case "MATCH": return Match(args, evaluator);
-            case "CHOOSE": return Choose(args, evaluator);
+            case "IF":
+                return If(args, evaluator);
+            case "IFS":
+                return Ifs(args, evaluator);
+            case "IFERROR":
+                return IfError(args, evaluator, false);
+            case "IFNA":
+                return IfError(args, evaluator, true);
+            case "SWITCH":
+                return Switch(args, evaluator);
+            case "AND":
+                return BoolAggregate(args, evaluator, BoolMode.And);
+            case "OR":
+                return BoolAggregate(args, evaluator, BoolMode.Or);
+            case "XOR":
+                return BoolAggregate(args, evaluator, BoolMode.Xor);
+            case "TRUE":
+                return FormulaValue.FromBoolean(true);
+            case "FALSE":
+                return FormulaValue.FromBoolean(false);
+            case "SUMIF":
+                return SumIf(args, evaluator);
+            case "AVERAGEIF":
+                return AverageIf(args, evaluator);
+            case "COUNTIF":
+                return CountIf(args, evaluator);
+            case "SUMIFS":
+                return ConditionalSumIfs(args, evaluator, false);
+            case "AVERAGEIFS":
+                return ConditionalSumIfs(args, evaluator, true);
+            case "COUNTIFS":
+                return CountIfs(args, evaluator);
+            case "SUMPRODUCT":
+                return SumProduct(args, evaluator);
+            case "VLOOKUP":
+                return VLookup(args, evaluator);
+            case "HLOOKUP":
+                return HLookup(args, evaluator);
+            case "INDEX":
+                return Index(args, evaluator);
+            case "MATCH":
+                return Match(args, evaluator);
+            case "CHOOSE":
+                return Choose(args, evaluator);
         }
 
         // ── Eager argument evaluation ────────────────────────────────────────────
@@ -126,7 +148,7 @@ internal static partial class FormulaFunctions
                 "LOWER" => Str(Text(values, 0).ToLowerInvariant()),
                 "PROPER" => Str(CultureInfo.InvariantCulture.TextInfo.ToTitleCase(Text(values, 0).ToLowerInvariant())),
                 "TRIM" => Str(TrimInner(Text(values, 0))),
-                "CLEAN" => Str(new string(Text(values, 0).Where(static c => !char.IsControl(c)).ToArray())),
+                "CLEAN" => Str(new string([.. Text(values, 0).Where(static c => !char.IsControl(c))])),
                 "CONCATENATE" or "CONCAT" => Str(string.Concat(Flatten(values).Select(FormulaEvaluator.ToText))),
                 "TEXTJOIN" => TextJoin(values),
                 "REPT" => Rept(values),

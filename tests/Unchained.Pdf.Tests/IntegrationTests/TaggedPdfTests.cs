@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Shared;
@@ -486,7 +486,7 @@ public sealed class TaggedPdfTests : PdfTestBase
     public async Task ValidatePdfUA_MissingPdfVersion_ReportsVersionViolation()
     {
         var result = await Processor.ValidatePdfUAAsync(
-            "%PDF"u8.ToArray(),
+            [.. "%PDF"u8],
             TestContext.Current.CancellationToken
         );
 

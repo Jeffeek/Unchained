@@ -1,7 +1,7 @@
+using Shouldly;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Shouldly;
 using Unchained.Ooxml;
 using Unchained.Pptx.Core;
 using Unchained.Pptx.Engine;
@@ -81,7 +81,7 @@ public sealed class PresentationDocumentTests
     {
         var doc = PptxFixtures.BlankPresentation();
         doc.Dispose();
-        Should.NotThrow(() => doc.Dispose());
+        Should.NotThrow(doc.Dispose);
     }
 
     [Fact]

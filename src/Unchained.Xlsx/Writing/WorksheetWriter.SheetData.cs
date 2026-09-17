@@ -57,9 +57,12 @@ internal static partial class WorksheetWriter
                 rowElement.SetAttributeValue("customHeight", "1");
         }
 
-        if (row.IsHidden) rowElement.SetAttributeValue("hidden", "1");
-        if (row.IsCollapsed) rowElement.SetAttributeValue("collapsed", "1");
-        if (row.OutlineLevel > 0) rowElement.SetAttributeValue("outlineLevel", row.OutlineLevel.ToString(CultureInfo.InvariantCulture));
+        if (row.IsHidden)
+            rowElement.SetAttributeValue("hidden", "1");
+        if (row.IsCollapsed)
+            rowElement.SetAttributeValue("collapsed", "1");
+        if (row.OutlineLevel > 0)
+            rowElement.SetAttributeValue("outlineLevel", row.OutlineLevel.ToString(CultureInfo.InvariantCulture));
         if (row.StyleIndex is { } style)
         {
             rowElement.SetAttributeValue("s", style.ToString(CultureInfo.InvariantCulture));
@@ -165,10 +168,14 @@ internal static partial class WorksheetWriter
                     colElement.SetAttributeValue("customWidth", "1");
             }
 
-            if (column.IsHidden) colElement.SetAttributeValue("hidden", "1");
-            if (column.IsCollapsed) colElement.SetAttributeValue("collapsed", "1");
-            if (column.OutlineLevel > 0) colElement.SetAttributeValue("outlineLevel", column.OutlineLevel.ToString(CultureInfo.InvariantCulture));
-            if (column.StyleIndex is { } style) colElement.SetAttributeValue(SmlNames.AttrStyle, style.ToString(CultureInfo.InvariantCulture));
+            if (column.IsHidden)
+                colElement.SetAttributeValue("hidden", "1");
+            if (column.IsCollapsed)
+                colElement.SetAttributeValue("collapsed", "1");
+            if (column.OutlineLevel > 0)
+                colElement.SetAttributeValue("outlineLevel", column.OutlineLevel.ToString(CultureInfo.InvariantCulture));
+            if (column.StyleIndex is { } style)
+                colElement.SetAttributeValue(SmlNames.AttrStyle, style.ToString(CultureInfo.InvariantCulture));
 
             cols.Add(colElement);
         }
@@ -272,22 +279,33 @@ internal static partial class WorksheetWriter
         var element = new XElement(SmlNames.DataValidation);
 
         var type = SmlEnums.ToLiteral(validation.Type);
-        if (type != null) element.SetAttributeValue("type", type);
+        if (type != null)
+            element.SetAttributeValue("type", type);
 
         var op = SmlEnums.ToLiteral(validation.Operator);
-        if (op != null) element.SetAttributeValue("operator", op);
+        if (op != null)
+            element.SetAttributeValue("operator", op);
 
-        if (validation.AllowBlank) element.SetAttributeValue("allowBlank", "1");
-        if (validation.ShowInputMessage) element.SetAttributeValue("showInputMessage", "1");
-        if (validation.ShowErrorAlert) element.SetAttributeValue("showErrorAlert", "1");
-        if (!validation.ShowDropDown) element.SetAttributeValue("showDropDown", "1");
+        if (validation.AllowBlank)
+            element.SetAttributeValue("allowBlank", "1");
+        if (validation.ShowInputMessage)
+            element.SetAttributeValue("showInputMessage", "1");
+        if (validation.ShowErrorAlert)
+            element.SetAttributeValue("showErrorAlert", "1");
+        if (!validation.ShowDropDown)
+            element.SetAttributeValue("showDropDown", "1");
 
         var errorStyle = SmlEnums.ToLiteral(validation.ErrorStyle);
-        if (errorStyle != null) element.SetAttributeValue("errorStyle", errorStyle);
-        if (!string.IsNullOrEmpty(validation.ErrorTitle)) element.SetAttributeValue("errorTitle", validation.ErrorTitle);
-        if (!string.IsNullOrEmpty(validation.ErrorMessage)) element.SetAttributeValue("error", validation.ErrorMessage);
-        if (!string.IsNullOrEmpty(validation.PromptTitle)) element.SetAttributeValue("promptTitle", validation.PromptTitle);
-        if (!string.IsNullOrEmpty(validation.Prompt)) element.SetAttributeValue("prompt", validation.Prompt);
+        if (errorStyle != null)
+            element.SetAttributeValue("errorStyle", errorStyle);
+        if (!string.IsNullOrEmpty(validation.ErrorTitle))
+            element.SetAttributeValue("errorTitle", validation.ErrorTitle);
+        if (!string.IsNullOrEmpty(validation.ErrorMessage))
+            element.SetAttributeValue("error", validation.ErrorMessage);
+        if (!string.IsNullOrEmpty(validation.PromptTitle))
+            element.SetAttributeValue("promptTitle", validation.PromptTitle);
+        if (!string.IsNullOrEmpty(validation.Prompt))
+            element.SetAttributeValue("prompt", validation.Prompt);
 
         element.SetAttributeValue("sqref", string.Join(' ', validation.Ranges.Select(static r => r.ToA1())));
 

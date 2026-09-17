@@ -31,7 +31,8 @@ internal sealed class MasterParser(OpcPackage package)
             RawElement = root
         };
 
-        if (root == null) return master;
+        if (root == null)
+            return master;
 
         // Parse theme
         var themeRel = part.FindRelationship(PmlNames.RelTypeTheme);

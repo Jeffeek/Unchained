@@ -60,9 +60,11 @@ public sealed class SectionCollectionTests
     [Fact]
     public void Clear_EmptiesCollection()
     {
-        var sections = new SectionCollection();
-        sections.Add("A");
-        sections.Add("B");
+        var sections = new SectionCollection
+        {
+            "A",
+            "B"
+        };
         sections.Clear();
         sections.Count.ShouldBe(0);
     }
@@ -70,9 +72,11 @@ public sealed class SectionCollectionTests
     [Fact]
     public void GenericEnumerator_IteratesSections()
     {
-        var sections = new SectionCollection();
-        sections.Add("A");
-        sections.Add("B");
+        var sections = new SectionCollection
+        {
+            "A",
+            "B"
+        };
 
         var names = sections.Select(static s => s.Name).ToList();
         names.ShouldBe(["A", "B"]);
@@ -81,8 +85,10 @@ public sealed class SectionCollectionTests
     [Fact]
     public void NonGenericEnumerator_IteratesSections()
     {
-        var sections = new SectionCollection();
-        sections.Add("A");
+        var sections = new SectionCollection
+        {
+            "A"
+        };
 
         var count = sections.Cast<object?>().Count();
 

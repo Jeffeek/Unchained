@@ -65,18 +65,23 @@ internal static class SheetGridDisplay
         var border = styles.GetBorder(index);
         var align = cell.GetEffectiveStyle().Alignment;
 
-        if (font.Bold) sb.Append("font-weight:bold;");
-        if (font.Italic) sb.Append("font-style:italic;");
-        if (font.Underline != FontUnderline.None) sb.Append("text-decoration:underline;");
-        if (font.Strikethrough) sb.Append("text-decoration:line-through;");
+        if (font.Bold)
+            _ = sb.Append("font-weight:bold;");
+        if (font.Italic)
+            _ = sb.Append("font-style:italic;");
+        if (font.Underline != FontUnderline.None)
+            _ = sb.Append("text-decoration:underline;");
+        if (font.Strikethrough)
+            _ = sb.Append("text-decoration:line-through;");
 
-        if (font.Color is { } fc) sb.Append("color:").Append(XlsxColor.ToHex(fc)).Append(';');
+        if (font.Color is { } fc)
+            _ = sb.Append("color:").Append(XlsxColor.ToHex(fc)).Append(';');
         // SizePoints differs from the 11pt default → scale the cell font.
         if (Math.Abs(font.SizePoints - 11.0) > 0.01)
-            sb.Append("font-size:").Append((font.SizePoints / 11.0 * 0.8).ToString("0.##", CultureInfo.InvariantCulture)).Append("rem;");
+            _ = sb.Append("font-size:").Append((font.SizePoints / 11.0 * 0.8).ToString("0.##", CultureInfo.InvariantCulture)).Append("rem;");
 
         if (fill is { PatternType: not FillPattern.None, ForegroundColor: { } bg })
-            sb.Append("background-color:").Append(XlsxColor.ToHex(bg)).Append(';');
+            _ = sb.Append("background-color:").Append(XlsxColor.ToHex(bg)).Append(';');
 
         AppendAlignment(sb, align);
         AppendBorders(sb, border);
@@ -95,7 +100,8 @@ internal static class SheetGridDisplay
             HorizontalAlignment.Justify or HorizontalAlignment.Distributed => "justify",
             _ => null
         };
-        if (horizontal != null) sb.Append("text-align:").Append(horizontal).Append(';');
+        if (horizontal != null)
+            _ = sb.Append("text-align:").Append(horizontal).Append(';');
 
         var vertical = align.Vertical switch
         {
@@ -104,9 +110,11 @@ internal static class SheetGridDisplay
             VerticalAlignment.Bottom => "bottom",
             _ => null
         };
-        if (vertical != null) sb.Append("vertical-align:").Append(vertical).Append(';');
+        if (vertical != null)
+            _ = sb.Append("vertical-align:").Append(vertical).Append(';');
 
-        if (align.WrapText) sb.Append("white-space:normal;");
+        if (align.WrapText)
+            _ = sb.Append("white-space:normal;");
     }
 
     private static void AppendBorders(StringBuilder sb, CellBorder border)
@@ -136,7 +144,7 @@ internal static class SheetGridDisplay
             _ => "solid"
         };
         var color = line.Color is { } c ? XlsxColor.ToHex(c) : "#000";
-        sb.Append(prop).Append(':').Append(width).Append(' ').Append(css).Append(' ').Append(color).Append(';');
+        _ = sb.Append(prop).Append(':').Append(width).Append(' ').Append(css).Append(' ').Append(color).Append(';');
     }
 
     public static string ColumnHeadStyle(Worksheet sheet, int col)
@@ -163,9 +171,11 @@ internal static class SheetGridDisplay
     public static (double Left, double Top) CellOrigin(Worksheet sheet, int row, int col)
     {
         var left = RowHeaderWidthPx;
-        for (var c = 1; c < col; c++) left += ColumnWidthPx(sheet, c);
+        for (var c = 1; c < col; c++)
+            left += ColumnWidthPx(sheet, c);
         var top = ColHeaderHeightPx;
-        for (var r = 1; r < row; r++) top += RowHeightPx(sheet, r);
+        for (var r = 1; r < row; r++)
+            top += RowHeightPx(sheet, r);
         return (left, top);
     }
 

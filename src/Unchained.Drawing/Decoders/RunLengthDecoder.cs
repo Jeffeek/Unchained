@@ -18,7 +18,8 @@ internal static class RunLengthDecoder
         {
             var length = span[i++];
 
-            if (length == 128) break;
+            if (length == 128)
+                break;
 
             if (length < 128)
             {

@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Core.Xml;
 using Unchained.Pptx.Models.Shapes;
@@ -23,7 +23,7 @@ public sealed class ShapeParserDirectTests
 
     private static ShapeCollection ParseTree(params XElement[] children)
     {
-        var spTree = new XElement(PmlNames.ShapeTree, children.Cast<object>().ToArray());
+        var spTree = new XElement(PmlNames.ShapeTree, [.. children]);
         var collection = new ShapeCollection();
         new ShapeParser().ParseTree(spTree, collection);
         return collection;
@@ -34,7 +34,8 @@ public sealed class ShapeParserDirectTests
         var sp = new XElement(PmlNames.Shape);
         sp.Add(nvSpPr ?? new XElement(PmlNames.NonVisualShapeProperties));
         sp.Add(spPr);
-        if (txBody != null) sp.Add(txBody);
+        if (txBody != null)
+            sp.Add(txBody);
         return sp;
     }
 
@@ -144,8 +145,10 @@ public sealed class ShapeParserDirectTests
     private static XElement NvSpPrWithPlaceholder(string? type, int? idx)
     {
         var ph = new XElement(PmlNames.Placeholder);
-        if (type != null) ph.Add(new XAttribute("type", type));
-        if (idx.HasValue) ph.Add(new XAttribute("idx", idx.Value));
+        if (type != null)
+            ph.Add(new XAttribute("type", type));
+        if (idx.HasValue)
+            ph.Add(new XAttribute("idx", idx.Value));
         return new XElement(
             PmlNames.NonVisualShapeProperties,
             new XElement(PmlNames.CommonNonVisualProperties, new XAttribute("id", "5"), new XAttribute("name", "PH")),

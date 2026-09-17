@@ -74,7 +74,8 @@ internal static class RawPdfBuilder
             {
                 PdfFixtures.Ln(sb, $"{streamDictNoLength[..^2]} /Length {streamData.Length} >>");
                 sb.Append("stream\n");
-                foreach (var b in streamData) sb.Append((char)b);
+                foreach (var b in streamData)
+                    sb.Append((char)b);
                 PdfFixtures.Ln(sb, "\nendstream");
             }
             else

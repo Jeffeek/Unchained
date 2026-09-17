@@ -22,10 +22,12 @@ internal static class PdfSignatureVerifier
 
         // Find all signature fields in the AcroForm
         var acroForm = ResolveAcroForm(core);
-        if (acroForm is null) return results;
+        if (acroForm is null)
+            return results;
 
         var fields = acroForm.Get<PdfArray>("Fields");
-        if (fields is null) return results;
+        if (fields is null)
+            return results;
 
         foreach (var fieldDict in fields.Elements
                      .Select(fieldElement => Resolve<PdfDictionary>(fieldElement, core))
@@ -204,7 +206,8 @@ internal static class PdfSignatureVerifier
     // Decode /Contents — parser stores hex strings as raw hex ASCII chars; decode to binary.
     private static byte[]? DecodeContentsBytes(PdfString str)
     {
-        if (!str.IsHex) return str.Bytes.ToArray();
+        if (!str.IsHex)
+            return str.Bytes.ToArray();
 
         var hex = str.Bytes.Span;
         if (hex.Length % 2 != 0)
@@ -264,19 +267,17 @@ internal static class PdfSignatureVerifier
             return null;
 
         var s = dateStr[2..];
-        if (s.Length < 14)
-            return null;
-
-        if (DateTimeOffset.TryParseExact(
+        return s.Length < 14
+            ? null
+            : DateTimeOffset.TryParseExact(
                 s[..14],
                 "yyyyMMddHHmmss",
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal,
                 out var result
-            ))
-            return result;
-
-        return null;
+            )
+                ? result
+                : null;
     }
 
     private static PdfSignatureInfo Invalid(string fieldName, string reason, X509Certificate2? cert = null) =>

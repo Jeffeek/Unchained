@@ -85,9 +85,11 @@ internal static class MutationHelper
         var catEntries = new Dictionary<string, PdfObject>(catDict.Entries);
         modifyCatalog(catEntries);
         var rebuiltCatalog = new PdfIndirectObject(catalogObj.ObjectNumber, catalogObj.Generation, new PdfDictionary(catEntries));
-        return existing
-            .Select(o => o.ObjectNumber == catalogObj.ObjectNumber ? rebuiltCatalog : o)
-            .ToList();
+        return
+        [
+            .. existing
+                .Select(o => o.ObjectNumber == catalogObj.ObjectNumber ? rebuiltCatalog : o)
+        ];
     }
 
     internal static void ApplyCatalogMutation(
@@ -110,7 +112,8 @@ internal static class MutationHelper
     {
         var existing = adapter.Core.CollectObjects().ToList();
         var (found, catalogIdx, catalogDict) = TryGetCatalogDict(adapter, existing);
-        if (!found) return false;
+        if (!found)
+            return false;
 
         var entries = new Dictionary<string, PdfObject>(catalogDict.Entries);
         mutation(entries);
@@ -162,7 +165,8 @@ internal static class MutationHelper
             {
                 var keyIsString = leafArray[i] is PdfString;
                 var value = extract(node, leafArray, i, keyIsString);
-                if (value is not null) result.Add(value);
+                if (value is not null)
+                    result.Add(value);
             }
         }
 

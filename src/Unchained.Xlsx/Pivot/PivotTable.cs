@@ -98,7 +98,7 @@ public sealed class PivotTable
     {
         var field = FindField(fieldName);
         field.Axis = PivotAxis.None;
-        _dataFields.RemoveAll(d => d.SourceIndex == field.SourceIndex);
+        _ = _dataFields.RemoveAll(d => d.SourceIndex == field.SourceIndex);
     }
 
     /// <summary>

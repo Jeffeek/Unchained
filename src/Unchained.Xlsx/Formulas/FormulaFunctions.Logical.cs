@@ -8,7 +8,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue If(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var condition = ev.Evaluate(args[0]);
         return condition.IsError
@@ -25,7 +26,8 @@ internal static partial class FormulaFunctions
         for (var i = 0; i + 1 < args.Count; i += 2)
         {
             var condition = ev.Evaluate(args[i]);
-            if (condition.IsError) return condition;
+            if (condition.IsError)
+                return condition;
             if (FormulaEvaluator.ToBoolean(condition))
                 return ev.Evaluate(args[i + 1]);
         }
@@ -35,7 +37,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue Switch(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var subject = ev.Evaluate(args[0]);
         var i = 1;
@@ -52,7 +55,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue IfError(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev, bool naOnly)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var value = ev.Evaluate(args[0]);
         var caught = value.IsError && (!naOnly || value.Error == CellError.NotAvailable);
@@ -65,13 +69,16 @@ internal static partial class FormulaFunctions
         var trueCount = 0;
         foreach (var v in args.SelectMany(arg => ev.Evaluate(arg).Flatten()))
         {
-            if (v.IsError) return v;
+            if (v.IsError)
+                return v;
 
-            if (v.Kind == FormulaValueKind.Blank) continue;
+            if (v.Kind == FormulaValueKind.Blank)
+                continue;
 
             any = true;
             var truthy = FormulaEvaluator.ToBoolean(v);
-            if (truthy) trueCount++;
+            if (truthy)
+                trueCount++;
             switch (mode)
             {
                 case BoolMode.And when !truthy:

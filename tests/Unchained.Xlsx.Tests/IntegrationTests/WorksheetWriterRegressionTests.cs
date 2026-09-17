@@ -71,11 +71,11 @@ public sealed class WorksheetWriterRegressionTests
             // Access by column number
             var col1 = sheet.Columns.GetColumn(1);
             col1.ShouldNotBeNull();
-            col1!.Width.ShouldBe(25.5);
+            col1.Width.ShouldBe(25.5);
 
             var col2 = sheet.Columns.GetColumn(2);
             col2.ShouldNotBeNull();
-            col2!.Width.ShouldBe(15.0);
+            col2.Width.ShouldBe(15.0);
         }
     }
 

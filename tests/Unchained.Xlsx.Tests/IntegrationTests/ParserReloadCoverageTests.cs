@@ -1,6 +1,6 @@
+using Shouldly;
 using System.IO.Compression;
 using System.Text;
-using Shouldly;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
 using Unchained.Xlsx.Models.Tables;

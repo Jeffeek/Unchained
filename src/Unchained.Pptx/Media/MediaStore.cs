@@ -198,7 +198,7 @@ public sealed class MediaStore
             switch (shape)
             {
                 case PictureShape { Image: not null } pic:
-                    used.Add(pic.Image);
+                    _ = used.Add(pic.Image);
                 break;
                 case GroupShape grp:
                     CollectImages(grp.Children, used);
@@ -214,10 +214,10 @@ public sealed class MediaStore
             switch (shape)
             {
                 case AudioShape { Audio: not null } audio:
-                    usedAudio.Add(audio.Audio);
+                    _ = usedAudio.Add(audio.Audio);
                 break;
                 case VideoShape { Video: not null } video:
-                    usedVideo.Add(video.Video);
+                    _ = usedVideo.Add(video.Video);
                 break;
                 case GroupShape grp:
                     CollectMedia(grp.Children, usedAudio, usedVideo);

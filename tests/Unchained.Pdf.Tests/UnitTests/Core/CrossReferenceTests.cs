@@ -33,7 +33,8 @@ public sealed class CrossReferenceTableTests
     private static CrossReferenceTable Table(params (int ObjNum, CrossReferenceEntry Entry)[] entries)
     {
         var d = new Dictionary<int, CrossReferenceEntry>();
-        foreach (var (n, e) in entries) d[n] = e;
+        foreach (var (n, e) in entries)
+            d[n] = e;
         return new CrossReferenceTable(d, 0);
     }
 

@@ -13,7 +13,8 @@ internal sealed partial class PageRenderer
     private void PaintShadingInPathBounds(ShadingInfo sh)
     {
         var (minX, minY, maxX, maxY) = PathDeviceBounds();
-        if (maxX < minX) return;
+        if (maxX < minX)
+            return;
 
         PaintShadingRect(sh, (int)Math.Floor(minX), (int)Math.Floor(minY), (int)Math.Ceiling(maxX), (int)Math.Ceiling(maxY));
     }
@@ -45,7 +46,8 @@ internal sealed partial class PageRenderer
         dy0 = Math.Max(0, dy0);
         dx1 = Math.Min(buffer.Width - 1, dx1);
         dy1 = Math.Min(buffer.Height - 1, dy1);
-        if (dx1 < dx0 || dy1 < dy0) return;
+        if (dx1 < dx0 || dy1 < dy0)
+            return;
 
         // Honour an active clip rectangle.
         {
@@ -54,32 +56,38 @@ internal sealed partial class PageRenderer
             dy0 = Math.Max(dy0, cy0);
             dx1 = Math.Min(dx1, cx1 - 1);
             dy1 = Math.Min(dy1, cy1 - 1);
-            if (dx1 < dx0 || dy1 < dy0) return;
+            if (dx1 < dx0 || dy1 < dy0)
+                return;
         }
 
         // Invert the device→user mapping. Device px = ux*scale, py = (H - uy)*scale, where
         // (ux,uy) = CTM·(x,y). Compose M = CTM then the device flip; invert the whole thing.
-        if (!ShadingMath.TryInvertDeviceToUser(_gs.Ctm, scale, pageHeightPt, out var inv)) return;
+        if (!ShadingMath.TryInvertDeviceToUser(_gs.Ctm, scale, pageHeightPt, out var inv))
+            return;
 
         for (var py = dy0; py <= dy1; py++)
-        for (var px = dx0; px <= dx1; px++)
         {
-            var (ux, uy) = ShadingMath.ApplyInv(inv, px + 0.5, py + 0.5);
-            if (!ShadingMath.ShadingT(sh, ux, uy, out var t)) continue;
-
-            var (r, g, b) = sh.ColorAt(t);
-            if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
-            else
+            for (var px = dx0; px <= dx1; px++)
             {
-                buffer.BlendPixel(
-                    px,
-                    py,
-                    r,
-                    g,
-                    b,
-                    _gs.FillA,
-                    _gs.BlendMode
-                );
+                var (ux, uy) = ShadingMath.ApplyInv(inv, px + 0.5, py + 0.5);
+                if (!ShadingMath.ShadingT(sh, ux, uy, out var t))
+                    continue;
+
+                var (r, g, b) = sh.ColorAt(t);
+                if (_gs.FillA >= 255)
+                    buffer.BlitImagePixel(px, py, r, g, b);
+                else
+                {
+                    buffer.BlendPixel(
+                        px,
+                        py,
+                        r,
+                        g,
+                        b,
+                        _gs.FillA,
+                        _gs.BlendMode
+                    );
+                }
             }
         }
     }
@@ -88,7 +96,8 @@ internal sealed partial class PageRenderer
     // Vertices are in user space; each is mapped to device space via UToPixel.
     private void PaintMesh(ShadingInfo sh)
     {
-        if (sh.Triangles is null) return;
+        if (sh.Triangles is null)
+            return;
 
         foreach (var t in sh.Triangles)
         {
@@ -113,32 +122,37 @@ internal sealed partial class PageRenderer
             }
 
             var denom = ((by - cy) * (ax - cx)) + ((cx - bx) * (ay - cy));
-            if (Math.Abs(denom) < RenderingConstants.DeterminantEpsilon) continue; // degenerate triangle
+            if (Math.Abs(denom) < RenderingConstants.DeterminantEpsilon)
+                continue; // degenerate triangle
 
             for (var py = minY; py <= maxY; py++)
-            for (var px = minX; px <= maxX; px++)
             {
-                var fx = px + 0.5;
-                var fy = py + 0.5;
-                var w0 = (((by - cy) * (fx - cx)) + ((cx - bx) * (fy - cy))) / denom;
-                var w1 = (((cy - ay) * (fx - cx)) + ((ax - cx) * (fy - cy))) / denom;
-                var w2 = 1 - w0 - w1;
-                if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001) continue; // outside triangle
-
-                var r = (byte)Math.Clamp((w0 * t.R0) + (w1 * t.R1) + (w2 * t.R2), 0, 255);
-                var g = (byte)Math.Clamp((w0 * t.G0) + (w1 * t.G1) + (w2 * t.G2), 0, 255);
-                var b = (byte)Math.Clamp((w0 * t.B0) + (w1 * t.B1) + (w2 * t.B2), 0, 255);
-                if (_gs.FillA >= 255) buffer.BlitImagePixel(px, py, r, g, b);
-                else
+                for (var px = minX; px <= maxX; px++)
                 {
-                    buffer.BlendPixel(
-                        px,
-                        py,
-                        r,
-                        g,
-                        b,
-                        _gs.FillA
-                    );
+                    var fx = px + 0.5;
+                    var fy = py + 0.5;
+                    var w0 = (((by - cy) * (fx - cx)) + ((cx - bx) * (fy - cy))) / denom;
+                    var w1 = (((cy - ay) * (fx - cx)) + ((ax - cx) * (fy - cy))) / denom;
+                    var w2 = 1 - w0 - w1;
+                    if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001)
+                        continue; // outside triangle
+
+                    var r = (byte)Math.Clamp((w0 * t.R0) + (w1 * t.R1) + (w2 * t.R2), 0, 255);
+                    var g = (byte)Math.Clamp((w0 * t.G0) + (w1 * t.G1) + (w2 * t.G2), 0, 255);
+                    var b = (byte)Math.Clamp((w0 * t.B0) + (w1 * t.B1) + (w2 * t.B2), 0, 255);
+                    if (_gs.FillA >= 255)
+                        buffer.BlitImagePixel(px, py, r, g, b);
+                    else
+                    {
+                        buffer.BlendPixel(
+                            px,
+                            py,
+                            r,
+                            g,
+                            b,
+                            _gs.FillA
+                        );
+                    }
                 }
             }
         }
@@ -149,10 +163,12 @@ internal sealed partial class PageRenderer
     // defined by XStep/YStep under the pattern matrix. Clipped to the path bbox + active clip.
     private void PaintTilingInPathBounds(TilingPatternInfo tp)
     {
-        if (_tilingDepth >= 2) return; // guard against pattern-in-pattern recursion
+        if (_tilingDepth >= 2)
+            return; // guard against pattern-in-pattern recursion
 
         var (minX, minY, maxX, maxY) = PathDeviceBounds();
-        if (maxX < minX) return;
+        if (maxX < minX)
+            return;
 
         // Pattern cell size in device pixels (pattern matrix scale × device scale).
         var pm = tp.Matrix;
@@ -160,7 +176,8 @@ internal sealed partial class PageRenderer
         var syv = Vector2D.Magnitude(pm[2], pm[3]);
         var stepXpx = Math.Abs(tp.XStep) * sxv * scale;
         var stepYpx = Math.Abs(tp.YStep) * syv * scale;
-        if (stepXpx < 0.5 || stepYpx < 0.5) return;
+        if (stepXpx < 0.5 || stepYpx < 0.5)
+            return;
 
         // Cap tile pixel size and total tile count to keep this bounded.
         var tileW = Math.Clamp((int)Math.Ceiling(stepXpx), 1, 256);
@@ -176,23 +193,25 @@ internal sealed partial class PageRenderer
         // Initial CTM translates the BBox lower-left to the tile origin.
         double[] cellCtm = [1, 0, 0, 1, -tp.BBox[0], -tp.BBox[1]];
         var cell = new PageRenderer(
-                tile,
-                fonts,
-                cellScale,
-                tp.YStep == 0 ? tileH / cellScale : Math.Abs(tp.YStep),
-                embeddedFontBytes,
-                imageXObjects,
-                cellCtm,
-                toUnicodeMaps,
-                compositeFonts,
-                extGStateAlphas,
-                shadings,
-                tilingPatterns,
-                null,
-                colorSpaces,
-                type3Fonts
-            )
-            { _tilingDepth = _tilingDepth + 1 };
+            tile,
+            fonts,
+            cellScale,
+            tp.YStep == 0 ? tileH / cellScale : Math.Abs(tp.YStep),
+            embeddedFontBytes,
+            imageXObjects,
+            cellCtm,
+            toUnicodeMaps,
+            compositeFonts,
+            extGStateAlphas,
+            shadings,
+            tilingPatterns,
+            null,
+            colorSpaces,
+            type3Fonts
+        )
+        {
+            _tilingDepth = _tilingDepth + 1
+        };
         // Uncoloured (PaintType 2) cells use the current fill colour.
         if (tp.PaintType == 2)
             cell.SetInitialFillColor(_gs.FillR, _gs.FillG, _gs.FillB);
@@ -215,17 +234,20 @@ internal sealed partial class PageRenderer
         }
 
         for (var py = y0; py <= y1; py++)
-        for (var px = x0; px <= x1; px++)
         {
-            var tx = (((px - x0) % tileW) + tileW) % tileW;
-            var ty = (((py - y0) % tileH) + tileH) % tileH;
-            var o = ((ty * tileW) + tx) * 4;
-            var r = tileData[o];
-            var g = tileData[o + 1];
-            var b = tileData[o + 2];
-            if (r >= 250 && g >= 250 && b >= 250) continue; // skip the cell's white background
+            for (var px = x0; px <= x1; px++)
+            {
+                var tx = (((px - x0) % tileW) + tileW) % tileW;
+                var ty = (((py - y0) % tileH) + tileH) % tileH;
+                var o = ((ty * tileW) + tx) * 4;
+                var r = tileData[o];
+                var g = tileData[o + 1];
+                var b = tileData[o + 2];
+                if (r >= 250 && g >= 250 && b >= 250)
+                    continue; // skip the cell's white background
 
-            buffer.BlitImagePixel(px, py, r, g, b);
+                buffer.BlitImagePixel(px, py, r, g, b);
+            }
         }
     }
 }

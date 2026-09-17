@@ -41,6 +41,6 @@ public sealed class LineFormat
     public void SetSolid(ColorSpec color, double widthPoints = 1.0)
     {
         WidthPoints = widthPoints;
-        Fill.SetSolid(color);
+        _ = Fill.SetSolid(color);
     }
 }

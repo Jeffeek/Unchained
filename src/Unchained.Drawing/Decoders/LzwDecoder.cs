@@ -54,7 +54,8 @@ internal static class LzwDecoder
             if (code == nextCode && lastCode >= 0)
             {
                 var root = lastCode;
-                while (root >= FirstDynamic) root = prefix[root];
+                while (root >= FirstDynamic)
+                    root = prefix[root];
                 prefix[nextCode] = lastCode;
                 suffix[nextCode] = suffix[root];
             }

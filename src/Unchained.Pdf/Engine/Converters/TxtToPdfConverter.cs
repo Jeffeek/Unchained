@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Content;
@@ -29,7 +28,8 @@ internal static class TxtToPdfConverter
         var allLines = LayoutLines(text, options.FontName, options.FontSize, usableWidth);
 
         // Ensure at least one page even for empty input.
-        if (allLines.Count == 0) allLines.Add(string.Empty);
+        if (allLines.Count == 0)
+            allLines.Add(string.Empty);
 
         var pageIndex = 0;
         for (var pageStart = 0; pageStart < allLines.Count; pageStart += linesPerPage)
@@ -62,7 +62,6 @@ internal static class TxtToPdfConverter
         return acc.Build();
     }
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static List<string> LayoutLines(
         string text,
         string fontName,
@@ -77,7 +76,6 @@ internal static class TxtToPdfConverter
         return result;
     }
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static IEnumerable<string> WrapLine(
         string line,
         string fontName,
@@ -98,7 +96,7 @@ internal static class TxtToPdfConverter
         foreach (var word in line.Split(' '))
         {
             if (current.Length == 0)
-                current.Append(word);
+                _ = current.Append(word);
             else
             {
                 var projected = MeasureText(current.ToString(), fontName, fontSize) +
@@ -106,14 +104,14 @@ internal static class TxtToPdfConverter
                                 MeasureText(word, fontName, fontSize);
                 if (projected <= maxWidth)
                 {
-                    current.Append(' ');
-                    current.Append(word);
+                    _ = current.Append(' ');
+                    _ = current.Append(word);
                 }
                 else
                 {
                     yield return current.ToString();
 
-                    current.Clear().Append(word);
+                    _ = current.Clear().Append(word);
                 }
             }
         }
@@ -146,7 +144,8 @@ internal static class TxtToPdfConverter
         var first = true;
         foreach (var line in lines)
         {
-            if (!first) w.Op("T*"u8);
+            if (!first)
+                w.Op("T*"u8);
             w.LiteralString(line);
             w.Op("Tj"u8);
             first = false;

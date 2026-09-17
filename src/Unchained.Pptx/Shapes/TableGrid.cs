@@ -124,7 +124,7 @@ public sealed class TableGrid
     internal void AddRowWithCells(Emu height, IEnumerable<TableCell> cells)
     {
         _rowHeights.Add(height);
-        _rows.Add(cells.ToList());
+        _rows.Add([.. cells]);
     }
 
     /// <summary>Adds a column width entry (used by the parser).</summary>

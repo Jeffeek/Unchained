@@ -411,8 +411,8 @@ internal static class ShapeWriter
         // Effects come after fill/line per the spPr schema order.
         if (EffectWriter.Write(shape.Effects) is { } effectLst)
             spPr.Add(effectLst);
-        if (Shape3DWriter.Write(shape.ThreeD) is { } sp3d)
-            spPr.Add(sp3d);
+        if (Shape3DWriter.Write(shape.ThreeD) is { } sp3D)
+            spPr.Add(sp3D);
         return spPr;
     }
 

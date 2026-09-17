@@ -17,7 +17,8 @@ internal static class PageColorSpaceResolver
     {
         var result = new Dictionary<string, ColorSpaceInfo>();
         var resources = core.ResolveDict(page[PdfName.Resources]);
-        if (resources is null) return result;
+        if (resources is null)
+            return result;
 
         // Recurse into form XObjects as well (same pattern as CollectShadings).
         CollectColorSpaces(core, resources, result, 0, new HashSet<int>());
@@ -47,7 +48,8 @@ internal static class PageColorSpaceResolver
                     ? core.ResolveIndirect(r.ObjectNumber).Value
                     : value;
                 var info = BuildColorSpaceInfo(core, csObj);
-                if (info is not null) result[name] = info;
+                if (info is not null)
+                    result[name] = info;
             }
         }
 
@@ -76,13 +78,17 @@ internal static class PageColorSpaceResolver
             return null;
 
         var kind = (arr[0] as PdfName)?.Value;
-        if (kind is null) return null;
+        if (kind is null)
+            return null;
 
         switch (kind)
         {
-            case PdfConstants.DeviceGray: return ColorSpaceInfo.Device(PdfConstants.DeviceGray);
-            case PdfConstants.DeviceRgb: return ColorSpaceInfo.Device(PdfConstants.DeviceRgb);
-            case PdfConstants.DeviceCmyk: return ColorSpaceInfo.Device(PdfConstants.DeviceCmyk);
+            case PdfConstants.DeviceGray:
+                return ColorSpaceInfo.Device(PdfConstants.DeviceGray);
+            case PdfConstants.DeviceRgb:
+                return ColorSpaceInfo.Device(PdfConstants.DeviceRgb);
+            case PdfConstants.DeviceCmyk:
+                return ColorSpaceInfo.Device(PdfConstants.DeviceCmyk);
 
             case PdfConstants.IccBased when arr.Count >= 2:
             {
@@ -123,7 +129,9 @@ internal static class PageColorSpaceResolver
                 var baseName = core.ResolveBaseSpaceName(arr[1]) ?? PdfConstants.DeviceRgb;
                 var baseChannels = baseName switch
                 {
-                    PdfConstants.DeviceGray => 1, PdfConstants.DeviceCmyk => 4, _ => 3
+                    PdfConstants.DeviceGray => 1,
+                    PdfConstants.DeviceCmyk => 4,
+                    _ => 3
                 };
                 var lookupObj = arr[3];
                 if (lookupObj is PdfIndirectReference lr)
@@ -158,9 +166,11 @@ internal static class PageColorSpaceResolver
                 return ColorSpaceInfo.CalRgb(gammaArr, matArr);
             }
 
-            case PdfConstants.Lab: return ColorSpaceInfo.Lab();
+            case PdfConstants.Lab:
+                return ColorSpaceInfo.Lab();
 
-            default: return null;
+            default:
+                return null;
         }
     }
 }

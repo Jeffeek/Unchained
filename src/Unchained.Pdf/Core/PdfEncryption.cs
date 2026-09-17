@@ -30,7 +30,8 @@ internal static class PdfEncryption
     internal static PdfEncryptionContext? CreateReadContext(PdfDictionary encryptDict, byte[] fileId, string password)
     {
         var filter = encryptDict.GetName("Filter");
-        if (filter != "Standard") return null; // unsupported handler
+        if (filter != "Standard")
+            return null; // unsupported handler
 
         var v = (int)(encryptDict.Get<PdfInteger>("V")?.Value ?? 0);
         var r = (int)(encryptDict.Get<PdfInteger>("R")?.Value ?? 0);
@@ -200,7 +201,8 @@ internal static class PdfEncryption
             // Test: SHA-256(pw + U[32..39])
             using var sha = SHA256.Create();
             var hash = sha.ComputeHash([.. pw, .. uBytes[32..40]]);
-            if (!hash.AsSpan().SequenceEqual(uBytes.AsSpan(0, 32))) return null;
+            if (!hash.AsSpan().SequenceEqual(uBytes.AsSpan(0, 32)))
+                return null;
 
             // Derive: file_key = AES-Decrypt(SHA-256(pw + U[40..47]), iv=0, UE)
             var kk = sha.ComputeHash([.. pw, .. uBytes[40..48]]);
@@ -302,12 +304,13 @@ internal static class PdfEncryption
         pBytes[2] = (byte)((pFlags >> 16) & 0xFF);
         pBytes[3] = (byte)((pFlags >> 24) & 0xFF);
 
-        var id0 = fileId.Length >= 16 ? fileId[..16] : fileId.Concat(new byte[16 - fileId.Length]).ToArray();
+        var id0 = fileId.Length >= 16 ? fileId[..16] : [.. fileId, .. new byte[16 - fileId.Length]];
 
         var hash = md5.ComputeHash([.. padded, .. oValue, .. pBytes, .. id0]);
 
         // Step 3: for R≥3, repeat MD5 50 times
-        if (r < 3) return hash[..keyLen];
+        if (r < 3)
+            return hash[..keyLen];
 
         for (var i = 0; i < 50; i++)
             hash = md5.ComputeHash(hash[..keyLen]);
@@ -332,7 +335,7 @@ internal static class PdfEncryption
 
         // R=3 or R=4
         using var md5 = MD5.Create();
-        var id0 = fileId.Length >= 16 ? fileId[..16] : fileId.Concat(new byte[16 - fileId.Length]).ToArray();
+        var id0 = fileId.Length >= 16 ? fileId[..16] : [.. fileId, .. new byte[16 - fileId.Length]];
         var hash = md5.ComputeHash([.. PasswordPadding, .. id0]);
 
         // Apply RC4 20 times with key XOR'd by iteration number
@@ -432,7 +435,8 @@ internal static class PdfEncryption
     internal static byte[] Rc4(byte[] key, byte[] data)
     {
         var s = new byte[256];
-        for (var i = 0; i < 256; i++) s[i] = (byte)i;
+        for (var i = 0; i < 256; i++)
+            s[i] = (byte)i;
         var j = 0;
 
         for (var i = 0; i < 256; i++)
@@ -477,7 +481,8 @@ internal static class PdfEncryption
 
     private static byte[] GetStringBytes(PdfDictionary dict, string key)
     {
-        if (dict.Get<PdfString>(key) is not { } s) return [];
+        if (dict.Get<PdfString>(key) is not { } s)
+            return [];
 
         // PdfString.IsHex has two distinct origins:
         //   (a) Parsed from file: Bytes holds the raw hex ASCII chars → must decode.

@@ -52,7 +52,9 @@ public sealed class PageContentEditor : IPageContentEditor
         double y,
         TextDrawOptions? options = null,
         CancellationToken ct = default
+        // ReSharper disable BadListLineBreaks
     ) => Task.Run(() => DrawText(document, pageNumber, text, x, y, options ?? TextDrawOptions.Default), ct);
+    // ReSharper restore BadListLineBreaks
 
     /// <inheritdoc />
     public Task DrawImageAsync(
@@ -64,7 +66,9 @@ public sealed class PageContentEditor : IPageContentEditor
         double width,
         double height,
         CancellationToken ct = default
+        // ReSharper disable BadListLineBreaks
     ) => Task.Run(() => DrawImage(document, pageNumber, image, x, y, width, height), ct);
+    // ReSharper restore BadListLineBreaks
 
     // ── Draw text ─────────────────────────────────────────────────────────────
 
@@ -275,7 +279,8 @@ public sealed class PageContentEditor : IPageContentEditor
         for (var i = 0;; i++)
         {
             var key = $"{prefix}{i}";
-            if (used.Add(key)) return key;
+            if (used.Add(key))
+                return key;
         }
     }
 

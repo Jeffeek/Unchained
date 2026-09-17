@@ -64,13 +64,16 @@ internal static class RasterBufferGlyphExtensions
         string blendMode = "Normal"
     )
     {
-        if (w <= 0 || h <= 0 || bufPtr == IntPtr.Zero) return;
+        if (w <= 0 || h <= 0 || bufPtr == IntPtr.Zero)
+            return;
 
         var absPitch = Math.Abs(pitch);
-        if (absPitch == 0) return;
+        if (absPitch == 0)
+            return;
 
         const int maxGlyphDim = 4096;
-        if (w > maxGlyphDim || h > maxGlyphDim || absPitch > maxGlyphDim * 4) return;
+        if (w > maxGlyphDim || h > maxGlyphDim || absPitch > maxGlyphDim * 4)
+            return;
 
         switch (pixelMode)
         {

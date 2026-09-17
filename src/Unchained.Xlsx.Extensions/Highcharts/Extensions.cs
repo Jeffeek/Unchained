@@ -64,11 +64,13 @@ public static class Extensions
             MergeAdditionalProperties(node, dict, allowOverride: false);
 
         // Recurse into object-valued properties.
-        if (node is not JsonObject objNode) return;
+        if (node is not JsonObject objNode)
+            return;
 
         foreach (var (key, child) in objNode)
         {
-            if (child is null) continue;
+            if (child is null)
+                continue;
 
             // Find the corresponding child object in the original graph.
             var childObj = FindChild(obj, key);
@@ -89,7 +91,8 @@ public static class Extensions
 
     private static void MergeAdditionalProperties(JsonNode target, IDictionary<string, object>? additional, bool allowOverride)
     {
-        if (additional is null || additional.Count == 0) return;
+        if (additional is null || additional.Count == 0)
+            return;
 
         foreach (var (key, value) in additional)
         {

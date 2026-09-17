@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine.PageResources;
@@ -28,7 +28,8 @@ public sealed class PageContentReaderTests
     private static PdfDictionary Page(params (string Key, PdfObject Value)[] entries)
     {
         var d = new Dictionary<string, PdfObject> { ["Type"] = PdfName.Page };
-        foreach (var (k, v) in entries) d[k] = v;
+        foreach (var (k, v) in entries)
+            d[k] = v;
         return new PdfDictionary(d);
     }
 

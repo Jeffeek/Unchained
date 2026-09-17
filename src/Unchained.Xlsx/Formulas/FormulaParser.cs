@@ -55,7 +55,7 @@ internal sealed class FormulaParser
             if (prec == 0 || prec < minPrecedence)
                 break;
 
-            Advance();
+            _ = Advance();
             var nextMin = IsRightAssociative(op) ? prec : prec + 1;
             var right = ParseExpression(nextMin);
             left = new BinaryNode(op, left, right);
@@ -77,14 +77,14 @@ internal sealed class FormulaParser
         // Postfix percent.
         while (Current is { Type: FormulaTokenType.Operator, Text: "%" })
         {
-            Advance();
+            _ = Advance();
             primary = new UnaryNode("%", primary);
         }
 
         // Range operator binds references: A1:B2.
         while (Current.Type == FormulaTokenType.Colon)
         {
-            Advance();
+            _ = Advance();
             var end = ParsePrimary();
             primary = new RangeNode(primary, end);
         }
@@ -98,25 +98,25 @@ internal sealed class FormulaParser
         switch (token.Type)
         {
             case FormulaTokenType.Number:
-                Advance();
+                _ = Advance();
                 return new NumberNode(FormulaTokenizer.ParseNumber(token.Text));
             case FormulaTokenType.Text:
-                Advance();
+                _ = Advance();
                 return new TextNode(token.Text);
             case FormulaTokenType.Boolean:
-                Advance();
+                _ = Advance();
                 return new BooleanNode(token.Text.Equals("TRUE", StringComparison.OrdinalIgnoreCase));
             case FormulaTokenType.Error:
-                Advance();
+                _ = Advance();
                 return new ErrorNode(CellErrorExtensions.FromLiteral(token.Text) ?? CellError.Value);
             case FormulaTokenType.CellOrName:
-                Advance();
+                _ = Advance();
                 return new ReferenceNode(token.Text);
             case FormulaTokenType.Function:
                 return ParseFunction();
             case FormulaTokenType.OpenParen:
             {
-                Advance();
+                _ = Advance();
                 var inner = ParseExpression(0);
                 Expect(FormulaTokenType.CloseParen);
                 return inner;
@@ -142,7 +142,7 @@ internal sealed class FormulaParser
             args.Add(ParseExpression(0));
             while (Current.Type == FormulaTokenType.Comma)
             {
-                Advance();
+                _ = Advance();
                 args.Add(ParseExpression(0));
             }
         }
@@ -156,6 +156,6 @@ internal sealed class FormulaParser
         if (Current.Type != type)
             throw new FormulaParseException($"Expected {type} but found '{Current.Text}'.");
 
-        Advance();
+        _ = Advance();
     }
 }

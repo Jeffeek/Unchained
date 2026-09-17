@@ -144,7 +144,7 @@ public sealed class MeshShadingDecoderTests
 
     [Fact]
     public void Type4_EmptyData_ReturnsEmpty() =>
-        MeshShadingDecoder.Decode(MeshStream(4, Array.Empty<byte>()), Core(), 4).ShouldBeEmpty();
+        MeshShadingDecoder.Decode(MeshStream(4, []), Core(), 4).ShouldBeEmpty();
 
     // ── Type4 fan tessellation (flags 1 and 2) ─────────────────────────────
 

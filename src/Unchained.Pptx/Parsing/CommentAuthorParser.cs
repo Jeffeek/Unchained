@@ -21,12 +21,13 @@ internal static class CommentAuthorParser
         foreach (var el in rootEl.Elements(pml + "cmAuthor"))
         {
             var idRaw = el.GetAttr(PmlNames.AttributeId);
-            if (!uint.TryParse(idRaw, out var id)) continue;
+            if (!uint.TryParse(idRaw, out var id))
+                continue;
 
             var name = el.GetAttr(PmlNames.AttributeName, string.Empty);
             var initials = el.GetAttr("initials", name.Length > 0 ? name[..1] : "?");
             var lastIdxRaw = el.GetAttr("lastIdx");
-            uint.TryParse(lastIdxRaw, out var lastIdx);
+            _ = uint.TryParse(lastIdxRaw, out var lastIdx);
 
             var author = new CommentAuthor(id, name, initials) { LastIndex = lastIdx };
             authors.AddParsed(author);

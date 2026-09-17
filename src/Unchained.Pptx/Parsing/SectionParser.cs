@@ -25,16 +25,19 @@ internal static class SectionParser
         );
 
         var extLst = presentationRoot.Element(pml + "extLst");
-        if (extLst == null) return;
+        if (extLst == null)
+            return;
 
         // ReSharper disable once LoopCanBePartlyConvertedToQuery
         foreach (var ext in extLst.Elements(pml + "ext"))
         {
             var uri = (string?)ext.Attribute("uri");
-            if (!SectionExtUri.Equals(uri, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!SectionExtUri.Equals(uri, StringComparison.OrdinalIgnoreCase))
+                continue;
 
             var sectionLst = ext.Element(P14 + "sectionLst");
-            if (sectionLst == null) continue;
+            if (sectionLst == null)
+                continue;
 
             foreach (var sec in sectionLst.Elements(P14 + "section"))
             {

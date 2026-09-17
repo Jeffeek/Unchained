@@ -25,7 +25,8 @@ internal sealed partial class PageRenderer
         var dstW = (int)Math.Abs(x1 - x0);
         var dstH = (int)Math.Abs(y1 - y0);
 
-        if (dstW <= 0 || dstH <= 0) return;
+        if (dstW <= 0 || dstH <= 0)
+            return;
 
         BlitScaledImage(
             img.RgbData,
@@ -40,8 +41,10 @@ internal sealed partial class PageRenderer
 
     private void PaintXObject(string resourceName)
     {
-        if (imageXObjects is null) return;
-        if (!imageXObjects.TryGetValue(resourceName, out var img)) return;
+        if (imageXObjects is null)
+            return;
+        if (!imageXObjects.TryGetValue(resourceName, out var img))
+            return;
 
         // The Do operator places the image in the unit square [0,0]→[1,1] in user
         // space, transformed by the current CTM.
@@ -53,7 +56,8 @@ internal sealed partial class PageRenderer
         var dstW = (int)Math.Abs(x1 - x0);
         var dstH = (int)Math.Abs(y1 - y0);
 
-        if (dstW <= 0 || dstH <= 0) return;
+        if (dstW <= 0 || dstH <= 0)
+            return;
 
         BlitScaledImage(
             img.RgbData,
@@ -84,73 +88,79 @@ internal sealed partial class PageRenderer
         byte[]? alpha = null
     )
     {
-        if (srcW <= 0 || srcH <= 0) return;
+        if (srcW <= 0 || srcH <= 0)
+            return;
 
         var downscale = srcW > dstW || srcH > dstH;
 
         for (var py = 0; py < dstH; py++)
-        for (var px = 0; px < dstW; px++)
         {
-            byte r, g, b;
-            int a;
-            if (downscale)
+            for (var px = 0; px < dstW; px++)
             {
-                // Average the source box [sx0,sx1)×[sy0,sy1) covered by this dest pixel.
-                var sx0 = px * srcW / dstW;
-                var sx1 = Math.Max(sx0 + 1, (px + 1) * srcW / dstW);
-                var sy0 = py * srcH / dstH;
-                var sy1 = Math.Max(sy0 + 1, (py + 1) * srcH / dstH);
-                long sr = 0, sg = 0, sb = 0, sa = 0;
-                var n = 0;
-                for (var sy = sy0; sy < sy1 && sy < srcH; sy++)
-                for (var sx = sx0; sx < sx1 && sx < srcW; sx++)
+                byte r, g, b;
+                int a;
+                if (downscale)
                 {
+                    // Average the source box [sx0,sx1)×[sy0,sy1) covered by this dest pixel.
+                    var sx0 = px * srcW / dstW;
+                    var sx1 = Math.Max(sx0 + 1, (px + 1) * srcW / dstW);
+                    var sy0 = py * srcH / dstH;
+                    var sy1 = Math.Max(sy0 + 1, (py + 1) * srcH / dstH);
+                    long sr = 0, sg = 0, sb = 0, sa = 0;
+                    var n = 0;
+                    for (var sy = sy0; sy < sy1 && sy < srcH; sy++)
+                    {
+                        for (var sx = sx0; sx < sx1 && sx < srcW; sx++)
+                        {
+                            var idx = (sy * srcW) + sx;
+                            var o = idx * 3;
+                            sr += rgb[o];
+                            sg += rgb[o + 1];
+                            sb += rgb[o + 2];
+                            sa += alpha is not null ? alpha[idx] : 255;
+                            n++;
+                        }
+                    }
+
+                    if (n == 0)
+                        continue;
+
+                    r = (byte)(sr / n);
+                    g = (byte)(sg / n);
+                    b = (byte)(sb / n);
+                    a = (int)(sa / n);
+                }
+                else
+                {
+                    var sx = px * srcW / dstW;
+                    var sy = py * srcH / dstH;
                     var idx = (sy * srcW) + sx;
                     var o = idx * 3;
-                    sr += rgb[o];
-                    sg += rgb[o + 1];
-                    sb += rgb[o + 2];
-                    sa += alpha is not null ? alpha[idx] : 255;
-                    n++;
+                    r = rgb[o];
+                    g = rgb[o + 1];
+                    b = rgb[o + 2];
+                    a = alpha is not null ? alpha[idx] : 255;
                 }
 
-                if (n == 0) continue;
-
-                r = (byte)(sr / n);
-                g = (byte)(sg / n);
-                b = (byte)(sb / n);
-                a = (int)(sa / n);
-            }
-            else
-            {
-                var sx = px * srcW / dstW;
-                var sy = py * srcH / dstH;
-                var idx = (sy * srcW) + sx;
-                var o = idx * 3;
-                r = rgb[o];
-                g = rgb[o + 1];
-                b = rgb[o + 2];
-                a = alpha is not null ? alpha[idx] : 255;
-            }
-
-            switch (a)
-            {
-                case <= 0:
-                    continue;
-                case >= 255:
-                    buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
-                break;
-                default:
-                    buffer.BlendPixel(
-                        dstX + px,
-                        dstY + py,
-                        r,
-                        g,
-                        b,
-                        (byte)a,
-                        _gs.BlendMode
-                    );
-                break;
+                switch (a)
+                {
+                    case <= 0:
+                        continue;
+                    case >= 255:
+                        buffer.BlitImagePixel(dstX + px, dstY + py, r, g, b);
+                    break;
+                    default:
+                        buffer.BlendPixel(
+                            dstX + px,
+                            dstY + py,
+                            r,
+                            g,
+                            b,
+                            (byte)a,
+                            _gs.BlendMode
+                        );
+                    break;
+                }
             }
         }
     }
@@ -159,8 +169,10 @@ internal sealed partial class PageRenderer
     // Returns the original alpha when no soft mask is active or (x,y) is out of range.
     private byte SoftMaskAlpha(int x, int y, byte a)
     {
-        if (_gs.SoftMask is not { } mask) return a;
-        if ((uint)x >= (uint)_gs.SoftMaskWidth || (uint)y >= (uint)_gs.SoftMaskHeight) return 0;
+        if (_gs.SoftMask is not { } mask)
+            return a;
+        if ((uint)x >= (uint)_gs.SoftMaskWidth || (uint)y >= (uint)_gs.SoftMaskHeight)
+            return 0;
 
         var maskA = mask[(y * _gs.SoftMaskWidth) + x];
         return (byte)(a * maskA / 255);
@@ -182,17 +194,19 @@ internal sealed partial class PageRenderer
         var x2 = px + pw;
         var y2 = py + ph;
         for (var y = py; y < y2; y++)
-        for (var x = px; x < x2; x++)
         {
-            buffer.SetPixel(
-                x,
-                y,
-                r,
-                g,
-                b,
-                SoftMaskAlpha(x, y, baseAlpha),
-                blendMode
-            );
+            for (var x = px; x < x2; x++)
+            {
+                buffer.SetPixel(
+                    x,
+                    y,
+                    r,
+                    g,
+                    b,
+                    SoftMaskAlpha(x, y, baseAlpha),
+                    blendMode
+                );
+            }
         }
     }
 
@@ -273,14 +287,16 @@ internal sealed partial class PageRenderer
             var pixels = maskBuf.ToArgbBytes();
             var alpha = new byte[smInfo.WidthPx * smInfo.HeightPx];
             for (var y = 0; y < smInfo.HeightPx; y++)
-            for (var x = 0; x < smInfo.WidthPx; x++)
             {
-                var o = ((y * smInfo.WidthPx) + x) * 4;
-                alpha[(y * smInfo.WidthPx) + x] = smInfo.MaskType == RenderingConstants.SoftMaskLuminosity
-                    ? (byte)(((pixels[o] * RenderingConstants.LumaR)
-                              + (pixels[o + 1] * RenderingConstants.LumaG)
-                              + (pixels[o + 2] * RenderingConstants.LumaB)) >> RenderingConstants.LumaShift)
-                    : pixels[o];
+                for (var x = 0; x < smInfo.WidthPx; x++)
+                {
+                    var o = ((y * smInfo.WidthPx) + x) * 4;
+                    alpha[(y * smInfo.WidthPx) + x] = smInfo.MaskType == RenderingConstants.SoftMaskLuminosity
+                        ? (byte)(((pixels[o] * RenderingConstants.LumaR)
+                                  + (pixels[o + 1] * RenderingConstants.LumaG)
+                                  + (pixels[o + 2] * RenderingConstants.LumaB)) >> RenderingConstants.LumaShift)
+                        : pixels[o];
+                }
             }
 
             return alpha;

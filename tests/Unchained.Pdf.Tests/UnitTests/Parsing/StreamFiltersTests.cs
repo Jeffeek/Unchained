@@ -1,6 +1,6 @@
+using Shouldly;
 using System.IO.Compression;
 using System.Text;
-using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 using Xunit;
@@ -34,7 +34,8 @@ public sealed class StreamFiltersTests
     {
         var original = "Hello from a compressed stream"u8.ToArray();
         using var ms = new MemoryStream();
-        using (var z = new ZLibStream(ms, CompressionMode.Compress, true)) z.Write(original);
+        using (var z = new ZLibStream(ms, CompressionMode.Compress, true))
+            z.Write(original);
         var compressed = ms.ToArray();
 
         var dict = new PdfDictionary(
@@ -127,7 +128,8 @@ public sealed class StreamFiltersTests
                 bits.Add(((code >> i) & 1) == 1);
         }
 
-        while (bits.Count % 8 != 0) bits.Add(false);
+        while (bits.Count % 8 != 0)
+            bits.Add(false);
         var bytes = new byte[bits.Count / 8];
         for (var i = 0; i < bits.Count; i++)
         {
@@ -200,7 +202,8 @@ public sealed class StreamFiltersTests
                 bits.Add(((code >> i) & 1) == 1);
         }
 
-        while (bits.Count % 8 != 0) bits.Add(false);
+        while (bits.Count % 8 != 0)
+            bits.Add(false);
         var bytes = new byte[bits.Count / 8];
         for (var i = 0; i < bits.Count; i++)
         {
@@ -280,7 +283,8 @@ public sealed class StreamFiltersTests
                 bits.Add(((code >> i) & 1) == 1);
         }
 
-        while (bits.Count % 8 != 0) bits.Add(false);
+        while (bits.Count % 8 != 0)
+            bits.Add(false);
         var bytes = new byte[bits.Count / 8];
         for (var i = 0; i < bits.Count; i++)
         {

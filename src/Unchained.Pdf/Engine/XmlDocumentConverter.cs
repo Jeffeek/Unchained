@@ -124,7 +124,7 @@ internal static class XmlDocumentConverter
 
             // Pre-scan for fonts used on this page.
             foreach (var font in pageEl.Elements().Select(static el => el.Attribute("font")?.Value ?? PdfConstants.FontHelvetica))
-                usedFonts.Add(font);
+                _ = usedFonts.Add(font);
 
             foreach (var font in usedFonts)
                 fontRefs[font] = acc.AddFont(font);
@@ -183,7 +183,8 @@ internal static class XmlDocumentConverter
     )
     {
         var text = el.Value;
-        if (string.IsNullOrEmpty(text)) return;
+        if (string.IsNullOrEmpty(text))
+            return;
 
         var font = el.Attribute("font")?.Value ?? (isBold ? PdfConstants.FontHelveticaBold : PdfConstants.FontHelvetica);
         var size = FloatAttr(el, "size", 12f);

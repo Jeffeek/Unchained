@@ -1,5 +1,5 @@
-using System.IO.Packaging;
 using Shouldly;
+using System.IO.Packaging;
 using Unchained.Ooxml.Drawing;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Engine;

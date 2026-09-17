@@ -40,7 +40,8 @@ public sealed class HtmlExportRichTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 

@@ -65,7 +65,8 @@ internal sealed class PresentationParser
         }
 
         var result = ParsePackage(package);
-        if (wasEncrypted) result.Protection.IsEncrypted = true;
+        if (wasEncrypted)
+            result.Protection.IsEncrypted = true;
         return result;
     }
 
@@ -81,10 +82,7 @@ internal sealed class PresentationParser
                     PmlNames.RelTypePresentation,
                     StringComparison.Ordinal
                 )
-            );
-
-        if (presentationRel == null)
-            throw new PptxException("The package does not contain a presentation relationship.");
+            ) ?? throw new PptxException("The package does not contain a presentation relationship.");
 
         var presentationUri = "/" + presentationRel.TargetUri.TrimStart('/');
         var presentationPart = package.GetPart(presentationUri);
@@ -114,14 +112,16 @@ internal sealed class PresentationParser
                      .SelectMany(static l => l.Elements(PmlNames.SlideMasterId)))
         {
             var rId = (string?)masterIdEl.Attribute(PmlNames.RelationshipId);
-            if (rId == null) continue;
+            if (rId == null)
+                continue;
 
             var masterRel = presentationPart.Relationships
                 .FirstOrDefault(r =>
                     r.Id.Equals(rId, StringComparison.Ordinal)
                 );
 
-            if (masterRel == null) continue;
+            if (masterRel == null)
+                continue;
 
             var masterUri = presentationPart.ResolveUri(masterRel.TargetUri);
             var master = masterParser.Parse(masterUri, rId);
@@ -163,14 +163,16 @@ internal sealed class PresentationParser
         {
             var id = (uint)(slideIdEl.GetAttrInt(PmlNames.AttributeId) ?? 256);
             var rId = (string?)slideIdEl.Attribute(PmlNames.RelationshipId);
-            if (rId == null) continue;
+            if (rId == null)
+                continue;
 
             var slideRel = presentationPart.Relationships
                 .FirstOrDefault(r =>
                     r.Id.Equals(rId, StringComparison.Ordinal)
                 );
 
-            if (slideRel == null) continue;
+            if (slideRel == null)
+                continue;
 
             var slideUri = presentationPart.ResolveUri(slideRel.TargetUri);
             var slide = slideParser.Parse(slideUri, rId, id);
@@ -224,7 +226,8 @@ internal sealed class PresentationParser
         {
             var uri = presentationPart.ResolveUri(rel.TargetUri);
             var part = package.TryGetPart(uri);
-            if (part == null) continue;
+            if (part == null)
+                continue;
 
             preserved.HasMacros = true;
             preserved.Parts.Add(
@@ -256,7 +259,8 @@ internal sealed class PresentationParser
         {
             var originUri = "/" + originRel.TargetUri.TrimStart('/');
             var originPart = package.TryGetPart(originUri);
-            if (originPart == null) continue;
+            if (originPart == null)
+                continue;
 
             CapturePartTree(package, originPart, originUri, preserved);
             preserved.AnchorRelationships.Add(
@@ -308,7 +312,8 @@ internal sealed class PresentationParser
                 }
             );
 
-            if (rel.IsExternal) continue;
+            if (rel.IsExternal)
+                continue;
 
             var childUri = part.ResolveUri(rel.TargetUri);
             var childPart = package.TryGetPart(childUri);
@@ -324,30 +329,33 @@ internal sealed class PresentationParser
         var rel = presentationPart.Relationships.FirstOrDefault(static r =>
             r.RelationshipType.Equals(PmlNames.RelTypePresProps, StringComparison.Ordinal)
         );
-        if (rel == null) return null;
+        if (rel == null)
+            return null;
 
         var uri = presentationPart.ResolveUri(rel.TargetUri);
         var part = package.TryGetPart(uri);
-        if (part == null) return null;
+        if (part == null)
+            return null;
 
         var doc = OoXmlHelper.ParseXml(part.Data);
         var showPr = doc.Root?.Element(PmlNames.Pml + "showPr");
-        if (showPr == null) return null;
+        if (showPr == null)
+            return null;
 
         var pml = PmlNames.Pml;
-        var settings = new SlideShowSettings();
+        var settings = new SlideShowSettings
+        {
+            ShowType = showPr.Element(pml + "browse") != null
+                ? SlideShowType.Browsed
+                : showPr.Element(pml + "kiosk") != null
+                    ? SlideShowType.Kiosk
+                    : SlideShowType.Presenter,
 
-        if (showPr.Element(pml + "browse") != null)
-            settings.ShowType = SlideShowType.Browsed;
-        else if (showPr.Element(pml + "kiosk") != null)
-            settings.ShowType = SlideShowType.Kiosk;
-        else
-            settings.ShowType = SlideShowType.Presenter;
-
-        settings.Loop = showPr.GetAttrBool("loop") ?? false;
-        // XML stores positive sense; absence means "show". Our model stores the inverse.
-        settings.ShowWithoutNarration = showPr.GetAttrBool("showNarration") == false;
-        settings.ShowWithoutAnimation = showPr.GetAttrBool("showAnimation") == false;
+            Loop = showPr.GetAttrBool("loop") ?? false,
+            // XML stores positive sense; absence means "show". Our model stores the inverse.
+            ShowWithoutNarration = showPr.GetAttrBool("showNarration") == false,
+            ShowWithoutAnimation = showPr.GetAttrBool("showAnimation") == false
+        };
 
         var sldRg = showPr.Element(pml + "sldRg");
         if (sldRg != null)
@@ -399,7 +407,8 @@ internal sealed class PresentationParser
         {
             yield return shape;
 
-            if (shape is not GroupShape group) continue;
+            if (shape is not GroupShape group)
+                continue;
 
             foreach (var child in EnumerateAllShapes(group.Children))
                 yield return child;
@@ -414,14 +423,16 @@ internal sealed class PresentationParser
     )
     {
         var listEl = root.Element(PmlNames.EmbeddedFontList);
-        if (listEl == null) return;
+        if (listEl == null)
+            return;
 
         var rNs = PmlNames.Relationships;
 
         foreach (var fontEl in listEl.Elements(PmlNames.EmbeddedFont))
         {
             var typeface = fontEl.Element(PmlNames.Font)?.Attribute(PmlNames.AttributeTypeface)?.Value;
-            if (string.IsNullOrEmpty(typeface)) continue;
+            if (string.IsNullOrEmpty(typeface))
+                continue;
 
             AddVariant(fontEl.Element(PmlNames.FontRegular), EmbeddedFontStyle.Regular);
             AddVariant(fontEl.Element(PmlNames.FontBold), EmbeddedFontStyle.Bold);
@@ -432,17 +443,20 @@ internal sealed class PresentationParser
             void AddVariant(XElement? variantEl, EmbeddedFontStyle style)
             {
                 var rId = (string?)variantEl?.Attribute(rNs + "id");
-                if (string.IsNullOrEmpty(rId)) return;
+                if (string.IsNullOrEmpty(rId))
+                    return;
 
                 var rel = presentationPart.Relationships
                     .FirstOrDefault(r => r.Id.Equals(rId, StringComparison.Ordinal));
-                if (rel == null) return;
+                if (rel == null)
+                    return;
 
                 var fontUri = presentationPart.ResolveUri(rel.TargetUri);
                 var part = package.TryGetPart(fontUri);
-                if (part == null) return;
+                if (part == null)
+                    return;
 
-                mediaStore.AddFont(
+                _ = mediaStore.AddFont(
                     new EmbeddedFont
                     {
                         Typeface = typeface,
@@ -460,7 +474,8 @@ internal sealed class PresentationParser
         var pml = PmlNames.Pml;
 
         var modVerEl = root.Element(pml + "modifyVerifier");
-        if (modVerEl == null) return protection;
+        if (modVerEl == null)
+            return protection;
 
         protection.WriteProtectionSaltBase64 = modVerEl.GetAttr("saltValue");
         protection.WriteProtectionHashBase64 = modVerEl.GetAttr("hashValue");
@@ -471,7 +486,8 @@ internal sealed class PresentationParser
     private static SlideSize ParseSlideSize(XContainer root)
     {
         var sldSz = root.Element(PmlNames.SlideSize);
-        if (sldSz == null) return SlideSize.Widescreen;
+        if (sldSz == null)
+            return SlideSize.Widescreen;
 
         var cx = sldSz.GetAttrLong(PmlNames.AttributeWidth, SlideSize.Widescreen.Width.Value);
         var cy = sldSz.GetAttrLong(PmlNames.AttributeHeight, SlideSize.Widescreen.Height.Value);
@@ -490,7 +506,8 @@ internal sealed class PresentationParser
                 )
             );
 
-        if (coreRel == null) return props;
+        if (coreRel == null)
+            return props;
 
         var corePart = package.TryGetPart("/" + coreRel.TargetUri.TrimStart('/'));
         if (corePart != null)
@@ -505,7 +522,8 @@ internal sealed class PresentationParser
         {
             var doc = OoXmlHelper.ParseXml(data);
             var root = doc.Root;
-            if (root == null) return;
+            if (root == null)
+                return;
 
             var dc = XNamespace.Get("http://purl.org/dc/elements/1.1/");
             var cp = XNamespace.Get(

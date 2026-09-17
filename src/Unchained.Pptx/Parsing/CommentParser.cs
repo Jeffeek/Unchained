@@ -24,13 +24,16 @@ internal static class CommentParser
         foreach (var cm in cmLstRoot.Elements(pml + "cm"))
         {
             var authorIdRaw = cm.GetAttr("authorId");
-            if (!uint.TryParse(authorIdRaw, out var authorId)) continue;
+            if (!uint.TryParse(authorIdRaw, out var authorId))
+                continue;
 
             var author = authors.FindById(authorId);
-            if (author == null) continue;
+            if (author == null)
+                continue;
 
             var idxRaw = cm.GetAttr(CmlNames.AttributeIndex);
-            if (!uint.TryParse(idxRaw, out var idx)) continue;
+            if (!uint.TryParse(idxRaw, out var idx))
+                continue;
 
             // Update the author's last index so new comments don't conflict
             if (idx > author.LastIndex)

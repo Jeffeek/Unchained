@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Rendering.Tests.Helpers;
 using Unchained.Pdf.Tests.Shared;
@@ -46,7 +46,8 @@ public sealed class PageRendererDispatchTests : RendererTestBase
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 5");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 5 /Root 1 0 R >>");
         PdfFixtures.Ln(sb, "startxref");
@@ -233,7 +234,8 @@ public sealed class PageRendererDispatchTests : RendererTestBase
         PdfFixtures.Ln(sb, "xref");
         PdfFixtures.Ln(sb, "0 6");
         PdfFixtures.Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            PdfFixtures.Ln(sb, $"{o:D10} 00000 n ");
         PdfFixtures.Ln(sb, "trailer");
         PdfFixtures.Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         PdfFixtures.Ln(sb, "startxref");

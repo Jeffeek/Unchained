@@ -54,7 +54,8 @@ public sealed class PageLabelEditor : IPageLabelEditor
         var result = new List<PageLabelRange>();
         var pageLabelsObj = core.Catalog[PdfName.PageLabels];
         var root = core.ResolveDict(pageLabelsObj);
-        if (root is null) return result;
+        if (root is null)
+            return result;
 
         CollectNumberTree(root, core, result);
         return result.OrderBy(static r => r.StartPageIndex).ToList();
@@ -74,7 +75,8 @@ public sealed class PageLabelEditor : IPageLabelEditor
             {
                 var pageIdx = (int)(arr[i] is PdfInteger pi ? pi.Value : 0);
                 var labelDict = core.ResolveDict(arr[i + 1]);
-                if (labelDict is null) return null;
+                if (labelDict is null)
+                    return null;
 
                 var style = ParseStyle(labelDict.GetName("S"));
                 var prefix = labelDict[PdfName.P] is PdfString ps
@@ -120,7 +122,7 @@ public sealed class PageLabelEditor : IPageLabelEditor
             adapter,
             static entries =>
             {
-                entries.Remove("PageLabels");
+                _ = entries.Remove("PageLabels");
             }
         );
 
@@ -130,9 +132,12 @@ public sealed class PageLabelEditor : IPageLabelEditor
     {
         var entries = new Dictionary<string, PdfObject>();
         var styleStr = StyleToString(range.Style);
-        if (styleStr is not null) entries[PdfName.S.Value] = PdfName.Get(styleStr);
-        if (!string.IsNullOrEmpty(range.Prefix)) entries["P"] = PdfString.FromLatin1(range.Prefix);
-        if (range.FirstLabelNumber != 1) entries["St"] = new PdfInteger(range.FirstLabelNumber);
+        if (styleStr is not null)
+            entries[PdfName.S.Value] = PdfName.Get(styleStr);
+        if (!string.IsNullOrEmpty(range.Prefix))
+            entries["P"] = PdfString.FromLatin1(range.Prefix);
+        if (range.FirstLabelNumber != 1)
+            entries["St"] = new PdfInteger(range.FirstLabelNumber);
 
         return new PdfDictionary(entries);
     }

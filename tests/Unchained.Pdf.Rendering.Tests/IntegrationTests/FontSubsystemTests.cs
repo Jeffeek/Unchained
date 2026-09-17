@@ -1,6 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Drawing.Primitives.Fonts;
 using Unchained.Drawing.Text;
 using Unchained.Pdf.Engine;
@@ -224,7 +223,6 @@ public sealed class FontSubsystemTests : RendererTestBase
     // Public alias used by FontUtilitiesTests (different class, same assembly).
     internal static byte[] LoadBundledDejaVuBytesPublic() => LoadBundledDejaVuBytes();
 
-    [SuppressMessage("ReSharper", "BadListLineBreaks")]
     private static byte[] CreateSolidRgb(
         int width,
         int height,
@@ -260,7 +258,8 @@ public sealed class FontUtilitiesTests : PdfTestBase
         // The method returns defaults rather than null when the input is too short.
         var metrics = TrueTypeMetrics.Read([0x00, 0x01, 0x02]);
         // Either null or default metrics — both are acceptable; the key invariant is no exception.
-        if (metrics is null) return;
+        if (metrics is null)
+            return;
 
         // If defaults are returned, they should be reasonable values.
         metrics.Ascent.ShouldBe(800);

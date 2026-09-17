@@ -123,9 +123,10 @@ public sealed class ColorSpaceInfoTests
     {
         var info = ColorSpaceInfo.Lab();
         info.Kind.ShouldBe("Lab");
+
         // L*=100 (white-ish) should not throw.
-        var rgb = info.ToRgb([100, 0, 0]);
-        rgb.R.ShouldBeGreaterThan((byte)0);
+        var (r, _, _) = info.ToRgb([100, 0, 0]);
+        r.ShouldBeGreaterThan((byte)0);
     }
 
     [Fact]

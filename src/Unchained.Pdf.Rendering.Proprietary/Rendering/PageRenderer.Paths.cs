@@ -53,14 +53,15 @@ internal sealed partial class PageRenderer
         double y3
     )
     {
-        if (_curSub is null) PathMoveTo(_currentPoint.X, _currentPoint.Y);
-        var p0 = _currentPoint;
+        if (_curSub is null)
+            PathMoveTo(_currentPoint.X, _currentPoint.Y);
+        var (x, y) = _currentPoint;
         for (var t = 1; t <= 8; t++)
         {
             var s = t / 8.0;
             var u = 1 - s;
-            var bx = (u * u * u * p0.X) + (3 * u * u * s * x1) + (3 * u * s * s * x2) + (s * s * s * x3);
-            var by = (u * u * u * p0.Y) + (3 * u * u * s * y1) + (3 * u * s * s * y2) + (s * s * s * y3);
+            var bx = (u * u * u * x) + (3 * u * u * s * x1) + (3 * u * s * s * x2) + (s * s * s * x3);
+            var by = (u * u * u * y) + (3 * u * u * s * y1) + (3 * u * s * s * y2) + (s * s * s * y3);
             _curSub!.Add((bx, by));
             _currentPoint = (bx, by);
         }
@@ -68,7 +69,8 @@ internal sealed partial class PageRenderer
 
     private void PathClose()
     {
-        if (!_inPath || _curSub is not { Count: > 0 }) return;
+        if (!_inPath || _curSub is not { Count: > 0 })
+            return;
 
         _curSub.Add(_pathStart);
         _currentPoint = _pathStart;
@@ -79,7 +81,8 @@ internal sealed partial class PageRenderer
     // path; everything else is scan-converted as a polygon (all subpaths together).
     private void DrawFill(bool evenOdd)
     {
-        if (_subpaths.Count == 0) return;
+        if (_subpaths.Count == 0)
+            return;
 
         // Shading pattern fill: paint the gradient clipped to the path's bounding box.
         if (_gs.FillShadingName is { } shName && shadings is not null
@@ -152,13 +155,19 @@ internal sealed partial class PageRenderer
         var maxX = double.MinValue;
         var maxY = double.MinValue;
         foreach (var sub in _subpaths)
-        foreach (var (ux, uy) in sub)
         {
-            var (px, py) = UToPixel(ux, uy);
-            if (px < minX) minX = px;
-            if (py < minY) minY = py;
-            if (px > maxX) maxX = px;
-            if (py > maxY) maxY = py;
+            foreach (var (ux, uy) in sub)
+            {
+                var (px, py) = UToPixel(ux, uy);
+                if (px < minX)
+                    minX = px;
+                if (py < minY)
+                    minY = py;
+                if (px > maxX)
+                    maxX = px;
+                if (py > maxY)
+                    maxY = py;
+            }
         }
 
         return (minX, minY, maxX, maxY);
@@ -184,14 +193,17 @@ internal sealed partial class PageRenderer
             {
                 var (px, py) = UToPixel(sub[i].X, sub[i].Y);
                 pts[i] = (px, py);
-                if (py < minY) minY = py;
-                if (py > maxY) maxY = py;
+                if (py < minY)
+                    minY = py;
+                if (py > maxY)
+                    maxY = py;
             }
 
             polys.Add(pts);
         }
 
-        if (polys.Count == 0) return;
+        if (polys.Count == 0)
+            return;
 
         var y0 = Math.Max(0, (int)Math.Floor(minY));
         var y1 = Math.Min(buffer.Height - 1, (int)Math.Ceiling(maxY));
@@ -210,9 +222,11 @@ internal sealed partial class PageRenderer
                 {
                     var (ax, ay) = pts[i];
                     var (bx, by) = pts[(i + 1) % n];        // implicit close
-                    if (Math.Abs(ay - by) < 0.05) continue; // horizontal edge contributes no crossing
+                    if (Math.Abs(ay - by) < 0.05)
+                        continue; // horizontal edge contributes no crossing
                     // Half-open [min,max) so shared vertices aren't double-counted.
-                    if (sy < Math.Min(ay, by) || sy >= Math.Max(ay, by)) continue;
+                    if (sy < Math.Min(ay, by) || sy >= Math.Max(ay, by))
+                        continue;
 
                     var t = (sy - ay) / (by - ay);
                     var cx = ax + (t * (bx - ax));
@@ -220,7 +234,8 @@ internal sealed partial class PageRenderer
                 }
             }
 
-            if (xs.Count < 2) continue;
+            if (xs.Count < 2)
+                continue;
 
             xs.Sort(static (p, q) => p.X.CompareTo(q.X));
 
@@ -229,11 +244,13 @@ internal sealed partial class PageRenderer
             {
                 wind += xs[i].Dir;
                 var inside = evenOdd ? ((i + 1) & 1) == 1 : wind != 0;
-                if (!inside) continue;
+                if (!inside)
+                    continue;
 
                 var xStart = (int)Math.Round(xs[i].X);
                 var xEnd = (int)Math.Round(xs[i + 1].X);
-                if (xEnd <= xStart) continue;
+                if (xEnd <= xStart)
+                    continue;
 
                 if (HasSoftMask)
                 {
@@ -280,7 +297,8 @@ internal sealed partial class PageRenderer
             ? _gs.DashLengths.Select(d => Math.Max(0.0, d * ctmScale * scale)).ToArray()
             : null;
         // A pattern of all zeros means "solid" — ignore it.
-        if (dashPx is not null && dashPx.All(static d => d <= 0)) dashPx = null;
+        if (dashPx is not null && dashPx.All(static d => d <= 0))
+            dashPx = null;
 
         foreach (var sub in _subpaths)
         {
@@ -334,7 +352,8 @@ internal sealed partial class PageRenderer
             }
 
             // Line caps on open subpaths (cap = 1 round, 2 projecting square).
-            if (_gs.LineCap == 0 || sub.Count < 2) continue;
+            if (_gs.LineCap == 0 || sub.Count < 2)
+                continue;
 
             var capR = Math.Max(1, thickPx / 2);
             var (ax, ay) = UToPixel(sub[0].X, sub[0].Y);
@@ -406,7 +425,8 @@ internal sealed partial class PageRenderer
         var dyOut = c.Y - b.Y;
         var lenIn = Vector2D.Magnitude(dxIn, dyIn);
         var lenOut = Vector2D.Magnitude(dxOut, dyOut);
-        if (lenIn < RenderingConstants.Epsilon || lenOut < RenderingConstants.Epsilon) return;
+        if (lenIn < RenderingConstants.Epsilon || lenOut < RenderingConstants.Epsilon)
+            return;
 
         // Unit normals (perpendicular to each segment, pointing "outward").
         var nxIn = -dyIn / lenIn;
@@ -479,10 +499,12 @@ internal sealed partial class PageRenderer
                 // Edge 2: point = b + nOut*half, direction = (dxOut/lenOut, dyOut/lenOut)
                 // Fall back to bevel if the angle is too shallow (miter limit exceeded).
                 var sinHalf = (nxIn * dyOut / lenOut) - (nyIn * dxOut / lenOut);
-                if (Math.Abs(sinHalf) < RenderingConstants.Epsilon) break; // parallel segments
+                if (Math.Abs(sinHalf) < RenderingConstants.Epsilon)
+                    break; // parallel segments
 
                 var miterLen = half / Math.Abs(sinHalf);
-                if (miterLen > half * _gs.MiterLimit) goto case 2; // exceed limit → bevel
+                if (miterLen > half * _gs.MiterLimit)
+                    goto case 2; // exceed limit → bevel
 
                 var mx = bx + ((nxIn + nxOut) * half / 2.0 / Math.Max(RenderingConstants.Epsilon, Math.Abs(sinHalf)));
                 var my = by + ((nyIn + nyOut) * half / 2.0 / Math.Max(RenderingConstants.Epsilon, Math.Abs(sinHalf)));
@@ -544,7 +566,8 @@ internal sealed partial class PageRenderer
         var dx = x1 - x0;
         var dy = y1 - y0;
         var len = Vector2D.Magnitude(dx, dy);
-        if (len < RenderingConstants.Epsilon) return;
+        if (len < RenderingConstants.Epsilon)
+            return;
 
         var ux = dx / len;
         var uy = dy / len;
@@ -604,7 +627,8 @@ internal sealed partial class PageRenderer
             polys.Add(pts);
         }
 
-        if (polys.Count == 0) return;
+        if (polys.Count == 0)
+            return;
 
         buffer.SetClipPolygons(polys, evenOdd);
     }
@@ -620,15 +644,18 @@ internal sealed partial class PageRenderer
     )
     {
         minX = minY = maxX = maxY = 0;
-        if (_subpaths.Count != 1) return false;
+        if (_subpaths.Count != 1)
+            return false;
 
         var sub = _subpaths[0];
         // 4 or 5 points (5th = explicit close back to start).
-        if (sub.Count is < 4 or > 5) return false;
+        if (sub.Count is < 4 or > 5)
+            return false;
 
         var distinctX = sub.Select(static p => p.X).Distinct().Count();
         var distinctY = sub.Select(static p => p.Y).Distinct().Count();
-        if (distinctX != 2 || distinctY != 2) return false;
+        if (distinctX != 2 || distinctY != 2)
+            return false;
 
         minX = sub.Min(static p => p.X);
         maxX = sub.Max(static p => p.X);

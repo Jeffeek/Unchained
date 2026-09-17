@@ -69,7 +69,7 @@ public sealed class ColumnCollection : IReadOnlyList<Column>
             _columns.Add(right);
         }
 
-        _columns.Remove(existing);
+        _ = _columns.Remove(existing);
         _columns.Add(isolated);
         return isolated;
     }

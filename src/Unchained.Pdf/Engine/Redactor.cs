@@ -1,7 +1,7 @@
-using Unchained.Drawing.Primitives.Extensions;
 using System.Globalization;
 using System.Text;
 using Unchained.Drawing.Primitives;
+using Unchained.Drawing.Primitives.Extensions;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
@@ -28,7 +28,8 @@ public sealed class Redactor : IRedactor
 
     private static void Redact(IPdfDocument document, IReadOnlyList<RedactionRegion> regions)
     {
-        if (regions.Count == 0) return;
+        if (regions.Count == 0)
+            return;
 
         var adapter = MutationHelper.Cast(nameof(document), document);
         var pageCount = adapter.Core.PageCount;
@@ -112,7 +113,8 @@ public sealed class Redactor : IRedactor
                     ctmStack.Push((double[])ctm.Clone());
                 break;
                 case "Q":
-                    if (ctmStack.Count > 0) ctm = ctmStack.Pop();
+                    if (ctmStack.Count > 0)
+                        ctm = ctmStack.Pop();
                 break;
                 case "cm" when op.Operands.Count >= 6:
                     ctm = Matrix2D.Multiply(ReadMatrix(op), ctm);
@@ -122,7 +124,7 @@ public sealed class Redactor : IRedactor
                     tlm = Matrix2D.Identity();
                 break;
                 case "Tf" when op.Operands.Count >= 2:
-                    op.Operands[1].ReadIntOrReal();
+                    _ = op.Operands[1].ReadIntOrReal();
                 break;
                 case "TL" when op.Operands.Count >= 1:
                     leading = op.Operands[0].ReadIntOrReal();
@@ -154,14 +156,16 @@ public sealed class Redactor : IRedactor
                 {
                     // Text-show origin = textMatrix × CTM applied to (0,0).
                     var (x, y) = Matrix2D.Transform(Matrix2D.Multiply(tm, ctm), 0, 0);
-                    if (InAnyRegion(regions, x, y)) drop = true;
+                    if (InAnyRegion(regions, x, y))
+                        drop = true;
                     break;
                 }
                 case "Do":
                 {
                     // Image/form placement origin = CTM applied to the unit square's centre.
                     var (x, y) = Matrix2D.Transform(ctm, 0.5, 0.5);
-                    if (InAnyRegion(regions, x, y)) drop = true;
+                    if (InAnyRegion(regions, x, y))
+                        drop = true;
                     break;
                 }
             }
@@ -171,7 +175,8 @@ public sealed class Redactor : IRedactor
 
             // Advance the text line for the show-with-newline operators even if dropped,
             // so subsequent text keeps its position.
-            if (op.Name is not ("'" or "\"")) continue;
+            if (op.Name is not ("'" or "\""))
+                continue;
 
             tlm = Matrix2D.Multiply(Matrix2D.Translate(0, -leading), tlm);
             tm = (double[])tlm.Clone();
@@ -181,8 +186,8 @@ public sealed class Redactor : IRedactor
         foreach (var r in regions)
         {
             var (cr, cg, cb) = r.FillColor;
-            sb.Append("q ").Append(F(cr)).Append(' ').Append(F(cg)).Append(' ').Append(F(cb)).Append(" rg ");
-            sb.Append(F(r.X))
+            _ = sb.Append("q ").Append(F(cr)).Append(' ').Append(F(cg)).Append(' ').Append(F(cb)).Append(" rg ");
+            _ = sb.Append(F(r.X))
                 .Append(' ')
                 .Append(F(r.Y))
                 .Append(' ')
@@ -205,44 +210,59 @@ public sealed class Redactor : IRedactor
         foreach (var operand in op.Operands)
         {
             WriteOperand(sb, operand);
-            sb.Append(' ');
+            _ = sb.Append(' ');
         }
 
-        sb.Append(op.Name).Append('\n');
+        _ = sb.Append(op.Name).Append('\n');
     }
 
     private static void WriteOperand(StringBuilder sb, PdfObject o)
     {
         switch (o)
         {
-            case PdfInteger i: sb.Append(i.Value.ToString(CultureInfo.InvariantCulture)); break;
-            case PdfReal r: sb.Append(F(r.Value)); break;
-            case PdfBoolean b: sb.Append(b.Value ? "true" : "false"); break;
-            case PdfName n: sb.Append('/').Append(n.Value); break;
-            case PdfNull: sb.Append("null"); break;
-            case PdfString s: WriteString(sb, s); break;
+            case PdfInteger i:
+                _ = sb.Append(i.Value.ToString(CultureInfo.InvariantCulture));
+            break;
+            case PdfReal r:
+                _ = sb.Append(F(r.Value));
+            break;
+            case PdfBoolean b:
+                _ = sb.Append(b.Value ? "true" : "false");
+            break;
+            case PdfName n:
+                _ = sb.Append('/').Append(n.Value);
+            break;
+            case PdfNull:
+                _ = sb.Append("null");
+            break;
+            case PdfString s:
+                WriteString(sb, s);
+            break;
             case PdfArray a:
-                sb.Append('[');
+                _ = sb.Append('[');
                 for (var i = 0; i < a.Count; i++)
                 {
-                    if (i > 0) sb.Append(' ');
+                    if (i > 0)
+                        _ = sb.Append(' ');
                     WriteOperand(sb, a[i]);
                 }
 
-                sb.Append(']');
+                _ = sb.Append(']');
             break;
             case PdfDictionary d:
-                sb.Append("<<");
+                _ = sb.Append("<<");
                 foreach (var (k, v) in d.Entries)
                 {
-                    sb.Append('/').Append(k).Append(' ');
+                    _ = sb.Append('/').Append(k).Append(' ');
                     WriteOperand(sb, v);
-                    sb.Append(' ');
+                    _ = sb.Append(' ');
                 }
 
-                sb.Append(">>");
+                _ = sb.Append(">>");
             break;
-            default: sb.Append("null"); break;
+            default:
+                _ = sb.Append("null");
+            break;
         }
     }
 
@@ -264,20 +284,22 @@ public sealed class Redactor : IRedactor
 
         if (printable)
         {
-            sb.Append('(');
+            _ = sb.Append('(');
             foreach (var b in bytes)
             {
-                if (b is (byte)'(' or (byte)')' or (byte)'\\') sb.Append('\\');
-                sb.Append((char)b);
+                if (b is (byte)'(' or (byte)')' or (byte)'\\')
+                    _ = sb.Append('\\');
+                _ = sb.Append((char)b);
             }
 
-            sb.Append(')');
+            _ = sb.Append(')');
         }
         else
         {
-            sb.Append('<');
-            foreach (var b in bytes) sb.Append(b.ToHex2());
-            sb.Append('>');
+            _ = sb.Append('<');
+            foreach (var b in bytes)
+                _ = sb.Append(b.ToHex2());
+            _ = sb.Append('>');
         }
     }
 

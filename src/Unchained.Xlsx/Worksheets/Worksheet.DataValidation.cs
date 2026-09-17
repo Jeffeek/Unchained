@@ -21,7 +21,7 @@ public sealed partial class Worksheet
 
     internal bool DataValidationsMaterialised { get; private set; }
 
-    internal DataValidationCollection DataValidationsInternal { get; } = new();
+    internal DataValidationCollection DataValidationsInternal { get; } = [];
 
     /// <summary>Adds a drop-down list validation to <paramref name="range" /> from an explicit list of options.</summary>
     public DataValidation.DataValidation AddDropdownValidation(CellRange range, params string[] options)

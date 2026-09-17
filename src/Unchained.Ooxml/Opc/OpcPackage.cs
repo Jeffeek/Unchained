@@ -127,7 +127,7 @@ internal sealed class OpcPackage : IDisposable
     public void RemovePart(string partUri)
     {
         var normalised = NormaliseUri(partUri);
-        _parts.Remove(normalised);
+        _ = _parts.Remove(normalised);
     }
 
     /// <summary>
@@ -228,7 +228,8 @@ internal sealed class OpcPackage : IDisposable
 
         foreach (var (name, data) in entries)
         {
-            if (IsMetaEntry(name)) continue;
+            if (IsMetaEntry(name))
+                continue;
 
             var uri = "/" + name.Replace('\\', '/');
             var contentType = _contentTypes.GetContentType(uri) ?? MimeTypes.OctetStream;

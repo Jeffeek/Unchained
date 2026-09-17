@@ -407,7 +407,7 @@ public sealed class PageOrganizer : IPageOrganizer
     {
         var order = OrderedLeafObjectNumbers(core);
         var baked = BakeLeaves(core);
-        return order.Select(n => (n, baked[n])).ToList();
+        return [.. order.Select(n => (n, baked[n]))];
     }
 
     // Walks the page tree and returns leaf object numbers in page order.
@@ -427,8 +427,10 @@ public sealed class PageOrganizer : IPageOrganizer
         ISet<int> seen
     )
     {
-        if (!seen.Add(nodeRef.ObjectNumber)) return; // cycle guard
-        if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node) return;
+        if (!seen.Add(nodeRef.ObjectNumber))
+            return; // cycle guard
+        if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node)
+            return;
 
         var type = node.GetName(PdfName.Type.Value);
         if (type == PdfName.Page.Value)
@@ -437,7 +439,8 @@ public sealed class PageOrganizer : IPageOrganizer
             return;
         }
 
-        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids) return;
+        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
+            return;
 
         foreach (var kr in kids.Elements.OfType<PdfIndirectReference>())
             WalkTree(core, kr, leaves, seen);
@@ -462,8 +465,10 @@ public sealed class PageOrganizer : IPageOrganizer
         ISet<int> seen
     )
     {
-        if (!seen.Add(nodeRef.ObjectNumber)) return;
-        if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node) return;
+        if (!seen.Add(nodeRef.ObjectNumber))
+            return;
+        if (core.ResolveIndirect(nodeRef.ObjectNumber).Value is not PdfDictionary node)
+            return;
 
         // Accumulate inheritable attributes this node provides for its descendants.
         var nextInherited = new Dictionary<string, PdfObject>(inherited);
@@ -483,7 +488,8 @@ public sealed class PageOrganizer : IPageOrganizer
             return;
         }
 
-        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids) return;
+        if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
+            return;
 
         foreach (var kr in kids.Elements.OfType<PdfIndirectReference>())
             BakeWalk(core, kr, nextInherited, output, seen);
@@ -513,7 +519,7 @@ public sealed class PageOrganizer : IPageOrganizer
         if (node.IsPage())
             return;
 
-        nodes.Add(nodeRef.ObjectNumber);
+        _ = nodes.Add(nodeRef.ObjectNumber);
         if (node.Get<PdfArray>(PdfName.Kids) is not { } kids)
             return;
 

@@ -112,6 +112,7 @@ public sealed class PdfTreeBuilderTests
         return Encoding.Latin1.GetBytes(sb.ToString());
 
         static void Ln(StringBuilder builder, string line) => builder.Append(line).Append('\n');
+
         static int Len(StringBuilder builder) => Encoding.Latin1.GetByteCount(builder.ToString());
     }
 }

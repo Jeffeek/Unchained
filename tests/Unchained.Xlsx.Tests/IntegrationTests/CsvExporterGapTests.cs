@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models;
 using Unchained.Xlsx.Models.Cell;
@@ -121,8 +121,7 @@ public sealed class CsvExporterGapTests
         document.Sheets[0].SetValue(2, 2, "B2");
         document.Sheets[0].SetValue(3, 3, "C3");
 
-        var text = Encoding.UTF8.GetString(
-            document.Sheets[0].ToCsv(new CsvSaveOptions { Range = CellRange.FromA1("B2") }));
+        var text = Encoding.UTF8.GetString(document.Sheets[0].ToCsv(new CsvSaveOptions { Range = CellRange.FromA1("B2") }));
 
         text.Trim().ShouldBe("B2");
     }

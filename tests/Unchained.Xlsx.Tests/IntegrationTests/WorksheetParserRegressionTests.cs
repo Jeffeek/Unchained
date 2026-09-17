@@ -155,10 +155,8 @@ public sealed class WorksheetParserRegressionTests
         byte[] bytes;
 
         using (var doc = processor.CreateBlank("Empty"))
-        {
             // Don't add any data - completely empty sheet
             bytes = await SaveToBytes(processor, doc);
-        }
 
         using (var doc = await LoadFromBytes(processor, bytes))
         {

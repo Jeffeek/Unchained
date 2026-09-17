@@ -76,7 +76,8 @@ internal static partial class WorkbookWriter
                 sheet.PartUri = uri;
             }
 
-            if (!string.IsNullOrEmpty(sheet.RelationshipId)) continue;
+            if (!string.IsNullOrEmpty(sheet.RelationshipId))
+                continue;
 
             string relId;
             do
@@ -96,7 +97,7 @@ internal static partial class WorkbookWriter
             var preservedRels = existing?.Relationships.ToList() ?? [];
 
             var bytes = WorksheetWriter.Write(sheet);
-            package.AddOrReplacePart(sheet.PartUri, SmlNames.ContentTypeWorksheet, bytes);
+            _ = package.AddOrReplacePart(sheet.PartUri, SmlNames.ContentTypeWorksheet, bytes);
 
             foreach (var rel in preservedRels)
                 package.AddRelationship(sheet.PartUri, rel.Id, rel.RelationshipType, rel.TargetUri, rel.IsExternal);
@@ -127,7 +128,7 @@ internal static partial class WorkbookWriter
                     table.PartUri = uri;
                 }
                 else
-                    usedUris.Add(table.PartUri);
+                    _ = usedUris.Add(table.PartUri);
 
                 if (string.IsNullOrEmpty(table.RelationshipId))
                 {
@@ -139,7 +140,7 @@ internal static partial class WorkbookWriter
                     table.RelationshipId = relId;
                 }
                 else
-                    sheetRelIds.Add(table.RelationshipId);
+                    _ = sheetRelIds.Add(table.RelationshipId);
             }
         }
     }
@@ -153,11 +154,12 @@ internal static partial class WorkbookWriter
 
             foreach (var table in sheet.TablesOrNull!.All)
             {
-                package.AddOrReplacePart(table.PartUri, SmlNames.ContentTypeTable, TableWriter.Write(table));
+                _ = package.AddOrReplacePart(table.PartUri, SmlNames.ContentTypeTable, TableWriter.Write(table));
 
                 var hasRel = package.GetRelationships(sheet.PartUri)
                     .Any(r => r.Id == table.RelationshipId);
-                if (hasRel) continue;
+                if (hasRel)
+                    continue;
 
                 var target = RelativeToSheet(table.PartUri);
                 package.AddRelationship(sheet.PartUri, table.RelationshipId, SmlNames.RelTypeTable, target);
@@ -192,7 +194,7 @@ internal static partial class WorkbookWriter
         if (!table.IsDirty && package.TryGetPart(SharedStringsUri) == null)
             return;
 
-        package.AddOrReplacePart(SharedStringsUri, SmlNames.ContentTypeSharedStrings, table.Serialize());
+        _ = package.AddOrReplacePart(SharedStringsUri, SmlNames.ContentTypeSharedStrings, table.Serialize());
     }
 
     // ── workbook.xml ─────────────────────────────────────────────────────────
@@ -227,7 +229,7 @@ internal static partial class WorkbookWriter
         }
 
         var bytes = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
-        package.AddOrReplacePart(WorkbookUri, SmlNames.ContentTypeWorkbook, bytes);
+        _ = package.AddOrReplacePart(WorkbookUri, SmlNames.ContentTypeWorkbook, bytes);
     }
 
     private static XElement CreateWorkbookRoot() =>
@@ -331,9 +333,12 @@ internal static partial class WorkbookWriter
             return;
 
         var element = new XElement(SmlNames.WorkbookProtection);
-        if (protection.LockStructure) element.SetAttributeValue("lockStructure", "1");
-        if (protection.LockWindows) element.SetAttributeValue("lockWindows", "1");
-        if (protection.PasswordHash != null) element.SetAttributeValue("workbookPassword", protection.PasswordHash);
+        if (protection.LockStructure)
+            element.SetAttributeValue("lockStructure", "1");
+        if (protection.LockWindows)
+            element.SetAttributeValue("lockWindows", "1");
+        if (protection.PasswordHash != null)
+            element.SetAttributeValue("workbookPassword", protection.PasswordHash);
 
         // <workbookProtection> follows <fileVersion>/<workbookPr> and precedes <bookViews>/<sheets>.
         var anchor = root.Child(SmlNames.Sheets);
@@ -432,12 +437,12 @@ internal static partial class WorkbookWriter
         var styles = document.MaterialisedStyles;
         if (styles != null)
         {
-            package.AddOrReplacePart(StylesUri, SmlNames.ContentTypeStyles, StylesWriter.Write(styles));
+            _ = package.AddOrReplacePart(StylesUri, SmlNames.ContentTypeStyles, StylesWriter.Write(styles));
             return;
         }
 
         if (package.TryGetPart(StylesUri) == null)
-            package.AddOrReplacePart(StylesUri, SmlNames.ContentTypeStyles, StylesWriter.Write(StyleBook.CreateDefault()));
+            _ = package.AddOrReplacePart(StylesUri, SmlNames.ContentTypeStyles, StylesWriter.Write(StyleBook.CreateDefault()));
     }
 
     // ── Minimal package for CreateBlank ─────────────────────────────────────────
@@ -445,7 +450,7 @@ internal static partial class WorkbookWriter
     private static OpcPackage CreateMinimalPackage()
     {
         var package = OpcPackage.CreateEmpty();
-        package.AddOrReplacePart(WorkbookUri, SmlNames.ContentTypeWorkbook, EmptyWorkbookBytes());
+        _ = package.AddOrReplacePart(WorkbookUri, SmlNames.ContentTypeWorkbook, EmptyWorkbookBytes());
         package.AddPackageRelationship("rId1", SmlNames.RelTypeOfficeDocument, "xl/workbook.xml");
         return package;
     }

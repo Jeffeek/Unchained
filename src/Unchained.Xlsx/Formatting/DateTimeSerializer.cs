@@ -25,18 +25,14 @@ internal static class DateTimeSerializer
     ///     Converts a serial number to a <see cref="DateTime" />, or returns <see langword="null" />
     ///     for the phantom 29 Feb 1900 (serial 60) or an out-of-range value.
     /// </summary>
-    public static DateTime? ToDateTime(double serial, bool date1904)
-    {
-        if (date1904)
-            return serial < 0 ? null : Base1904.AddDays(serial);
-
-        return serial switch
+    public static DateTime? ToDateTime(double serial, bool date1904) => date1904
+        ? serial < 0 ? null : Base1904.AddDays(serial)
+        : serial switch
         {
             // Serials in [60, 61) map to the phantom 29 Feb 1900 that never existed.
             < 1 or > MaxSerial or >= PhantomLeapSerial and < PhantomLeapSerial + 1 => null,
             _ => serial <= PhantomLeapSerial ? Base1900.AddDays(serial) : Base1900.AddDays(serial - 1)
         };
-    }
 
     /// <summary>Converts a <see cref="DateTime" /> to an Excel date/time serial number.</summary>
     public static double ToSerial(DateTime date, bool date1904)

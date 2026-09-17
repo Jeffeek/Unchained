@@ -111,13 +111,22 @@ public class CellCoverageTests
         var cell = document.Sheets[0][1, 1];
         switch (type)
         {
-            case CellType.String: cell.SetValue("hi"); break;
-            case CellType.Boolean: cell.SetValue(false); break;
-            case CellType.Error: cell.SetValue(CellError.Value); break;
-            case CellType.Number: cell.SetValue(3.5); break;
+            case CellType.String:
+                cell.SetValue("hi");
+            break;
+            case CellType.Boolean:
+                cell.SetValue(false);
+            break;
+            case CellType.Error:
+                cell.SetValue(CellError.Value);
+            break;
+            case CellType.Number:
+                cell.SetValue(3.5);
+            break;
             case CellType.Empty:
             case CellType.Formula:
-            default: break;
+            default:
+            break;
         }
 
         cell.GetFormattedString().ShouldBe(expected);
@@ -228,7 +237,7 @@ public class SpreadsheetProcessorCoverageTests
     {
         var processor = new SpreadsheetProcessor();
         processor.Dispose();
-        Should.NotThrow(() => processor.Dispose());
+        Should.NotThrow(processor.Dispose);
     }
 
     [Fact]

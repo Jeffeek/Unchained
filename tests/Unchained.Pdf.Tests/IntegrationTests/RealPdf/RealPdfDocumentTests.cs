@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using Shouldly;
+using System.Diagnostics;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Shared;

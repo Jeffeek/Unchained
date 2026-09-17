@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Drawing.Constants;
 using Unchained.Drawing.Encoders;
 using Xunit;

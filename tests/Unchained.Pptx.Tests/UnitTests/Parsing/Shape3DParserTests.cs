@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Xml;
@@ -30,13 +30,13 @@ public sealed class Shape3DParserTests
     [Fact]
     public void Parse_Attributes_ReadExtrusionContourMaterial()
     {
-        var sp3d = new XElement(
+        var sp3D = new XElement(
             DmlNames.Dml + "sp3d",
             new XAttribute("extrusionH", "50000"),
             new XAttribute("contourW", "12700"),
             new XAttribute("prstMaterial", "metal")
         );
-        var parent = new XElement(DmlNames.Dml + "spPr", sp3d);
+        var parent = new XElement(DmlNames.Dml + "spPr", sp3D);
         var threeD = new Shape3DFormat();
         Shape3DParser.Parse(parent, threeD);
 
@@ -48,7 +48,7 @@ public sealed class Shape3DParserTests
     [Fact]
     public void Parse_Bevels_ReadTopAndBottom()
     {
-        var sp3d = new XElement(
+        var sp3D = new XElement(
             DmlNames.Dml + "sp3d",
             new XElement(
                 DmlNames.Dml + "bevelT",
@@ -63,7 +63,7 @@ public sealed class Shape3DParserTests
                 new XAttribute("prst", "angle")
             )
         );
-        var parent = new XElement(DmlNames.Dml + "spPr", sp3d);
+        var parent = new XElement(DmlNames.Dml + "spPr", sp3D);
         var threeD = new Shape3DFormat();
         Shape3DParser.Parse(parent, threeD);
 
@@ -77,12 +77,12 @@ public sealed class Shape3DParserTests
     [Fact]
     public void Parse_ExtrusionAndContourColours_AreParsed()
     {
-        var sp3d = new XElement(
+        var sp3D = new XElement(
             DmlNames.Dml + "sp3d",
             new XElement(DmlNames.Dml + "extrusionClr", new XElement(DmlNames.Dml + "srgbClr", new XAttribute(DmlNames.AttributeValue, "FF0000"))),
             new XElement(DmlNames.Dml + "contourClr", new XElement(DmlNames.Dml + "srgbClr", new XAttribute(DmlNames.AttributeValue, "00FF00")))
         );
-        var parent = new XElement(DmlNames.Dml + "spPr", sp3d);
+        var parent = new XElement(DmlNames.Dml + "spPr", sp3D);
         var threeD = new Shape3DFormat();
         Shape3DParser.Parse(parent, threeD);
 

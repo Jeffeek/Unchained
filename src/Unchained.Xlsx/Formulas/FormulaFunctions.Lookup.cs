@@ -9,7 +9,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue VLookup(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 3) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 3)
+            return FormulaValue.FromError(CellError.Value);
 
         var key = ev.Evaluate(args[0]);
         var table = ev.Evaluate(args[1]);
@@ -28,7 +29,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue HLookup(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 3) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 3)
+            return FormulaValue.FromError(CellError.Value);
 
         var key = ev.Evaluate(args[0]);
         var table = ev.Evaluate(args[1]);
@@ -47,7 +49,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue Index(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var array = ev.Evaluate(args[0]);
         var rowNum = (int)FormulaEvaluator.ToNumber(ev.Evaluate(args[1]));
@@ -63,8 +66,10 @@ internal static partial class FormulaFunctions
             rowNum = 1;
         }
 
-        if (array.Columns == 1 && colNum == 0) colNum = 1;
-        if (colNum == 0) colNum = 1;
+        if (array.Columns == 1 && colNum == 0)
+            colNum = 1;
+        if (colNum == 0)
+            colNum = 1;
 
         return rowNum < 1 || rowNum > array.Rows || colNum < 1 || colNum > array.Columns
             ? FormulaValue.FromError(CellError.Reference)
@@ -73,7 +78,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue Match(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var key = ev.Evaluate(args[0]);
         var array = ev.Evaluate(args[1]).Flatten().ToList();
@@ -116,7 +122,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue Choose(IReadOnlyList<FormulaNode> args, FormulaEvaluator ev)
     {
-        if (args.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (args.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var index = (int)FormulaEvaluator.ToNumber(ev.Evaluate(args[0]));
         return index < 1 || index >= args.Count ? FormulaValue.FromError(CellError.Value) : ev.Evaluate(args[index]);
@@ -130,7 +137,8 @@ internal static partial class FormulaFunctions
             var cell = table.At(r, column);
             if (!approximate)
             {
-                if (ScalarEquals(cell, key)) return r;
+                if (ScalarEquals(cell, key))
+                    return r;
             }
             else if (Compare(cell, key) <= 0)
                 match = r;
@@ -149,7 +157,8 @@ internal static partial class FormulaFunctions
             var cell = table.At(0, c);
             if (!approximate)
             {
-                if (ScalarEquals(cell, key)) return c;
+                if (ScalarEquals(cell, key))
+                    return c;
             }
             else if (Compare(cell, key) <= 0)
                 match = c;
@@ -170,7 +179,8 @@ internal static partial class FormulaFunctions
         var text = criterion.Text ?? string.Empty;
         foreach (var op in new[] { "<>", ">=", "<=", ">", "<", "=" })
         {
-            if (!text.StartsWith(op, StringComparison.Ordinal)) continue;
+            if (!text.StartsWith(op, StringComparison.Ordinal))
+                continue;
 
             var rhs = text[op.Length..];
             return double.TryParse(rhs, NumberStyles.Any, CultureInfo.InvariantCulture, out var num) && IsNumber(value)
@@ -183,7 +193,12 @@ internal static partial class FormulaFunctions
 
     private static bool CompareNum(double a, double b, string op) => op switch
     {
-        ">" => a > b, "<" => a < b, ">=" => a >= b, "<=" => a <= b, "<>" => !a.Equals(b), _ => a.Equals(b)
+        ">" => a > b,
+        "<" => a < b,
+        ">=" => a >= b,
+        "<=" => a <= b,
+        "<>" => !a.Equals(b),
+        _ => a.Equals(b)
     };
 
     private static bool CompareText(string a, string b, string op)

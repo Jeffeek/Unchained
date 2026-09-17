@@ -1,7 +1,7 @@
+using Shouldly;
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Text;
-using Shouldly;
 using Unchained.Drawing.Constants;
 using Unchained.Drawing.Decoders;
 using Unchained.Drawing.Encoders;
@@ -80,7 +80,7 @@ public sealed class PngDecoderTests
 
     [Fact]
     public void EmptyInput_ReturnsNull() =>
-        PngDecoder.TryDecodeToRgb(ReadOnlySpan<byte>.Empty, out _, out _).ShouldBeNull();
+        PngDecoder.TryDecodeToRgb([], out _, out _).ShouldBeNull();
 
     [Fact]
     public void Grayscale_DecodesToEqualChannels()
@@ -299,7 +299,7 @@ public sealed class PngDecoderTests
             1,
             0,
             1,
-            "\0\0"u8.ToArray(),
+            [.. "\0\0"u8],
             bitDepth: 16
         );
         PngDecoder.TryDecodeToRgb(png, out _, out _).ShouldBeNull();
@@ -600,7 +600,8 @@ public sealed class PngDecoderTests
                     if (((val >> b) & 1) != 0)
                         packed[dst] |= (byte)(1 << (7 - bitOffset));
                     bitOffset++;
-                    if (bitOffset != 8) continue;
+                    if (bitOffset != 8)
+                        continue;
 
                     bitOffset = 0;
                     dst++;
@@ -665,7 +666,8 @@ public sealed class PngDecoderTests
         BinaryPrimitives.WriteInt32BigEndian(len, data.Length);
         s.Write(len);
         s.Write(Encoding.ASCII.GetBytes(type));
-        if (data.Length > 0) s.Write(data);
+        if (data.Length > 0)
+            s.Write(data);
         s.Write(stackalloc byte[4]); // CRC placeholder (ignored by decoder)
     }
 

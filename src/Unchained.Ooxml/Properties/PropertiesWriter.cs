@@ -61,7 +61,7 @@ internal static class PropertiesWriter
         AddDate(root, Cp + "lastPrinted", props.LastPrinted);
 
         var bytes = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
-        package.AddOrReplacePart(CoreUri, OoxmlContentTypes.CoreProperties, bytes);
+        _ = package.AddOrReplacePart(CoreUri, OoxmlContentTypes.CoreProperties, bytes);
         package.EnsurePackageRelationship(CoreRelType, "docProps/core.xml");
     }
 
@@ -102,7 +102,7 @@ internal static class PropertiesWriter
         AddIfPresent(root, Ep + "Manager", props.Manager);
 
         var bytes = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), root).ToUtf8Bytes();
-        package.AddOrReplacePart(AppUri, OoxmlContentTypes.ExtendedProperties, bytes);
+        _ = package.AddOrReplacePart(AppUri, OoxmlContentTypes.ExtendedProperties, bytes);
         package.EnsurePackageRelationship(AppRelType, "docProps/app.xml");
     }
 }

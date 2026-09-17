@@ -53,7 +53,7 @@ public sealed class SessionStateService(
         }
         finally
         {
-            Interlocked.Exchange(ref _loading, 0);
+            _ = Interlocked.Exchange(ref _loading, 0);
         }
     }
 
@@ -77,7 +77,7 @@ public sealed class SessionStateService(
         }
         finally
         {
-            Interlocked.Exchange(ref _loading, 0);
+            _ = Interlocked.Exchange(ref _loading, 0);
         }
     }
 
@@ -101,7 +101,7 @@ public sealed class SessionStateService(
         }
         finally
         {
-            Interlocked.Exchange(ref _loading, 0);
+            _ = Interlocked.Exchange(ref _loading, 0);
         }
     }
 
@@ -125,7 +125,7 @@ public sealed class SessionStateService(
         }
         finally
         {
-            Interlocked.Exchange(ref _loading, 0);
+            _ = Interlocked.Exchange(ref _loading, 0);
         }
     }
 
@@ -153,7 +153,7 @@ public sealed class SessionStateService(
         }
         finally
         {
-            Interlocked.Exchange(ref _loading, 0);
+            _ = Interlocked.Exchange(ref _loading, 0);
         }
     }
 

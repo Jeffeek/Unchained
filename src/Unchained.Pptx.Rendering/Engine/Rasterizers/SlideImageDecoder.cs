@@ -57,7 +57,8 @@ internal static class SlideImageDecoder
         if (GifDecoder.IsGif(bytes))
             return GifDecoder.TryDecodeToRgb(bytes, out width, out height);
 
-        if (!IsSvg(bytes)) return null;
+        if (!IsSvg(bytes))
+            return null;
 
         // Render SVG at a reasonable fixed resolution; caller scales to dest rect.
         const int svgRenderSize = 256;
@@ -83,13 +84,15 @@ internal static class SlideImageDecoder
     private static bool IsSvg(ReadOnlySpan<byte> bytes)
     {
         // SVG starts with XML declaration or <svg tag (possibly with BOM).
-        if (bytes.Length < 4) return false;
+        if (bytes.Length < 4)
+            return false;
         // Skip UTF-8 BOM if present.
         var start = (bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) ? 3 : 0;
         // Look for <svg or <?xml within the first 512 bytes.
         var searchLen = Math.Min(bytes.Length - start, 512);
         var trimmed = bytes.Slice(start, searchLen);
-        while (trimmed.Length > 0 && trimmed[0] <= 32) trimmed = trimmed[1..];
+        while (trimmed.Length > 0 && trimmed[0] <= 32)
+            trimmed = trimmed[1..];
         switch (trimmed.Length)
         {
             case >= 4 when trimmed[0] == '<' && trimmed[1] == 's' && trimmed[2] == 'v' && trimmed[3] == 'g':
@@ -101,8 +104,10 @@ internal static class SlideImageDecoder
                 if (close >= 0)
                 {
                     var afterDecl = trimmed[(close + 2)..];
-                    while (afterDecl.Length > 0 && afterDecl[0] <= 32) afterDecl = afterDecl[1..];
-                    if (afterDecl.Length >= 4 && afterDecl[0] == '<' && afterDecl[1] == 's' && afterDecl[2] == 'v' && afterDecl[3] == 'g') return true;
+                    while (afterDecl.Length > 0 && afterDecl[0] <= 32)
+                        afterDecl = afterDecl[1..];
+                    if (afterDecl.Length >= 4 && afterDecl[0] == '<' && afterDecl[1] == 's' && afterDecl[2] == 'v' && afterDecl[3] == 'g')
+                        return true;
                 }
 
                 break;

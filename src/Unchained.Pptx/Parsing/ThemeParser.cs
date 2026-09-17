@@ -28,7 +28,8 @@ internal static class ThemeParser
         };
 
         var elements = root.Element(DmlNames.ThemeElements);
-        if (elements == null) return theme;
+        if (elements == null)
+            return theme;
 
         var clrScheme = elements.Element(DmlNames.ColorScheme);
         if (clrScheme != null)
@@ -80,10 +81,12 @@ internal static class ThemeParser
         };
 
         var major = fontScheme.Element(DmlNames.MajorFont);
-        if (major != null) scheme.MajorFont = ParseFontSet(major);
+        if (major != null)
+            scheme.MajorFont = ParseFontSet(major);
 
         var minor = fontScheme.Element(DmlNames.MinorFont);
-        if (minor != null) scheme.MinorFont = ParseFontSet(minor);
+        if (minor != null)
+            scheme.MinorFont = ParseFontSet(minor);
 
         return scheme;
     }

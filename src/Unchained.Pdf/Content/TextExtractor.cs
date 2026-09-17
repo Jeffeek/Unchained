@@ -69,7 +69,8 @@ internal static class TextExtractor
                     ctmStack.Push((double[])ctm.Clone());
                 break;
                 case "Q":
-                    if (ctmStack.Count > 0) ctm = ctmStack.Pop();
+                    if (ctmStack.Count > 0)
+                        ctm = ctmStack.Pop();
                 break;
                 case "cm" when op.Operands.Count >= 6:
                 {
@@ -419,17 +420,17 @@ internal static class TextExtractor
                 uint code1 = span[0];
                 if (span.Length >= 2 && toUnicodeMap.TryGetValue(code2, out var u2))
                 {
-                    sb.Append(u2);
+                    _ = sb.Append(u2);
                     span = span[2..];
                 }
                 else if (toUnicodeMap.TryGetValue(code1, out var u1))
                 {
-                    sb.Append(u1);
+                    _ = sb.Append(u1);
                     span = span[1..];
                 }
                 else
                 {
-                    sb.Append((char)code1);
+                    _ = sb.Append((char)code1);
                     span = span[1..];
                 }
             }
@@ -449,7 +450,8 @@ internal static class TextExtractor
         {
             var w = Standard14Widths.Get(fontName, ch);
             var advance = ((w / 1000.0 * fontSize) + tc) * (th / 100.0);
-            if (ch == ' ') advance += tw * (th / 100.0);
+            if (ch == ' ')
+                advance += tw * (th / 100.0);
             totalAdvance += advance;
         }
 
@@ -554,7 +556,8 @@ internal static class TextExtractor
     /// </summary>
     internal static string SpansToText(IReadOnlyList<TextSpan> spans)
     {
-        if (spans.Count == 0) return string.Empty;
+        if (spans.Count == 0)
+            return string.Empty;
 
         var sb = new StringBuilder();
         var prevY = spans[0].Y;
@@ -567,12 +570,12 @@ internal static class TextExtractor
             if (i > 0)
             {
                 if (Math.Abs(span.Y - prevY) > LineThreshold)
-                    sb.Append('\n');
+                    _ = sb.Append('\n');
                 else if (span.X > prevEndX + 1.0)
-                    sb.Append(' ');
+                    _ = sb.Append(' ');
             }
 
-            sb.Append(span.Text);
+            _ = sb.Append(span.Text);
             prevY = span.Y;
             prevEndX = span.X + span.Width;
         }

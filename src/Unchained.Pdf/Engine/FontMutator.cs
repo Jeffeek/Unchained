@@ -92,21 +92,26 @@ internal static class FontMutator
         // Key = /FontFile2 stream object number, Value = set of used glyph IDs.
         var usedGlyphs = new Dictionary<int, HashSet<int>>();
         CollectUsedGlyphs(adapter, existing, usedGlyphs);
-        if (usedGlyphs.Count == 0) return;
+        if (usedGlyphs.Count == 0)
+            return;
 
         // Step 2: subset each embedded font stream.
         var changed = false;
         for (var i = 0; i < existing.Count; i++)
         {
             var obj = existing[i];
-            if (!usedGlyphs.TryGetValue(obj.ObjectNumber, out var glyphs)) continue;
-            if (obj.Value is not PdfStream fontStream) continue;
+            if (!usedGlyphs.TryGetValue(obj.ObjectNumber, out var glyphs))
+                continue;
+            if (obj.Value is not PdfStream fontStream)
+                continue;
 
             var originalBytes = fontStream.Data.ToArray();
-            if (originalBytes.Length == 0) continue;
+            if (originalBytes.Length == 0)
+                continue;
 
             var subsetBytes = TrueTypeSubsetter.Subset(originalBytes, glyphs);
-            if (subsetBytes.Length >= originalBytes.Length) continue; // no savings
+            if (subsetBytes.Length >= originalBytes.Length)
+                continue; // no savings
 
             // Rebuild the font stream with updated length.
             var newDict = new PdfDictionary(
@@ -141,11 +146,14 @@ internal static class FontMutator
         for (var i = 0; i < existing.Count; i++)
         {
             var obj = existing[i];
-            if (obj.Value is not PdfDictionary dict) continue;
-            if (dict.GetName(PdfName.Type.Value) != PdfName.Font.Value) continue;
+            if (obj.Value is not PdfDictionary dict)
+                continue;
+            if (dict.GetName(PdfName.Type.Value) != PdfName.Font.Value)
+                continue;
 
             var baseFont = dict.GetName(PdfName.BaseFont.Value);
-            if (baseFont is null) continue;
+            if (baseFont is null)
+                continue;
 
             result.Add((i, obj, dict, baseFont));
         }
@@ -262,7 +270,8 @@ internal static class FontMutator
             }
         }
 
-        if (fontToFontFile.Count == 0) return;
+        if (fontToFontFile.Count == 0)
+            return;
 
         // Walk each page's content operators to collect glyph IDs.
         for (var p = 1; p <= adapter.Core.PageCount; p++)
@@ -279,7 +288,8 @@ internal static class FontMutator
                               ?? (resDict?[PdfName.Font] is PdfIndirectReference fr
                                   ? adapter.Core.ResolveIndirect(fr.ObjectNumber).Value as PdfDictionary
                                   : null);
-            if (fontResDict is null) continue;
+            if (fontResDict is null)
+                continue;
 
             // Map resource name → FontFile2 object number.
             var resNameToFontFile = new Dictionary<string, int>();
@@ -292,7 +302,8 @@ internal static class FontMutator
                     resNameToFontFile[resName] = ffNum;
             }
 
-            if (resNameToFontFile.Count == 0) continue;
+            if (resNameToFontFile.Count == 0)
+                continue;
 
             // ReSharper disable once GrammarMistakeInComment
             // Walk operators: Tf sets current font, Tj/TJ/'/" show strings.
@@ -357,14 +368,14 @@ internal static class FontMutator
                     : cfi.CidToGid is not null && cid < cfi.CidToGid.Count
                         ? cfi.CidToGid[cid]
                         : cid;
-                result.Add(gid);
+                _ = result.Add(gid);
             }
         }
         else
         {
             // Simple font: each byte is a character code = approximate glyph ID.
             foreach (var b in bytes.Span)
-                result.Add(b);
+                _ = result.Add(b);
         }
     }
 }

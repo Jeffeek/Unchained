@@ -229,15 +229,15 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
             ? delta / (maximum + minimum)
             : delta / (2.0 - maximum - minimum);
 
-        if (Math.Abs(maximum - r) < DoubleComparisonTolerance)
-            hue = (g - b) / delta % 6.0;
-        else if (Math.Abs(maximum - g) < DoubleComparisonTolerance)
-            hue = ((b - r) / delta) + 2.0;
-        else
-            hue = ((r - g) / delta) + 4.0;
+        hue = Math.Abs(maximum - r) < DoubleComparisonTolerance
+            ? (g - b) / delta % 6.0
+            : Math.Abs(maximum - g) < DoubleComparisonTolerance
+                ? ((b - r) / delta) + 2.0
+                : ((r - g) / delta) + 4.0;
 
         hue /= 6.0;
-        if (hue < 0) hue += 1.0;
+        if (hue < 0)
+            hue += 1.0;
     }
 
     private static void HlsToRgb(
@@ -267,8 +267,10 @@ public readonly struct ColorSpec : IEquatable<ColorSpec>
 
     private static double HueToRgbChannel(double p, double q, double t)
     {
-        if (t < 0) t += 1.0;
-        if (t > 1) t -= 1.0;
+        if (t < 0)
+            t += 1.0;
+        if (t > 1)
+            t -= 1.0;
 
         return t switch
         {

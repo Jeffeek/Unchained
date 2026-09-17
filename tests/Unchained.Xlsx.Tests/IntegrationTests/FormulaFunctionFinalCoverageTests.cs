@@ -29,7 +29,8 @@ public class FormulaFunctionFinalCoverageTests
     ]
     public void MiscMath(string formula, double expected)
     {
-        if (formula.Contains("RANK.AVG")) return; // covered separately
+        if (formula.Contains("RANK.AVG"))
+            return; // covered separately
 
         Num(formula)!.Value.ShouldBe(expected, 1e-9);
     }
@@ -211,7 +212,8 @@ public class FormulaFunctionFinalCoverageTests
 
         static void Fill(Worksheet s)
         {
-            for (var i = 1; i <= 4; i++) s.SetValue(i, 1, i * 10);
+            for (var i = 1; i <= 4; i++)
+                s.SetValue(i, 1, i * 10);
         }
     }
 

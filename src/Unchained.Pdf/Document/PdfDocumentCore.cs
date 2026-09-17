@@ -18,13 +18,13 @@ namespace Unchained.Pdf.Document;
 /// </summary>
 internal sealed class PdfDocumentCore : IDisposable
 {
-    private readonly Dictionary<int, PdfIndirectObject> _cache = new();
+    private readonly Dictionary<int, PdfIndirectObject> _cache = [];
     // Object stream cache: stream object number → (objectNumber → decoded PdfObject)
     // Avoids re-decompressing the same object stream when multiple objects are resolved from it.
-    private readonly Dictionary<int, Dictionary<int, PdfObject>> _objectStreamCache = new();
+    private readonly Dictionary<int, Dictionary<int, PdfObject>> _objectStreamCache = [];
     private readonly PdfParser _parser;
+
     // ReSharper disable once NotAccessedField.Local
-    private readonly ReadOnlyMemory<byte> _source;
     private readonly CrossReferenceTable _xref;
     private bool _disposed;
 
@@ -37,7 +37,7 @@ internal sealed class PdfDocumentCore : IDisposable
 
     private PdfDocumentCore(ReadOnlyMemory<byte> source, CrossReferenceTable xref, PdfDictionary trailer)
     {
-        _source = source;
+        Source = source;
         _xref = xref;
         Trailer = trailer;
         _parser = new PdfParser(source);
@@ -53,7 +53,7 @@ internal sealed class PdfDocumentCore : IDisposable
     /// <summary>
     ///     The raw bytes of the loaded PDF file.
     /// </summary>
-    internal ReadOnlyMemory<byte> Source => _source;
+    internal ReadOnlyMemory<byte> Source { get; }
 
     /// <summary>
     ///     <see langword="true" /> when the PDF was saved in linearized (web-optimized) form.
@@ -65,7 +65,7 @@ internal sealed class PdfDocumentCore : IDisposable
         get
         {
             // Scan up to the first 1024 bytes per spec.
-            var span = _source.Span;
+            var span = Source.Span;
             var limit = Math.Min(span.Length, PdfConstants.XrefScanWindowBytes);
             var target = "/Linearized"u8;
             for (var i = 0; i <= limit - target.Length; i++)
@@ -167,22 +167,25 @@ internal sealed class PdfDocumentCore : IDisposable
         for (var i = 0; i < span.Length - 6; i++)
         {
             // Look for whitespace followed by digits
-            if (span[i] != (byte)'\n' && span[i] != (byte)'\r' && span[i] != (byte)' ')
+            if (span[i] is not (byte)'\n' and not (byte)'\r' and not (byte)' ')
                 continue;
 
             var start = i + 1;
-            if (start >= span.Length || !IsDigit(span[start])) continue;
+            if (start >= span.Length || !IsDigit(span[start]))
+                continue;
 
             // Parse object number
             var pos = start;
-            while (pos < span.Length && IsDigit(span[pos])) pos++;
+            while (pos < span.Length && IsDigit(span[pos]))
+                pos++;
             if (pos >= span.Length || span[pos] != ' ')
                 continue;
 
             if (!int.TryParse(
                     Encoding.ASCII.GetString(span[start..pos]),
                     out var objNum
-                ) || objNum <= 0) continue;
+                ) || objNum <= 0)
+                continue;
 
             // Parse generation number
             var genStart = pos + 1;
@@ -192,15 +195,16 @@ internal sealed class PdfDocumentCore : IDisposable
             if (pos + 4 >= span.Length || span[pos] != ' ')
                 continue;
 
-            if (!int.TryParse(Encoding.ASCII.GetString(span[genStart..pos]), out var gen)) continue;
+            if (!int.TryParse(Encoding.ASCII.GetString(span[genStart..pos]), out var gen))
+                continue;
 
             // Confirm " obj" follows
             if (span[pos + 1] != 'o' || span[pos + 2] != 'b' || span[pos + 3] != 'j')
                 continue;
-            if (span[pos + 4] != ' ' && span[pos + 4] != '\n' && span[pos + 4] != '\r')
+            if (span[pos + 4] is not (byte)' ' and not (byte)'\n' and not (byte)'\r')
                 continue;
 
-            entries.TryAdd(objNum, new CrossReferenceEntry(start - 1, gen, CrossReferenceEntryType.InUse));
+            _ = entries.TryAdd(objNum, new CrossReferenceEntry(start - 1, gen, CrossReferenceEntryType.InUse));
         }
 
         if (entries.Count == 0)
@@ -286,7 +290,8 @@ internal sealed class PdfDocumentCore : IDisposable
     private void InitializeEncryption(string? password)
     {
         var encryptEntry = Trailer[PdfName.Encrypt];
-        if (encryptEntry is null) return;
+        if (encryptEntry is null)
+            return;
 
         PdfDictionary encryptDict;
 
@@ -532,7 +537,8 @@ internal sealed class PdfDocumentCore : IDisposable
             if (kidType == PdfName.Page.Value)
             {
                 remaining--;
-                if (remaining == 0) return kidNode;
+                if (remaining == 0)
+                    return kidNode;
             }
             else
             {

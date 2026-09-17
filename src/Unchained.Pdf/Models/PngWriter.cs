@@ -40,7 +40,8 @@ internal static class PngWriter
                 raw[dst++] = rgb[si];
                 raw[dst++] = rgb[si + 1];
                 raw[dst++] = rgb[si + 2];
-                if (hasAlpha) raw[dst++] = alpha![(y * width) + x];
+                if (hasAlpha)
+                    raw[dst++] = alpha![(y * width) + x];
             }
         }
 

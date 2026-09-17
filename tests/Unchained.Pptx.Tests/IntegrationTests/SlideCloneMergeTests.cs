@@ -1,5 +1,5 @@
-using System.IO.Compression;
 using Shouldly;
+using System.IO.Compression;
 using Unchained.Drawing.Constants;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Charts;
@@ -207,13 +207,14 @@ public sealed class SlideCloneMergeTests : PptxTestBase
     public void AddClone_CrossDeck_TransfersChart()
     {
         var source = PptxFixtures.WithSlides(1);
-        source.Slides[0].Shapes.AddChart(
-            ChartType.BarClustered,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(3)
-        );
+        source.Slides[0]
+            .Shapes.AddChart(
+                ChartType.BarClustered,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(3)
+            );
         var target = PptxFixtures.BlankPresentation();
 
         var clone = target.Slides.AddClone(source.Slides[0]);
@@ -226,13 +227,14 @@ public sealed class SlideCloneMergeTests : PptxTestBase
     public async Task AddClone_CrossDeck_ChartSurvivesRoundTrip()
     {
         var source = PptxFixtures.WithSlides(1);
-        source.Slides[0].Shapes.AddChart(
-            ChartType.Pie,
-            Emu.FromInches(1),
-            Emu.FromInches(1),
-            Emu.FromInches(4),
-            Emu.FromInches(3)
-        );
+        source.Slides[0]
+            .Shapes.AddChart(
+                ChartType.Pie,
+                Emu.FromInches(1),
+                Emu.FromInches(1),
+                Emu.FromInches(4),
+                Emu.FromInches(3)
+            );
         var target = PptxFixtures.BlankPresentation();
         target.Slides.AddClone(source.Slides[0]);
 
@@ -258,11 +260,11 @@ public sealed class SlideCloneMergeTests : PptxTestBase
 
     // ── SmartArt (from a real fixture with a diagram) ─────────────────────────
 
-    private static async Task<byte[]> SmartArtSampleAsync()
+    private static Task<byte[]> SmartArtSampleAsync()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "TestFiles", "python-pptx", "shp-shapes.pptx");
         File.Exists(path).ShouldBeTrue("SmartArt sample missing");
-        return await File.ReadAllBytesAsync(path);
+        return File.ReadAllBytesAsync(path);
     }
 
     private static bool PartExists(byte[] pptx, string partName)

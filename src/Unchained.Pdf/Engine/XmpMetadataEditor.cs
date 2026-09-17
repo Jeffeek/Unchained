@@ -64,7 +64,7 @@ public sealed class XmpMetadataEditor : IXmpMetadataEditor
             existing,
             static catEntries =>
             {
-                catEntries.Remove(PdfName.Metadata.Value);
+                _ = catEntries.Remove(PdfName.Metadata.Value);
             }
         );
 

@@ -22,7 +22,8 @@ internal static class PageTransparencyResolver
         var result = new Dictionary<string, (double, double, string, string?)>();
         var resources = core.ResolveDict(page[PdfName.Resources]);
         var extDict = core.ResolveDict(resources?[PdfName.ExtGState]);
-        if (extDict is null) return result;
+        if (extDict is null)
+            return result;
 
         foreach (var (name, value) in extDict.Entries)
         {
@@ -58,20 +59,23 @@ internal static class PageTransparencyResolver
         var result = new Dictionary<string, SoftMaskInfo>();
         var resources = core.ResolveDict(page[PdfName.Resources]);
         var extDict = core.ResolveDict(resources?[PdfName.ExtGState]);
-        if (extDict is null) return result;
+        if (extDict is null)
+            return result;
 
         foreach (var (name, value) in extDict.Entries)
         {
             var gs = core.ResolveDict(value);
             var smaskObj = gs?[PdfName.SMask];
-            if (smaskObj is not PdfDictionary smaskDict) continue;
+            if (smaskObj is not PdfDictionary smaskDict)
+                continue;
 
             var maskType = (smaskDict[PdfName.S] as PdfName)?.Value ?? "Alpha";
             var formRef = smaskDict[PdfName.G];
             var formStream = formRef is PdfIndirectReference fRef
                 ? core.ResolveIndirect(fRef.ObjectNumber).Value as PdfStream
                 : formRef as PdfStream;
-            if (formStream?.Dictionary.GetName(PdfName.Subtype.Value) != PdfConstants.XObjectForm) continue;
+            if (formStream?.Dictionary.GetName(PdfName.Subtype.Value) != PdfConstants.XObjectForm)
+                continue;
 
             var bbox = formStream.GetFormBBox();
             var matrix = formStream.GetFormMatrix();

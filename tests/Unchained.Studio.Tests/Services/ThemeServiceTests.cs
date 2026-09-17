@@ -11,9 +11,9 @@ public sealed class ThemeServiceTests
 {
     private sealed class FakeJsRuntime : IJSRuntime
     {
-        public string? StoredValue { get; set; }
-        public bool ThrowOnInvoke { get; set; }
-        public Dictionary<string, string?> Writes { get; } = new();
+        public string? StoredValue { get; init; }
+        public bool ThrowOnInvoke { get; init; }
+        public Dictionary<string, string?> Writes { get; } = [];
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
         {
@@ -92,7 +92,7 @@ public sealed class ThemeServiceTests
     {
         var service = new ThemeService(new FakeJsRuntime { ThrowOnInvoke = true });
 
-        await Should.NotThrowAsync(async () => await service.InitializeAsync());
+        await Should.NotThrowAsync(service.InitializeAsync);
 
         service.IsDarkMode.ShouldBeTrue();
     }

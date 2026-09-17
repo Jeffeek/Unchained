@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Xunit;
 
@@ -8,7 +8,7 @@ namespace Unchained.Ooxml.Tests.UnitTests.Xml;
 public sealed class OoXmlHelperTests
 {
     private static XElement Element(params XAttribute[] attributes) =>
-        new("e", attributes.Cast<object>().ToArray());
+        new("e", [.. attributes]);
 
     [Fact]
     public void OoxmlRotationToDegrees_Converts()

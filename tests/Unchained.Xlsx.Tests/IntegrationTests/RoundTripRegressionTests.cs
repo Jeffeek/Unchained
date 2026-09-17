@@ -1,5 +1,4 @@
 using Shouldly;
-using System.IO;
 using Unchained.Xlsx.Abstractions;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Cell;
@@ -139,9 +138,7 @@ public sealed class RoundTripRegressionTests
 
             // Verify all formulas calculate correctly
             for (var i = 1; i <= 5; i++)
-            {
                 sheet.GetCell(i, 2)!.GetDouble().ShouldBe(i * 10 * 2);
-            }
         }
     }
 

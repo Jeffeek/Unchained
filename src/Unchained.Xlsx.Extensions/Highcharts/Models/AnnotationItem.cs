@@ -12,16 +12,16 @@ public class AnnotationItem
     public string? Title { get; set; }
 
     /// <summary>Shapes in this annotation.</summary>
-    public List<ShapeItem> Shapes { get; set; } = new();
+    public List<ShapeItem> Shapes { get; set; } = [];
 
     /// <summary>Labels in this annotation.</summary>
-    public List<LabelItem> Labels { get; set; } = new();
+    public List<LabelItem> Labels { get; set; } = [];
 
     /// <summary>
     ///     Points that the annotation is anchored to.
     ///     For data-point annotations, use the series index and data point index.
     /// </summary>
-    public List<AnnotationPoint> Points { get; set; } = new();
+    public List<AnnotationPoint> Points { get; set; } = [];
 
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }

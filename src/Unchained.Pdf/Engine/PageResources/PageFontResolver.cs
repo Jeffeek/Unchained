@@ -22,7 +22,8 @@ internal static class PageFontResolver
     {
         var resources = core.ResolveDict(page[PdfName.Resources]);
         var fontDict = core.ResolveDict(resources?[PdfName.Font]);
-        if (fontDict is null) return;
+        if (fontDict is null)
+            return;
 
         foreach (var (key, value) in fontDict.Entries)
             action(key, value, core.ResolveDict(value));
@@ -42,7 +43,8 @@ internal static class PageFontResolver
             (key, value, fontEntry) =>
             {
                 var (k, v, include) = selector(key, value, fontEntry);
-                if (include) result[k] = v;
+                if (include)
+                    result[k] = v;
             }
         );
         return result;
@@ -155,7 +157,7 @@ internal static class PageFontResolver
                 var c2GObj = cidFont[PdfName.CIDToGIDMap.Value];
                 if (c2GObj is PdfIndirectReference cr)
                     c2GObj = core.ResolveIndirect(cr.ObjectNumber).Value;
-                var identityCidToGid = c2GObj is null || (c2GObj as PdfName)?.Value == "Identity";
+                var identityCidToGid = c2GObj is null or PdfName { Value: "Identity" };
                 IReadOnlyDictionary<int, int>? cidToGid = null;
                 if (!identityCidToGid && c2GObj is PdfStream c2GStream)
                 {
@@ -164,7 +166,8 @@ internal static class PageFontResolver
                     for (var cid = 0; (cid * 2) + 1 < bytes.Length; cid++)
                     {
                         var gid = (bytes[cid * 2] << 8) | bytes[(cid * 2) + 1];
-                        if (gid != 0) map[cid] = gid;
+                        if (gid != 0)
+                            map[cid] = gid;
                     }
 
                     cidToGid = map;
@@ -196,16 +199,19 @@ internal static class PageFontResolver
             core,
             (key, _, fontEntry) =>
             {
-                if (fontEntry is null) return;
+                if (fontEntry is null)
+                    return;
 
                 var tuRef = fontEntry[PdfName.ToUnicode];
                 var tuStream = core.ResolveStream(tuRef);
-                if (tuStream is null) return;
+                if (tuStream is null)
+                    return;
 
                 try
                 {
                     var cmap = ParseToUnicodeCmap(StreamFilters.Decode(tuStream).Span);
-                    if (cmap.Count > 0) result[key] = cmap;
+                    if (cmap.Count > 0)
+                        result[key] = cmap;
                 }
                 catch
                 {
@@ -225,8 +231,10 @@ internal static class PageFontResolver
             core,
             (resName, _, font) =>
             {
-                if (font is null) return;
-                if (font.GetName(PdfName.Subtype.Value) != "Type3") return;
+                if (font is null)
+                    return;
+                if (font.GetName(PdfName.Subtype.Value) != "Type3")
+                    return;
 
                 // /FontMatrix: glyph space → text space transform.
                 var fm = font[PdfName.FontMatrix] is PdfArray { Count: >= 6 } fmArr
@@ -358,7 +366,8 @@ internal static class PageFontResolver
             }
 
             var first = (int)arr[i].ReadIntOrReal();
-            if (i + 1 >= arr.Count) break;
+            if (i + 1 >= arr.Count)
+                break;
 
             if (arr[i + 1] is PdfArray widthList)
             {
@@ -437,7 +446,8 @@ internal static class PageFontResolver
                     var key = charCode.Aggregate<byte, uint>(0, static (current, b) => (current << 8) | b);
 
                     var uniStr = DecodeUtf16Be(unicode);
-                    if (uniStr.Length > 0) result[key] = uniStr;
+                    if (uniStr.Length > 0)
+                        result[key] = uniStr;
                     break;
                 }
                 case 2 when parts.Length >= 3:
@@ -446,7 +456,8 @@ internal static class PageFontResolver
                     var lo = ParseHexToken(parts[0]);
                     var hi = ParseHexToken(parts[1]);
                     var dst = ParseHexToken(parts[2]);
-                    if (lo.Length == 0 || hi.Length == 0 || dst.Length == 0) continue;
+                    if (lo.Length == 0 || hi.Length == 0 || dst.Length == 0)
+                        continue;
 
                     uint loKey = 0, hiKey = 0;
                     loKey = lo.Aggregate(loKey, static (current, b) => (current << 8) | b);
@@ -477,7 +488,8 @@ internal static class PageFontResolver
             return [];
 
         var hex = token[1..^1];
-        if (hex.Length % 2 != 0) hex += "0";
+        if (hex.Length % 2 != 0)
+            hex += "0";
         var bytes = new byte[hex.Length / 2];
         for (var i = 0; i < bytes.Length; i++)
         {

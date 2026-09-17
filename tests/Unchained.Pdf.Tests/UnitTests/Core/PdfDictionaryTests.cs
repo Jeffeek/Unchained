@@ -9,7 +9,8 @@ public sealed class PdfDictionaryTests
     private static PdfDictionary Dict(params (string Key, PdfObject Value)[] entries)
     {
         var d = new Dictionary<string, PdfObject>();
-        foreach (var (k, v) in entries) d[k] = v;
+        foreach (var (k, v) in entries)
+            d[k] = v;
         return new PdfDictionary(d);
     }
 

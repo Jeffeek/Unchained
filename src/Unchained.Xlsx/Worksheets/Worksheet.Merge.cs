@@ -19,7 +19,7 @@ public sealed partial class Worksheet
 
     internal bool MergedCellsMaterialised { get; private set; }
 
-    internal MergedCellCollection MergedCellsInternal { get; } = new();
+    internal MergedCellCollection MergedCellsInternal { get; } = [];
 
     /// <summary>Merges the cells in <paramref name="range" /> into a single visible cell.</summary>
     public void MergeCells(CellRange range)
@@ -32,7 +32,7 @@ public sealed partial class Worksheet
     public void UnmergeCells(CellRange range)
     {
         EnsureMergedCellsParsed();
-        MergedCellsInternal.Remove(range);
+        _ = MergedCellsInternal.Remove(range);
     }
 
     private void EnsureMergedCellsParsed()

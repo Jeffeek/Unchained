@@ -13,7 +13,8 @@ internal static partial class FormulaFunctions
     private static FormulaValue Log(IReadOnlyList<FormulaValue> values)
     {
         var x = Num(values, 0);
-        if (x <= 0) return FormulaValue.FromError(CellError.Number);
+        if (x <= 0)
+            return FormulaValue.FromError(CellError.Number);
 
         var baseN = values.Count > 1 ? Num(values, 1) : 10;
         return Number(Math.Log(x, baseN));
@@ -30,7 +31,8 @@ internal static partial class FormulaFunctions
     private static double OddOf(double x)
     {
         var rounded = Math.Sign(x) * Math.Ceiling(Math.Abs(x));
-        if (rounded % 2 == 0) rounded += Math.Sign(x) == 0 ? 1 : Math.Sign(x);
+        if (rounded % 2 == 0)
+            rounded += Math.Sign(x) == 0 ? 1 : Math.Sign(x);
         return rounded == 0 ? 1 : rounded;
     }
 
@@ -38,7 +40,8 @@ internal static partial class FormulaFunctions
     {
         var n = (int)Math.Floor(x);
         double result = 1;
-        for (var i = 2; i <= n; i++) result *= i;
+        for (var i = 2; i <= n; i++)
+            result *= i;
         return result;
     }
 
@@ -59,7 +62,8 @@ internal static partial class FormulaFunctions
     {
         var lo = (int)Num(values, 0);
         var hi = (int)Num(values, 1);
-        if (hi < lo) (lo, hi) = (hi, lo);
+        if (hi < lo)
+            (lo, hi) = (hi, lo);
         return Number(SharedRandom.Next(lo, hi + 1));
     }
 
@@ -143,7 +147,7 @@ internal static partial class FormulaFunctions
 
     private static bool TrySortedRange(IReadOnlyList<FormulaValue> values, int rangeIndex, out List<double> sorted)
     {
-        sorted = values[rangeIndex].Flatten().Where(IsNumber).Select(FormulaEvaluator.ToNumber).OrderBy(static x => x).ToList();
+        sorted = [.. values[rangeIndex].Flatten().Where(IsNumber).Select(FormulaEvaluator.ToNumber).OrderBy(static x => x)];
         return sorted.Count != 0;
     }
 
@@ -152,7 +156,8 @@ internal static partial class FormulaFunctions
     private static FormulaValue Median(IEnumerable<FormulaValue> values)
     {
         var nums = Nums(values).OrderBy(static x => x).ToList();
-        if (nums.Count == 0) return FormulaValue.FromError(CellError.Number);
+        if (nums.Count == 0)
+            return FormulaValue.FromError(CellError.Number);
 
         var mid = nums.Count / 2;
         return Number(nums.Count % 2 == 1 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2);
@@ -161,7 +166,8 @@ internal static partial class FormulaFunctions
     private static FormulaValue Mode(IEnumerable<FormulaValue> values)
     {
         var groups = Nums(values).GroupBy(static x => x).Select(static g => (Value: g.Key, Count: g.Count())).ToList();
-        if (groups.Count == 0 || groups.All(static g => g.Count == 1)) return FormulaValue.FromError(CellError.NotAvailable);
+        if (groups.Count == 0 || groups.All(static g => g.Count == 1))
+            return FormulaValue.FromError(CellError.NotAvailable);
 
         var max = groups.Max(static g => g.Count);
         return Number(groups.First(g => g.Count == max).Value);
@@ -177,7 +183,8 @@ internal static partial class FormulaFunctions
     {
         var nums = Nums(values).ToList();
         var divisor = sample ? nums.Count - 1 : nums.Count;
-        if (divisor <= 0) return FormulaValue.FromError(CellError.DivisionByZero);
+        if (divisor <= 0)
+            return FormulaValue.FromError(CellError.DivisionByZero);
 
         var mean = nums.Average();
         return Number(nums.Sum(x => (x - mean) * (x - mean)) / divisor);
@@ -185,7 +192,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue LargeSmall(IReadOnlyList<FormulaValue> values, bool largest)
     {
-        if (values.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (values.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
         // First argument(s) are the array; the last is k.
         var k = (int)FormulaEvaluator.ToNumber(values[^1]);
         var arr = values
@@ -203,19 +211,21 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue Rank(IReadOnlyList<FormulaValue> values)
     {
-        if (values.Count < 2) return FormulaValue.FromError(CellError.Value);
+        if (values.Count < 2)
+            return FormulaValue.FromError(CellError.Value);
 
         var number = FormulaEvaluator.ToNumber(values[0]);
         var arr = values[1].Flatten().Where(IsNumber).Select(FormulaEvaluator.ToNumber).ToList();
         var ascending = values.Count >= 3 && FormulaEvaluator.ToNumber(values[2]) != 0;
-        var sorted = ascending ? arr.OrderBy(static x => x).ToList() : arr.OrderByDescending(static x => x).ToList();
+        var sorted = ascending ? arr.OrderBy(static x => x).ToList() : [.. arr.OrderByDescending(static x => x)];
         var idx = sorted.IndexOf(number);
         return idx < 0 ? FormulaValue.FromError(CellError.NotAvailable) : Number(idx + 1);
     }
 
     private static FormulaValue Percentile(IReadOnlyList<FormulaValue> values)
     {
-        if (!TrySortedRange(values, 0, out var arr)) return FormulaValue.FromError(CellError.Number);
+        if (!TrySortedRange(values, 0, out var arr))
+            return FormulaValue.FromError(CellError.Number);
 
         var p = Num(values, 1);
         var rank = p * (arr.Count - 1);
@@ -233,7 +243,8 @@ internal static partial class FormulaFunctions
     private static FormulaValue HarMean(IEnumerable<FormulaValue> values)
     {
         var nums = Nums(values).ToList();
-        if (nums.Count == 0) return FormulaValue.FromError(CellError.Number);
+        if (nums.Count == 0)
+            return FormulaValue.FromError(CellError.Number);
 
         var sum = nums.Sum(static x => 1.0 / x);
         return sum == 0 ? FormulaValue.FromError(CellError.DivisionByZero) : Number(nums.Count / sum);
@@ -242,7 +253,8 @@ internal static partial class FormulaFunctions
     private static FormulaValue AveDev(IEnumerable<FormulaValue> values)
     {
         var nums = Nums(values).ToList();
-        if (nums.Count == 0) return FormulaValue.FromError(CellError.Number);
+        if (nums.Count == 0)
+            return FormulaValue.FromError(CellError.Number);
 
         var mean = nums.Average();
         return Number(nums.Sum(x => Math.Abs(x - mean)) / nums.Count);
@@ -251,7 +263,8 @@ internal static partial class FormulaFunctions
     private static FormulaValue DevSq(IEnumerable<FormulaValue> values)
     {
         var nums = Nums(values).ToList();
-        if (nums.Count < 2) return FormulaValue.FromError(CellError.DivisionByZero);
+        if (nums.Count < 2)
+            return FormulaValue.FromError(CellError.DivisionByZero);
 
         var mean = nums.Average();
         return Number(nums.Sum(x => (x - mean) * (x - mean)));
@@ -259,7 +272,8 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue PercentRank(IReadOnlyList<FormulaValue> values)
     {
-        if (!TrySortedRange(values, 0, out var arr)) return FormulaValue.FromError(CellError.Number);
+        if (!TrySortedRange(values, 0, out var arr))
+            return FormulaValue.FromError(CellError.Number);
 
         var x = Num(values, 1);
         var below = arr.Count(e => e < x);
@@ -271,22 +285,26 @@ internal static partial class FormulaFunctions
 
     private static FormulaValue Quartile(IReadOnlyList<FormulaValue> values)
     {
-        if (!TrySortedRange(values, 0, out var arr)) return FormulaValue.FromError(CellError.Number);
+        if (!TrySortedRange(values, 0, out var arr))
+            return FormulaValue.FromError(CellError.Number);
 
         var q = Num(values, 1);
-        if (q is < 0 or > 4) return FormulaValue.FromError(CellError.Number);
+        if (q is < 0 or > 4)
+            return FormulaValue.FromError(CellError.Number);
 
         var rank = q / 4.0 * (arr.Count - 1);
         var lo = (int)Math.Floor(rank);
         var hi = (int)Math.Ceiling(rank);
-        if (hi >= arr.Count) hi = arr.Count - 1;
+        if (hi >= arr.Count)
+            hi = arr.Count - 1;
         return Number(arr[lo] + ((rank - lo) * (arr[hi] - arr[lo])));
     }
 
     private static FormulaValue Skew(IEnumerable<FormulaValue> values)
     {
         var nums = Nums(values).ToList();
-        if (nums.Count < 3) return FormulaValue.FromError(CellError.Number);
+        if (nums.Count < 3)
+            return FormulaValue.FromError(CellError.Number);
 
         var mean = nums.Average();
         var n = (double)nums.Count;
@@ -301,10 +319,12 @@ internal static partial class FormulaFunctions
         var percent = Math.Clamp(Num(values, 1), 0, 1);
 
         var nums = values[0].Flatten().Where(IsNumber).Select(FormulaEvaluator.ToNumber).ToList();
-        if (nums.Count < 2) return FormulaValue.FromError(CellError.Number);
+        if (nums.Count < 2)
+            return FormulaValue.FromError(CellError.Number);
 
         var count = (int)Math.Round(nums.Count * percent);
-        if (count * 2 > nums.Count) return FormulaValue.FromError(CellError.Number);
+        if (count * 2 > nums.Count)
+            return FormulaValue.FromError(CellError.Number);
 
         nums.Sort();
         var trimmed = nums[count..^count];
@@ -318,7 +338,8 @@ internal static partial class FormulaFunctions
         var s = Text(values, 0);
         var start = (int)Num(values, 1);
         var len = (int)Num(values, 2);
-        if (start < 1 || start > s.Length || len < 0) return Str(string.Empty);
+        if (start < 1 || start > s.Length || len < 0)
+            return Str(string.Empty);
 
         var from = start - 1;
         return Str(s.Substring(from, Math.Min(len, s.Length - from)));
@@ -347,7 +368,8 @@ internal static partial class FormulaFunctions
         var needle = Text(values, 0);
         var haystack = Text(values, 1);
         var start = values.Count > 2 ? Math.Max(1, (int)Num(values, 2)) - 1 : 0;
-        if (start > haystack.Length) return FormulaValue.FromError(CellError.Value);
+        if (start > haystack.Length)
+            return FormulaValue.FromError(CellError.Value);
 
         var idx = haystack.IndexOf(needle, start, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
         return idx < 0 ? FormulaValue.FromError(CellError.Value) : Number(idx + 1);
@@ -358,9 +380,11 @@ internal static partial class FormulaFunctions
         var s = Text(values, 0);
         var oldText = Text(values, 1);
         var newText = Text(values, 2);
-        if (oldText.Length == 0) return Str(s);
+        if (oldText.Length == 0)
+            return Str(s);
 
-        if (values.Count < 4) return Str(s.Replace(oldText, newText));
+        if (values.Count < 4)
+            return Str(s.Replace(oldText, newText));
 
         // Replace only the Nth occurrence.
         var instance = (int)Num(values, 3);
@@ -384,7 +408,8 @@ internal static partial class FormulaFunctions
         var start = (int)Num(values, 1);
         var len = (int)Num(values, 2);
         var newText = Text(values, 3);
-        if (start < 1) return Str(s);
+        if (start < 1)
+            return Str(s);
 
         var from = Math.Min(start - 1, s.Length);
         var remove = Math.Min(Math.Max(len, 0), s.Length - from);
@@ -402,8 +427,14 @@ internal static partial class FormulaFunctions
     {
         var x = Num(values, 0);
         var format = Text(values, 1);
-        try { return Str(NumberFormatter.Format(x, format, false)); }
-        catch { return Str(x.ToString("G15", CultureInfo.InvariantCulture)); }
+        try
+        {
+            return Str(NumberFormatter.Format(x, format, false));
+        }
+        catch
+        {
+            return Str(x.ToString("G15", CultureInfo.InvariantCulture));
+        }
     }
 
     private static FormulaValue TextBeforeAfter(IReadOnlyList<FormulaValue> values, bool before)
@@ -411,14 +442,16 @@ internal static partial class FormulaFunctions
         var text = Text(values, 0);
         var delimiter = Text(values, 1);
         var instance = values.Count > 2 ? (int)Num(values, 2) : 1;
-        if (instance < 1 || string.IsNullOrEmpty(delimiter)) return Str(text);
+        if (instance < 1 || string.IsNullOrEmpty(delimiter))
+            return Str(text);
 
         var occurrences = 0;
         var start = 0;
         while (start <= text.Length)
         {
             var pos = text.IndexOf(delimiter, start, StringComparison.Ordinal);
-            if (pos < 0) break;
+            if (pos < 0)
+                break;
 
             if (++occurrences == instance)
             {

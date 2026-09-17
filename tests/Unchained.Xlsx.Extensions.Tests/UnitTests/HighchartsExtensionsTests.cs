@@ -104,6 +104,7 @@ public class HighchartsExtensionsTests
     {
         var chart = BuildSimpleChart();
 
+        // ReSharper disable once RedundantArgumentDefaultValue
         var options = chart.ToHighchartsObject(null);
 
         options.ShouldNotBeNull();
@@ -325,7 +326,7 @@ public class HighchartsExtensionsTests
         };
         var settings = new HighchartsSettings
         {
-            AdditionalProperties = new Dictionary<string, object>()
+            AdditionalProperties = []
         };
 
         var json = options.ToJson(settings);

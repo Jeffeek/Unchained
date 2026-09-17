@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Pptx.Animations;
 using Unchained.Pptx.Parsing;
 using Xunit;
@@ -25,8 +25,9 @@ public sealed class TransitionParserDirectTests
 
     private static XElement Transition(XElement? effect = null, params XAttribute[] attrs)
     {
-        var el = new XElement(P + "transition", attrs.Cast<object>().ToArray());
-        if (effect is not null) el.Add(effect);
+        var el = new XElement(P + "transition", [.. attrs]);
+        if (effect is not null)
+            el.Add(effect);
         return el;
     }
 
@@ -112,7 +113,8 @@ public sealed class TransitionParserDirectTests
     public void Parse_EffectElement_MapsToEffect(string local, string? dir, TransitionEffect expected)
     {
         var effect = new XElement(P + local);
-        if (dir is not null) effect.Add(new XAttribute("dir", dir));
+        if (dir is not null)
+            effect.Add(new XAttribute("dir", dir));
         var t = Parse(Transition(effect));
         t.Effect.ShouldBe(expected);
     }

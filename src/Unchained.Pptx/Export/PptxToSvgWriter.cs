@@ -32,22 +32,17 @@ internal static class PptxToSvgWriter
         var fontScheme = slide.Master.Theme.Fonts;
 
         var sb = new StringBuilder();
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+        _ = sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
 
-        if (options.Responsive)
-        {
-            sb.AppendLine(
+        _ = options.Responsive
+            ? sb.AppendLine(
                 $"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
                 $"viewBox=\"0 0 {w:F4} {h:F4}\">"
-            );
-        }
-        else
-        {
-            sb.AppendLine(
+            )
+            : sb.AppendLine(
                 $"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
                 $"width=\"{w:F4}pt\" height=\"{h:F4}pt\" viewBox=\"0 0 {w:F4} {h:F4}\">"
             );
-        }
 
         WriteBackground(sb, slide, w, h, colorScheme);
 
@@ -57,7 +52,7 @@ internal static class PptxToSvgWriter
             WriteShape(sb, slide.Shapes[i], options, colorScheme, i, fontScheme, usedEmbeddedFonts: null);
         // ReSharper restore BadListLineBreaks
 
-        sb.AppendLine("</svg>");
+        _ = sb.AppendLine("</svg>");
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
@@ -77,22 +72,17 @@ internal static class PptxToSvgWriter
         var colorScheme = slide.Master.Theme.Colors;
 
         var sb = new StringBuilder();
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+        _ = sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
 
-        if (options.Responsive)
-        {
-            sb.AppendLine(
+        _ = options.Responsive
+            ? sb.AppendLine(
                 $"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
                 $"viewBox=\"0 0 {w:F4} {h:F4}\">"
-            );
-        }
-        else
-        {
-            sb.AppendLine(
+            )
+            : sb.AppendLine(
                 $"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
                 $"width=\"{w:F4}pt\" height=\"{h:F4}pt\" viewBox=\"0 0 {w:F4} {h:F4}\">"
             );
-        }
 
         WriteBackground(sb, slide, w, h, colorScheme);
 
@@ -114,7 +104,8 @@ internal static class PptxToSvgWriter
                                                      where !isEmbedded
                                                      select resolved
                                  ))
-                        unresolved.Add(resolved);
+                        _ = unresolved.Add(resolved);
+
                     break;
                 }
                 case GroupShape grp:
@@ -126,11 +117,12 @@ internal static class PptxToSvgWriter
         // Write embedded font @font-face rules.
         if (options.EmbedFonts && embeddedFonts.Count > 0)
         {
-            sb.AppendLine("<defs><style>");
+            _ = sb.AppendLine("<defs><style>");
             var written = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var font in embeddedFonts)
             {
-                if (written.Contains(font.Typeface)) continue;
+                if (written.Contains(font.Typeface))
+                    continue;
 
                 var base64 = Convert.ToBase64String(font.Data.Span);
                 var family = EscapeCssIdentifier(font.Typeface);
@@ -141,11 +133,11 @@ internal static class PptxToSvgWriter
                     EmbeddedFontStyle.Italic => "font-style:italic",
                     _ => string.Empty
                 };
-                sb.AppendLine($"@font-face {{font-family:\"{family}\";src:url(data:font/otf;base64,{base64}) format(\"opentype\"){(string.IsNullOrEmpty(styleAttr) ? "" : $";{styleAttr}")}}}");
-                written.Add(font.Typeface);
+                _ = sb.AppendLine($"@font-face {{font-family:\"{family}\";src:url(data:font/otf;base64,{base64}) format(\"opentype\"){(string.IsNullOrEmpty(styleAttr) ? "" : $";{styleAttr}")}}}");
+                _ = written.Add(font.Typeface);
             }
 
-            sb.AppendLine("</style></defs>");
+            _ = sb.AppendLine("</style></defs>");
         }
 
         // Shapes
@@ -154,7 +146,7 @@ internal static class PptxToSvgWriter
             WriteShape(sb, slide.Shapes[i], options, colorScheme, i, fontScheme, usedEmbeddedFonts);
         // ReSharper restore BadListLineBreaks
 
-        sb.AppendLine("</svg>");
+        _ = sb.AppendLine("</svg>");
         return (Encoding.UTF8.GetBytes(sb.ToString()), unresolved.ToList());
     }
 
@@ -180,7 +172,8 @@ internal static class PptxToSvgWriter
                                                      where !isEmbedded
                                                      select resolved
                                  ))
-                        unresolved.Add(resolved);
+                        _ = unresolved.Add(resolved);
+
                     break;
                 }
                 case GroupShape nested:
@@ -212,10 +205,11 @@ internal static class PptxToSvgWriter
     )
     {
         var fill = ResolveBackground(slide);
-        if (fill is null || fill.Type != FillType.Solid || fill.Solid == null) return;
+        if (fill is null || fill.Type != FillType.Solid || fill.Solid == null)
+            return;
 
         var color = ToSvgColor(fill.Solid.Color.Resolve(colorScheme));
-        sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" fill=\"{color}\"/>");
+        _ = sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" fill=\"{color}\"/>");
     }
 
     // Resolves background fill walking slide → layout → master.
@@ -263,10 +257,10 @@ internal static class PptxToSvgWriter
         }
 
         var idAttr = options.AnnotateShapes ? $" data-shape-index=\"{index}\"" : string.Empty;
-        sb.AppendLine($"<g transform=\"translate({x:F4},{y:F4})\"{idAttr}>");
+        _ = sb.AppendLine($"<g transform=\"translate({x:F4},{y:F4})\"{idAttr}>");
 
         // Shape background
-        sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" {fillAttr} {strokeAttr}/>");
+        _ = sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" {fillAttr} {strokeAttr}/>");
 
         // Shape content
         switch (shape)
@@ -281,7 +275,7 @@ internal static class PptxToSvgWriter
             break;
         }
 
-        sb.AppendLine("</g>");
+        _ = sb.AppendLine("</g>");
     }
 
     private static void WriteTextFrame(
@@ -298,13 +292,11 @@ internal static class PptxToSvgWriter
         var cursorY = paddingPt;
 
         // Default text color: StyleTextColor → dk1 → black.
-        string defaultColor;
-        if (shape.StyleTextColor.HasValue)
-            defaultColor = ToSvgColor(shape.StyleTextColor.Value.Resolve(colorScheme));
-        else if (colorScheme is not null)
-            defaultColor = ToSvgColor(colorScheme.Dark1.Resolve(colorScheme));
-        else
-            defaultColor = "#000000";
+        var defaultColor = shape.StyleTextColor.HasValue
+            ? ToSvgColor(shape.StyleTextColor.Value.Resolve(colorScheme))
+            : colorScheme is not null
+                ? ToSvgColor(colorScheme.Dark1.Resolve(colorScheme))
+                : "#000000";
 
         foreach (var para in shape.TextFrame.Paragraphs)
         {
@@ -318,7 +310,8 @@ internal static class PptxToSvgWriter
             var lineHeight = maxSize * TextConstants.DefaultLineHeightFactor;
             cursorY += maxSize; // advance to baseline
 
-            if (cursorY > h - paddingPt) break;
+            if (cursorY > h - paddingPt)
+                break;
 
             var anchor = para.Alignment switch
             {
@@ -334,7 +327,7 @@ internal static class PptxToSvgWriter
                 _ => paddingPt
             };
 
-            sb.Append($"<text x=\"{textX:F4}\" y=\"{cursorY:F4}\" text-anchor=\"{anchor}\">");
+            _ = sb.Append($"<text x=\"{textX:F4}\" y=\"{cursorY:F4}\" text-anchor=\"{anchor}\">");
 
             foreach (var run in para.Runs.Where(static run => !string.IsNullOrEmpty(run.Text)))
             {
@@ -345,9 +338,9 @@ internal static class PptxToSvgWriter
                     ? ToSvgColor(run.Format.Fill.Solid.Color.Resolve(colorScheme))
                     : defaultColor;
                 var fontFamily = ResolveFontFamily(run.Format.LatinFont, fontScheme);
-                usedEmbeddedFonts?.Add(fontFamily);
+                _ = usedEmbeddedFonts?.Add(fontFamily);
 
-                sb.Append(
+                _ = sb.Append(
                     $"<tspan font-size=\"{fs:F1}\" font-weight=\"{weight}\" " +
                     $"font-style=\"{style}\" font-family=\"{EscapeCssIdentifier(fontFamily)}\" " +
                     $"fill=\"{fill}\">" +
@@ -355,7 +348,7 @@ internal static class PptxToSvgWriter
                 );
             }
 
-            sb.AppendLine("</text>");
+            _ = sb.AppendLine("</text>");
             cursorY += lineHeight - maxSize; // remaining line gap
         }
     }
@@ -368,7 +361,7 @@ internal static class PptxToSvgWriter
     )
     {
         var dataUri = ExportText.ToBase64DataUri(pic.Image!.Data, pic.Image.ContentType);
-        sb.AppendLine(
+        _ = sb.AppendLine(
             $"<image x=\"0\" y=\"0\" width=\"{w:F4}\" height=\"{h:F4}\" " +
             $"preserveAspectRatio=\"none\" " +
             $"href=\"{dataUri}\"/>"

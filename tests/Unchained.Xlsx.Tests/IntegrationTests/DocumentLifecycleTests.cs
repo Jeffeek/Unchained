@@ -1,5 +1,5 @@
-using System.IO.Compression;
 using Shouldly;
+using System.IO.Compression;
 using Unchained.Xlsx.Core;
 using Unchained.Xlsx.Engine;
 using Unchained.Xlsx.Models.Sheets;

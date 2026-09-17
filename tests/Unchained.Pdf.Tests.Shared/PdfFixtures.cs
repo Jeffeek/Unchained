@@ -134,7 +134,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 5 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -195,7 +196,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 7");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 7 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -263,7 +265,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 7");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 7 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -336,7 +339,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 8");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 8 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -406,7 +410,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 9");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 9 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -456,7 +461,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 6");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -567,7 +573,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 6");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -629,7 +636,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 7");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 7 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -694,7 +702,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 6");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -756,7 +765,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 7");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 7 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -819,7 +829,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 8");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 8 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -926,7 +937,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 6");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -984,7 +996,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 6");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -1245,7 +1258,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 5 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -1315,7 +1329,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, $"0 {totalObjects}");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, $"<< /Size {totalObjects} /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -1366,7 +1381,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 5 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -1556,7 +1572,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, $"0 {totalObjects}");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, $"<< /Size {totalObjects} /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -1623,7 +1640,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 7");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 7 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -1668,7 +1686,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 5 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -1734,7 +1753,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 6");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -1969,7 +1989,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 5");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 5 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -2037,7 +2058,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 6");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -2112,7 +2134,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 7");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 7 /Root 1 0 R >>");
         Ln(sb, "startxref");
@@ -2178,7 +2201,8 @@ internal static class PdfFixtures
         Ln(sb, "xref");
         Ln(sb, "0 6");
         Ln(sb, "0000000000 65535 f ");
-        foreach (var o in offsets) Ln(sb, $"{o:D10} 00000 n ");
+        foreach (var o in offsets)
+            Ln(sb, $"{o:D10} 00000 n ");
         Ln(sb, "trailer");
         Ln(sb, "<< /Size 6 /Root 1 0 R >>");
         Ln(sb, "startxref");

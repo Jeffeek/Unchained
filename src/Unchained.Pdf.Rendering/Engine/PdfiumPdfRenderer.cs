@@ -1,8 +1,7 @@
+using PDFiumCore;
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
-using System.Text;
-using PDFiumCore;
 using Unchained.Drawing.Constants;
 using Unchained.Pdf.Abstractions;
 using Unchained.Pdf.Models;
@@ -100,9 +99,7 @@ internal sealed class PdfiumPdfRenderer : IPdfRenderer
                     throw new ArgumentOutOfRangeException(nameof(pageNumber));
 
                 // Load page (0-based index)
-                fpage = fpdfview.FPDF_LoadPage(doc, pageNumber - 1);
-                if (fpage is null)
-                    throw new InvalidOperationException("Failed to load PDF page.");
+                fpage = fpdfview.FPDF_LoadPage(doc, pageNumber - 1) ?? throw new InvalidOperationException("Failed to load PDF page.");
 
                 // Compute pixel dimensions
                 var widthPt = fpdfview.FPDF_GetPageWidthF(fpage);
@@ -112,12 +109,10 @@ internal sealed class PdfiumPdfRenderer : IPdfRenderer
                 var pixH = Math.Max(1, (int)Math.Ceiling(heightPt * scale));
 
                 // Create BGRA bitmap, fill with white, render
-                bitmap = fpdfview.FPDFBitmapCreate(pixW, pixH, 0 /* no alpha */);
-                if (bitmap is null)
-                    throw new InvalidOperationException("Failed to create bitmap.");
+                bitmap = fpdfview.FPDFBitmapCreate(pixW, pixH, 0 /* no alpha */) ?? throw new InvalidOperationException("Failed to create bitmap.");
 
                 // ReSharper disable once BadListLineBreaks
-                fpdfview.FPDFBitmapFillRect(bitmap, 0, 0, pixW, pixH, 0xFFFFFFFF);
+                _ = fpdfview.FPDFBitmapFillRect(bitmap, 0, 0, pixW, pixH, 0xFFFFFFFF);
 
                 // FPDF_ANNOT = 0x01 — also render annotations (matches Chrome's default view)
                 // ReSharper disable BadListLineBreaks
@@ -156,13 +151,15 @@ internal sealed class PdfiumPdfRenderer : IPdfRenderer
         // Convert BGRA → RGB (Pdfium pixel order: B G R A; PNG wants R G B)
         var rgb = new byte[width * height * 3];
         for (var row = 0; row < height; row++)
-        for (var col = 0; col < width; col++)
         {
-            var src = (row * stride) + (col * 4);
-            var dst = ((row * width) + col) * 3;
-            rgb[dst] = bgra[src + 2];     // R
-            rgb[dst + 1] = bgra[src + 1]; // G
-            rgb[dst + 2] = bgra[src];     // B
+            for (var col = 0; col < width; col++)
+            {
+                var src = (row * stride) + (col * 4);
+                var dst = ((row * width) + col) * 3;
+                rgb[dst] = bgra[src + 2];     // R
+                rgb[dst + 1] = bgra[src + 1]; // G
+                rgb[dst + 2] = bgra[src];     // B
+            }
         }
 
         return EncodeRgbPng(rgb, width, height);
@@ -174,7 +171,7 @@ internal sealed class PdfiumPdfRenderer : IPdfRenderer
         ms.Write(PngConstants.Signature);
         WriteIhdr(ms, width, height);
         WriteIdat(ms, rgb, width, height);
-        WriteChunk(ms, "IEND"u8, ReadOnlySpan<byte>.Empty);
+        WriteChunk(ms, "IEND"u8, []);
         return ms.ToArray();
     }
 
@@ -208,7 +205,8 @@ internal sealed class PdfiumPdfRenderer : IPdfRenderer
         BinaryPrimitives.WriteUInt32BigEndian(len, (uint)data.Length);
         s.Write(len);
         s.Write(type);
-        if (data.Length > 0) s.Write(data);
+        if (data.Length > 0)
+            s.Write(data);
         var crc = UpdateCrc(0xffffffff, type);
         crc = UpdateCrc(crc, data) ^ 0xffffffff;
         Span<byte> crcBuf = stackalloc byte[4];
@@ -218,7 +216,8 @@ internal sealed class PdfiumPdfRenderer : IPdfRenderer
 
     private static uint UpdateCrc(uint crc, ReadOnlySpan<byte> data)
     {
-        foreach (var b in data) crc = PngConstants.CtcTable[(crc ^ b) & JpegConstants.MarkerPrefix] ^ (crc >> 8);
+        foreach (var b in data)
+            crc = PngConstants.CtcTable[(crc ^ b) & JpegConstants.MarkerPrefix] ^ (crc >> 8);
         return crc;
     }
 }

@@ -23,10 +23,7 @@ internal static class WorkbookParser
     public static SpreadsheetDocument Parse(OpcPackage package)
     {
         var workbookRel = package.PackageRelationships
-            .FirstOrDefault(static r => r.RelationshipType.Equals(SmlNames.RelTypeOfficeDocument, StringComparison.Ordinal));
-
-        if (workbookRel == null)
-            throw new SpreadsheetException("The package does not contain a workbook relationship.");
+            .FirstOrDefault(static r => r.RelationshipType.Equals(SmlNames.RelTypeOfficeDocument, StringComparison.Ordinal)) ?? throw new SpreadsheetException("The package does not contain a workbook relationship.");
 
         var workbookUri = "/" + workbookRel.TargetUri.TrimStart('/');
         var workbookPart = package.TryGetPart(workbookUri)
@@ -177,7 +174,8 @@ internal static class WorkbookParser
 
     private static void ReadCoreProperties(OoXmlCoreProperties props, XContainer? root)
     {
-        if (root == null) return;
+        if (root == null)
+            return;
 
         XNamespace cp = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
         XNamespace dc = "http://purl.org/dc/elements/1.1/";
@@ -197,7 +195,8 @@ internal static class WorkbookParser
 
     private static void ReadAppProperties(OoXmlCoreProperties props, XContainer? root)
     {
-        if (root == null) return;
+        if (root == null)
+            return;
 
         XNamespace ep = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties";
         props.Company = (string?)root.Element(ep + "Company");

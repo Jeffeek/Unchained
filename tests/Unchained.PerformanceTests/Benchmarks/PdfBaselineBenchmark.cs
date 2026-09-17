@@ -40,7 +40,8 @@ public class PdfBaselineBenchmark
     public void Cleanup()
     {
         _processor.Dispose();
-        if (File.Exists(_singlePagePath)) File.Delete(_singlePagePath);
+        if (File.Exists(_singlePagePath))
+            File.Delete(_singlePagePath);
     }
 
     [Benchmark(Baseline = true, Description = "Parse 1-page PDF from byte[]")]

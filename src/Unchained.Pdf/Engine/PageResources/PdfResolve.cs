@@ -63,7 +63,8 @@ internal static class PdfResolve
         )
         {
             var xObjDict = ResolveDict(core, resources?[PdfName.XObject]);
-            if (xObjDict is null) yield break;
+            if (xObjDict is null)
+                yield break;
 
             foreach (var (_, value) in xObjDict.Entries)
             {
@@ -98,36 +99,29 @@ internal static class PdfResolve
         internal int ReadInt(int fallback = 0) => (int)obj.ReadIntOrReal(fallback);
 
         internal float[]? ReadFloatArray() => obj is PdfArray a
-            ? a.Elements.Select(static x => x.ReadFloat()).ToArray()
+            ? [.. a.Elements.Select(static x => x.ReadFloat())]
             : null;
 
         internal double[]? ReadDoubleArray() => obj is PdfArray a
-            ? a.Elements.Select(static x => x.ReadIntOrReal()).ToArray()
+            ? [.. a.Elements.Select(static x => x.ReadIntOrReal())]
             : null;
     }
 
     extension(PdfStream form)
     {
-        internal double[] GetFormBBox()
-        {
-            if (form.Dictionary[PdfName.BBox] is not PdfArray bbox || bbox.Elements.Count < 4)
-                return [0, 0, 1, 1];
-
-            return
+        internal double[] GetFormBBox() => form.Dictionary[PdfName.BBox] is not PdfArray bbox || bbox.Elements.Count < 4
+            ? [0, 0, 1, 1]
+            :
             [
                 bbox.Elements[0].ReadIntOrReal(),
                 bbox.Elements[1].ReadIntOrReal(),
                 bbox.Elements[2].ReadIntOrReal(),
                 bbox.Elements[3].ReadIntOrReal()
             ];
-        }
 
-        internal double[] GetFormMatrix()
-        {
-            if (form.Dictionary[PdfName.Matrix] is not PdfArray m || m.Elements.Count < 6)
-                return [1, 0, 0, 1, 0, 0];
-
-            return
+        internal double[] GetFormMatrix() => form.Dictionary[PdfName.Matrix] is not PdfArray m || m.Elements.Count < 6
+            ? [1, 0, 0, 1, 0, 0]
+            :
             [
                 m.Elements[0].ReadIntOrReal(),
                 m.Elements[1].ReadIntOrReal(),
@@ -136,7 +130,6 @@ internal static class PdfResolve
                 m.Elements[4].ReadIntOrReal(),
                 m.Elements[5].ReadIntOrReal()
             ];
-        }
     }
 
     // Resolves the /ColorSpace entry to a canonical name string.

@@ -34,11 +34,11 @@ internal static partial class WorkbookWriter
             nextCache++;
 
             // 1. Cache records part.
-            package.AddOrReplacePart(pivot.CacheRecordsUri, SmlNames.ContentTypePivotCacheRecords, PivotWriter.WriteCacheRecords(pivot));
+            _ = package.AddOrReplacePart(pivot.CacheRecordsUri, SmlNames.ContentTypePivotCacheRecords, PivotWriter.WriteCacheRecords(pivot));
 
             // 2. Cache definition part + def → records relationship.
             const string recordsRelId = "rId1";
-            package.AddOrReplacePart(
+            _ = package.AddOrReplacePart(
                 pivot.CacheDefinitionUri,
                 SmlNames.ContentTypePivotCacheDefinition,
                 PivotWriter.WriteCacheDefinition(pivot, recordsRelId)
@@ -52,7 +52,7 @@ internal static partial class WorkbookWriter
             );
 
             // 3. Table definition part + table → cacheDefinition relationship.
-            package.AddOrReplacePart(pivot.TablePartUri, SmlNames.ContentTypePivotTable, PivotWriter.WriteTableDefinition(pivot));
+            _ = package.AddOrReplacePart(pivot.TablePartUri, SmlNames.ContentTypePivotTable, PivotWriter.WriteTableDefinition(pivot));
             package.ClearRelationships(pivot.TablePartUri);
             pivot.CacheDefinitionRelId = "rId1";
             package.AddRelationship(

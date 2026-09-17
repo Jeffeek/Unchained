@@ -1,6 +1,6 @@
-using System.Runtime.InteropServices;
 using FreeTypeSharp;
 using HarfBuzzSharp;
+using System.Runtime.InteropServices;
 using Unchained.Drawing.Constants;
 using Buffer = HarfBuzzSharp.Buffer;
 using Face = HarfBuzzSharp.Face;

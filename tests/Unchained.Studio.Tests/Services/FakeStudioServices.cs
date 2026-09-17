@@ -28,7 +28,7 @@ internal sealed class FakeStudioDialogs : IStudioDialogs
     )
         where TDialog : ComponentBase
     {
-        configure?.Invoke(new DialogParameters());
+        configure?.Invoke([]);
         return Task.FromResult((TResult?)NextResult);
     }
 
@@ -41,7 +41,7 @@ internal sealed class FakeStudioDialogs : IStudioDialogs
     )
         where TDialog : ComponentBase
     {
-        configure?.Invoke(new DialogParameters());
+        configure?.Invoke([]);
         VoidTitles.Add(title);
         return Task.CompletedTask;
     }

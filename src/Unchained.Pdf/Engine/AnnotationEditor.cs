@@ -50,7 +50,7 @@ public sealed class AnnotationEditor : IAnnotationEditor
             existing,
             targetDict,
             builder.Objects,
-            current => [..current, annotObj.ToReference()]
+            current => [.. current, annotObj.ToReference()]
         );
     }
 
@@ -122,7 +122,7 @@ public sealed class AnnotationEditor : IAnnotationEditor
 
             var entries = new Dictionary<string, PdfObject>(pd.Entries);
             if (newAnnots.Count == 0)
-                entries.Remove(PdfName.Annots.Value);
+                _ = entries.Remove(PdfName.Annots.Value);
             else
                 entries[PdfName.Annots.Value] = new PdfArray(newAnnots.ToArray());
 
@@ -177,10 +177,12 @@ public sealed class AnnotationEditor : IAnnotationEditor
         var resolvable = -1;
         for (var i = 0; i < elements.Count; i++)
         {
-            if (core.ResolveDict(elements[i]) is null) continue;
+            if (core.ResolveDict(elements[i]) is null)
+                continue;
 
             resolvable++;
-            if (resolvable == annotationIndex) return i;
+            if (resolvable == annotationIndex)
+                return i;
         }
 
         throw new ArgumentOutOfRangeException(nameof(annotationIndex), annotationIndex, "Annotation index is out of range for the page.");

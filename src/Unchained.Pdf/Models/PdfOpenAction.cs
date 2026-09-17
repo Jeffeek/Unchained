@@ -4,6 +4,7 @@ namespace Unchained.Pdf.Models;
 ///     Represents a PDF document open action (ISO 32000-1 §12.6).
 ///     Use the static factory methods to create the desired action type.
 /// </summary>
+// ReSharper disable once ClassCannotBeInstantiated
 public abstract class PdfOpenAction
 {
     private PdfOpenAction() { }

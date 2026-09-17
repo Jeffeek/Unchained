@@ -71,7 +71,7 @@ public sealed class RowCollectionTests
         collection.GetOrCreateRow(1);
         collection.GetOrCreateRow(2);
 
-        collection.Count().ShouldBe(2);
+        collection.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class RowCollectionTests
         var collection = new RowCollection();
         collection.GetOrCreateRow(1);
 
-        collection.Cast<object>().Count().ShouldBe(1);
+        collection.Count.ShouldBe(1);
     }
 
     [Fact]

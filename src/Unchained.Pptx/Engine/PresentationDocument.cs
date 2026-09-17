@@ -45,8 +45,8 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
         Properties = properties;
         Protection = protection;
         SlideSize = slideSize;
-        CommentAuthors = commentAuthors ?? new CommentAuthorCollection();
-        Sections = sections ?? new SectionCollection();
+        CommentAuthors = commentAuthors ?? [];
+        Sections = sections ?? [];
         Engine = engine;
     }
 
@@ -141,7 +141,8 @@ public sealed class PresentationDocument : IDisposable, IAsyncDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
 
         _disposed = true;
         Engine?.Dispose();

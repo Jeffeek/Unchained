@@ -29,7 +29,8 @@ public sealed class WorksheetDrawingsGapTests
         sheet.SetValue(1, 2, "S1");
         sheet.SetValue(1, 3, "S2");
         sheet.SetValue(2, 1, "Jan");
-        sheet.SetValue(2, 2, 1.0); sheet.SetValue(2, 3, 4.0);
+        sheet.SetValue(2, 2, 1.0);
+        sheet.SetValue(2, 3, 4.0);
         sheet.SetValue(3, 1, "Feb");
         sheet.SetValue(3, 2, 2.0);
         sheet.SetValue(3, 3, 5.0);

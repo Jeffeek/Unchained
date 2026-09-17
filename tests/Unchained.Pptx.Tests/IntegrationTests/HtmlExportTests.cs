@@ -25,7 +25,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -41,7 +42,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -57,7 +59,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -76,7 +79,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -93,7 +97,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -119,7 +124,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -137,7 +143,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -160,7 +167,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -187,7 +195,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
@@ -203,7 +212,8 @@ public sealed class HtmlExportTests : PptxTestBase
         }
         finally
         {
-            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 }

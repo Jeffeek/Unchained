@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Engine;
 using Unchained.Pdf.Models;
 using Unchained.Pdf.Tests.Shared;
@@ -37,7 +37,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
             "report.txt",
             "Monthly report",
             "text/plain",
-            "Hello embedded world"u8.ToArray()
+            [.. "Hello embedded world"u8]
         );
 
         await editor.AddEmbeddedFileAsync(doc, file, TestContext.Current.CancellationToken);
@@ -56,12 +56,12 @@ public sealed class EmbeddedFilesTests : PdfTestBase
 
         await editor.AddEmbeddedFileAsync(
             doc,
-            new EmbeddedFile("file1", "a.txt", null, null, "AAA"u8.ToArray()),
+            new EmbeddedFile("file1", "a.txt", null, null, [.. "AAA"u8]),
             TestContext.Current.CancellationToken
         );
         await editor.AddEmbeddedFileAsync(
             doc,
-            new EmbeddedFile("file2", "b.txt", null, null, "BBB"u8.ToArray()),
+            new EmbeddedFile("file2", "b.txt", null, null, [.. "BBB"u8]),
             TestContext.Current.CancellationToken
         );
 
@@ -97,7 +97,7 @@ public sealed class EmbeddedFilesTests : PdfTestBase
 
         await editor.AddEmbeddedFileAsync(
             doc,
-            new EmbeddedFile("myfile", "test.txt", null, null, "data"u8.ToArray()),
+            new EmbeddedFile("myfile", "test.txt", null, null, [.. "data"u8]),
             TestContext.Current.CancellationToken
         );
         await editor.RemoveEmbeddedFileAsync(doc, "myfile", TestContext.Current.CancellationToken);
@@ -185,8 +185,8 @@ public sealed class EmbeddedFilesTests : PdfTestBase
         var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
-        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("dup", "dup.txt", null, null, "v1"u8.ToArray()), TestContext.Current.CancellationToken);
-        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("dup", "dup.txt", null, null, "v2"u8.ToArray()), TestContext.Current.CancellationToken);
+        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("dup", "dup.txt", null, null, [.. "v1"u8]), TestContext.Current.CancellationToken);
+        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("dup", "dup.txt", null, null, [.. "v2"u8]), TestContext.Current.CancellationToken);
 
         // The duplicate-name skip means only one "dup" entry survives, with the newest data.
         var files = editor.GetEmbeddedFiles(doc).Where(static f => f.Name == "dup").ToList();
@@ -200,8 +200,8 @@ public sealed class EmbeddedFilesTests : PdfTestBase
         var editor = new EmbeddedFileEditor();
         await using var doc = await LoadAsync(PdfFixtures.SinglePage(), TestContext.Current.CancellationToken);
 
-        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("a", "a.txt", null, null, "aa"u8.ToArray()), TestContext.Current.CancellationToken);
-        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("b", "b.txt", null, null, "bb"u8.ToArray()), TestContext.Current.CancellationToken);
+        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("a", "a.txt", null, null, [.. "aa"u8]), TestContext.Current.CancellationToken);
+        await editor.AddEmbeddedFileAsync(doc, new EmbeddedFile("b", "b.txt", null, null, [.. "bb"u8]), TestContext.Current.CancellationToken);
 
         await editor.RemoveEmbeddedFileAsync(doc, "a", TestContext.Current.CancellationToken);
 

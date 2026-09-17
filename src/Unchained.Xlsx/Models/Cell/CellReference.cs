@@ -59,7 +59,8 @@ public readonly struct CellReference : IEquatable<CellReference>, IComparable<Ce
 
         var i = 0;
         var column = 0;
-        if (a1[i] == '$') i++;
+        if (a1[i] == '$')
+            i++;
 
         var letterStart = i;
         while (i < a1.Length && IsAsciiLetter(a1[i]))
@@ -71,7 +72,8 @@ public readonly struct CellReference : IEquatable<CellReference>, IComparable<Ce
         if (i == letterStart || column is < 1 or > MaxColumn)
             return false;
 
-        if (i < a1.Length && a1[i] == '$') i++;
+        if (i < a1.Length && a1[i] == '$')
+            i++;
 
         var digitStart = i;
         var row = 0;
@@ -123,7 +125,7 @@ public readonly struct CellReference : IEquatable<CellReference>, IComparable<Ce
         while (column > 0)
         {
             var remainder = (column - 1) % 26;
-            builder.Insert(0, (char)('A' + remainder));
+            _ = builder.Insert(0, (char)('A' + remainder));
             column = (column - 1) / 26;
         }
 

@@ -19,7 +19,8 @@ internal static class SmartArtParser
     public static void Parse(XElement dataModel, SmartArtShape shape)
     {
         var ptLst = dataModel.Element(DmlNames.DiagramPointList);
-        if (ptLst == null) return;
+        if (ptLst == null)
+            return;
 
         // Index every point by its model identifier.
         var points = new Dictionary<string, XElement>(StringComparer.Ordinal);
@@ -27,7 +28,8 @@ internal static class SmartArtParser
         foreach (var pt in ptLst.Elements(DmlNames.DiagramPoint))
         {
             var modelId = (string?)pt.Attribute("modelId");
-            if (modelId == null) continue;
+            if (modelId == null)
+                continue;
 
             points[modelId] = pt;
             if ((string?)pt.Attribute("type") == "doc")
@@ -43,7 +45,8 @@ internal static class SmartArtParser
         {
             var srcId = (string?)cxn.Attribute("srcId");
             var destId = (string?)cxn.Attribute("destId");
-            if (srcId == null || destId == null) continue;
+            if (srcId == null || destId == null)
+                continue;
 
             var order = (int?)cxn.Attribute("srcOrd") ?? 0;
 
@@ -53,7 +56,8 @@ internal static class SmartArtParser
         }
 
         var rootId = (string?)docPoint?.Attribute("modelId");
-        if (rootId == null) return;
+        if (rootId == null)
+            return;
 
         foreach (var node in BuildChildren(rootId, points, childLinks))
             shape.Nodes.Add(node);
@@ -66,11 +70,13 @@ internal static class SmartArtParser
     )
     {
         var result = new List<SmartArtNode>();
-        if (!childLinks.TryGetValue(parentId, out var children)) return result;
+        if (!childLinks.TryGetValue(parentId, out var children))
+            return result;
 
         foreach (var (_, destId) in children.OrderBy(static c => c.Order))
         {
-            if (!points.TryGetValue(destId, out var pt)) continue;
+            if (!points.TryGetValue(destId, out var pt))
+                continue;
 
             var node = new SmartArtNode
             {
@@ -90,7 +96,8 @@ internal static class SmartArtParser
     private static string ReadNodeText(XContainer pt)
     {
         var t = pt.Element(DmlNames.DiagramText);
-        if (t == null) return string.Empty;
+        if (t == null)
+            return string.Empty;
 
         var paragraphs = t.Elements(DmlNames.Dml + "p")
             .Select(static p => string.Concat(
@@ -109,18 +116,21 @@ internal static class SmartArtParser
     public static void ApplyTextEdits(XElement dataModel, IEnumerable<SmartArtNode> nodes)
     {
         var ptLst = dataModel.Element(DmlNames.DiagramPointList);
-        if (ptLst == null) return;
+        if (ptLst == null)
+            return;
 
         var byId = new Dictionary<string, XElement>(StringComparer.Ordinal);
         foreach (var pt in ptLst.Elements(DmlNames.DiagramPoint))
         {
             var modelId = (string?)pt.Attribute("modelId");
-            if (modelId != null) byId[modelId] = pt;
+            if (modelId != null)
+                byId[modelId] = pt;
         }
 
         foreach (var node in Flatten(nodes).Where(static node => !string.IsNullOrEmpty(node.ModelId)))
         {
-            if (!byId.TryGetValue(node.ModelId, out var pt)) continue;
+            if (!byId.TryGetValue(node.ModelId, out var pt))
+                continue;
 
             SetNodeText(pt, node.Text);
         }

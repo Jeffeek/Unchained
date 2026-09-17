@@ -21,10 +21,12 @@ internal static class PageContentReader
     internal static IReadOnlyList<ContentOperator> GetContentOperators(PdfDictionary page, PdfDocumentCore core)
     {
         var contents = page[PdfName.Contents];
-        if (contents is null) return [];
+        if (contents is null)
+            return [];
 
         var decoded = DecodeContents(core, contents);
-        if (decoded.Length == 0) return [];
+        if (decoded.Length == 0)
+            return [];
 
         var operators = ContentStreamParser.Parse(decoded);
         var resources = core.ResolveDict(page[PdfName.Resources]);
@@ -133,10 +135,12 @@ internal static class PageContentReader
         contents switch
         {
             PdfIndirectReference r => TryResolveStream(core, r),
-            PdfArray array => array.Elements
-                .OfType<PdfIndirectReference>()
-                .SelectMany(r => TryResolveStream(core, r))
-                .ToList(),
+            PdfArray array =>
+            [
+                .. array.Elements
+                    .OfType<PdfIndirectReference>()
+                    .SelectMany(r => TryResolveStream(core, r))
+            ],
             PdfStream s => [s],
             _ => []
         };

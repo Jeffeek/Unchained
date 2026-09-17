@@ -109,6 +109,7 @@ public sealed class SheetGridTests : MudTestContext
         cut.Markup.ShouldContain("Text");
         cut.Markup.ShouldContain("42");
         cut.Markup.ShouldContain("3.14");
+        // ReSharper disable once RedundantArgumentDefaultValue
         cut.Markup.ShouldContain("TRUE", Case.Insensitive);
     }
 }

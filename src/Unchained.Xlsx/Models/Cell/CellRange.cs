@@ -144,8 +144,10 @@ public readonly struct CellRange : IEquatable<CellRange>
     public IEnumerable<CellReference> Cells()
     {
         for (var row = TopLeft.Row; row <= BottomRight.Row; row++)
-        for (var col = TopLeft.Column; col <= BottomRight.Column; col++)
-            yield return new CellReference(row, col);
+        {
+            for (var col = TopLeft.Column; col <= BottomRight.Column; col++)
+                yield return new CellReference(row, col);
+        }
     }
 
     // ── Equality ─────────────────────────────────────────────────────────────

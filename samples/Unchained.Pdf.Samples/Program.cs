@@ -29,7 +29,7 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
-        Directory.CreateDirectory(OutputDir);
+        _ = Directory.CreateDirectory(OutputDir);
         Console.WriteLine("Unchained.Pdf samples");
         Console.WriteLine($"Output directory: {OutputDir}");
         Console.WriteLine();
@@ -116,7 +116,8 @@ internal static class Program
     {
         // Reuse the Markdown demo's output as input; generate it if absent.
         var source = Path.Combine(OutputDir, "from-markdown.pdf");
-        if (!File.Exists(source)) await CreateFromMarkdownAsync();
+        if (!File.Exists(source))
+            await CreateFromMarkdownAsync();
 
         var processor = new DocumentProcessor();
         await using var doc = await processor.LoadAsync(source);
@@ -251,7 +252,8 @@ internal static class Program
     {
         var source = Path.Combine(OutputDir, "table.pdf");
         var processor = new DocumentProcessor();
-        if (!File.Exists(source)) await GenerateTableAsync();
+        if (!File.Exists(source))
+            await GenerateTableAsync();
 
         await using var doc = await processor.LoadAsync(source);
 

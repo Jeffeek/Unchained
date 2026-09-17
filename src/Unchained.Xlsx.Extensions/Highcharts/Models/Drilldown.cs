@@ -18,7 +18,7 @@ public class Drilldown
     /// <summary>
     ///     Drilldown series keyed by parent series name.
     /// </summary>
-    public Dictionary<string, List<DrilldownSeries>> Series { get; set; } = new();
+    public Dictionary<string, List<DrilldownSeries>> Series { get; set; } = [];
 
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }

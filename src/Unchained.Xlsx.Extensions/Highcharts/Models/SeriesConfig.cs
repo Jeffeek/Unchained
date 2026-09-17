@@ -16,10 +16,10 @@ public class SeriesConfig
     public string? Color { get; set; }
 
     /// <summary>Data points (simple scalar values). <see langword="null" /> entries represent missing data.</summary>
-    public List<double?> Data { get; set; } = new();
+    public List<double?> Data { get; set; } = [];
 
     /// <summary>Advanced data points with per-point properties (colour, sliced, etc.).</summary>
-    public List<DataPoint?> DataPoints { get; set; } = new();
+    public List<DataPoint?> DataPoints { get; set; } = [];
 
     /// <summary>
     ///     Index of the Y-axis this series renders on.

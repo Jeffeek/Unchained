@@ -37,8 +37,10 @@ public sealed class PdfTabTests : MudTestContext
         // Use a real test PDF from the shared test files
         var path = Path.Combine(
             AppContext.BaseDirectory,
+            // ReSharper disable BadListLineBreaks
             "..", "..", "..", "..",
             "Unchained.Pdf.Tests.Shared", "TestFiles", "arabic.pdf"
+            // ReSharper restore BadListLineBreaks
         );
         var fullPath = Path.GetFullPath(path);
 

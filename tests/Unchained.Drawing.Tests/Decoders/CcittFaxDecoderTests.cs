@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Drawing.Decoders;
 using Xunit;
 
@@ -207,9 +207,10 @@ public sealed class CcittFaxDecoderTests
     {
         // encodedByteAlign=true pads each row to byte boundary
         byte[] data = [0xFF, 0x00, 0xFF, 0x00];
-        // ReSharper disable once RedundantArgumentDefaultValue
         // ReSharper disable once BadListLineBreaks
+        // ReSharper disable RedundantArgumentDefaultValue
         var decoded = CcittFaxDecoder.Decode(data, 0, 8, 2, false, true).ToArray();
+        // ReSharper restore RedundantArgumentDefaultValue
         decoded.Length.ShouldBeGreaterThanOrEqualTo(2);
     }
 

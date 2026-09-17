@@ -82,7 +82,8 @@ public sealed class XfdfEditor : IXfdfEditor
     {
         var xfdf = XDocument.Parse(xfdfXml);
         var annotsElem = xfdf.Root?.Element(XfdfNs + "annots");
-        if (annotsElem is null) return;
+        if (annotsElem is null)
+            return;
 
         var editor = new AnnotationEditor();
         foreach (var elem in annotsElem.Elements())
@@ -130,26 +131,21 @@ public sealed class XfdfEditor : IXfdfEditor
             return null;
 
         var parts = rectStr.Split(',');
-        if (parts.Length < 4) return null;
-        if (!float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x) ||
-            !float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y) ||
-            !float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var x2) ||
-            !float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var y2))
-            return null;
-
-        return (x, y, x2 - x, y2 - y);
+        return parts.Length < 4
+            ? null
+            : !float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x) ||
+              !float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y) ||
+              !float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var x2) ||
+              !float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var y2)
+                ? null
+                : (x, y, x2 - x, y2 - y);
     }
 
-    private static float[]? ParseHexColor(string? hex)
-    {
-        if (string.IsNullOrEmpty(hex) || hex.Length < 7 || hex[0] != '#')
-            return null;
-
-        if (!int.TryParse(hex[1..3], NumberStyles.HexNumber, null, out var r) ||
-            !int.TryParse(hex[3..5], NumberStyles.HexNumber, null, out var g) ||
-            !int.TryParse(hex[5..7], NumberStyles.HexNumber, null, out var b))
-            return null;
-
-        return [r / 255f, g / 255f, b / 255f];
-    }
+    private static float[]? ParseHexColor(string? hex) => string.IsNullOrEmpty(hex) || hex.Length < 7 || hex[0] != '#'
+        ? null
+        : !int.TryParse(hex[1..3], NumberStyles.HexNumber, null, out var r) ||
+          !int.TryParse(hex[3..5], NumberStyles.HexNumber, null, out var g) ||
+          !int.TryParse(hex[5..7], NumberStyles.HexNumber, null, out var b)
+            ? null
+            : [r / 255f, g / 255f, b / 255f];
 }

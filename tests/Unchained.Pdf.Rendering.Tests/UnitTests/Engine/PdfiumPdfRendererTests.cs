@@ -83,8 +83,7 @@ public sealed class PdfiumPdfRendererTests
 
         await cts.CancelAsync();
 
-        await Should.ThrowAsync<TaskCanceledException>(async () =>
-            await renderer.RenderPageAsync(page, new RenderOptions { Dpi = 96 }, cts.Token));
+        await Should.ThrowAsync<TaskCanceledException>(async () => await renderer.RenderPageAsync(page, new RenderOptions { Dpi = 96 }, cts.Token));
     }
 
     [Fact]
@@ -134,8 +133,7 @@ public sealed class PdfiumPdfRendererTests
         await using var doc = await LoadTestDocumentAsync();
         using var renderer = new PdfiumPdfRenderer();
 
-        await Should.ThrowAsync<NotImplementedException>(async () =>
-            await renderer.RenderDocumentAsync(doc, new RenderOptions { Dpi = 96 }, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<NotImplementedException>(async () => await renderer.RenderDocumentAsync(doc, new RenderOptions { Dpi = 96 }, TestContext.Current.CancellationToken));
     }
 
     [Fact]

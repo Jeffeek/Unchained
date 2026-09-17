@@ -7,7 +7,7 @@ namespace Unchained.Ooxml.Text;
 public sealed class TextFrame
 {
     /// <summary>The paragraphs contained in this text frame.</summary>
-    public ParagraphCollection Paragraphs { get; } = new();
+    public ParagraphCollection Paragraphs { get; } = [];
 
     /// <summary>Text body formatting (margins, anchor, direction, autofit).</summary>
     public TextFrameFormat Format { get; } = new();
@@ -25,7 +25,7 @@ public sealed class TextFrame
         set
         {
             Paragraphs.Clear();
-            Paragraphs.Add(value);
+            _ = Paragraphs.Add(value);
         }
     }
 

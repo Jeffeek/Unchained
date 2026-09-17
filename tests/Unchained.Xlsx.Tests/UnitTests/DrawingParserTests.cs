@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Ooxml.Charts;
 using Unchained.Ooxml.Opc;
 using Unchained.Ooxml.Xml;
@@ -33,7 +33,7 @@ public sealed class DrawingParserTests
         using var processor = new SpreadsheetProcessor();
         var document = processor.CreateBlank("Sheet1");
         var part = new OpcPart(DrawingUri, "application/vnd.openxmlformats-officedocument.drawing+xml", []);
-        return (document, part, new DrawingCollection());
+        return (document, part, []);
     }
 
     private static void Parse(XElement anchorContent, SpreadsheetDocument document, OpcPart part, DrawingCollection drawings) =>

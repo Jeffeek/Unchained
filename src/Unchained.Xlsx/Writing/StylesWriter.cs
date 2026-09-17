@@ -60,13 +60,20 @@ internal static class StylesWriter
     private static XElement WriteFont(CellFont font)
     {
         var element = new XElement(SmlNames.Font);
-        if (font.Bold) element.Add(new XElement(SmlNames.FontBold));
-        if (font.Italic) element.Add(new XElement(SmlNames.FontItalic));
-        if (font.Strikethrough) element.Add(new XElement(SmlNames.FontStrike));
-        if (font.Outline) element.Add(new XElement(SmlNames.FontOutline));
-        if (font.Shadow) element.Add(new XElement(SmlNames.FontShadow));
-        if (font.Condense) element.Add(new XElement(SmlNames.FontCondense));
-        if (font.Extend) element.Add(new XElement(SmlNames.FontExtend));
+        if (font.Bold)
+            element.Add(new XElement(SmlNames.FontBold));
+        if (font.Italic)
+            element.Add(new XElement(SmlNames.FontItalic));
+        if (font.Strikethrough)
+            element.Add(new XElement(SmlNames.FontStrike));
+        if (font.Outline)
+            element.Add(new XElement(SmlNames.FontOutline));
+        if (font.Shadow)
+            element.Add(new XElement(SmlNames.FontShadow));
+        if (font.Condense)
+            element.Add(new XElement(SmlNames.FontCondense));
+        if (font.Extend)
+            element.Add(new XElement(SmlNames.FontExtend));
 
         if (font.Underline != FontUnderline.None)
         {
@@ -139,8 +146,10 @@ internal static class StylesWriter
     private static XElement WriteBorder(CellBorder border)
     {
         var element = new XElement(SmlNames.Border);
-        if (border.DiagonalUp) element.SetAttributeValue("diagonalUp", "1");
-        if (border.DiagonalDown) element.SetAttributeValue("diagonalDown", "1");
+        if (border.DiagonalUp)
+            element.SetAttributeValue("diagonalUp", "1");
+        if (border.DiagonalDown)
+            element.SetAttributeValue("diagonalDown", "1");
 
         element.Add(WriteEdge(SmlNames.Left, border.Left));
         element.Add(WriteEdge(SmlNames.Right, border.Right));
@@ -182,11 +191,16 @@ internal static class StylesWriter
             new XAttribute("xfId", xf.XfId.ToString(CultureInfo.InvariantCulture))
         );
 
-        if (xf.ApplyNumberFormat) element.SetAttributeValue("applyNumberFormat", "1");
-        if (xf.ApplyFont) element.SetAttributeValue("applyFont", "1");
-        if (xf.ApplyFill) element.SetAttributeValue("applyFill", "1");
-        if (xf.ApplyBorder) element.SetAttributeValue("applyBorder", "1");
-        if (xf.ApplyAlignment || !xf.Alignment.IsDefault) element.SetAttributeValue("applyAlignment", "1");
+        if (xf.ApplyNumberFormat)
+            element.SetAttributeValue("applyNumberFormat", "1");
+        if (xf.ApplyFont)
+            element.SetAttributeValue("applyFont", "1");
+        if (xf.ApplyFill)
+            element.SetAttributeValue("applyFill", "1");
+        if (xf.ApplyBorder)
+            element.SetAttributeValue("applyBorder", "1");
+        if (xf.ApplyAlignment || !xf.Alignment.IsDefault)
+            element.SetAttributeValue("applyAlignment", "1");
 
         if (!xf.Alignment.IsDefault)
             element.Add(WriteAlignment(xf.Alignment));
@@ -199,18 +213,25 @@ internal static class StylesWriter
         var element = new XElement(SmlNames.Alignment);
 
         var horizontal = SmlEnums.ToLiteral(alignment.Horizontal);
-        if (horizontal != null) element.SetAttributeValue("horizontal", horizontal);
+        if (horizontal != null)
+            element.SetAttributeValue("horizontal", horizontal);
 
         var vertical = SmlEnums.ToLiteral(alignment.Vertical);
-        if (vertical != null) element.SetAttributeValue("vertical", vertical);
+        if (vertical != null)
+            element.SetAttributeValue("vertical", vertical);
 
-        if (alignment.WrapText) element.SetAttributeValue("wrapText", "1");
-        if (alignment.ShrinkToFit) element.SetAttributeValue("shrinkToFit", "1");
-        if (alignment.TextRotation != 0) element.SetAttributeValue("textRotation", alignment.TextRotation.ToString(CultureInfo.InvariantCulture));
-        if (alignment.Indent != 0) element.SetAttributeValue("indent", alignment.Indent.ToString(CultureInfo.InvariantCulture));
+        if (alignment.WrapText)
+            element.SetAttributeValue("wrapText", "1");
+        if (alignment.ShrinkToFit)
+            element.SetAttributeValue("shrinkToFit", "1");
+        if (alignment.TextRotation != 0)
+            element.SetAttributeValue("textRotation", alignment.TextRotation.ToString(CultureInfo.InvariantCulture));
+        if (alignment.Indent != 0)
+            element.SetAttributeValue("indent", alignment.Indent.ToString(CultureInfo.InvariantCulture));
         if (alignment.ReadingOrder != ReadingOrder.ContextDependent)
             element.SetAttributeValue("readingOrder", SmlEnums.ToLiteral(alignment.ReadingOrder).ToString(CultureInfo.InvariantCulture));
-        if (alignment.JustifyLastLine) element.SetAttributeValue("justifyLastLine", "1");
+        if (alignment.JustifyLastLine)
+            element.SetAttributeValue("justifyLastLine", "1");
 
         return element;
     }

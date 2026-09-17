@@ -92,7 +92,7 @@ public sealed class RealPdfSmokeTests : PdfTestBase
                 ms.Position = 0;
                 var header = new byte[5];
                 _ = ms.Read(header, 0, 5);
-                header.ShouldBe("%PDF-"u8.ToArray(), path);
+                header.ShouldBe([.. "%PDF-"u8], path);
             }
         );
 
@@ -117,8 +117,17 @@ public sealed class RealPdfSmokeTests : PdfTestBase
 
     private static async Task<IPdfDocument?> TryLoadDocAsync(string path)
     {
-        try { return await LoadAsync(await File.ReadAllBytesAsync(path)); }
-        catch (PdfException) { return null; }
-        catch (PdfEncryptedException) { return null; } // skip password-protected files
+        try
+        {
+            return await LoadAsync(await File.ReadAllBytesAsync(path));
+        }
+        catch (PdfException)
+        {
+            return null;
+        }
+        catch (PdfEncryptedException)
+        {
+            return null;
+        } // skip password-protected files
     }
 }

@@ -18,7 +18,7 @@ public class Pane
     public double? OuterRadius { get; set; }
 
     /// <summary>Pane background(s).</summary>
-    public List<BackgroundConfig> Background { get; set; } = new();
+    public List<BackgroundConfig> Background { get; set; } = [];
 
     /// <summary>Additional properties not covered by the typed API.</summary>
     public Dictionary<string, object>? AdditionalProperties { get; set; }

@@ -105,7 +105,7 @@ internal sealed class PresentationWriter
         var hasAnyComments = slides.Any(static s => s.HasComments);
         if (hasAnyComments || commentAuthors is { Count: > 0 })
         {
-            var authors = commentAuthors ?? new CommentAuthorCollection();
+            var authors = commentAuthors ?? [];
             WriteCommentAuthors(package, authors, contentTypes);
         }
 
@@ -165,7 +165,7 @@ internal sealed class PresentationWriter
             var extension = ExtensionForContentType(image.ContentType);
             var uri = $"/ppt/media/image{index++}{extension}";
             image.PartUri = uri;
-            package.AddOrReplacePart(uri, image.ContentType, image.Data.ToArray());
+            _ = package.AddOrReplacePart(uri, image.ContentType, image.Data.ToArray());
         }
     }
 
@@ -190,7 +190,7 @@ internal sealed class PresentationWriter
             // Write theme
             var themeUri = $"/ppt/theme/theme{i + 1}.xml";
             var themeXml = ThemeWriter.Write(master.Theme);
-            package.AddOrReplacePart(
+            _ = package.AddOrReplacePart(
                 themeUri,
                 PmlNames.ContentTypeTheme,
                 new XDocument(themeXml).ToUtf8Bytes()
@@ -202,7 +202,7 @@ internal sealed class PresentationWriter
 
             // Write master XML
             var masterXml = MasterWriter.Write(master, themeUri, layoutUris);
-            package.AddOrReplacePart(
+            _ = package.AddOrReplacePart(
                 masterUri,
                 PmlNames.ContentTypeSlideMaster,
                 new XDocument(masterXml).ToUtf8Bytes()
@@ -252,7 +252,7 @@ internal sealed class PresentationWriter
             contentTypes.Register(layoutUri, PmlNames.ContentTypeSlideLayout);
 
             var layoutXml = LayoutWriter.Write(layout);
-            package.AddOrReplacePart(
+            _ = package.AddOrReplacePart(
                 layoutUri,
                 PmlNames.ContentTypeSlideLayout,
                 new XDocument(layoutXml).ToUtf8Bytes()
@@ -346,7 +346,7 @@ internal sealed class PresentationWriter
             // Write slide XML (all relationship IDs now set)
             contentTypes.Register(slideUri, PmlNames.ContentTypeSlide);
             var slideXml = SlideWriter.Write(slide);
-            package.AddOrReplacePart(
+            _ = package.AddOrReplacePart(
                 slideUri,
                 PmlNames.ContentTypeSlide,
                 new XDocument(slideXml).ToUtf8Bytes()
@@ -378,7 +378,7 @@ internal sealed class PresentationWriter
                 var chartBytes = chartShape.ChartPartData
                                  ?? ChartWriter.Write(chartShape.Chart);
 
-                package.AddOrReplacePart(chartShape.PartUri, PmlNames.ContentTypeChart, chartBytes);
+                _ = package.AddOrReplacePart(chartShape.PartUri, PmlNames.ContentTypeChart, chartBytes);
                 contentTypes.Register(chartShape.PartUri, PmlNames.ContentTypeChart);
 
                 package.AddRelationship(
@@ -416,7 +416,7 @@ internal sealed class PresentationWriter
                 var notesDoc = NotesWriter.Write(slide.Notes);
                 if (notesDoc != null)
                 {
-                    package.AddOrReplacePart(
+                    _ = package.AddOrReplacePart(
                         notesUri,
                         PmlNames.ContentTypeNotesSlide,
                         notesDoc.ToUtf8Bytes()
@@ -438,7 +438,7 @@ internal sealed class PresentationWriter
                 var comments = slide.GetComments();
                 var commentsUri = $"/ppt/comments/comment{commentPartIndex++}.xml";
                 var cmDoc = CommentWriter.Write(comments);
-                package.AddOrReplacePart(
+                _ = package.AddOrReplacePart(
                     commentsUri,
                     PmlNames.ContentTypeComments,
                     cmDoc.ToUtf8Bytes()
@@ -464,7 +464,8 @@ internal sealed class PresentationWriter
         {
             yield return shape;
 
-            if (shape is not GroupShape group) continue;
+            if (shape is not GroupShape group)
+                continue;
 
             foreach (var child in EnumerateAllShapes(group.Children))
                 yield return child;
@@ -482,7 +483,8 @@ internal sealed class PresentationWriter
         HyperlinkAction action
     )
     {
-        if (string.IsNullOrEmpty(action.RelationshipId)) return;
+        if (string.IsNullOrEmpty(action.RelationshipId))
+            return;
 
         if (!string.IsNullOrEmpty(action.Url))
         {
@@ -524,7 +526,8 @@ internal sealed class PresentationWriter
         RunHyperlink link
     )
     {
-        if (string.IsNullOrEmpty(link.RelationshipId)) return;
+        if (string.IsNullOrEmpty(link.RelationshipId))
+            return;
 
         if (!string.IsNullOrEmpty(link.Url))
         {
@@ -578,10 +581,11 @@ internal sealed class PresentationWriter
                 continue;
             }
 
-            if (related.Data is null) continue;
+            if (related.Data is null)
+                continue;
 
             var subUri = UniquePartUri(related.Target, usedSubPartUris, ref clonedIndex);
-            package.AddOrReplacePart(subUri, related.ContentType, related.Data);
+            _ = package.AddOrReplacePart(subUri, related.ContentType, related.Data);
             contentTypes.Register(subUri, related.ContentType);
             package.AddRelationship(
                 chartShape.PartUri,
@@ -605,9 +609,8 @@ internal sealed class PresentationWriter
 
         string candidate;
         do
-        {
             candidate = $"{directory}imported{index++}_{fileName}";
-        } while (!used.Add(candidate));
+        while (!used.Add(candidate));
 
         return candidate;
     }
@@ -705,7 +708,7 @@ internal sealed class PresentationWriter
         if (string.IsNullOrEmpty(relationshipId) || string.IsNullOrEmpty(partUri) || data == null)
             return;
 
-        package.AddOrReplacePart(partUri, contentType, data);
+        _ = package.AddOrReplacePart(partUri, contentType, data);
         contentTypes.Register(partUri, contentType);
         package.AddRelationship(slideUri, relationshipId, relType, OpcPackage.GetRelativeUri(slideUri, partUri));
     }
@@ -759,7 +762,8 @@ internal sealed class PresentationWriter
     /// </summary>
     private static void PatchSmartArtRelationshipIds(SmartArtShape shape)
     {
-        if (shape.RawElement is null) return;
+        if (shape.RawElement is null)
+            return;
 
         var r = PmlNames.Relationships;
         var relIds = shape.RawElement.Descendants(DmlNames.DiagramRelIds).FirstOrDefault()
@@ -772,11 +776,11 @@ internal sealed class PresentationWriter
             SetAttributeIfPresent(relIds, r + "cs", shape.ColorsRelationshipId);
         }
 
-        if (!string.IsNullOrEmpty(shape.DrawingRelationshipId))
-        {
-            var ext = shape.RawElement.Descendants().FirstOrDefault(static e => e.Name.LocalName == "dataModelExt");
-            ext?.SetAttributeValue("relId", shape.DrawingRelationshipId);
-        }
+        if (string.IsNullOrEmpty(shape.DrawingRelationshipId))
+            return;
+
+        var ext = shape.RawElement.Descendants().FirstOrDefault(static e => e.Name.LocalName == "dataModelExt");
+        ext?.SetAttributeValue("relId", shape.DrawingRelationshipId);
 
         return;
 
@@ -794,7 +798,7 @@ internal sealed class PresentationWriter
     )
     {
         var caDoc = CommentAuthorWriter.Write(authors);
-        package.AddOrReplacePart(
+        _ = package.AddOrReplacePart(
             CommentAuthorsPartUri,
             PmlNames.ContentTypeCommentAuthors,
             caDoc.ToUtf8Bytes()
@@ -899,7 +903,7 @@ internal sealed class PresentationWriter
         var presContentType = hasMacros
             ? PmlNames.ContentTypePresentationMacroEnabled
             : PmlNames.ContentTypePresentation;
-        package.AddOrReplacePart(PresentationPartUri, presContentType, presXml.ToUtf8Bytes());
+        _ = package.AddOrReplacePart(PresentationPartUri, presContentType, presXml.ToUtf8Bytes());
         contentTypes.Register(PresentationPartUri, presContentType);
 
         // Presentation relationships
@@ -974,13 +978,15 @@ internal sealed class PresentationWriter
         // Write each preserved part and its own (verbatim) relationships.
         foreach (var part in preserved.Parts)
         {
-            package.AddOrReplacePart(part.Uri, part.ContentType, part.Data);
+            _ = package.AddOrReplacePart(part.Uri, part.ContentType, part.Data);
             contentTypes.Register(part.Uri, part.ContentType);
         }
 
         foreach (var part in preserved.Parts)
-        foreach (var rel in part.Relationships)
-            package.AddRelationship(part.Uri, rel.Id, rel.Type, rel.Target, rel.IsExternal);
+        {
+            foreach (var rel in part.Relationships)
+                package.AddRelationship(part.Uri, rel.Id, rel.Type, rel.Target, rel.IsExternal);
+        }
 
         // Anchor relationships connect a known source to a preserved part. Use fresh ids so they
         // do not collide with relationships the writer already added to presentation.xml.
@@ -1058,9 +1064,12 @@ internal sealed class PresentationWriter
 
         // Boolean show flags are attributes on showPr. The XML stores the positive sense
         // (showNarration / showAnimation default true), so invert our "without" booleans.
-        if (show.Loop) showPr.Add(new XAttribute("loop", "1"));
-        if (show.ShowWithoutNarration) showPr.Add(new XAttribute("showNarration", "0"));
-        if (show.ShowWithoutAnimation) showPr.Add(new XAttribute("showAnimation", "0"));
+        if (show.Loop)
+            showPr.Add(new XAttribute("loop", "1"));
+        if (show.ShowWithoutNarration)
+            showPr.Add(new XAttribute("showNarration", "0"));
+        if (show.ShowWithoutAnimation)
+            showPr.Add(new XAttribute("showAnimation", "0"));
 
         var presentationPr = new XElement(
             pml + "presentationPr",
@@ -1071,7 +1080,7 @@ internal sealed class PresentationWriter
         );
 
         var doc = new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), presentationPr);
-        package.AddOrReplacePart(PresPropsPartUri, PmlNames.ContentTypePresProps, doc.ToUtf8Bytes());
+        _ = package.AddOrReplacePart(PresPropsPartUri, PmlNames.ContentTypePresProps, doc.ToUtf8Bytes());
         contentTypes.Register(PresPropsPartUri, PmlNames.ContentTypePresProps);
     }
 

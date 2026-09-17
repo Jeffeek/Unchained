@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Models;
 using Xunit;
@@ -53,7 +53,7 @@ public sealed class PdfEncryptionContextTests
     public void DecryptStream_Empty_ReturnsEmpty()
     {
         var ctx = new PdfEncryptionContext(Key(32), PdfEncryptionAlgorithm.Aes256);
-        ctx.DecryptStream(ReadOnlySpan<byte>.Empty, 1, 0).ShouldBeEmpty();
+        ctx.DecryptStream([], 1, 0).ShouldBeEmpty();
     }
 
     [Fact]

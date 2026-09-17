@@ -32,7 +32,7 @@ public sealed class MediaStoreTests
     public void AddImage_Instance_Stores()
     {
         var store = Store();
-        var image = new EmbeddedImage("image/jpeg", new byte[] { 9 });
+        var image = new EmbeddedImage("image/jpeg", "\t"u8.ToArray());
         store.AddImage(image);
         store.Images.ShouldContain(image);
     }

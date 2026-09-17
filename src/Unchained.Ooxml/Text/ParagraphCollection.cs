@@ -39,7 +39,7 @@ public sealed class ParagraphCollection : IReadOnlyList<Paragraph>
     public Paragraph Add(string text)
     {
         var paragraph = new Paragraph();
-        paragraph.Runs.Add(text);
+        _ = paragraph.Runs.Add(text);
         _paragraphs.Add(paragraph);
         return paragraph;
     }

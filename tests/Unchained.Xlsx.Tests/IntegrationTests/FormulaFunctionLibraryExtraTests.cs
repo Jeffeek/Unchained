@@ -58,7 +58,8 @@ public class FormulaFunctionLibraryExtraTests
 
         static void Fill(Worksheet s)
         {
-            for (var i = 1; i <= 5; i++) s.SetValue(i, 1, i);
+            for (var i = 1; i <= 5; i++)
+                s.SetValue(i, 1, i);
         }
     }
 

@@ -345,9 +345,9 @@ public static class PptxPropertyAdapter
     {
         var sb = new StringBuilder();
         if (chart.Data.Categories.Count > 0)
-            sb.AppendLine($"Categories: {string.Join(", ", chart.Data.Categories)}");
+            _ = sb.AppendLine($"Categories: {string.Join(", ", chart.Data.Categories)}");
         foreach (var series in chart.Data.Series)
-            sb.AppendLine($"{series.Name}: {string.Join(", ", series.Values)}");
+            _ = sb.AppendLine($"{series.Name}: {string.Join(", ", series.Values)}");
         return sb.ToString().TrimEnd();
     }
 

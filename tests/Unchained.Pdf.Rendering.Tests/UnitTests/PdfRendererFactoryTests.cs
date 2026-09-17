@@ -1,5 +1,4 @@
 using Shouldly;
-using Unchained.Pdf.Rendering;
 using Unchained.Pdf.Rendering.Abstractions;
 using Xunit;
 

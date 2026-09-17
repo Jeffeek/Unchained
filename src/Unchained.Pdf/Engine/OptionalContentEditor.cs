@@ -33,14 +33,10 @@ public sealed class OptionalContentEditor : IOptionalContentEditor
 
         var catalog = adapter.Core.Catalog;
         var ocPropsRef = catalog[PdfName.OCProperties];
-        var ocProps = adapter.Core.ResolveDict(ocPropsRef);
-        if (ocProps is null)
-            throw new InvalidOperationException("Document has no /OCProperties (no layers).");
+        var ocProps = adapter.Core.ResolveDict(ocPropsRef) ?? throw new InvalidOperationException("Document has no /OCProperties (no layers).");
 
         // The default config /D is usually a direct dict inside /OCProperties.
-        var defaultCfg = adapter.Core.ResolveDict(ocProps[PdfName.D]);
-        if (defaultCfg is null)
-            throw new InvalidOperationException("Document /OCProperties has no default configuration /D.");
+        var defaultCfg = adapter.Core.ResolveDict(ocProps[PdfName.D]) ?? throw new InvalidOperationException("Document /OCProperties has no default configuration /D.");
 
         var offList = (defaultCfg[PdfName.OFF] as PdfArray)?.Elements.ToList() ?? [];
         var ocgRef = new PdfIndirectReference(ocgObjectNumber, 0);
@@ -49,7 +45,7 @@ public sealed class OptionalContentEditor : IOptionalContentEditor
         switch (visible)
         {
             case true when alreadyOff:
-                offList.RemoveAll(e => e is PdfIndirectReference r && r.ObjectNumber == ocgObjectNumber);
+                _ = offList.RemoveAll(e => e is PdfIndirectReference r && r.ObjectNumber == ocgObjectNumber);
             break;
             case false when !alreadyOff:
                 offList.Add(ocgRef);

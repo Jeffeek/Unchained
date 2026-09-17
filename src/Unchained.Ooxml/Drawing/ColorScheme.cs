@@ -68,19 +68,44 @@ public sealed class ColorScheme
         {
             switch (slot)
             {
-                case ThemeColorSlot.Dark1: Dark1 = value; break;
-                case ThemeColorSlot.Light1: Light1 = value; break;
-                case ThemeColorSlot.Dark2: Dark2 = value; break;
-                case ThemeColorSlot.Light2: Light2 = value; break;
-                case ThemeColorSlot.Accent1: Accent1 = value; break;
-                case ThemeColorSlot.Accent2: Accent2 = value; break;
-                case ThemeColorSlot.Accent3: Accent3 = value; break;
-                case ThemeColorSlot.Accent4: Accent4 = value; break;
-                case ThemeColorSlot.Accent5: Accent5 = value; break;
-                case ThemeColorSlot.Accent6: Accent6 = value; break;
-                case ThemeColorSlot.Hyperlink: HyperlinkColor = value; break;
-                case ThemeColorSlot.FollowedHyperlink: FollowedHyperlinkColor = value; break;
-                default: throw new ArgumentOutOfRangeException(nameof(slot), slot, "Unrecognised theme colour slot.");
+                case ThemeColorSlot.Dark1:
+                    Dark1 = value;
+                break;
+                case ThemeColorSlot.Light1:
+                    Light1 = value;
+                break;
+                case ThemeColorSlot.Dark2:
+                    Dark2 = value;
+                break;
+                case ThemeColorSlot.Light2:
+                    Light2 = value;
+                break;
+                case ThemeColorSlot.Accent1:
+                    Accent1 = value;
+                break;
+                case ThemeColorSlot.Accent2:
+                    Accent2 = value;
+                break;
+                case ThemeColorSlot.Accent3:
+                    Accent3 = value;
+                break;
+                case ThemeColorSlot.Accent4:
+                    Accent4 = value;
+                break;
+                case ThemeColorSlot.Accent5:
+                    Accent5 = value;
+                break;
+                case ThemeColorSlot.Accent6:
+                    Accent6 = value;
+                break;
+                case ThemeColorSlot.Hyperlink:
+                    HyperlinkColor = value;
+                break;
+                case ThemeColorSlot.FollowedHyperlink:
+                    FollowedHyperlinkColor = value;
+                break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(slot), slot, "Unrecognised theme colour slot.");
             }
         }
     }

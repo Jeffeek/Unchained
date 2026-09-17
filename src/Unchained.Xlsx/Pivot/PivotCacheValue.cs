@@ -11,7 +11,6 @@ internal readonly struct PivotCacheValue
 {
     // ReSharper disable BadListLineBreaks
     private PivotCacheValue(PivotCacheValueKind kind, double number, string? text, bool boolean, CellError error)
-        // ReSharper restore BadListLineBreaks
     {
         Kind = kind;
         Number = number;

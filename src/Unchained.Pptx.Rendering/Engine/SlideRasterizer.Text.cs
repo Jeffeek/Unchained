@@ -31,7 +31,7 @@ internal sealed partial class SlideRasterizer
     {
         var scale = dpi / RenderingConstants.PointsPerInch;
         var lineHeight = 0;
-        RenderRunText(
+        _ = RenderRunText(
             buffer,
             text,
             TextConstants.FallbackLatinFont,
@@ -85,7 +85,8 @@ internal sealed partial class SlideRasterizer
                     var colX = shapeX + (col * (colW + spacingPx));
                     var start = col * parasPerCol;
                     var end = Math.Min(start + parasPerCol, textFrame.Paragraphs.Count);
-                    if (start >= end) break;
+                    if (start >= end)
+                        break;
 
                     // Build a temporary TextFrame with just this column's paragraphs.
                     var colFrame = new TextFrame
@@ -137,13 +138,10 @@ internal sealed partial class SlideRasterizer
         };
 
         // Default text color priority: styleTextColor → theme dk1 → black.
-        uint defaultTextArgb;
-        if (styleTextColor.HasValue)
-            defaultTextArgb = styleTextColor.Value.Resolve(colorScheme);
-        else if (colorScheme is not null)
-            defaultTextArgb = colorScheme.Dark1.Resolve(colorScheme);
-        else
-            defaultTextArgb = 0xFF000000u;
+        var defaultTextArgb = styleTextColor?.Resolve(colorScheme)
+                              ?? (colorScheme is not null
+                                  ? colorScheme.Dark1.Resolve(colorScheme)
+                                  : 0xFF000000u);
         ExtractArgb(defaultTextArgb, out _, out var defaultR, out var defaultG, out var defaultB);
 
         // Measure total text height for vertical anchor (Middle/Bottom).
@@ -181,8 +179,10 @@ internal sealed partial class SlideRasterizer
                 {
                     var mid = (lo + hi) / 2;
                     var h = MeasureTotalTextHeight(textFrame, scale * mid, defaultFontSize * mid);
-                    if (h <= availH) lo = mid;
-                    else hi = mid;
+                    if (h <= availH)
+                        lo = mid;
+                    else
+                        hi = mid;
                 }
 
                 fontScale = lo;
@@ -196,7 +196,8 @@ internal sealed partial class SlideRasterizer
             if (paragraph.Runs.Count == 0)
             {
                 cursorY += (int)(defaultFontSize * fontScale * scale) + 2;
-                if (cursorY > maxY) return;
+                if (cursorY > maxY)
+                    return;
 
                 continue;
             }
@@ -238,11 +239,13 @@ internal sealed partial class SlideRasterizer
                     cursorY += lineHeight + 2;
                     lineX = innerLeft;
                     lineHeight = 0;
-                    if (cursorY > maxY) break;
+                    if (cursorY > maxY)
+                        break;
                 }
 
                 var renderWord = lineX == innerLeft ? word.TrimStart() : word;
-                if (string.IsNullOrEmpty(renderWord)) continue;
+                if (string.IsNullOrEmpty(renderWord))
+                    continue;
 
                 var dummy = 0;
                 lineX = RenderRunText(
@@ -260,11 +263,13 @@ internal sealed partial class SlideRasterizer
                     b,
                     ref dummy
                 );
-                if (dummy > lineHeight) lineHeight = dummy;
+                if (dummy > lineHeight)
+                    lineHeight = dummy;
             }
 
             cursorY += lineHeight + 2;
-            if (cursorY > maxY) return;
+            if (cursorY > maxY)
+                return;
         }
     }
 
@@ -310,8 +315,10 @@ internal sealed partial class SlideRasterizer
         while (i < text.Length)
         {
             var start = i;
-            while (i < text.Length && text[i] != ' ') i++;
-            while (i < text.Length && text[i] == ' ') i++;
+            while (i < text.Length && text[i] != ' ')
+                i++;
+            while (i < text.Length && text[i] == ' ')
+                i++;
             if (i > start)
                 result.Add(text[start..i]);
         }
@@ -327,7 +334,8 @@ internal sealed partial class SlideRasterizer
         uint pixelSize
     )
     {
-        if (string.IsNullOrEmpty(text)) return 0;
+        if (string.IsNullOrEmpty(text))
+            return 0;
 
         try
         {

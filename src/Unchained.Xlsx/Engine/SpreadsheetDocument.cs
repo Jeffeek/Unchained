@@ -36,7 +36,7 @@ public sealed class SpreadsheetDocument : ISpreadsheetDocument
         Package = package;
         Sheets = new WorksheetCollection(this);
         Properties = new WorkbookProperties();
-        DefinedNames = new DefinedNameCollection();
+        DefinedNames = [];
         Protection = new WorkbookProtection();
     }
 

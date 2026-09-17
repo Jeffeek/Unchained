@@ -107,9 +107,7 @@ public sealed class SplitDialogTests : MudTestContext
         var provider = Render<MudDialogProvider>();
         var dialog = await ShowAsync(provider, pageCount: 5);
 
-        var splitEachButton = provider.FindAll("button").First(static b =>
-            b.TextContent.Contains("One file per page")
-        );
+        var splitEachButton = provider.FindAll("button").First(static b => b.TextContent.Contains("One file per page"));
         await splitEachButton.ClickAsync();
 
         var input = provider.Find("input");

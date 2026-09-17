@@ -78,7 +78,8 @@ internal static class ColorParser
     private static double ReadTransformValue(XContainer parent, XName childName)
     {
         var child = parent.Element(childName);
-        if (child == null) return childName == DmlNames.LuminanceModifier ? 1.0 : 0.0;
+        if (child == null)
+            return childName == DmlNames.LuminanceModifier ? 1.0 : 0.0;
 
         var raw = child.GetAttrInt(DmlNames.AttributeValue);
         return raw == null ? childName == DmlNames.LuminanceModifier ? 1.0 : 0.0 : raw.Value / (double)OoxmlScaling.PercentScale;

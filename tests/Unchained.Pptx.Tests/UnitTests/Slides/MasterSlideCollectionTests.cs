@@ -1,5 +1,5 @@
-using System.Collections;
 using Shouldly;
+using System.Collections;
 using Unchained.Pptx.Slides;
 using Xunit;
 

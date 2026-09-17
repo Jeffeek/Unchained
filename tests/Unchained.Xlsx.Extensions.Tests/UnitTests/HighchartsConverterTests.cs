@@ -85,11 +85,11 @@ public class HighchartsConverterTests
         var series1 = result.Series[0];
         series1.Name.ShouldBe("Revenue A");
         series1.Type.ShouldBe("line");
-        series1.Data.ShouldBe(seriesA.Cast<double?>().ToList());
+        series1.Data.ShouldBe([.. seriesA.Cast<double?>()]);
 
         var series2 = result.Series[1];
         series2.Name.ShouldBe("Revenue B");
-        series2.Data.ShouldBe(seriesB.Cast<double?>().ToList());
+        series2.Data.ShouldBe([.. seriesB.Cast<double?>()]);
     }
 
     [Fact]

@@ -1,7 +1,7 @@
-using System.Xml.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Packaging;
+using System.Xml.Linq;
 using Unchained.Ooxml;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Engine;
@@ -302,8 +302,10 @@ internal static class OpenXmlPresentationParser
         props.LastModifiedBy = core.LastModifiedBy;
         props.Category = core.Category;
         props.ContentStatus = core.ContentStatus;
-        if (core.Created is { } created) props.Created = created;
-        if (core.Modified is { } modified) props.Modified = modified;
+        if (core.Created is { } created)
+            props.Created = created;
+        if (core.Modified is { } modified)
+            props.Modified = modified;
         return props;
     }
 
@@ -326,7 +328,8 @@ internal static class OpenXmlPresentationParser
         foreach (var slideId in idList.Elements<P.SlideId>())
         {
             var rId = slideId.RelationshipId?.Value;
-            if (rId is null) continue;
+            if (rId is null)
+                continue;
 
             if (presPart.GetPartById(rId) is SlidePart sp)
                 yield return (sp, slideId.Id?.Value ?? 256);
@@ -356,7 +359,8 @@ internal static class OpenXmlPresentationParser
             ReadShapeTree(tree, slide.Shapes, slidePart, mediaStore, imageCache);
 
         // Speaker notes — reuse the shared NotesParser on the notes-slide XML.
-        if (slidePart.NotesSlidePart?.NotesSlide is not { } sdkNotes) return slide;
+        if (slidePart.NotesSlidePart?.NotesSlide is not { } sdkNotes)
+            return slide;
 
         var notesXml = XElement.Parse(sdkNotes.OuterXml, LoadOptions.None);
         NotesParser.Parse(notesXml, slide.Notes);
@@ -419,7 +423,8 @@ internal static class OpenXmlPresentationParser
             }
         }
 
-        if (sp.TextBody is not { } body) return shape;
+        if (sp.TextBody is not { } body)
+            return shape;
 
         shape.IsTextBox = true;
         ReadTextBody(body, shape.TextFrame);
@@ -553,7 +558,8 @@ internal static class OpenXmlPresentationParser
 
     private static void ReadCommon(P.NonVisualDrawingProperties? nv, Shape shape)
     {
-        if (nv is null) return;
+        if (nv is null)
+            return;
 
         shape.ShapeId = nv.Id?.Value ?? 0;
         shape.Name = nv.Name?.Value ?? string.Empty;
@@ -577,13 +583,16 @@ internal static class OpenXmlPresentationParser
     // Reads a shape's click hyperlink, resolving the relationship id to its external URL.
     private static void ReadHyperlink(P.NonVisualDrawingProperties? nv, OpenXmlPartContainer? part, Shape shape)
     {
-        if (nv is null || part is null) return;
+        if (nv is null || part is null)
+            return;
 
         var rId = nv.GetFirstChild<D.HyperlinkOnClick>()?.Id?.Value;
-        if (string.IsNullOrEmpty(rId)) return;
+        if (string.IsNullOrEmpty(rId))
+            return;
 
         var relationship = part.HyperlinkRelationships.FirstOrDefault(r => r.Id == rId);
-        if (relationship is null) return;
+        if (relationship is null)
+            return;
 
         shape.ClickAction = new HyperlinkAction
         {
@@ -597,7 +606,8 @@ internal static class OpenXmlPresentationParser
     // so a shape's effects (shadow/glow/reflection/…) round-trip through the SDK engine faithfully.
     private static void ReadEffects(OpenXmlElement? shapeProperties, Shape shape)
     {
-        if (shapeProperties is null) return;
+        if (shapeProperties is null)
+            return;
 
         EffectParser.Parse(XElement.Parse(shapeProperties.OuterXml), shape.Effects);
     }
@@ -646,7 +656,8 @@ internal static class OpenXmlPresentationParser
             shape.Y = new Emu(off.Y ?? 0);
         }
 
-        if (xfrm?.Extents is not { } ext) return;
+        if (xfrm?.Extents is not { } ext)
+            return;
 
         shape.Width = new Emu(ext.Cx ?? 0);
         shape.Height = new Emu(ext.Cy ?? 0);
@@ -660,7 +671,8 @@ internal static class OpenXmlPresentationParser
             shape.Y = new Emu(off.Y ?? 0);
         }
 
-        if (xfrm?.Extents is not { } ext) return;
+        if (xfrm?.Extents is not { } ext)
+            return;
 
         shape.Width = new Emu(ext.Cx ?? 0);
         shape.Height = new Emu(ext.Cy ?? 0);
@@ -668,7 +680,8 @@ internal static class OpenXmlPresentationParser
 
     private static void ReadTable(D.Table? table, TableShape shape)
     {
-        if (table is null) return;
+        if (table is null)
+            return;
 
         var columnWidths = table.TableGrid?.Elements<D.GridColumn>()
             .Select(static c => new Emu(c.Width?.Value ?? 0))
@@ -745,7 +758,7 @@ internal static class OpenXmlPresentationParser
                     RelationshipId = external.Id,
                     RelationshipType = external.RelationshipType,
                     IsExternal = true,
-                    Target = external.Uri?.ToString() ?? string.Empty
+                    Target = external.Uri.ToString()
                 }
             );
         }

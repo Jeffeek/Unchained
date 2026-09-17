@@ -17,7 +17,7 @@ public sealed class ZipBuilderTests
     [Fact]
     public void Build_SingleFile_CreatesEntry()
     {
-        var bytes = ZipBuilder.Build([("hello.txt", "Hello"u8.ToArray())]);
+        var bytes = ZipBuilder.Build([("hello.txt", [.. "Hello"u8])]);
 
         using var archive = new ZipArchive(new MemoryStream(bytes));
         var entry = archive.GetEntry("hello.txt");
@@ -58,7 +58,7 @@ public sealed class ZipBuilderTests
     [Fact]
     public void Build_DataRoundTrips()
     {
-        var bytes = ZipBuilder.Build([("msg.txt", "Hello, World!"u8.ToArray())]);
+        var bytes = ZipBuilder.Build([("msg.txt", [.. "Hello, World!"u8])]);
 
         using var archive = new ZipArchive(new MemoryStream(bytes));
         using var stream = archive.GetEntry("msg.txt")!.Open();

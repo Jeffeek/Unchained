@@ -75,13 +75,16 @@ public sealed class SmartArtShape : Shape
     public string GetAllText()
     {
         var sb = new StringBuilder();
-        foreach (var n in Nodes) Walk(n, sb);
+        foreach (var n in Nodes)
+            Walk(n, sb);
         return sb.ToString().TrimEnd();
 
         static void Walk(SmartArtNode node, StringBuilder sb)
         {
-            if (!string.IsNullOrEmpty(node.Text)) sb.AppendLine(node.Text);
-            foreach (var child in node.Children) Walk(child, sb);
+            if (!string.IsNullOrEmpty(node.Text))
+                _ = sb.AppendLine(node.Text);
+            foreach (var child in node.Children)
+                Walk(child, sb);
         }
     }
 }

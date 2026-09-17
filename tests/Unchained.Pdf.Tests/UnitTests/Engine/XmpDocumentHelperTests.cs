@@ -1,6 +1,6 @@
+using Shouldly;
 using System.Text;
 using System.Xml.Linq;
-using Shouldly;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Document;
 using Unchained.Pdf.Engine;

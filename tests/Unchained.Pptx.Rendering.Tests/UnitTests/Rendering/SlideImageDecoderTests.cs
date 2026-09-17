@@ -1,5 +1,5 @@
-using System.Text;
 using Shouldly;
+using System.Text;
 using Unchained.Drawing;
 using Unchained.Drawing.Encoders;
 using Unchained.Ooxml.Media;

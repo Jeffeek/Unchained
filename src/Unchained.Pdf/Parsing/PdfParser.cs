@@ -1,7 +1,5 @@
-using Unchained.Drawing.Primitives.Extensions;
 using System.Globalization;
 using System.Text;
-using Unchained.Drawing.Constants;
 using Unchained.Pdf.Core;
 using Unchained.Pdf.Parsing.Filters;
 
@@ -82,7 +80,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         if (!next.Is(PdfTokenKind.Stream) || value is not PdfDictionary dict)
             return new PdfIndirectObject((int)objNum, (int)generation, value);
 
-        lexer.ReadNext(); // consume "stream"
+        _ = lexer.ReadNext(); // consume "stream"
         SkipNewline(lexer);
 
         // /Length may be stored as an indirect reference (/Length 3 0 R).
@@ -150,7 +148,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         var third = lexer.Peek();
         if (third.Kind == PdfTokenKind.IndirectRef)
         {
-            lexer.ReadNext(); // consume R
+            _ = lexer.ReadNext(); // consume R
             return new PdfIndirectReference(
                 (int)ParseRawInteger(first.Raw.Span),
                 (int)ParseRawInteger(second.Raw.Span)
@@ -169,7 +167,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
             var peek = lexer.Peek();
             if (peek.Is(PdfTokenKind.ArrayEnd))
             {
-                lexer.ReadNext();
+                _ = lexer.ReadNext();
                 break;
             }
 
@@ -190,7 +188,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
             var peek = lexer.Peek();
             if (peek.Is(PdfTokenKind.DictionaryEnd))
             {
-                lexer.ReadNext();
+                _ = lexer.ReadNext();
                 break;
             }
 
@@ -220,8 +218,10 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         var endstream = "endstream"u8;
         for (var i = dataStart; i < source.Length - endstream.Length; i++)
         {
-            if (source[i] != (byte)'e') continue;
-            if (!source.Slice(i, endstream.Length).SequenceEqual(endstream)) continue;
+            if (source[i] != (byte)'e')
+                continue;
+            if (!source.Slice(i, endstream.Length).SequenceEqual(endstream))
+                continue;
 
             // Verify it's preceded by a newline
             var beforeLen = i - dataStart;
@@ -267,7 +267,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         {
             var (entries, trailerDict, prev) = ParseSingleXref(xrefOffset);
             foreach (var (k, v) in entries)
-                allEntries.TryAdd(k, v);
+                _ = allEntries.TryAdd(k, v);
 
             trailer ??= trailerDict;
             xrefOffset = prev;
@@ -330,7 +330,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
         var limit = (int)Math.Min(startOffset + 256, span.Length);
         for (var i = (int)startOffset; i < limit; i++)
         {
-            if (span[i] < (byte)'0' || span[i] > (byte)'9')
+            if (span[i] is < (byte)'0' or > (byte)'9')
                 continue;
 
             if (i > 0 && span[i - 1] is not ((byte)'\r' or (byte)'\n'))
@@ -341,11 +341,11 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
             if (!testLexer.Peek().Is(PdfTokenKind.Integer))
                 continue;
 
-            testLexer.ReadNext();
+            _ = testLexer.ReadNext();
             if (!testLexer.Peek().Is(PdfTokenKind.Integer))
                 continue;
 
-            testLexer.ReadNext();
+            _ = testLexer.ReadNext();
             if (testLexer.Peek().Is(PdfTokenKind.Obj))
                 return i;
         }
@@ -356,7 +356,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     // Parses a traditional "xref\n<subsection> ... trailer\n<dict>" block (§7.5.4).
     private (Dictionary<int, CrossReferenceEntry>, PdfDictionary, long) ParseTraditionalXref(Lexer lexer)
     {
-        lexer.ReadNext(); // consume "xref"
+        _ = lexer.ReadNext(); // consume "xref"
         var entries = new Dictionary<int, CrossReferenceEntry>();
 
         while (lexer.Peek().Kind == PdfTokenKind.Integer)
@@ -507,7 +507,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     // Callers that need the decoded bytes (e.g. text rendering) call GetBinaryBytes().
     private static PdfString ParseLiteralString(PdfToken token)
     {
-        var inner = token.Raw.Slice(1, token.Raw.Length - 2);
+        var inner = token.Raw[1..^1];
         return new PdfString(inner);
     }
 
@@ -517,7 +517,7 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
     // binary content is needed (e.g. for text char-code decoding in the renderer).
     private static PdfString ParseHexString(PdfToken token)
     {
-        var inner = token.Raw.Slice(1, token.Raw.Length - 2);
+        var inner = token.Raw[1..^1];
         return new PdfString(inner, true);
     }
 
@@ -543,11 +543,11 @@ internal sealed class PdfParser(ReadOnlyMemory<byte> source)
             {
                 var hi = HexNibble(span[i + 1]);
                 var lo = HexNibble(span[i + 2]);
-                sb.Append((char)((hi << 4) | lo));
+                _ = sb.Append((char)((hi << 4) | lo));
                 i += 2;
             }
             else
-                sb.Append((char)span[i]);
+                _ = sb.Append((char)span[i]);
         }
 
         return sb.ToString();

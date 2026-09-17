@@ -107,7 +107,7 @@ internal static class FormulaTokenizer
             {
                 if (i + 1 < s.Length && s[i + 1] == '"')
                 {
-                    sb.Append('"');
+                    _ = sb.Append('"');
                     i += 2;
                     continue;
                 }
@@ -116,7 +116,7 @@ internal static class FormulaTokenizer
                 break;
             }
 
-            sb.Append(s[i]);
+            _ = sb.Append(s[i]);
             i++;
         }
 
@@ -132,7 +132,8 @@ internal static class FormulaTokenizer
         {
             var ch = s[i];
             i++;
-            if (ch is '!' or '?') break; // terminators that are part of the literal
+            if (ch is '!' or '?')
+                break; // terminators that are part of the literal
         }
 
         return new FormulaToken(FormulaTokenType.Error, s[start..i]);
@@ -141,15 +142,18 @@ internal static class FormulaTokenizer
     private static FormulaToken ReadNumber(string s, ref int i)
     {
         var start = i;
-        while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.')) i++;
+        while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.'))
+            i++;
 
         // Scientific notation.
         if (i >= s.Length || (s[i] != 'e' && s[i] != 'E'))
             return new FormulaToken(FormulaTokenType.Number, s[start..i]);
 
         i++;
-        if (i < s.Length && (s[i] == '+' || s[i] == '-')) i++;
-        while (i < s.Length && char.IsDigit(s[i])) i++;
+        if (i < s.Length && (s[i] == '+' || s[i] == '-'))
+            i++;
+        while (i < s.Length && char.IsDigit(s[i]))
+            i++;
 
         return new FormulaToken(FormulaTokenType.Number, s[start..i]);
     }
@@ -188,9 +192,12 @@ internal static class FormulaTokenizer
         if (s[i] == '\'')
         {
             i++;
-            while (i < s.Length && s[i] != '\'') i++;
-            if (i < s.Length) i++; // closing quote
-            if (i < s.Length && s[i] == '!') i++;
+            while (i < s.Length && s[i] != '\'')
+                i++;
+            if (i < s.Length)
+                i++; // closing quote
+            if (i < s.Length && s[i] == '!')
+                i++;
         }
 
         while (i < s.Length)

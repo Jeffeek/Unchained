@@ -7,7 +7,7 @@ namespace Unchained.Ooxml.Text;
 public sealed class Paragraph
 {
     /// <summary>The text runs that make up this paragraph.</summary>
-    public RunCollection Runs { get; } = new();
+    public RunCollection Runs { get; } = [];
 
     /// <summary>
     ///     Gets or sets the paragraph's text as a plain string.
@@ -22,7 +22,7 @@ public sealed class Paragraph
         set
         {
             Runs.Clear();
-            Runs.Add(value);
+            _ = Runs.Add(value);
         }
     }
 
@@ -77,7 +77,8 @@ public sealed class Paragraph
     {
         ArgumentNullException.ThrowIfNull(oldText);
         ArgumentNullException.ThrowIfNull(newText);
-        if (oldText.Length == 0) return 0;
+        if (oldText.Length == 0)
+            return 0;
 
         // Split runs into segments of consecutive non-field runs; matches never cross a field.
         var count = 0;
@@ -109,14 +110,16 @@ public sealed class Paragraph
         StringComparison comparison
     )
     {
-        if (runs.Count == 0) return 0;
+        if (runs.Count == 0)
+            return 0;
 
         var count = 0;
         while (true)
         {
             var combined = string.Concat(runs.Select(static r => r.Text));
             var idx = combined.IndexOf(oldText, comparison);
-            if (idx < 0) break;
+            if (idx < 0)
+                break;
 
             var end = idx + oldText.Length;
             int startRun = -1, startOffset = 0, endRun = -1, endOffset = 0;
@@ -142,7 +145,8 @@ public sealed class Paragraph
                 pos = runEnd;
             }
 
-            if (startRun == -1) break; // defensive: should not happen
+            if (startRun == -1)
+                break; // defensive: should not happen
 
             if (startRun == endRun)
             {

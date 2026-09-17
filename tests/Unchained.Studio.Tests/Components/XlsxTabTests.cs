@@ -34,16 +34,17 @@ public sealed class XlsxTabTests : MudTestContext
 
         // XlsxEditorViewModel needs Func<Worksheet?> - return the current sheet
         Services.AddSingleton<Func<Worksheet?>>(() =>
-        {
-            var xlsx = session.Xlsx;
-            if (xlsx?.Document == null)
-                return null;
+            {
+                var xlsx = session.Xlsx;
+                if (xlsx?.Document == null)
+                    return null;
 
-            var index = xlsx.CurrentSheet - 1; // CurrentSheet is 1-based
-            return index >= 0 && index < xlsx.Document.Sheets.Count
-                ? xlsx.Document.Sheets[index]
-                : null;
-        });
+                var index = xlsx.CurrentSheet - 1; // CurrentSheet is 1-based
+                return index >= 0 && index < xlsx.Document.Sheets.Count
+                    ? xlsx.Document.Sheets[index]
+                    : null;
+            }
+        );
         Services.AddSingleton<XlsxEditorViewModel>();
     }
 

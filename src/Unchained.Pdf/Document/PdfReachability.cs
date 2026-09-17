@@ -27,7 +27,7 @@ internal static class PdfReachability
 
         foreach (var leaf in leaves)
         {
-            reachable.Add(leaf.ObjectNumber);
+            _ = reachable.Add(leaf.ObjectNumber);
             queue.Enqueue(leaf.Value);
         }
 

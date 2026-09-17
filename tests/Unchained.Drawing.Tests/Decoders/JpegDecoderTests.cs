@@ -18,7 +18,7 @@ public sealed class JpegDecoderTests
 
     [Fact]
     public void EmptyInput_ReturnsNull() =>
-        JpegDecoder.TryDecodeToRgb(ReadOnlySpan<byte>.Empty, out _, out _).ShouldBeNull();
+        JpegDecoder.TryDecodeToRgb([], out _, out _).ShouldBeNull();
 
     [Fact]
     public void TruncatedJpeg_ReturnsNullNotThrow() =>

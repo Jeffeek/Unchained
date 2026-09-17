@@ -136,7 +136,7 @@ public sealed class WorksheetCollectionTests
         using var doc = processor.CreateBlank("Sheet1");
         doc.Sheets.Add("Sheet3");
 
-        var inserted = doc.Sheets.Insert(1, "Sheet2");
+        doc.Sheets.Insert(1, "Sheet2");
 
         doc.Sheets.Count.ShouldBe(3);
         doc.Sheets[1].Name.ShouldBe("Sheet2");
@@ -219,7 +219,7 @@ public sealed class WorksheetCollectionTests
         using var doc = processor.CreateBlank("Sheet1");
         doc.Sheets.Add("Sheet2");
 
-        var names = doc.Sheets.Select(s => s.Name).ToList();
+        var names = doc.Sheets.Select(static s => s.Name).ToList();
 
         names.Count.ShouldBe(2);
         names[0].ShouldBe("Sheet1");
@@ -232,9 +232,7 @@ public sealed class WorksheetCollectionTests
         using var processor = new SpreadsheetProcessor();
         using var doc = processor.CreateBlank("Sheet1");
 
-        var count = doc.Sheets.Cast<object?>().Count();
-
-        count.ShouldBe(1);
+        doc.Sheets.Count.ShouldBe(1);
     }
 
     [Fact]

@@ -75,7 +75,7 @@ internal sealed class PdfXConverter(PdfXProfile profile, string outputConditionI
         var infoObjNum = infoRef?.ObjectNumber ?? (catalogObjNum + 3);
         var infoEntries = new Dictionary<string, PdfObject>();
         if (infoRef is not null && core.ResolveIndirect(infoRef.ObjectNumber).Value is PdfDictionary existingInfo)
-            infoEntries = new Dictionary<string, PdfObject>(existingInfo.Entries);
+            infoEntries = new(existingInfo.Entries);
 
         infoEntries["GTS_PDFXVersion"] = PdfString.FromLatin1(VersionString(profile));
         if (!infoEntries.ContainsKey(PdfName.Title.Value))

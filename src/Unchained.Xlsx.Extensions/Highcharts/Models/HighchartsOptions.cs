@@ -22,10 +22,10 @@ public class HighchartsOptions
     public AxisConfig? XAxis { get; set; }
 
     /// <summary>Value (Y) axes — single axis by default, multiple for dual-axis charts.</summary>
-    public List<YAxisConfig> YAxis { get; set; } = new();
+    public List<YAxisConfig> YAxis { get; set; } = [];
 
     /// <summary>Data series.</summary>
-    public List<SeriesConfig> Series { get; set; } = new();
+    public List<SeriesConfig> Series { get; set; } = [];
 
     /// <summary>Global plot options (e.g. stacking rules applied to all series).</summary>
     public PlotOptions? PlotOptions { get; set; }

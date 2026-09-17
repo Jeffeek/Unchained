@@ -110,7 +110,8 @@ public sealed class SlideCollection : IReadOnlyList<Slide>
     /// </summary>
     public void MoveTo(int currentIndex, int newIndex)
     {
-        if (currentIndex == newIndex) return;
+        if (currentIndex == newIndex)
+            return;
 
         var slide = _slides[currentIndex];
         _slides.RemoveAt(currentIndex);

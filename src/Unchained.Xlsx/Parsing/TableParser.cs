@@ -41,7 +41,8 @@ internal static class TableParser
             table.AddColumnRaw(column);
 
         var styleInfo = root.Child(TableStyleInfo);
-        if (styleInfo == null) return table;
+        if (styleInfo == null)
+            return table;
 
         table.StyleName = styleInfo.GetAttr("name") ?? table.StyleName;
         table.ShowFirstColumn = styleInfo.GetAttrBool("showFirstColumn") == true;

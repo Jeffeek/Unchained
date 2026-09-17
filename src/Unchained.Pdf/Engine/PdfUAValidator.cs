@@ -162,7 +162,8 @@ internal static class PdfUAValidator
     {
         var metaObj = core.Catalog[PdfName.Metadata];
         var stream = core.ResolveStream(metaObj);
-        if (stream is null) return false;
+        if (stream is null)
+            return false;
 
         try
         {
@@ -229,10 +230,12 @@ internal static class PdfUAValidator
     private static void CheckRoleMap(PdfDocumentCore core, ICollection<PdfUAViolation> v)
     {
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
-        if (root is null) return;
+        if (root is null)
+            return;
 
         var roleMap = Resolve<PdfDictionary>(root[PdfName.RoleMap], core);
-        if (roleMap is null) return; // /RoleMap is optional when only standard types are used.
+        if (roleMap is null)
+            return; // /RoleMap is optional when only standard types are used.
 
         // Any non-standard type in /RoleMap must map to a standard type.
         foreach (var (customType, mapped) in roleMap.Entries)
@@ -253,7 +256,8 @@ internal static class PdfUAValidator
     private static void CheckFigureAltText(PdfDocumentCore core, ICollection<PdfUAViolation> v)
     {
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
-        if (root is null) return;
+        if (root is null)
+            return;
 
         WalkStructTree(
             root,
@@ -280,7 +284,8 @@ internal static class PdfUAValidator
         {
             var pageDict = core.GetPage(page);
             var annots = core.ResolveAnnots(pageDict);
-            if (annots is null) continue;
+            if (annots is null)
+                continue;
 
             foreach (var _ in from elem in annots.Elements
                               select core.ResolveDict(elem)
@@ -299,7 +304,8 @@ internal static class PdfUAValidator
         // Collect all heading levels in document order and check for skipped levels.
         var headingLevels = new List<int>();
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
-        if (root is null) return;
+        if (root is null)
+            return;
 
         WalkStructTree(
             root,
@@ -332,7 +338,8 @@ internal static class PdfUAValidator
     private static void CheckTables(PdfDocumentCore core, ICollection<PdfUAViolation> v)
     {
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
-        if (root is null) return;
+        if (root is null)
+            return;
 
         WalkStructTree(
             root,
@@ -365,7 +372,8 @@ internal static class PdfUAValidator
     private static void CheckLists(PdfDocumentCore core, ICollection<PdfUAViolation> v)
     {
         var root = Resolve<PdfDictionary>(core.Catalog[PdfName.StructTreeRoot], core);
-        if (root is null) return;
+        if (root is null)
+            return;
 
         WalkStructTree(
             root,
@@ -431,7 +439,8 @@ internal static class PdfUAValidator
                 {
                     var decoded = StreamFilters.Decode(streamObj);
                     var text = Encoding.Latin1.GetString(decoded.Span);
-                    if (text.Contains("BDC") || text.Contains("BMC")) pageHasMarkedContent = true;
+                    if (text.Contains("BDC") || text.Contains("BMC"))
+                        pageHasMarkedContent = true;
                     // Check if there is any actual drawing content.
                     if (text.Contains("Tj") || text.Contains("TJ") || text.Contains(" re ") ||
                         text.Contains(" f\n") || text.Contains(" S\n") || text.Contains(" cm\n"))
@@ -464,12 +473,14 @@ internal static class PdfUAValidator
         {
             var pageDict = core.GetPage(page);
             var annots = core.ResolveAnnots(pageDict);
-            if (annots is null) continue;
+            if (annots is null)
+                continue;
 
             foreach (var elem in annots.Elements)
             {
                 var dict = core.ResolveDict(elem);
-                if (dict is null) continue;
+                if (dict is null)
+                    continue;
 
                 var subtype = dict.GetName(PdfName.Subtype.Value) ?? string.Empty;
 
@@ -523,7 +534,8 @@ internal static class PdfUAValidator
 
         // OpenAction: if present, may not be a named action of type /Named (§7.14.1).
         var openAction = core.Catalog[PdfName.OpenAction];
-        if (openAction is null) return;
+        if (openAction is null)
+            return;
 
         var actionDict = Resolve<PdfDictionary>(openAction, core);
         if (actionDict?.GetName("S") == "JavaScript")
@@ -588,7 +600,8 @@ internal static class PdfUAValidator
         void EnqueueKids(PdfDictionary node, PdfDocumentCore c, Queue<PdfDictionary> q)
         {
             var kObj = node[PdfName.K];
-            if (kObj is null) return;
+            if (kObj is null)
+                return;
 
             IEnumerable<PdfObject> kids = kObj switch
             {
@@ -618,7 +631,8 @@ internal static class PdfUAValidator
     )
     {
         var kObj = elem[PdfName.K];
-        if (kObj is null) return;
+        if (kObj is null)
+            return;
 
         IEnumerable<PdfObject> kids = kObj switch
         {

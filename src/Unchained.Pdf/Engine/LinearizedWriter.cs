@@ -94,7 +94,7 @@ internal static class LinearizedWriter
 
         // Always include catalog.
         if (trailer[PdfName.Root] is PdfIndirectReference catalogRef)
-            firstPageSet.Add(catalogRef.ObjectNumber);
+            _ = firstPageSet.Add(catalogRef.ObjectNumber);
 
         // Find the first page dict object number.
         PdfIndirectReference? firstPageRef;
@@ -132,7 +132,8 @@ internal static class LinearizedWriter
 
         // Always include the /Pages root (needed for the catalog → pages reference).
         var pagesRef = (core.Catalog[PdfName.Pages] as PdfIndirectReference)?.ObjectNumber;
-        if (pagesRef.HasValue) firstPageSet.Add(pagesRef.Value);
+        if (pagesRef.HasValue)
+            _ = firstPageSet.Add(pagesRef.Value);
 
         var firstPage = objects
             .Where(o => firstPageSet.Contains(o.ObjectNumber))
@@ -188,16 +189,20 @@ internal static class LinearizedWriter
             case PdfDictionary dict:
             {
                 foreach (var (_, value) in dict.Entries)
-                foreach (var n in CollectRefs(value))
-                    yield return n;
+                {
+                    foreach (var n in CollectRefs(value))
+                        yield return n;
+                }
 
                 break;
             }
             case PdfStream stream:
             {
                 foreach (var (_, value) in stream.Dictionary.Entries)
-                foreach (var n in CollectRefs(value))
-                    yield return n;
+                {
+                    foreach (var n in CollectRefs(value))
+                        yield return n;
+                }
 
                 break;
             }
@@ -300,8 +305,8 @@ internal static class LinearizedWriter
             MainXrefOffset = mainXrefOffset,
             FileLength = pos,
             PageOffsets = pageOffsets,
-            FirstPageObjectNumbers = firstPageObjects.Select(static o => o.ObjectNumber).ToArray(),
-            RemainingObjectNumbers = remainingObjects.Select(static o => o.ObjectNumber).ToArray()
+            FirstPageObjectNumbers = [.. firstPageObjects.Select(static o => o.ObjectNumber)],
+            RemainingObjectNumbers = [.. remainingObjects.Select(static o => o.ObjectNumber)]
         };
     }
 
@@ -534,7 +539,7 @@ internal static class LinearizedWriter
         {
             var entry = offsets.TryGetValue(i, out var off)
                 ? Encoding.ASCII.GetBytes($"{off:D10} 00000 n \r\n")
-                : "0000000000 00000 f \r\n"u8.ToArray();
+                : [.. "0000000000 00000 f \r\n"u8];
             buf.Write(entry);
             written += entry.Length;
         }
@@ -600,16 +605,16 @@ internal static class LinearizedWriter
     )
     {
         var sb = new StringBuilder();
-        sb.Append("xref\n0 1\n0000000000 65535 f \r\n");
+        _ = sb.Append("xref\n0 1\n0000000000 65535 f \r\n");
         foreach (var obj in objects.OrderBy(static o => o.ObjectNumber))
         {
             if (!offsets.TryGetValue(obj.ObjectNumber, out var off))
                 continue;
 
-            sb.Append($"{obj.ObjectNumber} 1\n{off:D10} 00000 n \r\n");
+            _ = sb.Append($"{obj.ObjectNumber} 1\n{off:D10} 00000 n \r\n");
         }
 
-        sb.Append($"{hintObjNum} 1\n{hintOffset:D10} 00000 n \r\n");
+        _ = sb.Append($"{hintObjNum} 1\n{hintOffset:D10} 00000 n \r\n");
         return Encoding.ASCII.GetBytes(sb.ToString());
     }
 

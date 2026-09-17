@@ -20,7 +20,7 @@ internal static class PngEncoder
         ms.Write(PngSignature);
         WriteIHDR(ms, buffer.Width, buffer.Height);
         WriteIDAT(ms, buffer);
-        WriteChunk(ms, Encoding.UTF8.GetBytes(PngConstants.IEND), ReadOnlySpan<byte>.Empty);
+        WriteChunk(ms, Encoding.UTF8.GetBytes(PngConstants.IEND), []);
 
         return ms.ToArray();
     }
@@ -70,7 +70,8 @@ internal static class PngEncoder
         BinaryPrimitives.WriteUInt32BigEndian(lenBuf, (uint)data.Length);
         stream.Write(lenBuf);
         stream.Write(type);
-        if (data.Length > 0) stream.Write(data);
+        if (data.Length > 0)
+            stream.Write(data);
 
         var crc = UpdateCrc(PngConstants.Crc32Init, type);
         crc = UpdateCrc(crc, data);

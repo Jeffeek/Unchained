@@ -1,6 +1,6 @@
-using System.Xml.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
+using System.Xml.Linq;
 using Unchained.Ooxml.Drawing;
 using Unchained.Ooxml.Engine;
 using Unchained.Ooxml.Media;
@@ -102,7 +102,7 @@ internal static class OpenXmlPresentationWriter
             {
                 PatchSlidePart(match.Part, modelSlide);
                 ordered.Add(match.SlideId);
-                kept.Add(modelSlide.SlideId);
+                _ = kept.Add(modelSlide.SlideId);
                 continue;
             }
 
@@ -119,13 +119,13 @@ internal static class OpenXmlPresentationWriter
         foreach (var (id, entry) in existing)
         {
             if (!kept.Contains(id))
-                presPart.DeletePart(entry.Part);
+                _ = presPart.DeletePart(entry.Part);
         }
 
         // Rebuild the list in model order (detaches then re-attaches the kept ids, appends new ones).
         slideIdList.RemoveAllChildren<P.SlideId>();
         foreach (var slideId in ordered)
-            slideIdList.AppendChild(slideId);
+            _ = slideIdList.AppendChild(slideId);
     }
 
     private static uint NextSlideId(IEnumerable<uint> existingIds, IEnumerable<P.SlideId> pending)
@@ -139,7 +139,7 @@ internal static class OpenXmlPresentationWriter
     {
         var slidePart = presPart.AddNewPart<SlidePart>();
         if (layout is not null)
-            slidePart.AddPart(layout);
+            _ = slidePart.AddPart(layout);
 
         slidePart.Slide = new P.Slide(SlideWriter.Write(modelSlide).ToString(SaveOptions.DisableFormatting));
         slidePart.Slide.Save();
@@ -225,7 +225,7 @@ internal static class OpenXmlPresentationWriter
         {
             var id = ShapeIdOf(element);
             if (id != 0)
-                byId.TryAdd(id, element);
+                _ = byId.TryAdd(id, element);
         }
 
         var ordered = new List<XElement>();

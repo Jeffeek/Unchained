@@ -19,7 +19,7 @@ internal sealed class ProcessorGate(int concurrency) : IDisposable
         finally
         {
             if (!_disposed)
-                _semaphore.Release();
+                _ = _semaphore.Release();
         }
     }
 

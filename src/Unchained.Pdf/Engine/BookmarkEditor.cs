@@ -44,7 +44,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
             var rootNum = builder.NextNumber();
             var rootRef = new PdfIndirectReference(rootNum, 0);
             var itemRefs = BuildOutlineItems(builder, bookmarks, rootRef, pageObjNums);
-            builder.AddAt(
+            _ = builder.AddAt(
                 rootNum,
                 new PdfDictionary(
                     new Dictionary<string, PdfObject>
@@ -63,7 +63,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
         var catDict = (PdfDictionary)catalogObj.Value;
         var catEntries = new Dictionary<string, PdfObject>(catDict.Entries);
         if (outlinesEntry is PdfNull)
-            catEntries.Remove(PdfName.Outlines.Value);
+            _ = catEntries.Remove(PdfName.Outlines.Value);
         else
             catEntries[PdfName.Outlines.Value] = outlinesEntry;
 
@@ -104,8 +104,10 @@ public sealed class BookmarkEditor : IBookmarkEditor
                 [PdfName.Parent.Value] = parentRef,
                 [PdfName.Dest.Value] = destArr
             };
-            if (i > 0) dict[PdfName.Prev.Value] = refs[i - 1];
-            if (i < items.Count - 1) dict[PdfName.Next.Value] = refs[i + 1];
+            if (i > 0)
+                dict[PdfName.Prev.Value] = refs[i - 1];
+            if (i < items.Count - 1)
+                dict[PdfName.Next.Value] = refs[i + 1];
 
             if (bm.Children is { Count: > 0 })
             {
@@ -115,7 +117,7 @@ public sealed class BookmarkEditor : IBookmarkEditor
                 dict[PdfName.Count.Value] = new PdfInteger(CountAll(bm.Children));
             }
 
-            builder.AddAt(nums[i], new PdfDictionary(dict));
+            _ = builder.AddAt(nums[i], new PdfDictionary(dict));
         }
 
         return refs;

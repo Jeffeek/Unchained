@@ -16,7 +16,8 @@ internal static class AsciiHexDecoder
 
         foreach (var b in span)
         {
-            if (b == (byte)'>') break;
+            if (b == (byte)'>')
+                break;
 
             int value;
             switch (b)

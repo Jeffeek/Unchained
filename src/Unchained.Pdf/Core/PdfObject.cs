@@ -149,7 +149,8 @@ public sealed class PdfString(ReadOnlyMemory<byte> bytes, bool isHex = false) : 
             }
         }
 
-        if (hi >= 0) result[j++] = (byte)(hi << 4);
+        if (hi >= 0)
+            result[j++] = (byte)(hi << 4);
         return result.AsMemory(0, j);
     }
 }

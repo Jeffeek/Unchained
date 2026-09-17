@@ -130,7 +130,7 @@ public sealed class StampApplier : IStampApplier
         page,
         stampRef,
         prepend: isBackground,
-        (IReadOnlyList<(string Category, string Key, PdfObject Ref)>)[(PdfName.Font.Value, StampFontKey, fontRef)],
+        [(PdfName.Font.Value, StampFontKey, fontRef)],
         core
     );
 

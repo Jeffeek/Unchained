@@ -32,7 +32,8 @@ public sealed partial class SheetGrid
             return true;
         }
 
-        if (_resizeRow == -1) return false;
+        if (_resizeRow == -1)
+            return false;
 
         var deltaPoints = (e.ClientY - _resizeStartClient) / PixelsPerPoint;
         var newHeight = Math.Max(1, _resizeStartSize + deltaPoints);

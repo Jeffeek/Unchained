@@ -4,7 +4,7 @@ namespace Unchained.Pdf.Abstractions;
 
 /// <summary>
 ///     Authors content on existing pages: inserts blank pages, draws text, and places images.
-///     All operations mutate <paramref name="document" /> in-place and follow the standard
+///     All operations mutate document in-place and follow the standard
 ///     full-rewrite serialization used across the library.
 /// </summary>
 // ReSharper disable once MemberCanBeInternal

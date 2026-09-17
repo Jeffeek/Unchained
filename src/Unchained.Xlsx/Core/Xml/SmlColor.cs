@@ -16,18 +16,14 @@ internal static class SmlColor
     ///     Parses an 8-digit hex ARGB string into a <see cref="ColorSpec" />.
     ///     Returns <see langword="null" /> when <paramref name="hex" /> is null or malformed.
     /// </summary>
-    public static ColorSpec? FromHexArgb(string? hex)
-    {
-        if (!OoXmlHelper.TryParseHexArgb(hex!, out var argb))
-            return null;
-
-        return ColorSpec.FromArgb(
+    public static ColorSpec? FromHexArgb(string? hex) => !OoXmlHelper.TryParseHexArgb(hex!, out var argb)
+        ? null
+        : ColorSpec.FromArgb(
             (byte)((argb >> 24) & 0xFF),
             (byte)((argb >> 16) & 0xFF),
             (byte)((argb >> 8) & 0xFF),
             (byte)(argb & 0xFF)
         );
-    }
 
     /// <summary>
     ///     Renders the RGB value of <paramref name="color" /> as an 8-digit hex ARGB string.

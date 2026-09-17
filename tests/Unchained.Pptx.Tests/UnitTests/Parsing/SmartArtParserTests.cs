@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using Shouldly;
+using System.Xml.Linq;
 using Unchained.Ooxml.Xml;
 using Unchained.Pptx.Parsing;
 using Unchained.Pptx.Shapes;
@@ -14,7 +14,8 @@ public sealed class SmartArtParserTests
     private static XElement Point(string modelId, string? type = null, string? text = null)
     {
         var pt = new XElement(DmlNames.DiagramPoint, new XAttribute("modelId", modelId));
-        if (type != null) pt.Add(new XAttribute("type", type));
+        if (type != null)
+            pt.Add(new XAttribute("type", type));
         if (text != null)
         {
             pt.Add(
@@ -37,7 +38,8 @@ public sealed class SmartArtParserTests
             new XAttribute("destId", destId),
             new XAttribute("srcOrd", order)
         );
-        if (type != null) cxn.Add(new XAttribute("type", type));
+        if (type != null)
+            cxn.Add(new XAttribute("type", type));
         return cxn;
     }
 

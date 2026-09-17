@@ -116,7 +116,7 @@ public sealed class EncryptionTests : PdfTestBase
         ms.Position = 0;
         var header = new byte[5];
         _ = ms.Read(header, 0, 5);
-        header.ShouldBe("%PDF-"u8.ToArray());
+        header.ShouldBe([.. "%PDF-"u8]);
     }
 
     [Fact]

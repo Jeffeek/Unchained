@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Unchained.Pdf.Models;
 
 /// <summary>
@@ -7,10 +5,6 @@ namespace Unchained.Pdf.Models;
 ///     Higher versions enable features such as transparency (1.4+) and object streams (1.5+),
 ///     but may reduce compatibility with older readers.
 /// </summary>
-[
-    SuppressMessage("ReSharper", "UnusedMember.Global"),
-    SuppressMessage("ReSharper", "InconsistentNaming")
-]
 public enum PdfVersion
 {
     /// <summary>PDF 1.4 — adds transparency, patterns, and smooth shading.</summary>
@@ -23,10 +17,10 @@ public enum PdfVersion
     Pdf17,
 
     /// <summary>PDF/A-1b — ISO 19005-1 archival subset at conformance level B.</summary>
-    PdfA1b,
+    PdfA1B,
 
     /// <summary>PDF/A-2b — ISO 19005-2 archival subset at conformance level B; supports JPEG 2000.</summary>
-    PdfA2b
+    PdfA2B
 }
 
 /// <summary>Options applied when serializing a PDF document to a byte stream.</summary>

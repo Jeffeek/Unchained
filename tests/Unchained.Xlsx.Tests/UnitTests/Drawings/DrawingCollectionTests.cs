@@ -82,7 +82,7 @@ public sealed class DrawingCollectionTests
             CreatePicture()
         };
 
-        collection.Count().ShouldBe(2);
+        collection.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public sealed class DrawingCollectionTests
     {
         var collection = new DrawingCollection { CreatePicture() };
 
-        collection.Cast<object>().Count().ShouldBe(1);
+        collection.Count.ShouldBe(1);
     }
 
     [Fact]

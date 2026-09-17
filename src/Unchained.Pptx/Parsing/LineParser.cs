@@ -17,7 +17,8 @@ internal static class LineParser
     public static void Parse(XElement parent, LineFormat line)
     {
         var ln = parent.Element(DmlNames.Line);
-        if (ln == null) return;
+        if (ln == null)
+            return;
 
         // Width in EMU → convert to points (1 pt = 12700 EMU)
         var widthEmu = ln.GetAttrInt(DmlNames.AttributeLineWidth);
@@ -43,7 +44,8 @@ internal static class LineParser
 
         // Tail arrowhead
         var tail = ln.Element(DmlNames.TailEnd);
-        if (tail == null) return;
+        if (tail == null)
+            return;
 
         line.TailArrow.HeadType = LineStyles.ParseArrowType(tail.GetAttr("type", "none"));
         line.TailArrow.Width = LineStyles.ParseArrowSize(tail.GetAttr("w", "med"));

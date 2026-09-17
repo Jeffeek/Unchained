@@ -35,9 +35,10 @@ internal sealed unsafe class GlyphFace : IDisposable
             return;
 
         _disposed = true;
-        if (_face == null) return;
+        if (_face == null)
+            return;
 
-        FT_Done_Face(_face);
+        _ = FT_Done_Face(_face);
         _face = null;
     }
 
