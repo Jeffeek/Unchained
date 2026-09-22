@@ -1,5 +1,9 @@
 # Unchained
 
+<div align="center">
+  <img src="docs/master-image.jpg" alt="Unchained Logo">
+</div>
+
 **MIT-licensed document processing for .NET** — a free, open-source suite of libraries for creating and manipulating documents in all common business formats. No per-server fees, no copyleft restrictions, no proprietary lock-in.
 
 [![CI](https://github.com/Jeffeek/Unchained/actions/workflows/ci.yml/badge.svg)](https://github.com/Jeffeek/Unchained/actions/workflows/ci.yml)
