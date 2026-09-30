@@ -112,4 +112,54 @@ public sealed class SheetGridTests : MudTestContext
         // ReSharper disable once RedundantArgumentDefaultValue
         cut.Markup.ShouldContain("TRUE", Case.Insensitive);
     }
+
+    // ── Virtualization ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Render_LargeSheet_RendersOnlyViewportWindow()
+    {
+        var document = _processor.CreateBlank("Sheet1");
+        // 400 used rows → the un-virtualized grid would emit 408 <tr> elements.
+        for (var r = 1; r <= 400; r++)
+            document.Sheets[0][r, 1].SetValue($"R{r}");
+
+        var cut = Render<SheetGrid>(pb => pb.Add(static c => c.Sheet, document.Sheets[0]));
+
+        // Only the seeded window renders, not every used row.
+        cut.Markup.ShouldContain("R1");
+        cut.Markup.ShouldNotContain("R400");
+    }
+
+    [Fact]
+    public void OnViewportChanged_ScrolledDown_RendersScrolledRowsAndDropsEarlierOnes()
+    {
+        var document = _processor.CreateBlank("Sheet1");
+        for (var r = 1; r <= 400; r++)
+            document.Sheets[0][r, 1].SetValue($"R{r}");
+
+        var cut = Render<SheetGrid>(pb => pb.Add(static c => c.Sheet, document.Sheets[0]));
+
+        // Default row height is 15pt → 20px. Scroll ~200 rows down with a 400px viewport.
+        cut.InvokeAsync(() => cut.Instance.OnViewportChanged(4000, 0, 800, 400));
+
+        cut.Markup.ShouldContain("R200");
+        cut.Markup.ShouldNotContain(">R1<");
+    }
+
+    [Fact]
+    public void OnViewportChanged_ScrolledPastEnd_ClampsToLastDisplayRow()
+    {
+        var document = _processor.CreateBlank("Sheet1");
+        for (var r = 1; r <= 400; r++)
+            document.Sheets[0][r, 1].SetValue($"R{r}");
+
+        var cut = Render<SheetGrid>(pb => pb.Add(static c => c.Sheet, document.Sheets[0]));
+
+        // Scroll far past the end — the window must clamp to the last display row
+        // (400 used + 8 padding rows), not collapse to an empty body.
+        cut.InvokeAsync(() => cut.Instance.OnViewportChanged(100000, 0, 800, 400));
+
+        cut.Markup.ShouldContain(">408<");
+        cut.Markup.ShouldNotContain(">R1<");
+    }
 }

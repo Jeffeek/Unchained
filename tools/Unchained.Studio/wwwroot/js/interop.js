@@ -73,6 +73,53 @@ window.unchainedStudio = {
         }
     },
 
+    // ── XLSX grid virtualization ─────────────────────────────────────────────
+    // Reports the scroll offset + viewport size of the sheet scroll container so the
+    // grid renders only the visible cell window. Coalesced to one report per frame:
+    // a raw scroll event stream would otherwise queue thousands of circuit messages.
+
+    attachGridScroll(host, dotNetRef) {
+        if (!host) return;
+        this.detachGridScroll(host);
+
+        let queued = false;
+        const push = () => {
+            queued = false;
+            dotNetRef.invokeMethodAsync(
+                'OnViewportChanged',
+                host.scrollTop, host.scrollLeft, host.clientWidth, host.clientHeight);
+        };
+        const handler = () => {
+            if (queued) return;
+            queued = true;
+            requestAnimationFrame(push);
+        };
+
+        host.__gridScroll = handler;
+        host.addEventListener('scroll', handler, { passive: true });
+
+        // Container resize changes the visible window just like scrolling does.
+        if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(handler);
+            ro.observe(host);
+            host.__gridResize = ro;
+        }
+
+        push(); // seed the initial viewport before the first scroll
+    },
+
+    detachGridScroll(host) {
+        if (!host) return;
+        if (host.__gridScroll) {
+            host.removeEventListener('scroll', host.__gridScroll);
+            host.__gridScroll = null;
+        }
+        if (host.__gridResize) {
+            host.__gridResize.disconnect();
+            host.__gridResize = null;
+        }
+    },
+
     // ── Local storage (settings persistence) ─────────────────────────────────
 
     getLocalStorage(key) {

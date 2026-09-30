@@ -29,6 +29,7 @@ public sealed partial class SheetGrid
             var deltaChars = (e.ClientX - _resizeStartClient) / PixelsPerChar;
             var newWidth = Math.Max(0, _resizeStartSize + deltaChars);
             Sheet.SetColumnWidth(_resizeCol, Math.Round(newWidth, 2));
+            RebuildOffsets(); // the new width shifts every offset after this column
             return true;
         }
 
@@ -38,6 +39,7 @@ public sealed partial class SheetGrid
         var deltaPoints = (e.ClientY - _resizeStartClient) / PixelsPerPoint;
         var newHeight = Math.Max(1, _resizeStartSize + deltaPoints);
         Sheet.SetRowHeight(_resizeRow, Math.Round(newHeight, 1));
+        RebuildOffsets();
         return true;
     }
 
