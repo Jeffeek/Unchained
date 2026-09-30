@@ -1,7 +1,10 @@
+@using System.Globalization
 @using Unchained.Xlsx.Cell
 @using Unchained.Xlsx.Drawings
 @using Unchained.Xlsx.Models.Cell
 @using Unchained.Xlsx.Worksheets
+@implements IAsyncDisposable
+@inject IJSRuntime Js
 <div class="sheet-grid-wrapper">
     <div class="sheet-grid-toolbar">
         <MudText Typo="Typo.subtitle2" Class="mr-2">@Sheet.Name</MudText>
@@ -21,14 +24,16 @@
         </MudTooltip>
     </div>
 
-    <div class="sheet-grid-scroll" @onmouseup="EndDrag" @onmouseleave="EndDrag" @onmousemove="OnGridMouseMove"
+    <div class="sheet-grid-scroll" @ref="_scrollHost" @onmouseup="EndDrag" @onmouseleave="EndDrag" @onmousemove="OnGridMouseMove"
          @oncontextmenu:preventDefault="true" @oncontextmenu="OnGridContextMenu"
          @onclick="OnScrollAreaClick">
         <table class="sheet-grid">
             <thead>
             <tr>
                 <th class="sg-corner" @onclick="SelectAll"></th>
-                @for (var c = 1; c <= _cols; c++)
+                @* Spacers stand in for the off-screen columns so the scroll width matches the full grid. *@
+                <th class="sg-spacer" style="width:@Px(LeftSpacer);min-width:@Px(LeftSpacer)"></th>
+                @for (var c = _firstCol; c <= _lastCol; c++)
                 {
                     var col = c;
                     <th class="sg-col-head" style="@SheetGridDisplay.ColumnHeadStyle(Sheet, col)" @onclick="() => SelectColumn(col)">
@@ -38,10 +43,15 @@
                         </span>
                     </th>
                 }
+                <th class="sg-spacer" style="width:@Px(RightSpacer);min-width:@Px(RightSpacer)"></th>
             </tr>
             </thead>
             <tbody>
-            @for (var r = 1; r <= _rows; r++)
+            @if (TopSpacer > 0)
+            {
+                <tr class="sg-spacer-row" style="height:@Px(TopSpacer)"></tr>
+            }
+            @for (var r = _firstRow; r <= _lastRow; r++)
             {
                 var row = r;
                 <tr style="@SheetGridDisplay.RowStyle(Sheet, row)">
@@ -51,7 +61,8 @@
                               @onmousedown="e => StartRowResize(row, e)">
                         </span>
                     </th>
-                    @for (var c = 1; c <= _cols; c++)
+                    <td class="sg-spacer" style="width:@Px(LeftSpacer);min-width:@Px(LeftSpacer)"></td>
+                    @for (var c = _firstCol; c <= _lastCol; c++)
                     {
                         var col = c;
                         var isEditing = _editRow == row && _editCol == col;
@@ -74,7 +85,12 @@
                             }
                         </td>
                     }
+                    <td class="sg-spacer" style="width:@Px(RightSpacer);min-width:@Px(RightSpacer)"></td>
                 </tr>
+            }
+            @if (BottomSpacer > 0)
+            {
+                <tr class="sg-spacer-row" style="height:@Px(BottomSpacer)"></tr>
             }
             </tbody>
         </table>
@@ -232,6 +248,9 @@
     private int _rows = MinRows;
     private int _cols = MinCols;
 
+    private ElementReference _scrollHost;
+    private DotNetObjectReference<SheetGrid>? _selfRef;
+
     protected override void OnParametersSet() => RecalculateDimensions();
 
     private void RecalculateDimensions()
@@ -241,10 +260,24 @@
         var usedCols = used?.BottomRight.Column ?? 0;
         _rows = Math.Max(_rows, Math.Max(MinRows, usedRows + PadRows));
         _cols = Math.Max(_cols, Math.Max(MinCols, usedCols + PadCols));
+
+        // Row/column sizes feed the virtualization window, so rebuild both together.
+        RebuildOffsets();
+        _ = RecalculateWindow();
     }
+
+    /// <summary>Formats a pixel length for an inline style.</summary>
+    private static string Px(double value) =>
+        string.Create(CultureInfo.InvariantCulture, $"{value:0}px");
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+            await Js.InvokeVoidAsync("unchainedStudio.attachGridScroll", _scrollHost, _selfRef);
+        }
+
         if (!_focusPending)
             return;
 
@@ -254,6 +287,17 @@
         {
             /* element may have been replaced — ignore */
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await Js.InvokeVoidAsync("unchainedStudio.detachGridScroll", _scrollHost); }
+        catch
+        {
+            /* circuit already gone — nothing to detach */
+        }
+
+        _selfRef?.Dispose();
     }
 
     // ── Drag end (resize / chart drag / cell drag) ─────────────────────────────
@@ -285,8 +329,19 @@
 
     // ── Display dimensions ─────────────────────────────────────────────────────
 
-    private void AddRow() => _rows++;
-    private void AddColumn() => _cols++;
+    private void AddRow()
+    {
+        _rows++;
+        RebuildOffsets();
+        _ = RecalculateWindow();
+    }
+
+    private void AddColumn()
+    {
+        _cols++;
+        RebuildOffsets();
+        _ = RecalculateWindow();
+    }
 
     /// <summary>Re-reads cell content + forces a redraw (called by the host after external mutations).</summary>
     public void Invalidate()
