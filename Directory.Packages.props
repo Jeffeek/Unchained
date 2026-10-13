@@ -5,7 +5,7 @@
   </PropertyGroup>
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
-    <PackageVersion Include="AngleSharp" Version="1.8.2" />
+    <PackageVersion Include="AngleSharp" Version="1.8.4" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
@@ -33,10 +33,10 @@
   </ItemGroup>
   <!-- ── Unchained.Pdf.Rendering — text shaping (HarfBuzz) ─────────────────── -->
   <ItemGroup Label="Unchained.Pdf.Rendering">
-    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.201" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.201" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.201" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.201" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.301" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.301" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.301" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.301" />
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
   <ItemGroup Label="Unchained.Studio">
@@ -47,13 +47,13 @@
     <!-- PDFiumCore: MIT wrapper for the Pdfium rendering engine (same engine as Chrome).
          Used as the reference renderer in Studio — far more accurate than PDF.js. -->
     <PackageVersion Include="PDFiumCore" Version="155.0.8057" />
-    <PackageVersion Include="bblanchon.PDFium" Version="156.0.8066" />
-    <PackageVersion Include="bblanchon.PDFium.macOS" Version="156.0.8066" />
-    <PackageVersion Include="bblanchon.PDFium.Linux" Version="156.0.8066" />
-    <PackageVersion Include="bblanchon.PDFium.Win32" Version="156.0.8066" />
-    <PackageVersion Include="bblanchon.PDFium.WebAssembly" Version="156.0.8066" />
-    <PackageVersion Include="bblanchon.PDFium.Android" Version="156.0.8066" />
-    <PackageVersion Include="bblanchon.PDFium.iOS " Version="156.0.8066" />
+    <PackageVersion Include="bblanchon.PDFium" Version="156.0.8076" />
+    <PackageVersion Include="bblanchon.PDFium.macOS" Version="156.0.8076" />
+    <PackageVersion Include="bblanchon.PDFium.Linux" Version="156.0.8076" />
+    <PackageVersion Include="bblanchon.PDFium.Win32" Version="156.0.8076" />
+    <PackageVersion Include="bblanchon.PDFium.WebAssembly" Version="156.0.8076" />
+    <PackageVersion Include="bblanchon.PDFium.Android" Version="156.0.8076" />
+    <PackageVersion Include="bblanchon.PDFium.iOS " Version="156.0.8076" />
     <PackageVersion Include="bblanchon.PDFium.Android" Version="156.0.8066" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
