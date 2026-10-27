@@ -19,7 +19,7 @@
     <PackageVersion Include="JpegLibrary" Version="0.4.32" />
     <PackageVersion Include="JBig2Decoder.NETStandard" Version="1.5.2" />
     <PackageVersion Include="Markdig" Version="1.4.0" />
-    <PackageVersion Include="CoreJ2K" Version="2.3.3.91" />
+    <PackageVersion Include="CoreJ2K" Version="2.4.0.98" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.12" />
   </ItemGroup>
   <!-- ── Unchained.Drawing.Text — glyph rasterization (FreeType2) ──────────── -->
