@@ -10,8 +10,8 @@
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
-    <PackageVersion Include="Microsoft.Bcl.Cryptography" Version="10.0.12" />
-    <PackageVersion Include="System.Formats.Asn1" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Bcl.Cryptography" Version="10.0.14" />
+    <PackageVersion Include="System.Formats.Asn1" Version="10.0.14" />
     <PackageVersion Include="System.IO.Packaging" Version="10.0.14" />
   </ItemGroup>
   <!-- ── Unchained.Pdf — image / document processing ──────────────────────── -->
