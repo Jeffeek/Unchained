@@ -5,7 +5,7 @@
   </PropertyGroup>
   <!-- ── Unchained.Ooxml — shared OOXML core engine (MIT, .NET Foundation) ──── -->
   <ItemGroup Label="Unchained.Ooxml">
-    <PackageVersion Include="AngleSharp" Version="1.8.3" />
+    <PackageVersion Include="AngleSharp" Version="1.8.6" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
@@ -18,7 +18,7 @@
   <ItemGroup Label="Unchained.Pdf">
     <PackageVersion Include="JpegLibrary" Version="0.4.32" />
     <PackageVersion Include="JBig2Decoder.NETStandard" Version="1.5.2" />
-    <PackageVersion Include="Markdig" Version="1.4.0" />
+    <PackageVersion Include="Markdig" Version="1.4.2" />
     <PackageVersion Include="CoreJ2K" Version="2.4.1.108" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
   </ItemGroup>
@@ -33,10 +33,10 @@
   </ItemGroup>
   <!-- ── Unchained.Pdf.Rendering — text shaping (HarfBuzz) ─────────────────── -->
   <ItemGroup Label="Unchained.Pdf.Rendering">
-    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.400" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.400" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.400" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.400" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.2.1.401" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.401" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.401" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.401" />
   </ItemGroup>
   <!-- ── Unchained.Studio — Blazor Server dev tool ────────────────────────── -->
   <ItemGroup Label="Unchained.Studio">
@@ -66,7 +66,7 @@
   <!-- ── Test project ───────────────────────────────────────────────────────── -->
   <ItemGroup Label="Tests">
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
-    <PackageVersion Include="xunit.v3.assert" Version="4.0.1" />
+    <PackageVersion Include="xunit.v3.assert" Version="4.0.3" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Moq" Version="4.21.0" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
