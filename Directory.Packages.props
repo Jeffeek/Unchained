@@ -10,17 +10,17 @@
     <PackageVersion Include="DocumentFormat.OpenXml.Features" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Linq" Version="3.5.1" />
     <PackageVersion Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
-    <PackageVersion Include="Microsoft.Bcl.Cryptography" Version="10.0.14" />
-    <PackageVersion Include="System.Formats.Asn1" Version="10.0.14" />
-    <PackageVersion Include="System.IO.Packaging" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Bcl.Cryptography" Version="10.0.15" />
+    <PackageVersion Include="System.Formats.Asn1" Version="10.0.15" />
+    <PackageVersion Include="System.IO.Packaging" Version="10.0.15" />
   </ItemGroup>
   <!-- ── Unchained.Pdf — image / document processing ──────────────────────── -->
   <ItemGroup Label="Unchained.Pdf">
     <PackageVersion Include="JpegLibrary" Version="0.4.32" />
     <PackageVersion Include="JBig2Decoder.NETStandard" Version="1.5.2" />
     <PackageVersion Include="Markdig" Version="1.4.2" />
-    <PackageVersion Include="CoreJ2K" Version="2.4.1.108" />
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+    <PackageVersion Include="CoreJ2K" Version="2.4.2.112" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
   </ItemGroup>
   <!-- ── Unchained.Drawing.Text — glyph rasterization (FreeType2) ──────────── -->
   <ItemGroup Label="Unchained.Drawing.Text">
@@ -52,7 +52,7 @@
     <PackageVersion Include="bblanchon.PDFium.Linux" Version="156.0.8076" />
     <PackageVersion Include="bblanchon.PDFium.Win32" Version="156.0.8076" />
     <PackageVersion Include="bblanchon.PDFium.WebAssembly" Version="156.0.8076" />
-    <PackageVersion Include="bblanchon.PDFium.Android" Version="159.0.8138" />
+    <PackageVersion Include="bblanchon.PDFium.Android" Version="159.0.8152" />
     <PackageVersion Include="bblanchon.PDFium.iOS " Version="156.0.8076" />
   </ItemGroup>
   <!-- ── Performance tests ────────────────────────────────────────────────── -->
@@ -65,7 +65,7 @@
   </ItemGroup>
   <!-- ── Test project ───────────────────────────────────────────────────────── -->
   <ItemGroup Label="Tests">
-    <PackageVersion Include="xunit.v3" Version="4.0.1" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="xunit.v3.assert" Version="4.0.3" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Moq" Version="4.21.0" />
